@@ -51,6 +51,8 @@ import org.apache.commons.lang3.math.NumberUtils;
  */
 public class WordWrapTag extends StringTagSupport {
 
+    private static final long serialVersionUID = 1L;
+
     private String delimiter;
     private String width;
     private String split;

@@ -40,6 +40,8 @@ import org.apache.roller.weblogger.util.Utilities;
  */
 public class CommentDataServlet extends HttpServlet {
 
+    private static final long serialVersionUID = 1L;
+
     public void checkAuth(HttpServletRequest request, Weblog weblog) {
     }
 

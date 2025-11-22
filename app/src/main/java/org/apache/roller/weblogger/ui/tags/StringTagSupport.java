@@ -36,6 +36,8 @@ import javax.servlet.jsp.tagext.BodyTagSupport;
  */
 public abstract class StringTagSupport extends BodyTagSupport {
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * PageContext attribute to store the result in.
      */

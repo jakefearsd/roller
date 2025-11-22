@@ -40,20 +40,22 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute","remove","cancel"})
 public class CategoryRemove extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(CategoryRemove.class);
-    
+
     // id of category to remove
     private String removeId = null;
-    
+
     // category object that we will remove
     private WeblogCategory category = null;
-    
+
     // category id of the category to move to
     private String targetCategoryId = null;
 
     // all categories from the action weblog
-    private List<WeblogCategory> allCategories = new ArrayList<>();
+    private transient List<WeblogCategory> allCategories = new ArrayList<>();
     
     
     public CategoryRemove() {

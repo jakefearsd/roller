@@ -39,6 +39,8 @@ import java.util.List;
 // TODO: make this work @AllowedMethods({"execute","remove"})
 public class EntryRemove extends UIAction {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(EntryRemove.class);
 
     // id of entry to remove

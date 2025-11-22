@@ -38,6 +38,8 @@ import org.apache.roller.weblogger.pojos.WeblogTheme;
  */
 public class WeblogCustomTheme extends WeblogTheme {
 
+    private static final long serialVersionUID = 1L;
+
     public WeblogCustomTheme(Weblog weblog) {
         super(weblog);
     }

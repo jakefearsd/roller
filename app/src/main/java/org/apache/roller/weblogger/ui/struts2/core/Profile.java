@@ -40,9 +40,12 @@ import java.util.TimeZone;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class Profile extends UIAction {
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(Profile.class);
-    
-    private ProfileBean bean = new ProfileBean();
+
+    private transient ProfileBean bean = new ProfileBean();
     private AuthMethod authMethod = WebloggerConfig.getAuthMethod();
 
     public Profile() {
@@ -107,7 +110,7 @@ public class Profile extends UIAction {
             // User.password does not allow null, so generate one
             if (authMethod.equals(AuthMethod.OPENID) ||
                     (authMethod.equals(AuthMethod.DB_OPENID) && !StringUtils.isEmpty(bean.getOpenIdUrl()))) {
-                String randomString = RandomStringUtils.randomAlphanumeric(255);
+                String randomString = RandomStringUtils.secure().nextAlphanumeric(255);
                 existingUser.resetPassword(randomString);
             }
 

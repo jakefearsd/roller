@@ -153,6 +153,8 @@ public class LRUCache2
     // David Flanaghan: http://www.davidflanagan.com/blog/000014.html
     private static class LRULinkedHashMap extends LinkedHashMap<Object, CacheEntry>
     {
+        private static final long serialVersionUID = 1L;
+
         protected int maxsize;
 
         public LRULinkedHashMap(int maxsize)

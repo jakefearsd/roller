@@ -32,7 +32,9 @@ import java.util.List;
  * Manage planet groups.
  */
 // TODO: make this work @AllowedMethods({"execute","save","delete"})
-public class PlanetGroups extends PlanetUIAction  implements ServletRequestAware {
+public class PlanetGroups extends PlanetUIAction implements ServletRequestAware {
+
+    private static final long serialVersionUID = 1L;
 
     private static Log log = LogFactory.getLog(PlanetGroups.class);
 

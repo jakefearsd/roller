@@ -25,7 +25,9 @@ import org.apache.roller.RollerException;
  * Exception generated from FeedUpdater.
  */
 public class UpdaterException extends RollerException {
-    
+
+    private static final long serialVersionUID = 1L;
+
     public UpdaterException(String msg) {
         super(msg);
     }

@@ -39,7 +39,9 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public final class BookmarksImport extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(BookmarksImport.class);
     
     // only write files out that are below this threshold

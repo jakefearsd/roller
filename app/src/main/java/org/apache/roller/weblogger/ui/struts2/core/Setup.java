@@ -36,9 +36,11 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class Setup extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static final Log LOG = LogFactory.getLog(Setup.class);
-    
+
     private long userCount = 0;
     private long blogCount = 0;
 
@@ -46,7 +48,7 @@ public class Setup extends UIAction {
     private Boolean aggregated;
 
     // weblogs for frontpage blog chooser
-    private Collection<Weblog> weblogs;
+    private transient Collection<Weblog> weblogs;
 
     public Setup() {
         this.pageTitle = "index.heading";

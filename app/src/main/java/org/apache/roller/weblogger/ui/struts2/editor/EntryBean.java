@@ -25,6 +25,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -348,8 +349,17 @@ public class EntryBean {
         setTagsAsString(entry.getTagsAsString());
         setSearchDescription(entry.getSearchDescription());
         
-        // set comment count, ignoreSpam=false, approvedOnly=false
-        setCommentCount(entry.getComments(false, false).size());
+        // set comment count for all comments (including spam and unapproved)
+        try {
+            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            CommentSearchCriteria csc = new CommentSearchCriteria();
+            csc.setWeblog(entry.getWebsite());
+            csc.setEntry(entry);
+            setCommentCount(wmgr.getComments(csc).size());
+        } catch (WebloggerException e) {
+            log.error("Error getting comment count", e);
+            setCommentCount(0);
+        }
         
         // init plugins values
         if(entry.getPlugins() != null) {

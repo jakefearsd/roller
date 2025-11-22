@@ -41,10 +41,12 @@ import java.util.Map;
 // TODO: make this work @AllowedMethods({"execute","move"})
 public class TemplateEdit extends UIAction {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(TemplateEdit.class);
 
     // form bean for collection all template properties
-    private TemplateEditBean bean = new TemplateEditBean();
+    private transient TemplateEditBean bean = new TemplateEditBean();
 
     // the template we are working on
     private WeblogTemplate template = null;

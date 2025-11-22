@@ -73,6 +73,7 @@ class RoleAssignmentRequestWrapper extends HttpServletRequestWrapper {
     }
 
     @Override
+    @SuppressWarnings("deprecation") // hasRole() is needed for Spring Security role checking
     public boolean isUserInRole(String roleName) {
         UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
         if (getUserPrincipal() != null) {

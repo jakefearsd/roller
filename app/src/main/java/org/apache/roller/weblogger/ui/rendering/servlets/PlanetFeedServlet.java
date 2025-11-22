@@ -54,8 +54,10 @@ import org.apache.roller.weblogger.util.cache.CachedContent;
  */
 public class PlanetFeedServlet extends HttpServlet {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(PlanetFeedServlet.class);
-    private PlanetCache planetCache = null;
+    private transient PlanetCache planetCache = null;
 
     /**
      * Init method for this servlet

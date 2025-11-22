@@ -100,11 +100,11 @@ public class WeblogEntry implements Serializable {
     private WeblogCategory category = null;
     
     // Collection of name/value entry attributes
-    private Set<WeblogEntryAttribute> attSet = new TreeSet<>();
-    
-    private Set<WeblogEntryTag> tagSet = new HashSet<>();
-    private Set<WeblogEntryTag> removedTags = new HashSet<>();
-    private Set<WeblogEntryTag> addedTags = new HashSet<>();
+    private transient Set<WeblogEntryAttribute> attSet = new TreeSet<>();
+
+    private transient Set<WeblogEntryTag> tagSet = new HashSet<>();
+    private transient Set<WeblogEntryTag> removedTags = new HashSet<>();
+    private transient Set<WeblogEntryTag> addedTags = new HashSet<>();
     
     //----------------------------------------------------------- Construction
     

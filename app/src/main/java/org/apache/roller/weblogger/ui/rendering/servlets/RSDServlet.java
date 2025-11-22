@@ -53,6 +53,8 @@ import org.apache.roller.weblogger.util.cache.CachedContent;
  */
 public class RSDServlet extends HttpServlet {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(RSDServlet.class);
 
     /**

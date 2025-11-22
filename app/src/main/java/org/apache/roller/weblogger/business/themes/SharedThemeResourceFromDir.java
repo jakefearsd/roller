@@ -35,9 +35,11 @@ import org.apache.roller.weblogger.pojos.ThemeResource;
  * not be any external classes which need to construct their own instances
  * of this class.
  */
-public class SharedThemeResourceFromDir 
+public class SharedThemeResourceFromDir
         implements ThemeResource, Serializable {
-    
+
+    private static final long serialVersionUID = 1L;
+
     // the physical java.io.File backing this resource
     private File resourceFile = null;
     

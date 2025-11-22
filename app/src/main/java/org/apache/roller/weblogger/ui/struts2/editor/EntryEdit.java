@@ -66,10 +66,12 @@ import org.apache.struts2.interceptor.validation.SkipValidation;
 // TODO: make this work @AllowedMethods({"execute","firstSave","saveDraft","publish","entryEdit","entryAdd"})
 public final class EntryEdit extends UIAction {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(EntryEdit.class);
 
     // bean for managing form data
-    private EntryBean bean = new EntryBean();
+    private transient EntryBean bean = new EntryBean();
 
     // the entry we are adding or editing
     private WeblogEntry entry = null;

@@ -71,14 +71,16 @@ import java.util.regex.Pattern;
  */
 public class PageServlet extends HttpServlet {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(PageServlet.class);
     // for referrer processing
     private boolean processReferrers = true;
     private static Pattern robotPattern = null;
     // for caching
     private boolean excludeOwnerPages = false;
-    private WeblogPageCache weblogPageCache = null;
-    private SiteWideCache siteWideCache = null;
+    private transient WeblogPageCache weblogPageCache = null;
+    private transient SiteWideCache siteWideCache = null;
 
     // Development theme reloading
     Boolean themeReload = false;

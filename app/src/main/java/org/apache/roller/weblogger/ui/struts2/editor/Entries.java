@@ -44,17 +44,19 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute"})
 public class Entries extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(Entries.class);
-    
+
     // number of comments to show per page
     private static final int COUNT = 30;
-    
+
     // bean for managing submitted data
-    private EntriesBean bean = new EntriesBean();
-    
+    private transient EntriesBean bean = new EntriesBean();
+
     // pager for the entries we are viewing
-    private EntriesPager pager = null;
+    private transient EntriesPager pager = null;
     
     // first entry in the list
     private WeblogEntry firstEntry = null;

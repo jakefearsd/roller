@@ -48,20 +48,22 @@ import org.apache.struts2.interceptor.validation.SkipValidation;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class WeblogConfig extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(WeblogConfig.class);
-    
+
     // bean for managing submitted data
-    private WeblogConfigBean bean = new WeblogConfigBean();
-    
+    private transient WeblogConfigBean bean = new WeblogConfigBean();
+
     // categories list
-    private List<WeblogCategory> weblogCategories = Collections.emptyList();
-    
+    private transient List<WeblogCategory> weblogCategories = Collections.emptyList();
+
     // list of available editors
-    private List<WeblogEntryEditor> editorsList = Collections.emptyList();
-    
+    private transient List<WeblogEntryEditor> editorsList = Collections.emptyList();
+
     // list of available plugins
-    private List<WeblogEntryPlugin> pluginsList = Collections.emptyList();
+    private transient List<WeblogEntryPlugin> pluginsList = Collections.emptyList();
 
     private final boolean weblogAdminsUntrusted = WebloggerConfig.getBooleanProperty("weblogAdminsUntrusted");
     

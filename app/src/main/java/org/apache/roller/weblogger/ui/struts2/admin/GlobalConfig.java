@@ -51,19 +51,21 @@ import org.apache.struts2.interceptor.ServletRequestAware;
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class GlobalConfig extends UIAction implements HttpParametersAware, ServletRequestAware {
 
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(GlobalConfig.class);
 
     // the request parameters
-    private HttpParameters params = HttpParameters.create().build();
+    private transient HttpParameters params = HttpParameters.create().build();
 
     // map of config properties
-    private Map<String, RuntimeConfigProperty> properties = Collections.emptyMap();
+    private transient Map<String, RuntimeConfigProperty> properties = Collections.emptyMap();
 
     // the runtime config def used to populate the display
-    private ConfigDef globalConfigDef = null;
+    private transient ConfigDef globalConfigDef = null;
 
     // list of comment plugins
-    private List<WeblogEntryCommentPlugin> pluginsList = Collections.emptyList();
+    private transient List<WeblogEntryCommentPlugin> pluginsList = Collections.emptyList();
 
     // comment plugins that are enabled.  this is what the html form submits to
     private String[] commentPlugins = new String[0];
@@ -72,10 +74,10 @@ public class GlobalConfig extends UIAction implements HttpParametersAware, Servl
     // GET on the GlobalConfig!save URL and thus sets all checkboxes to false
     private String httpMethod = "GET";
 
-    private final ResourceBundle bundle = ResourceBundle.getBundle("ApplicationResources");
+    private final transient ResourceBundle bundle = ResourceBundle.getBundle("ApplicationResources");
 
     // weblogs for frontpage blog chooser
-    private Collection<Weblog> weblogs;
+    private transient Collection<Weblog> weblogs;
 
 
     public GlobalConfig() {

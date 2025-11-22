@@ -35,6 +35,8 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
 // TODO: make this work @AllowedMethods({"execute","resign"})
 public class MemberResign extends UIAction {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(MemberResign.class);
 
     public MemberResign() {

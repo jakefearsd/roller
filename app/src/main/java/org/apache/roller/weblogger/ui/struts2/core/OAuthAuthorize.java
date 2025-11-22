@@ -32,6 +32,9 @@ import org.apache.struts2.interceptor.validation.SkipValidation;
  */
 // TODO: make this work @AllowedMethods({"execute"})
 public class OAuthAuthorize extends UIAction implements ServletRequestAware {
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(OAuthAuthorize.class);
     private String appDesc = null;
     private String token = null;

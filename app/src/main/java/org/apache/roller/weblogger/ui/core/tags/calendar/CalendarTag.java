@@ -42,6 +42,8 @@ import javax.servlet.jsp.tagext.TagSupport;
  * @jsp.tag name="Calendar"
  */
 public class CalendarTag extends TagSupport {
+    private static final long serialVersionUID = 1L;
+
     private static Log mLogger =
             LogFactory.getFactory().getInstance(CalendarTag.class);
 

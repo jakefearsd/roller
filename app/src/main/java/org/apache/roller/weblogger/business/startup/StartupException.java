@@ -27,8 +27,10 @@ import org.apache.roller.weblogger.WebloggerException;
  * Exception generated from Weblogger startup process.
  */
 public class StartupException extends WebloggerException {
-    
-    private final List<String> startupLog;
+
+    private static final long serialVersionUID = 1L;
+
+    private final transient List<String> startupLog;
     
     
     public StartupException(String msg) {

@@ -25,8 +25,9 @@ import org.apache.roller.RollerException;
  * A base exception class for Roller Weblogger.
  */
 public class WebloggerException extends RollerException {
-    
-    
+
+    private static final long serialVersionUID = 1L;
+
     public WebloggerException() {
         super();
     }

@@ -50,7 +50,7 @@ public class ResourceServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(ResourceServlet.class);
 
-    private ServletContext context = null;
+    private transient ServletContext context = null;
 
     @Override
     public void init(ServletConfig config) throws ServletException {

@@ -28,6 +28,9 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  * There can be up to one for the whole site and up to one per user.
  */
 public class OAuthConsumerRecord implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private String consumerKey;
     private String consumerSecret;
     private String userName;

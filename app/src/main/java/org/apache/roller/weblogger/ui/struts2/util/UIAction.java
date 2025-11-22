@@ -54,7 +54,9 @@ import java.util.stream.IntStream;
  */
 public abstract class UIAction extends ActionSupport
         implements UIActionPreparable, UISecurityEnforced, RequestAware {
-    
+
+    private static final long serialVersionUID = 1L;
+
     // a result that sends the user to an access denied warning
     public static final String DENIED = "access-denied";
     

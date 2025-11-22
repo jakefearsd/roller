@@ -35,7 +35,9 @@ import java.util.Map;
  * template which is part of a shared Theme.
  */
 public class SharedThemeTemplate implements ThemeTemplate, Serializable {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private String id = null;
     private ComponentType action = null;
     private String name = null;
@@ -49,7 +51,7 @@ public class SharedThemeTemplate implements ThemeTemplate, Serializable {
     private String type = null;
 
     //hash map to cache template Code objects parsed
-    private Map<RenditionType, TemplateRendition> templateRenditionHashMap = new EnumMap<>(RenditionType.class);
+    private transient Map<RenditionType, TemplateRendition> templateRenditionHashMap = new EnumMap<>(RenditionType.class);
     
     public SharedThemeTemplate() {}
     

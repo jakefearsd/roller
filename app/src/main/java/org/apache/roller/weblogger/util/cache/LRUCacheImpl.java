@@ -134,6 +134,8 @@ public class LRUCacheImpl implements Cache {
     
     // David Flanaghan: http://www.davidflanagan.com/blog/000014.html
     private static class LRULinkedHashMap<K, V> extends LinkedHashMap<K, V> {
+        private static final long serialVersionUID = 1L;
+
         protected int maxsize;
         
         public LRULinkedHashMap(int maxsize) {

@@ -48,6 +48,8 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogMediaResourceRequest;
  */
 public class MediaResourceServlet extends HttpServlet {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(MediaResourceServlet.class);
 
     @Override

@@ -40,7 +40,9 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute","save","cancel"})
 public class MembersInvite extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(MembersInvite.class);
     
     // user being invited

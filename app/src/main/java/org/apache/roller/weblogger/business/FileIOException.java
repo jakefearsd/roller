@@ -26,7 +26,9 @@ import org.apache.roller.weblogger.WebloggerException;
  * working on a file, such as during a save or delete.
  */
 public class FileIOException extends WebloggerException {
-    
+
+    private static final long serialVersionUID = 1L;
+
     public FileIOException(String s) {
         super(s);
     }

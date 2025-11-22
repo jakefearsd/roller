@@ -46,13 +46,15 @@ import java.util.Map;
 // TODO: make this work @AllowedMethods({"execute","add"})
 public class Templates extends UIAction {
 
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(Templates.class);
 
     // list of templates to display
-    private List<WeblogTemplate> templates = Collections.emptyList();
+    private transient List<WeblogTemplate> templates = Collections.emptyList();
 
     // list of template action types user is allowed to create
-    private Map<ComponentType, String> availableActions = Collections.emptyMap();
+    private transient Map<ComponentType, String> availableActions = Collections.emptyMap();
 
     // name and action of new template if we are adding a template
     private String newTmplName = null;

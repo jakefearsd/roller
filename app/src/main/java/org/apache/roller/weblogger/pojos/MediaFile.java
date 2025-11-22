@@ -63,19 +63,19 @@ public class MediaFile implements Serializable {
     private String creatorUserName;
     private Weblog weblog;
 
-    private InputStream is;
+    private transient InputStream is;
 
-    private MediaFileDirectory directory;
+    private transient MediaFileDirectory directory;
 
-    private FileContent content;
-    private FileContent thumbnail;
+    private transient FileContent content;
+    private transient FileContent thumbnail;
 
     // TODO: anchor to be populated
     // private String anchor;
 
-    private Set<MediaFileTag> tagSet = new HashSet<>();
-    private Set<String> removedTags = new HashSet<>();
-    private Set<String> addedTags = new HashSet<>();
+    private transient Set<MediaFileTag> tagSet = new HashSet<>();
+    private transient Set<String> removedTags = new HashSet<>();
+    private transient Set<String> addedTags = new HashSet<>();
 
     public MediaFile() {
     }

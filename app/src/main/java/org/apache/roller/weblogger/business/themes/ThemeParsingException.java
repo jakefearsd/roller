@@ -25,8 +25,9 @@ import org.apache.roller.weblogger.WebloggerException;
  * Thrown when there is a problem parsing a given theme xml descriptor.
  */
 public class ThemeParsingException extends WebloggerException {
-    
-    
+
+    private static final long serialVersionUID = 1L;
+
     public ThemeParsingException(String s,Throwable t) {
         super(s, t);
     }

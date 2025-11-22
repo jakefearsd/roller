@@ -52,20 +52,22 @@ import org.apache.struts2.interceptor.validation.SkipValidation;
  */
 // TODO: make this work @AllowedMethods({"execute","save","activate"})
 public class Register extends UIAction implements ServletRequestAware {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(Register.class);
     private static final String DISABLED_RETURN_CODE = "disabled";
     public static final String DEFAULT_ALLOWED_CHARS = "A-Za-z0-9";
 
     // this is a no-no, we should not need this
-    private HttpServletRequest servletRequest = null;
+    private transient HttpServletRequest servletRequest = null;
 
     private AuthMethod authMethod = WebloggerConfig.getAuthMethod();
 
     private String activationStatus = null;
-    
+
     private String activationCode = null;
-    private ProfileBean bean = new ProfileBean();
+    private transient ProfileBean bean = new ProfileBean();
 
     public Register() {
         this.pageTitle = "newUser.addNewUser";
@@ -367,7 +369,7 @@ public class Register extends UIAction implements ServletRequestAware {
         // User.password does not allow null, so generate one
         if (getAuthMethod().equals(AuthMethod.OPENID.name()) ||
                 (getAuthMethod().equals(AuthMethod.DB_OPENID.name()) && !StringUtils.isEmpty(getBean().getOpenIdUrl()))) {
-            String randomString = RandomStringUtils.randomAlphanumeric(255);
+            String randomString = RandomStringUtils.secure().nextAlphanumeric(255);
             getBean().setPasswordText(randomString);
             getBean().setPasswordConfirm(randomString);
         }

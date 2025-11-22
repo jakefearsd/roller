@@ -25,7 +25,9 @@ import org.apache.roller.RollerException;
  * Exception generated from Weblogger initialization process.
  */
 public class InitializationException extends RollerException {
-    
+
+    private static final long serialVersionUID = 1L;
+
     public InitializationException(String msg) {
         super(msg);
     }

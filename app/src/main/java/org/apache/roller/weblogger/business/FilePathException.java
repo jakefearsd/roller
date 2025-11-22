@@ -26,7 +26,9 @@ import org.apache.roller.weblogger.WebloggerException;
  * reason, like it represents a directory instead of a file.
  */
 public class FilePathException extends WebloggerException {
-    
+
+    private static final long serialVersionUID = 1L;
+
     public FilePathException(String s) {
         super(s);
     }

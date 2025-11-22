@@ -16,7 +16,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * A utility class for storing cached content written to a java.io.Writer.
  */
 public class CachedContent implements AutoCloseable, Serializable {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(CachedContent.class);
     
     // the byte array we use to maintain the cached content

@@ -46,17 +46,19 @@ import java.util.Map;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class PlanetConfig extends PlanetUIAction implements HttpParametersAware {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(PlanetConfig.class);
     
     // original request parameters
-    private HttpParameters parameters = HttpParameters.create().build();
-    
+    private transient HttpParameters parameters = HttpParameters.create().build();
+
     // runtime properties data
-    private Map<String, RuntimeConfigProperty> properties = Collections.emptyMap();
-    
+    private transient Map<String, RuntimeConfigProperty> properties = Collections.emptyMap();
+
     // the runtime config def used to populate the display
-    private ConfigDef globalConfigDef = null;
+    private transient ConfigDef globalConfigDef = null;
     
     
     public PlanetConfig() {

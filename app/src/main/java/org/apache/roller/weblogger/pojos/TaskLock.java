@@ -28,7 +28,9 @@ import org.apache.roller.util.UUIDGenerator;
  * Represents locking information about a specific RollerTask.
  */
 public class TaskLock implements Serializable {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private String id = UUIDGenerator.generateUUID();
     private String name = null;
     private Date timeAcquired = null;

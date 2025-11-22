@@ -48,11 +48,13 @@ import org.apache.struts2.interceptor.validation.SkipValidation;
  */
 // TODO: make this work @AllowedMethods({"execute","save","firstSave"})
 public class UserEdit extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(UserEdit.class);
 
     // a bean to store our form data
-    private CreateUserBean bean = new CreateUserBean();
+    private transient CreateUserBean bean = new CreateUserBean();
 
     // user we are creating or modifying
     private User user = null;
@@ -159,7 +161,7 @@ public class UserEdit extends UIAction {
             // User.password does not allow null, so generate one
             if (authMethod.equals(AuthMethod.OPENID) ||
                     (authMethod.equals(AuthMethod.DB_OPENID) && !StringUtils.isEmpty(bean.getOpenIdUrl()))) {
-                String randomString = RandomStringUtils.randomAlphanumeric(255);
+                String randomString = RandomStringUtils.secure().nextAlphanumeric(255);
                 user.resetPassword(randomString);
             }
 

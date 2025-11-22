@@ -36,6 +36,8 @@ import org.apache.roller.weblogger.util.cache.CacheManager;
 // TODO: make this work @AllowedMethods({"execute","index","flushCache","reset"})
 public class Maintenance extends UIAction {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(Maintenance.class);
 
     public Maintenance() {

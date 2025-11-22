@@ -20,6 +20,9 @@ import com.rometools.rome.feed.CopyFrom;
 import com.rometools.rome.feed.module.ModuleImpl;
 
 public class ContentModuleImpl extends ModuleImpl implements ContentModule {
+
+    private static final long serialVersionUID = 1L;
+
     private String encoded;
 
     public ContentModuleImpl() {

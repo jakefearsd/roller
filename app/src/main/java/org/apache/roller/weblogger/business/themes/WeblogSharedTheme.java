@@ -38,7 +38,9 @@ import org.apache.roller.weblogger.pojos.WeblogTheme;
  * A WeblogTheme shared by many weblogs and backed by a SharedTheme.
  */
 public class WeblogSharedTheme extends WeblogTheme {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(WeblogSharedTheme.class);
     
     private SharedTheme theme = null;

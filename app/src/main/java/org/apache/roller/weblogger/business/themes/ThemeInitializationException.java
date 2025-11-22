@@ -25,8 +25,9 @@ import org.apache.roller.weblogger.WebloggerException;
  * Thrown when there is a problem initalizing a theme object.
  */
 public class ThemeInitializationException extends WebloggerException {
-    
-    
+
+    private static final long serialVersionUID = 1L;
+
     public ThemeInitializationException(String s,Throwable t) {
         super(s, t);
     }

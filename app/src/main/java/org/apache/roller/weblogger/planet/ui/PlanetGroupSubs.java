@@ -40,6 +40,8 @@ import java.util.*;
 // TODO: make this work @AllowedMethods({"execute","saveSubscription","saveGroup","deleteSubscription"})
 public class PlanetGroupSubs extends PlanetUIAction implements ServletRequestAware {
 
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(PlanetGroupSubs.class);
 
     // the planet group we are working in

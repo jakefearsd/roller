@@ -32,6 +32,8 @@ import org.apache.roller.weblogger.business.WebloggerFactory;
  */
 public class PlanetGroup implements Serializable, Comparable<PlanetGroup> {
 
+    private static final long serialVersionUID = 1L;
+
     private transient String[] catArray = null;
     
     // attributes
@@ -46,8 +48,8 @@ public class PlanetGroup implements Serializable, Comparable<PlanetGroup> {
     private String categoryRestriction = null;
     
     // associations
-    private Planet planet = null;
-    private Set<Subscription> subscriptions = new TreeSet<>();
+    private transient Planet planet = null;
+    private transient Set<Subscription> subscriptions = new TreeSet<>();
     
     
     public PlanetGroup() {}

@@ -28,7 +28,9 @@ import org.apache.roller.util.UUIDGenerator;
  * Planet Subscription.
  */
 public class Subscription implements Serializable, Comparable<Subscription> {
-    
+
+    private static final long serialVersionUID = 1L;
+
     // attributes
     private String id = UUIDGenerator.generateUUID();
     private String title;
@@ -40,8 +42,8 @@ public class Subscription implements Serializable, Comparable<Subscription> {
     private int inboundblogs = 0;
 
     // associations
-    private Set<PlanetGroup> groups = new HashSet<>();
-    private Set<SubscriptionEntry> entries = new HashSet<>();
+    private transient Set<PlanetGroup> groups = new HashSet<>();
+    private transient Set<SubscriptionEntry> entries = new HashSet<>();
     
     
     public Subscription() {}

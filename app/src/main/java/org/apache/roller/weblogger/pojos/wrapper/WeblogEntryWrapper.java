@@ -213,6 +213,11 @@ public final class WeblogEntryWrapper {
     }
     
     
+    /**
+     * @deprecated Use getComments() instead
+     */
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public List<WeblogEntryCommentWrapper> getComments(boolean ignoreSpam, boolean approvedOnly) {
         return this.pojo.getComments(ignoreSpam, approvedOnly).stream()
                 .map(comment -> WeblogEntryCommentWrapper.wrap(comment, urlStrategy))
@@ -230,11 +235,21 @@ public final class WeblogEntryWrapper {
     }
     
     
+    /**
+     * @deprecated Use getPermalink() instead
+     */
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public String getPermaLink() {
         return this.pojo.getPermaLink();
     }
-    
-    
+
+
+    /**
+     * @deprecated Use getPermalink() + "#comments" instead
+     */
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public String getCommentsLink() {
         return this.pojo.getCommentsLink();
     }

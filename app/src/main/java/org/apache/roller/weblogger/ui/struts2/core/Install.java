@@ -40,6 +40,8 @@ import org.springframework.beans.FatalBeanException;
 // TODO: make this work @AllowedMethods({"execute","create","upgrade","bootstrap"})
 public class Install extends UIAction {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(Install.class);
 
     private static final String DATABASE_ERROR = "database_error";
@@ -50,7 +52,7 @@ public class Install extends UIAction {
     private Throwable rootCauseException = null;
     private boolean error = false;
     private boolean success = false;
-    private List<String> messages = null;
+    private transient List<String> messages = null;
     private String databaseName = "Unknown";
 
 

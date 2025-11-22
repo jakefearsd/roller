@@ -25,7 +25,9 @@ import org.apache.roller.weblogger.WebloggerException;
  * A generic Roller rendering exception.
  */
 public class RenderingException extends WebloggerException {
-    
+
+    private static final long serialVersionUID = 1L;
+
     public RenderingException(String s) {
         super(s);
     }

@@ -36,10 +36,12 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
 // TODO: make this work @AllowedMethods({"execute","move"})
 public class Categories extends UIAction {
 
+	private static final long serialVersionUID = 1L;
+
 	private static Log log = LogFactory.getLog(Categories.class);
 
 	// all categories from the action weblog
-	private List<WeblogCategory> allCategories;
+	private transient List<WeblogCategory> allCategories;
 
 	public Categories() {
 		this.actionName = "categories";

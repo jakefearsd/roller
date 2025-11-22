@@ -36,9 +36,11 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute","enable","disable","delete","deleteConfirm"})
 public class PingTargets extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(PingTargets.class);
-    
+
     public PingTargets() {
         this.actionName = "commonPingTargets";
         this.desiredMenu = "admin";
@@ -46,7 +48,7 @@ public class PingTargets extends UIAction {
     }
 
     // list of available ping targets
-    private List<PingTarget> pingTargets = Collections.emptyList();
+    private transient List<PingTarget> pingTargets = Collections.emptyList();
 
     // ping target we are working on, if any
     private PingTarget pingTarget = null;

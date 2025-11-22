@@ -31,7 +31,9 @@ import java.util.List;
  * multiple weblogs using a common set of resources.
  */
 public abstract class SharedTheme implements Theme, Serializable {
-    
+
+    private static final long serialVersionUID = 1L;
+
     protected String id = null;
     protected String name = null;
     protected String description = null;

@@ -36,7 +36,9 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute"})
 public class Login extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private String error = null;
 
     private AuthMethod authMethod = WebloggerConfig.getAuthMethod();

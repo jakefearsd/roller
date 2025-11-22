@@ -26,7 +26,9 @@ import org.apache.roller.weblogger.WebloggerException;
  * its subclasses when the request being parsed is invalid in any way.
  */
 public class InvalidRequestException extends WebloggerException {
-    
+
+    private static final long serialVersionUID = 1L;
+
     public InvalidRequestException(String msg) {
         super(msg);
     }

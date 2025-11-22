@@ -40,18 +40,20 @@ import javax.servlet.http.HttpServletResponse;
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class FolderEdit extends UIAction implements ServletResponseAware {
 
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(FolderEdit.class);
 
     // bean for managing form data
-    private FolderBean bean = new FolderBean();
+    private transient FolderBean bean = new FolderBean();
 
     // the id of the folder we are working with
     private String folderId = null;
 
     // the folder we are adding or editing
-    private WeblogBookmarkFolder folder = null;
+    private transient WeblogBookmarkFolder folder = null;
 
-    private HttpServletResponse httpServletResponse;
+    private transient HttpServletResponse httpServletResponse;
 
 
     public FolderEdit() {

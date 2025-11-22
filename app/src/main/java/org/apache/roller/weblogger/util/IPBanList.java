@@ -174,6 +174,8 @@ public final class IPBanList {
     // changed since the last time we checked
     private static class ModifiedFile extends java.io.File {
 
+        private static final long serialVersionUID = 1L;
+
         private long myLastModified = 0;
 
         public ModifiedFile(String filePath) {

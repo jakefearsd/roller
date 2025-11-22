@@ -28,8 +28,10 @@ import java.io.Serializable;
  * and timeout period with them so we can know when they expire.
  */
 public class ExpiringCacheEntry implements Serializable {
-    
-    private final Object value;
+
+    private static final long serialVersionUID = 1L;
+
+    private final transient Object value;
     private final long timeCached;
     private final long timeout;
     

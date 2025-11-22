@@ -45,11 +45,13 @@ import org.apache.roller.weblogger.business.themes.SharedTheme;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class CreateWeblog extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(CreateWeblog.class);
     private static final String DISABLED_RETURN_CODE = "disabled";
 
-    private CreateWeblogBean bean = new CreateWeblogBean();
+    private transient CreateWeblogBean bean = new CreateWeblogBean();
     
 
     public CreateWeblog() {

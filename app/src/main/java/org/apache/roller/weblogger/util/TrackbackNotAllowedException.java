@@ -26,7 +26,9 @@ import org.apache.roller.weblogger.WebloggerException;
  * by the system administrator.
  */
 public class TrackbackNotAllowedException extends WebloggerException {
-    
+
+    private static final long serialVersionUID = 1L;
+
     public TrackbackNotAllowedException(String url) {
         super(url);
     }

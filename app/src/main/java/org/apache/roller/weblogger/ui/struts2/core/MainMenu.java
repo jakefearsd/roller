@@ -37,7 +37,9 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute","accept","decline"})
 public class MainMenu extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(MainMenu.class);
     
     private String websiteId = null;

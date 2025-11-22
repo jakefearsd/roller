@@ -46,7 +46,9 @@ import org.apache.roller.weblogger.ui.struts2.util.UIAction;
  */
 // TODO: make this work @AllowedMethods({"execute","enable","disable","pingNow"})
 public class Pings extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(Pings.class);
     
     // ping target id to work on
@@ -56,10 +58,10 @@ public class Pings extends UIAction {
     private PingTarget pingTarget = null;
     
     // commong ping targets list
-    private List<PingTarget> commonPingTargets = Collections.emptyList();
-    
+    private transient List<PingTarget> commonPingTargets = Collections.emptyList();
+
     // track the enabled/disabled status for pings
-    private Map<String, Boolean> pingStatus = Collections.emptyMap();
+    private transient Map<String, Boolean> pingStatus = Collections.emptyMap();
     
     
     public Pings() {

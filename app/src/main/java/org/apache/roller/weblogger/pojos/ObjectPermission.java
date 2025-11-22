@@ -26,6 +26,9 @@ import org.apache.roller.util.UUIDGenerator;
  * Base permission class for Roller. 
  */
 public abstract class ObjectPermission extends RollerPermission {
+
+    private static final long serialVersionUID = 1L;
+
     protected String  id = UUIDGenerator.generateUUID();
     protected String  userName;
     protected String  objectType;

@@ -28,7 +28,9 @@ import java.io.Serializable;
  * rendering for a given weblog design.
  */
 public abstract class WeblogTheme implements Theme, Serializable {
-    
+
+    private static final long serialVersionUID = 1L;
+
     // this is the name that will be used to identify a user customized theme
     public static final String CUSTOM = "custom";
 

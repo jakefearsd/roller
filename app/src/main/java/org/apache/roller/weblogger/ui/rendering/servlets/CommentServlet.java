@@ -74,11 +74,13 @@ import org.apache.roller.weblogger.util.cache.CacheManager;
  */
 public class CommentServlet extends HttpServlet {
 
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(CommentServlet.class);
 
-    private CommentAuthenticator authenticator = null;
-    private CommentValidationManager commentValidationManager = null;
-    private GenericThrottle commentThrottle = null;
+    private transient CommentAuthenticator authenticator = null;
+    private transient CommentValidationManager commentValidationManager = null;
+    private transient GenericThrottle commentThrottle = null;
 
     /**
      * Initialization.

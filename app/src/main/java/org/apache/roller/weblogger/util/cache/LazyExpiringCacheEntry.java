@@ -43,8 +43,10 @@ import java.io.Serializable;
  * we try to use them.
  */
 public class LazyExpiringCacheEntry implements Serializable {
-    
-    private final Object value;
+
+    private static final long serialVersionUID = 1L;
+
+    private final transient Object value;
     private final long timeCached;
     
     

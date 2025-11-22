@@ -50,7 +50,7 @@ public class ThemeEdit extends UIAction {
     private static Log log = LogFactory.getLog(Templates.class);
 
     // list of available themes
-    private List<SharedTheme> themes = Collections.emptyList();
+    private transient List<SharedTheme> themes = Collections.emptyList();
 
     // type of theme desired, either 'shared' or 'custom'
     private String themeType = null;

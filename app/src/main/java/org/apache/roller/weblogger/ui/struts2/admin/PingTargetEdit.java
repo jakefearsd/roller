@@ -33,11 +33,13 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class PingTargetEdit extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(PingTargetEdit.class);
 
     // a bean for managing submitted data
-    private PingTargetBean bean = new PingTargetBean();
+    private transient PingTargetBean bean = new PingTargetBean();
 
     // ping target we are working on, if any
     private PingTarget pingTarget = null;

@@ -36,7 +36,7 @@ public class RomeFeedFetcherTest  {
     
     public static Log log = LogFactory.getLog(RomeFeedFetcherTest.class);
     
-    String feed_url = "https://rollerweblogger.org/roller/feed/entries/atom";
+    String feed_url = "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml";
     
     @BeforeEach
     public void setUp() throws Exception {
@@ -58,8 +58,8 @@ public class RomeFeedFetcherTest  {
             Subscription sub = feedFetcher.fetchSubscription(feed_url);
             assertNotNull(sub);
             assertEquals(feed_url, sub.getFeedURL());
-            assertEquals("https://rollerweblogger.org/roller/", sub.getSiteURL());
-            assertEquals("Blogging Roller", sub.getTitle());
+            assertEquals("https://www.nytimes.com/section/technology", sub.getSiteURL());
+            assertEquals("NYT > Technology", sub.getTitle());
             assertNotNull(sub.getLastUpdated());
             assertTrue(!sub.getEntries().isEmpty());
 
@@ -80,8 +80,8 @@ public class RomeFeedFetcherTest  {
             Subscription sub = feedFetcher.fetchSubscription(feed_url);
             assertNotNull(sub);
             assertEquals(feed_url, sub.getFeedURL());
-            assertEquals("https://rollerweblogger.org/roller/", sub.getSiteURL());
-            assertEquals("Blogging Roller", sub.getTitle());
+            assertEquals("https://www.nytimes.com/section/technology", sub.getSiteURL());
+            assertEquals("NYT > Technology", sub.getTitle());
             assertNotNull(sub.getLastUpdated());
             assertTrue(!sub.getEntries().isEmpty());
             

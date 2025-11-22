@@ -39,11 +39,13 @@ import org.apache.struts2.interceptor.validation.SkipValidation;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class CategoryEdit extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(CategoryEdit.class);
 
     // bean for managing form data
-    private CategoryBean bean = new CategoryBean();
+    private transient CategoryBean bean = new CategoryBean();
 
     // the (new or already existing) category we are editing
     private WeblogCategory category = null;

@@ -30,7 +30,9 @@ import java.util.Date;
  * an object.
  */
 public class StaticTemplate implements Template, Serializable {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private String id = null;
     private String name = null;
     private String description = null;

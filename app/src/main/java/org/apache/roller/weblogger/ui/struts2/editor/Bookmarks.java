@@ -41,6 +41,8 @@ import org.apache.struts2.interceptor.validation.SkipValidation;
 // TODO: make this work @AllowedMethods({"execute","delete","deleteFolder","move","view","folderCreated"})
 public class Bookmarks extends UIAction {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(Bookmarks.class);
 
     // the id of folder being viewed
@@ -59,7 +61,7 @@ public class Bookmarks extends UIAction {
     private String viewFolderId = null;
 
     // all folders from the action weblog
-    private List<WeblogBookmarkFolder> allFolders = Collections.emptyList();
+    private transient List<WeblogBookmarkFolder> allFolders = Collections.emptyList();
 
     public Bookmarks() {
         this.actionName = "bookmarks";

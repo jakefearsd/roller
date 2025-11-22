@@ -34,7 +34,10 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute"})
 public class UserAdmin extends UIAction {
-    private CreateUserBean bean = new CreateUserBean();
+
+    private static final long serialVersionUID = 1L;
+
+    private transient CreateUserBean bean = new CreateUserBean();
 
     public UserAdmin() {
         this.actionName = "userAdmin";

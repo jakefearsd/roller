@@ -34,6 +34,9 @@ import org.apache.roller.weblogger.util.Utilities;
  * Represents a permission that applies globally to the entire web application.
  */
 public class GlobalPermission extends RollerPermission {
+
+    private static final long serialVersionUID = 1L;
+
     protected String actions;
 
     /** Allowed to login and edit profile */
@@ -46,14 +49,15 @@ public class GlobalPermission extends RollerPermission {
     public static final String ADMIN  = "admin";
     
     /**
-     * Create global permission for one specific user initialized with the 
+     * Create global permission for one specific user initialized with the
      * actions that are implied by the user's roles.
      * @param user User of permission.
      * @throws org.apache.roller.weblogger.WebloggerException
      */
+    @SuppressWarnings("deprecation") // getRoles() is needed to build permission from user's actual roles
     public GlobalPermission(User user) throws WebloggerException {
         super("GlobalPermission user: " + user.getUserName());
-        
+
         // loop through user's roles, adding actions implied by each
         List<String> roles = WebloggerFactory.getWeblogger().getUserManager().getRoles(user);
         List<String> actionsList = new ArrayList<>();

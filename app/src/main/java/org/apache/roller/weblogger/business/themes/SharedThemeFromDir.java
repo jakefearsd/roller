@@ -40,29 +40,31 @@ import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
  */
 public class SharedThemeFromDir extends SharedTheme {
 
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(SharedThemeFromDir.class);
 
     // the filesystem directory where we should read this theme from
     private String themeDir = null;
 
     // the theme preview image
-    private ThemeResource previewImage = null;
+    private transient ThemeResource previewImage = null;
 
     // the theme stylesheet
-    private ThemeTemplate stylesheet = null;
+    private transient ThemeTemplate stylesheet = null;
 
     // we keep templates in a Map for faster lookups by name
-    private Map<String, ThemeTemplate> templatesByName = new HashMap<>();
+    private transient Map<String, ThemeTemplate> templatesByName = new HashMap<>();
 
     // we keep templates in a Map for faster lookups by link
-    private Map<String, ThemeTemplate> templatesByLink = new HashMap<>();
+    private transient Map<String, ThemeTemplate> templatesByLink = new HashMap<>();
 
     // we keep templates in a Map for faster lookups by action
-    private Map<ComponentType, ThemeTemplate> templatesByAction = new EnumMap<>(ComponentType.class);
+    private transient Map<ComponentType, ThemeTemplate> templatesByAction = new EnumMap<>(ComponentType.class);
 
     // we keep resources in a Map for faster lookups by path
     // the Map contains ... (resource path, ThemeResource)
-    private Map<String, ThemeResource> resources = new HashMap<>();
+    private transient Map<String, ThemeResource> resources = new HashMap<>();
 
     public SharedThemeFromDir(String themeDirPath)
             throws ThemeInitializationException {

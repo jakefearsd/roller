@@ -43,11 +43,13 @@ import org.apache.struts2.interceptor.HttpParametersAware;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class Members extends UIAction implements HttpParametersAware {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(Members.class);
-    
+
     // raw parameters from request
-    private HttpParameters parameters = HttpParameters.create().build();
+    private transient HttpParameters parameters = HttpParameters.create().build();
     
     
     public Members() {

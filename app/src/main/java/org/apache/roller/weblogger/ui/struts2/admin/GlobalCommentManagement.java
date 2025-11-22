@@ -50,17 +50,19 @@ import org.apache.struts2.interceptor.ServletRequestAware;
  */
 // TODO: make this work @AllowedMethods({"query","delete","update"})
 public class GlobalCommentManagement extends UIAction implements ServletRequestAware {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(GlobalCommentManagement.class);
-    
+
     // number of comments to show per page
     private static final int COUNT = 30;
-    
+
     // bean for managing submitted data
-    private GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-    
+    private transient GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
+
     // pager for the comments we are viewing
-    private CommentsPager pager = null;
+    private transient CommentsPager pager = null;
     
     // first comment in the list
     private WeblogEntryComment firstComment = null;

@@ -39,7 +39,7 @@ public class SingleThreadedFeedUpdaterTest  {
     
     private Subscription testSub = null;
     
-    private String feed_url = "https://rollerweblogger.org/roller/feed/entries/atom";
+    private String feed_url = "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml";
     
 
     @BeforeEach
@@ -76,8 +76,8 @@ public class SingleThreadedFeedUpdaterTest  {
         sub = mgr.getSubscription(feed_url);
         assertNotNull(sub);
         assertEquals(feed_url, sub.getFeedURL());
-        assertEquals("https://rollerweblogger.org/roller/", sub.getSiteURL());
-        assertEquals("Blogging Roller", sub.getTitle());
+        assertEquals("https://www.nytimes.com/section/technology", sub.getSiteURL());
+        assertEquals("NYT > Technology", sub.getTitle());
         assertNotNull(sub.getLastUpdated());
         assertTrue(!sub.getEntries().isEmpty());
     }

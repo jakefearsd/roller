@@ -35,6 +35,9 @@ import org.apache.struts2.interceptor.validation.SkipValidation;
  */
 // TODO: make this work @AllowedMethods({"execute"})
 public class OAuthKeys extends UIAction {
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(OAuthKeys.class);
     private OAuthConsumer userConsumer;
     private OAuthConsumer siteWideConsumer;

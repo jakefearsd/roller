@@ -48,6 +48,7 @@ public class AuthoritiesPopulator implements LdapAuthoritiesPopulator {
      * @see org.springframework.security.ldap.LdapAuthoritiesPopulator#getGrantedAuthorities(org.springframework.ldap.core.DirContextOperations, String)
      */
     @Override
+    @SuppressWarnings("deprecation") // getRoles() is needed for Spring Security LDAP integration
     public Collection<GrantedAuthority> getGrantedAuthorities(DirContextOperations userData, String username) {
 
         // This check is probably unnecessary.

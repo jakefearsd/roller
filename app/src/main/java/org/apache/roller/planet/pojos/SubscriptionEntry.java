@@ -36,7 +36,9 @@ import org.apache.roller.util.UUIDGenerator;
  * forms of RSS and Atom.
  */
 public class SubscriptionEntry implements Serializable, Comparable<SubscriptionEntry> {
-    
+
+    private static final long serialVersionUID = 1L;
+
     // attributes
     private String id = UUIDGenerator.generateUUID();
     private String handle;

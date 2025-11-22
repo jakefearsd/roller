@@ -27,7 +27,9 @@ import org.apache.roller.util.UUIDGenerator;
  * Represents hit count data for a weblog.
  */
 public class WeblogHitCount implements Serializable {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private String id = UUIDGenerator.generateUUID();
     private Weblog weblog = null;
     private int dailyHits = 0;

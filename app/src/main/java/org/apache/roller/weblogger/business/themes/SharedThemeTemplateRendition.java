@@ -30,6 +30,8 @@ import java.util.Date;
  */
 public class SharedThemeTemplateRendition implements Serializable, TemplateRendition {
 
+	private static final long serialVersionUID = 1L;
+
 	private String template = null;
 	private RenditionType type = null;
 	private TemplateLanguage templateLanguage = null;

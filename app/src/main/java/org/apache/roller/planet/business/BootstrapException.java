@@ -25,7 +25,9 @@ import org.apache.roller.RollerException;
  * Exception generated from Weblogger bootstrapping process.
  */
 public class BootstrapException extends RollerException {
-    
+
+    private static final long serialVersionUID = 1L;
+
     public BootstrapException(String msg) {
         super(msg);
     }

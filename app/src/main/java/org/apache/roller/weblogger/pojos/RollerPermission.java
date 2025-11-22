@@ -28,6 +28,9 @@ import org.apache.roller.weblogger.util.Utilities;
  * Base permission class for Roller. 
  */
 public abstract class RollerPermission extends java.security.Permission {
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(RollerPermission.class);
     
 

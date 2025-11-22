@@ -35,11 +35,13 @@ import org.apache.struts2.interceptor.validation.SkipValidation;
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
 public class BookmarkEdit extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private static Log log = LogFactory.getLog(BookmarkEdit.class);
 
     // bean for managing form data
-    private BookmarkBean bean = new BookmarkBean();
+    private transient BookmarkBean bean = new BookmarkBean();
 
     // the id of the folder holding the bookmark
     private String folderId = null;

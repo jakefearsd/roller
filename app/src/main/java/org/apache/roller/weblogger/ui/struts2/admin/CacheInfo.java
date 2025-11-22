@@ -32,9 +32,11 @@ import org.apache.struts2.convention.annotation.AllowedMethods;
  */
 // TODO: make this work @AllowedMethods({"execute"})
 public class CacheInfo extends UIAction {
-    
+
+    private static final long serialVersionUID = 1L;
+
     // map of stats to display
-    private Map<String, Map<String, Object>> stats = Collections.emptyMap();
+    private transient Map<String, Map<String, Object>> stats = Collections.emptyMap();
     
     // cache which we would clear when clear() is called
     private String cache = null;

@@ -28,6 +28,9 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  * Stores data for an OAuth accessor
  */
 public class OAuthAccessorRecord implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private String consumerKey;
     private String requestToken;
     private String accessToken;

@@ -52,11 +52,13 @@ import org.apache.roller.weblogger.util.cache.CacheManager;
  * Trackback to a Weblog Entry. For more info on Trackback, read the spec:
  * <a href="http://www.movabletype.org/documentation/trackback/specification.html">MT Trackback</a>.
  */
-public class TrackbackServlet extends HttpServlet { 
-    
+public class TrackbackServlet extends HttpServlet {
+
+    private static final long serialVersionUID = 1L;
+
     private static Log logger = LogFactory.getLog(TrackbackServlet.class);
-    
-    private CommentValidationManager commentValidationManager = null;
+
+    private transient CommentValidationManager commentValidationManager = null;
     
 
     @Override

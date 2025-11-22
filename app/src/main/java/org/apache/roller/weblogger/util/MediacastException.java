@@ -25,7 +25,9 @@ import org.apache.roller.weblogger.WebloggerException;
  * An exception thrown when dealing with Mediacast files.
  */
 public class MediacastException extends WebloggerException {
-    
+
+    private static final long serialVersionUID = 1L;
+
     private int errorCode = 0;
     private String errorKey = null;
     

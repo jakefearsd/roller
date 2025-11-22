@@ -27,6 +27,8 @@ import java.io.PrintWriter;
  */
 public abstract class RollerException extends Exception {
 
+    private static final long serialVersionUID = 1L;
+
     private final Throwable mRootCause;
 
 

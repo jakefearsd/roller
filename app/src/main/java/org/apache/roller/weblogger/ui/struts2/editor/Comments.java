@@ -63,10 +63,10 @@ public class Comments extends UIAction {
     private static final int COUNT = 30;
 
     // bean for managing submitted data
-    private CommentsBean bean = new CommentsBean();
+    private transient CommentsBean bean = new CommentsBean();
 
     // pager for the comments we are viewing
-    private CommentsPager pager = null;
+    private transient CommentsPager pager = null;
 
     // first comment in the list
     private WeblogEntryComment firstComment = null;

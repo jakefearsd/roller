@@ -48,9 +48,11 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogPreviewResourceReques
  */
 public class PreviewResourceServlet extends HttpServlet {
 
+    private static final long serialVersionUID = 1L;
+
     private static final Log log = LogFactory.getLog(PreviewResourceServlet.class);
 
-    private ServletContext context = null;
+    private transient ServletContext context = null;
 
     @Override
     public void init(ServletConfig config) throws ServletException {

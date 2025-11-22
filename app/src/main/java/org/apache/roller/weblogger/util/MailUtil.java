@@ -284,7 +284,7 @@ public class MailUtil {
             log.debug("Sending notification email to all subscribers");
 
             // Get all the subscribers to this comment thread
-            List<WeblogEntryComment> comments = entry.getComments(true, true);
+            List<WeblogEntryComment> comments = entry.getComments();
             for (WeblogEntryComment comment : comments) {
                 if (!StringUtils.isEmpty(comment.getEmail())) {
                     // if user has commented twice, count the most recent notify setting
@@ -696,6 +696,8 @@ public class MailUtil {
      * An exception thrown if there is a problem sending an email.
      */
     public class MailingException extends WebloggerException {
+        private static final long serialVersionUID = 1L;
+
         public MailingException(Throwable t) {
             super(t);
         }

@@ -89,13 +89,13 @@ public class Weblog implements Serializable {
     // Associated objects
     private WeblogCategory bloggerCategory = null;
 
-    private Map<String, WeblogEntryPlugin> initializedPlugins = null;
+    private transient Map<String, WeblogEntryPlugin> initializedPlugins = null;
 
-    private List<WeblogCategory> weblogCategories = new ArrayList<>();
+    private transient List<WeblogCategory> weblogCategories = new ArrayList<>();
 
-    private List<WeblogBookmarkFolder> bookmarkFolders = new ArrayList<>();
+    private transient List<WeblogBookmarkFolder> bookmarkFolders = new ArrayList<>();
 
-    private List<MediaFileDirectory> mediaFileDirectories = new ArrayList<>();
+    private transient List<MediaFileDirectory> mediaFileDirectories = new ArrayList<>();
 
     public Weblog() {
     }
