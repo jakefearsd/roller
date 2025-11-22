@@ -40,7 +40,7 @@ limitations under the License.
     </scm>
 
     <properties>
-        <derby.version>10.11.1.1</derby.version>
+        <derby.version>10.15.2.0</derby.version>
         <java-mail.version>1.4.7</java-mail.version>
         <jaxb.version>2.3.1</jaxb.version>
         <jetty.plugin.version>10.0.24</jetty.plugin.version> <!-- Jetty 11 requires Jakarta package names -->
@@ -68,11 +68,9 @@ limitations under the License.
                         <fork>true</fork>
                         <compilerArgs>
                             <arg>-Xlint:all</arg>
-                            <!--
-                            <arg>-Xlint:unchecked,rawtypes,cast,overrides,overloads,dep-ann,removal,synchronization,try,finally,varargs,processing</arg>
-                            <arg>-Xmaxwarns</arg>
-                            <arg>1000</arg>
-                            -->
+                            <!-- Disable warnings from Struts TagAnnotationProcessor which doesn't support Java 11+ -->
+                            <arg>-Xlint:-options</arg>
+                            <arg>-Xlint:-processing</arg>
                         </compilerArgs>
                         <encoding>${project.build.sourceEncoding}</encoding>
                     </configuration>

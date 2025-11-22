@@ -455,7 +455,7 @@ public class LuceneIndexManager implements IndexManager {
             String handle;
             Timestamp now = new Timestamp(new Date().getTime());
             for (int i = offset; i < offset + limit; i++) {
-                doc = search.getSearcher().doc(hits[i].doc);
+                doc = search.getSearcher().storedFields().document(hits[i].doc);
                 handle = doc.getField(FieldConstants.WEBSITE_HANDLE).stringValue();
                 entry = weblogMgr.getWeblogEntry(doc.getField(FieldConstants.ID).stringValue());
 

@@ -121,7 +121,7 @@ public class Trackback {
         
         // prepare http request
         HttpClient client = new HttpClient();
-        client.setConnectionTimeout(45 * RollerConstants.SEC_IN_MS);
+        client.getHttpConnectionManager().getParams().setConnectionTimeout(45 * RollerConstants.SEC_IN_MS);
         HttpMethod method = new PostMethod(trackbackURL);
         method.setQueryString(queryString);
         
