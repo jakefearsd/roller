@@ -15,36 +15,36 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 <!doctype html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
-    <title><s:property value="pageTitle"/></title>
-    <tiles:insertAttribute name="head"/>
+    <title>${pageTitle}</title>
+    <jsp:include page="${head}"/>
     <style>
-        <tiles:insertAttribute name="styles" />
+        <jsp:include page="${styles}" />
     </style>
 </head>
 <body>
 
-<tiles:insertAttribute name="banner"/>
+<jsp:include page="${banner}"/>
 
 <div id="wrapper" class="container-fluid" style="margin-top:5em">
 
     <div class="row">
         <div class="col-md-1"></div>
         <div class="col-md-10">
-            <tiles:insertAttribute name="messages"/>
-            <tiles:insertAttribute name="content"/>
+            <jsp:include page="${messages}"/>
+            <jsp:include page="${content}"/>
         </div>
         <div class="col-md-1"></div>
     </div>
 
     <div id="footer">
-        <tiles:insertAttribute name="footer"/>
+        <jsp:include page="${footer}"/>
     </div>
 
 </body>

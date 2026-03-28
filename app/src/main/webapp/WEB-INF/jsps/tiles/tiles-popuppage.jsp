@@ -15,16 +15,16 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 <!doctype html>
 <html>
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
-        <tiles:insertAttribute name="head" />
+        <jsp:include page="${head}" />
         <style>
-            <tiles:insertAttribute name="styles" />
+            <jsp:include page="${styles}" />
         </style>
     </head>
 
@@ -32,19 +32,19 @@
 
         <div id="wrapper" class="container-fluid">
             <div id="leftcontent_wrap">
-                <div id="leftcontent"> 
+                <div id="leftcontent">
                 </div>
             </div>
 
             <div id="centercontent_wrap">
                 <div id="centercontent">
-                    <tiles:insertAttribute name="messages" />
-                    <tiles:insertAttribute name="content" />    
+                    <jsp:include page="${messages}" />
+                    <jsp:include page="${content}" />
                 </div>
             </div>
 
             <div id="rightcontent_wrap">
-                <div id="rightcontent"> 
+                <div id="rightcontent">
                 </div>
             </div>
         </div>

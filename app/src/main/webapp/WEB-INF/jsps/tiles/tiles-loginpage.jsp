@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 <!doctype html>
 <html>
 <head>
@@ -23,15 +23,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
-    <title><s:property value="getProp('site.shortName')"/>: <s:property value="pageTitle"/></title>
-    <tiles:insertAttribute name="head"/>
+    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: ${pageTitle}</title>
+    <jsp:include page="${head}"/>
     <style>
-        <tiles:insertAttribute name="styles" />
+        <jsp:include page="${styles}" />
     </style>
 </head>
 <body>
 
-<tiles:insertAttribute name="banner"/>
+<jsp:include page="${banner}"/>
 
 <div class="container-fluid">
 
@@ -39,9 +39,9 @@
         <div class="col-md-4"></div>
 
         <div class="col-md-4">
-            <h1 class="roller-page-title"><s:property value="pageTitle"/></h1>
-            <tiles:insertAttribute name="messages"/>
-            <tiles:insertAttribute name="content"/>
+            <h1 class="roller-page-title">${pageTitle}</h1>
+            <jsp:include page="${messages}"/>
+            <jsp:include page="${content}"/>
         </div>
 
         <div class="col-md-4"></div>
