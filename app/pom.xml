@@ -56,7 +56,6 @@ limitations under the License.
         <slf4j.version>2.0.17</slf4j.version>
         <spring.version>6.2.17</spring.version>
         <spring.security.version>6.5.9</spring.security.version>
-        <struts.version>7.1.1</struts.version>
         <velocity.version>2.4.1</velocity.version>
         <webjars.version>1.6</webjars.version>
         <ws-commons-util.version>1.0.2</ws-commons-util.version>
@@ -162,7 +161,7 @@ limitations under the License.
              this pom.xml prior to July 2013 for the necessary OpenJPA configuration -->
 
 
-        <!-- Apache deps include Velocity, Struts, Lucene, HttpClient and XML-RPC -->
+        <!-- Apache deps include Velocity, Lucene, HttpClient and XML-RPC -->
 
         <dependency>
             <groupId>org.apache.velocity</groupId>
@@ -190,45 +189,6 @@ limitations under the License.
             <version>${asm.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.struts</groupId>
-            <artifactId>struts2-core</artifactId>
-            <version>${struts.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-api</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.struts</groupId>
-            <artifactId>struts2-spring-plugin</artifactId>
-            <version>${struts.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework</groupId>
-                    <artifactId>spring-beans</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.springframework</groupId>
-                    <artifactId>spring-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.struts</groupId>
-            <artifactId>struts2-convention-plugin</artifactId>
-            <version>${struts.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.struts</groupId>
-            <artifactId>struts2-tiles-plugin</artifactId>
-            <version>${struts.version}</version>
-        </dependency>
 
         <!-- note: update head.jsp on webjar version change -->
         <dependency>
@@ -420,6 +380,12 @@ limitations under the License.
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
             <version>${spring.version}</version>
         </dependency>
 
