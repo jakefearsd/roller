@@ -41,12 +41,12 @@ mvn test -Dtest.database=derby
 ## Architecture Overview
 
 Apache Roller is a multi-user blog server built with:
-- **Web Framework**: Apache Struts 2 with custom action hierarchy
-- **Security**: Spring Security with role-based access control
+- **Web Framework**: Spring MVC with `@Controller` classes and `*.rol` URL mappings
+- **Security**: Spring Security with role-based access control and built-in CSRF
 - **Persistence**: JPA with EclipseLink (supports multiple databases)
-- **Templating**: Dual system - Velocity for blog rendering, JSP/Tiles for admin UI
+- **Templating**: Dual system - Velocity for blog rendering, JSP/JSTL for admin UI
 - **Search**: Apache Lucene for full-text search
-- **DI Container**: Google Guice
+- **DI Container**: Google Guice (business layer), Spring (web layer)
 
 ### Core Package Structure
 ```
@@ -57,7 +57,7 @@ org.apache.roller.weblogger.
 │   ├── themes/        # Theme and template management
 │   └── search/        # Lucene search implementation
 ├── pojos/             # Domain model entities
-├── ui.struts2/        # Struts2 actions and web layer
+├── ui/controllers/    # Spring MVC controllers
 │   ├── admin/         # Administrative functions
 │   ├── core/          # Core app functions (login, profile)
 │   └── editor/        # Content editing interface
@@ -85,10 +85,10 @@ IndexManager getIndexManager()
 - `MediaFileManager` - File uploads and media
 
 ### Security Architecture
-- **Authentication**: Multiple providers (database, LDAP, OpenID)
+- **Authentication**: Multiple providers (database, LDAP)
 - **Authorization**: Role-based with `GlobalPermission`, `WeblogPermission`, and `ObjectPermission`
-- **Custom Interceptors**: `UISecurityInterceptor` enforces access controls
-- **CSRF Protection**: Custom salt-based protection
+- **Custom Interceptor**: `RollerHandlerInterceptor` enforces access controls
+- **CSRF Protection**: Spring Security built-in CSRF (automatic on all POST forms)
 
 ### Theme System
 - **Shared Themes**: System-provided themes in `/themes/` directory

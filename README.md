@@ -129,13 +129,13 @@ Detailed guides are available in the [`docs/`](docs/) directory:
 
 ## Technology Stack
 
-- **Web Framework:** Apache Struts 2
+- **Web Framework:** Spring MVC
 - **Security:** Spring Security
 - **Persistence:** JPA (EclipseLink)
-- **Templating:** Apache Velocity (blog rendering), JSP/Tiles (admin UI)
+- **Templating:** Apache Velocity (blog rendering), JSP/JSTL (admin UI)
 - **Search:** Apache Lucene
 - **Feeds:** ROME (RSS/Atom)
-- **DI:** Google Guice
+- **DI:** Google Guice (business layer), Spring (web layer)
 
 ---
 
