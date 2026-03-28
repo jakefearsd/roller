@@ -68,6 +68,12 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
 
         Object controller = handlerMethod.getBean();
 
+        // Skip all checks if the application hasn't been bootstrapped yet
+        // (install/setup controllers need to run before bootstrap)
+        if (!WebloggerFactory.isBootstrapped()) {
+            return true;
+        }
+
         // --- 1. Resolve authenticated user from Spring Security ---
         User authenticatedUser = resolveAuthenticatedUser();
         if (authenticatedUser != null) {

@@ -28,3 +28,8 @@ docker/postgresql-data
 docker/roller-data
 assembly-release/release.sh
 it-selenium/overlays/
+*.log
+*.log.gz
+logs/
+app/logs/
+socket:*

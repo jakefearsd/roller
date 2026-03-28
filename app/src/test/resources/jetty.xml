@@ -35,20 +35,9 @@
         </Arg>
     </New>
 
-    <New id="mail" class="org.eclipse.jetty.plus.jndi.Resource">
-        <Arg> <Ref id="wac_mail"/> </Arg>
-        <Arg>mail/Session</Arg>
-        <Arg>
-            <New class="org.eclipse.jetty.jndi.factories.MailSessionReference">
-                <Set name="properties">
-                    <New class="java.util.Properties">
-                        <Put name="mail.smtp.host">mail</Put>
-                        <Put name="mail.debug">true</Put>
-                    </New>
-                </Set>
-            </New>
-        </Arg>
-    </New>
+    <!-- Mail: no JNDI binding needed. Dev mode uses mail.configurationType=properties
+         in roller-jettyrun.properties. Jetty 11's MailSessionReference is incompatible
+         with Jakarta Mail (angus-mail) so JNDI mail sessions aren't possible in dev. -->
 
     <Call name="addEventListener">
         <Arg>

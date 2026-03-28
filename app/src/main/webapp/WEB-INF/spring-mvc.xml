@@ -15,6 +15,9 @@
 
     <mvc:annotation-driven/>
 
+    <!-- Serve webjars from classpath (replaces javax-based WebjarsServlet) -->
+    <mvc:resources mapping="/webjars/**" location="classpath:/META-INF/resources/webjars/"/>
+
     <mvc:interceptors>
         <bean class="org.apache.roller.weblogger.ui.controllers.RollerHandlerInterceptor"/>
     </mvc:interceptors>

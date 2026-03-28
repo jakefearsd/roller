@@ -14,7 +14,7 @@ mvn -DskipTests=true install
 
 # Run development server with embedded Derby database
 cd app && mvn jetty:run
-# Access at http://localhost:8080/roller
+# Access at http://localhost:8083/roller
 
 # Run with Docker and PostgreSQL
 docker-compose up

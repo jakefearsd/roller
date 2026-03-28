@@ -91,7 +91,7 @@ mvn -DskipTests=true install
 cd app && mvn jetty:run
 ```
 
-Browse to http://localhost:8080/roller
+Browse to http://localhost:8083/roller
 
 ### Option 2: Docker Compose + PostgreSQL
 
@@ -101,7 +101,7 @@ cd roller
 docker-compose up
 ```
 
-Browse to http://localhost:8080/roller
+Browse to http://localhost:8083/roller
 
 ---
 

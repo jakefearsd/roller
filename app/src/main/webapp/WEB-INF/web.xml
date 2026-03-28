@@ -8,7 +8,7 @@
 
     <context-param>
         <param-name>contextConfigLocation</param-name>
-        <param-value>/WEB-INF/security.xml</param-value>
+        <param-value>/WEB-INF/security.xml /WEB-INF/spring-mvc.xml</param-value>
     </context-param>
 
     <context-param>
@@ -142,9 +142,7 @@
         <listener-class>org.apache.roller.weblogger.ui.core.RollerContext</listener-class>
     </listener>
     
-    <listener>
-        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
-    </listener>
+    <!-- RollerContext extends ContextLoaderListener, so no separate one needed -->
 
 
     <!-- Servlet Definitions -->
@@ -226,10 +224,7 @@
         <load-on-startup>9</load-on-startup>
     </servlet>
 
-    <servlet>
-        <servlet-name>AtomServlet</servlet-name>
-        <servlet-class>com.rometools.propono.atom.server.AtomServlet</servlet-class>
-    </servlet>
+    <!-- AtomServlet removed: rome-propono uses javax.servlet (incompatible with Jakarta) -->
 
     <servlet>
         <servlet-name>CommentDataServlet</servlet-name>
@@ -251,30 +246,17 @@
         <servlet-class>org.apache.roller.weblogger.webservices.tagdata.TagDataServlet</servlet-class>
     </servlet>
 
-    <servlet>
-        <servlet-name>XmlRpcServlet</servlet-name>
-        <servlet-class>org.apache.xmlrpc.webserver.XmlRpcServlet</servlet-class>
-        <init-param>
-            <description>
-                Sets whether the servlet supports vendor extensions for XML-RPC.
-            </description>
-            <param-name>enabledForExtensions</param-name>
-            <param-value>true</param-value>
-        </init-param>
-    </servlet>
+    <!-- XmlRpcServlet disabled: xmlrpc-server 3.1.3 uses javax.servlet (incompatible with Jakarta) -->
 
-    <servlet>
-        <servlet-name>WebjarsServlet</servlet-name>
-        <servlet-class>org.webjars.servlet.WebjarsServlet</servlet-class>
-        <load-on-startup>2</load-on-startup>
-    </servlet>
+    <!-- WebjarsServlet removed (javax-only). Webjars served by Spring MVC resource handler
+         or directly from classpath via the default servlet. -->
 
     <servlet>
         <servlet-name>springMvc</servlet-name>
         <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
         <init-param>
             <param-name>contextConfigLocation</param-name>
-            <param-value>/WEB-INF/spring-mvc.xml</param-value>
+            <param-value></param-value>
         </init-param>
         <load-on-startup>1</load-on-startup>
         <multipart-config>
@@ -401,15 +383,9 @@
     </servlet-mapping>
 
     <!-- Web Service Servlets -->
-    <servlet-mapping>
-        <servlet-name>XmlRpcServlet</servlet-name>
-        <url-pattern>/roller-services/xmlrpc</url-pattern>
-    </servlet-mapping>
+    <!-- XmlRpcServlet mapping disabled (servlet removed - javax incompatible) -->
 
-    <servlet-mapping>
-        <servlet-name>AtomServlet</servlet-name>
-        <url-pattern>/roller-services/app/*</url-pattern>
-    </servlet-mapping>
+    <!-- AtomServlet mapping removed (servlet removed - javax incompatible) -->
 
     <servlet-mapping>
         <servlet-name>TagDataServlet</servlet-name>
@@ -421,10 +397,7 @@
         <url-pattern>/roller-services/opensearch/*</url-pattern>
     </servlet-mapping>
 
-    <servlet-mapping>
-        <servlet-name>WebjarsServlet</servlet-name>
-        <url-pattern>/webjars/*</url-pattern>
-    </servlet-mapping>
+    <!-- Webjars mapping now handled by Spring MVC resource handler -->
 
     <session-config>
         <session-timeout>30</session-timeout>
@@ -473,12 +446,9 @@
         <mapped-name>jdbc/roller</mapped-name>
     </resource-ref>
 
-    <resource-ref>
-        <res-ref-name>mail/Session</res-ref-name>
-        <res-type>jakarta.mail.Session</res-type>
-        <res-auth>Container</res-auth>
-        <mapped-name>Session</mapped-name>
-    </resource-ref>
+    <!-- Mail session provided by container config (e.g. Tomcat context.xml), not declared
+         here because Jetty 11's MailSessionReference uses javax.mail internally and cannot
+         work with Jakarta Mail. The app handles mail config via roller.properties. -->
 
     <jsp-config>
         <jsp-property-group>

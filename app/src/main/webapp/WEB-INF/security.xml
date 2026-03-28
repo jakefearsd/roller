@@ -28,7 +28,8 @@
     <http pattern="/scripts/**" security="none"/>
     <http pattern="/styles/**" security="none"/>
 
-    <http auto-config="false" access-decision-manager-ref="accessDecisionManager" use-expressions="false">
+    <http auto-config="false" access-decision-manager-ref="accessDecisionManager"
+          use-expressions="false" use-authorization-manager="false">
         <intercept-url pattern="/roller-ui/login-redirect**" access="admin,editor"/>
         <intercept-url pattern="/roller-ui/profile**" access="admin,editor"/>
         <intercept-url pattern="/roller-ui/createWeblog**" access="admin,editor"/>

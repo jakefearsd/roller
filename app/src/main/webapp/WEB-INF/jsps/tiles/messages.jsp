@@ -37,7 +37,7 @@
 
 
 <%-- Success Messages --%>
-<c:if test="${!actionMessages.isEmpty}">
+<c:if test="${not empty actionMessages}">
     <div id="messages" class="alert alert-success">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
             <span aria-hidden="true">&times;</span>
@@ -47,7 +47,7 @@
 </c:if>
 
 <%-- Error Messages --%>
-<c:if test="${!actionErrors.isEmpty || !fieldErrors.isEmpty}">
+<c:if test="${not empty actionErrors || not empty fieldErrors}">
     <div id="errors" class="alert alert-danger">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
             <span aria-hidden="true">&times;</span>
@@ -59,7 +59,7 @@
             </c:forEach>
 
             <c:forEach items="${fieldErrors.keySet()}" var="fieldErrorName">
-                <c:forEach items="${fieldErrors[#fieldErrorName]}" var="fieldErrorValue">
+                <c:forEach items="${fieldErrors[fieldErrorName]}" var="fieldErrorValue">
                     <li><c:out value="${fieldErrorValue}" escapeXml="false"/></li>
                 </c:forEach>
             </c:forEach>
