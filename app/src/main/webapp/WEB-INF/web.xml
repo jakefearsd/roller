@@ -233,17 +233,17 @@
 
     <servlet>
         <servlet-name>CommentDataServlet</servlet-name>
-        <servlet-class>org.apache.roller.weblogger.ui.struts2.ajax.CommentDataServlet</servlet-class>
+        <servlet-class>org.apache.roller.weblogger.ui.controllers.ajax.CommentDataServlet</servlet-class>
     </servlet>
 
     <servlet>
         <servlet-name>UserDataServlet</servlet-name>
-        <servlet-class>org.apache.roller.weblogger.ui.struts2.ajax.UserDataServlet</servlet-class>
+        <servlet-class>org.apache.roller.weblogger.ui.controllers.ajax.UserDataServlet</servlet-class>
     </servlet>
 
     <servlet>
         <servlet-name>ThemeDataServlet</servlet-name>
-        <servlet-class>org.apache.roller.weblogger.ui.struts2.ajax.ThemeDataServlet</servlet-class>
+        <servlet-class>org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet</servlet-class>
     </servlet>
 
     <servlet>

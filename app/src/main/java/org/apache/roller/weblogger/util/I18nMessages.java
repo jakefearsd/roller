@@ -191,8 +191,6 @@ public final class I18nMessages {
 
 	/**
 	 * Clear tomcat cache.
-	 * 
-	 * @see com.opensymphony.xwork2.util.LocalizedTextUtil
 	 */
 	private static void clearTomcatCache() {
 

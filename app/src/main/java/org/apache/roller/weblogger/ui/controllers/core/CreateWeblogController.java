@@ -191,8 +191,8 @@ public class CreateWeblogController extends BaseController {
     }
 
     private void addListsToModel(Model model) {
-        model.addAttribute("localesList", org.apache.roller.weblogger.ui.struts2.util.UIUtils.getLocales());
-        model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.struts2.util.UIUtils.getTimeZones());
+        model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
+        model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
 
         ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
         List<SharedTheme> themes = themeMgr.getEnabledThemesList();

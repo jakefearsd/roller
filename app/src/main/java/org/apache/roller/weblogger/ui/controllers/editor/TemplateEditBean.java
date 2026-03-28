@@ -32,7 +32,7 @@ import org.apache.roller.weblogger.pojos.WeblogTemplate;
  * Form bean for TemplateEdit action.
  */
 public class TemplateEditBean {
-    private static Log log = LogFactory.getLog(TemplateEdit.class);
+    private static Log log = LogFactory.getLog(TemplateEditBean.class);
  
     private String id = null;
     private String name = null;

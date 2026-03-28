@@ -27,7 +27,6 @@ import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.runtime.RuntimeConfigDefs;
 import org.apache.roller.weblogger.config.runtime.RuntimeConfigDefsParser;
-import org.apache.roller.weblogger.planet.ui.PlanetConfig;
 
 
 /**
@@ -139,7 +138,7 @@ public class PlanetRuntimeConfig {
 
         try {
             StringWriter configString = new StringWriter();
-            try (InputStreamReader reader = new InputStreamReader(PlanetConfig.class.getResourceAsStream(runtimeConfig))) {
+            try (InputStreamReader reader = new InputStreamReader(PlanetRuntimeConfig.class.getResourceAsStream(runtimeConfig))) {
                 reader.transferTo(configString);
             }
             return configString.toString();

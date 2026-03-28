@@ -39,9 +39,7 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.core.RollerLoginSessionManager;
-import org.apache.roller.weblogger.ui.struts2.admin.CreateUserBean;
-import org.apache.roller.weblogger.ui.struts2.core.Register;
-import org.apache.roller.weblogger.ui.struts2.util.UIUtils;
+import org.apache.roller.weblogger.ui.controllers.util.UIUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -331,7 +329,7 @@ public class UserEditController extends BaseController {
         if (isAdd) {
             String allowed = WebloggerConfig.getProperty("username.allowedChars");
             if (allowed == null || allowed.isBlank()) {
-                allowed = Register.DEFAULT_ALLOWED_CHARS;
+                allowed = UIUtils.DEFAULT_ALLOWED_CHARS;
             }
             String safe = CharSetUtils.keep(bean.getUserName(), allowed);
 
