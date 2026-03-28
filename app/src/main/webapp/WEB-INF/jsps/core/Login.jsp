@@ -47,6 +47,7 @@
                 <input class="form-control" type="text" name="openid_identifier" id="openid_identifier"/>
             </div>
 
+            <sec:csrfInput/>
             <spring:message code="loginPage.loginOpenID" var="loginOpenIDLabel"/>
             <button type="submit" name="submit" id="submit" class="btn btn-primary"
                 value="${loginOpenIDLabel}"></button>
@@ -88,6 +89,7 @@
                 </div>
             </c:if>
 
+            <sec:csrfInput/>
             <div class="form-group">
                 <button class="btn btn-primary" type="submit" name="login" id="login">
                     <spring:message code='loginPage.login'/>
