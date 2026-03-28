@@ -23,7 +23,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
-    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: ${pageTitle}</title>
+    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <spring:message code="${pageTitle}" text="${pageTitle}"/></title>
     <jsp:include page="${head}"/>
     <style>
         <jsp:include page="${styles}" />
@@ -39,7 +39,7 @@
         <div class="col-md-1"></div>
         <div class="col-md-10">
 
-            <h1 class="roller-page-title">${pageTitle}</h1>
+            <h1 class="roller-page-title"><spring:message code="${pageTitle}" text="${pageTitle}"/></h1>
             <p><jsp:include page="${messages}"/>
             <div class="panel">
                 <div class="panel-body">
