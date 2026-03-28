@@ -88,7 +88,7 @@
     <input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''} tabindex="6"/>
 
     <!-- original path from base URL of ctx/resources/ -->
-    <c:if test="${getBooleanProp('mediafile.originalPathEdit.enabled')}">
+    <c:if test="${rc:getBooleanProp('mediafile.originalPathEdit.enabled')}">
         <div id="originalPathdiv" class="miscControl">
             <input type="text" name="bean.originalPath" value="${bean.originalPath}" id="originalPath" size="30" maxlength="100" tabindex="3" class="form-control"/>
         </div>

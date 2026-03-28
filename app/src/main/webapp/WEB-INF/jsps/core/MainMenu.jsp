@@ -121,7 +121,7 @@
                 <c:if test='${perms.hasAction("admin")}'>
 
                     <%-- And only show theme option if custom themes are enabled --%>
-                    <c:if test="${getProp['themes.customtheme.allowed']}">
+                    <c:if test="${rc:getProp('themes.customtheme.allowed')}">
                         <c:choose>
                             <c:when test="${perms.weblog.editorTheme == 'custom'}">
                                 <c:url value="/roller-ui/authoring/templates.rol" var="weblogTheme">

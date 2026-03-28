@@ -22,7 +22,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
-    <title>${getProp('site.shortName')}: ${pageTitle}</title>
+    <title>${rc:getProp('site.shortName')}: ${pageTitle}</title>
     <jsp:include page="${head}"/>
     <style>
         <jsp:include page="${styles}"/>

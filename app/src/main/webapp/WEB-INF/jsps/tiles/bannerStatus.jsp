@@ -29,7 +29,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#">${getProp('site.name')}</a>
+                <a class="navbar-brand" href="#">${rc:getProp('site.name')}</a>
             </div>
 
             <ul class="nav navbar-nav">
@@ -90,7 +90,7 @@
 
             <ul class="nav navbar-nav navbar-right">
 
-                <li><a href="<c:url value='/'/>">${getProp('site.shortName')}</a></li>
+                <li><a href="<c:url value='/'/>">${rc:getProp('site.shortName')}</a></li>
 
                 <li>
                     <a href="<c:url value="/roller-ui/menu.rol"/>">
@@ -111,15 +111,15 @@
                         </li>
 
                         <c:choose>
-                            <c:when test="${getBooleanProp('users.registration.enabled') && getProp('authentication.method') != 'ldap'}">
+                            <c:when test="${rc:getBooleanProp('users.registration.enabled') && getProp('authentication.method') != 'ldap'}">
                                 <li>
                                     <a href="<c:url value="/roller-ui/register.rol"/>">
                                         <spring:message code="navigationBar.register"/></a>
                                 </li>
                             </c:when>
-                            <c:when test="${not empty getProp('users.registration.url')}">
+                            <c:when test="${not empty rc:getProp('users.registration.url')}">
                                 <li>
-                                    <a href="${getProp('users.registration.url')}">
+                                    <a href="${rc:getProp('users.registration.url')}">
                                         <spring:message code="navigationBar.register"/></a>
                                 </li>
                             </c:when>

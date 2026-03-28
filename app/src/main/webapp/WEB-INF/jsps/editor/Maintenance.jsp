@@ -25,7 +25,7 @@
     <p><spring:message code="maintenance.prompt.flush"/></p>
     <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/maintenance!flushCache.rol"><spring:message code="maintenance.button.flush"/></button>
 
-    <c:if test="${getBooleanProp('search.enabled')}">
+    <c:if test="${rc:getBooleanProp('search.enabled')}">
         <p><spring:message code="maintenance.prompt.index"/></p>
         <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/maintenance!index.rol"><spring:message code="maintenance.button.index"/></button>
     </c:if>

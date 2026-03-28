@@ -75,11 +75,11 @@
     <input type="checkbox" name="bean.allowComments" value="true" ${bean.allowComments ? 'checked' : ''}/>
 
     <c:choose>
-<c:when test="${getBooleanProp('users.comments.emailnotify')}">
+<c:when test="${rc:getBooleanProp('users.comments.emailnotify')}">
         <input type="checkbox" name="bean.emailComments" value="true" ${bean.emailComments ? 'checked' : ''}/>
     </c:if>
 
-    <c:if test="${!getBooleanProp('users.moderation.required')}">
+    <c:if test="${!rc:getBooleanProp('users.moderation.required')}">
         <input type="checkbox" name="bean.moderateComments" value="true" ${bean.moderateComments ? 'checked' : ''}/>
     </c:if>
 
@@ -131,7 +131,7 @@
 
     <%-- ***** Web analytics settings ***** --%>
 
-    <c:if test="${getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted}">
+    <c:if test="${rc:getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted}">
         <h3><spring:message code="configForm.webAnalytics"/></h3>
 
         <textarea name="bean.analyticsCode" rows="10" cols="70">${bean.analyticsCode}</textarea>
