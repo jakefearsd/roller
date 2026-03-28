@@ -20,7 +20,7 @@ package org.apache.roller.weblogger.ui.struts2.core;
 
 import java.util.TimeZone;
 import java.util.UUID;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.CharSetUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -38,7 +38,7 @@ import org.apache.roller.weblogger.ui.core.security.CustomUserRegistry;
 import org.apache.roller.weblogger.ui.struts2.util.UIAction;
 import org.apache.roller.weblogger.util.MailUtil;
 import org.apache.struts2.convention.annotation.AllowedMethods;
-import org.apache.struts2.interceptor.ServletRequestAware;
+import org.apache.struts2.action.ServletRequestAware;
 import org.apache.struts2.interceptor.validation.SkipValidation;
 
 
@@ -440,7 +440,7 @@ public class Register extends UIAction implements ServletRequestAware {
     }
 
     @Override
-    public void setServletRequest(HttpServletRequest servletRequest) {
+    public void withServletRequest(HttpServletRequest servletRequest) {
         this.servletRequest = servletRequest;
     }
     

@@ -21,9 +21,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.planet.business.PlanetManager;
 import org.apache.roller.planet.pojos.PlanetGroup;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.struts2.interceptor.ServletRequestAware;
+import org.apache.struts2.action.ServletRequestAware;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,7 +53,7 @@ public class PlanetGroups extends PlanetUIAction implements ServletRequestAware 
     }
 
     @Override
-    public void setServletRequest(HttpServletRequest request) {
+    public void withServletRequest(HttpServletRequest request) {
         group = PlanetGroupSubs.getGroupFromRequest(request, getPlanet());
     }
 

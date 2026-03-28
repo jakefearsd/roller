@@ -19,7 +19,7 @@
 package org.apache.roller.weblogger.ui.struts2.admin;
 
 import java.util.*;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -41,15 +41,15 @@ import org.apache.roller.weblogger.ui.struts2.util.UIAction;
 import org.apache.roller.weblogger.util.Utilities;
 import org.apache.struts2.dispatcher.HttpParameters;
 import org.apache.struts2.dispatcher.Parameter;
-import org.apache.struts2.interceptor.HttpParametersAware;
-import org.apache.struts2.interceptor.ServletRequestAware;
+import org.apache.struts2.action.ParametersAware;
+import org.apache.struts2.action.ServletRequestAware;
 
 
 /**
  * Action which handles editing of global configuration.
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
-public class GlobalConfig extends UIAction implements HttpParametersAware, ServletRequestAware {
+public class GlobalConfig extends UIAction implements ParametersAware, ServletRequestAware {
 
     private static final long serialVersionUID = 1L;
 
@@ -255,7 +255,7 @@ public class GlobalConfig extends UIAction implements HttpParametersAware, Servl
 
 
     @Override
-    public void setParameters(HttpParameters parameters) {
+    public void withParameters(HttpParameters parameters) {
         this.params = parameters;
 
         if (log.isDebugEnabled()) {
@@ -309,7 +309,7 @@ public class GlobalConfig extends UIAction implements HttpParametersAware, Servl
     }
 
     @Override
-    public void setServletRequest(HttpServletRequest req) {
+    public void withServletRequest(HttpServletRequest req) {
         httpMethod = req.getMethod();
     }
 

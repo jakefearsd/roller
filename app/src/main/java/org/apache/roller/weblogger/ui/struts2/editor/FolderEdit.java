@@ -27,11 +27,11 @@ import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.WeblogBookmarkFolder;
 import org.apache.roller.weblogger.ui.struts2.util.UIAction;
 import org.apache.roller.weblogger.util.cache.CacheManager;
-import org.apache.struts2.interceptor.ServletResponseAware;
+import org.apache.struts2.action.ServletResponseAware;
 import org.apache.struts2.convention.annotation.AllowedMethods;
 import org.apache.struts2.interceptor.validation.SkipValidation;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 
 /**
@@ -84,7 +84,7 @@ public class FolderEdit extends UIAction implements ServletResponseAware {
     }
 
     @Override
-    public void setServletResponse(HttpServletResponse httpServletResponse) {
+    public void withServletResponse(HttpServletResponse httpServletResponse) {
         this.httpServletResponse = httpServletResponse;
     }
 

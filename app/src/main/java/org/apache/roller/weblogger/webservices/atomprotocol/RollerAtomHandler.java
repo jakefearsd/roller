@@ -19,7 +19,7 @@ package org.apache.roller.weblogger.webservices.atomprotocol;
 import com.rometools.propono.atom.common.Categories;
 import com.rometools.propono.atom.server.AtomRequest;
 import java.util.StringTokenizer;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,13 +38,9 @@ import com.rometools.propono.atom.server.AtomNotFoundException;
 import com.rometools.rome.feed.atom.Entry;
 import com.rometools.rome.feed.atom.Feed;
 import java.nio.charset.StandardCharsets;
-import javax.servlet.http.HttpServletResponse;
-import net.oauth.OAuthAccessor;
-import net.oauth.OAuthMessage;
-import net.oauth.server.OAuthServlet;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.OAuthManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -496,22 +492,15 @@ public class RollerAtomHandler implements AtomHandler {
 
     private String authenticationOAUTH(
             HttpServletRequest request, HttpServletResponse response) {
+        // OAuth 1.0a support removed: the net.oauth library uses javax.servlet
+        // which is incompatible with Jakarta EE (jakarta.servlet).
+        log.warn("OAuth 1.0a authentication requested but support has been removed "
+                + "during Jakarta EE migration");
         try {
-            OAuthManager omgr = WebloggerFactory.getWeblogger().getOAuthManager();
-            OAuthMessage requestMessage = OAuthServlet.getMessage(request, null);
-            OAuthAccessor accessor = omgr.getAccessor(requestMessage);
-            omgr.getValidator().validateMessage(requestMessage, accessor);
-            return (String)accessor.consumer.getProperty("userId");
-
-        } catch (Exception ex) {
-            log.debug("ERROR authenticating user", ex);
-            String realm = (request.isSecure())?"https://":"http://";
-            realm += request.getLocalName();
-            try {
-                OAuthServlet.handleException(response, ex, realm, true);
-            } catch (Exception ioe) {
-                log.debug("ERROR writing error response", ioe);
-            }
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                    "OAuth 1.0a support removed during Jakarta EE migration");
+        } catch (Exception ioe) {
+            log.debug("ERROR writing error response", ioe);
         }
         return null;
     }

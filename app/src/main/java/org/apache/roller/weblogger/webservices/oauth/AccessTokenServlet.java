@@ -18,22 +18,14 @@
 package org.apache.roller.weblogger.webservices.oauth;
 
 import java.io.IOException;
-import java.io.OutputStream;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
-import net.oauth.OAuth;
-import net.oauth.OAuthAccessor;
-import net.oauth.OAuthMessage;
-import net.oauth.OAuthProblemException;
-import net.oauth.server.OAuthServlet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.business.OAuthManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 
 /**
  * Access Token request handler
@@ -57,43 +49,10 @@ public class AccessTokenServlet extends HttpServlet {
         
     public void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws IOException, ServletException {
-        try{
-            OAuthMessage requestMessage = OAuthServlet.getMessage(request, null);
-            
-            OAuthManager omgr = WebloggerFactory.getWeblogger().getOAuthManager();
-            OAuthAccessor accessor = omgr.getAccessor(requestMessage);
-            omgr.getValidator().validateMessage(requestMessage, accessor);
-            
-            // make sure token is authorized
-            if (!Boolean.TRUE.equals(accessor.getProperty("authorized"))) {
-                 OAuthProblemException problem = new OAuthProblemException("permission_denied");
-                throw problem;
-            }
-            // generate access token and secret
-            if (accessor.accessToken == null) {
-                omgr.generateAccessToken(accessor);
-                WebloggerFactory.getWeblogger().flush();
-            }
-
-            response.setContentType("text/plain");
-            try (OutputStream out = response.getOutputStream()) {
-                OAuth.formEncode(OAuth.newList(
-                        "oauth_token", accessor.accessToken,
-                        "oauth_token_secret", accessor.tokenSecret), out);
-            }
-            
-        } catch (Exception e){
-            handleException(e, request, response, true);
-        }
-    }
-
-    public void handleException(Exception e, HttpServletRequest request,
-            HttpServletResponse response, boolean sendBody)
-            throws IOException, ServletException {
-        log.debug("ERROR authorizing token", e);
-        String realm = (request.isSecure())?"https://":"http://";
-        realm += request.getLocalName();
-        OAuthServlet.handleException(response, e, realm, sendBody);
+        // OAuth 1.0a support removed: the net.oauth library uses javax.servlet
+        // which is incompatible with Jakarta EE (jakarta.servlet).
+        throw new UnsupportedOperationException(
+                "OAuth 1.0a support removed during Jakarta EE migration");
     }
 
 }

@@ -17,13 +17,13 @@
  */
 package org.apache.roller.weblogger.ui.struts2.core;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.struts2.util.UIAction;
 import org.apache.struts2.convention.annotation.AllowedMethods;
-import org.apache.struts2.interceptor.ServletRequestAware;
+import org.apache.struts2.action.ServletRequestAware;
 import org.apache.struts2.interceptor.validation.SkipValidation;
 
 
@@ -93,7 +93,7 @@ public class OAuthAuthorize extends UIAction implements ServletRequestAware {
     }
 
     @Override
-    public void setServletRequest(HttpServletRequest request) {
+    public void withServletRequest(HttpServletRequest request) {
         this.appDesc = (String)request.getAttribute("CONS_DESC");
         this.token = (String)request.getAttribute("TOKEN");
         this.callback = (String)request.getAttribute("CALLBACK");

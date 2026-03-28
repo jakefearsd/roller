@@ -32,7 +32,7 @@ import org.apache.roller.weblogger.ui.struts2.util.UIAction;
 import org.apache.roller.weblogger.util.Utilities;
 import org.apache.struts2.dispatcher.HttpParameters;
 import org.apache.struts2.dispatcher.Parameter;
-import org.apache.struts2.interceptor.HttpParametersAware;
+import org.apache.struts2.action.ParametersAware;
 
 
 /**
@@ -42,7 +42,7 @@ import org.apache.struts2.interceptor.HttpParametersAware;
  * website.permissions collection when a permission is deleted.
  */
 // TODO: make this work @AllowedMethods({"execute","save"})
-public class Members extends UIAction implements HttpParametersAware {
+public class Members extends UIAction implements ParametersAware {
 
     private static final long serialVersionUID = 1L;
 
@@ -166,7 +166,7 @@ public class Members extends UIAction implements HttpParametersAware {
     }
 
     @Override
-    public void setParameters(HttpParameters parameters) {
+    public void withParameters(HttpParameters parameters) {
         this.parameters = parameters;
     }
     

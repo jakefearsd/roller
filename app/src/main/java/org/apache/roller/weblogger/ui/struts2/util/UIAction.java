@@ -18,7 +18,7 @@
 
 package org.apache.roller.weblogger.ui.struts2.util;
 
-import com.opensymphony.xwork2.ActionSupport;
+import org.apache.struts2.ActionSupport;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -30,7 +30,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
 import org.apache.roller.weblogger.ui.core.util.menu.MenuHelper;
-import org.apache.struts2.interceptor.RequestAware;
+import org.apache.struts2.ActionContext;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -53,7 +53,7 @@ import java.util.stream.IntStream;
  * getText(key) on the param passed into setError() and setSuccess().
  */
 public abstract class UIAction extends ActionSupport
-        implements UIActionPreparable, UISecurityEnforced, RequestAware {
+        implements UIActionPreparable, UISecurityEnforced {
 
     private static final long serialVersionUID = 1L;
 
@@ -91,8 +91,7 @@ public abstract class UIAction extends ActionSupport
         // no-op
     }
 	
-    @Override
-	public void setRequest(Map<String, Object> map) {
+    public void setRequest(Map<String, Object> map) {
 		this.salt = (String) map.get("salt");
 	}
 

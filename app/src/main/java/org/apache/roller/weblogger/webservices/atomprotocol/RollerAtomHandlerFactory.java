@@ -18,24 +18,26 @@
 
 package org.apache.roller.weblogger.webservices.atomprotocol;
 
-import com.rometools.propono.atom.server.AtomHandlerFactory;
 import com.rometools.propono.atom.server.AtomHandler;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Extends {@link com.rometools.propono.atom.server.AtomHandlerFactory} to create and return 
- * {@link com.rometools.propono.atom.server.impl.FileBasedAtomHandler}.
+ * Factory for creating {@link RollerAtomHandler} instances.
+ *
+ * <p>Previously extended {@code com.rometools.propono.atom.server.AtomHandlerFactory},
+ * but that superclass declares {@code newAtomHandler(javax.servlet.http.HttpServletRequest,
+ * javax.servlet.http.HttpServletResponse)} which is incompatible with Jakarta EE.
+ * Now a standalone factory class that uses jakarta.servlet types directly.</p>
  */
-public class RollerAtomHandlerFactory extends AtomHandlerFactory {
-    
+public class RollerAtomHandlerFactory {
+
     /**
      * Create new AtomHandler.
      */
-    @Override
     public AtomHandler newAtomHandler(
             HttpServletRequest req, HttpServletResponse res) {
         return new RollerAtomHandler(req, res);
-    }    
+    }
 }
       

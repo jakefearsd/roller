@@ -24,7 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,7 +42,7 @@ import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.ui.struts2.util.UIAction;
 import org.apache.roller.weblogger.util.Utilities;
 import org.apache.struts2.convention.annotation.AllowedMethods;
-import org.apache.struts2.interceptor.ServletRequestAware;
+import org.apache.struts2.action.ServletRequestAware;
 
 
 /**
@@ -381,7 +381,7 @@ public class GlobalCommentManagement extends UIAction implements ServletRequestA
     }
 
     @Override
-    public void setServletRequest(HttpServletRequest req) {
+    public void withServletRequest(HttpServletRequest req) {
         httpMethod = req.getMethod();
     }
     

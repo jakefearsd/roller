@@ -28,9 +28,9 @@ import org.apache.roller.planet.pojos.PlanetGroup;
 import org.apache.roller.planet.pojos.Subscription;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
-import org.apache.struts2.interceptor.ServletRequestAware;
+import org.apache.struts2.action.ServletRequestAware;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 
 
@@ -70,7 +70,7 @@ public class PlanetGroupSubs extends PlanetUIAction implements ServletRequestAwa
 
 
     @Override
-    public void setServletRequest(HttpServletRequest request) {
+    public void withServletRequest(HttpServletRequest request) {
         if (request.getParameter("createNew") != null) {
             group = new PlanetGroup();
         } else {
