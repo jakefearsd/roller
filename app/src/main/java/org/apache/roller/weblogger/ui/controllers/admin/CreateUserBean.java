@@ -42,7 +42,7 @@ public class CreateUserBean {
     private String locale = null;
     private String timeZone = null;
     private String openIdUrl = null;
-    private Boolean enabled = Boolean.TRUE;
+    private Boolean enabled = Boolean.FALSE;
     private String activationCode = null;
     private boolean administrator = false;
     private List<String> list = new ArrayList<>();

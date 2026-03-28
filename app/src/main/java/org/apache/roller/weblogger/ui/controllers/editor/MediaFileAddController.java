@@ -33,6 +33,7 @@ import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.apache.roller.weblogger.util.RollerMessages.RollerMessage;
 import org.apache.roller.weblogger.util.Utilities;
@@ -169,6 +170,12 @@ public class MediaFileAddController extends MediaFileBase {
         }
 
         return ".MediaFileAdd";
+    }
+
+    @PostMapping("/mediaFileAdd!cancel.rol")
+    public String cancel(HttpServletRequest request) {
+        Weblog weblog = getActionWeblog(request);
+        return "redirect:/roller-ui/authoring/mediaFileView.rol?weblog=" + (weblog != null ? weblog.getHandle() : "");
     }
 
     private MediaFileDirectory resolveDirectory(HttpServletRequest request, Model model, MediaFileBean bean) {

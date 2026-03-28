@@ -28,7 +28,7 @@
     <div class="form-group">
         <label class="col-md-3 control-label"><spring:message code="generic.name"/></label>
         <div class="col-md-9">
-            <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control"/>
+            <input type="text" id="entry_bean_name" name="bean.name" value="${bean.name}" maxlength="255" class="form-control"/>
         </div>
     </div>
 

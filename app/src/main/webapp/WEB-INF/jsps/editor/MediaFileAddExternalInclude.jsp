@@ -28,7 +28,7 @@ function submitPage(frm) {
 }
 </script>
 
-<form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/ .rol" method="POST">
+<form id="entry" action="#" method="POST">
 <table class="entryEditTable" cellpadding="0" cellspacing="0" width="100%">
 
         <tr>

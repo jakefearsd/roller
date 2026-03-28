@@ -44,7 +44,7 @@ public class TemplateEditBean {
     private String templateLanguage = null;
     private boolean navbar= false;
     private boolean hidden = false;
-    private Boolean autoContentType = Boolean.TRUE;
+    private Boolean autoContentType = Boolean.FALSE;
     private String manualContentType = null;
     private String type = null;
 

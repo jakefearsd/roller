@@ -44,10 +44,10 @@ public class WeblogConfigBean {
     private String timeZone = null;
     private String defaultPlugins = null;
     private int entryDisplayCount = 15;
-    private boolean active = true;
+    private boolean active = false;
     private boolean commentModerationRequired = false;
     private boolean enableMultiLang = false;
-    private boolean showAllLangs = true;
+    private boolean showAllLangs = false;
     private String icon = null;
     private String about = null;
 

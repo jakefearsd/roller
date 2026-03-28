@@ -534,7 +534,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn" value="${getText('generic.yes')}" onclick="deleteSelected()">
+                    <button type="button" class="btn" onclick="deleteSelected()">
                         <spring:message code="generic.yes"/>
                     </button>
                     &nbsp;

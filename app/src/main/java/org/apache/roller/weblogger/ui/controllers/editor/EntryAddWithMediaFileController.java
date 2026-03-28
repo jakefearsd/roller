@@ -34,6 +34,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
@@ -60,7 +61,7 @@ public class EntryAddWithMediaFileController extends MediaFileBase {
         return "weblogEdit.title.newEntry";
     }
 
-    @GetMapping("/entryAddWithMediaFile.rol")
+    @RequestMapping(value = "/entryAddWithMediaFile.rol", method = {RequestMethod.GET, RequestMethod.POST})
     public String execute(HttpServletRequest request, Model model,
                           @ModelAttribute("bean") EntryBean bean,
                           @RequestParam(value = "selectedImages", required = false) String[] selectedImages,

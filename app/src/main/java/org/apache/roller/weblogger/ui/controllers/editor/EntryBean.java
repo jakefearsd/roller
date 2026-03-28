@@ -64,7 +64,7 @@ public class EntryBean {
     private int hours = 0;
     private int minutes = 0;
     private int seconds = 0;
-    private boolean allowComments = true;
+    private boolean allowComments = false;
     private Integer commentDays = 0;
     private boolean rightToLeft = false;
     private boolean pinnedToMain = false;

@@ -37,33 +37,25 @@
 
 
 <%-- Success Messages --%>
-<c:if test="${not empty actionMessages}">
+<c:if test="${not empty messages}">
     <div id="messages" class="alert alert-success">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
             <span aria-hidden="true">&times;</span>
         </button>
-        <c:forEach items="${actionMessages}" var="msg"><div class="alert alert-info">${msg}</div></c:forEach>
+        <c:forEach items="${messages}" var="msg"><div class="alert alert-info">${msg}</div></c:forEach>
     </div>
 </c:if>
 
 <%-- Error Messages --%>
-<c:if test="${not empty actionErrors || not empty fieldErrors}">
+<c:if test="${not empty errors}">
     <div id="errors" class="alert alert-danger">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
             <span aria-hidden="true">&times;</span>
         </button>
         <ul>
-
-            <c:forEach items="${actionErrors}" var="actionError">
-                <li><c:out value="${actionError}" escapeXml="false"/></li>
+            <c:forEach items="${errors}" var="error">
+                <li><c:out value="${error}" escapeXml="false"/></li>
             </c:forEach>
-
-            <c:forEach items="${fieldErrors.keySet()}" var="fieldErrorName">
-                <c:forEach items="${fieldErrors[fieldErrorName]}" var="fieldErrorValue">
-                    <li><c:out value="${fieldErrorValue}" escapeXml="false"/></li>
-                </c:forEach>
-            </c:forEach>
-
         </ul>
     </div>
 </c:if>
