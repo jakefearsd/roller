@@ -31,7 +31,7 @@
 <c:when test="${bean.commentCount > 0}">
                     <c:url var="commentsURL" value="/roller-ui/authoring/comments.rol">
                        <c:param name="bean.entryId" value="${bean.id}"/>
-                       <c:param name="weblog" value="${weblog}"/>
+                       <c:param name="weblog" value="${actionWeblog.handle}"/>
                     </c:url>
                     <spring:message code="weblogEdit.hasComments" arguments="${commentsURL},${bean.commentCount}"/>
                 </c:when>
@@ -44,7 +44,7 @@
                 <h3><spring:message code="weblogEdit.pendingEntries"/></h3>
                 
                 <c:set var="pendingEntries" value="${recentPendingEntries}"/>
-                <c:if test="${pendingEntries.isEmpty}">
+                <c:if test="${empty pendingEntries}">
                     <span><spring:message code="generic.none"/></span>
                 </c:if>
                 <c:forEach items="${pendingEntries}" var="post">
@@ -65,7 +65,7 @@
                 <h3><spring:message code="weblogEdit.draftEntries"/></h3>
                 
                 <c:set var="draftEntries" value="${recentDraftEntries}"/>
-                <c:if test="${draftEntries.isEmpty}">
+                <c:if test="${empty draftEntries}">
                     <span><spring:message code="generic.none"/></span>
                 </c:if>
                 <c:forEach items="${draftEntries}" var="post">
@@ -89,7 +89,7 @@
                     <h3><spring:message code="weblogEdit.publishedEntries"/></h3>
                     
                     <c:set var="pubEntries" value="${recentPublishedEntries}"/>
-                    <c:if test="${pubEntries.isEmpty}">
+                    <c:if test="${empty pubEntries}">
                         <span><spring:message code="generic.none"/></span>
                     </c:if>
                     <c:forEach items="${pubEntries}" var="post">
@@ -111,7 +111,7 @@
                     <h3><spring:message code="weblogEdit.scheduledEntries"/></h3>
                     
                     <c:set var="schedEntries" value="${recentScheduledEntries}"/>
-                    <c:if test="${schedEntries.isEmpty}">
+                    <c:if test="${empty schedEntries}">
                         <span><spring:message code="generic.none"/></span>
                     </c:if>
                     <c:forEach items="${schedEntries}" var="post">

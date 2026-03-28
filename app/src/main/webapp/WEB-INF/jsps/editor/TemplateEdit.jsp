@@ -29,55 +29,81 @@
     <p class="pagetip"><spring:message code="pageForm.tip"/></p>
 </c:otherwise>
 </c:choose><form id="template" action="${pageContext.request.contextPath}/roller-ui/authoring/templateEdit!save.rol" method="post" class="form-vertical">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.id" value="${bean.id}"/>
     <input type="hidden" name="bean.type" value="${bean.type}"/>
 
     <%-- ================================================================== --%>
     <%-- Name, link and description: disabled when page is a required page --%>
 
-    <c:choose>
-<c:when test="${template.required || bean.mobile}">
-        <%-- Cannot edit name of a reqired template --%>
-        <input type="text" name="bean.name" value="${bean.name}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
-    </c:when>
-<c:otherwise>
-        <input type="text" name="bean.name" value="${bean.name}" size="50" class="form-control"/>
-    </c:otherwise>
-</c:choose><input type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
-
-    <c:choose>
-<c:when test="${!template.required && template.custom}">
-
-        <%-- allow setting the path for a custom template --%>
-        <input type="text" name="bean.link" value="${bean.link}" size="50" class="form-control" onkeyup="updatePageURLDisplay()"/>
-
-        <%-- show preview of the full URL that will result from that path --%>
-
-        <div id="no_link" class="alert-danger" style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
-            <spring:message code="pageForm.noUrl"/>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="generic.name"/></label>
+        <div class="col-md-9">
+            <c:choose>
+                <c:when test="${template.required || bean.mobile}">
+                    <%-- Cannot edit name of a reqired template --%>
+                    <input type="text" name="bean.name" value="${bean.name}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
+                </c:when>
+                <c:otherwise>
+                    <input type="text" name="bean.name" value="${bean.name}" size="50" class="form-control"/>
+                </c:otherwise>
+            </c:choose>
         </div>
+    </div>
 
-        <div id="good_link" class="alert-success"
-             style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
-            <spring:message code="pageForm.resultingUrlWillBe"/>
-            ${actionWeblog.absoluteURL}page/
-            <span id="linkPreview" style="color:red">${bean.link}</span>
-            <c:if test="${template.link != null}">
-                [<a id="launchLink" onClick="launchPage()"><spring:message code="pageForm.launch"/></a>]
-            </c:if>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="pageForm.action"/></label>
+        <div class="col-md-9">
+            <input type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
         </div>
+    </div>
 
-    </c:if>
+    <c:choose>
+        <c:when test="${!template.required && template.custom}">
 
-    <c:if test="${template.required}">
-        <%-- Required templates have a description--%>
-        <textarea name="bean.description" rows="2" cols="50" readonly style="background: #e5e5e5">${bean.description}</textarea>
-    </c:when>
-<c:otherwise>
-        <textarea name="bean.description" rows="2" cols="50">${bean.description}</textarea>
-    </c:otherwise>
-</c:choose><%-- ================================================================== --%>
+            <div class="form-group">
+                <label class="col-md-3 control-label"><spring:message code="pageForm.link"/></label>
+                <div class="col-md-9">
+                    <%-- allow setting the path for a custom template --%>
+                    <input type="text" name="bean.link" value="${bean.link}" size="50" class="form-control" onkeyup="updatePageURLDisplay()"/>
+                </div>
+            </div>
+
+            <%-- show preview of the full URL that will result from that path --%>
+
+            <div id="no_link" class="alert-danger" style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
+                <spring:message code="pageForm.noUrl"/>
+            </div>
+
+            <div id="good_link" class="alert-success"
+                 style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
+                <spring:message code="pageForm.resultingUrlWillBe"/>
+                ${actionWeblog.absoluteURL}page/
+                <span id="linkPreview" style="color:red">${bean.link}</span>
+                <c:if test="${template.link != null}">
+                    [<a id="launchLink" onClick="launchPage()"><spring:message code="pageForm.launch"/></a>]
+                </c:if>
+            </div>
+
+        </c:when>
+    </c:choose>
+
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="generic.description"/></label>
+        <div class="col-md-9">
+            <c:choose>
+                <c:when test="${template.required}">
+                    <%-- Required templates have a description--%>
+                    <textarea name="bean.description" rows="2" cols="50" readonly style="background: #e5e5e5">${bean.description}</textarea>
+                </c:when>
+                <c:otherwise>
+                    <textarea name="bean.description" rows="2" cols="50">${bean.description}</textarea>
+                </c:otherwise>
+            </c:choose>
+        </div>
+    </div>
+
+    <%-- ================================================================== --%>
 
     <%-- Tabs for each of the two content areas: Standard and Mobile --%>
     <ul id="template-code-tabs" class="nav nav-tabs" role="tablist" style="margin-bottom: 1em">
@@ -118,7 +144,7 @@
 
     <button type="submit" class="btn btn-default"><spring:message code="generic.save"/></button>
     <input type="button" value='<spring:message code="generic.done"/>' class="button btn"
-           onclick="window.location='<c:url value="/roller-ui/authoring/templates.rol"><c:param name="weblog" value="${weblog}"/></c:url>'"/>
+           onclick="window.location='<c:url value="/roller-ui/authoring/templates.rol"><c:param name="weblog" value="${actionWeblog.handle}"/></c:url>'"/>
 
     <%-- ================================================================== --%>
     <%-- Advanced settings inside a control toggle --%>
@@ -142,20 +168,40 @@
             <div id="collapseAdvanced" class="panel-collapse collapse">
                 <div class="panel-body">
 
-                    <select name="bean.templateLanguage" class="form-control" size="1">
-<c:forEach items="${templateLanguages}" var="opt">
-<option value="${opt}" ${opt == bean.templateLanguage ? 'selected' : ''}>${opt}</option>
-</c:forEach>
-</select>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label"><spring:message code="pageForm.templateLanguage"/></label>
+                        <div class="col-md-9">
+                            <select name="bean.templateLanguage" class="form-control" size="1">
+                                <c:forEach items="${templateLanguages}" var="opt">
+                                    <option value="${opt.key}" ${opt.key == bean.templateLanguage ? 'selected' : ''}>${opt.value}</option>
+                                </c:forEach>
+                            </select>
+                        </div>
+                    </div>
 
-                    <input type="checkbox" name="bean.hidden" value="true" ${bean.hidden ? 'checked' : ''}/>
+                    <div class="form-group">
+                        <div class="col-md-offset-3 col-md-9">
+                            <label><input type="checkbox" name="bean.hidden" value="true" ${bean.hidden ? 'checked' : ''}/> <spring:message code="pageForm.hidden"/></label>
+                        </div>
+                    </div>
 
-                    <input type="checkbox" name="bean.navbar" value="true" ${bean.navbar ? 'checked' : ''}/>
+                    <div class="form-group">
+                        <div class="col-md-offset-3 col-md-9">
+                            <label><input type="checkbox" name="bean.navbar" value="true" ${bean.navbar ? 'checked' : ''}/> <spring:message code="pageForm.navbar"/></label>
+                        </div>
+                    </div>
 
-                    <input type="checkbox" name="bean.autoContentType" value="true" ${bean.autoContentType ? 'checked' : ''}/>
+                    <div class="form-group">
+                        <div class="col-md-offset-3 col-md-9">
+                            <label><input type="checkbox" name="bean.autoContentType" value="true" ${bean.autoContentType ? 'checked' : ''}/> <spring:message code="pageForm.useAutoContentType"/></label>
+                        </div>
+                    </div>
 
-                    <div id="manual-content-type-control-group" style="display:none">
-                        <input type="text" name="bean.manualContentType" value="${bean.manualContentType}" class="form-control"/>
+                    <div class="form-group" id="manual-content-type-control-group" style="display:none">
+                        <label class="col-md-3 control-label"><spring:message code="pageForm.useManualContentType"/></label>
+                        <div class="col-md-9">
+                            <input type="text" name="bean.manualContentType" value="${bean.manualContentType}" class="form-control"/>
+                        </div>
                     </div>
 
                 </div>

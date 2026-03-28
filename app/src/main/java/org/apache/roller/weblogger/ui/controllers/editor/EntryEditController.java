@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -417,7 +418,7 @@ public class EntryEditController extends BaseController {
         model.addAttribute("categories", getCategories(request));
         model.addAttribute("entryPlugins", getEntryPlugins(request));
         model.addAttribute("editor", getEditor(request));
-        model.addAttribute("isUserAnAuthor", getActionWeblog(request).hasUserPermission(
+        model.addAttribute("userAnAuthor", getActionWeblog(request).hasUserPermission(
                 getAuthenticatedUser(request), WeblogPermission.POST));
         model.addAttribute("jsonAutocompleteUrl", WebloggerFactory.getWeblogger().getUrlStrategy()
                 .getWeblogTagsJsonURL(getActionWeblog(request), false, 0));
@@ -428,6 +429,22 @@ public class EntryEditController extends BaseController {
                     .getWeblogEntryURL(getActionWeblog(request), null, entry.getAnchor(), true));
         }
 
+        // Hour/minute/second lists for pub time selectors
+        List<Integer> hoursList = new ArrayList<>();
+        for (int i = 0; i < 24; i++) hoursList.add(i);
+        model.addAttribute("hoursList", hoursList);
+
+        List<Integer> minutesList = new ArrayList<>();
+        for (int i = 0; i < 60; i++) minutesList.add(i);
+        model.addAttribute("minutesList", minutesList);
+        model.addAttribute("secondsList", new ArrayList<>(minutesList));
+
+        // Locale list for multi-language blogs
+        model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
+
+        // Comment days options
+        model.addAttribute("commentDaysList", getCommentDaysList(request));
+
         model.addAttribute("recentPublishedEntries",
                 getRecentEntries(request, PubStatus.PUBLISHED, WeblogEntrySearchCriteria.SortBy.PUBLICATION_TIME));
         model.addAttribute("recentScheduledEntries",
@@ -436,6 +453,21 @@ public class EntryEditController extends BaseController {
                 getRecentEntries(request, PubStatus.DRAFT, WeblogEntrySearchCriteria.SortBy.UPDATE_TIME));
         model.addAttribute("recentPendingEntries",
                 getRecentEntries(request, PubStatus.PENDING, WeblogEntrySearchCriteria.SortBy.UPDATE_TIME));
+    }
+
+    private Map<Integer, String> getCommentDaysList(HttpServletRequest request) {
+        Map<Integer, String> map = new LinkedHashMap<>();
+        map.put(0, getText("weblogEdit.unlimitedCommentDays", request));
+        map.put(1, getText("weblogEdit.days1", request));
+        map.put(2, getText("weblogEdit.days2", request));
+        map.put(3, getText("weblogEdit.days3", request));
+        map.put(7, getText("weblogEdit.days7", request));
+        map.put(14, getText("weblogEdit.days14", request));
+        map.put(30, getText("weblogEdit.days30", request));
+        map.put(60, getText("weblogEdit.days60", request));
+        map.put(90, getText("weblogEdit.days90", request));
+        map.put(-1, getText("weblogEdit.noComments", request));
+        return map;
     }
 
     private List<WeblogCategory> getCategories(HttpServletRequest request) {

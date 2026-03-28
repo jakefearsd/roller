@@ -35,7 +35,7 @@
     <table class="table table-striped"> <%-- of weblog templates --%>
 
         <c:choose>
-            <c:when test="${!templates.isEmpty}">
+            <c:when test="${not empty templates}">
 
             <tr>
                 <th width="30%"><spring:message code="generic.name"/></th>

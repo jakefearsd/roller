@@ -26,7 +26,7 @@
     <spring:message code="stylesheetEdit.youCanCustomize"/>
 
     <form action="${pageContext.request.contextPath}/roller-ui/authoring/stylesheetEdit!save.rol" method="post" class="form-vertical">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
         <%-- Tabs for each of the two content areas: Standard and Mobile --%>
         <ul id="template-code-tabs" class="nav nav-tabs" role="tablist" style="margin-bottom: 1em">
@@ -86,7 +86,7 @@
         <spring:message code="stylesheetEdit.sharedThemeWithStylesheet"/>
 
         <form action="${pageContext.request.contextPath}/roller-ui/authoring/stylesheetEdit!copyStylesheet.rol" method="post" class="form-vertical">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
             <button type="submit" class="btn btn-success"><spring:message code="stylesheetEdit.copyStylesheet"/></button>
         <sec:csrfInput/>
 </form>

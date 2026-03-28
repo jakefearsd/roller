@@ -22,7 +22,7 @@
 <p class="pagetip"><spring:message code="mediaFileSuccess.pageTip"/></p>
 
 <form id="entry" method="post" class="form-horizontal">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.enclosureURL" value="${bean.enclosureURL}" id="enclosureURL"/>
 
     <c:if test="${newImages.size() > 0}">

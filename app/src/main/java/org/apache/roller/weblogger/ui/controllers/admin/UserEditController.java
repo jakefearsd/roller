@@ -43,6 +43,7 @@ import org.apache.roller.weblogger.ui.controllers.util.UIUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -74,6 +75,11 @@ public class UserEditController extends BaseController {
         return "admin";
     }
 
+    @ModelAttribute("bean")
+    public CreateUserBean getBean() {
+        return new CreateUserBean();
+    }
+
     // --- Create User ---
 
     @GetMapping("/createUser.rol")
@@ -95,7 +101,7 @@ public class UserEditController extends BaseController {
 
     @PostMapping("/createUser!save.rol")
     public String createUserSave(HttpServletRequest request, Model model,
-                                 CreateUserBean bean) {
+                                 @ModelAttribute("bean") CreateUserBean bean) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "createUser");
         model.addAttribute("pageTitle", "userAdmin.title.createNewUser");
@@ -172,7 +178,7 @@ public class UserEditController extends BaseController {
 
     @GetMapping("/modifyUser.rol")
     public String modifyUserExecute(HttpServletRequest request, Model model,
-                                    CreateUserBean bean) {
+                                    @ModelAttribute("bean") CreateUserBean bean) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "modifyUser");
         model.addAttribute("pageTitle", "userAdmin.title.editUser");
@@ -198,14 +204,14 @@ public class UserEditController extends BaseController {
 
     @GetMapping("/modifyUser!firstSave.rol")
     public String modifyUserFirstSave(HttpServletRequest request, Model model,
-                                      CreateUserBean bean) {
+                                      @ModelAttribute("bean") CreateUserBean bean) {
         addMessage(model, "createUser.add.success", bean.getUserName(), request);
         return modifyUserExecute(request, model, bean);
     }
 
     @PostMapping("/modifyUser!save.rol")
     public String modifyUserSave(HttpServletRequest request, Model model,
-                                 CreateUserBean bean) {
+                                 @ModelAttribute("bean") CreateUserBean bean) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "modifyUser");
         model.addAttribute("pageTitle", "userAdmin.title.editUser");

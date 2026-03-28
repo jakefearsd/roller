@@ -21,7 +21,7 @@
 <c:if test="${authenticatedUser != null}">
     <p>
     <spring:message code="mainPage.loggedInAs"/>:
-    <a href="<c:url value="/roller-ui/.rol"/>">
+    <a href="<c:url value="/roller-ui/profile.rol"/>">
         ${authenticatedUser.userName}
     </a>
     </p>

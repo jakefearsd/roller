@@ -38,7 +38,9 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,6 +65,12 @@ public class ProfileController extends BaseController {
     @Override
     public String getPageTitle() {
         return "yourProfile.title";
+    }
+
+    @Override
+    @InitBinder("bean")
+    public void initBeanBinder(WebDataBinder binder) {
+        // No prefix — this controller uses Spring form:form tags which don't prefix field names
     }
 
     @ModelAttribute("bean")

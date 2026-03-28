@@ -22,7 +22,7 @@
 </p>
 
 <form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileEdit!save.rol" method="POST" enctype="multipart/form-data" class="form-horizontal">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="mediaFileId" value="${mediaFileId}" id="mediaFileId"/>
     <input type="hidden" name="bean.permalink" value="${bean.permalink}"/>
 
@@ -41,7 +41,12 @@
     <%-- ================================================================== --%>
     <%-- Title, category, dates and other metadata --%>
 
-    <input type="text" name="bean.name" value="${bean.name}" size="35" maxlength="100" tabindex="1" class="form-control"/>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="generic.name"/></label>
+        <div class="col-md-9">
+            <input type="text" name="bean.name" value="${bean.name}" size="35" maxlength="100" tabindex="1" class="form-control"/>
+        </div>
+    </div>
 
     <div class="form-group">
         <label class="control-label col-sm-3"><spring:message code="mediaFileEdit.fileInfo"/></label>
@@ -73,19 +78,43 @@
         </div>
     </div>
 
-    <textarea name="bean.description" rows="2" cols="50" tabindex="2">${bean.description}</textarea>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="generic.description"/></label>
+        <div class="col-md-9">
+            <textarea name="bean.description" rows="2" cols="50" tabindex="2" class="form-control">${bean.description}</textarea>
+        </div>
+    </div>
 
-    <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" size="30" maxlength="100" tabindex="3" class="form-control"/>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="mediaFileEdit.tags"/></label>
+        <div class="col-md-9">
+            <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" size="30" maxlength="100" tabindex="3" class="form-control"/>
+        </div>
+    </div>
 
-    <input type="text" name="bean.copyrightText" value="${bean.copyrightText}" size="30" maxlength="100" tabindex="4" class="form-control"/>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="mediaFileEdit.copyright"/></label>
+        <div class="col-md-9">
+            <input type="text" name="bean.copyrightText" value="${bean.copyrightText}" size="30" maxlength="100" tabindex="4" class="form-control"/>
+        </div>
+    </div>
 
-    <select name="bean.directoryId" class="form-control" tabindex="5">
-<c:forEach items="${allDirectories}" var="opt">
-<option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
-</c:forEach>
-</select>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="mediaFileEdit.directory"/></label>
+        <div class="col-md-9">
+            <select name="bean.directoryId" class="form-control" tabindex="5">
+                <c:forEach items="${allDirectories}" var="opt">
+                    <option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
+                </c:forEach>
+            </select>
+        </div>
+    </div>
 
-    <input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''} tabindex="6"/>
+    <div class="form-group">
+        <div class="col-md-offset-3 col-md-9">
+            <label><input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''} tabindex="6"/> <spring:message code="mediaFileEdit.includeGalleryHelp"/></label>
+        </div>
+    </div>
 
     <!-- original path from base URL of ctx/resources/ -->
     <c:if test="${rc:getBooleanProp('mediafile.originalPathEdit.enabled')}">

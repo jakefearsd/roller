@@ -171,7 +171,7 @@
     </ul>
 </nav>
 
-<c:if test="${pager.items.isEmpty}">
+<c:if test="${empty pager.items}">
     <spring:message code="weblogEntryQuery.noneFound"/>
 </c:if>
 
@@ -185,7 +185,7 @@
             <c:set var="deleteAction">entryRemoveViaList!remove</c:set>
             
             <form action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post" class="form-horizontal">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
             
                 <div class="modal-header">

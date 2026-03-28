@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -174,6 +175,26 @@ public class WeblogConfigController extends BaseController {
 
         model.addAttribute("weblogAdminsUntrusted",
                 WebloggerConfig.getBooleanProperty("weblogAdminsUntrusted"));
+
+        model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
+        model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
+        model.addAttribute("commentDaysList", getCommentDaysList(request));
+        model.addAttribute("defaultPlugins", getActionWeblog(request).getDefaultPlugins());
+    }
+
+    private Map<Integer, String> getCommentDaysList(HttpServletRequest request) {
+        Map<Integer, String> map = new LinkedHashMap<>();
+        map.put(0, getText("weblogEdit.unlimitedCommentDays", request));
+        map.put(1, getText("weblogEdit.days1", request));
+        map.put(2, getText("weblogEdit.days2", request));
+        map.put(3, getText("weblogEdit.days3", request));
+        map.put(7, getText("weblogEdit.days7", request));
+        map.put(14, getText("weblogEdit.days14", request));
+        map.put(30, getText("weblogEdit.days30", request));
+        map.put(60, getText("weblogEdit.days60", request));
+        map.put(90, getText("weblogEdit.days90", request));
+        map.put(-1, getText("weblogEdit.noComments", request));
+        return map;
     }
 
     @ModelAttribute("bean")

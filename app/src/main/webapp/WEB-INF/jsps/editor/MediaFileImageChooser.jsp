@@ -35,7 +35,7 @@
 <c:if test="${childFiles || allDirectories}">
 
     <form id="mediaFileChooserForm" name="mediaFileChooserForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileImageChooser.rol" method="post" class="form-vertical">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
         <input type="hidden" name="mediaFileId" value=""/>
 
         <p class="pagetip"><spring:message code="mediaFileImageChooser.pageTip"/></p>
@@ -43,7 +43,7 @@
         <%-- ***************************************************************** --%>
         <%-- Maybe show media directory selector --%>
 
-        <c:if test="${!allDirectories.isEmpty}">
+        <c:if test="${not empty allDirectories}">
             <select name="directoryId" class="form-control" onchange="onView()">
 <option value=""></option>
 <c:forEach items="${allDirectories}" var="opt">

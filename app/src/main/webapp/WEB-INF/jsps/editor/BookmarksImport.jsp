@@ -26,7 +26,7 @@
 </p>     
 
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/bookmarksImport!save.rol" method="POST" enctype="multipart/form-data">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="file" name="opmlFile"/>
     <br />
     <br />

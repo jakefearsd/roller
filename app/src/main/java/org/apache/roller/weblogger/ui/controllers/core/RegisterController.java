@@ -41,7 +41,9 @@ import org.apache.roller.weblogger.ui.core.security.CustomUserRegistry;
 import org.apache.roller.weblogger.util.MailUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -74,6 +76,12 @@ public class RegisterController extends BaseController {
     @Override
     public String getPageTitle() {
         return "newUser.addNewUser";
+    }
+
+    @Override
+    @InitBinder("bean")
+    public void initBeanBinder(WebDataBinder binder) {
+        // No prefix — this controller uses Spring form:form tags
     }
 
     @ModelAttribute("bean")

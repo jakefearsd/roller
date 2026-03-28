@@ -182,7 +182,7 @@
     <c:if test="${actionName == 'modifyUser'}">
         <h2><spring:message code="userAdmin.userWeblogs" /></h2>
 
-        <c:if test="${permissions != null && !permissions.isEmpty()}">
+        <c:if test="${not empty permissions}">
             <p><spring:message code="userAdmin.userMemberOf" />:</p>
             <table class="table" style="width: 80%">
                 <c:forEach var="perms" items="${permissions}">
@@ -220,7 +220,7 @@
                 </c:forEach>
             </table>
         </c:if>
-        <c:if test="${permissions == null || permissions.isEmpty()}">
+        <c:if test="${empty permissions}">
             <spring:message code="userAdmin.userHasNoWeblogs" />
         </c:if>
     </c:if>

@@ -60,17 +60,20 @@
                 <h3><spring:message code="mediaFileView.search"/></h3>
 
                 <form id="mediaFileSearchForm" name="mediaFileSearchForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView!search.rol" method="post" class="form-vertical">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                     <input type="hidden" name="mediaFileId" value=""/>
 
+                    <label><spring:message code="generic.name"/></label>
                     <input type="text" name="bean.name" value="${bean.name}" id="beanName" size="20" maxlength="255" class="form-control"/>
 
+                    <label><spring:message code="mediaFileView.type"/></label>
                     <select name="bean.type" id="beanType" class="form-control">
 <c:forEach items="${fileTypes}" var="opt">
 <option value="${opt.key}" ${opt.key == bean.type ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
 </select>
 
+                    <label><spring:message code="mediaFileView.size"/></label>
                     <select name="bean.sizeFilterType" id="sizeFilterTypeCombo" class="form-control">
 <c:forEach items="${sizeFilterTypes}" var="opt">
 <option value="${opt.key}" ${opt.key == bean.sizeFilterType ? 'selected' : ''}>${opt.value}</option>
@@ -85,6 +88,7 @@
 </c:forEach>
 </select>
 
+                    <label><spring:message code="mediaFileView.tags"/></label>
                     <input type="text" name="bean.tags" value="${bean.tags}" id="beanTags" size="20" maxlength="50" class="form-control"/>
 
                     <button type="submit" id="searchButton" class="btn btn-primary" style="margin:5px 0;"><spring:message code="mediaFileView.search"/></button>

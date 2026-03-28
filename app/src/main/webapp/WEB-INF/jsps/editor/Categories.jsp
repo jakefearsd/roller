@@ -18,7 +18,7 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <spring:message code="categoriesForm.subtitle" arguments="${weblog}"/>
+    <spring:message code="categoriesForm.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 <p class="pagetip">
     <spring:message code="categoriesForm.rootPrompt"/>
@@ -26,7 +26,7 @@
 
 <%-- Form is a table of categories each with checkbox --%>
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/categories!move.rol" method="post">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="categoryId" value="${categoryId}"/>
 
     <table class="rollertable table table-striped" width="100%">
@@ -39,9 +39,9 @@
         </tr>
 
         <c:choose>
-<c:when test="${AllCategories != null && !AllCategories.isEmpty}">
+<c:when test="${not empty allCategories}">
 
-            <c:forEach items="${AllCategories}" var="category" varStatus="rowstatus">
+            <c:forEach items="${allCategories}" var="category" varStatus="rowstatus">
                 <tr>
                     <td>${category.name}</td>
 
@@ -64,7 +64,7 @@
                     </td>
 
                     <td class="rollertable" align="center">
-                        <c:if test="${AllCategories.size() > 1}">
+                        <c:if test="${allCategories.size() > 1}">
 
                             <c:set var="categoryId" value="${category.id}"/>
                             <c:set var="categoryName" value="${category.name}"/>
@@ -109,17 +109,32 @@
 
             <div class="modal-body">
                 <form id="categoryEditForm" action="${pageContext.request.contextPath}/roller-ui/authoring/categoryEdit.rol" method="post" class="form-horizontal">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                     <input type="hidden" name="bean.id" value="${bean.id}"/>
 
                     <%-- action needed here because we are using AJAX to post this form --%>
                     <input type="hidden" name="action:categoryEdit!save" value="${save}"/>
 
-                    <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label"><spring:message code="generic.name"/></label>
+                        <div class="col-md-9">
+                            <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                        </div>
+                    </div>
 
-                    <input type="text" name="bean.description" value="${bean.description}" class="form-control"/>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label"><spring:message code="generic.description"/></label>
+                        <div class="col-md-9">
+                            <input type="text" name="bean.description" value="${bean.description}" class="form-control"/>
+                        </div>
+                    </div>
 
-                    <input type="text" name="bean.image" value="${bean.image}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label"><spring:message code="categoryForm.image"/></label>
+                        <div class="col-md-9">
+                            <input type="text" name="bean.image" value="${bean.image}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                        </div>
+                    </div>
                 <sec:csrfInput/>
 </form>
             </div>
@@ -243,7 +258,7 @@
             </div>
 
             <form action="${pageContext.request.contextPath}/roller-ui/authoring/categoryRemove!remove.rol" method="post" class="form-horizontal">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="${removeId}"/>
                 
                 <div class="modal-body">

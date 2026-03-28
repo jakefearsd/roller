@@ -48,18 +48,24 @@
 </p>
 
 <form id="entry" method="post" class="form-horizontal">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.status" value="${bean.status}"/>
     <c:choose>
 <c:when test="${actionName == 'entryEdit'}">
         <input type="hidden" name="bean.id" value="${bean.id}"/>
-    </c:if>
+    </c:when>
+</c:choose>
 
     <%-- ================================================================== --%>
     <%-- Title, category, dates and other metadata --%>
 
     <%-- title --%>
-    <input type="text" name="bean.title" value="${bean.title}" maxlength="255" tabindex="1" class="form-control"/>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="weblogEdit.title"/></label>
+        <div class="col-md-9">
+            <input type="text" name="bean.title" value="${bean.title}" maxlength="255" tabindex="1" class="form-control"/>
+        </div>
+    </div>
 
     <%-- permalink --%>
     <c:if test="${actionName == 'entryEdit'}">
@@ -71,7 +77,8 @@
 
             <div class="controls col-md-9">
                 <p class="form-control-static">
-                    <c:if test="${bean.published}">
+                    <c:choose>
+<c:when test="${bean.published}">
                         <a id="entry_bean_permalink" href='${entry.permalink}'>
                             ${entry.permalink}
                         </a>
@@ -87,23 +94,38 @@
     </c:if>
 
     <%-- tags --%>
-    <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" id="tagAutoComplete" maxlength="255" tabindex="2" class="form-control"/>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="weblogEdit.tags"/></label>
+        <div class="col-md-9">
+            <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" id="tagAutoComplete" maxlength="255" tabindex="2" class="form-control"/>
+        </div>
+    </div>
 
     <%-- category --%>
-    <select name="bean.categoryId" class="form-control" tabindex="3">
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="weblogEdit.category"/></label>
+        <div class="col-md-9">
+            <select name="bean.categoryId" class="form-control" tabindex="3">
 <c:forEach items="${categories}" var="opt">
 <option value="${opt.id}" ${opt.id == bean.categoryId ? 'selected' : ''}>${opt.name}</option>
 </c:forEach>
 </select>
+        </div>
+    </div>
 
     <c:choose>
 <c:when test="${actionWeblog.enableMultiLang}">
         <%-- language / locale --%>
-        <select name="bean.locale" class="form-control" tabindex="4">
+        <div class="form-group">
+            <label class="col-md-3 control-label"><spring:message code="weblogEdit.locale"/></label>
+            <div class="col-md-9">
+                <select name="bean.locale" class="form-control" tabindex="4">
 <c:forEach items="${localesList}" var="opt">
 <option value="${opt}" ${opt == bean.locale ? 'selected' : ''}>${opt}</option>
 </c:forEach>
 </select>
+            </div>
+        </div>
     </c:when>
 <c:otherwise>
         <input type="hidden" name="bean.locale" value="${bean.locale}"/>
@@ -164,7 +186,7 @@
             <%-- Plugins --%>
 
         <c:choose>
-<c:when test="${!entryPlugins.isEmpty}">
+<c:when test="${not empty entryPlugins}">
 
             <div class="panel panel-default" id="panel-plugins">
                 <div class="panel-heading">
@@ -186,7 +208,8 @@
                 </div>
             </div>
 
-        </c:if>
+        </c:when>
+</c:choose>
 
             <%-- Advanced settings --%>
 
@@ -241,25 +264,48 @@
 
                     </div>
 
-                    <select name="bean.commentDays" class="form-control">
+                    <div class="form-group">
+                        <label class="col-md-3 control-label"><spring:message code="weblogEdit.commentDays"/></label>
+                        <div class="col-md-9">
+                            <select name="bean.commentDays" class="form-control">
 <c:forEach items="${commentDaysList}" var="opt">
 <option value="${opt.key}" ${opt.key == bean.commentDays ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
 </select>
+                        </div>
+                    </div>
 
-                    <input type="checkbox" name="bean.rightToLeft" value="true" ${bean.rightToLeft ? 'checked' : ''}/>
+                    <div class="form-group">
+                        <div class="col-md-offset-3 col-md-9">
+                            <label><input type="checkbox" name="bean.rightToLeft" value="true" ${bean.rightToLeft ? 'checked' : ''}/> <spring:message code="weblogEdit.rightToLeft"/></label>
+                        </div>
+                    </div>
 
                         <%-- global admin can pin items to front page weblog --%>
                     <c:if test="${authenticatedUser.hasGlobalPermission('admin')}">
-                        <input type="checkbox" name="bean.pinnedToMain" value="true" ${bean.pinnedToMain ? 'checked' : ''}/>
+                        <div class="form-group">
+                            <div class="col-md-offset-3 col-md-9">
+                                <label><input type="checkbox" name="bean.pinnedToMain" value="true" ${bean.pinnedToMain ? 'checked' : ''}/> <spring:message code="weblogEdit.pinnedToMain"/></label>
+                            </div>
+                        </div>
                     </c:if>
 
-                    <input type="text" name="bean.searchDescription" value="${bean.searchDescription}" maxlength="255" class="form-control"/>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label"><spring:message code="weblogEdit.searchDescription"/></label>
+                        <div class="col-md-9">
+                            <input type="text" name="bean.searchDescription" value="${bean.searchDescription}" maxlength="255" class="form-control"/>
+                        </div>
+                    </div>
 
-                    <input type="text" name="bean.enclosureURL" value="${bean.enclosureURL}" maxlength="255" class="form-control"/>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label"><spring:message code="weblogEdit.enclosureURL"/></label>
+                        <div class="col-md-9">
+                            <input type="text" name="bean.enclosureURL" value="${bean.enclosureURL}" maxlength="255" class="form-control"/>
+                        </div>
+                    </div>
 
                     <c:if test="${actionName == 'entryEdit'}">
-                        <c:if test="${!bean.enclosureURL.isEmpty()}">
+                        <c:if test="${not empty bean.enclosureURL}">
                             <spring:message code="weblogEdit.enclosureType"/>:
                             ${entry.findEntryAttribute("att_mediacast_type")}
                             <spring:message code="weblogEdit.enclosureLength"/>:
@@ -289,7 +335,8 @@
                value="<spring:message code="weblogEdit.fullPreviewMode"/>"
                onclick="fullPreviewMode()"/>
     </c:if>
-    <c:if test="${userAnAuthor}">
+    <c:choose>
+<c:when test="${userAnAuthor}">
 
         <%-- publish --%>
         <button type="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.post"/></button>
@@ -339,7 +386,7 @@
             <c:set var="deleteAction">entryRemoveViaList!remove</c:set>
 
             <form action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post" class="form-horizontal">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
                 <div class="modal-header">

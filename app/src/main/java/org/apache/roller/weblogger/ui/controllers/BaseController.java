@@ -35,6 +35,8 @@ import org.apache.roller.weblogger.ui.core.util.menu.MenuHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.InitBinder;
 
 /**
  * Abstract base controller for Spring MVC controllers in Roller.
@@ -45,6 +47,17 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
 
     @Autowired
     protected MessageSource messageSource;
+
+    /**
+     * Allow form parameters prefixed with "bean." to bind to @ModelAttribute("bean").
+     * This preserves the Struts2 convention where form fields were named bean.title, bean.id, etc.
+     * Controllers using Spring form:form tags (which don't use the prefix) should override
+     * this method with a no-op.
+     */
+    @InitBinder("bean")
+    public void initBeanBinder(WebDataBinder binder) {
+        binder.setFieldDefaultPrefix("bean.");
+    }
 
     // --- UIActionPreparable default ---
 

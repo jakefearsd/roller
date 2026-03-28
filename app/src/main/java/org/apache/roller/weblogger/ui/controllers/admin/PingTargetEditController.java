@@ -33,6 +33,7 @@ import org.apache.roller.weblogger.pojos.PingTarget;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -66,12 +67,17 @@ public class PingTargetEditController extends BaseController {
         return "commonPingTargets";
     }
 
+    @ModelAttribute("bean")
+    public PingTargetBean getBean() {
+        return new PingTargetBean();
+    }
+
     /**
      * Save a new ping target (add).
      */
     @PostMapping("/commonPingTargetAdd.rol")
     public String addSave(HttpServletRequest request, Model model,
-                          PingTargetBean bean) {
+                          @ModelAttribute("bean") PingTargetBean bean) {
         populateCommonModel(request, model);
         model.addAttribute("bean", bean);
 
@@ -104,7 +110,7 @@ public class PingTargetEditController extends BaseController {
      */
     @PostMapping("/commonPingTargetEdit.rol")
     public String editSave(HttpServletRequest request, Model model,
-                           PingTargetBean bean) {
+                           @ModelAttribute("bean") PingTargetBean bean) {
         populateCommonModel(request, model);
         model.addAttribute("bean", bean);
 

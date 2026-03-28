@@ -18,11 +18,11 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p>
-    <spring:message code="yourWebsites.confirmResignation" arguments="${weblog}"/>
+    <spring:message code="yourWebsites.confirmResignation" arguments="${actionWeblog.handle}"/>
 </p>
 
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/memberResign!resign.rol" method="post" class="form-horizontal">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <button type="submit" class="form-horizontal"><spring:message code="generic.yes"/></button>&nbsp;
     <button type="submit" class="form-horizontal" formaction="${pageContext.request.contextPath}/roller-ui/authoring/menu.rol"><spring:message code="generic.no"/></button>
 <sec:csrfInput/>

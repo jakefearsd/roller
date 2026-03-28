@@ -22,24 +22,53 @@
 <p class="pagetip"> <spring:message code="mediaFileAdd.pageTip"/> </p>
 
 <form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol" method="POST" enctype="multipart/form-data" class="form-horizontal">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="directoryName" value="${directoryName}"/>
 
-    <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control"/>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="generic.name"/></label>
+        <div class="col-md-9">
+            <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control"/>
+        </div>
+    </div>
 
-    <textarea name="bean.description" rows="3">${bean.description}</textarea>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="generic.description"/></label>
+        <div class="col-md-9">
+            <textarea name="bean.description" rows="3" class="form-control">${bean.description}</textarea>
+        </div>
+    </div>
 
-    <textarea name="bean.copyrightText" rows="3">${bean.copyrightText}</textarea>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="mediaFileAdd.copyright"/></label>
+        <div class="col-md-9">
+            <textarea name="bean.copyrightText" rows="3" class="form-control">${bean.copyrightText}</textarea>
+        </div>
+    </div>
 
-    <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" maxlength="255" class="form-control"/>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="mediaFileAdd.tags"/></label>
+        <div class="col-md-9">
+            <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" maxlength="255" class="form-control"/>
+        </div>
+    </div>
 
-    <select name="bean.directoryId" class="form-control">
-<c:forEach items="${allDirectories}" var="opt">
-<option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
-</c:forEach>
-</select>
+    <div class="form-group">
+        <label class="col-md-3 control-label"><spring:message code="mediaFileAdd.directory"/></label>
+        <div class="col-md-9">
+            <select name="bean.directoryId" class="form-control">
+                <c:forEach items="${allDirectories}" var="opt">
+                    <option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
+                </c:forEach>
+            </select>
+        </div>
+    </div>
 
-    <input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''}/>
+    <div class="form-group">
+        <div class="col-md-offset-3 col-md-9">
+            <label><input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''}/> <spring:message code="mediaFileAdd.includeGallery"/></label>
+        </div>
+    </div>
 
     <div class="panel panel-default">
         <div class="panel-heading">

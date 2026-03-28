@@ -33,7 +33,7 @@
 <c:when test='${currentDirectory.name.equals("default")}'>
 
     <p class="subtitle">
-        <spring:message code="mediaFileView.subtitle" arguments="${weblog}"/>
+        <spring:message code="mediaFileView.subtitle" arguments="${actionWeblog.handle}"/>
     </p>
     <p class="pagetip">
         <spring:message code="mediaFileView.rootPageTip"/>
@@ -59,7 +59,7 @@
 </c:choose><spring:message code="mediaFileView.searchInfo"/>
 
     <ul>
-        <c:if test="${!bean.name.isEmpty()}">
+        <c:if test="${not empty bean.name}">
             <li>
                 <spring:message code="mediaFileView.filesNamed" arguments="${bean.name}"/>
             </li>
@@ -69,12 +69,12 @@
                 <spring:message code="mediaFileView.filesOfSize" arguments="${bean.sizeFilterTypeLabel},${bean.size},${bean.sizeUnitLabel}"/>
             </li>
         </c:if>
-        <c:if test="${!bean.type.isEmpty()}">
+        <c:if test="${not empty bean.type}">
             <li>
                 <spring:message code="mediaFileView.filesOfType" arguments="${bean.typeLabel}"/>
             </li>
         </c:if>
-        <c:if test="${!bean.tags.isEmpty()}">
+        <c:if test="${not empty bean.tags}">
             <li>
                 <spring:message code="mediaFileView.filesTagged" arguments="${bean.tags}"/>
             </li>
@@ -96,14 +96,14 @@
 </c:choose><c:if test="${childFiles || (pager && pager.items.size() > 0)}">
 
     <form id="mediaFileViewForm" name="mediaFileViewForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView.rol" method="post">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
         <input type="hidden" name="directoryId" value="${directoryId}"/>
         <input type="hidden" name="newDirectoryName" value="${newDirectoryName}"/>
         <input type="hidden" name="mediaFileId" value=""/>
 
         <div class="image-controls">
 
-            <c:if test="${!allDirectories.isEmpty}">
+            <c:if test="${not empty allDirectories}">
                 <%-- Folder to View combo-box --%>
                 <span><spring:message code="mediaFileView.viewFolder"/>:</span>
                 <select name="viewDirectoryId" id="viewDirectoryMenu" class="form-control" onchange="onView()">

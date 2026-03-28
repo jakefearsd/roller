@@ -23,11 +23,12 @@
 <p><spring:message code="weblogEntryQuery.sidebarDescription"/></p>
 
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/entries.rol" method="post" class="form-vertical">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- ========================================================= --%>
     <%-- filter by category --%>
 
+    <label><spring:message code="weblogEntryQuery.label.category"/></label>
     <select name="bean.categoryName" class="form-control" size="1">
 <c:forEach items="${categories}" var="opt">
 <option value="${opt.name}" ${opt.name == bean.categoryName ? 'selected' : ''}>${opt.name}</option>
@@ -37,11 +38,13 @@
     <%-- ========================================================= --%>
     <%-- filter by tag --%>
 
+    <label><spring:message code="weblogEntryQuery.label.tags"/></label>
     <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" size="14" class="form-control"/>
 
     <%-- ========================================================= --%>
     <%-- filter by text --%>
 
+    <label><spring:message code="weblogEntryQuery.label.text"/></label>
     <input type="text" name="bean.text" value="${bean.text}" size="14" class="form-control"/>
 
     <%-- ========================================================= --%>

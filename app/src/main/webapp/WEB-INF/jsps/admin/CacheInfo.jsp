@@ -21,7 +21,7 @@
 <p><spring:message code="cacheInfo.prompt" />
 
 <c:forEach var="cache" items="${stats}">
-    <c:if test="${cache != null && !cache.value.isEmpty()}">
+    <c:if test="${not empty cache.value}">
 
         <table class="table table-bordered">
             <tr>

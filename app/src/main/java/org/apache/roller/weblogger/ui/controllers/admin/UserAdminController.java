@@ -29,6 +29,7 @@ import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -65,6 +66,11 @@ public class UserAdminController extends BaseController {
         return "userAdmin";
     }
 
+    @ModelAttribute("bean")
+    public CreateUserBean getBean() {
+        return new CreateUserBean();
+    }
+
     @GetMapping("/userAdmin.rol")
     public String execute(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
@@ -78,7 +84,7 @@ public class UserAdminController extends BaseController {
 
     @PostMapping("/userAdmin!edit.rol")
     public String edit(HttpServletRequest request, Model model,
-                       CreateUserBean bean) {
+                       @ModelAttribute("bean") CreateUserBean bean) {
         populateCommonModel(request, model);
 
         model.addAttribute("authMethod", WebloggerConfig.getAuthMethod().name());

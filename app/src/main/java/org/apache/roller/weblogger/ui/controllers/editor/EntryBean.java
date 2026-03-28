@@ -298,7 +298,8 @@ public class EntryBean {
         entry.setLocale(getLocale());
         entry.setSummary(getSummary());
         entry.setText(getText());
-        entry.setTagsAsString(Utilities.replaceNonAlphanumeric(getTagsAsString(), ' '));
+        entry.setTagsAsString(getTagsAsString() != null
+                ? Utilities.replaceNonAlphanumeric(getTagsAsString(), ' ') : "");
         entry.setSearchDescription(getSearchDescription());
         
         // figure out the category selected

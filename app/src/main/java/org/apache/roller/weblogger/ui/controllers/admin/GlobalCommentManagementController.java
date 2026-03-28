@@ -41,6 +41,7 @@ import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -82,6 +83,11 @@ public class GlobalCommentManagementController extends BaseController {
         return "globalCommentManagement";
     }
 
+    @ModelAttribute("bean")
+    public GlobalCommentManagementBean getBean() {
+        return new GlobalCommentManagementBean();
+    }
+
     /**
      * Show comment management page.
      */
@@ -106,7 +112,7 @@ public class GlobalCommentManagementController extends BaseController {
      */
     @GetMapping("/globalCommentManagement!query.rol")
     public String query(HttpServletRequest request, Model model,
-                        GlobalCommentManagementBean bean) {
+                        @ModelAttribute("bean") GlobalCommentManagementBean bean) {
         populateCommonModel(request, model);
         model.addAttribute("bean", bean);
 
@@ -144,7 +150,7 @@ public class GlobalCommentManagementController extends BaseController {
      */
     @PostMapping("/globalCommentManagement!delete.rol")
     public String delete(HttpServletRequest request, Model model,
-                         GlobalCommentManagementBean bean) {
+                         @ModelAttribute("bean") GlobalCommentManagementBean bean) {
         populateCommonModel(request, model);
 
         try {
@@ -182,7 +188,7 @@ public class GlobalCommentManagementController extends BaseController {
      */
     @PostMapping("/globalCommentManagement!update.rol")
     public String update(HttpServletRequest request, Model model,
-                         GlobalCommentManagementBean bean) {
+                         @ModelAttribute("bean") GlobalCommentManagementBean bean) {
         populateCommonModel(request, model);
 
         try {

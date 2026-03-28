@@ -22,7 +22,7 @@
 </p>
 
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/themeEdit!save.rol" method="post" class="form-vertical">
-<input type="hidden" name="weblog" value="${weblog}"/>
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- Two choices side-by-side: choose Shared or Custom Theme --%>
 
@@ -33,8 +33,7 @@
                 <div class="panel-body" id="sharedChooser">
                     <h3>
                         <input id="sharedRadio" type="radio" name="themeType" value="shared"
-                            <c:choose>
-<c:when test="${!customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
+                            <c:if test="${!customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
                         <spring:message code="themeEditor.sharedTheme"/>
                     </h3>
                     <spring:message code="themeEditor.sharedThemeDescription"/>
@@ -65,7 +64,8 @@
         <p class="lead">
             <spring:message code="themeEditor.yourCurrentTheme"/>
             <b>${actionWeblog.theme.name}</b>
-            <c:if test="${${sharedThemeCustomStylesheet}}">
+            <c:choose>
+<c:when test="${sharedThemeCustomStylesheet}">
                 <spring:message code="themeEditor.yourCustomStylesheet"/>
             </c:when>
 <c:otherwise>
@@ -130,7 +130,7 @@
         </c:when>
 <c:otherwise>
             <p><spring:message code="themeEditor.existingTemplatesWarning"/></p>
-            <input type="checkbox" name="importTheme" value="true" ${importTheme ? 'checked' : ''}/>
+            <label><input type="checkbox" name="importTheme" value="true" ${importTheme ? 'checked' : ''}/> <spring:message code="themeEditor.importAndOverwriteTemplates"/></label>
         </c:otherwise>
 </c:choose><%-- Update button --%>
         <button type="submit" class="btn btn-default"><spring:message code="themeEditor.save"/></button>
