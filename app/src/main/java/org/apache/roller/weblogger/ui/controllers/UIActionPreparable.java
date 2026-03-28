@@ -16,9 +16,19 @@
  * directory of this distribution.
  */
 
-package org.apache.roller.weblogger.ui.struts2.util;
+package org.apache.roller.weblogger.ui.controllers;
 
-/** @deprecated Use org.apache.roller.weblogger.ui.controllers.UIActionPreparable */
-@Deprecated
-public interface UIActionPreparable
-        extends org.apache.roller.weblogger.ui.controllers.UIActionPreparable {}
+
+/**
+ * A Roller specific version of the Preparable interface.
+ *
+ * This provides a prepare option that is executed at the very end of the
+ * interceptor stack, just before the action method is executed. This way the
+ * custom prepare method can make use of anything the custom interceptors
+ * provide.
+ */
+public interface UIActionPreparable {
+
+    void myPrepare();
+
+}
