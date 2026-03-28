@@ -103,7 +103,7 @@
         <spring:message code="userSettings.locale" var="localeLabel"/>
         <label class="col-sm-3 control-label">${localeLabel}</label>
         <div class="col-sm-9 controls">
-            <form:select path="locale" items="${localesList}" itemValue="toString()" itemLabel="displayName" cssClass="form-control"/>
+            <form:select path="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-control"/>
         </div>
     </div>
 
