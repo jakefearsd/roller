@@ -15,53 +15,52 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
-<p class="subtitle"> <s:text name="mediaFileAdd.title"/> </p>
-<p class="pagetip"> <s:text name="mediaFileAdd.pageTip"/> </p>
+<p class="subtitle"> <spring:message code="mediaFileAdd.title"/> </p>
+<p class="pagetip"> <spring:message code="mediaFileAdd.pageTip"/> </p>
 
-<s:form id="entry" action="mediaFileAdd!save"
-        method="POST" enctype="multipart/form-data" theme="bootstrap" cssClass="form-horizontal">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
-    <s:hidden name="directoryName"/>
+<form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol" method="POST" enctype="multipart/form-data" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+    <input type="hidden" name="directoryName" value="${directoryName}"/>
 
-    <s:textfield name="bean.name" maxlength="255" label="%{getText('generic.name')}"/>
+    <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control"/>
 
-    <s:textarea name="bean.description"  rows="3" label="%{getText('generic.description')}"/>
+    <textarea name="bean.description" rows="3">${bean.description}</textarea>
 
-    <s:textarea name="bean.copyrightText" rows="3" label="%{getText('mediaFileAdd.copyright')}"/>
+    <textarea name="bean.copyrightText" rows="3">${bean.copyrightText}</textarea>
 
-    <s:textfield name="bean.tagsAsString" maxlength="255" label="%{getText('mediaFileAdd.tags')}"/>
+    <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" maxlength="255" class="form-control"/>
 
-    <s:select name="bean.directoryId" list="allDirectories"
-              listKey="id" listValue="name" label="%{getText('mediaFileAdd.directory')}"/>
+    <select name="bean.directoryId" class="form-control">
+<c:forEach items="${allDirectories}" var="opt">
+<option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
 
-    <s:checkbox name="bean.sharedForGallery"
-                label="%{getText('mediaFileAdd.includeGallery')}"
-                tooltip="%{getText('mediaFileEdit.includeGalleryHelp')}"/>
+    <input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''}/>
 
     <div class="panel panel-default">
         <div class="panel-heading">
             <h4 class="panel-title">
-                <s:text name="mediaFileAdd.fileLocation"/>
+                <spring:message code="mediaFileAdd.fileLocation"/>
             </h4>
         </div>
         <div class="panel-body">
-            <s:file id="fileControl0" name="uploadedFiles" size="30" />
-            <s:file id="fileControl1" name="uploadedFiles" size="30" />
-            <s:file id="fileControl2" name="uploadedFiles" size="30" />
-            <s:file id="fileControl3" name="uploadedFiles" size="30" />
-            <s:file id="fileControl4" name="uploadedFiles" size="30" />
+            <input type="file" name="uploadedFiles" id="fileControl0" size="30"/>
+            <input type="file" name="uploadedFiles" id="fileControl1" size="30"/>
+            <input type="file" name="uploadedFiles" id="fileControl2" size="30"/>
+            <input type="file" name="uploadedFiles" id="fileControl3" size="30"/>
+            <input type="file" name="uploadedFiles" id="fileControl4" size="30"/>
         </div>
     </div>
 
-    <s:submit id="uploadButton" cssClass="btn btn-default"
-              value="%{getText('mediaFileAdd.upload')}" action="mediaFileAdd!save"/>
-    <s:submit cssClass="btn" value="%{getText('generic.cancel')}" action="mediaFileAdd!cancel"/>
+    <button type="submit" id="uploadButton" class="btn btn-default" formaction="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol"><spring:message code="mediaFileAdd.upload"/></button>
+    <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!cancel.rol"><spring:message code="generic.cancel"/></button>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
 <%-- ================================================================== --%>
@@ -91,7 +90,7 @@
             } else if (count > 1) {
                 entryBean.css("font-style", "italic");
                 entryBean.css("color", "grey");
-                entryBean.get(0).value = "<s:text name="mediaFileAdd.multipleNames"  />";
+                entryBean.get(0).value = "<spring:message code="mediaFileAdd.multipleNames"/>";
                 entryBean.get(0).disabled = true;
             }
 

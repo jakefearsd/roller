@@ -15,23 +15,23 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p class="subtitle"><s:text name="maintenance.subtitle" /></p>
+<p class="subtitle"><spring:message code="maintenance.subtitle"/></p>
     
-<s:form action="maintenance" cssClass="form-vertical">
-	<s:hidden name="salt" />
-    <s:hidden name="weblog" value="%{actionWeblog.handle}" />
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/maintenance.rol" method="post" class="form-vertical">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
-    <p><s:text name="maintenance.prompt.flush" /></p>
-    <s:submit value="%{getText('maintenance.button.flush')}" action="maintenance!flushCache" cssClass="btn" />
+    <p><spring:message code="maintenance.prompt.flush"/></p>
+    <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/maintenance!flushCache.rol"><spring:message code="maintenance.button.flush"/></button>
 
-    <s:if test="getBooleanProp('search.enabled')">
-        <p><s:text name="maintenance.prompt.index" /></p>
-        <s:submit value="%{getText('maintenance.button.index')}" action="maintenance!index" cssClass="btn" />
-    </s:if>
+    <c:if test="${getBooleanProp('search.enabled')}">
+        <p><spring:message code="maintenance.prompt.index"/></p>
+        <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/maintenance!index.rol"><spring:message code="maintenance.button.index"/></button>
+    </c:if>
 
-    <p><s:text name="maintenance.prompt.reset" /></p>
-    <s:submit value="%{getText('maintenance.button.reset')}" action="maintenance!reset" cssClass="btn" />
+    <p><spring:message code="maintenance.prompt.reset"/></p>
+    <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/maintenance!reset.rol"><spring:message code="maintenance.button.reset"/></button>
 
-</s:form>
+<sec:csrfInput/>
+</form>

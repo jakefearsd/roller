@@ -15,18 +15,17 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p class="subtitle"><s:text name="inviteMember.subtitle" /></p>
-<p><s:text name="inviteMember.prompt" /></p>
+<p class="subtitle"><spring:message code="inviteMember.subtitle"/></p>
+<p><spring:message code="inviteMember.prompt"/></p>
 
-<s:form action="invite!save" cssClass="form-horizontal">
-	<s:hidden name="salt" />
-    <s:hidden name="weblog" value="%{actionWeblog.handle}" />
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/invite!save.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <div class="formrow">
        <label for="userName" class="formrow">
-           <s:text name="inviteMember.userName" /></label>
+           <spring:message code="inviteMember.userName"/></label>
        <div>
            <input name="userName" id="userName" size="30" maxlength="30"
                onfocus="onMemberNameFocus(true)" onkeyup="onMemberNameChange(true)" /><br />
@@ -42,20 +41,21 @@
 
     <div style="clear:left">
        <label for="userName" class="formrow" />
-           <s:text name="inviteMember.permissions" /></label>
+           <spring:message code="inviteMember.permissions"/></label>
        <input type="radio" name="permissionString" value="admin"  />
-       <s:text name="inviteMember.administrator" />
+       <spring:message code="inviteMember.administrator"/>
        <input type="radio" name="permissionString" value="post" checked />
-       <s:text name="inviteMember.author" />
+       <spring:message code="inviteMember.author"/>
        <input type="radio" name="permissionString" value="edit_draft" />
-       <s:text name="inviteMember.limited" />
+       <spring:message code="inviteMember.limited"/>
     </div>
 
     <br />
-    <s:submit id="inviteButton" value="%{getText('inviteMember.button.save')}"  cssClass="btn btn-default"/>
-    <s:submit value="%{getText('generic.cancel')}" action="invite!cancel" cssClass="btn"/>
+    <button type="submit" id="inviteButton" class="btn btn-default"><spring:message code="inviteMember.button.save"/></button>
+    <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/invite!cancel.rol"><spring:message code="generic.cancel"/></button>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 <script>
 

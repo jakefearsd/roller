@@ -15,17 +15,15 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p>
-    <s:text name="yourWebsites.confirmResignation">
-        <s:param value="weblog"/>
-    </s:text>
+    <spring:message code="yourWebsites.confirmResignation" arguments="${weblog}"/>
 </p>
 
-<s:form action="memberResign!resign"  cssClass="form-horizontal">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
-    <s:submit value="%{getText('generic.yes')}" cssClass="form-horizontal"/>&nbsp;
-    <s:submit value="%{getText('generic.no')}" action="menu" cssClass="form-horizontal"/>
-</s:form>
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/memberResign!resign.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+    <button type="submit" class="form-horizontal"><spring:message code="generic.yes"/></button>&nbsp;
+    <button type="submit" class="form-horizontal" formaction="${pageContext.request.contextPath}/roller-ui/authoring/menu.rol"><spring:message code="generic.no"/></button>
+<sec:csrfInput/>
+</form>

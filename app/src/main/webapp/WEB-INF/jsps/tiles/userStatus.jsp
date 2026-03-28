@@ -16,23 +16,23 @@
   directory of this distribution.
 --%>
 
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<s:if test="authenticatedUser != null">
+<c:if test="${authenticatedUser != null}">
     <p>
-    <s:text name="mainPage.loggedInAs" />:
-    <a href="<s:url action="menu" namespace="/roller-ui" />">
-        <s:property value="authenticatedUser.userName"/>
+    <spring:message code="mainPage.loggedInAs"/>:
+    <a href="<c:url value="/roller-ui/.rol"/>">
+        ${authenticatedUser.userName}
     </a>
     </p>
-</s:if>
+</c:if>
 
-<s:if test="actionWeblog != null">
+<c:if test="${actionWeblog != null}">
     <p>
-    <s:text name="mainPage.currentWebsite" />:
-    <a href='<s:property value="actionWeblog.absoluteURL" />'>
-        <s:property value="actionWeblog.handle" />
+    <spring:message code="mainPage.currentWebsite"/>:
+    <a href='${actionWeblog.absoluteURL}'>
+        ${actionWeblog.handle}
     </a>
     </p>
-</s:if>
+</c:if>
     

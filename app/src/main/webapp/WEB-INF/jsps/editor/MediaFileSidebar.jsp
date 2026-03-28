@@ -15,83 +15,87 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <div class="sidebarFade">
     <div class="menu-tr">
         <div class="menu-tl">
             <div class="sidebarInner">
 
-                <h3><s:text name="mediaFileSidebar.actions"/></h3>
+                <h3><spring:message code="mediaFileSidebar.actions"/></h3>
 
                 <div style="clear:right">
                     <span class="glyphicon glyphicon-picture"></span>
-                    <s:url var="mediaFileAddURL" action="mediaFileAdd">
-                        <s:param name="weblog" value="%{actionWeblog.handle}"/>
-                        <s:param name="directoryName" value="%{directoryName}"/>
-                    </s:url>
-                    <a href='<s:property escapeHtml="false" value="%{mediaFileAddURL}" />'
-                            <s:if test="actionName.equals('mediaFileAdd')"> style='font-weight:bold;'</s:if> >
-                        <s:text name="mediaFileSidebar.add"/>
+                    <c:url var="mediaFileAddURL" value="/roller-ui/authoring/mediaFileAdd.rol">
+                        <c:param name="weblog" value="${actionWeblog.handle}"/>
+                        <c:param name="directoryName" value="${directoryName}"/>
+                    </c:url>
+                    <a href='<c:out value="${mediaFileAddURL}" escapeXml="false"/>'
+                            <c:if test="${actionName.equals('mediaFileAdd')}"> style='font-weight:bold;'</c:if> >
+                        <spring:message code="mediaFileSidebar.add"/>
                     </a>
                 </div>
 
-                <s:if test="!pager">
+                <c:if test="${!pager}">
                     <%-- Only show Create New Directory control when NOT showing search results --%>
 
                     <div style="clear:right; margin-top: 1em">
 
                         <span class="glyphicon glyphicon-folder-open"></span>
-                        <s:text name="mediaFileView.addDirectory"/> <br />
+                        <spring:message code="mediaFileView.addDirectory"/> <br />
 
                         <label for="newDirectoryName">
-                            <s:text name="mediaFileView.directoryName"/>
+                            <spring:message code="mediaFileView.directoryName"/>
                         </label>
                         <input type="text" id="newDirectoryName" name="newDirectoryName" size="8" maxlength="25"/>
 
                         <input type="button" id="newDirectoryButton" class="btn btn-primary" style="clear:left"
-                               value='<s:text name="mediaFileView.create" />' onclick="onCreateDirectory()"/>
+                               value='<spring:message code="mediaFileView.create"/>' onclick="onCreateDirectory()"/>
 
                     </div>
-                </s:if>
+                </c:if>
 
                 <hr size="1" noshade="noshade"/>
 
-                <h3><s:text name="mediaFileView.search"/></h3>
+                <h3><spring:message code="mediaFileView.search"/></h3>
 
-                <s:form id="mediaFileSearchForm" name="mediaFileSearchForm"
-                        action="mediaFileView!search" theme="bootstrap" cssClass="form-vertical">
-                    <s:hidden name="salt"/>
-                    <s:hidden name="weblog"/>
+                <form id="mediaFileSearchForm" name="mediaFileSearchForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView!search.rol" method="post" class="form-vertical">
+<input type="hidden" name="weblog" value="${weblog}"/>
                     <input type="hidden" name="mediaFileId" value=""/>
 
-                    <s:textfield id="beanName" name="bean.name" size="20" maxlength="255"
-                                 label="%{getText('generic.name')}"/>
+                    <input type="text" name="bean.name" value="${bean.name}" id="beanName" size="20" maxlength="255" class="form-control"/>
 
-                    <s:select id="beanType" name="bean.type"
-                              list="fileTypes" listKey="key" listValue="value"
-                              label="%{getText('mediaFileView.type')}"/>
+                    <select name="bean.type" id="beanType" class="form-control">
+<c:forEach items="${fileTypes}" var="opt">
+<option value="${opt.key}" ${opt.key == bean.type ? 'selected' : ''}>${opt.value}</option>
+</c:forEach>
+</select>
 
-                    <s:select name="bean.sizeFilterType" id="sizeFilterTypeCombo"
-                              list="sizeFilterTypes" listKey="key" listValue="value"
-                              label="%{getText('mediaFileView.size')}"/>
+                    <select name="bean.sizeFilterType" id="sizeFilterTypeCombo" class="form-control">
+<c:forEach items="${sizeFilterTypes}" var="opt">
+<option value="${opt.key}" ${opt.key == bean.sizeFilterType ? 'selected' : ''}>${opt.value}</option>
+</c:forEach>
+</select>
 
-                    <s:textfield id="beanSize" name="bean.size" size="3" maxlength="10"/>
+                    <input type="text" name="bean.size" value="${bean.size}" id="beanSize" size="3" maxlength="10" class="form-control"/>
 
-                    <s:select name="bean.sizeUnit" list="sizeUnits" listKey="key" listValue="value"/>
+                    <select name="bean.sizeUnit" class="form-control">
+<c:forEach items="${sizeUnits}" var="opt">
+<option value="${opt.key}" ${opt.key == bean.sizeUnit ? 'selected' : ''}>${opt.value}</option>
+</c:forEach>
+</select>
 
-                    <s:textfield id="beanTags" name="bean.tags" size="20" maxlength="50"
-                                 label="%{getText('mediaFileView.tags')}"/>
+                    <input type="text" name="bean.tags" value="${bean.tags}" id="beanTags" size="20" maxlength="50" class="form-control"/>
 
-                    <s:submit id="searchButton" cssClass="btn btn-primary"
-                              value="%{getText('mediaFileView.search')}" cssStyle="margin:5px 0;"/>
+                    <button type="submit" id="searchButton" class="btn btn-primary" style="margin:5px 0;"><spring:message code="mediaFileView.search"/></button>
 
-                    <s:if test="pager">
+                    <c:if test="${pager}">
                         <input id="resetButton" style="margin:5px 0;" type="button" class="btn"
-                               name="reset" value='<s:text name="mediaFileView.reset" />'/>
-                    </s:if>
+                               name="reset" value='<spring:message code="mediaFileView.reset"/>'/>
+                    </c:if>
 
-                </s:form>
+                <sec:csrfInput/>
+</form>
 
             </div>
         </div>
@@ -103,7 +107,7 @@
 
     function onCreateDirectory() {
         document.mediaFileViewForm.newDirectoryName.value = $("#newDirectoryName").get(0).value;
-        document.mediaFileViewForm.action = '<s:url action="mediaFileView!createNewDirectory" />';
+        document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!createNewDirectory.rol"/>';
         document.mediaFileViewForm.submit();
     }
 
@@ -127,10 +131,10 @@
         $("select").bind("change", maintainSearchButtonState);
 
         $("#resetButton").bind("click", function () {
-            <s:url var="mediaFileViewURL" action="mediaFileView">
-            <s:param name="weblog" value="%{actionWeblog.handle}" />
-            </s:url>
-            window.location = '<s:property value="%{mediaFileViewURL}" />';
+            <c:url var="mediaFileViewURL" value="/roller-ui/authoring/mediaFileView.rol">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+            </c:url>
+            window.location = '${mediaFileViewURL}';
         });
     });
 

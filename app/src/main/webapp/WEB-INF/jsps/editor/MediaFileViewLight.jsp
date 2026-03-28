@@ -15,15 +15,15 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 {
 "Result":
 [
-    <s:iterator var="directory" value="childDirectories" status="dirStatus">
-{"label":"<s:property value="#directory.name" />","key":"<s:property value="#directory.id" />","type":"dir"}<s:if test="(!#dirStatus.last) || (#dirStatus.last && childFiles.size() > 0)">,</s:if>
-    </s:iterator>
-    <s:iterator var="mediaFile" value="childFiles" status="fileStatus">
-{"label":"<s:property value="#mediaFile.name" />","key":"<s:property value="#mediaFile.id" />","type":"file"}<s:if test="!#fileStatus.last">,</s:if>
-    </s:iterator>
+    <c:forEach items="${childDirectories}" var="directory" varStatus="dirStatus">
+{"label":"${directory.name}","key":"${directory.id}","type":"dir"}<c:if test="${(!dirStatus.last) || (dirStatus.last && childFiles.size() > 0)}">,</c:if>
+    </c:forEach>
+    <c:forEach items="${childFiles}" var="mediaFile" varStatus="fileStatus">
+{"label":"${mediaFile.name}","key":"${mediaFile.id}","type":"file"}<c:if test="${!fileStatus.last}">,</c:if>
+    </c:forEach>
 ]
 }

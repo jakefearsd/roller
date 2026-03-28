@@ -15,48 +15,46 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h3><s:text name="weblogEntryQuery.sidebarTitle"/></h3>
+<h3><spring:message code="weblogEntryQuery.sidebarTitle"/></h3>
 <hr size="1" noshade="noshade"/>
 
-<p><s:text name="weblogEntryQuery.sidebarDescription"/></p>
+<p><spring:message code="weblogEntryQuery.sidebarDescription"/></p>
 
-<s:form action="entries" theme="bootstrap" cssClass="form-vertical">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/entries.rol" method="post" class="form-vertical">
+<input type="hidden" name="weblog" value="${weblog}"/>
 
     <%-- ========================================================= --%>
     <%-- filter by category --%>
 
-    <s:select name="bean.categoryName"
-              label="%{getText('weblogEntryQuery.label.category')}"
-              list="categories" listKey="name" listValue="name" size="1"/>
+    <select name="bean.categoryName" class="form-control" size="1">
+<c:forEach items="${categories}" var="opt">
+<option value="${opt.name}" ${opt.name == bean.categoryName ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
 
     <%-- ========================================================= --%>
     <%-- filter by tag --%>
 
-    <s:textfield name="bean.tagsAsString" size="14"
-                 label="%{getText('weblogEntryQuery.label.tags')}"/>
+    <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" size="14" class="form-control"/>
 
     <%-- ========================================================= --%>
     <%-- filter by text --%>
 
-    <s:textfield name="bean.text" size="14"
-                 label="%{getText('weblogEntryQuery.label.text')}"/>
+    <input type="text" name="bean.text" value="${bean.text}" size="14" class="form-control"/>
 
     <%-- ========================================================= --%>
     <%-- filter by date --%>
 
     <div class="control-group">
         <label for="bean.startDateString" class="control-label">
-            <s:text name="weblogEntryQuery.label.startDate"/>
+            <spring:message code="weblogEntryQuery.label.startDate"/>
         </label>
         <div class="controls">
             <div class="input-group">
 
-                <s:textfield name="bean.startDateString" readonly="true"
-                             theme="simple" cssClass="date-picker form-control"/>
+                <input type="text" name="bean.startDateString" value="${bean.startDateString}" readonly class="date-picker form-control"/>
                 <label for="bean.startDateString" class="input-group-addon btn">
                     <span class="glyphicon glyphicon-calendar"></span>
                 </label>
@@ -67,13 +65,12 @@
 
     <div class="control-group">
         <label for="bean.endDateString" class="control-label">
-            <s:text name="weblogEntryQuery.label.endDate"/>
+            <spring:message code="weblogEntryQuery.label.endDate"/>
         </label>
         <div class="controls">
             <div class="input-group">
 
-                <s:textfield name="bean.endDateString" readonly="true"
-                             theme="simple" cssClass="date-picker form-control"/>
+                <input type="text" name="bean.endDateString" value="${bean.endDateString}" readonly class="date-picker form-control"/>
                 <label for="bean.endDateString" class="input-group-addon btn">
                     <span class="glyphicon glyphicon-calendar"></span>
                 </label>
@@ -87,24 +84,25 @@
     <%-- ========================================================= --%>
     <%-- filter by status --%>
 
-    <s:radio name="bean.status"
-             label="%{getText('weblogEntryQuery.label.status')}"
-             list="statusOptions" listKey="key" listValue="value"/>
+    <c:forEach items="${statusOptions}" var="opt">
+<label><input type="radio" name="bean.status" value="${opt.key}" ${opt.key == bean.status ? 'checked' : ''}/> ${opt.value}</label>
+</c:forEach>
 
     <%-- ========================================================= --%>
     <%-- sort by --%>
 
-    <s:radio name="bean.sortBy"
-             label="%{getText('weblogEntryQuery.label.sortby')}"
-             list="sortByOptions" listKey="key" listValue="value"/>
+    <c:forEach items="${sortByOptions}" var="opt">
+<label><input type="radio" name="bean.sortBy" value="${opt.key}" ${opt.key == bean.sortBy ? 'checked' : ''}/> ${opt.value}</label>
+</c:forEach>
 
     
     <%-- ========================================================= --%>
     <%-- filter button --%>
 
-    <s:submit cssClass="btn" value="%{getText('weblogEntryQuery.button.query')}"/>
+    <button type="submit" class="btn"><spring:message code="weblogEntryQuery.button.query"/></button>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 <script>
 

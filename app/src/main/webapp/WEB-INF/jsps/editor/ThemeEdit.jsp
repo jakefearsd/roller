@@ -15,17 +15,14 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <s:text name="themeEditor.subtitle">
-        <s:param value="actionWeblog.handle"/>
-    </s:text>
+    <spring:message code="themeEditor.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<s:form action="themeEdit!save" theme="bootstrap" cssClass="form-vertical">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/themeEdit!save.rol" method="post" class="form-vertical">
+<input type="hidden" name="weblog" value="${weblog}"/>
 
     <%-- Two choices side-by-side: choose Shared or Custom Theme --%>
 
@@ -36,10 +33,11 @@
                 <div class="panel-body" id="sharedChooser">
                     <h3>
                         <input id="sharedRadio" type="radio" name="themeType" value="shared"
-                            <s:if test="!customTheme">checked</s:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
-                        <s:text name="themeEditor.sharedTheme"/>
+                            <c:choose>
+<c:when test="${!customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
+                        <spring:message code="themeEditor.sharedTheme"/>
                     </h3>
-                    <s:text name="themeEditor.sharedThemeDescription"/>
+                    <spring:message code="themeEditor.sharedThemeDescription"/>
                 </div>
             </div>
         </div>
@@ -49,10 +47,10 @@
                 <div class="panel-body" id="customChooser">
                     <h3>
                         <input id="customRadio" type="radio" name="themeType" value="custom"
-                            <s:if test="customTheme">checked</s:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
-                        <s:text name="themeEditor.customTheme"/>
+                            <c:if test="${customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
+                        <spring:message code="themeEditor.customTheme"/>
                     </h3>
-                    <s:text name="themeEditor.customThemeDescription"/>
+                    <spring:message code="themeEditor.customThemeDescription"/>
                 </div>
             </div>
         </div>
@@ -65,15 +63,15 @@
 
         <%-- you have shared theme X --%>
         <p class="lead">
-            <s:text name="themeEditor.yourCurrentTheme"/>
-            <b><s:property value="actionWeblog.theme.name"/></b>
-            <s:if test="%{sharedThemeCustomStylesheet}">
-                <s:text name="themeEditor.yourCustomStylesheet"/>
-            </s:if>
-            <s:else>
-                <s:text name="themeEditor.yourThemeStyleSheet"/>
-            </s:else>
-        </p>
+            <spring:message code="themeEditor.yourCurrentTheme"/>
+            <b>${actionWeblog.theme.name}</b>
+            <c:if test="${${sharedThemeCustomStylesheet}}">
+                <spring:message code="themeEditor.yourCustomStylesheet"/>
+            </c:when>
+<c:otherwise>
+                <spring:message code="themeEditor.yourThemeStyleSheet"/>
+            </c:otherwise>
+</c:choose></p>
 
     </div>
 
@@ -82,13 +80,15 @@
     <div id="themeChooser" style="display:none;">
 
         <%-- theme selector with preview image --%>
-        <p class="lead"><s:text name="themeEditor.selectTheme"/></p>
+        <p class="lead"><spring:message code="themeEditor.selectTheme"/></p>
         <p>
-            <s:select id="themeSelector" name="selectedThemeId" list="themes" style="width:20em"
-                listKey="id" listValue="name" size="1"
-                onchange="proposeSharedThemeChange(this[selectedIndex].value)"/>
+            <select name="selectedThemeId" id="themeSelector" class="form-control" style="width:20em" size="1" onchange="proposeSharedThemeChange(this[selectedIndex].value)">
+<c:forEach items="${themes}" var="opt">
+<option value="${opt.id}" ${opt.id == selectedThemeId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
         </p>
-        <p><s:text name="themeEditor.thisTheme"/> <p id="themeDescription"></p>
+        <p><spring:message code="themeEditor.thisTheme"/> <p id="themeDescription"></p>
         <p><img id="themeThumbnail" src="" class="img-responsive img-thumbnail" style="max-width: 30em" /></p>
 
     </div>
@@ -98,18 +98,18 @@
     <div id="sharedChangeToShared" style="display:none;">
 
         <div class="alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
-            <s:text name="themeEditor.proposedSharedThemeChange"/>
+            <spring:message code="themeEditor.proposedSharedThemeChange"/>
         </div>
 
         <%-- Preview and Update buttons --%>
-        <p> <s:text name="themeEditor.previewDescription"/> </p>
+        <p> <spring:message code="themeEditor.previewDescription"/> </p>
         <input type="button" name="themePreview" class="btn"
-            value="<s:text name='themeEditor.preview' />"
+            value="<spring:message code="themeEditor.preview"/>"
             onclick="fullPreview($('#themeSelector').get(0))"/>
 
-        <s:submit cssClass="btn btn-default" value="%{getText('themeEditor.save')}"/>
+        <button type="submit" class="btn btn-default"><spring:message code="themeEditor.save"/></button>
 
-        <input type="button" class="btn" onclick="cancelChanges()" value="<s:text name='generic.cancel'/>" />
+        <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
     </div>
 
@@ -118,31 +118,31 @@
     <div id="sharedChangeToCustom" style="display:none;">
 
         <div class="alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
-            <s:text name="themeEditor.proposedSharedChangeToCustom"/>
+            <spring:message code="themeEditor.proposedSharedChangeToCustom"/>
         </div>
 
-        <s:if test="firstCustomization">
+        <c:choose>
+<c:when test="${firstCustomization}">
             <p>
-                <s:text name="themeEditor.importRequired"/>
-                <s:hidden name="importTheme" value="true"/>
+                <spring:message code="themeEditor.importRequired"/>
+                <input type="hidden" name="importTheme" value="${true}"/>
             </p>
-        </s:if>
-        <s:else>
-            <p><s:text name="themeEditor.existingTemplatesWarning"/></p>
-            <s:checkbox name="importTheme" label="%{getText('themeEditor.importAndOverwriteTemplates')}"/>
-        </s:else>
+        </c:when>
+<c:otherwise>
+            <p><spring:message code="themeEditor.existingTemplatesWarning"/></p>
+            <input type="checkbox" name="importTheme" value="true" ${importTheme ? 'checked' : ''}/>
+        </c:otherwise>
+</c:choose><%-- Update button --%>
+        <button type="submit" class="btn btn-default"><spring:message code="themeEditor.save"/></button>
 
-        <%-- Update button --%>
-        <s:submit cssClass="btn btn-default" value="%{getText('themeEditor.save')}"/>
-
-        <input type="button" class="btn" onclick="cancelChanges()" value="<s:text name='generic.cancel'/>" />
+        <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
     </div>
 
     <%-- ================================================= --%>
 
     <div id="customNoChange" style="display:none;">
-        <p class="lead"><s:text name="themeEditor.youAreUsingACustomTheme"/></p>
+        <p class="lead"><spring:message code="themeEditor.youAreUsingACustomTheme"/></p>
     </div>
 
     <%-- ================================================= --%>
@@ -150,44 +150,45 @@
     <div id="customChangeToShared" style="display:none;">
 
         <div class="alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
-            <s:text name="themeEditor.proposedChangeToShared"/>
+            <spring:message code="themeEditor.proposedChangeToShared"/>
         </div>
 
         <%-- Preview and Update buttons --%>
-        <p> <s:text name="themeEditor.previewDescription"/> </p>
+        <p> <spring:message code="themeEditor.previewDescription"/> </p>
         <input type="button" name="themePreview" class="btn"
-            value="<s:text name='themeEditor.preview' />"
+            value="<spring:message code="themeEditor.preview"/>"
             onclick="fullPreview($('#themeSelector').get(0))"/>
 
-        <s:submit cssClass="btn btn-default" value="%{getText('themeEditor.save')}"/>
+        <button type="submit" class="btn btn-default"><spring:message code="themeEditor.save"/></button>
 
-        <input type="button" class="btn" onclick="cancelChanges()" value="<s:text name='generic.cancel'/>" />
+        <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
     </div>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 <script type="text/javascript">
 
     var proposedChangeType = ""
     var proposedThemeId = ""
-    var originalThemeId = "<s:property value="themeId"/>"
+    var originalThemeId = "${themeId}"
     var originalType = ""
 
     $.when( $.ready ).then(function() {
 
-        <s:if test="customTheme">
+        <c:choose>
+<c:when test="${customTheme}">
         originalType = "custom"
         updateView($('#customRadio'));
-        previewImage('<s:property value="themes[0].id"/>');
-        </s:if>
-
-        <s:else>
+        previewImage('${themes[0].id}');
+        </c:when>
+<c:otherwise>
         originalType = "shared"
         updateView($('#sharedRadio'));
-        previewImage('<s:property value="themeId"/>');
-        </s:else>
-    });
+        previewImage('${themeId}');
+        </c:otherwise>
+</c:choose>});
 
     function proposeThemeTypeChange(selected) {
 
@@ -244,18 +245,18 @@
 
     function previewImage(themeId) {
         $.ajax({
-            url: "<s:url value='themedata'/>",
+            url: "<c:url value='themedata'/>",
             data: {theme: themeId}, success: function (data) {
                 $('#themeDescription').html(data.description);
                 thumbnail = $('#themeThumbnail');
-                thumbnail.attr('src', '<s:property value="siteURL" />' + data.previewPath);
+                thumbnail.attr('src', '${siteURL}' + data.previewPath);
             }
         });
     }
 
     function fullPreview(selector) {
         selected = selector.selectedIndex;
-        window.open('<s:url value="/roller-ui/authoring/preview/%{actionWeblog.handle}"/>?theme='
+        window.open('<c:url value="/roller-ui/authoring/preview/${actionWeblog.handle}"/>?theme='
             + selector.options[selected].value);
     }
 

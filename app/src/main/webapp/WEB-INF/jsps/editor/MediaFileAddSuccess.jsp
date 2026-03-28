@@ -15,24 +15,23 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
-<p class="subtitle"><s:text name="mediaFileSuccess.subtitle"/></p>
-<p class="pagetip"><s:text name="mediaFileSuccess.pageTip"/></p>
+<p class="subtitle"><spring:message code="mediaFileSuccess.subtitle"/></p>
+<p class="pagetip"><spring:message code="mediaFileSuccess.pageTip"/></p>
 
-<s:form id="entry" theme="bootstrap" cssClass="form-horizontal">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
-    <s:hidden name="bean.enclosureURL" id="enclosureURL"/>
+<form id="entry" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+    <input type="hidden" name="bean.enclosureURL" value="${bean.enclosureURL}" id="enclosureURL"/>
 
-    <s:if test="newImages.size() > 0">
-        <h4><s:text name="mediaFileSuccess.selectImagesTitle"/></h4>
-        <p><s:text name="mediaFileSuccess.selectImages"/></p>
+    <c:if test="${newImages.size() > 0}">
+        <h4><spring:message code="mediaFileSuccess.selectImagesTitle"/></h4>
+        <p><spring:message code="mediaFileSuccess.selectImages"/></p>
 
         <%-- select images via checkboxes --%>
 
-        <s:iterator value="newImages" var="newImage">
+        <c:forEach items="${newImages}" var="newImage">
 
             <div class="panel panel-default">
                 <div class="panel-body">
@@ -40,35 +39,35 @@
                     <div class="row">
 
                         <div class="col-md-1">
-                            <input type="checkbox" name="selectedImages" value="<s:property value="#newImage.id"/>"/>
+                            <input type="checkbox" name="selectedImages" value="${newImage.id}"/>
                         </div>
 
                         <div class="col-md-2">
                             <img align="center" class="mediaFileImage"
-                                 src='<s:property value="%{#newImage.thumbnailURL}" />' alt="thumbnail"/>
+                                 src='${newImage.thumbnailURL}' alt="thumbnail"/>
                         </div>
 
                         <div class="col-md-9">
                             <p>
-                                <b><s:text name="mediaFileSuccess.name"/></b>
-                                <s:property value="%{#newImage.name}"/>
+                                <b><spring:message code="mediaFileSuccess.name"/></b>
+                                ${newImage.name}
                             </p>
 
                             <p>
-                                <b><s:text name="mediaFileSuccess.type"/></b>
-                                <s:property value="%{#newImage.contentType}"/>
+                                <b><spring:message code="mediaFileSuccess.type"/></b>
+                                ${newImage.contentType}
                             </p>
 
                             <p>
-                                <b><s:text name="mediaFileSuccess.size"/></b>
-                                <s:property value="%{#newImage.length}"/> <s:text name="mediaFileSuccess.bytes"/>,
-                                <s:property value="%{#newImage.width}"/> x
-                                <s:property value="%{#newImage.height}"/> <s:text name="mediaFileSuccess.pixels"/>
+                                <b><spring:message code="mediaFileSuccess.size"/></b>
+                                ${newImage.length} <spring:message code="mediaFileSuccess.bytes"/>,
+                                ${newImage.width} x
+                                ${newImage.height} <spring:message code="mediaFileSuccess.pixels"/>
                             </p>
 
                             <p>
-                                <b><s:text name="mediaFileSuccess.link"/></b>
-                                <s:property value="%{#newImage.permalink}"/>
+                                <b><spring:message code="mediaFileSuccess.link"/></b>
+                                ${newImage.permalink}
                             </p>
                         </div>
 
@@ -77,18 +76,18 @@
                 </div>
             </div>
 
-        </s:iterator>
+        </c:forEach>
 
-    </s:if>
+    </c:if>
 
-    <s:if test="newFiles.size() > 0">
+    <c:if test="${newFiles.size() > 0}">
 
         <%-- select enclosure file via radio boxes --%>
 
-        <h4><s:text name="mediaFileSuccess.selectEnclosureTitle"/></h4>
-        <p><s:text name="mediaFileSuccess.selectEnclosure"/></p>
+        <h4><spring:message code="mediaFileSuccess.selectEnclosureTitle"/></h4>
+        <p><spring:message code="mediaFileSuccess.selectEnclosure"/></p>
 
-        <s:iterator value="newFiles" var="newFile">
+        <c:forEach items="${newFiles}" var="newFile">
             <div class="panel panel-default">
                 <div class="panel-body">
 
@@ -96,28 +95,28 @@
 
                         <div class="col-md-1">
                             <input type="radio" name="enclosure"
-                                   onchange="setEnclosure('<s:property value="%{#newFile.permalink}"/>')"/>
+                                   onchange="setEnclosure('${newFile.permalink}')"/>
                         </div>
 
                         <div class="col-md-11">
                             <p>
-                                <b><s:text name="mediaFileSuccess.name"/></b>
-                                <s:property value="%{#newFile.name}"/>
+                                <b><spring:message code="mediaFileSuccess.name"/></b>
+                                ${newFile.name}
                             </p>
 
                             <p>
-                                <b><s:text name="mediaFileSuccess.type"/></b>
-                                <s:property value="%{#newFile.contentType}"/>,&nbsp;
+                                <b><spring:message code="mediaFileSuccess.type"/></b>
+                                ${newFile.contentType},&nbsp;
 
-                                <b><s:text name="mediaFileSuccess.size"/></b>
-                                <s:property value="%{#newFile.length}"/> <s:text name="mediaFileSuccess.bytes"/>,
-                                <s:property value="%{#newFile.width}"/> x
-                                <s:property value="%{#newFile.height}"/> <s:text name="mediaFileSuccess.pixels"/>
+                                <b><spring:message code="mediaFileSuccess.size"/></b>
+                                ${newFile.length} <spring:message code="mediaFileSuccess.bytes"/>,
+                                ${newFile.width} x
+                                ${newFile.height} <spring:message code="mediaFileSuccess.pixels"/>
                             </p>
 
                             <p>
-                                <b><s:text name="mediaFileSuccess.link"/></b>
-                                <s:property value="%{#newFile.permalink}"/>
+                                <b><spring:message code="mediaFileSuccess.link"/></b>
+                                ${newFile.permalink}
                             </p>
                         </div>
 
@@ -125,7 +124,7 @@
 
                 </div>
             </div>
-        </s:iterator>
+        </c:forEach>
 
         <div class="panel panel-default">
             <div class="panel-body">
@@ -136,41 +135,41 @@
                     </div>
 
                     <div class="col-md-10">
-                        <s:text name="mediaFileSuccess.noEnclosure" />
+                        <spring:message code="mediaFileSuccess.noEnclosure"/>
                     </div>
 
                 </div>
             </div>
         </div>
 
-    </s:if>
+    </c:if>
 
     <%-- buttons for create new weblog, cancel and upload more --%>
 
     <div>
-        <s:url var="mediaFileAddURL" action="mediaFileAdd">
-            <s:param name="weblog" value="%{actionWeblog.handle}"/>
-            <s:param name="directoryName" value="%{directoryName}"/>
-        </s:url>
+        <c:url var="mediaFileAddURL" value="/roller-ui/authoring/mediaFileAdd.rol">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+            <c:param name="directoryName" value="${directoryName}"/>
+        </c:url>
 
-        <s:url var="mediaFileViewURL" action="mediaFileView">
-            <s:param name="weblog" value="%{actionWeblog.handle}"/>
-            <s:param name="directoryId" value="%{bean.directoryId}"/>
-        </s:url>
+        <c:url var="mediaFileViewURL" value="/roller-ui/authoring/mediaFileView.rol">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+            <c:param name="directoryId" value="${bean.directoryId}"/>
+        </c:url>
 
-        <s:submit cssClass="btn btn-success" id="submit" value="%{getText('mediaFileSuccess.createPost')}"
-                  action="entryAddWithMediaFile"/>
+        <button type="submit" id="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryAddWithMediaFile.rol"><spring:message code="mediaFileSuccess.createPost"/></button>
 
-        <button class="btn btn-default" onclick='window.load("<s:property value='%{mediaFileAddURL}'/>")'>
-            <s:text name="mediaFileSuccess.uploadMore"/>
+        <button class="btn btn-default" onclick='window.load("${mediaFileAddURL}")'>
+            <spring:message code="mediaFileSuccess.uploadMore"/>
         </button>
 
-        <button class="btn" onclick='window.load("<s:property value='%{mediaFileViewURL}'/>")'>
-            <s:text name="generic.cancel"/>
+        <button class="btn" onclick='window.load("${mediaFileViewURL}")'>
+            <spring:message code="generic.cancel"/>
         </button>
     </div>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
 <%-- ================================================================================= --%>

@@ -15,10 +15,10 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <s:text name="mediaFile.add.title"  />
+    <spring:message code="mediaFile.add.title"/>
 </p>
 
 <script>
@@ -28,17 +28,15 @@ function submitPage(frm) {
 }
 </script>
 
-<s:form id="entry" action=" " method="POST">
-	<s:hidden name="salt" />
-
-    <table class="entryEditTable" cellpadding="0" cellspacing="0" width="100%">
+<form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/ .rol" method="POST">
+<table class="entryEditTable" cellpadding="0" cellspacing="0" width="100%">
 
         <tr>
             <td class="entryEditFormLabel">
                 <label for="status">URL:</label>
             </td>
             <td>
-                <s:textfield name="url" size="50" maxlength="255" tabindex="1" />
+                <input type="text" name="url" value="${url}" size="50" maxlength="255" tabindex="1" class="form-control"/>
             </td>
        </tr>
 
@@ -47,7 +45,7 @@ function submitPage(frm) {
                 <label for="status">Title</label>
             </td>
             <td>
-                <s:textfield name="title" size="50" maxlength="255" />
+                <input type="text" name="title" value="${title}" size="50" maxlength="255" class="form-control"/>
             </td>
        </tr>
 
@@ -59,4 +57,5 @@ function submitPage(frm) {
        <input type="button" value="Cancel" onClick="javascript:window.parent.onClose();" />
     </div>
 
-</s:form>
+<sec:csrfInput/>
+</form>

@@ -16,17 +16,16 @@
   directory of this distribution.
 --%>
 <%-- This page is designed to be included in EntryEdit.jsp --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
 <%-- ********************************************************************* --%>
 
 <%-- content --%>
-<s:textarea id="edit_content" name="bean.text"
-            tabindex="5" rows="18" cssClass="col-sm-12" theme="simple"/>
+<textarea name="bean.text" id="edit_content" rows="18" tabindex="5" class="col-sm-12">${bean.text}</textarea>
 
-<a href="#" onClick="onClickMediaFileInsert();"><s:text name="weblogEdit.insertMediaFile"/></a><br/>
-<img src="<s:url value='/roller-ui/images/spacer.png' />" alt="spacer" style="min-height: 2em"/>
+<a href="#" onClick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a><br/>
+<img src="<c:url value='/roller-ui/images/spacer.png'/>" alt="spacer" style="min-height: 2em"/>
 
 <%-- summary --%>
 
@@ -36,7 +35,7 @@
         <h4 class="panel-title">
             <a href="#" class="collapsed"
                data-toggle="collapse" data-target="#collapseSummaryEditor">
-                <s:text name="weblogEdit.summary"/>
+                <spring:message code="weblogEdit.summary"/>
             </a>
         </h4>
 
@@ -44,8 +43,7 @@
     <div id="collapseSummaryEditor" class="panel-collapse collapse">
         <div class="panel-body">
 
-            <s:textarea id="edit_summary" name="bean.summary"
-                        tabindex="6" rows="10" cssClass="col-sm-12" theme="simple"/>
+            <textarea name="bean.summary" id="edit_summary" rows="10" tabindex="6" class="col-sm-12">${bean.summary}</textarea>
 
         </div>
     </div>
@@ -63,7 +61,7 @@
         <div class="modal-content">
 
             <div class="modal-header">
-                <h4 class="modal-title"><s:text name='weblogEdit.insertMediaFile'/></h4>
+                <h4 class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -90,7 +88,8 @@
 
 <script>
 
-    <s:if test="editor.id == 'editor-text.jsp'">
+    <c:choose>
+<c:when test="${editor.id == 'editor-text.jsp'}">
 
     <%-- Plain text editor functions --%>
 
@@ -141,8 +140,8 @@
         });
     });
 
-    </s:if>
-    <s:else>
+    </c:when>
+<c:otherwise>
 
     <%-- Rich text editor functions --%>
 
@@ -184,15 +183,14 @@
         $('#edit_content').summernote("pasteHTML", toInsert);
     }
 
-    </s:else>
-
-    <%-- Common functions --%>
+    </c:otherwise>
+</c:choose><%-- Common functions --%>
 
     function onClickMediaFileInsert() {
-        <s:url var="mediaFileImageChooser" action="mediaFileImageChooser" namespace="overlay">
-        <s:param name="weblog" value="%{actionWeblog.handle}" />
-        </s:url>
-        $("#mediaFileEditor").attr('src', '<s:property value="%{mediaFileImageChooser}" />');
+        <c:url var="mediaFileImageChooser" value="/overlay/mediaFileImageChooser.rol">
+        <c:param name="weblog" value="${actionWeblog.handle}"/>
+        </c:url>
+        $("#mediaFileEditor").attr('src', '${mediaFileImageChooser}');
         $('#mediafile_edit_lightbox').modal({show: true});
     }
 

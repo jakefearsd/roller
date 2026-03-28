@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <nav class="navbar navbar-default navbar-static-top navbar-inverse">
     <div class="container-fluid">
@@ -29,105 +29,105 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#"><s:property value="%{getProp('site.name')}" /></a>
+                <a class="navbar-brand" href="#">${getProp('site.name')}</a>
             </div>
             
             <ul class="nav navbar-nav">
 
-                <s:if test="actionWeblog != null">
+                <c:choose>
+<c:when test="${actionWeblog != null}">
                     
-                    <s:set var="tabMenu" value="menu"/>
-                    <s:if test="#tabMenu != null">
+                    <c:set var="tabMenu" value="${menu}"/>
+                    <c:if test="${tabMenu != null}">
 
-                        <s:iterator var="tab" value="#tabMenu.tabs">
+                        <c:forEach items="${tabMenu.tabs}" var="tab">
                             <li class="dropdown">
                                 <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
                                    aria-haspopup="true" aria-expanded="false">
-                                    <s:text name="%{#tab.key}"/> <span class="caret"></span>
+                                    <spring:message code="${tab.key}"/> <span class="caret"></span>
                                 </a>
                                 <ul class="dropdown-menu">
-                                    <s:iterator var="tabItem" value="#tab.items" status="stat">
+                                    <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
                                         <li>
-                                            <a href="<s:url action="%{#tabItem.action}">
-                                                <s:param name="weblog" value="actionWeblog.handle"/></s:url>">
-                                                <s:text name="%{#tabItem.key}"/>
+                                            <a href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol">
+                                                <c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
+                                                <spring:message code="${tabItem.key}"/>
                                             </a>
                                         </li>
-                                    </s:iterator>
+                                    </c:forEach>
                                 </ul>
                             </li>
-                        </s:iterator>
+                        </c:forEach>
 
-                    </s:if>
+                    </c:if>
                     
-                </s:if>
+                </c:if>
 
-                <s:if test="actionWeblog == null">
+                <c:if test="${actionWeblog == null}">
 
-                    <s:set var="tabMenu" value="menu"/>
-                    <s:if test="#tabMenu != null">
+                    <c:set var="tabMenu" value="${menu}"/>
+                    <c:if test="${tabMenu != null}">
 
-                        <s:iterator var="tab" value="#tabMenu.tabs">
+                        <c:forEach items="${tabMenu.tabs}" var="tab">
                             <li class="dropdown">
                                 <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
                                    aria-haspopup="true" aria-expanded="false">
-                                    <s:text name="%{#tab.key}"/> <span class="caret"></span>
+                                    <spring:message code="${tab.key}"/> <span class="caret"></span>
                                 </a>
                                 <ul class="dropdown-menu">
-                                    <s:iterator var="tabItem" value="#tab.items" status="stat">
+                                    <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
                                         <li>
-                                            <a href="<s:url action='%{#tabItem.action}' />">
-                                                <s:text name="%{#tabItem.key}"/>
+                                            <a href="<c:url value='/roller-ui/authoring/${tabItem.action}.rol'/>">
+                                                <spring:message code="${tabItem.key}"/>
                                             </a>
                                         </li>
-                                    </s:iterator>
+                                    </c:forEach>
                                 </ul>
                             </li>
-                        </s:iterator>
+                        </c:forEach>
 
-                    </s:if>
+                    </c:if>
 
-                </s:if>
+                </c:if>
 
             </ul>
             
             <ul class="nav navbar-nav navbar-right">
                 
-                <li><a href="<s:url value='/'/>"><s:property value="getProp('site.shortName')"/></a></li>
+                <li><a href="<c:url value='/'/>">${getProp('site.shortName')}</a></li>
 
                 <li>
-                    <a href="<s:url action='menu' namespace='/roller-ui' />">
-                        <s:text name="mainPage.mainMenu" /></a>
+                    <a href="<c:url value="/roller-ui/menu.rol"/>">
+                        <spring:message code="mainPage.mainMenu"/></a>
                 </li>
 
-                <s:if test="authenticatedUser != null">
+                <c:if test="${authenticatedUser != null}">
                     <li>
-                        <a href="<s:url action='logout' namespace='/roller-ui' />">
-                            <s:text name="navigationBar.logout"/></a>
+                        <a href="<c:url value="/roller-ui/logout.rol"/>">
+                            <spring:message code="navigationBar.logout"/></a>
                     </li>
-                </s:if>
-                <s:else>
+                </c:when>
+<c:otherwise>
                     <li>
-                        <a href="<s:url action='login-redirect' namespace='/roller-ui' />">
-                            <s:text name="navigationBar.login"/></a>
+                        <a href="<c:url value="/roller-ui/login-redirect.rol"/>">
+                            <spring:message code="navigationBar.login"/></a>
                     </li>
 
-                    <s:if test="getBooleanProp('users.registration.enabled') && getProp('authentication.method') != 'ldap'">
+                    <c:choose>
+<c:when test="${getBooleanProp('users.registration.enabled') && getProp('authentication.method') != 'ldap'}">
                         <li>
-                            <a href="<s:url action='register' namespace='/roller-ui' />">
-                                <s:text name="navigationBar.register"/></a>
+                            <a href="<c:url value="/roller-ui/register.rol"/>">
+                                <spring:message code="navigationBar.register"/></a>
                         </li>
-                    </s:if>
+                    </c:when>
+<c:when test="${getProp('users.registration.url') != null && getProp('users.registration.url') > 0}">
+                        <li>
+                            <a href="${getProp('users.registration.url')}">
+                                <spring:message code="navigationBar.register"/></a>
+                        </li>
                     
-                    <s:elseif test="getProp('users.registration.url') != null && getProp('users.registration.url') > 0">
-                        <li>
-                            <a href="<s:property value="getProp('users.registration.url')"/>">
-                                <s:text name="navigationBar.register"/></a>
-                        </li>
-                    </s:elseif>
-                </s:else>
-                
-            </ul>
+                </c:otherwise>
+</c:choose></ul>
         </div><!--/.nav-collapse -->
     </div>
 </nav>

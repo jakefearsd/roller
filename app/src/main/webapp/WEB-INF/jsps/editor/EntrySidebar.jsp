@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <div class="sidebarFade">
     <div class="menu-tr">
@@ -25,111 +25,108 @@
 
                 <%-- comments on this entry --%>
                 
-                <h3><s:text name="weblogEdit.comments" /></h3>
+                <h3><spring:message code="weblogEdit.comments"/></h3>
 
-                <s:if test="bean.commentCount > 0">
-                    <s:url action="comments" var="commentsURL">
-                       <s:param name="bean.entryId" value="bean.id" />
-                       <s:param name="weblog" value="weblog" />
-                    </s:url>
-                    <s:text name="weblogEdit.hasComments">
-                        <s:param value="%{commentsURL}" />
-                        <s:param value="bean.commentCount" />
-                    </s:text>
-                </s:if>
-                <s:else>
-                    <span><s:text name="generic.none" /></span>
-                </s:else>
-
-                <%-- pending entries --%>
+                <c:choose>
+<c:when test="${bean.commentCount > 0}">
+                    <c:url var="commentsURL" value="/roller-ui/authoring/comments.rol">
+                       <c:param name="bean.entryId" value="${bean.id}"/>
+                       <c:param name="weblog" value="${weblog}"/>
+                    </c:url>
+                    <spring:message code="weblogEdit.hasComments" arguments="${commentsURL},${bean.commentCount}"/>
+                </c:when>
+<c:otherwise>
+                    <span><spring:message code="generic.none"/></span>
+                </c:otherwise>
+</c:choose><%-- pending entries --%>
                     
                 <hr size="1" noshade="noshade" />  
-                <h3><s:text name="weblogEdit.pendingEntries" /></h3>
+                <h3><spring:message code="weblogEdit.pendingEntries"/></h3>
                 
-                <s:set var="pendingEntries" value="recentPendingEntries" />
-                <s:if test="#pendingEntries.isEmpty">
-                    <span><s:text name="generic.none" /></span>
-                </s:if>
-                <s:iterator var="post" value="#pendingEntries">
+                <c:set var="pendingEntries" value="${recentPendingEntries}"/>
+                <c:if test="${pendingEntries.isEmpty}">
+                    <span><spring:message code="generic.none"/></span>
+                </c:if>
+                <c:forEach items="${pendingEntries}" var="post">
                     <span class="entryEditSidebarLink">
-                        <s:url var="editUrl" action="entryEdit">
-                            <s:param name="weblog" value="%{actionWeblog.handle}" />
-                            <s:param name="bean.id" value="#post.id" />
-                        </s:url>
+                        <c:url var="editUrl" value="/roller-ui/authoring/entryEdit.rol">
+                            <c:param name="weblog" value="${actionWeblog.handle}"/>
+                            <c:param name="bean.id" value="${post.id}"/>
+                        </c:url>
                         <span class="glyphicon glyphicon-lock" aria-hidden="true"> </span> 
-                        <s:a href="%{editUrl}"><str:truncateNicely lower="40">
-                             <s:property value="#post.title" /></str:truncateNicely></s:a>
+                        <a href="${editUrl}"><str:truncateNicely lower="40">
+                             ${post.title}</str:truncateNicely></a>
                     </span><br />
-                </s:iterator>
+                </c:forEach>
 
                 <%-- draft entries --%>
                 
                 <hr size="1" noshade="noshade" />            
-                <h3><s:text name="weblogEdit.draftEntries" /></h3>
+                <h3><spring:message code="weblogEdit.draftEntries"/></h3>
                 
-                <s:set var="draftEntries" value="recentDraftEntries" />
-                <s:if test="#draftEntries.isEmpty">
-                    <span><s:text name="generic.none" /></span>
-                </s:if>
-                <s:iterator var="post" value="#draftEntries">
+                <c:set var="draftEntries" value="${recentDraftEntries}"/>
+                <c:if test="${draftEntries.isEmpty}">
+                    <span><spring:message code="generic.none"/></span>
+                </c:if>
+                <c:forEach items="${draftEntries}" var="post">
                     <span class="entryEditSidebarLink">
-                        <s:url var="editUrl" action="entryEdit">
-                            <s:param name="weblog" value="%{actionWeblog.handle}" />
-                            <s:param name="bean.id" value="#post.id" />
-                        </s:url>
+                        <c:url var="editUrl" value="/roller-ui/authoring/entryEdit.rol">
+                            <c:param name="weblog" value="${actionWeblog.handle}"/>
+                            <c:param name="bean.id" value="${post.id}"/>
+                        </c:url>
                         <span class="glyphicon glyphicon-edit" aria-hidden="true"> </span> 
-                        <s:a href="%{editUrl}"><str:truncateNicely lower="40">
-                             <s:property value="#post.title" /></str:truncateNicely></s:a>
+                        <a href="${editUrl}"><str:truncateNicely lower="40">
+                             ${post.title}</str:truncateNicely></a>
                     </span><br />
-                </s:iterator>
+                </c:forEach>
                 
                 
-                <s:if test="userAnAuthor">
+                <c:if test="${userAnAuthor}">
 
                     <%-- published entries --%>
 
                     <hr size="1" noshade="noshade" />
-                    <h3><s:text name="weblogEdit.publishedEntries" /></h3>
+                    <h3><spring:message code="weblogEdit.publishedEntries"/></h3>
                     
-                    <s:set var="pubEntries" value="recentPublishedEntries" />
-                    <s:if test="#pubEntries.isEmpty">
-                        <span><s:text name="generic.none" /></span>
-                    </s:if>
-                    <s:iterator var="post" value="#pubEntries">
+                    <c:set var="pubEntries" value="${recentPublishedEntries}"/>
+                    <c:if test="${pubEntries.isEmpty}">
+                        <span><spring:message code="generic.none"/></span>
+                    </c:if>
+                    <c:forEach items="${pubEntries}" var="post">
                         <span class="entryEditSidebarLink">
-                            <s:url var="editUrl" action="entryEdit">
-                                <s:param name="weblog" value="%{actionWeblog.handle}" />
-                                <s:param name="bean.id" value="#post.id" />
-                            </s:url>
+                            <c:url var="editUrl" value="/roller-ui/authoring/entryEdit.rol">
+                                <c:param name="weblog" value="${actionWeblog.handle}"/>
+                                <c:param name="bean.id" value="${post.id}"/>
+                            </c:url>
                             <span class="glyphicon glyphicon-book" aria-hidden="true"> </span> 
-                            <s:a href="%{editUrl}"><str:truncateNicely lower="40">
-                                <s:property value="#post.title" /></str:truncateNicely></s:a>
+                            <a href="${editUrl}"><str:truncateNicely lower="40">
+                                ${post.title}</str:truncateNicely></a>
                         </span><br />
-                    </s:iterator>
+                    </c:forEach>
 
 
                     <%-- scheduled entries --%>
 
                     <hr size="1" noshade="noshade" />            
-                    <h3><s:text name="weblogEdit.scheduledEntries" /></h3>
+                    <h3><spring:message code="weblogEdit.scheduledEntries"/></h3>
                     
-                    <s:set var="schedEntries" value="recentScheduledEntries" />
-                    <s:if test="#schedEntries.isEmpty">
-                        <span><s:text name="generic.none" /></span>
-                    </s:if>
-                    <s:iterator var="post" value="#schedEntries">
+                    <c:set var="schedEntries" value="${recentScheduledEntries}"/>
+                    <c:if test="${schedEntries.isEmpty}">
+                        <span><spring:message code="generic.none"/></span>
+                    </c:if>
+                    <c:forEach items="${schedEntries}" var="post">
                         <span class="entryEditSidebarLink">
-                            <s:url var="editUrl" action="entryEdit">
-                                <s:param name="weblog" value="%{actionWeblog.handle}" />
-                                <s:param name="bean.id" value="#post.id" />
-                            </s:url>
+                            <c:url var="editUrl" value="/roller-ui/authoring/entryEdit.rol">
+                                <c:param name="weblog" value="${actionWeblog.handle}"/>
+                                <c:param name="bean.id" value="${post.id}"/>
+                            </c:url>
                             <span class="glyphicon glyphicon-time" aria-hidden="true"> </span>
-                            <s:a href="%{editUrl}"><str:truncateNicely lower="40">
-                                <s:property value="#post.title" /></str:truncateNicely></s:a>
+                            <a href="${editUrl}"><str:truncateNicely lower="40">
+                                ${post.title}</str:truncateNicely></a>
                         </span><br />
-                    </s:iterator>
+                    </c:forEach>
                     
-                </s:if>
+                </c:if>
                 
                 <br />
                 <br />

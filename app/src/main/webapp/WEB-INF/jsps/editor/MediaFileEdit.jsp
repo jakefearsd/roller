@@ -15,54 +15,44 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="pagetip">
-    <s:text name="mediaFileEdit.pagetip"/>
+    <spring:message code="mediaFileEdit.pagetip"/>
 </p>
 
-<s:form id="entry" action="mediaFileEdit!save" method="POST" enctype="multipart/form-data"
-        theme="bootstrap" class="form-horizontal">
+<form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileEdit!save.rol" method="POST" enctype="multipart/form-data" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+    <input type="hidden" name="mediaFileId" value="${mediaFileId}" id="mediaFileId"/>
+    <input type="hidden" name="bean.permalink" value="${bean.permalink}"/>
 
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
-    <s:hidden name="mediaFileId" id="mediaFileId"/>
-    <s:hidden name="bean.permalink"/>
-
-    <s:if test="bean.isImage">
+    <c:if test="${bean.isImage}">
         <div class="form-group">
             <label class="control-label col-sm-3">Thumbnail</label>
             <div class="controls col-sm-9">
-                <a href='<s:property value="bean.permalink" />' target="_blank">
-                    <img alt="thumbnail" src='<s:property value="bean.thumbnailURL" />'
-                         title='<s:text name="mediaFileEdit.clickToView" />'/>
+                <a href='${bean.permalink}' target="_blank">
+                    <img alt="thumbnail" src='${bean.thumbnailURL}'
+                         title='<spring:message code="mediaFileEdit.clickToView"/>'/>
                 </a>
             </div>
         </div>
-    </s:if>
+    </c:if>
 
     <%-- ================================================================== --%>
     <%-- Title, category, dates and other metadata --%>
 
-    <s:textfield name="bean.name" size="35" maxlength="100" tabindex="1"
-                 label="%{getText('generic.name')}"/>
+    <input type="text" name="bean.name" value="${bean.name}" size="35" maxlength="100" tabindex="1" class="form-control"/>
 
     <div class="form-group">
-        <label class="control-label col-sm-3"><s:text name="mediaFileEdit.fileInfo"/></label>
+        <label class="control-label col-sm-3"><spring:message code="mediaFileEdit.fileInfo"/></label>
 
         <div class="controls col-sm-9">
 
-            <s:text name="mediaFileEdit.fileTypeSize">
-                <s:param value="bean.contentType"/>
-                <s:param value="bean.length"/>
-            </s:text>
+            <spring:message code="mediaFileEdit.fileTypeSize" arguments="${bean.contentType},${bean.length}"/>
 
-            <s:if test="bean.isImage">
-                <s:text name="mediaFileEdit.fileDimensions">
-                    <s:param value="bean.width"/>
-                    <s:param value="bean.height"/>
-                </s:text>
-            </s:if>
+            <c:if test="${bean.isImage}">
+                <spring:message code="mediaFileEdit.fileDimensions" arguments="${bean.width},${bean.height}"/>
+            </c:if>
 
         </div>
     </div>
@@ -73,46 +63,45 @@
         <div class="controls col-sm-9">
 
             <input type="text" id="clip_text" size="57" 
-                   value='<s:property value="bean.permalink" />' readonly />
+                   value='${bean.permalink}' readonly />
 
-            <s:url var="linkIconURL" value="/roller-ui/images/clippy.svg"/>
+            <c:url var="linkIconURL" value="/roller-ui/images/clippy.svg"/>
             <button class="clipbutton" data-clipboard-target="#clip_text" type="button">
-                <img src='<s:property value="%{linkIconURL}" />' alt="Copy to clipboard" style="width:0.9em; height:0.9em">
+                <img src='${linkIconURL}' alt="Copy to clipboard" style="width:0.9em; height:0.9em">
             </button>
 
         </div>
     </div>
 
-    <s:textarea name="bean.description" cols="50" rows="2" tabindex="2"
-                label="%{getText('generic.description')}"/>
+    <textarea name="bean.description" rows="2" cols="50" tabindex="2">${bean.description}</textarea>
 
-    <s:textfield name="bean.tagsAsString" size="30" maxlength="100" tabindex="3"
-                 label="%{getText('mediaFileEdit.tags')}"/>
+    <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" size="30" maxlength="100" tabindex="3" class="form-control"/>
 
-    <s:textfield name="bean.copyrightText" size="30" maxlength="100" tabindex="4"
-                 label="%{getText('mediaFileEdit.copyright')}"/>
+    <input type="text" name="bean.copyrightText" value="${bean.copyrightText}" size="30" maxlength="100" tabindex="4" class="form-control"/>
 
-    <s:select name="bean.directoryId" list="allDirectories" listKey="id" listValue="name"
-              tabindex="5" label="%{getText('mediaFileEdit.directory')}"/>
+    <select name="bean.directoryId" class="form-control" tabindex="5">
+<c:forEach items="${allDirectories}" var="opt">
+<option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
 
-    <s:checkbox name="bean.sharedForGallery" tabindex="6"
-                label="%{getText('mediaFileEdit.includeGalleryHelp')}"/>
+    <input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''} tabindex="6"/>
 
     <!-- original path from base URL of ctx/resources/ -->
-    <s:if test="getBooleanProp('mediafile.originalPathEdit.enabled')">
+    <c:if test="${getBooleanProp('mediafile.originalPathEdit.enabled')}">
         <div id="originalPathdiv" class="miscControl">
-            <s:textfield name="bean.originalPath" id="originalPath" size="30"
-                         maxlength="100" tabindex="3"/>
+            <input type="text" name="bean.originalPath" value="${bean.originalPath}" id="originalPath" size="30" maxlength="100" tabindex="3" class="form-control"/>
         </div>
-    </s:if>
+    </c:if>
 
 
     <input type="submit" tabindex="7" class="btn btn-success"
-           value="<s:text name="generic.save" />" name="submit"/>
+           value="<spring:message code="generic.save"/>" name="submit"/>
     <input type="button" tabindex="8" class="btn"
-           value="<s:text name="generic.cancel" />" onClick="window.parent.onEditCancelled();"/>
+           value="<spring:message code="generic.cancel"/>" onClick="window.parent.onEditCancelled();"/>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
 <script>

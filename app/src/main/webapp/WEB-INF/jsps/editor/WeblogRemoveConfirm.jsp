@@ -15,40 +15,38 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <s:text name="websiteRemove.subtitle" />
+    <spring:message code="websiteRemove.subtitle"/>
 </p>
 
 <p style="margin-bottom: 3em">
-    <s:text name="websiteRemove.youSure"> 
-        <s:param value="actionWeblog.name" />
-    </s:text>
+    <spring:message code="websiteRemove.youSure" arguments="${actionWeblog.name}"/>
     <br/>
     <br/>
     <span class="warning">
-        <s:text name="websiteSettings.removeWebsiteWarning" />
+        <spring:message code="websiteSettings.removeWebsiteWarning"/>
     </span>
 </p>
 
 <div class="row">
     <div class="col-md-2">
 
-        <s:form action="weblogRemove!remove" theme="bootstrap" cssClass="form-horizontal">
-            <s:hidden name="salt" />
-            <s:hidden name="weblog" value="%{actionWeblog.handle}" />
-            <s:submit cssClass="btn btn-danger" value="%{getText('generic.yesRemove')}" />
-        </s:form>
+        <form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogRemove!remove.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+            <button type="submit" class="btn btn-danger"><spring:message code="generic.yesRemove"/></button>
+        <sec:csrfInput/>
+</form>
 
     </div>
     <div class="col-md-2">
 
-        <s:form action="weblogConfig" method="post" theme="bootstrap" cssClass="form-horizontal">
-            <s:hidden name="salt" />
-            <s:hidden name="weblog" value="%{actionWeblog.handle}" />
-            <s:submit cssClass="btn btn-success" value="%{getText('generic.cancel')}" />
-        </s:form>
+        <form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+            <button type="submit" class="btn btn-success"><spring:message code="generic.cancel"/></button>
+        <sec:csrfInput/>
+</form>
 
     </div>
     <div class="col-md-8"></div>

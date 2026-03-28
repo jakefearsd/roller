@@ -15,20 +15,20 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h3><s:text name="mainPage.actions"/></h3>
+<h3><spring:message code="mainPage.actions"/></h3>
 <hr size="1" noshade="noshade"/>
 
 <p>
-    <s:set var="categoryId" value="#bean.id"/>
-    <s:set var="categoryName" value="#post.name"/>
-    <s:set var="categoryDesc" value="#post.description"/>
-    <s:set var="categoryImage" value="#post.image"/>
+    <c:set var="categoryId" value="${bean.id}"/>
+    <c:set var="categoryName" value="${post.name}"/>
+    <c:set var="categoryDesc" value="${post.description}"/>
+    <c:set var="categoryImage" value="${post.image}"/>
 
     <a href="#" onclick="showCategoryAddModal()">
         <span class="glyphicon glyphicon-plus"></span>
-        <s:text name="categoriesForm.addCategory"/>
+        <spring:message code="categoriesForm.addCategory"/>
     </a>
 </p>
 
@@ -39,7 +39,7 @@
     function showCategoryAddModal() {
 
         feedbackAreaEdit.html("");
-        $('#category-edit-title').html('<s:text name="categoryForm.add.title" />');
+        $('#category-edit-title').html('<spring:message code="categoryForm.add.title"/>');
 
         $('#categoryEditForm_bean_id').val("");
         $('#categoryEditForm_bean_name').val("");

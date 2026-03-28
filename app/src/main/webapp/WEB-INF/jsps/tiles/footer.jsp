@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
 <% request.setAttribute("version",
@@ -24,8 +24,5 @@
       org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger().getRevision()); %>
 
 <img src='<c:url value="/images/tinyfeather.png"/>' alt="ASF logo" style="vertical-align:middle" />
-<s:text name="footer.productName" >
-    <s:param value="#request.version" />
-    <s:param value="#request.revision" />
-</s:text>
+<spring:message code="footer.productName" arguments="${request.version},${request.revision}"/>
       

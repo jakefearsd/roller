@@ -15,10 +15,10 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<s:set var="tabMenu" value="menu"/>
-<s:if test="#tabMenu != null">
+<c:set var="tabMenu" value="${menu}"/>
+<c:if test="${tabMenu != null}">
 
     <%--
     <nav class="navbar navbar-default">
@@ -26,41 +26,41 @@
             <div id="navbar" class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
 
-                    <s:iterator id="tab" value="#tabMenu.tabs">
+                    <c:forEach items="${tabMenu.tabs}" var="tab">
                         <li class="dropdown">
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" 
                                 aria-haspopup="true" aria-expanded="false">
-                                <s:text name="%{#tab.key}"/> <span class="caret"></span>
+                                <spring:message code="${tab.key}"/> <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <s:iterator id="tabItem" value="#tab.items" status="stat">
+                                <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
                                     <li>
-                                        <a href="<s:url action="%{#tabItem.action}"><s:param name="weblog" value="actionWeblog.handle"/></s:url>">
-                                            <s:text name="%{#tabItem.key}"/>
+                                        <a href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol"><c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
+                                            <spring:message code="${tabItem.key}"/>
                                         </a>
                                     </li>
-                                </s:iterator>
+                                </c:forEach>
                             </ul>
                         </li>
-                    </s:iterator>
+                    </c:forEach>
                     
                 </ul>
             </div> <!--/.nav-collapse -->
         </div> <!--/.container-fluid -->
     </nav>
 
-    <s:iterator id="tab" value="#tabMenu.tabs">
+    <c:forEach items="${tabMenu.tabs}" var="tab">
 
-        <h3><s:text name="%{#tab.key}"/></h3>
+        <h3><spring:message code="${tab.key}"/></h3>
 
         <div class="list-group">
-            <s:iterator id="tabItem" value="#tab.items" status="stat">
-                <a class="list-group-item" href="<s:url action="%{#tabItem.action}"><s:param name="weblog" value="actionWeblog.handle"/></s:url>">
-                    <s:text name="%{#tabItem.key}"/></a>
-            </s:iterator>
+            <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
+                <a class="list-group-item" href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol"><c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
+                    <spring:message code="${tabItem.key}"/></a>
+            </c:forEach>
         </div>
 
-    </s:iterator>
+    </c:forEach>
     --%>
         
-</s:if>
+</c:if>

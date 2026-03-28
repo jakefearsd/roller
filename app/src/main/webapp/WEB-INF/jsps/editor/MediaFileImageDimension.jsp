@@ -15,13 +15,13 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<s:url var="mediaFileURL" value="/roller-ui/rendering/media-resources/%{bean.id}" />
+<c:url var="mediaFileURL" value="/roller-ui/rendering/media-resources/${bean.id}"/>
 
 <script>
 function addImage() {
-    var filePointer = "<img src='<s:property value="%{mediaFileURL}" />' alt='<s:property value="bean.name" />' width='<width>' height='<height>' style='<style>' />";
+    var filePointer = "<img src='${mediaFileURL}' alt='${bean.name}' width='<width>' height='<height>' style='<style>' />";
     filePointer = filePointer.replace('<width>', document.imageDimForm.imageWidth.value);
     filePointer = filePointer.replace('<height>', document.imageDimForm.imageHeight.value);
     var styleDescription = '';
@@ -55,7 +55,7 @@ function addImage() {
 <form name="imageDimForm" method="POST" onsubmit="addImage()">
 
     <div id="imageAlign" style="border:1px solid #000000;width:120px;height:100px;margin:5px;">
-        <img border="0" src='<s:property value="%{mediaFileURL}" />' width="120px" height="100px" />
+        <img border="0" src='${mediaFileURL}' width="120px" height="100px" />
     </div>
 
     <table class="entryEditTable" cellpadding="0" cellspacing="0" width="100%">
@@ -65,7 +65,7 @@ function addImage() {
                 <label for="status">Link URL:</label>
             </td>
             <td>
-               <s:a href="%{mediaFileURL}"><s:property value="%{mediaFileURL}" /></s:a>
+               <a href="${mediaFileURL}">${mediaFileURL}</a>
             </td>
        </tr>
 

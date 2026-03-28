@@ -15,148 +15,145 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <s:text name="websiteSettings.subtitle">
-        <s:param value="actionWeblog.handle"/>
-    </s:text>
+    <spring:message code="websiteSettings.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<s:form action="weblogConfig!save" theme="bootstrap" cssClass="form-horizontal">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog" value="%{actionWeblog.handle}"/>
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig!save.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- ***** General settings ***** --%>
 
-    <h3><s:text name="websiteSettings.generalSettings"/></h3>
+    <h3><spring:message code="websiteSettings.generalSettings"/></h3>
 
-    <s:textfield label="%{getText('websiteSettings.websiteTitle')}"
-                 name="bean.name" size="30" maxlength="40"/>
+    <input type="text" name="bean.name" value="${bean.name}" size="30" maxlength="40" class="form-control"/>
 
-    <s:textfield label="%{getText('generic.tagline')}"
-                 name="bean.tagline" size="30" maxlength="255"/>
+    <input type="text" name="bean.tagline" value="${bean.tagline}" size="30" maxlength="255" class="form-control"/>
 
-    <s:textfield label="%{getText('websiteSettings.icon')}"
-                 name="bean.icon" size="30" maxlength="40"/>
+    <input type="text" name="bean.icon" value="${bean.icon}" size="30" maxlength="40" class="form-control"/>
 
-    <s:textarea label="%{getText('websiteSettings.about')}"
-                name="bean.about" rows="3" cols="40 "/>
+    <textarea name="bean.about" rows="3" cols="40 ">${bean.about}</textarea>
 
-    <s:textfield label="%{getText('websiteSettings.emailAddress')}"
-                 name="bean.emailAddress" size="30" maxlength="40"/>
+    <input type="text" name="bean.emailAddress" value="${bean.emailAddress}" size="30" maxlength="40" class="form-control"/>
 
-    <s:select name="bean.editorPage" label="%{getText('websiteSettings.editor')}"
-              list="editorsList" listKey="id" listValue="getText(name)"/>
+    <select name="bean.editorPage" class="form-control">
+<c:forEach items="${editorsList}" var="opt">
+<option value="${opt.id}" ${opt.id == bean.editorPage ? 'selected' : ''}><spring:message code="${opt.name}"/></option>
+</c:forEach>
+</select>
 
-    <s:textfield type="number" label="%{getText('websiteSettings.entryDisplayCount')}"
-                 name="bean.entryDisplayCount" size="4"/>
+    <input type="number" name="bean.entryDisplayCount" value="${bean.entryDisplayCount}" size="4" class="form-control"/>
 
-    <s:checkbox label="%{getText('websiteSettings.active')}"
-                name="bean.active" size="30" maxlength="40"/>
+    <input type="checkbox" name="bean.active" value="true" ${bean.active ? 'checked' : ''}/>
 
     <%-- ***** Language/i18n settings ***** --%>
 
-    <h3><s:text name="websiteSettings.languageSettings"/></h3>
+    <h3><spring:message code="websiteSettings.languageSettings"/></h3>
 
-    <s:select name="bean.locale" list="localesList" listValue="displayName"
-              label="%{getText('createWebsite.locale')}"/>
+    <select name="bean.locale" class="form-control">
+<c:forEach items="${localesList}" var="opt">
+<option value="${opt}" ${opt == bean.locale ? 'selected' : ''}>${opt}</option>
+</c:forEach>
+</select>
 
-    <s:select name="bean.timeZone" list="timeZonesList"
-              label="%{getText('createWebsite.timezone')}"/>
+    <select name="bean.timeZone" class="form-control">
+<c:forEach items="${timeZonesList}" var="opt">
+<option value="${opt}" ${opt == bean.timeZone ? 'selected' : ''}>${opt}</option>
+</c:forEach>
+</select>
 
-    <s:checkbox name="bean.enableMultiLang"
-                label="%{getText('websiteSettings.enableMultiLang')}"/>
+    <input type="checkbox" name="bean.enableMultiLang" value="true" ${bean.enableMultiLang ? 'checked' : ''}/>
 
-    <s:checkbox name="bean.showAllLangs"
-                label="%{getText('websiteSettings.showAllLangs')}"/>
+    <input type="checkbox" name="bean.showAllLangs" value="true" ${bean.showAllLangs ? 'checked' : ''}/>
 
     <%-- ***** Comment settings ***** --%>
 
-    <h3><s:text name="websiteSettings.commentSettings"/></h3>
+    <h3><spring:message code="websiteSettings.commentSettings"/></h3>
 
-    <s:checkbox name="bean.allowComments"
-                label="%{getText('websiteSettings.allowComments')}"/>
+    <input type="checkbox" name="bean.allowComments" value="true" ${bean.allowComments ? 'checked' : ''}/>
 
-    <s:if test="getBooleanProp('users.comments.emailnotify')">
-        <s:checkbox name="bean.emailComments"
-                    label="%{getText('websiteSettings.emailComments')}"/>
-    </s:if>
+    <c:choose>
+<c:when test="${getBooleanProp('users.comments.emailnotify')}">
+        <input type="checkbox" name="bean.emailComments" value="true" ${bean.emailComments ? 'checked' : ''}/>
+    </c:if>
 
-    <s:if test="!getBooleanProp('users.moderation.required')">
-        <s:checkbox name="bean.moderateComments"
-                    label="%{getText('websiteSettings.moderateComments')}"/>
-    </s:if>
+    <c:if test="${!getBooleanProp('users.moderation.required')}">
+        <input type="checkbox" name="bean.moderateComments" value="true" ${bean.moderateComments ? 'checked' : ''}/>
+    </c:if>
 
     <%-- ***** Default entry comment settings ***** --%>
 
-    <h3><s:text name="websiteSettings.defaultCommentSettings"/></h3>
+    <h3><spring:message code="websiteSettings.defaultCommentSettings"/></h3>
 
-    <s:select name="bean.defaultCommentDays" label="%{getText('websiteSettings.applyCommentDefaults')}"
-              list="commentDaysList" listKey="key" listValue="value"/>
+    <select name="bean.defaultCommentDays" class="form-control">
+<c:forEach items="${commentDaysList}" var="opt">
+<option value="${opt.key}" ${opt.key == bean.defaultCommentDays ? 'selected' : ''}>${opt.value}</option>
+</c:forEach>
+</select>
 
-    <s:checkbox name="bean.defaultAllowComments"
-                label="%{getText('websiteSettings.defaultAllowComments')}"/>
+    <input type="checkbox" name="bean.defaultAllowComments" value="true" ${bean.defaultAllowComments ? 'checked' : ''}/>
 
-    <s:checkbox name="bean.applyCommentDefaults"
-                label="%{getText('websiteSettings.applyCommentDefaults')}"/>
+    <input type="checkbox" name="bean.applyCommentDefaults" value="true" ${bean.applyCommentDefaults ? 'checked' : ''}/>
 
     <%-- ***** Blogger API setting settings ***** --%>
 
-    <h3><s:text name="websiteSettings.bloggerApi"/></h3>
+    <h3><spring:message code="websiteSettings.bloggerApi"/></h3>
 
-    <s:select name="bean.bloggerCategoryId" label="%{getText('websiteSettings.bloggerApiCategory')}"
-              list="weblogCategories" listKey="id" listValue="name"/>
+    <select name="bean.bloggerCategoryId" class="form-control">
+<c:forEach items="${weblogCategories}" var="opt">
+<option value="${opt.id}" ${opt.id == bean.bloggerCategoryId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
 
-    <s:checkbox name="bean.enableBloggerApi"
-                label="%{getText('websiteSettings.enableBloggerApi')}"/>
+    <input type="checkbox" name="bean.enableBloggerApi" value="true" ${bean.enableBloggerApi ? 'checked' : ''}/>
 
     <%-- ***** Plugins "formatting" settings ***** --%>
 
-    <h3><s:text name="websiteSettings.formatting"/></h3>
+    <h3><spring:message code="websiteSettings.formatting"/></h3>
 
-    <s:if test="!pluginsList.isEmpty">
+    <c:if test="${!pluginsList.isEmpty}">
 
-        <s:checkboxlist list="pluginsList" label="%{getText('websiteSettings.label1')}"
-                        name="bean.defaultPluginsArray" listKey="name" listValue="name"/>
+        <c:forEach items="${pluginsList}" var="opt">
+<label><input type="checkbox" name="bean.defaultPluginsArray" value="${opt.name}"/> ${opt.name}</label>
+</c:forEach>
 
-    </s:if>
-    <s:else>
-        <s:hidden name="defaultPlugins"/>
-    </s:else>
+    </c:when>
+<c:otherwise>
+        <input type="hidden" name="defaultPlugins" value="${defaultPlugins}"/>
+    </c:otherwise>
+</c:choose><%-- ***** Spam prevention settings ***** --%>
 
-    <%-- ***** Spam prevention settings ***** --%>
+    <h3><spring:message code="websiteSettings.spamPrevention"/></h3>
 
-    <h3><s:text name="websiteSettings.spamPrevention"/></h3>
-
-    <s:textarea name="bean.bannedwordslist" rows="7" cols="40"
-                label="%{getText('websiteSettings.bannedWordsList')}"/>
+    <textarea name="bean.bannedwordslist" rows="7" cols="40">${bean.bannedwordslist}</textarea>
 
     <%-- ***** Web analytics settings ***** --%>
 
-    <s:if test="getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted">
-        <h3><s:text name="configForm.webAnalytics"/></h3>
+    <c:if test="${getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted}">
+        <h3><spring:message code="configForm.webAnalytics"/></h3>
 
-        <s:textarea name="bean.analyticsCode" rows="10" cols="70"
-                    label="%{getText('websiteSettings.analyticsTrackingCode')}"/>
-    </s:if>
+        <textarea name="bean.analyticsCode" rows="10" cols="70">${bean.analyticsCode}</textarea>
+    </c:if>
 
     <div class="control" style="margin-bottom:5em">
-        <s:submit cssClass="btn btn-success" value="%{getText('websiteSettings.button.update')}"/>
+        <button type="submit" class="btn btn-success"><spring:message code="websiteSettings.button.update"/></button>
     </div>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
-<s:form action="weblogRemove" cssClass="form-horizontal">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog" value="%{actionWeblog.handle}"/>
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogRemove.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
-    <h3><s:text name="websiteSettings.removeWebsiteHeading"/></h3>
-    <s:text name="websiteSettings.removeWebsite"/><br/><br/>
+    <h3><spring:message code="websiteSettings.removeWebsiteHeading"/></h3>
+    <spring:message code="websiteSettings.removeWebsite"/><br/><br/>
     <div class="alert alert-danger" role="alert">
-        <s:text name="websiteSettings.removeWebsiteWarning"/>
+        <spring:message code="websiteSettings.removeWebsiteWarning"/>
     </div>
-    <s:submit cssClass="btn btn-danger" value="%{getText('websiteSettings.button.remove')}"/>
+    <button type="submit" class="btn btn-danger"><spring:message code="websiteSettings.button.remove"/></button>
 
-</s:form>
+<sec:csrfInput/>
+</form>

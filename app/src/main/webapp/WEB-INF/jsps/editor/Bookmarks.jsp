@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
 <%--
@@ -28,39 +28,38 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
 <%-- Main blogroll/folder management interface, a checkbox-table with some buttons  --%>
 
-<p class="subtitle"><s:text name="bookmarksForm.subtitle"> <s:param value="weblog"/> </s:text></p>
+<p class="subtitle"><spring:message code="bookmarksForm.subtitle" arguments="${weblog}"/></p>
 
-<s:if test="folder.name == 'default'">
-    <p class="pagetip"><s:text name="bookmarksForm.rootPrompt"/></p>
-</s:if>
-<s:else>
-    <p class="pagetip"><s:text name="bookmarksForm.otherPrompt"/></p>
-</s:else>
+<c:choose>
+<c:when test="${folder.name == 'default'}">
+    <p class="pagetip"><spring:message code="bookmarksForm.rootPrompt"/></p>
+</c:when>
+<c:otherwise>
+    <p class="pagetip"><spring:message code="bookmarksForm.otherPrompt"/></p>
+</c:otherwise>
+</c:choose><%-- table of blogroll links with selection checkboxes, wrapped in a form --%>
 
-
-<%-- table of blogroll links with selection checkboxes, wrapped in a form --%>
-
-<s:form action="bookmarks!delete" theme="bootstrap" cssClass="form-horizontal">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
-    <s:hidden name="folderId"/>
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/bookmarks!delete.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+    <input type="hidden" name="folderId" value="${folderId}"/>
 
     <%-- for default blogroll, show page "tip" and read-only folder name --%>
 
-    <s:if test="folder.name == 'default'">
+    <c:choose>
+<c:when test="${folder.name == 'default'}">
 
         <div class="form-group ">
             <label class="col-sm-3 control-label" for="bookmarks_folder_name">
-                <s:text name="bookmarksForm.blogrollName"/>
+                <spring:message code="bookmarksForm.blogrollName"/>
             </label>
             <div class="col-sm-9 controls">
-                <div class="form-control"><s:text name="%{folder.name}"/></div>
+                <div class="form-control"><spring:message code="${folder.name}"/></div>
             </div>
         </div>
 
-    </s:if>
+    </c:if>
 
-    <s:if test="folder.name != 'default'">
+    <c:if test="${folder.name != 'default'}">
 
         <%-- Blogroll / Folder Name --%>
 
@@ -69,34 +68,38 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
         <div class="form-group ">
             <label class="col-sm-3 control-label" for="bookmarks_folder_name">
-                <s:text name="bookmarksForm.blogrollName"/>
+                <spring:message code="bookmarksForm.blogrollName"/>
             </label>
             <div class="col-sm-9 controls">
                 <input style="width:55%; float:left" type="text" name="folder.name"
-                       value="<s:text name='%{folder.name}'/>" id="bookmarks_folder_name" class="form-control"
+                       value="<spring:message code="${folder.name}"/>" id="bookmarks_folder_name" class="form-control"
                        onchange="nameChanged()"
                        onkeyup="nameChanged()"/>
                 <button type="button" id="rename_button"
                         class="btn btn-success" style="float:left; margin-left:1em;"
                         onclick="renameFolder(); return false;"
                         onsubmit="return false;">
-                    <s:text name="generic.rename"/>
+                    <spring:message code="generic.rename"/>
                 </button>
                 <button type="button" id="rename_cancel"
                         class="btn btn-default" style="float:left; margin-left:1em;"
                         onclick="cancelRenameFolder(); return false;"
                         onsubmit="return false;">
-                    <s:text name="generic.cancel"/>
+                    <spring:message code="generic.cancel"/>
                 </button>
             </div>
         </div>
 
-    </s:if>
+    </c:if>
 
     <%-- allow user to select the bookmark folder to view --%>
 
-    <s:select name="viewFolderId" list="allFolders" listKey="id" listValue="name" emptyOption="true"
-              label="%{getText('bookmarksForm.switchTo')}" onchange="viewChanged()" onmouseup="viewChanged()"/>
+    <select name="viewFolderId" class="form-control" onchange="viewChanged()" onmouseup="viewChanged()">
+<option value=""></option>
+<c:forEach items="${allFolders}" var="opt">
+<option value="${opt.id}" ${opt.id == viewFolderId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
 
     <table class="rollertable table table-striped">
 
@@ -104,52 +107,52 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
             <th width="5%">
                 <input name="control" type="checkbox"
                        onclick="toggleFunctionAll(this.checked); selectionChanged()"
-                       title="<s:text name="bookmarksForm.selectAllLabel"/>"/>
+                       title="<spring:message code="bookmarksForm.selectAllLabel"/>"/>
             </th>
-            <th class="rollertable" width="25%"><s:text name="generic.name"/></th>
-            <th class="rollertable" width="70%"><s:text name="bookmarksForm.url"/></th>
-            <th class="rollertable" width="5%"><s:text name="generic.edit"/></th>
+            <th class="rollertable" width="25%"><spring:message code="generic.name"/></th>
+            <th class="rollertable" width="70%"><spring:message code="bookmarksForm.url"/></th>
+            <th class="rollertable" width="5%"><spring:message code="generic.edit"/></th>
         </tr>
 
-        <s:if test="folder.bookmarks.size > 0">
+        <c:if test="${folder.bookmarks.size > 0}">
 
             <%-- Bookmarks --%>
-            <s:iterator var="bookmark" value="folder.bookmarks" status="rowstatus">
+            <c:forEach items="${folder.bookmarks}" var="bookmark" varStatus="rowstatus">
                 <tr class="rollertable_odd">
 
                     <td class="rollertable center" style="vertical-align:middle">
                         <input type="checkbox" name="selectedBookmarks" onchange="selectionChanged()"
-                               title="<s:text name="bookmarksForm.selectOneLabel"><s:param value="#bookmark.name"/></s:text>"
-                               value="<s:property value="#bookmark.id"/>"/>
+                               title="<spring:message code="bookmarksForm.selectOneLabel" arguments="${bookmark.name}"/>"
+                               value="${bookmark.id}"/>
                     </td>
 
                     <td>
                         <str:truncateNicely lower="40" upper="50">
-                            <s:property value="#bookmark.name"/>
+                            ${bookmark.name}
                         </str:truncateNicely>
                     </td>
 
                     <td>
-                        <s:if test="#bookmark.url != null">
-                            <a href='<s:property value="#bookmark.url" />' target='_blank'>
+                        <c:if test="${bookmark.url != null}">
+                            <a href='${bookmark.url}' target='_blank'>
                                 <str:truncateNicely lower="70" upper="90">
-                                    <s:property value="#bookmark.url"/>
+                                    ${bookmark.url}
                                 </str:truncateNicely>
                                 <span class="glyphicon glyphicon-play-circle"></span>
                             </a>
-                        </s:if>
+                        </c:if>
 
                     </td>
 
                     <td align="center">
 
                         <a href="#" onclick="editBookmark(
-                                '<s:property value="#bookmark.id"/>',
-                                '<s:property value="#bookmark.name"/>',
-                                '<s:property value="#bookmark.url"/>',
-                                '<s:property value="#bookmark.feedUrl"/>',
-                                '<s:property value="#bookmark.description"/>',
-                                '<s:property value="#bookmark.image"/>' )">
+                                '${bookmark.id}',
+                                '${bookmark.name}',
+                                '${bookmark.url}',
+                                '${bookmark.feedUrl}',
+                                '${bookmark.description}',
+                                '${bookmark.image}' )">
                             <span class="glyphicon glyphicon-edit"></span>
                         </a>
 
@@ -157,54 +160,51 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
                 </tr>
 
-            </s:iterator>
+            </c:forEach>
 
-        </s:if>
-
-        <s:else>
+        </c:when>
+<c:otherwise>
             <tr>
                 <td style="vertical-align:middle; padding-top: 1em;" colspan="7">
-                    <s:text name="bookmarksForm.noresults"/>
+                    <spring:message code="bookmarksForm.noresults"/>
                 </td>
             </tr>
-        </s:else>
-
-    </table>
+        </c:otherwise>
+</c:choose></table>
 
     <%-- Add new blogroll link --%>
     <button type="button" class="btn btn-success" onclick="addBookmark();return false;"
             style="float:left; margin-right: 2em">
-        <s:text name="bookmarksForm.addBookmark"/>
+        <spring:message code="bookmarksForm.addBookmark"/>
     </button>
 
-    <s:if test="!allFolders.isEmpty && folder.bookmarks.size > 0">
+    <c:choose>
+<c:when test="${!allFolders.isEmpty && folder.bookmarks.size > 0}">
         <%-- Move-selected button --%>
-        <s:submit id="move_selected" value="%{getText('bookmarksForm.move')}" theme="simple"
-                  cssClass="btn btn-warning" cssStyle="float:left; margin-right: 0.5em"
-                  action="bookmarks!move" onclick="onMoveToFolder();return false;"/>
+        <button type="submit" id="move_selected" class="btn btn-warning" style="float:left; margin-right: 0.5em" onclick="onMoveToFolder();return false;" formaction="${pageContext.request.contextPath}/roller-ui/authoring/bookmarks!move.rol"><spring:message code="bookmarksForm.move"/></button>
         <%-- Move-to combo-box --%>
-        <s:select name="targetFolderId" theme="simple"
-                  cssClass="form-control" cssStyle="float:left; width:30%; margin-right: 2em"
-                  list="allFolders" listKey="id" listValue="name"/>
-    </s:if>
+        <select name="targetFolderId" class="form-control" style="float:left; width:30%; margin-right: 2em">
+<c:forEach items="${allFolders}" var="opt">
+<option value="${opt.id}" ${opt.id == targetFolderId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
+    </c:if>
 
-    <s:if test="folder.bookmarks.size > 0">
+    <c:if test="${folder.bookmarks.size > 0}">
         <%-- Delete-selected button --%>
-        <input id="delete_selected" value="<s:text name="bookmarksForm.delete"/>" type="button"
+        <input id="delete_selected" value="<spring:message code="bookmarksForm.delete"/>" type="button"
                class="btn btn-danger" style="float:left;"
                onclick="confirmDeleteSelected();return false;"/>
-    </s:if>
+    </c:if>
 
-    <s:if test="folder.name != 'default'">
+    <c:if test="${folder.name != 'default'}">
         <%-- Delete the whole blogroll --%>
-        <s:submit value="%{getText('bookmarksForm.deleteFolder')}" theme="simple"
-                  cssClass="btn btn-danger" cssStyle="float:right; clear:left; margin-top:2em"
-                  action="bookmarks!deleteFolder"
-                  onclick="confirmDeleteFolder();return false;"/>
+        <button type="submit" class="btn btn-danger" style="float:right; clear:left; margin-top:2em" onclick="confirmDeleteFolder();return false;" formaction="${pageContext.request.contextPath}/roller-ui/authoring/bookmarks!deleteFolder.rol"><spring:message code="bookmarksForm.deleteFolder"/></button>
 
-    </s:if>
+    </c:if>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
 <%-- -------------------------------------------------------- --%>
@@ -240,7 +240,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
         selectionChanged();
 
         // add the "New Blogroll" option to blogroll selectors
-        viewSelector.append(new Option('<s:text name="bookmarksForm.newBlogroll"/>', "new_blogroll"));
+        viewSelector.append(new Option('<spring:message code="bookmarksForm.newBlogroll"/>', "new_blogroll"));
     });
 
 
@@ -309,9 +309,9 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
             // kludge: scrape response status from HTML returned by Struts
             var alertEnd = data.indexOf("ALERT_END");
-            var notUnique = data.indexOf('<s:text name="bookmarkForm.error.duplicateName" />');
+            var notUnique = data.indexOf('<spring:message code="bookmarkForm.error.duplicateName"/>');
             if (notUnique > 0 && notUnique < alertEnd) {
-                alert('<s:text name="bookmarkForm.error.duplicateName" />');
+                alert('<spring:message code="bookmarkForm.error.duplicateName"/>');
 
             } else {
                 originalName = newName;
@@ -319,7 +319,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
             }
 
         }).error(function (data) {
-            alert('<s:text name="generic.error.check.logs" />');
+            alert('<spring:message code="generic.error.check.logs"/>');
         });
     }
 
@@ -338,7 +338,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
     function confirmDeleteFolder() {
         $('#boomarks_delete_folder_folderId').val($('#bookmarks_folderId:first').val());
-        $('#deleteBlogrollName').html('<s:property value="%{folder.name}"/>');
+        $('#deleteBlogrollName').html('${folder.name}');
         $('#delete-blogroll-modal').modal({show: true});
     }
 
@@ -366,7 +366,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
     function newBlogroll() {
 
         // user selected New Blogroll option, show the add/edit blogroll modal
-        $('#blogroll-edit-title').html('<s:text name="bookmarksForm.addBlogroll.title" />');
+        $('#blogroll-edit-title').html('<spring:message code="bookmarksForm.addBlogroll.title"/>');
 
         folderEditForm.action = "folderAdd!save.rol";
         folderEditForm.actionName.value = "folderAdd";
@@ -396,29 +396,26 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
             </div>
 
             <div class="modal-body">
-                <s:form action="folderEdit" id="folderEditForm" theme="bootstrap" cssClass="form-horizontal">
-                    <s:hidden name="salt"/>
-                    <s:hidden name="actionName"/>
-                    <s:hidden name="weblog"/>
-                    <s:hidden name="bean.id"/>
+                <form id="folderEditForm" action="${pageContext.request.contextPath}/roller-ui/authoring/folderEdit.rol" method="post" class="form-horizontal">
+<input type="hidden" name="actionName" value="${actionName}"/>
+                    <input type="hidden" name="weblog" value="${weblog}"/>
+                    <input type="hidden" name="bean.id" value="${bean.id}"/>
 
                     <%-- action needed here because we are using AJAX to post this form --%>
-                    <s:hidden name="action:folderEdit!save" value="save"/>
+                    <input type="hidden" name="action:folderEdit!save" value="${save}"/>
 
-                    <s:textfield name="bean.name" label="%{getText('generic.name')}" maxlength="255"
-                                 onchange="onBlogrollFormChanged()"
-                                 onkeyup="onBlogrollFormChanged()"
-                    />
-                </s:form>
+                    <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control" onchange="onBlogrollFormChanged()" onkeyup="onBlogrollFormChanged()"/>
+                <sec:csrfInput/>
+</form>
             </div> <!-- modal-body-->
 
             <div class="modal-footer">
                 <p id="feedback-area-blogroll-edit"></p>
                 <button id="save_blogroll" onclick="submitEditedBlogroll()" class="btn btn-primary">
-                    <s:text name="generic.save"/>
+                    <spring:message code="generic.save"/>
                 </button>
                 <button type="button" class="btn" data-dismiss="modal">
-                    <s:text name="generic.cancel"/>
+                    <spring:message code="generic.cancel"/>
                 </button>
             </div>
 
@@ -458,7 +455,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
         // if name is empty reject and show error message
         if ($("#folderEditForm_bean_name").val().trim() === "") {
-            feedbackAreaBlogrollEdit.html('<s:text name="bookmarksForm.blogroll.requiredFields" />');
+            feedbackAreaBlogrollEdit.html('<spring:message code="bookmarksForm.blogroll.requiredFields"/>');
             feedbackAreaBlogrollEdit.css("color", "red");
             return;
         }
@@ -474,14 +471,14 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
             // kludge: scrape response status from HTML returned by Struts
             var alertEnd = data.indexOf("ALERT_END");
-            var notUnique = data.indexOf('<s:text name="bookmarkForm.error.duplicateName" />');
+            var notUnique = data.indexOf('<spring:message code="bookmarkForm.error.duplicateName"/>');
             if (notUnique > 0 && notUnique < alertEnd) {
                 feedbackAreaBlogrollEdit.css("color", "red");
-                feedbackAreaBlogrollEdit.html('<s:text name="bookmarkForm.error.duplicateName" />');
+                feedbackAreaBlogrollEdit.html('<spring:message code="bookmarkForm.error.duplicateName"/>');
 
             } else {
                 feedbackAreaBlogrollEdit.css("color", "green");
-                feedbackAreaBlogrollEdit.html('<s:text name="generic.success" />');
+                feedbackAreaBlogrollEdit.html('<spring:message code="generic.success"/>');
                 $('#blogroll-edit-modal').modal("hide");
 
                 // kludge get folderId from response header send back by Struts action
@@ -495,7 +492,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
             }
 
         }).error(function (data) {
-            feedbackAreaBlogrollEdit.html('<s:text name="generic.error.check.logs" />');
+            feedbackAreaBlogrollEdit.html('<spring:message code="generic.error.check.logs"/>');
             feedbackAreaBlogrollEdit.css("color", "red");
         });
     }
@@ -515,25 +512,26 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
             <div class="modal-header">
                 <h3>
-                    <s:text name="bookmarksForm.delete.confirm"/>
+                    <spring:message code="bookmarksForm.delete.confirm"/>
                 </h3>
             </div>
 
-            <s:form theme="bootstrap" cssClass="form-horizontal">
+            <form method="post" class="form-horizontal">
                 <div class="modal-body">
-                    <s:text name="bookmarksForm.delete.areYouSure" />
+                    <spring:message code="bookmarksForm.delete.areYouSure"/>
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn" value="%{getText('generic.yes')}" onclick="deleteSelected()">
-                        <s:text name="generic.yes"/>
+                    <button type="button" class="btn" value="${getText('generic.yes')}" onclick="deleteSelected()">
+                        <spring:message code="generic.yes"/>
                     </button>
                     &nbsp;
                     <button type="button" class="btn btn-default btn-primary" data-dismiss="modal">
-                        <s:text name="generic.no"/>
+                        <spring:message code="generic.no"/>
                     </button>
                 </div>
-            </s:form>
+            <sec:csrfInput/>
+</form>
 
         </div>
     </div>
@@ -552,30 +550,29 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
             <div class="modal-header">
                 <h3>
-                    <s:text name="blogrollDeleteOK.removeBlogroll"/>:
+                    <spring:message code="blogrollDeleteOK.removeBlogroll"/>:
                     <span id="blogroll-name"></span>
                 </h3>
             </div>
 
-            <s:form id="boomarks_delete_folder" action="bookmarks!deleteFolder" theme="bootstrap"
-                    cssClass="form-horizontal">
-                <s:hidden name="salt"/>
-                <s:hidden name="weblog"/>
-                <s:hidden name="folderId"/>
+            <form id="boomarks_delete_folder" action="${pageContext.request.contextPath}/roller-ui/authoring/bookmarks!deleteFolder.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+                <input type="hidden" name="folderId" value="${folderId}"/>
 
                 <div class="modal-body">
-                    <s:text name="blogrollDeleteOK.areYouSure" />
+                    <spring:message code="blogrollDeleteOK.areYouSure"/>
                     <span id="deleteBlogrollName"></span>?
                 </div>
 
                 <div class="modal-footer">
-                    <s:submit cssClass="btn" value="%{getText('generic.yes')}"/>&nbsp;
+                    <button type="submit" class="btn"><spring:message code="generic.yes"/></button>&nbsp;
                     <button type="button" class="btn btn-default btn-primary" data-dismiss="modal">
-                        <s:text name="generic.no"/>
+                        <spring:message code="generic.no"/>
                     </button>
                 </div>
 
-            </s:form>
+            <sec:csrfInput/>
+</form>
 
         </div>
     </div>
@@ -595,21 +592,20 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
             <div class="modal-header">
 
                 <%-- Titling, processing actions different between add and edit --%>
-                <s:if test="actionName == 'bookmarkEdit'">
-                    <s:set var="subtitleKey">bookmarkForm.edit.subtitle</s:set>
-                    <s:set var="mainAction">bookmarkEdit</s:set>
-                </s:if>
-                <s:else>
-                    <s:set var="subtitleKey">bookmarkForm.add.subtitle</s:set>
-                    <s:set var="mainAction">bookmarkAdd</s:set>
-                </s:else>
-
-                <h3>
-                    <s:text name="%{#subtitleKey}"> </s:text> <span id="subtitle_folder_name"></span>
+                <c:if test="${actionName == 'bookmarkEdit'}">
+                    <c:set var="subtitleKey">bookmarkForm.edit.subtitle</c:set>
+                    <c:set var="mainAction">bookmarkEdit</c:set>
+                </c:when>
+<c:otherwise>
+                    <c:set var="subtitleKey">bookmarkForm.add.subtitle</c:set>
+                    <c:set var="mainAction">bookmarkAdd</c:set>
+                </c:otherwise>
+</c:choose><h3>
+                    <spring:message code="${subtitleKey}"/> <span id="subtitle_folder_name"></span>
                 </h3>
 
                 <div id="bookmark_required_fields" role="alert" class="alert">
-                    <s:text name="bookmarkForm.requiredFields"/>
+                    <spring:message code="bookmarkForm.requiredFields"/>
                 </div>
 
             </div>
@@ -617,42 +613,27 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
             <div class="modal-body">
 
-                <s:form action="bookmarkEdit" theme="bootstrap" cssClass="form-horizontal">
-                    <s:hidden name="salt"/>
-                    <s:hidden name="weblog"/>
+                <form action="${pageContext.request.contextPath}/roller-ui/authoring/bookmarkEdit.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
                     <%--
                         Edit action uses folderId for redirection back to proper bookmarks folder on cancel
                         (as configured in struts.xml); add action also, plus to know which folder to put new
                         bookmark in.
                     --%>
-                    <s:hidden name="folderId"/>
-                    <s:hidden name="bean.id"/>
+                    <input type="hidden" name="folderId" value="${folderId}"/>
+                    <input type="hidden" name="bean.id" value="${bean.id}"/>
 
-                    <s:textfield name="bean.name" maxlength="255"
-                                 onchange="onBookmarkFormChanged()"
-                                 onkeyup="onBookmarkFormChanged()"
-                                 label="%{getText('generic.name')}"/>
+                    <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
 
-                    <s:textfield name="bean.url" maxlength="255"
-                                 onchange="onBookmarkFormChanged()"
-                                 onkeyup="onBookmarkFormChanged()"
-                                 label="%{getText('bookmarkForm.url')}"/>
+                    <input type="text" name="bean.url" value="${bean.url}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
 
-                    <s:textfield name="bean.feedUrl" maxlength="255"
-                                 onchange="onBookmarkFormChanged()"
-                                 onkeyup="onBookmarkFormChanged()"
-                                 label="%{getText('bookmarkForm.rssUrl')}"/>
+                    <input type="text" name="bean.feedUrl" value="${bean.feedUrl}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
 
-                    <s:textfield name="bean.description" maxlength="255"
-                                 onchange="onBookmarkFormChanged()"
-                                 onkeyup="onBookmarkFormChanged()"
-                                 label="%{getText('generic.description')}"/>
+                    <input type="text" name="bean.description" value="${bean.description}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
 
-                    <s:textfield name="bean.image" maxlength="255"
-                                 onchange="onBookmarkFormChanged()"
-                                 onkeyup="onBookmarkFormChanged()"
-                                 label="%{getText('bookmarkForm.image')}"/>
-                </s:form>
+                    <input type="text" name="bean.image" value="${bean.image}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
+                <sec:csrfInput/>
+</form>
 
             </div>
 
@@ -660,10 +641,10 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
                 <div class="modal-footer">
                     <p id="feedback-area-edit"></p>
                     <button type="button" id="save_bookmark" onclick="saveBookmark()" class="btn btn-primary">
-                        <s:text name="generic.save"/>
+                        <spring:message code="generic.save"/>
                     </button>
                     <button type="button" class="btn" data-dismiss="modal">
-                        <s:text name="generic.cancel"/>
+                        <spring:message code="generic.cancel"/>
                     </button>
                 </div>
             </div>
@@ -690,7 +671,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
         saveBookmarkButton.attr("disabled", true);
 
         var elem = $('#bookmark_required_fields:first');
-        elem.html('<s:text name="bookmarkForm.requiredFields" />');
+        elem.html('<spring:message code="bookmarkForm.requiredFields"/>');
         elem.removeClass("alert-success");
         elem.removeClass("alert-danger");
         elem.addClass("alert-info");
@@ -712,7 +693,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
         saveBookmarkButton.attr("disabled", true);
 
         var elem = $('#bookmark_required_fields:first');
-        elem.html('<s:text name="bookmarkForm.requiredFields" />');
+        elem.html('<spring:message code="bookmarkForm.requiredFields"/>');
         elem.removeClass("alert-success");
         elem.removeClass("alert-danger");
         elem.addClass("alert-info");
@@ -766,7 +747,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
         if (name.length > 0 && url.length > 0 && badUrls.length === 0) {
             saveBookmarkButton.attr("disabled", false);
 
-            message = '<s:text name="generic.looksGood" />';
+            message = '<spring:message code="generic.looksGood"/>';
             elem.removeClass("alert-info");
             elem.removeClass("alert-danger");
             elem.addClass("alert-success");
@@ -776,10 +757,10 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
             saveBookmarkButton.attr("disabled", true);
 
             if (name.length === 0 || url.length === 0) {
-                message = '<s:text name="bookmarkForm.required" />';
+                message = '<spring:message code="bookmarkForm.required"/>';
             }
             if (badUrls.length > 0) {
-                message = '<s:text name="bookmarkForm.badUrls" />';
+                message = '<spring:message code="bookmarkForm.badUrls"/>';
                 var sep = " ";
                 for (i in badUrls) {
                     message = message + sep + badUrls[i];
@@ -809,14 +790,14 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
             // kludge: scrape response status from HTML returned by Struts
             var alertEnd = data.indexOf("ALERT_END");
-            var notUnique = data.indexOf('<s:text name="bookmarkForm.error.duplicateName" />');
+            var notUnique = data.indexOf('<spring:message code="bookmarkForm.error.duplicateName"/>');
             if (notUnique > 0 && notUnique < alertEnd) {
                 feedbackAreaEdit.css("color", "red");
-                feedbackAreaEdit.html('<s:text name="bookmarkForm.error.duplicateName" />');
+                feedbackAreaEdit.html('<spring:message code="bookmarkForm.error.duplicateName"/>');
 
             } else {
                 feedbackAreaEdit.css("color", "green");
-                feedbackAreaEdit.html('<s:text name="generic.success" />');
+                feedbackAreaEdit.html('<spring:message code="generic.success"/>');
                 $('#addedit-bookmark-modal').modal("hide");
 
                 // cause page to be reloaded so that edit appears
@@ -827,7 +808,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
             }
 
         }).error(function (data) {
-            feedbackAreaEdit.html('<s:text name="generic.error.check.logs" />');
+            feedbackAreaEdit.html('<spring:message code="generic.error.check.logs"/>');
             feedbackAreaEdit.css("color", "red");
         });
     }

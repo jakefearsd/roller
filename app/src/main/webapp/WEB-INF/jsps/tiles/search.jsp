@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <div class="searchSidebarHead">
     <div class="menu-tr">
@@ -27,7 +27,7 @@
 
 <div class="searchSidebarBody">
 
-     <h3><s:text name="mainPage.searchWeblogs" /></h3>
+     <h3><spring:message code="mainPage.searchWeblogs"/></h3>
 
      <form id="searchForm" method="get"
         action="<c:out value="${baseURL}" />/sitesearch.do"

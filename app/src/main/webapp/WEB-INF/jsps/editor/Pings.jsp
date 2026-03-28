@@ -15,84 +15,84 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-   <s:text name="pings.subtitle" >
-       <s:param value="actionWeblog.handle" />
-   </s:text>
+   <spring:message code="pings.subtitle" arguments="${actionWeblog.handle}"/>
 </p>  
-<p class="pagetip"> <s:text name="pings.explanation"/> </p>
+<p class="pagetip"> <spring:message code="pings.explanation"/> </p>
 
-<p> <h2><s:text name="pings.commonPingTargets"/></h2> </p>
+<p> <h2><spring:message code="pings.commonPingTargets"/></h2> </p>
 
-<p> <s:text name="pings.commonPingTargetsExplanation"/> </p>
+<p> <spring:message code="pings.commonPingTargetsExplanation"/> </p>
 
 
 <table class="rollertable table table-striped">
 <%-- Headings --%>
 <tr class="rollertable">
-    <th class="rollertable" width="20%"><s:text name="generic.name" /></th>
-    <th class="rollertable" width="40%"><s:text name="pingTarget.pingUrl" /></th>
-    <th class="rollertable" width="20%" colspan=2><s:text name="pingTarget.auto" /></th>
-    <th class="rollertable" width="20%"><s:text name="pingTarget.manual" /></th>
+    <th class="rollertable" width="20%"><spring:message code="generic.name"/></th>
+    <th class="rollertable" width="40%"><spring:message code="pingTarget.pingUrl"/></th>
+    <th class="rollertable" width="20%" colspan=2><spring:message code="pingTarget.auto"/></th>
+    <th class="rollertable" width="20%"><spring:message code="pingTarget.manual"/></th>
 </tr>
 
 <%-- Table of current common targets with actions --%>
-<s:iterator var="pingTarget" value="commonPingTargets" status="rowstatus">
-    <s:if test="#rowstatus.odd == true">
+<c:forEach items="${commonPingTargets}" var="pingTarget" varStatus="rowstatus">
+    <c:choose>
+<c:when test="${rowstatus.odd == true}">
         <tr class="rollertable_odd">
-    </s:if>
-    <s:else>
+    </c:when>
+<c:otherwise>
         <tr class="rollertable_even">
-    </s:else>
-    
-    <td class="rollertable">
-        <str:truncateNicely lower="15" upper="20" ><s:property value="#pingTarget.name" /></str:truncateNicely>
+    </c:otherwise>
+</c:choose><td class="rollertable">
+        <str:truncateNicely lower="15" upper="20" >${pingTarget.name}</str:truncateNicely>
     </td>
     
     <td class="rollertable">
-        <str:truncateNicely lower="70" upper="75" ><s:property value="#pingTarget.pingUrl" /></str:truncateNicely>
+        <str:truncateNicely lower="70" upper="75" >${pingTarget.pingUrl}</str:truncateNicely>
     </td>
     
     <!-- TODO: Use icons here -->
     <td class="rollertable" align="center" >
-        <s:if test="pingStatus[#pingTarget.id]">
-            <span style="color: #00aa00; font-weight: bold;"><s:text name="pingTarget.enabled"/></span>&nbsp;
-        </s:if>
-        <s:else>
-            <span style="color: #aaaaaa; font-weight: bold;"><s:text name="pingTarget.disabled"/></span>&nbsp;
-        </s:else>
-    </td>
+        <c:choose>
+<c:when test="${pingStatus[pingTarget.id]}">
+            <span style="color: #00aa00; font-weight: bold;"><spring:message code="pingTarget.enabled"/></span>&nbsp;
+        </c:when>
+<c:otherwise>
+            <span style="color: #aaaaaa; font-weight: bold;"><spring:message code="pingTarget.disabled"/></span>&nbsp;
+        </c:otherwise>
+</c:choose></td>
     
     <!-- TODO: Use icons here -->
     <td class="rollertable" align="center" >
-        <s:if test="pingStatus[#pingTarget.id]">
-            <s:url var="disableUrl" action="pings!disable" >
-                <s:param name="weblog" value="%{actionWeblog.handle}" />
-                <s:param name="pingTargetId" value="#pingTarget.id" />
-            </s:url>
-            <s:a href="%{disableUrl}"><s:text name="pingTarget.disable"/></s:a>
-        </s:if>
-        <s:else>
-            <s:url var="enableUrl" action="pings!enable" >
-                <s:param name="weblog" value="%{actionWeblog.handle}" />
-                <s:param name="pingTargetId" value="#pingTarget.id" />
-            </s:url>
-            <s:a href="%{enableUrl}"><s:text name="pingTarget.enable"/></s:a>
-        </s:else>
-    </td>
+        <c:choose>
+<c:when test="${pingStatus[pingTarget.id]}">
+            <c:url var="disableUrl" value="/roller-ui/authoring/pings!disable.rol">
+                <c:param name="weblog" value="${actionWeblog.handle}"/>
+                <c:param name="pingTargetId" value="${pingTarget.id}"/>
+            </c:url>
+            <a href="${disableUrl}"><spring:message code="pingTarget.disable"/></a>
+        </c:when>
+<c:otherwise>
+            <c:url var="enableUrl" value="/roller-ui/authoring/pings!enable.rol">
+                <c:param name="weblog" value="${actionWeblog.handle}"/>
+                <c:param name="pingTargetId" value="${pingTarget.id}"/>
+            </c:url>
+            <a href="${enableUrl}"><spring:message code="pingTarget.enable"/></a>
+        </c:otherwise>
+</c:choose></td>
     
     <td class="rollertable">
-        <s:url var="pingNowUrl" action="pings!pingNow" >
-            <s:param name="weblog" value="%{actionWeblog.handle}" />
-            <s:param name="pingTargetId" value="#pingTarget.id" />
-        </s:url>
-        <s:a href="%{pingNowUrl}"><s:text name="pingTarget.sendPingNow"/></s:a>
+        <c:url var="pingNowUrl" value="/roller-ui/authoring/pings!pingNow.rol">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+            <c:param name="pingTargetId" value="${pingTarget.id}"/>
+        </c:url>
+        <a href="${pingNowUrl}"><spring:message code="pingTarget.sendPingNow"/></a>
     </td>
     
     </tr>
-</s:iterator>
+</c:forEach>
 </table>
 
 <br />

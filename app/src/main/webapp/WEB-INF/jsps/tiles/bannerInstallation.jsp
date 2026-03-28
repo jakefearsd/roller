@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <nav class="navbar navbar-default navbar-static-top navbar-inverse">
     <div class="container-fluid">
@@ -29,14 +29,14 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#"><s:text name="installer.bannerTitleLeft" /></a>
+                <a class="navbar-brand" href="#"><spring:message code="installer.bannerTitleLeft"/></a>
             </div>
 
             <ul class="nav navbar-nav">
             </ul>
 
             <ul class="nav navbar-nav navbar-right">
-                <li><a href="<s:url value='/'/>"><s:text name="installer.bannerTitleRight" /></a></li>
+                <li><a href="<c:url value='/'/>"><spring:message code="installer.bannerTitleRight"/></a></li>
             </ul>
 
         </div>

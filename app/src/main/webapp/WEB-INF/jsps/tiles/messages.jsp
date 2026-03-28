@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <script>
     $(document).ready(function () {
@@ -37,35 +37,35 @@
 
 
 <%-- Success Messages --%>
-<s:if test="!actionMessages.isEmpty">
+<c:if test="${!actionMessages.isEmpty}">
     <div id="messages" class="alert alert-success">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
             <span aria-hidden="true">&times;</span>
         </button>
-        <s:actionmessage />
+        <c:forEach items="${actionMessages}" var="msg"><div class="alert alert-info">${msg}</div></c:forEach>
     </div>
-</s:if>
+</c:if>
 
 <%-- Error Messages --%>
-<s:if test="!actionErrors.isEmpty || !fieldErrors.isEmpty">
+<c:if test="${!actionErrors.isEmpty || !fieldErrors.isEmpty}">
     <div id="errors" class="alert alert-danger">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
             <span aria-hidden="true">&times;</span>
         </button>
         <ul>
 
-            <s:iterator var="actionError" value="actionErrors">
-                <li><s:property value="#actionError" escapeHtml="false" /></li>
-            </s:iterator>
+            <c:forEach items="${actionErrors}" var="actionError">
+                <li><c:out value="${actionError}" escapeXml="false"/></li>
+            </c:forEach>
 
-            <s:iterator var="fieldErrorName" value="fieldErrors.keySet()">
-                <s:iterator var="fieldErrorValue" value="fieldErrors[#fieldErrorName]">
-                    <li><s:property value="#fieldErrorValue" escapeHtml="false" /></li>
-                </s:iterator>
-            </s:iterator>
+            <c:forEach items="${fieldErrors.keySet()}" var="fieldErrorName">
+                <c:forEach items="${fieldErrors[#fieldErrorName]}" var="fieldErrorValue">
+                    <li><c:out value="${fieldErrorValue}" escapeXml="false"/></li>
+                </c:forEach>
+            </c:forEach>
 
         </ul>
     </div>
-</s:if>
+</c:if>
 
 <!-- ALERT_END: this comment needed for AJAX error handling -->

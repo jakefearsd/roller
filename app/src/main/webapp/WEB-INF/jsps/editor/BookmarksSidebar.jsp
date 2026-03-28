@@ -15,9 +15,9 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h3><s:text name="mainPage.actions"/></h3>
+<h3><spring:message code="mainPage.actions"/></h3>
 <hr size="1" noshade="noshade"/>
 
 <p>
@@ -25,19 +25,19 @@
 
     <a href="#" onclick="newBlogroll()">
         <span class="glyphicon glyphicon-plus"></span>
-        <s:text name="bookmarksForm.addFolder"/>
+        <spring:message code="bookmarksForm.addFolder"/>
     </a>
 </p>
 
 <%-- Import bookmarks
 <p>
-    <s:url var="importBookmarks" action="bookmarksImport">
-        <s:param name="weblog" value="%{actionWeblog.handle}"/>
-    </s:url>
-    <s:a href="%{importBookmarks}">
+    <c:url var="importBookmarks" value="/roller-ui/authoring/bookmarksImport.rol">
+        <c:param name="weblog" value="${actionWeblog.handle}"/>
+    </c:url>
+    <a href="${importBookmarks}">
         <span class="glyphicon glyphicon-plus"></span>
-        <s:text name="bookmarksForm.importBookmarks"/>
-    </s:a>
+        <spring:message code="bookmarksForm.importBookmarks"/>
+    </a>
 </p>
 --%>
 

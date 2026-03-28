@@ -15,24 +15,22 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <s:text name="bookmarksImport.subtitle" >
-        <s:param value="actionWeblog.handle" />
-    </s:text>
+    <spring:message code="bookmarksImport.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
 <p class="pagetip">
-    <s:text name="bookmarksImport.prompt" />
+    <spring:message code="bookmarksImport.prompt"/>
 </p>     
 
-<s:form action="bookmarksImport!save" method="POST" enctype="multipart/form-data">
-	<s:hidden name="salt" />
-    <s:hidden name="weblog" />
-    <s:file name="opmlFile" />
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/bookmarksImport!save.rol" method="POST" enctype="multipart/form-data">
+<input type="hidden" name="weblog" value="${weblog}"/>
+    <input type="file" name="opmlFile"/>
     <br />
     <br />
-    <s:submit value="%{getText('bookmarksImport.import')}" />
-    <s:submit value="%{getText('generic.cancel')}" action="bookmarks" />
-</s:form>
+    <button type="submit" class="btn"><spring:message code="bookmarksImport.import"/></button>
+    <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/bookmarks.rol"><spring:message code="generic.cancel"/></button>
+<sec:csrfInput/>
+</form>

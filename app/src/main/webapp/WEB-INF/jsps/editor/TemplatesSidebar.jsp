@@ -15,24 +15,28 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h3><s:text name="pagesForm.addNewPage"/></h3>
+<h3><spring:message code="pagesForm.addNewPage"/></h3>
 <hr size="1" noshade="noshade"/>
 
-<s:form action="templates!add" theme="bootstrap" cssClass="form-horizontal" id="templateAdd">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
+<form id="templateAdd" action="${pageContext.request.contextPath}/roller-ui/authoring/templates!add.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
 
-    <s:text name="generic.name"/>
-    <s:textfield name="newTmplName"/>
+    <spring:message code="generic.name"/>
+    <input type="text" name="newTmplName" value="${newTmplName}" class="form-control"/>
 
-    <s:if test="!availableActions.isEmpty">
-        <s:text name="pagesForm.action"/>
-        <s:select name="newTmplAction" list="availableActions"/>
-    </s:if>
+    <c:if test="${!availableActions.isEmpty}">
+        <spring:message code="pagesForm.action"/>
+        <select name="newTmplAction" class="form-control">
+<c:forEach items="${availableActions}" var="opt">
+<option value="${opt}" ${opt == newTmplAction ? 'selected' : ''}>${opt}</option>
+</c:forEach>
+</select>
+    </c:if>
 
-    <s:submit class="btn" value="%{getText('pagesForm.add')}"/>
+    <button type="submit" class="btn"><spring:message code="pagesForm.add"/></button>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 

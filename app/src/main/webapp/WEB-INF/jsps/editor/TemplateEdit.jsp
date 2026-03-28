@@ -15,95 +15,86 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <s:text name="pageForm.subtitle">
-        <s:param value="bean.name"/>
-        <s:param value="actionWeblog.handle"/>
-    </s:text>
+    <spring:message code="pageForm.subtitle" arguments="${bean.name},${actionWeblog.handle}"/>
 </p>
 
-<s:if test="template.required">
-    <p class="pagetip"><s:text name="pageForm.tip.required"/></p>
-</s:if>
-<s:else>
-    <p class="pagetip"><s:text name="pageForm.tip"/></p>
-</s:else>
-
-<s:form action="templateEdit!save" id="template" theme="bootstrap" cssClass="form-vertical">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
-    <s:hidden name="bean.id"/>
-    <s:hidden name="bean.type"/>
+<c:choose>
+<c:when test="${template.required}">
+    <p class="pagetip"><spring:message code="pageForm.tip.required"/></p>
+</c:when>
+<c:otherwise>
+    <p class="pagetip"><spring:message code="pageForm.tip"/></p>
+</c:otherwise>
+</c:choose><form id="template" action="${pageContext.request.contextPath}/roller-ui/authoring/templateEdit!save.rol" method="post" class="form-vertical">
+<input type="hidden" name="weblog" value="${weblog}"/>
+    <input type="hidden" name="bean.id" value="${bean.id}"/>
+    <input type="hidden" name="bean.type" value="${bean.type}"/>
 
     <%-- ================================================================== --%>
     <%-- Name, link and description: disabled when page is a required page --%>
 
-    <s:if test="template.required || bean.mobile">
+    <c:choose>
+<c:when test="${template.required || bean.mobile}">
         <%-- Cannot edit name of a reqired template --%>
-        <s:textfield name="bean.name"
-                     label="%{getText('generic.name')}" size="50" readonly="true" cssStyle="background: #e5e5e5"/>
-    </s:if>
-    <s:else>
-        <s:textfield name="bean.name"
-                     label="%{getText('generic.name')}" size="50"/>
-    </s:else>
+        <input type="text" name="bean.name" value="${bean.name}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
+    </c:when>
+<c:otherwise>
+        <input type="text" name="bean.name" value="${bean.name}" size="50" class="form-control"/>
+    </c:otherwise>
+</c:choose><input type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
 
-    <s:textfield name="bean.action" label="%{getText('pageForm.action')}" size="50"
-                 readonly="true" cssStyle="background: #e5e5e5"/>
-
-    <s:if test="!template.required && template.custom">
+    <c:choose>
+<c:when test="${!template.required && template.custom}">
 
         <%-- allow setting the path for a custom template --%>
-        <s:textfield name="bean.link"
-                     label="%{getText('pageForm.link')}" size="50" onkeyup="updatePageURLDisplay()"/>
+        <input type="text" name="bean.link" value="${bean.link}" size="50" class="form-control" onkeyup="updatePageURLDisplay()"/>
 
         <%-- show preview of the full URL that will result from that path --%>
 
         <div id="no_link" class="alert-danger" style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
-            <s:text name="pageForm.noUrl"/>
+            <spring:message code="pageForm.noUrl"/>
         </div>
 
         <div id="good_link" class="alert-success"
              style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
-            <s:text name="pageForm.resultingUrlWillBe"/>
-            <s:property value="actionWeblog.absoluteURL"/>page/
-            <span id="linkPreview" style="color:red"><s:property value="bean.link"/></span>
-            <s:if test="template.link != null">
-                [<a id="launchLink" onClick="launchPage()"><s:text name="pageForm.launch"/></a>]
-            </s:if>
+            <spring:message code="pageForm.resultingUrlWillBe"/>
+            ${actionWeblog.absoluteURL}page/
+            <span id="linkPreview" style="color:red">${bean.link}</span>
+            <c:if test="${template.link != null}">
+                [<a id="launchLink" onClick="launchPage()"><spring:message code="pageForm.launch"/></a>]
+            </c:if>
         </div>
 
-    </s:if>
+    </c:if>
 
-    <s:if test="template.required">
+    <c:if test="${template.required}">
         <%-- Required templates have a description--%>
-        <s:textarea name="bean.description" label="%{getText('generic.description')}"
-                    cols="50" rows="2" readonly="true" cssStyle="background: #e5e5e5"/>
-    </s:if>
-    <s:else>
-        <s:textarea name="bean.description" label="%{getText('generic.description')}" cols="50" rows="2"/>
-    </s:else>
-
-    <%-- ================================================================== --%>
+        <textarea name="bean.description" rows="2" cols="50" readonly style="background: #e5e5e5">${bean.description}</textarea>
+    </c:when>
+<c:otherwise>
+        <textarea name="bean.description" rows="2" cols="50">${bean.description}</textarea>
+    </c:otherwise>
+</c:choose><%-- ================================================================== --%>
 
     <%-- Tabs for each of the two content areas: Standard and Mobile --%>
     <ul id="template-code-tabs" class="nav nav-tabs" role="tablist" style="margin-bottom: 1em">
 
         <li role="presentation" class="active">
             <a href="#tabStandard" aria-controls="home" role="tab" data-toggle="tab">
-                <em><s:text name="stylesheetEdit.standard"/></em>
+                <em><spring:message code="stylesheetEdit.standard"/></em>
             </a>
         </li>
 
-        <s:if test="bean.contentsMobile != null">
+        <c:if test="${bean.contentsMobile != null}">
             <li role="presentation">
                 <a href="#tabMobile" aria-controls="home" role="tab" data-toggle="tab">
-                    <em><s:text name="stylesheetEdit.mobile"/></em>
+                    <em><spring:message code="stylesheetEdit.mobile"/></em>
                 </a>
             </li>
-        </s:if>
+        </c:if>
 
     </ul>
 
@@ -111,28 +102,28 @@
     <div class="tab-content">
 
         <div role="tabpanel" class="tab-pane active" id="tabStandard">
-            <s:textarea name="bean.contentsStandard" cols="80" rows="30" cssStyle="width:100%"/>
+            <textarea name="bean.contentsStandard" rows="30" cols="80" style="width:100%">${bean.contentsStandard}</textarea>
         </div>
 
-        <s:if test="bean.contentsMobile != null">
+        <c:if test="${bean.contentsMobile != null}">
             <div role="tabpanel" class="tab-pane" id="tabMobile">
-                <s:textarea name="bean.contentsMobile" cols="80" rows="30" cssStyle="width:100%"/>
+                <textarea name="bean.contentsMobile" rows="30" cols="80" style="width:100%">${bean.contentsMobile}</textarea>
             </div>
-        </s:if>
+        </c:if>
 
     </div>
 
     <%-- ================================================================== --%>
     <%-- Save, Close and Resize text area buttons--%>
 
-    <s:submit value="%{getText('generic.save')}" cssClass="btn btn-default"/>
-    <input type="button" value='<s:text name="generic.done"/>' class="button btn"
-           onclick="window.location='<s:url action="templates"><s:param name="weblog" value="%{weblog}"/></s:url>'"/>
+    <button type="submit" class="btn btn-default"><spring:message code="generic.save"/></button>
+    <input type="button" value='<spring:message code="generic.done"/>' class="button btn"
+           onclick="window.location='<c:url value="/roller-ui/authoring/templates.rol"><c:param name="weblog" value="${weblog}"/></c:url>'"/>
 
     <%-- ================================================================== --%>
     <%-- Advanced settings inside a control toggle --%>
 
-    <s:if test="template.custom">
+    <c:if test="${template.custom}">
 
         <div class="panel-group" id="accordion" style="margin-top:2em">
 
@@ -142,7 +133,7 @@
 
                 <h4 class="panel-title">
                     <a class="collapsed" data-toggle="collapse" data-target="#collapseAdvanced" href="#">
-                        <s:text name="pageForm.advancedSettings"/>
+                        <spring:message code="pageForm.advancedSettings"/>
                     </a>
                 </h4>
 
@@ -151,37 +142,37 @@
             <div id="collapseAdvanced" class="panel-collapse collapse">
                 <div class="panel-body">
 
-                    <s:select name="bean.templateLanguage" list="templateLanguages" size="1"
-                              label="%{getText('pageForm.templateLanguage')}"/>
+                    <select name="bean.templateLanguage" class="form-control" size="1">
+<c:forEach items="${templateLanguages}" var="opt">
+<option value="${opt}" ${opt == bean.templateLanguage ? 'selected' : ''}>${opt}</option>
+</c:forEach>
+</select>
 
-                    <s:checkbox name="bean.hidden"
-                                label="%{getText('pageForm.hidden')}" tooltip="%{getText('pageForm.hidden.tip')}"/>
+                    <input type="checkbox" name="bean.hidden" value="true" ${bean.hidden ? 'checked' : ''}/>
 
-                    <s:checkbox name="bean.navbar"
-                                label="%{getText('pageForm.navbar')}" tooltip="%{getText('pageForm.navbar.tip')}"/>
+                    <input type="checkbox" name="bean.navbar" value="true" ${bean.navbar ? 'checked' : ''}/>
 
-                    <s:checkbox name="bean.autoContentType"
-                                label="%{getText('pageForm.useAutoContentType')}"/>
+                    <input type="checkbox" name="bean.autoContentType" value="true" ${bean.autoContentType ? 'checked' : ''}/>
 
                     <div id="manual-content-type-control-group" style="display:none">
-                        <s:textfield name="bean.manualContentType"
-                                     label="%{getText('pageForm.useManualContentType')}"/>
+                        <input type="text" name="bean.manualContentType" value="${bean.manualContentType}" class="form-control"/>
                     </div>
 
                 </div>
             </div>
         </div>
 
-    </s:if>
+    </c:if>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
 <script type="text/javascript">
 
-    var weblogURL = '<s:property value="actionWeblog.absoluteURL" />';
-    var originalLink = '<s:property value="bean.link" />';
-    var type = '<s:property value="bean.type" />';
+    var weblogURL = '${actionWeblog.absoluteURL}';
+    var originalLink = '${bean.link}';
+    var type = '${bean.type}';
 
     $(document).ready(function () {
 

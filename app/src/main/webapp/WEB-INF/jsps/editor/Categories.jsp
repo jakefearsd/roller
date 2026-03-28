@@ -15,86 +15,83 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <s:text name="categoriesForm.subtitle">
-        <s:param value="weblog"/>
-    </s:text>
+    <spring:message code="categoriesForm.subtitle" arguments="${weblog}"/>
 </p>
 <p class="pagetip">
-    <s:text name="categoriesForm.rootPrompt"/>
+    <spring:message code="categoriesForm.rootPrompt"/>
 </p>
 
 <%-- Form is a table of categories each with checkbox --%>
-<s:form action="categories!move">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
-    <s:hidden name="categoryId"/>
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/categories!move.rol" method="post">
+<input type="hidden" name="weblog" value="${weblog}"/>
+    <input type="hidden" name="categoryId" value="${categoryId}"/>
 
     <table class="rollertable table table-striped" width="100%">
 
         <tr class="rollertable">
-            <th width="30%"><s:text name="generic.name"/></th>
-            <th width="50%"><s:text name="generic.description"/></th>
-            <th width="10%"><s:text name="generic.edit"/></th>
-            <th width="10%"><s:text name="categoriesForm.remove"/></th>
+            <th width="30%"><spring:message code="generic.name"/></th>
+            <th width="50%"><spring:message code="generic.description"/></th>
+            <th width="10%"><spring:message code="generic.edit"/></th>
+            <th width="10%"><spring:message code="categoriesForm.remove"/></th>
         </tr>
 
-        <s:if test="AllCategories != null && !AllCategories.isEmpty">
+        <c:choose>
+<c:when test="${AllCategories != null && !AllCategories.isEmpty}">
 
-            <s:iterator var="category" value="AllCategories" status="rowstatus">
+            <c:forEach items="${AllCategories}" var="category" varStatus="rowstatus">
                 <tr>
-                    <td><s:property value="#category.name"/></td>
+                    <td>${category.name}</td>
 
-                    <td><s:property value="#category.description"/></td>
+                    <td>${category.description}</td>
 
                     <td align="center">
 
-                        <s:set var="categoryId"    value="#category.id" />
-                        <s:set var="categoryName"  value="#category.name" />
-                        <s:set var="categoryDesc"  value="#category.description" />
-                        <s:set var="categoryImage" value="#category.image" />
+                        <c:set var="categoryId" value="${category.id}"/>
+                        <c:set var="categoryName" value="${category.name}"/>
+                        <c:set var="categoryDesc" value="${category.description}"/>
+                        <c:set var="categoryImage" value="${category.image}"/>
                         <a href="#" onclick="showCategoryEditModal(
-                                '<s:property value="categoryId" />',
-                                '<s:property value="categoryName"/>',
-                                '<s:property value="categoryDesc"/>',
-                                '<s:property value="categoryImage"/>' )">
+                                '${categoryId}',
+                                '${categoryName}',
+                                '${categoryDesc}',
+                                '${categoryImage}' )">
                             <span class="glyphicon glyphicon-edit"></span>
                         </a>
 
                     </td>
 
                     <td class="rollertable" align="center">
-                        <s:if test="AllCategories.size() > 1">
+                        <c:if test="${AllCategories.size() > 1}">
 
-                            <s:set var="categoryId"    value="#category.id" />
-                            <s:set var="categoryName"  value="#category.name" />
-                            <s:set var="categoryInUse" value="#category.inUse.toString()" />
+                            <c:set var="categoryId" value="${category.id}"/>
+                            <c:set var="categoryName" value="${category.name}"/>
+                            <c:set var="categoryInUse" value="${category.inUse.toString()}"/>
                             <a href="#" onclick="showCategoryDeleteModal(
-                                    '<s:property value="categoryId" />',
-                                    '<s:property value="categoryName" />',
-                                    <s:property value="categoryInUse"/> )" >
+                                    '${categoryId}',
+                                    '${categoryName}',
+                                    ${categoryInUse} )" >
                                 <span class="glyphicon glyphicon-trash"></span>
                             </a>
 
-                        </s:if>
+                        </c:if>
                     </td>
 
                 </tr>
-            </s:iterator>
+            </c:forEach>
 
-        </s:if>
-
-        <s:else>
+        </c:when>
+<c:otherwise>
             <tr>
-                <td style="vertical-align:middle" colspan="6"><s:text name="categoriesForm.noresults"/></td>
+                <td style="vertical-align:middle" colspan="6"><spring:message code="categoriesForm.noresults"/></td>
             </tr>
-        </s:else>
+        </c:otherwise>
+</c:choose></table>
 
-    </table>
-
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
 <%-- ============================================================= --%>
@@ -111,31 +108,29 @@
             </div>
 
             <div class="modal-body">
-                <s:form action="categoryEdit" id="categoryEditForm" theme="bootstrap" cssClass="form-horizontal">
-                    <s:hidden name="salt"/>
-                    <s:hidden name="weblog"/>
-                    <s:hidden name="bean.id"/>
+                <form id="categoryEditForm" action="${pageContext.request.contextPath}/roller-ui/authoring/categoryEdit.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+                    <input type="hidden" name="bean.id" value="${bean.id}"/>
 
                     <%-- action needed here because we are using AJAX to post this form --%>
-                    <s:hidden name="action:categoryEdit!save" value="save"/>
+                    <input type="hidden" name="action:categoryEdit!save" value="${save}"/>
 
-                    <s:textfield name="bean.name" label="%{getText('generic.name')}" maxlength="255"
-                                 onchange="validateCategory()" onkeyup="validateCategory()" />
+                    <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
 
-                    <s:textfield name="bean.description" label="%{getText('generic.description')}"/>
+                    <input type="text" name="bean.description" value="${bean.description}" class="form-control"/>
 
-                    <s:textfield name="bean.image" label="%{getText('categoryForm.image')}"
-                                 onchange="validateCategory()" onkeyup="validateCategory()" />
-                </s:form>
+                    <input type="text" name="bean.image" value="${bean.image}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                <sec:csrfInput/>
+</form>
             </div>
 
             <div class="modal-footer">
                 <p id="feedback-area-edit"></p>
                 <button onclick="submitEditedCategory()" class="btn btn-primary">
-                    <s:text name="generic.save"/>
+                    <spring:message code="generic.save"/>
                 </button>
                 <button type="button" class="btn" data-dismiss="modal">
-                    <s:text name="generic.cancel"/>
+                    <spring:message code="generic.cancel"/>
                 </button>
             </div>
 
@@ -149,7 +144,7 @@
 
     function showCategoryEditModal( id, name, desc, image ) {
         feedbackAreaEdit.html("");
-        $('#category-edit-title').html('<s:text name="categoryForm.edit.title" />');
+        $('#category-edit-title').html('<spring:message code="categoryForm.edit.title"/>');
 
         $('#categoryEditForm_bean_id').val(id);
         $('#categoryEditForm_bean_name').val(name);
@@ -169,7 +164,7 @@
 
         if (!categoryName || categoryName.trim() === '') {
             saveCategoryButton.attr("disabled", true);
-            feedbackAreaEdit.html('<s:text name="categoryForm.requiredFields" />');
+            feedbackAreaEdit.html('<spring:message code="categoryForm.requiredFields"/>');
             feedbackAreaEdit.css("color", "red");
             return;
         }
@@ -177,7 +172,7 @@
         if (imageURL && imageURL.trim() !== '') {
             if (!isValidUrl(imageURL)) {
                 saveCategoryButton.attr("disabled", true);
-                feedbackAreaEdit.html('<s:text name="categoryForm.badURL" />');
+                feedbackAreaEdit.html('<spring:message code="categoryForm.badURL"/>');
                 feedbackAreaEdit.css("color", "red");
                 return;
             }
@@ -191,7 +186,7 @@
 
         // if name is empty reject and show error message
         if ($("#categoryEditForm_bean_name").val().trim() === "") {
-            feedbackAreaEdit.html('<s:text name="categoryForm.requiredFields" />');
+            feedbackAreaEdit.html('<spring:message code="categoryForm.requiredFields"/>');
             feedbackAreaEdit.css("color", "red");
             return;
         }
@@ -207,23 +202,23 @@
 
             // kludge: scrape response status from HTML returned by Struts
             var alertEnd = data.indexOf("ALERT_END");
-            var notUnique = data.indexOf('<s:text name="categoryForm.error.duplicateName" />');
-            var notValid = data.indexOf('<s:text name="categoryForm.error.invalidName" />');
+            var notUnique = data.indexOf('<spring:message code="categoryForm.error.duplicateName"/>');
+            var notValid = data.indexOf('<spring:message code="categoryForm.error.invalidName"/>');
             if (notUnique > 0 && notUnique < alertEnd) {
                 feedbackAreaEdit.css("color", "red");
-                feedbackAreaEdit.html('<s:text name="categoryForm.error.duplicateName" />');
+                feedbackAreaEdit.html('<spring:message code="categoryForm.error.duplicateName"/>');
             } else if (notValid > 0 && notValid < alertEnd) {
                 feedbackAreaEdit.css("color", "red");
-                feedbackAreaEdit.html('<s:text name="categoryForm.error.invalidName" />');
+                feedbackAreaEdit.html('<spring:message code="categoryForm.error.invalidName"/>');
             } else {
                 feedbackAreaEdit.css("color", "green");
-                feedbackAreaEdit.html('<s:text name="generic.success" />');
+                feedbackAreaEdit.html('<spring:message code="generic.success"/>');
                 $('#category-edit-modal').modal("hide");
                 location.reload(true);
             }
 
         }).error(function (data) {
-            feedbackAreaEdit.html('<s:text name="generic.error.check.logs" />');
+            feedbackAreaEdit.html('<spring:message code="generic.error.check.logs"/>');
             feedbackAreaEdit.css("color", "red");
         });
     }
@@ -242,42 +237,46 @@
 
             <div class="modal-header">
                 <h3>
-                    <s:text name="categoryDeleteOK.removeCategory"/>:
+                    <spring:message code="categoryDeleteOK.removeCategory"/>:
                     <span id="category-name"></span>
                 </h3>
             </div>
 
-            <s:form action="categoryRemove!remove" theme="bootstrap" cssClass="form-horizontal">
-                <s:hidden name="salt"/>
-                <s:hidden name="weblog"/>
-                <s:hidden name="removeId"/>
+            <form action="${pageContext.request.contextPath}/roller-ui/authoring/categoryRemove!remove.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+                <input type="hidden" name="removeId" value="${removeId}"/>
                 
                 <div class="modal-body">
 
                     <div id="category-in-use" style="display:none">
                         <p>
-                            <s:text name="categoryDeleteOK.warningCatInUse"/>
-                            <s:text name="categoryDeleteOK.youMustMoveEntries"/>
+                            <spring:message code="categoryDeleteOK.warningCatInUse"/>
+                            <spring:message code="categoryDeleteOK.youMustMoveEntries"/>
                         </p>
-                        <s:text name="categoryDeleteOK.moveToWhere"/>
-                        <s:select name="targetCategoryId" list="allCategories" listKey="id" listValue="name"/>
+                        <spring:message code="categoryDeleteOK.moveToWhere"/>
+                        <select name="targetCategoryId" class="form-control">
+<c:forEach items="${allCategories}" var="opt">
+<option value="${opt.id}" ${opt.id == targetCategoryId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
                     </div>
 
                     <div id="category-empty" style="display:none">
-                        <p><s:text name="categoryDeleteOK.noEntriesInCat"/></p>
+                        <p><spring:message code="categoryDeleteOK.noEntriesInCat"/></p>
                     </div>
                     
-                    <p> <strong><s:text name="categoryDeleteOK.areYouSure"/></strong> </p>
+                    <p> <strong><spring:message code="categoryDeleteOK.areYouSure"/></strong> </p>
                 </div>
 
                 <div class="modal-footer">
-                    <s:submit cssClass="btn btn-danger" value="%{getText('generic.yes')}"/>&nbsp;
+                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>&nbsp;
                     <button type="button" class="btn btn-default" data-dismiss="modal">
-                        <s:text name="generic.no" />
+                        <spring:message code="generic.no"/>
                     </button>
                 </div>
 
-            </s:form>
+            <sec:csrfInput/>
+</form>
 
         </div>
     </div>
@@ -303,12 +302,12 @@
     function populateCategorySelect(removeId) {
         const allCategories = [];
 
-        <s:iterator value="allCategories" var="category">
+        <c:forEach items="${allCategories}" var="category">
         allCategories.push({
-            id: '<s:property value="#category.id"/>',
-            name: '<s:property value="#category.name"/>'
+            id: '${category.id}',
+            name: '${category.name}'
         });
-        </s:iterator>
+        </c:forEach>
 
         const select = $('#categoryRemove_targetCategoryId');
         select.empty();

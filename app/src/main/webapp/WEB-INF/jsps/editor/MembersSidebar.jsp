@@ -15,21 +15,21 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h3><s:text name="mainPage.actions" /></h3>
+<h3><spring:message code="mainPage.actions"/></h3>
 <hr size="1" noshade="noshade" />
 
 <span class="glyphicon glyphicon-plus"></span>
-<s:url action="invite" var="inviteUrl">
-   <s:param name="weblog" value="%{actionWeblog.handle}" />
-</s:url>
-<a href='<s:property value="#inviteUrl" />'>
-    <s:text name="memberPermissions.inviteMember" />
+<c:url var="inviteUrl" value="/roller-ui/authoring/invite.rol">
+   <c:param name="weblog" value="${actionWeblog.handle}"/>
+</c:url>
+<a href='${inviteUrl}'>
+    <spring:message code="memberPermissions.inviteMember"/>
 </a>
-<s:text name="memberPermissions.whyInvite" />
+<spring:message code="memberPermissions.whyInvite"/>
 
-<h3> <s:text name="memberPermissions.permissionsHelpTitle" /> </h3>
+<h3> <spring:message code="memberPermissions.permissionsHelpTitle"/> </h3>
 <hr size="1" noshade="noshade" />
 
-<s:text name="memberPermissions.permissionHelp" />
+<spring:message code="memberPermissions.permissionHelp"/>

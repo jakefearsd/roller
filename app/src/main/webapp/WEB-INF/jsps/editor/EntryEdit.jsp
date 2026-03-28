@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <%-- Prevent annoying scrolling. taken from http://stackoverflow.com/a/10548809/3591946 --%>
 <script type="text/javascript">
@@ -34,115 +34,120 @@
 </style>
 
 <%-- Titling, processing actions different between entry add and edit --%>
-<s:if test="actionName == 'entryEdit'">
-    <s:set var="subtitleKey">weblogEdit.subtitle.editEntry</s:set>
-    <s:set var="mainAction">entryEdit</s:set>
-</s:if>
-<s:else>
-    <s:set var="subtitleKey">weblogEdit.subtitle.newEntry</s:set>
-    <s:set var="mainAction">entryAdd</s:set>
-</s:else>
-
-<p class="subtitle">
-    <s:text name="%{#subtitleKey}">
-        <s:param value="actionWeblog.handle"/>
-    </s:text>
+<c:choose>
+<c:when test="${actionName == 'entryEdit'}">
+    <c:set var="subtitleKey">weblogEdit.subtitle.editEntry</c:set>
+    <c:set var="mainAction">entryEdit</c:set>
+</c:when>
+<c:otherwise>
+    <c:set var="subtitleKey">weblogEdit.subtitle.newEntry</c:set>
+    <c:set var="mainAction">entryAdd</c:set>
+</c:otherwise>
+</c:choose><p class="subtitle">
+    <spring:message code="${subtitleKey}" arguments="${actionWeblog.handle}"/>
 </p>
 
-<s:form id="entry" theme="bootstrap" cssClass="form-horizontal">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
-    <s:hidden name="bean.status"/>
-    <s:if test="actionName == 'entryEdit'">
-        <s:hidden name="bean.id"/>
-    </s:if>
+<form id="entry" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+    <input type="hidden" name="bean.status" value="${bean.status}"/>
+    <c:choose>
+<c:when test="${actionName == 'entryEdit'}">
+        <input type="hidden" name="bean.id" value="${bean.id}"/>
+    </c:if>
 
     <%-- ================================================================== --%>
     <%-- Title, category, dates and other metadata --%>
 
     <%-- title --%>
-    <s:textfield label="%{getText('weblogEdit.title')}" name="bean.title" maxlength="255" tabindex="1"/>
+    <input type="text" name="bean.title" value="${bean.title}" maxlength="255" tabindex="1" class="form-control"/>
 
     <%-- permalink --%>
-    <s:if test="actionName == 'entryEdit'">
+    <c:if test="${actionName == 'entryEdit'}">
         <div class="form-group">
 
             <label class="col-md-3" for="entry_bean_permalink">
-                <s:text name="weblogEdit.permaLink"/>
+                <spring:message code="weblogEdit.permaLink"/>
             </label>
 
             <div class="controls col-md-9">
                 <p class="form-control-static">
-                    <s:if test="bean.published">
-                        <a id="entry_bean_permalink" href='<s:property value="entry.permalink" />'>
-                            <s:property value="entry.permalink"/>
+                    <c:if test="${bean.published}">
+                        <a id="entry_bean_permalink" href='${entry.permalink}'>
+                            ${entry.permalink}
                         </a>
-                        <img src='<s:url value="/images/launch-link.png"/>'/>
-                    </s:if>
-                    <s:else>
-                        <s:property value="entry.permalink"/>
-                    </s:else>
-                </p>
+                        <img src='<c:url value="/images/launch-link.png"/>'/>
+                    </c:when>
+<c:otherwise>
+                        ${entry.permalink}
+                    </c:otherwise>
+</c:choose></p>
             </div>
 
         </div>
-    </s:if>
+    </c:if>
 
     <%-- tags --%>
-    <s:textfield label="%{getText('weblogEdit.tags')}" id="tagAutoComplete" name="bean.tagsAsString"
-                 maxlength="255" tabindex="2"/>
+    <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" id="tagAutoComplete" maxlength="255" tabindex="2" class="form-control"/>
 
     <%-- category --%>
-    <s:select label="%{getText('weblogEdit.category')}" name="bean.categoryId"
-              list="categories" listKey="id" listValue="name" tabindex="3"/>
+    <select name="bean.categoryId" class="form-control" tabindex="3">
+<c:forEach items="${categories}" var="opt">
+<option value="${opt.id}" ${opt.id == bean.categoryId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
 
-    <s:if test="actionWeblog.enableMultiLang">
+    <c:choose>
+<c:when test="${actionWeblog.enableMultiLang}">
         <%-- language / locale --%>
-        <s:select label="%{getText('weblogEdit.locale')}" name="bean.locale"
-                  list="localesList" listValue="displayName" tabindex="4"/>
-    </s:if>
-    <s:else>
-        <s:hidden name="bean.locale"/>
-    </s:else>
-
-    <%-- status --%>
+        <select name="bean.locale" class="form-control" tabindex="4">
+<c:forEach items="${localesList}" var="opt">
+<option value="${opt}" ${opt == bean.locale ? 'selected' : ''}>${opt}</option>
+</c:forEach>
+</select>
+    </c:when>
+<c:otherwise>
+        <input type="hidden" name="bean.locale" value="${bean.locale}"/>
+    </c:otherwise>
+</c:choose><%-- status --%>
     <div class="form-group">
-        <label class="col-md-3" for="weblogEdit.status"><s:text name="weblogEdit.status"/></label>
+        <label class="col-md-3" for="weblogEdit.status"><spring:message code="weblogEdit.status"/></label>
 
         <div class="controls col-md-9">
 
             <p class="form-control-static">
-                <s:if test="bean.published">
+                <c:choose>
+                <c:when test="${bean.published}">
                     <span class="label label-success">
-                        <s:text name="weblogEdit.published"/>
-                        (<s:text name="weblogEdit.updateTime"/>
-                        <s:date name="entry.updateTime"/>)
+                        <spring:message code="weblogEdit.published"/>
+                        (<spring:message code="weblogEdit.updateTime"/>
+                        <fmt:formatDate value="${entry.updateTime}"/>)
                     </span>
-                </s:if>
-                <s:elseif test="bean.draft">
+                </c:when>
+                <c:when test="${bean.draft}">
                     <span class="label label-info">
-                        <s:text name="weblogEdit.draft"/>
-                        (<s:text name="weblogEdit.updateTime"/>
-                        <s:date name="entry.updateTime"/>)
+                        <spring:message code="weblogEdit.draft"/>
+                        (<spring:message code="weblogEdit.updateTime"/>
+                        <fmt:formatDate value="${entry.updateTime}"/>)
                     </span>
-                </s:elseif>
-                <s:elseif test="bean.pending">
+                </c:when>
+                <c:when test="${bean.pending}">
                     <span class="label label-warning">
-                        <s:text name="weblogEdit.pending"/>
-                        (<s:text name="weblogEdit.updateTime"/>
-                        <s:date name="entry.updateTime"/>)
+                        <spring:message code="weblogEdit.pending"/>
+                        (<spring:message code="weblogEdit.updateTime"/>
+                        <fmt:formatDate value="${entry.updateTime}"/>)
                     </span>
-                </s:elseif>
-                <s:elseif test="bean.scheduled">
+                </c:when>
+                <c:when test="${bean.scheduled}">
                     <span class="label label-info">
-                        <s:text name="weblogEdit.scheduled"/>
-                        (<s:text name="weblogEdit.updateTime"/>
-                        <s:date name="entry.updateTime"/>)
+                        <spring:message code="weblogEdit.scheduled"/>
+                        (<spring:message code="weblogEdit.updateTime"/>
+                        <fmt:formatDate value="${entry.updateTime}"/>)
                     </span>
-                </s:elseif>
-                <s:else>
-                    <span class="label label-danger"><s:text name="weblogEdit.unsaved"/></span>
-                </s:else>
+                </c:when>
+                <c:otherwise>
+                    <span class="label label-danger"><spring:message code="weblogEdit.unsaved"/></span>
+                </c:otherwise>
+                </c:choose>
             </p>
 
         </div>
@@ -154,31 +159,34 @@
 
             <%-- Weblog editor --%>
 
-        <s:include value="%{editor.jspPage}"/>
+        <jsp:include page="${editor.jspPage}"/>
 
             <%-- Plugins --%>
 
-        <s:if test="!entryPlugins.isEmpty">
+        <c:choose>
+<c:when test="${!entryPlugins.isEmpty}">
 
             <div class="panel panel-default" id="panel-plugins">
                 <div class="panel-heading">
 
                     <h4 class="panel-title">
                         <a class="collapsed" data-toggle="collapse" data-target="#collapsePlugins" href="#">
-                            <s:text name="weblogEdit.pluginsToApply"/> </a>
+                            <spring:message code="weblogEdit.pluginsToApply"/> </a>
                     </h4>
 
                 </div>
                 <div id="collapsePlugins" class="panel-collapse collapse">
                     <div class="panel-body">
 
-                        <s:checkboxlist name="bean.plugins" list="entryPlugins" listKey="name" listValue="name"/>
+                        <c:forEach items="${entryPlugins}" var="opt">
+<label><input type="checkbox" name="bean.plugins" value="${opt.name}"/> ${opt.name}</label>
+</c:forEach>
 
                     </div>
                 </div>
             </div>
 
-        </s:if>
+        </c:if>
 
             <%-- Advanced settings --%>
 
@@ -188,7 +196,7 @@
                 <h4 class="panel-title">
                     <a class="collapsed" data-toggle="collapse" data-parent="#collapseAdvanced"
                        href="#collapseAdvanced">
-                        <s:text name="weblogEdit.miscSettings"/> </a>
+                        <spring:message code="weblogEdit.miscSettings"/> </a>
                 </h4>
 
             </div>
@@ -197,56 +205,67 @@
 
                     <div class="form-group">
 
-                        <label class="control-label col-md-3"><s:text name="weblogEdit.pubTime"/></label>
+                        <label class="control-label col-md-3"><spring:message code="weblogEdit.pubTime"/></label>
 
                         <div class="controls col-md-9">
 
-                            <s:select theme="simple" name="bean.hours" list="hoursList"/> :
-                            <s:select theme="simple" name="bean.minutes" list="minutesList"/> :
-                            <s:select theme="simple" name="bean.seconds" list="secondsList"/> <br/>
+                            <select name="bean.hours">
+<c:forEach items="${hoursList}" var="opt">
+<option value="${opt}" ${opt == bean.hours ? 'selected' : ''}>${opt}</option>
+</c:forEach>
+</select> :
+                            <select name="bean.minutes">
+<c:forEach items="${minutesList}" var="opt">
+<option value="${opt}" ${opt == bean.minutes ? 'selected' : ''}>${opt}</option>
+</c:forEach>
+</select> :
+                            <select name="bean.seconds">
+<c:forEach items="${secondsList}" var="opt">
+<option value="${opt}" ${opt == bean.seconds ? 'selected' : ''}>${opt}</option>
+</c:forEach>
+</select> <br/>
 
-                            <img src="<s:url value='/roller-ui/images/spacer.png' />"
+                            <img src="<c:url value='/roller-ui/images/spacer.png'/>"
                                  alt="spacer" style="min-height: 0.3em"/>
 
                             <div class="input-group">
-                                <s:textfield name="bean.dateString" readonly="true" cssStyle="width:15em"
-                                             theme="simple" cssClass="date-picker form-control"/>
+                                <input type="text" name="bean.dateString" value="${bean.dateString}" readonly class="date-picker form-control" style="width:15em"/>
                                 <label for="bean.dateString" class="input-group-addon btn" style="width:3em">
                                     <span class="glyphicon glyphicon-calendar"></span>
                                 </label>
                             </div>
 
-                            <s:property value="actionWeblog.timeZone"/>
+                            ${actionWeblog.timeZone}
 
                         </div>
 
                     </div>
 
-                    <s:select label="%{getText('weblogEdit.commentDays')}" name="bean.commentDays"
-                              list="commentDaysList" listKey="key" listValue="value"/>
+                    <select name="bean.commentDays" class="form-control">
+<c:forEach items="${commentDaysList}" var="opt">
+<option value="${opt.key}" ${opt.key == bean.commentDays ? 'selected' : ''}>${opt.value}</option>
+</c:forEach>
+</select>
 
-                    <s:checkbox label="%{getText('weblogEdit.rightToLeft')}" name="bean.rightToLeft"/>
+                    <input type="checkbox" name="bean.rightToLeft" value="true" ${bean.rightToLeft ? 'checked' : ''}/>
 
                         <%-- global admin can pin items to front page weblog --%>
-                    <s:if test="authenticatedUser.hasGlobalPermission('admin')">
-                        <s:checkbox label="%{getText('weblogEdit.pinnedToMain')}" name="bean.pinnedToMain"
-                                    tooltop="%{getText('weblogEdit.pinnedToMain.tooltip')}"/>
-                    </s:if>
+                    <c:if test="${authenticatedUser.hasGlobalPermission('admin')}">
+                        <input type="checkbox" name="bean.pinnedToMain" value="true" ${bean.pinnedToMain ? 'checked' : ''}/>
+                    </c:if>
 
-                    <s:textfield label="%{getText('weblogEdit.searchDescription')}" name="bean.searchDescription"
-                                 maxlength="255" tooltip="%{getText('weblogEdit.searchDescription.tooltip')}"/>
+                    <input type="text" name="bean.searchDescription" value="${bean.searchDescription}" maxlength="255" class="form-control"/>
 
-                    <s:textfield label="%{getText('weblogEdit.enclosureURL')}" name="bean.enclosureURL"
-                                 maxlength="255" tooltip="%{getText('weblogEdit.enclosureURL.tooltip')}"/>
+                    <input type="text" name="bean.enclosureURL" value="${bean.enclosureURL}" maxlength="255" class="form-control"/>
 
-                    <s:if test="actionName == 'entryEdit'">
-                        <s:if test="!bean.enclosureURL.isEmpty()">
-                            <s:text name="weblogEdit.enclosureType"/>:
-                            <s:property value='entry.findEntryAttribute("att_mediacast_type")'/>
-                            <s:text name="weblogEdit.enclosureLength"/>:
-                            <s:property value='entry.findEntryAttribute("att_mediacast_length")'/>
-                        </s:if>
-                    </s:if>
+                    <c:if test="${actionName == 'entryEdit'}">
+                        <c:if test="${!bean.enclosureURL.isEmpty()}">
+                            <spring:message code="weblogEdit.enclosureType"/>:
+                            ${entry.findEntryAttribute("att_mediacast_type")}
+                            <spring:message code="weblogEdit.enclosureLength"/>:
+                            ${entry.findEntryAttribute("att_mediacast_length")}
+                        </c:if>
+                    </c:if>
 
                 </div>
 
@@ -261,56 +280,50 @@
     <%-- The button box --%>
 
     <%-- save draft --%>
-    <s:submit cssClass="btn btn-warning"
-              value="%{getText('weblogEdit.save')}"
-              action="%{#mainAction}!saveDraft"/>
+    <button type="submit" class="btn btn-warning" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!saveDraft.rol"><spring:message code="weblogEdit.save"/></button>
 
-    <s:if test="actionName == 'entryEdit'">
+    <c:if test="${actionName == 'entryEdit'}">
 
         <%-- preview mode --%>
         <input class="btn btn-default" type="button" name="fullPreview"
-               value="<s:text name='weblogEdit.fullPreviewMode' />"
+               value="<spring:message code="weblogEdit.fullPreviewMode"/>"
                onclick="fullPreviewMode()"/>
-    </s:if>
-    <s:if test="userAnAuthor">
+    </c:if>
+    <c:if test="${userAnAuthor}">
 
         <%-- publish --%>
-        <s:submit cssClass="btn btn-success"
-                  value="%{getText('weblogEdit.post')}"
-                  action="%{#mainAction}!publish"/>
-    </s:if>
-    <s:else>
+        <button type="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.post"/></button>
+    </c:when>
+<c:otherwise>
 
         <%-- submit for review --%>
-        <s:submit cssClass="btn btn-info"
-                  value="%{getText('weblogEdit.submitForReview')}"
-                  action="%{#mainAction}!publish"/>
-    </s:else>
-
-    <s:if test="actionName == 'entryEdit'">
+        <button type="submit" class="btn btn-info" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.submitForReview"/></button>
+    </c:otherwise>
+</c:choose><c:if test="${actionName == 'entryEdit'}">
 
         <%-- delete --%>
         <span style="float:right">
             <input class="btn btn-danger" type="button"
-                   value="<s:text name='weblogEdit.deleteEntry'/>"
-                   onclick="showDeleteModal('<s:property value="entry.id" />', '<s:property value="entry.title"/>' )">
+                   value="<spring:message code="weblogEdit.deleteEntry"/>"
+                   onclick="showDeleteModal('${entry.id}', '${entry.title}' )">
         </span>
-    </s:if>
+    </c:if>
 
 
     <%-- Trackback control
-    <s:if test="actionName == 'entryEdit' && userAnAuthor">
+    <c:if test="${actionName == 'entryEdit' && userAnAuthor}">
         <br/>
-        <h2><s:text name="weblogEdit.trackback"/></h2>
-        <s:text name="weblogEdit.trackbackUrl"/>
+        <h2><spring:message code="weblogEdit.trackback"/></h2>
+        <spring:message code="weblogEdit.trackbackUrl"/>
         <br/>
-        <s:textfield name="trackbackUrl" size="80" maxlength="255" style="width:35%"/>
+        <input type="text" name="trackbackUrl" value="${trackbackUrl}" size="80" maxlength="255" class="form-control"/>
 
-        <s:submit value="%{getText('weblogEdit.sendTrackback')}" action="entryEdit!trackback"/>
-    </s:if>
+        <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!trackback.rol"><spring:message code="weblogEdit.sendTrackback"/></button>
+    </c:if>
     --%>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
 <%-- ========================================================================================== --%>
@@ -323,17 +336,16 @@
 
         <div class="modal-content">
 
-            <s:set var="deleteAction">entryRemoveViaList!remove</s:set>
+            <c:set var="deleteAction">entryRemoveViaList!remove</c:set>
 
-            <s:form action="%{#deleteAction}" theme="bootstrap" cssClass="form-horizontal">
-                <s:hidden name="salt"/>
-                <s:hidden name="weblog"/>
-                <s:hidden name="removeId" id="removeId"/>
+            <form action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+                <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
                 <div class="modal-header">
                     <div class="modal-title">
-                        <h3><s:text name="weblogEntryRemove.removeWeblogEntry"/></h3>
-                        <p><s:text name="weblogEntryRemove.areYouSure"/></p>
+                        <h3><spring:message code="weblogEntryRemove.removeWeblogEntry"/></h3>
+                        <p><spring:message code="weblogEntryRemove.areYouSure"/></p>
                     </div>
                 </div>
 
@@ -341,7 +353,7 @@
 
                     <div class="form-group">
                         <label class="col-sm-3 control-label">
-                            <s:text name="weblogEntryRemove.entryTitle"/>
+                            <spring:message code="weblogEntryRemove.entryTitle"/>
                         </label>
                         <div class="col-sm-9 controls">
                             <p class="form-control-static" style="padding-top:0px" id="postTitleLabel"></p>
@@ -350,7 +362,7 @@
 
                     <div class="form-group">
                         <label class="col-sm-3 control-label">
-                            <s:text name="weblogEntryRemove.entryId"/>
+                            <spring:message code="weblogEntryRemove.entryId"/>
                         </label>
                         <div class="col-sm-9 controls">
                             <p class="form-control-static" style="padding-top:0px" id="postIdLabel"></p>
@@ -360,13 +372,14 @@
                 </div>
 
                 <div class="modal-footer">
-                    <s:submit cssClass="btn" value="%{getText('generic.yes')}"/>
+                    <button type="submit" class="btn"><spring:message code="generic.yes"/></button>
                     <button type="button" class="btn btn-default btn-primary" data-dismiss="modal">
-                        <s:text name="generic.no"/>
+                        <spring:message code="generic.no"/>
                     </button>
                 </div>
 
-            </s:form>
+            <sec:csrfInput/>
+</form>
 
         </div>
 
@@ -383,7 +396,7 @@
     });
 
     function fullPreviewMode() {
-        window.open('<s:property value="previewURL" />', 'roller-preview');
+        window.open('${previewURL}', 'roller-preview');
     }
 
     $(function () {
@@ -405,7 +418,7 @@
             .autocomplete({
                 delay: 500,
                 source: function (request, response) {
-                    $.getJSON("<s:property value='jsonAutocompleteUrl' />", {
+                    $.getJSON("${jsonAutocompleteUrl}", {
                             format: 'json',
                             prefix: extractLast(request.term)
                         },

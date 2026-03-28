@@ -15,95 +15,95 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <s:text name="pagesForm.subtitle">
-        <s:param value="actionWeblog.handle"/>
-    </s:text>
+    <spring:message code="pagesForm.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 <p class="pagetip">
-    <s:text name="pagesForm.tip"/>
+    <spring:message code="pagesForm.tip"/>
 </p>
 
-<s:if test="actionWeblog.editorTheme != 'custom'">
-    <p><s:text name="pagesForm.themesReminder"><s:param value="actionWeblog.editorTheme"/></s:text></p>
-</s:if>
+<c:choose>
+<c:when test="${actionWeblog.editorTheme != 'custom'}">
+    <p><spring:message code="pagesForm.themesReminder" arguments="${actionWeblog.editorTheme}"/></p>
+</c:if>
 
-<s:form action="templates!remove" theme="bootstrap" cssClass="form-horizontal">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog" value="%{actionWeblog.handle}"/>
-    <s:hidden name="removeId" id="removeId"/>
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/templates!remove.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+    <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
     <table class="table table-striped"> <%-- of weblog templates --%>
 
-        <s:if test="!templates.isEmpty">
+        <c:if test="${!templates.isEmpty}">
 
             <tr>
-                <th width="30%"><s:text name="generic.name"/></th>
-                <th width="10"><s:text name="pagesForm.action"/></th>
-                <th width="55%"><s:text name="generic.description"/></th>
-                <th width="10"><s:text name="pagesForm.remove"/></th>
+                <th width="30%"><spring:message code="generic.name"/></th>
+                <th width="10"><spring:message code="pagesForm.action"/></th>
+                <th width="55%"><spring:message code="generic.description"/></th>
+                <th width="10"><spring:message code="pagesForm.remove"/></th>
             </tr>
 
-            <s:iterator var="p" value="templates" status="rowstatus">
+            <c:forEach items="${templates}" var="p" varStatus="rowstatus">
                 <tr>
 
                     <td style="vertical-align:middle">
-                        <s:if test="! #p.hidden">
-                            <img src='<s:url value="/images/page_white.png"/>' border="0" alt="icon"/>
-                        </s:if>
-                        <s:else>
-                            <img src='<s:url value="/images/page_white_gear.png"/>' border="0" alt="icon"/>
-                        </s:else>
-                        <s:url var="edit" action="templateEdit">
-                            <s:param name="weblog" value="actionWeblog.handle"/>
-                            <s:param name="bean.id" value="#p.id"/>
-                        </s:url>
-                        <s:a href="%{edit}"><s:property value="#p.name"/></s:a>
+                        <c:if test="${! p.hidden}">
+                            <img src='<c:url value="/images/page_white.png"/>' border="0" alt="icon"/>
+                        </c:when>
+<c:otherwise>
+                            <img src='<c:url value="/images/page_white_gear.png"/>' border="0" alt="icon"/>
+                        </c:otherwise>
+</c:choose><c:url var="edit" value="/roller-ui/authoring/templateEdit.rol">
+                            <c:param name="weblog" value="${actionWeblog.handle}"/>
+                            <c:param name="bean.id" value="${p.id}"/>
+                        </c:url>
+                        <a href="${edit}">${p.name}</a>
                     </td>
 
-                    <td style="vertical-align:middle"><s:property value="#p.action.readableName"/></td>
+                    <td style="vertical-align:middle">${p.action.readableName}</td>
 
-                    <td style="vertical-align:middle"><s:property value="#p.description"/></td>
+                    <td style="vertical-align:middle">${p.description}</td>
 
                     <td class="center" style="vertical-align:middle">
-                        <s:if test="!#p.required || !customTheme">
-                            <s:url var="removeUrl" action="templateRemove">
-                                <s:param name="weblog" value="actionWeblog.handle"/>
-                                <s:param name="removeId" value="#p.id"/>
-                            </s:url>
+                        <c:choose>
+<c:when test="${!p.required || !customTheme}">
+                            <c:url var="removeUrl" value="/roller-ui/authoring/templateRemove.rol">
+                                <c:param name="weblog" value="${actionWeblog.handle}"/>
+                                <c:param name="removeId" value="${p.id}"/>
+                            </c:url>
                             <a href="#" onclick=
-                                    "confirmTemplateDelete('<s:property value="#p.id"/>', '<s:property value="#p.name"/>' )">
+                                    "confirmTemplateDelete('${p.id}', '${p.name}' )">
                                 <span class="glyphicon glyphicon-trash"></span>
                             </a>
 
-                        </s:if>
-                        <s:else>
+                        </c:when>
+<c:otherwise>
                             <span class="glyphicon glyphicon-lock"></span>
-                        </s:else>
-                    </td>
+                        </c:otherwise>
+</c:choose></td>
 
                 </tr>
-            </s:iterator>
+            </c:forEach>
 
-        </s:if>
-        <s:else>
+        </c:when>
+<c:otherwise>
             <tr class="rollertable_odd">
                 <td style="vertical-align:middle" colspan="5">
-                    <s:text name="pageForm.notemplates"/>
+                    <spring:message code="pageForm.notemplates"/>
                 </td>
             </tr>
-        </s:else>
-    </table>
+        </c:otherwise>
+</c:choose></table>
 
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
 <script>
     function confirmTemplateDelete(templateId, templateName) {
         $('#removeId').val(templateId);
-        if (window.confirm('<s:text name="pageRemove.confirm"/>: \'' + templateName + '\'?')) {
+        if (window.confirm('<spring:message code="pageRemove.confirm"/>: \'' + templateName + '\'?')) {
             document.getElementById("templates").submit();
         }
     }

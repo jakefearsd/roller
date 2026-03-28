@@ -15,15 +15,17 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<s:if test="contentTypeImage">
-   <s:include value="/WEB-INF/jsps/editor/MediaFileImageDimension.jsp" />
-</s:if>
-<s:else>
+<c:choose>
+<c:when test="${contentTypeImage}">
+   <jsp:include page="/WEB-INF/jsps/editor/MediaFileImageDimension.jsp"/>
+</c:when>
+<c:otherwise>
 <script>
-    <s:url var="mediaFileURL" value="/roller-ui/rendering/media-resources/%{bean.id}" />
-    var filePointer = "<a href='<s:property value="%{mediaFileURL}" />'><s:property value="bean.name" /></a>";
+    <c:url var="mediaFileURL" value="/roller-ui/rendering/media-resources/${bean.id}"/>
+    var filePointer = "<a href='${mediaFileURL}'>${bean.name}</a>";
     parent.onClose(filePointer);
 </script>
-</s:else>
+</c:otherwise>
+</c:choose>
