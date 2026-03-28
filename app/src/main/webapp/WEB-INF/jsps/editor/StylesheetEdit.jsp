@@ -15,35 +15,35 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p class="subtitle"><s:text name="stylesheetEdit.subtitle" /></p>
+<p class="subtitle"><spring:message code="stylesheetEdit.subtitle"/></p>
 
 
-<s:if test="template != null">
+<c:choose>
+<c:when test="${template != null}">
 
-    <s:text name="stylesheetEdit.youCanCustomize" />
+    <spring:message code="stylesheetEdit.youCanCustomize"/>
 
-    <s:form action="stylesheetEdit!save" theme="bootstrap" cssClass="form-vertical">
-        <s:hidden name="salt" />
-        <s:hidden name="weblog" />
+    <form action="${pageContext.request.contextPath}/roller-ui/authoring/stylesheetEdit!save.rol" method="post" class="form-vertical">
+<input type="hidden" name="weblog" value="${weblog}"/>
 
         <%-- Tabs for each of the two content areas: Standard and Mobile --%>
         <ul id="template-code-tabs" class="nav nav-tabs" role="tablist" style="margin-bottom: 1em">
 
             <li role="presentation" class="active">
                 <a href="#tabStandard" aria-controls="home" role="tab" data-toggle="tab">
-                    <em><s:text name="stylesheetEdit.standard"/></em>
+                    <em><spring:message code="stylesheetEdit.standard"/></em>
                 </a>
             </li>
 
-            <s:if test="contentsMobile != null">
+            <c:if test="${contentsMobile != null}">
                 <li role="presentation">
                     <a href="#tabMobile" aria-controls="home" role="tab" data-toggle="tab">
-                        <em><s:text name="stylesheetEdit.mobile"/></em>
+                        <em><spring:message code="stylesheetEdit.mobile"/></em>
                     </a>
                 </li>
-            </s:if>
+            </c:if>
 
         </ul>
 
@@ -51,76 +51,73 @@
         <div class="tab-content">
 
             <div role="tabpanel" class="tab-pane active" id="tabStandard">
-                <s:textarea name="contentsStandard" cols="80" rows="30" cssStyle="width:100%" />
+                <textarea name="contentsStandard" rows="30" cols="80" style="width:100%">${contentsStandard}</textarea>
             </div>
 
-            <s:if test="contentsMobile != null">
+            <c:if test="${contentsMobile != null}">
                 <div role="tabpanel" class="tab-pane" id="tabMobile">
-                    <s:textarea name="contentsMobile" cols="80" rows="30" cssStyle="width:100%" />
+                    <textarea name="contentsMobile" rows="30" cols="80" style="width:100%">${contentsMobile}</textarea>
                 </div>
-            </s:if>
+            </c:if>
 
         </div>
 
         <%-- Save, Close and Resize text area buttons--%>
-        <s:submit value="%{getText('generic.save')}" cssClass="btn btn-success" />
+        <button type="submit" class="btn btn-success"><spring:message code="generic.save"/></button>
 
-        <s:if test="!customTheme">
-            <s:submit value="%{getText('stylesheetEdit.revert')}" cssClass="btn"
-                onclick="revertStylesheet();return false;"
-                      tooltip="%{getText('stylesheetEdit.revertTip')}" />
-        </s:if>
+        <c:if test="${!customTheme}">
+            <button type="submit" class="btn" onclick="revertStylesheet();return false;"><spring:message code="stylesheetEdit.revert"/></button>
+        </c:if>
 
         <%-- Only delete if we have no custom templates ie website.customStylesheetPath=null --%>
-        <s:if test="sharedThemeStylesheet">
-            <s:submit value="%{getText('stylesheetEdit.delete')}"  cssClass="btn btn-danger"
-                onclick="deleteStylesheet();return false;"
-                      tooltip="%{getText('stylesheetEdit.deleteTip')}" />
-        </s:if>
+        <c:if test="${sharedThemeStylesheet}">
+            <button type="submit" class="btn btn-danger" onclick="deleteStylesheet();return false;"><spring:message code="stylesheetEdit.delete"/></button>
+        </c:if>
 
-    </s:form>
+    <sec:csrfInput/>
+</form>
 
-</s:if>
-<s:elseif test="sharedTheme">
+</c:when>
+<c:when test="${sharedTheme}">
 
-    <s:if test="sharedThemeStylesheet">
+    <c:choose>
+<c:when test="${sharedThemeStylesheet}">
 
-        <s:text name="stylesheetEdit.sharedThemeWithStylesheet" />
+        <spring:message code="stylesheetEdit.sharedThemeWithStylesheet"/>
 
-        <s:form action="stylesheetEdit!copyStylesheet" theme="bootstrap" cssClass="form-vertical">
-            <s:hidden name="salt" />
-            <s:hidden name="weblog" />
-            <s:submit value="%{getText('stylesheetEdit.copyStylesheet')}" cssClass="btn btn-success"
-                tooltip="%{getText('stylesheetEdit.createStylesheetTip')}" />
-        </s:form>
+        <form action="${pageContext.request.contextPath}/roller-ui/authoring/stylesheetEdit!copyStylesheet.rol" method="post" class="form-vertical">
+<input type="hidden" name="weblog" value="${weblog}"/>
+            <button type="submit" class="btn btn-success"><spring:message code="stylesheetEdit.copyStylesheet"/></button>
+        <sec:csrfInput/>
+</form>
 
-    </s:if>
-    <s:else>
-        <p><s:text name="stylesheetEdit.sharedThemeNoStylesheetSupport" /></p>
-    </s:else>
-
-</s:elseif>
-<s:else>
-    <s:text name="stylesheetEdit.customThemeNoStylesheet" />
-</s:else>
-
+    </c:when>
+<c:otherwise>
+        <p><spring:message code="stylesheetEdit.sharedThemeNoStylesheetSupport"/></p>
+    </c:otherwise>
+</c:choose>
+</c:when>
+<c:otherwise>
+    <spring:message code="stylesheetEdit.customThemeNoStylesheet"/>
+</c:otherwise>
+</c:choose>
 
 <script type="text/javascript">
 
     function revertStylesheet() {
-        if (window.confirm('<s:text name="stylesheetEdit.confirmRevert"/>')) {
-            document.stylesheetEdit.action = "<s:url action='stylesheetEdit!revert' />";
+        if (window.confirm('<spring:message code="stylesheetEdit.confirmRevert"/>')) {
+            document.stylesheetEdit.action = "<c:url value='/roller-ui/authoring/stylesheetEdit!revert.rol'/>";
             document.stylesheetEdit.submit();
         }
     };
-    <s:if test="%{sharedThemeStylesheet}">
+    <c:if test="${sharedThemeStylesheet}">
         function deleteStylesheet() {
-            if (window.confirm('<s:text name="stylesheetEdit.confirmDelete"/>')) {
-                document.stylesheetEdit.action = "<s:url action='stylesheetEdit!delete' />";
+            if (window.confirm('<spring:message code="stylesheetEdit.confirmDelete"/>')) {
+                document.stylesheetEdit.action = "<c:url value='/roller-ui/authoring/stylesheetEdit!delete.rol'/>";
                 document.stylesheetEdit.submit();
             }
         };
-    </s:if>
+    </c:if>
 
 </script>
 

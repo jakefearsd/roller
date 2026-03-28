@@ -15,15 +15,13 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 -->
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <s:text name="weblogEntryQuery.subtitle" >
-        <s:param value="actionWeblog.handle" />
-    </s:text>
+    <spring:message code="weblogEntryQuery.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 <p class="pagetip">
-    <s:text name="weblogEntryQuery.tip" />
+    <spring:message code="weblogEntryQuery.tip"/>
 </p>
 
 
@@ -32,18 +30,18 @@
 
 <nav>
     <ul class="pager">
-        <s:if test="pager.prevLink != null">
+        <c:if test="${pager.prevLink != null}">
             <li class="previous">
-                <a href='<s:property value="pager.prevLink" />'> 
+                <a href='${pager.prevLink}'>
                     <span aria-hidden="true">&larr;</span>Newer</a>
             </li>
-        </s:if>
-        <s:if test="pager.nextLink != null">
+        </c:if>
+        <c:if test="${pager.nextLink != null}">
             <li class="next">
-                <a href='<s:property value="pager.nextLink"/>'>Older
+                <a href='${pager.nextLink}'>Older
                     <span aria-hidden="true">&rarr;</span></a>
             </li>
-        </s:if>
+        </c:if>
     </ul>
 </nav>
 
@@ -53,11 +51,11 @@
 
 <p style="text-align: center">
     <span class="draftEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span> 
-    <s:text name="weblogEntryQuery.draft" />&nbsp;&nbsp;
+    <spring:message code="weblogEntryQuery.draft"/>&nbsp;&nbsp;
     <span class="pendingEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-    <s:text name="weblogEntryQuery.pending" />&nbsp;&nbsp;
+    <spring:message code="weblogEntryQuery.pending"/>&nbsp;&nbsp;
     <span class="scheduledEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-    <s:text name="weblogEntryQuery.scheduled" />&nbsp;&nbsp;
+    <spring:message code="weblogEntryQuery.scheduled"/>&nbsp;&nbsp;
 </p>
 
 <table class="rollertable table table-striped" width="100%">
@@ -65,91 +63,90 @@
 <tr>
     <th class="rollertable" width="3%"> </th>
     <th class="rollertable" width="7%">
-        <s:text name="weblogEntryQuery.pubTime" />
+        <spring:message code="weblogEntryQuery.pubTime"/>
     </th>
     <th class="rollertable" width="7%">
-        <s:text name="weblogEntryQuery.updateTime" />
+        <spring:message code="weblogEntryQuery.updateTime"/>
     </th>
     <th class="rollertable">
-        <s:text name="weblogEntryQuery.title" />
+        <spring:message code="weblogEntryQuery.title"/>
     </th>
     <th class="rollertable" width="15%">
-        <s:text name="weblogEntryQuery.category" />
+        <spring:message code="weblogEntryQuery.category"/>
     </th>
     <th class="rollertable" width="3%"> </th>
 </tr>
 
-<s:iterator var="post" value="pager.items">
+<c:forEach items="${pager.items}" var="post">
     <%-- <td> with style if comment is spam or pending --%>
-    <s:if test="#post.status.name() == 'DRAFT'">
-        <tr class="draftentry"> 
-    </s:if>
-    <s:elseif test="#post.status.name() == 'PENDING'">
-        <tr class="pendingentry"> 
-    </s:elseif>
-    <s:elseif test="#post.status.name() == 'SCHEDULED'">
-        <tr class="scheduledentry"> 
-    </s:elseif>
-    <s:else>
+    <c:choose>
+    <c:when test="${post.status.name() == 'DRAFT'}">
+        <tr class="draftentry">
+    </c:when>
+    <c:when test="${post.status.name() == 'PENDING'}">
+        <tr class="pendingentry">
+    </c:when>
+    <c:when test="${post.status.name() == 'SCHEDULED'}">
+        <tr class="scheduledentry">
+    </c:when>
+    <c:otherwise>
         <tr>
-    </s:else>
-
+    </c:otherwise>
+    </c:choose>
     <td>
-        <s:url var="editUrl" action="entryEdit">
-            <s:param name="weblog" value="%{actionWeblog.handle}" />
-            <s:param name="bean.id" value="#post.id" />
-        </s:url>
-        <s:a href="%{editUrl}">
+        <c:url var="editUrl" value="/roller-ui/authoring/entryEdit.rol">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+            <c:param name="bean.id" value="${post.id}"/>
+        </c:url>
+        <a href="${editUrl}">
             <span class="glyphicon glyphicon-edit" data-toggle="tooltip" data-placement="top"
-                  title="<s:text name='generic.edit'/>">
+                  title="<spring:message code="generic.edit"/>">
             </span>
-        </s:a>
+        </a>
     </td>
 
     <td>
-        <s:if test="#post.pubTime != null">
-            <s:text name="weblogEntryQuery.date.toStringFormat">
-                <s:param value="#post.pubTime" />
-            </s:text>
-        </s:if>
+        <c:if test="${post.pubTime != null}">
+            <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${post.pubTime}"/>
+        </c:if>
     </td>
     
     <td>
-        <s:if test="#post.updateTime != null">
-            <s:text name="weblogEntryQuery.date.toStringFormat">
-                <s:param value="#post.updateTime" />
-            </s:text>
-        </s:if>
+        <c:if test="${post.updateTime != null}">
+            <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${post.updateTime}"/>
+        </c:if>
     </td>
     
     <td>
-        <s:if test="#post.status.name() == 'PUBLISHED'">
-            <a href='<s:property value="#post.permalink" />'>
-                <str:truncateNicely upper="80"><s:property value="#post.displayTitle" /></str:truncateNicely>
+        <c:choose>
+        <c:when test="${post.status.name() == 'PUBLISHED'}">
+            <a href='${post.permalink}'>
+                <str:truncateNicely upper="80">${post.displayTitle}</str:truncateNicely>
             </a>
-        </s:if>
-        <s:else>
-            <str:truncateNicely upper="80"><s:property value="#post.displayTitle" /></str:truncateNicely>
-        </s:else>
+        </c:when>
+        <c:otherwise>
+            <str:truncateNicely upper="80">${post.displayTitle}</str:truncateNicely>
+        </c:otherwise>
+        </c:choose>
     </td>
     
     <td>
-        <s:property value="#post.category.name" />
+        ${post.category.name}
     </td>
 
     <td>
-        <s:set var="postId" value="#post.id" />
-        <s:set var="postTitle" value="#post.title" />
+        <c:set var="postId" value="${post.id}"/>
+        <c:set var="postTitle" value="${post.title}"/>
         <a href="#"
-            onclick="showDeleteModal('<s:property value="postId" />', '<s:property value="postTitle"/>' )">
+            onclick="showDeleteModal('${postId}', '${postTitle}' )">
             <span class="glyphicon glyphicon-trash"
-                  data-toggle="tooltip" data-placement="top" title="<s:text name='generic.delete'/>">
+                  data-toggle="tooltip" data-placement="top" title="<spring:message code="generic.delete"/>">
             </span>
         </a>
     </td>
 
     </tr>
-</s:iterator>
+</c:forEach>
 
 </table>
 
@@ -159,24 +156,24 @@
 
 <nav>
     <ul class="pager">
-        <s:if test="pager.prevLink != null">
+        <c:if test="${pager.prevLink != null}">
             <li class="previous">
-                <a href='<s:property value="pager.prevLink" />'>
+                <a href='${pager.prevLink}'>
                     <span aria-hidden="true">&larr;</span> Older</a>
             </li>
-        </s:if>
-        <s:if test="pager.nextLink != null">
+        </c:if>
+        <c:if test="${pager.nextLink != null}">
             <li class="next">
-                <a href='<s:property value="pager.nextLink"/>'>Newer
+                <a href='${pager.nextLink}'>Newer
                     <span aria-hidden="true">&rarr;</span></a>
             </li>
-        </s:if>
+        </c:if>
     </ul>
 </nav>
 
-<s:if test="pager.items.isEmpty">
-    <s:text name="weblogEntryQuery.noneFound" />
-</s:if>
+<c:if test="${pager.items.isEmpty}">
+    <spring:message code="weblogEntryQuery.noneFound"/>
+</c:if>
 
 
 <div id="delete-entry-modal" class="modal fade delete-entry-modal" tabindex="-1" role="dialog">
@@ -185,17 +182,16 @@
 
         <div class="modal-content">
 
-            <s:set var="deleteAction">entryRemoveViaList!remove</s:set>
+            <c:set var="deleteAction">entryRemoveViaList!remove</c:set>
             
-            <s:form action="%{#deleteAction}" theme="bootstrap" cssClass="form-horizontal">
-                <s:hidden name="salt"/>
-                <s:hidden name="weblog"/>
-                <s:hidden name="removeId" id="removeId"/>
+            <form action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${weblog}"/>
+                <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
             
                 <div class="modal-header">
                     <div class="modal-title">
-                        <h3><s:text name="weblogEntryRemove.removeWeblogEntry"/></h3>
-                        <p><s:text name="weblogEntryRemove.areYouSure"/></p>
+                        <h3><spring:message code="weblogEntryRemove.removeWeblogEntry"/></h3>
+                        <p><spring:message code="weblogEntryRemove.areYouSure"/></p>
                     </div>
                 </div>
                 
@@ -203,7 +199,7 @@
 
                     <div class="form-group">
                         <label class="col-sm-3 control-label">
-                            <s:text name="weblogEntryRemove.entryTitle"/>
+                            <spring:message code="weblogEntryRemove.entryTitle"/>
                         </label>
                         <div class="col-sm-9 controls">
                             <p class="form-control-static" style="padding-top:0px" id="postTitleLabel"></p>
@@ -212,7 +208,7 @@
 
                     <div class="form-group">
                         <label class="col-sm-3 control-label">
-                            <s:text name="weblogEntryRemove.entryId"/>
+                            <spring:message code="weblogEntryRemove.entryId"/>
                         </label>
                         <div class="col-sm-9 controls">
                             <p class="form-control-static" style="padding-top:0px" id="postIdLabel"></p>
@@ -222,13 +218,14 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <s:submit cssClass="btn" value="%{getText('generic.yes')}"/>
+                    <button type="submit" class="btn"><spring:message code="generic.yes"/></button>
                     <button type="button" class="btn btn-default btn-primary" data-dismiss="modal">
-                        <s:text name="generic.no" />
+                        <spring:message code="generic.no"/>
                     </button>
                 </div>
 
-            </s:form>
+            <sec:csrfInput/>
+</form>
             
         </div>
 

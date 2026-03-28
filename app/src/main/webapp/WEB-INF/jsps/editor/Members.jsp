@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
         
 <script>
 // <!--  
@@ -27,88 +27,86 @@ function save() {
             removing = true;
         }
     }
-    if (removing && !confirm("<s:text name='memberPermissions.confirmRemove' />")) return;
+    if (removing && !confirm("<spring:message code="memberPermissions.confirmRemove"/>")) return;
     document.memberPermissionsForm.submit();
 }
 // -->
 </script>
 
 <p class="subtitle">
-    <s:text name="memberPermissions.subtitle" >
-        <s:param value="actionWeblog.handle" />
-    </s:text>
+    <spring:message code="memberPermissions.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<p><s:text name="memberPermissions.description" /></p>
+<p><spring:message code="memberPermissions.description"/></p>
 
-<s:form action="members!save" cssClass="form-horizontal">
-	<s:hidden name="salt" />
-    <s:hidden name="weblog" value="%{actionWeblog.handle}" />
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post" class="form-horizontal">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     
     <div style="text-align: right; padding-bottom: 6px;">
         <span class="pendingCommentBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <s:text name="commentManagement.pending" />&nbsp;
+            <spring:message code="commentManagement.pending"/>&nbsp;
     </div>
     
     <table class="rollertable table table-striped">
         <tr class="rHeaderTr">
            <th class="rollertable" width="20%">
-               <s:text name="memberPermissions.userName" />
+               <spring:message code="memberPermissions.userName"/>
            </th>
            <th class="rollertable" width="20%">
-               <s:text name="memberPermissions.administrator" />
+               <spring:message code="memberPermissions.administrator"/>
            </th>
            <th class="rollertable" width="20%">
-               <s:text name="memberPermissions.author" />
+               <spring:message code="memberPermissions.author"/>
            </th>
            <th class="rollertable" width="20%">
-               <s:text name="memberPermissions.limited" />
+               <spring:message code="memberPermissions.limited"/>
            </th>
            <th class="rollertable" width="20%">
-               <s:text name="memberPermissions.remove" />
+               <spring:message code="memberPermissions.remove"/>
            </th>
         </tr>
-        <s:iterator var="perm" value="weblogPermissions" status="rowstatus">
-            <s:if test="#perm.pending">
+        <c:forEach items="${weblogPermissions}" var="perm" varStatus="rowstatus">
+            <c:choose>
+<c:when test="${perm.pending}">
                 <tr class="rollertable_pending">
-            </s:if>
-            <s:elseif test="#rowstatus.odd == true">
+            </c:when>
+<c:when test="${rowstatus.odd == true}">
                 <tr class="rollertable_odd">
-            </s:elseif>
-            <s:else>
-                <tr class="rollertable_even">
-            </s:else>
             
-                <td class="rollertable">
+            <c:otherwise>
+                <tr class="rollertable_even">
+            </c:otherwise>
+</c:choose><td class="rollertable">
                     <span class="glyphicon glyphicon-user"></span>
-	                <s:property value="#perm.user.userName" />
+	                ${perm.user.userName}
                 </td>               
                 <td class="rollertable">
                     <input type="radio" 
-                        <s:if test='#perm.hasAction("admin")'>checked</s:if>
-                        name='perm-<s:property value="#perm.user.id" />' value="admin" />
+                        <c:if test='${perm.hasAction("admin")}'>checked</c:if>
+                        name='perm-${perm.user.id}' value="admin" />
                 </td>
                 <td class="rollertable">
 	                <input type="radio" 
-                        <s:if test='#perm.hasAction("post")'>checked</s:if>
-                        name='perm-<s:property value="#perm.user.id" />' value="post" />
+                        <c:if test='${perm.hasAction("post")}'>checked</c:if>
+                        name='perm-${perm.user.id}' value="post" />
                 </td>                
                 <td class="rollertable">
                     <input type="radio" 
-                        <s:if test='#perm.hasAction("edit_draft")'>checked</s:if>
-                        name='perm-<s:property value="#perm.user.id" />' value="edit_draft" />
+                        <c:if test='${perm.hasAction("edit_draft")}'>checked</c:if>
+                        name='perm-${perm.user.id}' value="edit_draft" />
                 </td>                
                 <td class="rollertable">
                     <input type="radio" 
-                        name='perm-<s:property value="#perm.user.id" />' value="-1" />
+                        name='perm-${perm.user.id}' value="-1" />
                 </td>
            </tr>
-       </s:iterator>
+       </c:forEach>
     </table>
     <br />
      
     <div class="control">
-       <s:submit value="%{getText('generic.save')}" cssClass="btn" />
+       <button type="submit" class="btn"><spring:message code="generic.save"/></button>
     </div>
     
-</s:form>
+<sec:csrfInput/>
+</form>

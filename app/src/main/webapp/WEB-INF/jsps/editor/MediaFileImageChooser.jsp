@@ -15,7 +15,7 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <style>
 
@@ -23,7 +23,7 @@
 
 <script>
     function onSelectDirectory(id) {
-        window.location = "?directoryId=" + id + "&weblog=" + '<s:property value="actionWeblog.handle" />';
+        window.location = "?directoryId=" + id + "&weblog=" + '${actionWeblog.handle}';
     }
 </script>
 
@@ -32,23 +32,26 @@
 
 <%-- Subtitle and folder path --%>
 
-<s:if test="childFiles || allDirectories">
+<c:choose>
+<c:when test="${childFiles || allDirectories}">
 
-    <s:form id="mediaFileChooserForm" name="mediaFileChooserForm" action="mediaFileImageChooser"
-            theme="bootstrap" cssClass="form-vertical">
-        <s:hidden name="salt"/>
-        <s:hidden name="weblog"/>
+    <form id="mediaFileChooserForm" name="mediaFileChooserForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileImageChooser.rol" method="post" class="form-vertical">
+<input type="hidden" name="weblog" value="${weblog}"/>
         <input type="hidden" name="mediaFileId" value=""/>
 
-        <p class="pagetip"><s:text name="mediaFileImageChooser.pageTip"/></p>
+        <p class="pagetip"><spring:message code="mediaFileImageChooser.pageTip"/></p>
 
         <%-- ***************************************************************** --%>
         <%-- Maybe show media directory selector --%>
 
-        <s:if test="!allDirectories.isEmpty">
-            <s:select name="directoryId" emptyOption="true" label="%{getText('mediaFileView.viewFolder')}"
-                      list="allDirectories" listKey="id" listValue="name" onchange="onView()"/>
-        </s:if>
+        <c:if test="${!allDirectories.isEmpty}">
+            <select name="directoryId" class="form-control" onchange="onView()">
+<option value=""></option>
+<c:forEach items="${allDirectories}" var="opt">
+<option value="${opt.id}" ${opt.id == directoryId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
+        </c:if>
 
         <%-- ***************************************************************** --%>
         <%-- Media files grid --%>
@@ -58,48 +61,48 @@
 
                 <ul>
 
-                    <s:if test="childFiles.size() == 0">
-                        <p style="text-align: center"><s:text name="mediaFileView.noFiles"/></p>
-                    </s:if>
+                    <c:if test="${childFiles.size() == 0}">
+                        <p style="text-align: center"><spring:message code="mediaFileView.noFiles"/></p>
+                    </c:if>
 
-                    <s:if test="childFiles.size() > 0">
+                    <c:if test="${childFiles.size() > 0}">
 
-                        <s:iterator var="mediaFile" value="childFiles">
+                        <c:forEach items="${childFiles}" var="mediaFile">
 
-                            <s:url var="mediaFileURL" includeContext="false" value="%{#mediaFile.permalink}"/>
-                            <s:url var="mediaFileThumbnailURL" value="%{#mediaFile.thumbnailURL}"/>
+                            <c:set var="mediaFileURL" value="${mediaFile.permalink}"/>
+                            <c:url var="mediaFileThumbnailURL" value="${mediaFile.thumbnailURL}"/>
 
                             <li class="align-images"
                                 onmouseover="highlight(this, true)" onmouseout="highlight(this, false)">
 
                                 <div class="mediaObject"
-                                     onclick="onSelectMediaFile('<s:property value="#mediaFile.name"/>',
-                                             '<s:property value="%{mediaFileURL}"/>',
-                                             '<s:property value="#mediaFile.isImageFile()"/>')">
+                                     onclick="onSelectMediaFile('${mediaFile.name}',
+                                             '${mediaFileURL}',
+                                             '${mediaFile.isImageFile()}')">
 
-                                    <s:if test="#mediaFile.imageFile">
-                                        <img border="0" src='<s:property value="%{mediaFileThumbnailURL}" />'
-                                             width='<s:property value="#mediaFile.thumbnailWidth"/>'
-                                             height='<s:property value="#mediaFile.thumbnailHeight"/>'
-                                             alt='<s:property value="#mediaFile.name" />'/>
-                                    </s:if>
-
-                                    <s:else>
+                                    <c:choose>
+<c:when test="${mediaFile.imageFile}">
+                                        <img border="0" src='${mediaFileThumbnailURL}'
+                                             width='${mediaFile.thumbnailWidth}'
+                                             height='${mediaFile.thumbnailHeight}'
+                                             alt='${mediaFile.name}'/>
+                                    </c:when>
+<c:otherwise>
                                         <span class="glyphicon glyphicon-file"></span>
-                                    </s:else>
-
+                                    </c:otherwise>
+                                    </c:choose>
                                 </div>
 
                                 <div class="mediaObjectInfo">
                                     <str:truncateNicely upper="60">
-                                        <s:property value="#mediaFile.name"/>
+                                        ${mediaFile.name}
                                     </str:truncateNicely>
                                 </div>
 
                             </li>
 
-                        </s:iterator>
-                    </s:if>
+                        </c:forEach>
+                    </c:if>
 
                 </ul>
             </div>
@@ -107,9 +110,10 @@
 
         <div style="clear:left;"></div>
 
-    </s:form>
+    <sec:csrfInput/>
+</form>
 
-</s:if>
+</c:if>
 
 
 <script>

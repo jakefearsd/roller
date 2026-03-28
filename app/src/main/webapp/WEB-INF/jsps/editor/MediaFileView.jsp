@@ -15,120 +15,110 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<s:form id="createPostForm" action='entryAddWithMediaFile'>
-    <s:hidden name="salt"/>
-    <input type="hidden" name="weblog" value='<s:property value="actionWeblog.handle" />'/>
+<form id="createPostForm" method="post">
+<input type="hidden" name="weblog" value='${actionWeblog.handle}'/>
     <input type="hidden" name="selectedImage" id="selectedImage"/>
     <input type="hidden" name="type" id="type"/>
-</s:form>
+<sec:csrfInput/>
+</form>
 
 
 <%-- ********************************************************************* --%>
 
 <%-- Subtitle and folder path --%>
 
-<s:if test='currentDirectory.name.equals("default")'>
+<c:choose>
+<c:when test='${currentDirectory.name.equals("default")}'>
 
     <p class="subtitle">
-        <s:text name="mediaFileView.subtitle">
-            <s:param value="weblog"/>
-        </s:text>
+        <spring:message code="mediaFileView.subtitle" arguments="${weblog}"/>
     </p>
     <p class="pagetip">
-        <s:text name="mediaFileView.rootPageTip"/>
+        <spring:message code="mediaFileView.rootPageTip"/>
     </p>
 
-</s:if>
-
-<s:elseif test='pager'>
+</c:when>
+<c:when test='${pager}'>
 
     <p class="subtitle">
-        <s:text name="mediaFileView.searchTitle"/>
+        <spring:message code="mediaFileView.searchTitle"/>
     </p>
     <p class="pagetip">
 
             <%-- display summary of the search results and terms --%>
 
-        <s:if test="pager.items.size() > 0">
-        <s:text name="mediaFileView.matchingResults">
-            <s:param value="pager.items.size()"/>
-        </s:text>
-        </s:if>
-        <s:else>
-            <s:text name="mediaFileView.noResults"/>
-        </s:else>
-            <s:text name="mediaFileView.searchInfo"/>
+        <c:choose>
+<c:when test="${pager.items.size() > 0}">
+        <spring:message code="mediaFileView.matchingResults" arguments="${pager.items.size()}"/>
+        </c:when>
+<c:otherwise>
+            <spring:message code="mediaFileView.noResults"/>
+        </c:otherwise>
+</c:choose><spring:message code="mediaFileView.searchInfo"/>
 
     <ul>
-        <s:if test="!bean.name.isEmpty()">
+        <c:if test="${!bean.name.isEmpty()}">
             <li>
-                <s:text name="mediaFileView.filesNamed">
-                    <s:param value="bean.name"/>
-                </s:text>
+                <spring:message code="mediaFileView.filesNamed" arguments="${bean.name}"/>
             </li>
-        </s:if>
-        <s:if test="bean.size > 0">
+        </c:if>
+        <c:if test="${bean.size > 0}">
             <li>
-                <s:text name="mediaFileView.filesOfSize">
-                    <s:param value='bean.sizeFilterTypeLabel'/>
-                    <s:param value='bean.size'/>
-                    <s:param value='bean.sizeUnitLabel'/>
-                </s:text>
+                <spring:message code="mediaFileView.filesOfSize" arguments="${bean.sizeFilterTypeLabel},${bean.size},${bean.sizeUnitLabel}"/>
             </li>
-        </s:if>
-        <s:if test="!bean.type.isEmpty()">
+        </c:if>
+        <c:if test="${!bean.type.isEmpty()}">
             <li>
-                <s:text name="mediaFileView.filesOfType">
-                    <s:param value='bean.typeLabel'/>
-                </s:text>
+                <spring:message code="mediaFileView.filesOfType" arguments="${bean.typeLabel}"/>
             </li>
-        </s:if>
-        <s:if test="!bean.tags.isEmpty()">
+        </c:if>
+        <c:if test="${!bean.tags.isEmpty()}">
             <li>
-                <s:text name="mediaFileView.filesTagged">
-                    <s:param value="bean.tags"/>
-                </s:text>
+                <spring:message code="mediaFileView.filesTagged" arguments="${bean.tags}"/>
             </li>
-        </s:if>
+        </c:if>
     </ul>
 
-</s:elseif>
 
-<s:else>
+
+<c:otherwise>
 
     <p class="subtitle">
-        <s:text name="mediaFileView.folderName"/>: <s:property value="%{currentDirectory.name}"/>
+        <spring:message code="mediaFileView.folderName"/>: ${currentDirectory.name}
     </p>
     <p class="pagetip">
-        <s:text name="mediaFileView.dirPageTip"/>
+        <spring:message code="mediaFileView.dirPageTip"/>
     </p>
 
-</s:else>
+</c:otherwise>
+</c:choose><c:if test="${childFiles || (pager && pager.items.size() > 0)}">
 
-
-<s:if test="childFiles || (pager && pager.items.size() > 0)">
-
-    <s:form id="mediaFileViewForm" name="mediaFileViewForm" action="mediaFileView" theme="bootstrap">
-        <s:hidden name="salt"/>
-        <s:hidden name="weblog"/>
-        <s:hidden name="directoryId"/>
-        <s:hidden name="newDirectoryName"/>
+    <form id="mediaFileViewForm" name="mediaFileViewForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView.rol" method="post">
+<input type="hidden" name="weblog" value="${weblog}"/>
+        <input type="hidden" name="directoryId" value="${directoryId}"/>
+        <input type="hidden" name="newDirectoryName" value="${newDirectoryName}"/>
         <input type="hidden" name="mediaFileId" value=""/>
 
         <div class="image-controls">
 
-            <s:if test="!allDirectories.isEmpty">
+            <c:if test="${!allDirectories.isEmpty}">
                 <%-- Folder to View combo-box --%>
-                <span><s:text name="mediaFileView.viewFolder"/>:</span>
-                <s:select id="viewDirectoryMenu" name="viewDirectoryId"
-                          list="allDirectories" listKey="id" listValue="name" onchange="onView()"/>
-            </s:if>
+                <span><spring:message code="mediaFileView.viewFolder"/>:</span>
+                <select name="viewDirectoryId" id="viewDirectoryMenu" class="form-control" onchange="onView()">
+<c:forEach items="${allDirectories}" var="opt">
+<option value="${opt.id}" ${opt.id == viewDirectoryId ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
+            </c:if>
 
-            <span><s:text name="mediaFileView.sortBy"/>:</span>
-            <s:select id="sortByMenu" name="sortBy" list="sortOptions" listKey="key" listValue="value"
-                      onchange="document.mediaFileViewForm.submit();"/>
+            <span><spring:message code="mediaFileView.sortBy"/>:</span>
+            <select name="sortBy" id="sortByMenu" class="form-control" onchange="document.mediaFileViewForm.submit();">
+<c:forEach items="${sortOptions}" var="opt">
+<option value="${opt.key}" ${opt.key == sortBy ? 'selected' : ''}>${opt.value}</option>
+</c:forEach>
+</select>
 
         </div>
 
@@ -152,159 +142,161 @@
 
                 <ul>
 
-                    <s:if test="!pager">
+                    <c:choose>
+<c:when test="${!pager}">
 
                         <%-- ----------------------------------------------------- --%>
 
                         <%-- NOT SEARCH RESULTS --%>
 
-                        <s:if test="childFiles.size() ==0">
-                            <s:text name="mediaFileView.noFiles"/>
-                        </s:if>
+                        <c:if test="${childFiles.size() ==0}">
+                            <spring:message code="mediaFileView.noFiles"/>
+                        </c:if>
 
                         <%-- List media files --%>
 
-                        <s:iterator var="mediaFile" value="childFiles">
+                        <c:forEach items="${childFiles}" var="mediaFile">
 
                             <li class="align-images"
                                 onmouseover="highlight(this, true)" onmouseout="highlight(this, false)">
 
                                 <div class="mediaObject" onclick="onClickEdit(
-                                        '<s:property value="#mediaFile.id"/>',
-                                        '<s:property value="#mediaFile.name"/>' )">
+                                        '${mediaFile.id}',
+                                        '${mediaFile.name}' )">
 
-                                    <s:if test="#mediaFile.imageFile">
-                                        <img border="0" src='<s:property value="%{#mediaFile.thumbnailURL}" />'
-                                             width='<s:property value="#mediaFile.thumbnailWidth" />'
-                                             height='<s:property value="#mediaFile.thumbnailHeight" />'
-                                             title='<s:property value="#mediaFile.name" />'
-                                             alt='<s:property value="#mediaFile.name" />'
-                                            <%-- onclick="onClickEdit('<s:property value="#mediaFile.id"/>')" --%> />
-                                    </s:if>
-
-                                    <s:else>
-                                        <s:url var="mediaFileURL" value="/images/page.png"/>
-                                        <img border="0" src='<s:property value="%{mediaFileURL}" />'
+                                    <c:choose>
+<c:when test="${mediaFile.imageFile}">
+                                        <img border="0" src='${mediaFile.thumbnailURL}'
+                                             width='${mediaFile.thumbnailWidth}'
+                                             height='${mediaFile.thumbnailHeight}'
+                                             title='${mediaFile.name}'
+                                             alt='${mediaFile.name}'
+                                            <%-- onclick="onClickEdit('${mediaFile.id}')" --%> />
+                                    </c:when>
+<c:otherwise>
+                                        <c:url var="mediaFileURL" value="/images/page.png"/>
+                                        <img border="0" src='${mediaFileURL}'
                                              style="padding:40px 50px;"
-                                             alt='<s:property value="#mediaFile.name"/>'
-                                            <%-- onclick="onClickEdit('<s:property value="#mediaFile.id"/>')" --%> />
-                                    </s:else>
-
+                                             alt='${mediaFile.name}'
+                                            <%-- onclick="onClickEdit('${mediaFile.id}')" --%> />
+                                    </c:otherwise>
+                                    </c:choose>
                                 </div>
 
                                 <div class="mediaObjectInfo">
 
                                     <input type="checkbox"
                                            name="selectedMediaFiles"
-                                           value="<s:property value="#mediaFile.id"/>"/>
+                                           value="${mediaFile.id}"/>
                                     <input type="hidden" id="mediafileidentity"
-                                           value="<s:property value='#mediaFile.id'/>"/>
+                                           value="${mediaFile.id}"/>
 
                                     <str:truncateNicely lower="47" upper="47">
-                                        <s:property value="#mediaFile.name"/>
+                                        ${mediaFile.name}
                                     </str:truncateNicely>
 
                                 </div>
 
                             </li>
 
-                        </s:iterator>
+                        </c:forEach>
 
-                    </s:if>
-
-                    <s:else>
+                    </c:when>
+<c:otherwise>
 
                         <%-- ----------------------------------------------------- --%>
 
                         <%-- SEARCH RESULTS --%>
 
-                        <s:iterator var="mediaFile" value="pager.items">
+                        <c:forEach items="${pager.items}" var="mediaFile">
 
                             <li class="align-images"
                                 onmouseover="highlight(this, true)" onmouseout="highlight(this, false)">
 
                                 <div class="mediaObject" onclick="onClickEdit(
-                                        '<s:property value="#mediaFile.id"/>',
-                                        '<s:property value="#mediaFile.name"/>' )">
+                                        '${mediaFile.id}',
+                                        '${mediaFile.name}' )">
 
-                                    <s:if test="#mediaFile.imageFile">
-                                        <img border="0" src='<s:property value="%{#mediaFile.thumbnailURL}" />'
-                                             width='<s:property value="#mediaFile.thumbnailWidth"/>'
-                                             height='<s:property value="#mediaFile.thumbnailHeight"/>'
-                                             title='<s:property value="#mediaFile.name" />'
-                                             alt='<s:property value="#mediaFile.name"/>'/>
-                                    </s:if>
-
-                                    <s:else>
-                                        <s:url var="mediaFileURL" value="/images/page.png"/>
-                                        <img border="0" src='<s:property value="%{mediaFileURL}" />'
-                                             style="padding:40px 50px;" alt='<s:property value="#mediaFile.name"/>'/>
-                                    </s:else>
-
-                                </div>
+                                    <c:choose>
+<c:when test="${mediaFile.imageFile}">
+                                        <img border="0" src='${mediaFile.thumbnailURL}'
+                                             width='${mediaFile.thumbnailWidth}'
+                                             height='${mediaFile.thumbnailHeight}'
+                                             title='${mediaFile.name}'
+                                             alt='${mediaFile.name}'/>
+                                    </c:when>
+<c:otherwise>
+                                        <c:url var="mediaFileURL" value="/images/page.png"/>
+                                        <img border="0" src='${mediaFileURL}'
+                                             style="padding:40px 50px;" alt='${mediaFile.name}'/>
+                                    </c:otherwise>
+</c:choose></div>
 
                                 <div class="mediaObjectInfo">
 
                                     <input type="checkbox"
                                            name="selectedMediaFiles"
-                                           value="<s:property value="#mediaFile.id"/>"/>
+                                           value="${mediaFile.id}"/>
                                     <input type="hidden" id="mediafileidentity"
-                                           value="<s:property value='#mediaFile.id'/>">
+                                           value="${mediaFile.id}">
 
                                     <str:truncateNicely lower="40" upper="50">
-                                        <s:property value="#mediaFile.name"/>
+                                        ${mediaFile.name}
                                     </str:truncateNicely>
 
-                                    <span class="button" id="addbutton-<s:property value='#mediaFile.id' />">
-                                    <img id="addbutton-img<s:property value='#mediaFile.id' />"
-                                         src="<s:url value="/images/add.png"/>"/>
+                                    <span class="button" id="addbutton-${mediaFile.id}">
+                                    <img id="addbutton-img${mediaFile.id}"
+                                         src="<c:url value="/images/add.png"/>"/>
                                 </span>
 
                                 </div>
 
                             </li>
 
-                        </s:iterator>
+                        </c:forEach>
 
-                    </s:else>
-
-                </ul>
+                    </c:otherwise>
+</c:choose></ul>
 
             </div>
         </div>
 
         <div style="clear:left;"></div>
 
-        <s:if test="(!pager && childFiles.size() > 0) || (pager && pager.items.size() > 0) || (currentDirectory.name != 'default' && !pager)">
+        <c:if test="${(!pager && childFiles.size() > 0) || (pager && pager.items.size() > 0) || (currentDirectory.name != 'default' && !pager)}">
 
             <div class="image-controls">
 
-                <s:if test="(!pager && childFiles.size() > 0) || (pager && pager.items.size() > 0)">
+                <c:if test="${(!pager && childFiles.size() > 0) || (pager && pager.items.size() > 0)}">
                     <input id="toggleButton" type="button" class="btn" style="display: inline"
-                           value='<s:text name="generic.toggle" />' onclick="onToggle()"/>
+                           value='<spring:message code="generic.toggle"/>' onclick="onToggle()"/>
 
                     <input id="deleteButton" type="button" class="btn btn-danger" style="display: inline"
-                           value='<s:text name="mediaFileView.deleteSelected" />' onclick="onDeleteSelected()"/>
+                           value='<spring:message code="mediaFileView.deleteSelected"/>' onclick="onDeleteSelected()"/>
 
                     <input id="moveButton" type="button" class="btn btn-primary" style="display: inline"
-                           value='<s:text name="mediaFileView.moveSelected" />' onclick="onMoveSelected()"/>
-                </s:if>
+                           value='<spring:message code="mediaFileView.moveSelected"/>' onclick="onMoveSelected()"/>
+                </c:if>
 
-                <s:select id="moveTargetMenu" name="selectedDirectory" cssStyle="display: inline; width: 15em"
-                          list="allDirectories" listKey="id" listValue="name"/>
+                <select name="selectedDirectory" id="moveTargetMenu" class="form-control" style="display: inline; width: 15em">
+<c:forEach items="${allDirectories}" var="opt">
+<option value="${opt.id}" ${opt.id == selectedDirectory ? 'selected' : ''}>${opt.name}</option>
+</c:forEach>
+</select>
 
-                <s:if test="currentDirectory.name != 'default' && !pager">
+                <c:if test="${currentDirectory.name != 'default' && !pager}">
                     <input id="deleteFolderButton" type="button" class="btn" style="display: inline"
-                           value='<s:text name="mediaFileView.deleteFolder" />' onclick="onDeleteFolder()"/>
-                </s:if>
+                           value='<spring:message code="mediaFileView.deleteFolder"/>' onclick="onDeleteFolder()"/>
+                </c:if>
 
             </div>
 
-        </s:if>
+        </c:if>
 
-    </s:form>
+    <sec:csrfInput/>
+</form>
 
-</s:if>
+</c:if>
 
 
 <%-- ================================================================================================ --%>
@@ -319,7 +311,7 @@
 
             <div class="modal-header">
                 <h3 class="subtitle">
-                    <s:text name="mediaFileEdit.subtitle"/><b><span id="edit-subtitle"></span></b>
+                    <spring:message code="mediaFileEdit.subtitle"/><b><span id="edit-subtitle"></span></b>
                 </h3>
             </div>
 
@@ -345,11 +337,11 @@
     toggleState = 'Off';
 
     function onClickEdit(mediaFileId, mediaFileName) {
-        <s:url var="mediaFileEditURL" action="mediaFileEdit">
-        <s:param name="weblog" value="%{actionWeblog.handle}" />
-        </s:url>
+        <c:url var="mediaFileEditURL" value="/roller-ui/authoring/mediaFileEdit.rol">
+        <c:param name="weblog" value="${actionWeblog.handle}"/>
+        </c:url>
         $('#edit-subtitle').html(mediaFileName);
-        $('#mediaFileEditor').attr('src', '<s:property value="%{mediaFileEditURL}" />' + '&mediaFileId=' + mediaFileId);
+        $('#mediaFileEditor').attr('src', '${mediaFileEditURL}' + '&mediaFileId=' + mediaFileId);
         $('#mediafile_edit_lightbox').modal({show: true});
     }
 
@@ -364,8 +356,8 @@
     }
 
     function onSelectDirectory(id) {
-        window.location = "<s:url action="mediaFileView" />?directoryId="
-            + id + "&weblog=" + '<s:property value="actionWeblog.handle" />';
+        window.location = "<c:url value="/roller-ui/authoring/mediaFileView.rol"/>?directoryId="
+            + id + "&weblog=" + '${actionWeblog.handle}';
     }
 
     function onToggle() {
@@ -385,28 +377,28 @@
     }
 
     function onDeleteSelected() {
-        if (confirm("<s:text name='mediaFile.delete.confirm' />")) {
-            document.mediaFileViewForm.action = '<s:url action="mediaFileView!deleteSelected" />';
+        if (confirm("<spring:message code="mediaFile.delete.confirm"/>")) {
+            document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!deleteSelected.rol"/>';
             document.mediaFileViewForm.submit();
         }
     }
 
     function onDeleteFolder() {
-        if (confirm("<s:text name='mediaFile.deleteFolder.confirm' />")) {
-            document.mediaFileViewForm.action = '<s:url action="mediaFileView!deleteFolder" />';
+        if (confirm("<spring:message code="mediaFile.deleteFolder.confirm"/>")) {
+            document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!deleteFolder.rol"/>';
             document.mediaFileViewForm.submit();
         }
     }
 
     function onMoveSelected() {
-        if (confirm("<s:text name='mediaFile.move.confirm' />")) {
-            document.mediaFileViewForm.action = '<s:url action="mediaFileView!moveSelected" />';
+        if (confirm("<spring:message code="mediaFile.move.confirm"/>")) {
+            document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!moveSelected.rol"/>';
             document.mediaFileViewForm.submit();
         }
     }
 
     function onView() {
-        document.mediaFileViewForm.action = "<s:url action='mediaFileView!view' />";
+        document.mediaFileViewForm.action = "<c:url value='/roller-ui/authoring/mediaFileView!view.rol'/>";
         document.mediaFileViewForm.submit();
     }
 
