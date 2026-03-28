@@ -151,8 +151,8 @@
 
                 </c:if>
 
-                <%-- don't allow last admin to resign from blog --%>
-                <c:if test='${!(perms.hasAction("admin") && perms.weblog.adminUserCount == 1)}'>
+                <%-- resign from blog (last-admin check enforced server-side) --%>
+                <c:if test='${perms.hasAction("admin")}'>
 
                     <button type="button" class="btn btn-default">
                         <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
