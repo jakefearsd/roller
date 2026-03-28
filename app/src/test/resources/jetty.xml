@@ -26,7 +26,7 @@
         <Arg> <Ref id="wac_ds"/> </Arg>
         <Arg>jdbc/rollerdb</Arg>
         <Arg>
-            <New class="org.apache.commons.dbcp.BasicDataSource">
+            <New class="org.apache.commons.dbcp2.BasicDataSource">
                 <Set name="driverClassName">org.apache.derby.jdbc.ClientDriver</Set>
                 <Set name="url">jdbc:derby://localhost:4224/memory:rollerdb;create=true</Set>
                 <Set name="username">app</Set>
