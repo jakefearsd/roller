@@ -24,14 +24,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
     <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <spring:message code="${pageTitle}" text="${pageTitle}"/></title>
-    <jsp:include page="${head}"/>
+    <jsp:include page="${tile_head}"/>
     <style>
-        <jsp:include page="${styles}" />
+        <jsp:include page="${tile_styles}" />
     </style>
 </head>
 <body>
 
-<jsp:include page="${banner}"/>
+<jsp:include page="${tile_banner}"/>
 
 <div class="container-fluid">
 
@@ -40,10 +40,10 @@
         <div class="col-md-10">
 
             <h1 class="roller-page-title"><spring:message code="${pageTitle}" text="${pageTitle}"/></h1>
-            <p><jsp:include page="${messages}"/>
+            <p><jsp:include page="${tile_messages}"/>
             <div class="panel">
                 <div class="panel-body">
-                    <jsp:include page="${content}"/>
+                    <jsp:include page="${tile_content}"/>
                 </div>
             </div>
 

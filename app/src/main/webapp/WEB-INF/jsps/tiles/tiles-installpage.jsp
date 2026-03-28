@@ -23,28 +23,28 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
     <title><spring:message code="${pageTitle}" text="${pageTitle}"/></title>
-    <jsp:include page="${head}"/>
+    <jsp:include page="${tile_head}"/>
     <style>
-        <jsp:include page="${styles}" />
+        <jsp:include page="${tile_styles}" />
     </style>
 </head>
 <body>
 
-<jsp:include page="${banner}"/>
+<jsp:include page="${tile_banner}"/>
 
 <div id="wrapper" class="container-fluid" style="margin-top:5em">
 
     <div class="row">
         <div class="col-md-1"></div>
         <div class="col-md-10">
-            <jsp:include page="${messages}"/>
-            <jsp:include page="${content}"/>
+            <jsp:include page="${tile_messages}"/>
+            <jsp:include page="${tile_content}"/>
         </div>
         <div class="col-md-1"></div>
     </div>
 
     <div id="footer">
-        <jsp:include page="${footer}"/>
+        <jsp:include page="${tile_footer}"/>
     </div>
 
 </body>

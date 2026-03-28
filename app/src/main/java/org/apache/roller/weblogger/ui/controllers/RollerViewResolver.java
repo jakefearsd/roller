@@ -528,12 +528,14 @@ public class RollerViewResolver implements ViewResolver, Ordered {
         @Override
         public void render(Map<String, ?> model, HttpServletRequest request,
                            HttpServletResponse response) throws Exception {
-            // expose Spring model attributes on the request
+            // expose tile attribute paths (prefixed with "tile_" to avoid
+            // collisions with model attributes like "menu")
+            definition.attributes().forEach((key, value) ->
+                    request.setAttribute("tile_" + key, value));
+            // expose Spring model attributes
             if (model != null) {
                 model.forEach((key, value) -> request.setAttribute(key, value));
             }
-            // expose tile attribute paths so layout JSPs can use ${attributeName}
-            definition.attributes().forEach(request::setAttribute);
             // forward to the layout JSP
             request.getRequestDispatcher(definition.layout()).forward(request, response);
         }

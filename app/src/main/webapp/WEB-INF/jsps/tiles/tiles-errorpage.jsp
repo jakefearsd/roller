@@ -23,15 +23,15 @@
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
       <title><spring:message code="error" /></title>
-      <jsp:include page="${head}" />
+      <jsp:include page="${tile_head}" />
       <style>
-          <jsp:include page="${styles}" />
+          <jsp:include page="${tile_styles}" />
       </style>
     </head>
     <body>
 
         <div id="banner">
-            <jsp:include page="${banner}" />
+            <jsp:include page="${tile_banner}" />
         </div>
 
         <div id="wrapper" class="container-fluid">
@@ -42,8 +42,8 @@
 
             <div id="centercontent_wrap">
                 <div id="centercontent">
-                    <jsp:include page="${messages}" />
-                    <jsp:include page="${content}" />
+                    <jsp:include page="${tile_messages}" />
+                    <jsp:include page="${tile_content}" />
                 </div>
             </div>
 
@@ -54,7 +54,7 @@
         </div>
 
         <div id="footer">
-            <jsp:include page="${footer}" />
+            <jsp:include page="${tile_footer}" />
         </div>
 
     </body>
