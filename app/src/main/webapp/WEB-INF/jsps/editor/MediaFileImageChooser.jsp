@@ -32,8 +32,7 @@
 
 <%-- Subtitle and folder path --%>
 
-<c:choose>
-<c:when test="${childFiles || allDirectories}">
+<c:if test="${childFiles || allDirectories}">
 
     <form id="mediaFileChooserForm" name="mediaFileChooserForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileImageChooser.rol" method="post" class="form-vertical">
 <input type="hidden" name="weblog" value="${weblog}"/>

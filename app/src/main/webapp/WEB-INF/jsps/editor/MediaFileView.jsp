@@ -81,7 +81,7 @@
         </c:if>
     </ul>
 
-
+</c:when>
 
 <c:otherwise>
 

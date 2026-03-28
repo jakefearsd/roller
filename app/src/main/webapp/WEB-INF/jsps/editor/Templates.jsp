@@ -24,8 +24,7 @@
     <spring:message code="pagesForm.tip"/>
 </p>
 
-<c:choose>
-<c:when test="${actionWeblog.editorTheme != 'custom'}">
+<c:if test="${actionWeblog.editorTheme != 'custom'}">
     <p><spring:message code="pagesForm.themesReminder" arguments="${actionWeblog.editorTheme}"/></p>
 </c:if>
 
@@ -35,7 +34,8 @@
 
     <table class="table table-striped"> <%-- of weblog templates --%>
 
-        <c:if test="${!templates.isEmpty}">
+        <c:choose>
+            <c:when test="${!templates.isEmpty}">
 
             <tr>
                 <th width="30%"><spring:message code="generic.name"/></th>
@@ -48,7 +48,8 @@
                 <tr>
 
                     <td style="vertical-align:middle">
-                        <c:if test="${! p.hidden}">
+                        <c:choose>
+<c:when test="${! p.hidden}">
                             <img src='<c:url value="/images/page_white.png"/>' border="0" alt="icon"/>
                         </c:when>
 <c:otherwise>

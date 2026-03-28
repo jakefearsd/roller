@@ -72,7 +72,7 @@ function save() {
             </c:when>
 <c:when test="${rowstatus.odd == true}">
                 <tr class="rollertable_odd">
-            
+            </c:when>
             <c:otherwise>
                 <tr class="rollertable_even">
             </c:otherwise>
