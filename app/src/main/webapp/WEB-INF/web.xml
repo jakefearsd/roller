@@ -17,11 +17,6 @@
     </context-param>
 
     <filter>
-        <filter-name>struts2</filter-name>
-        <filter-class>org.apache.struts2.dispatcher.filter.StrutsPrepareAndExecuteFilter</filter-class>
-    </filter>
-
-    <filter>
         <filter-name>securityFilter</filter-name>
         <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
         <init-param>
@@ -64,16 +59,6 @@
         <filter-name>CharEncodingFilter</filter-name>
         <filter-class>org.apache.roller.weblogger.ui.core.filters.CharEncodingFilter</filter-class>
     </filter>
-
-	<filter>
-		<filter-name>LoadSaltFilter</filter-name>
-		<filter-class>org.apache.roller.weblogger.ui.core.filters.LoadSaltFilter</filter-class>
-	</filter>
-
-	<filter>
-		<filter-name>ValidateSaltFilter</filter-name>
-		<filter-class>org.apache.roller.weblogger.ui.core.filters.ValidateSaltFilter</filter-class>
-	</filter>
 
     <!-- Development purposes only, not activated in a filter-mapping by default -->
     <filter>
@@ -141,35 +126,11 @@
         <dispatcher>REQUEST</dispatcher>
     </filter-mapping>
 
-	<filter-mapping>
-		<filter-name>LoadSaltFilter</filter-name>
-		<url-pattern>/roller-ui/*</url-pattern>
-        <dispatcher>REQUEST</dispatcher>
-        <dispatcher>FORWARD</dispatcher>
-	</filter-mapping>
-
-	<filter-mapping>
-		<filter-name>ValidateSaltFilter</filter-name>
-		<url-pattern>/roller-ui/*</url-pattern>
-	</filter-mapping>
-
     <!-- Request mapping, this is what allows the urls to work -->
     <filter-mapping>
         <filter-name>RequestMappingFilter</filter-name>
         <url-pattern>/*</url-pattern>
         <dispatcher>REQUEST</dispatcher>
-    </filter-mapping>
-
-    <!-- Struts2 -->
-    <filter-mapping>
-        <filter-name>struts2</filter-name>
-        <url-pattern>*.rol</url-pattern>
-        <dispatcher>REQUEST</dispatcher>
-        <dispatcher>FORWARD</dispatcher>
-    </filter-mapping>
-    <filter-mapping>
-        <filter-name>struts2</filter-name>
-        <url-pattern>/struts/*</url-pattern>
     </filter-mapping>
 
     <!-- Context Listeners -->
@@ -182,7 +143,7 @@
     </listener>
     
     <listener>
-        <listener-class>org.apache.struts2.tiles.StrutsTilesListener</listener-class>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
     </listener>
 
 
@@ -307,6 +268,24 @@
         <servlet-class>org.webjars.servlet.WebjarsServlet</servlet-class>
         <load-on-startup>2</load-on-startup>
     </servlet>
+
+    <servlet>
+        <servlet-name>springMvc</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <init-param>
+            <param-name>contextConfigLocation</param-name>
+            <param-value>/WEB-INF/spring-mvc.xml</param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+        <multipart-config>
+            <max-file-size>1000000000</max-file-size>
+            <max-request-size>1000000000</max-request-size>
+        </multipart-config>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>springMvc</servlet-name>
+        <url-pattern>*.rol</url-pattern>
+    </servlet-mapping>
 
     <!-- BEGIN OAUTH -->
 

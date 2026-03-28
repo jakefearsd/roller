@@ -49,9 +49,6 @@
         <!-- OpenID support removed in Spring Security 6; OIDC via OAuth2 is the replacement.
              To re-enable, implement OIDC-based authentication. -->
 
-        <!-- roller already uses its own salt based CSRF protection-->
-        <csrf disabled="true"/>
-        
         <!-- some roller UI (i.e. media file editor) uses iframes -->
         <headers>
             <frame-options policy="SAMEORIGIN"/>
