@@ -35,6 +35,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Action for resigning from a weblog.
@@ -77,7 +78,8 @@ public class MemberResignController extends BaseController {
     }
 
     @PostMapping("/memberResign!resign.rol")
-    public String resign(HttpServletRequest request, Model model) {
+    public String resign(HttpServletRequest request, Model model,
+                         RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
 
         try {
@@ -87,12 +89,12 @@ public class MemberResignController extends BaseController {
             WebloggerFactory.getWeblogger().flush();
 
             String weblogHandle = request.getParameter("weblog");
-            addMessage(model, "yourWebsites.resigned", weblogHandle != null ? weblogHandle : "", request);
+            addFlashMessage(redirectAttributes, "yourWebsites.resigned", weblogHandle != null ? weblogHandle : "", request);
 
             return "redirect:/roller-ui/menu.rol";
         } catch (WebloggerException ex) {
             log.error("Error doing weblog resign - " + getActionWeblog(request).getHandle(), ex);
-            addError(model, "Resignation failed - check system logs", request);
+            addFlashError(redirectAttributes, "Resignation failed - check system logs", request);
         }
 
         return "redirect:/roller-ui/menu.rol";

@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 
 /**
@@ -93,7 +94,8 @@ public class SetupController extends BaseController {
     @PostMapping("/setup!save.rol")
     public String save(HttpServletRequest request, Model model,
                        @RequestParam(value = "frontpageBlog", required = false) String frontpageBlog,
-                       @RequestParam(value = "aggregated", required = false) Boolean aggregated) {
+                       @RequestParam(value = "aggregated", required = false) Boolean aggregated,
+                       RedirectAttributes redirectAttributes) {
 
         populateCommonModel(request, model);
 
@@ -109,11 +111,11 @@ public class SetupController extends BaseController {
 
             WebloggerFactory.getWeblogger().flush();
 
-            addMessage(model, "frontpageConfig.values.saved", request);
+            addFlashMessage(redirectAttributes, "frontpageConfig.values.saved", request);
 
         } catch (WebloggerException ex) {
             LOG.error("ERROR saving frontpage configuration", ex);
-            addError(model, "frontpageConfig.values.error", request);
+            addFlashError(redirectAttributes, "frontpageConfig.values.error", request);
         }
 
         return "redirect:/";

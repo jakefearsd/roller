@@ -37,6 +37,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Abstract base controller for Spring MVC controllers in Roller.
@@ -181,6 +182,60 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
             model.addAttribute("messages", messages);
         }
         messages.add(getText(key, new Object[]{param}, request));
+    }
+
+    // --- Flash attribute helpers (for messages that survive redirects) ---
+
+    /**
+     * Add a flash message that survives a redirect.
+     */
+    @SuppressWarnings("unchecked")
+    protected void addFlashMessage(RedirectAttributes redirectAttributes, String key, HttpServletRequest request) {
+        List<String> messages = (List<String>) redirectAttributes.getFlashAttributes().get("messages");
+        if (messages == null) {
+            messages = new ArrayList<>();
+        }
+        messages.add(getText(key, request));
+        redirectAttributes.addFlashAttribute("messages", messages);
+    }
+
+    /**
+     * Add a flash message with a parameter that survives a redirect.
+     */
+    @SuppressWarnings("unchecked")
+    protected void addFlashMessage(RedirectAttributes redirectAttributes, String key, String param, HttpServletRequest request) {
+        List<String> messages = (List<String>) redirectAttributes.getFlashAttributes().get("messages");
+        if (messages == null) {
+            messages = new ArrayList<>();
+        }
+        messages.add(getText(key, new Object[]{param}, request));
+        redirectAttributes.addFlashAttribute("messages", messages);
+    }
+
+    /**
+     * Add a flash error that survives a redirect.
+     */
+    @SuppressWarnings("unchecked")
+    protected void addFlashError(RedirectAttributes redirectAttributes, String key, HttpServletRequest request) {
+        List<String> errors = (List<String>) redirectAttributes.getFlashAttributes().get("errors");
+        if (errors == null) {
+            errors = new ArrayList<>();
+        }
+        errors.add(getText(key, request));
+        redirectAttributes.addFlashAttribute("errors", errors);
+    }
+
+    /**
+     * Add a flash error with a parameter that survives a redirect.
+     */
+    @SuppressWarnings("unchecked")
+    protected void addFlashError(RedirectAttributes redirectAttributes, String key, String param, HttpServletRequest request) {
+        List<String> errors = (List<String>) redirectAttributes.getFlashAttributes().get("errors");
+        if (errors == null) {
+            errors = new ArrayList<>();
+        }
+        errors.add(getText(key, new Object[]{param}, request));
+        redirectAttributes.addFlashAttribute("errors", errors);
     }
 
     // --- Configuration property helpers ---

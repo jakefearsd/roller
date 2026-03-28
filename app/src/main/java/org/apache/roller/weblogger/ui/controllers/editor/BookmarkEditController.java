@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Edit a new or existing bookmark (blogroll item).
@@ -67,7 +68,8 @@ public class BookmarkEditController extends BaseController {
     @PostMapping("/bookmarkAdd!save.rol")
     public String bookmarkAddSave(HttpServletRequest request, Model model,
                                   @ModelAttribute("bean") BookmarkBean bean,
-                                  @RequestParam(value = "folderId", required = false) String folderId) {
+                                  @RequestParam(value = "folderId", required = false) String folderId,
+                                  RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "bookmarkAdd");
         model.addAttribute("pageTitle", getText("bookmarkForm.add.title", request));
@@ -89,7 +91,7 @@ public class BookmarkEditController extends BaseController {
             bmgr.saveBookmark(bookmark);
             WebloggerFactory.getWeblogger().flush();
             CacheManager.invalidate(bookmark);
-            addMessage(model, "bookmarkForm.created", bookmark.getName(), request);
+            addFlashMessage(redirectAttributes, "bookmarkForm.created", bookmark.getName(), request);
 
             return "redirect:/roller-ui/authoring/bookmarks.rol?weblog="
                     + getActionWeblog(request).getHandle() + "&folderId=" + folderId;
@@ -129,7 +131,8 @@ public class BookmarkEditController extends BaseController {
     @PostMapping("/bookmarkEdit!save.rol")
     public String bookmarkEditSave(HttpServletRequest request, Model model,
                                    @ModelAttribute("bean") BookmarkBean bean,
-                                   @RequestParam(value = "folderId", required = false) String folderId) {
+                                   @RequestParam(value = "folderId", required = false) String folderId,
+                                   RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "bookmarkEdit");
         model.addAttribute("pageTitle", getText("bookmarkForm.edit.title", request));
@@ -150,7 +153,7 @@ public class BookmarkEditController extends BaseController {
             bmgr.saveBookmark(bookmark);
             WebloggerFactory.getWeblogger().flush();
             CacheManager.invalidate(bookmark);
-            addMessage(model, "bookmarkForm.updated", bookmark.getName(), request);
+            addFlashMessage(redirectAttributes, "bookmarkForm.updated", bookmark.getName(), request);
 
             return "redirect:/roller-ui/authoring/bookmarks.rol?weblog="
                     + getActionWeblog(request).getHandle() + "&folderId=" + folderId;

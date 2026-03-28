@@ -39,6 +39,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Remove a weblog entry.
@@ -77,7 +78,8 @@ public class EntryRemoveController extends BaseController {
 
     @PostMapping("/entryRemove!remove.rol")
     public String remove(HttpServletRequest request, Model model,
-                         @RequestParam(value = "removeId", required = false) String removeId) {
+                         @RequestParam(value = "removeId", required = false) String removeId,
+                         RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "entryRemove");
 
@@ -104,7 +106,7 @@ public class EntryRemoveController extends BaseController {
                 wmgr.removeWeblogEntry(entry);
                 WebloggerFactory.getWeblogger().flush();
 
-                addMessage(model, "weblogEdit.entryRemoved", entry.getTitle(), request);
+                addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);
 
                 // redirect to entryAdd
                 return "redirect:/roller-ui/authoring/entryAdd.rol?weblog="
@@ -115,7 +117,7 @@ public class EntryRemoveController extends BaseController {
                 addError(model, "generic.error.check.logs", request);
             }
         } else {
-            addError(model, "weblogEntry.notFound", request);
+            addFlashError(redirectAttributes, "weblogEntry.notFound", request);
             return "redirect:/roller-ui/menu.rol";
         }
 
@@ -137,7 +139,8 @@ public class EntryRemoveController extends BaseController {
 
     @PostMapping("/entryRemoveViaList!remove.rol")
     public String entryRemoveViaListRemove(HttpServletRequest request, Model model,
-                                           @RequestParam(value = "removeId", required = false) String removeId) {
+                                           @RequestParam(value = "removeId", required = false) String removeId,
+                                           RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "entryRemoveViaList");
 
@@ -164,7 +167,7 @@ public class EntryRemoveController extends BaseController {
                 wmgr.removeWeblogEntry(entry);
                 WebloggerFactory.getWeblogger().flush();
 
-                addMessage(model, "weblogEdit.entryRemoved", entry.getTitle(), request);
+                addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);
 
                 return "redirect:/roller-ui/authoring/entries.rol?weblog="
                         + getActionWeblog(request).getHandle();
@@ -174,7 +177,7 @@ public class EntryRemoveController extends BaseController {
                 addError(model, "generic.error.check.logs", request);
             }
         } else {
-            addError(model, "weblogEntry.notFound", request);
+            addFlashError(redirectAttributes, "weblogEntry.notFound", request);
             return "redirect:/roller-ui/menu.rol";
         }
 

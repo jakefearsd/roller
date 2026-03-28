@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Allows website admin to invite new members to website.
@@ -64,11 +65,12 @@ public class MembersInviteController extends BaseController {
     }
 
     @GetMapping("/invite.rol")
-    public String execute(HttpServletRequest request, Model model) {
+    public String execute(HttpServletRequest request, Model model,
+                          RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
 
         if (!WebloggerConfig.getBooleanProperty("groupblogging.enabled")) {
-            addError(model, "inviteMember.disabled", request);
+            addFlashError(redirectAttributes, "inviteMember.disabled", request);
             return "redirect:/roller-ui/authoring/members.rol?weblog="
                     + getActionWeblog(request).getHandle();
         }
@@ -79,11 +81,12 @@ public class MembersInviteController extends BaseController {
     @PostMapping("/invite!save.rol")
     public String save(HttpServletRequest request, Model model,
                        @RequestParam(value = "userName", required = false) String userName,
-                       @RequestParam(value = "permissionString", required = false) String permissionString) {
+                       @RequestParam(value = "permissionString", required = false) String permissionString,
+                       RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
 
         if (!WebloggerConfig.getBooleanProperty("groupblogging.enabled")) {
-            addError(model, "inviteMember.disabled", request);
+            addFlashError(redirectAttributes, "inviteMember.disabled", request);
             return "redirect:/roller-ui/authoring/members.rol?weblog="
                     + getActionWeblog(request).getHandle();
         }
@@ -124,13 +127,13 @@ public class MembersInviteController extends BaseController {
                         Collections.singletonList(permissionString));
                 WebloggerFactory.getWeblogger().flush();
 
-                addMessage(model, "inviteMember.userInvited", request);
+                addFlashMessage(redirectAttributes, "inviteMember.userInvited", request);
 
                 if (MailUtil.isMailConfigured()) {
                     try {
                         MailUtil.sendWeblogInvitation(getActionWeblog(request), user);
                     } catch (WebloggerException e) {
-                        addMessage(model, "error.untranslated", e.getMessage(), request);
+                        addFlashMessage(redirectAttributes, "error.untranslated", e.getMessage(), request);
                     }
                 }
 

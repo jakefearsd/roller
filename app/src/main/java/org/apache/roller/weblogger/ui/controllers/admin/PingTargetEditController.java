@@ -36,6 +36,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 
 /**
@@ -77,7 +78,8 @@ public class PingTargetEditController extends BaseController {
      */
     @PostMapping("/commonPingTargetAdd.rol")
     public String addSave(HttpServletRequest request, Model model,
-                          @ModelAttribute("bean") PingTargetBean bean) {
+                          @ModelAttribute("bean") PingTargetBean bean,
+                          RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("bean", bean);
 
@@ -94,7 +96,7 @@ public class PingTargetEditController extends BaseController {
                 pingTargetMgr.savePingTarget(pingTarget);
                 WebloggerFactory.getWeblogger().flush();
 
-                addMessage(model, "pingTarget.created", pingTarget.getName(), request);
+                addFlashMessage(redirectAttributes, "pingTarget.created", pingTarget.getName(), request);
                 return "redirect:/roller-ui/admin/commonPingTargets.rol";
             } catch (WebloggerException ex) {
                 log.error("Error adding ping target", ex);
@@ -110,7 +112,8 @@ public class PingTargetEditController extends BaseController {
      */
     @PostMapping("/commonPingTargetEdit.rol")
     public String editSave(HttpServletRequest request, Model model,
-                           @ModelAttribute("bean") PingTargetBean bean) {
+                           @ModelAttribute("bean") PingTargetBean bean,
+                           RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("bean", bean);
 
@@ -138,7 +141,7 @@ public class PingTargetEditController extends BaseController {
                 pingTargetMgr.savePingTarget(pingTarget);
                 WebloggerFactory.getWeblogger().flush();
 
-                addMessage(model, "pingTarget.updated", pingTarget.getName(), request);
+                addFlashMessage(redirectAttributes, "pingTarget.updated", pingTarget.getName(), request);
                 return "redirect:/roller-ui/admin/commonPingTargets.rol";
             } catch (WebloggerException ex) {
                 log.error("Error editing ping target", ex);

@@ -40,6 +40,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Remove a category.
@@ -100,7 +101,8 @@ public class CategoryRemoveController extends BaseController {
     @PostMapping("/categoryRemove!remove.rol")
     public String remove(HttpServletRequest request, Model model,
                          @RequestParam(value = "removeId", required = false) String removeId,
-                         @RequestParam(value = "targetCategoryId", required = false) String targetCategoryId) {
+                         @RequestParam(value = "targetCategoryId", required = false) String targetCategoryId,
+                         RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
 
         WeblogCategory category = lookupCategory(removeId);
@@ -118,7 +120,7 @@ public class CategoryRemoveController extends BaseController {
                 wmgr.removeWeblogCategory(category);
                 WebloggerFactory.getWeblogger().flush();
 
-                addMessage(model, "categoryForm.removed", category.getName(), request);
+                addFlashMessage(redirectAttributes, "categoryForm.removed", category.getName(), request);
 
                 return "redirect:/roller-ui/authoring/categories.rol?weblog="
                         + getActionWeblog(request).getHandle();

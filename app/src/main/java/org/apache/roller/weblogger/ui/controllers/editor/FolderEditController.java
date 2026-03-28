@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Edit a new or existing folder.
@@ -127,7 +128,8 @@ public class FolderEditController extends BaseController {
     @PostMapping("/folderEdit!save.rol")
     public String folderEditSave(HttpServletRequest request, HttpServletResponse response, Model model,
                                  @ModelAttribute("bean") FolderBean bean,
-                                 @RequestParam(value = "folderId", required = false) String folderId) {
+                                 @RequestParam(value = "folderId", required = false) String folderId,
+                                 RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "folderEdit");
         model.addAttribute("pageTitle", getText("folderForm.edit.title", request));
@@ -148,7 +150,7 @@ public class FolderEditController extends BaseController {
             WebloggerFactory.getWeblogger().flush();
 
             CacheManager.invalidate(folder);
-            addMessage(model, "folderForm.updated", request);
+            addFlashMessage(redirectAttributes, "folderForm.updated", request);
 
             String sanitizedFolderId = folderId != null ? folderId.replace("\n", "").replace("\r", "") : "";
             response.addHeader("folderId", sanitizedFolderId);

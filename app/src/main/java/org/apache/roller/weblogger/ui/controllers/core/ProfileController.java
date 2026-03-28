@@ -44,6 +44,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 
 /**
@@ -95,7 +96,8 @@ public class ProfileController extends BaseController {
 
     @PostMapping("/profile!save.rol")
     public String save(HttpServletRequest request, Model model,
-                       @ModelAttribute("bean") ProfileBean bean) {
+                       @ModelAttribute("bean") ProfileBean bean,
+                       RedirectAttributes redirectAttributes) {
 
         populateCommonModel(request, model);
         model.addAttribute("authMethod", authMethod.name());
@@ -156,7 +158,7 @@ public class ProfileController extends BaseController {
                 UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
                 mgr.saveUser(existingUser);
                 WebloggerFactory.getWeblogger().flush();
-                addMessage(model, "generic.changes.saved", request);
+                addFlashMessage(redirectAttributes, "generic.changes.saved", request);
                 return "redirect:/roller-ui/menu.rol";
             } catch (WebloggerException ex) {
                 log.error("ERROR in action", ex);

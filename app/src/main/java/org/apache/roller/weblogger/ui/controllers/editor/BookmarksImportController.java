@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Import opml file into bookmarks folder.
@@ -74,7 +75,8 @@ public class BookmarksImportController extends BaseController {
 
     @PostMapping("/bookmarksImport!save.rol")
     public String save(HttpServletRequest request, Model model,
-                       @RequestParam(value = "opmlFile", required = false) MultipartFile opmlFile) {
+                       @RequestParam(value = "opmlFile", required = false) MultipartFile opmlFile,
+                       RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
 
         BookmarkManager bm = WebloggerFactory.getWeblogger().getBookmarkManager();
@@ -93,7 +95,7 @@ public class BookmarksImportController extends BaseController {
                     WebloggerFactory.getWeblogger().flush();
                     CacheManager.invalidate(getActionWeblog(request));
 
-                    addMessage(model, "bookmarksImport.imported", folderName, request);
+                    addFlashMessage(redirectAttributes, "bookmarksImport.imported", folderName, request);
 
                     return "redirect:/roller-ui/authoring/bookmarks.rol?weblog="
                             + getActionWeblog(request).getHandle();

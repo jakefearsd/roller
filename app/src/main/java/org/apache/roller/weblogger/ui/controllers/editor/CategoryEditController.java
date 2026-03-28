@@ -40,6 +40,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Edit a new or existing weblog category.
@@ -73,7 +74,8 @@ public class CategoryEditController extends BaseController {
 
     @PostMapping("/categoryAdd!save.rol")
     public String categoryAddSave(HttpServletRequest request, Model model,
-                                  @ModelAttribute("bean") CategoryBean bean) {
+                                  @ModelAttribute("bean") CategoryBean bean,
+                                  RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "categoryAdd");
         model.addAttribute("pageTitle", getText("categoryForm.add.title", request));
@@ -94,7 +96,7 @@ public class CategoryEditController extends BaseController {
                 WebloggerFactory.getWeblogger().flush();
 
                 CacheManager.invalidate(getActionWeblog(request));
-                addMessage(model, "categoryForm.created", category.getName(), request);
+                addFlashMessage(redirectAttributes, "categoryForm.created", category.getName(), request);
 
                 return "redirect:/roller-ui/authoring/categories.rol?weblog="
                         + getActionWeblog(request).getHandle();
@@ -131,7 +133,8 @@ public class CategoryEditController extends BaseController {
 
     @PostMapping("/categoryEdit!save.rol")
     public String categoryEditSave(HttpServletRequest request, Model model,
-                                   @ModelAttribute("bean") CategoryBean bean) {
+                                   @ModelAttribute("bean") CategoryBean bean,
+                                   RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "categoryEdit");
         model.addAttribute("pageTitle", getText("categoryForm.edit.title", request));
@@ -148,7 +151,7 @@ public class CategoryEditController extends BaseController {
                 WebloggerFactory.getWeblogger().flush();
 
                 CacheManager.invalidate(getActionWeblog(request));
-                addMessage(model, "categoryForm.changesSaved", category.getName(), request);
+                addFlashMessage(redirectAttributes, "categoryForm.changesSaved", category.getName(), request);
 
                 return "redirect:/roller-ui/authoring/categories.rol?weblog="
                         + getActionWeblog(request).getHandle();

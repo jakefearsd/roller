@@ -46,6 +46,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 
 /**
@@ -118,7 +119,8 @@ public class CreateWeblogController extends BaseController {
 
     @PostMapping("/createWeblog!save.rol")
     public String save(HttpServletRequest request, Model model,
-                       @ModelAttribute("bean") CreateWeblogBean bean) {
+                       @ModelAttribute("bean") CreateWeblogBean bean,
+                       RedirectAttributes redirectAttributes) {
 
         populateCommonModel(request, model);
         addListsToModel(model);
@@ -129,7 +131,7 @@ public class CreateWeblogController extends BaseController {
                 UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
                 List<WeblogPermission> permissions = mgr.getWeblogPermissions(user);
                 if (!permissions.isEmpty()) {
-                    addError(model, "createWebsite.oneBlogLimit", request);
+                    addFlashError(redirectAttributes, "createWebsite.oneBlogLimit", request);
                     return "redirect:/roller-ui/menu.rol";
                 }
             }
@@ -160,7 +162,7 @@ public class CreateWeblogController extends BaseController {
                 WebloggerFactory.getWeblogger().getWeblogManager().addWeblog(wd);
                 WebloggerFactory.getWeblogger().flush();
 
-                addMessage(model, "createWebsite.created", bean.getHandle(), request);
+                addFlashMessage(redirectAttributes, "createWebsite.created", bean.getHandle(), request);
                 return "redirect:/roller-ui/menu.rol";
 
             } catch (WebloggerException e) {
