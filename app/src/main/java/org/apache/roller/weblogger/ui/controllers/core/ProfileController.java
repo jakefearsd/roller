@@ -149,7 +149,7 @@ public class ProfileController extends BaseController {
                 mgr.saveUser(existingUser);
                 WebloggerFactory.getWeblogger().flush();
                 addMessage(model, "generic.changes.saved", request);
-                return ".MainMenu";
+                return "redirect:/roller-ui/menu.rol";
             } catch (WebloggerException ex) {
                 log.error("ERROR in action", ex);
                 addError(model, "Unexpected error doing profile save", request);
