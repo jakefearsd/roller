@@ -15,38 +15,38 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p class="subtitle"><s:text name="cacheInfo.subtitle" />
-<p><s:text name="cacheInfo.prompt" />
+<p class="subtitle"><spring:message code="cacheInfo.subtitle" />
+<p><spring:message code="cacheInfo.prompt" />
 
-<s:iterator var="cache" value="stats">
-    <s:if test="#cache != null && !#cache.value.isEmpty">
+<c:forEach var="cache" items="${stats}">
+    <c:if test="${cache != null && !cache.value.isEmpty()}">
 
         <table class="table table-bordered">
             <tr>
-                <th colspan="2"><s:property value="#cache.key"/></th>
+                <th colspan="2">${fn:escapeXml(cache.key)}</th>
             </tr>
 
-            <s:iterator var="prop" value="#cache.value">
+            <c:forEach var="prop" items="${cache.value}">
                 <tr>
-                    <td><s:property value="#prop.key"/></td>
-                    <td><s:property value="#prop.value"/></td>
+                    <td>${fn:escapeXml(prop.key)}</td>
+                    <td>${fn:escapeXml(prop.value)}</td>
                 </tr>
-            </s:iterator>
+            </c:forEach>
 
             <tr>
                 <td colspan="2">
-                    <s:form action="cacheInfo!clear">
-						<s:hidden name="salt" />
-                        <s:hidden name="cache" value="%{#cache.key}" />
-                        <s:submit value="%{getText('cacheInfo.clear')}" cssClass="btn btn-default" />
-                    </s:form>
+                    <form method="post" action="<c:url value='/roller-ui/admin/cacheInfo!clear.rol'/>">
+                        <sec:csrfInput/>
+                        <input type="hidden" name="cache" value="${fn:escapeXml(cache.key)}" />
+                        <button type="submit" class="btn btn-default"><spring:message code="cacheInfo.clear"/></button>
+                    </form>
                 </td>
             </tr>
-            
+
         </table>
-        
+
         <br>
-    </s:if>
-</s:iterator>
+    </c:if>
+</c:forEach>

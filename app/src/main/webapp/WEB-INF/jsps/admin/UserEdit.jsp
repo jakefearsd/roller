@@ -15,157 +15,229 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
 <%-- Titling, processing actions different between add and edit --%>
-<s:if test="actionName == 'createUser'">
-    <s:set var="subtitleKey">userAdmin.subtitle.createNewUser</s:set>
-</s:if>
-<s:else>
-    <s:set var="subtitleKey">userAdmin.subtitle.editUser</s:set>
-</s:else>
+<c:choose>
+    <c:when test="${actionName == 'createUser'}">
+        <c:set var="subtitleKey" value="userAdmin.subtitle.createNewUser"/>
+    </c:when>
+    <c:otherwise>
+        <c:set var="subtitleKey" value="userAdmin.subtitle.editUser"/>
+    </c:otherwise>
+</c:choose>
 
 <p class="subtitle">
-    <s:text name="%{#subtitleKey}">
-        <s:param value="bean.userName" />
-    </s:text>
+    <spring:message code="${subtitleKey}" arguments="${bean.userName}"/>
 </p>
 
 <p class="pagetip">
-    <s:if test="actionName == 'createUser'">
-        <s:text name="userAdmin.addInstructions"/>
-    </s:if>
-    <s:if test="authMethod == 'DB_OPENID'">
-         <s:text name="userAdmin.noPasswordForOpenID"/>
-    </s:if>
+    <c:if test="${actionName == 'createUser'}">
+        <spring:message code="userAdmin.addInstructions"/>
+    </c:if>
+    <c:if test="${authMethod == 'DB_OPENID'}">
+         <spring:message code="userAdmin.noPasswordForOpenID"/>
+    </c:if>
 </p>
 
-<s:form theme="bootstrap" cssClass="form-horizontal">
-	<s:hidden name="salt" />
-    <s:if test="actionName == 'modifyUser'">
+<c:choose>
+    <c:when test="${actionName == 'createUser'}">
+        <c:set var="saveAction" value="/roller-ui/admin/createUser!save.rol"/>
+        <c:set var="cancelAction" value="/roller-ui/admin/createUser!cancel.rol"/>
+    </c:when>
+    <c:otherwise>
+        <c:set var="saveAction" value="/roller-ui/admin/modifyUser!save.rol"/>
+        <c:set var="cancelAction" value="/roller-ui/admin/modifyUser!cancel.rol"/>
+    </c:otherwise>
+</c:choose>
+
+<form method="post" action="<c:url value='${saveAction}'/>" class="form-horizontal">
+    <sec:csrfInput/>
+    <c:if test="${actionName == 'modifyUser'}">
         <%-- bean for add does not have a bean id yet --%>
-        <s:hidden name="bean.id" />
-    </s:if>
+        <input type="hidden" name="bean.id" value="${fn:escapeXml(bean.id)}" />
+    </c:if>
 
-    <s:if test="actionName == 'modifyUser'">
-        <s:textfield name="bean.userName" size="30" maxlength="30" onkeyup="formChanged()"
-                label="%{getText('userSettings.username')}"
-                tooltip="%{getText('userSettings.tip.username')}"
-                readonly="true" cssStyle="background: #e5e5e5" />
-    </s:if>
-    <s:else>
-        <s:textfield name="bean.userName" size="30" maxlength="30" onkeyup="formChanged()"
-                label="%{getText('userSettings.username')}"
-                tooltip="%{getText('userAdmin.tip.username')}" />
-    </s:else>
+    <c:choose>
+        <c:when test="${actionName == 'modifyUser'}">
+            <div class="form-group">
+                <label class="col-sm-3 control-label"><spring:message code="userSettings.username"/></label>
+                <div class="col-sm-9 controls">
+                    <input type="text" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
+                           size="30" maxlength="30" onkeyup="formChanged()"
+                           readonly="readonly" style="background: #e5e5e5" class="form-control"
+                           title="<spring:message code='userSettings.tip.username'/>"/>
+                </div>
+            </div>
+        </c:when>
+        <c:otherwise>
+            <div class="form-group">
+                <label class="col-sm-3 control-label"><spring:message code="userSettings.username"/></label>
+                <div class="col-sm-9 controls">
+                    <input type="text" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
+                           size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
+                           title="<spring:message code='userAdmin.tip.username'/>"/>
+                </div>
+            </div>
+        </c:otherwise>
+    </c:choose>
 
-    <s:textfield id="bean_userName" name="bean.screenName" size="30" maxlength="30" onkeyup="formChanged()"
-                label="%{getText('userSettings.screenname')}"
-                tooltip="%{getText('userAdmin.tip.screenName')}" />
+    <div class="form-group">
+        <label class="col-sm-3 control-label"><spring:message code="userSettings.screenname"/></label>
+        <div class="col-sm-9 controls">
+            <input type="text" id="bean_userName" name="bean.screenName" value="${fn:escapeXml(bean.screenName)}"
+                   size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
+                   title="<spring:message code='userAdmin.tip.screenName'/>"/>
+        </div>
+    </div>
 
-    <s:textfield id="bean_fullName" name="bean.fullName" size="30" maxlength="30" onkeyup="formChanged()"
-                 label="%{getText('userSettings.fullname')}"
-                 tooltip="%{getText('userAdmin.tip.fullName')}" />
+    <div class="form-group">
+        <label class="col-sm-3 control-label"><spring:message code="userSettings.fullname"/></label>
+        <div class="col-sm-9 controls">
+            <input type="text" id="bean_fullName" name="bean.fullName" value="${fn:escapeXml(bean.fullName)}"
+                   size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
+                   title="<spring:message code='userAdmin.tip.fullName'/>"/>
+        </div>
+    </div>
 
-    <s:if test="authMethod == 'ROLLERDB' || authMethod == 'DB_OPENID'">
-        <s:password name="bean.password" size="30" maxlength="30" onkeyup="formChanged()"
-                     label="%{getText('userSettings.password')}"
-                     tooltip="%{getText('userAdmin.tip.password')}" />
-    </s:if>
+    <c:if test="${authMethod == 'ROLLERDB' || authMethod == 'DB_OPENID'}">
+        <div class="form-group">
+            <label class="col-sm-3 control-label"><spring:message code="userSettings.password"/></label>
+            <div class="col-sm-9 controls">
+                <input type="password" name="bean.password" size="30" maxlength="30"
+                       onkeyup="formChanged()" class="form-control"
+                       title="<spring:message code='userAdmin.tip.password'/>"/>
+            </div>
+        </div>
+    </c:if>
 
-    <s:if test="authMethod == 'OPENID' || authMethod == 'DB_OPENID'">
-        <s:textfield name="bean.openIdUrl" size="30" maxlength="255" id="f_openid_identifier"
-                     label="%{getText('userSettings.openIdUrl')}"
-                     tooltip="%{getText('userAdmin.tip.openIdUrl')}" />
-    </s:if>
+    <c:if test="${authMethod == 'OPENID' || authMethod == 'DB_OPENID'}">
+        <div class="form-group">
+            <label class="col-sm-3 control-label"><spring:message code="userSettings.openIdUrl"/></label>
+            <div class="col-sm-9 controls">
+                <input type="text" name="bean.openIdUrl" value="${fn:escapeXml(bean.openIdUrl)}"
+                       size="30" maxlength="255" id="f_openid_identifier" class="form-control"
+                       title="<spring:message code='userAdmin.tip.openIdUrl'/>"/>
+            </div>
+        </div>
+    </c:if>
 
-    <s:textfield id="bean_email" name="bean.emailAddress" size="30" maxlength="255" onkeyup="formChanged()"
-                 label="%{getText('userSettings.email')}"
-                 tooltip="%{getText('userAdmin.tip.email')}" />
+    <div class="form-group">
+        <label class="col-sm-3 control-label"><spring:message code="userSettings.email"/></label>
+        <div class="col-sm-9 controls">
+            <input type="text" id="bean_email" name="bean.emailAddress" value="${fn:escapeXml(bean.emailAddress)}"
+                   size="30" maxlength="255" onkeyup="formChanged()" class="form-control"
+                   title="<spring:message code='userAdmin.tip.email'/>"/>
+        </div>
+    </div>
 
-    <s:select name="bean.locale" size="1" list="localesList" listValue="displayName"
-                 label="%{getText('userSettings.locale')}"
-                 tooltip="%{getText('userAdmin.tip.locale')}" />
+    <div class="form-group">
+        <label class="col-sm-3 control-label"><spring:message code="userSettings.locale"/></label>
+        <div class="col-sm-9 controls">
+            <select name="bean.locale" class="form-control"
+                    title="<spring:message code='userAdmin.tip.locale'/>">
+                <c:forEach var="loc" items="${localesList}">
+                    <option value="${fn:escapeXml(loc)}"
+                        <c:if test="${loc == bean.locale}">selected="selected"</c:if>
+                    >${fn:escapeXml(loc.displayName)}</option>
+                </c:forEach>
+            </select>
+        </div>
+    </div>
 
-    <s:select name="bean.timeZone" size="1" list="timeZonesList"
-                 label="%{getText('userSettings.timeZone')}"
-                 tooltip="%{getText('userAdmin.tip.timeZone')}" />
+    <div class="form-group">
+        <label class="col-sm-3 control-label"><spring:message code="userSettings.timeZone"/></label>
+        <div class="col-sm-9 controls">
+            <select name="bean.timeZone" class="form-control"
+                    title="<spring:message code='userAdmin.tip.timeZone'/>">
+                <c:forEach var="tz" items="${timeZonesList}">
+                    <option value="${fn:escapeXml(tz)}"
+                        <c:if test="${tz == bean.timeZone}">selected="selected"</c:if>
+                    >${fn:escapeXml(tz)}</option>
+                </c:forEach>
+            </select>
+        </div>
+    </div>
 
-    <s:checkbox name="bean.enabled" size="30" maxlength="30"
-                 label="%{getText('userAdmin.enabled')}"
-                 tooltip="%{getText('userAdmin.tip.userEnabled')}" />
+    <div class="form-group">
+        <label class="col-sm-3 control-label"><spring:message code="userAdmin.enabled"/></label>
+        <div class="col-sm-9 controls">
+            <input type="checkbox" name="bean.enabled" value="true"
+                <c:if test="${bean.enabled}">checked="checked"</c:if>
+                   title="<spring:message code='userAdmin.tip.userEnabled'/>"/>
+        </div>
+    </div>
 
-    <s:checkbox name="bean.administrator" size="30" maxlength="30"
-                 label="%{getText('userAdmin.userAdmin')}"
-                 tooltip="%{getText('userAdmin.tip.userAdmin')}" />
+    <div class="form-group">
+        <label class="col-sm-3 control-label"><spring:message code="userAdmin.userAdmin"/></label>
+        <div class="col-sm-9 controls">
+            <input type="checkbox" name="bean.administrator" value="true"
+                <c:if test="${bean.administrator}">checked="checked"</c:if>
+                   title="<spring:message code='userAdmin.tip.userAdmin'/>"/>
+        </div>
+    </div>
 
 
-    <s:if test="actionName == 'modifyUser'">
-        <h2><s:text name="userAdmin.userWeblogs" /></h2>
+    <c:if test="${actionName == 'modifyUser'}">
+        <h2><spring:message code="userAdmin.userWeblogs" /></h2>
 
-        <s:if test="permissions != null && !permissions.isEmpty() > 0">
-            <p><s:text name="userAdmin.userMemberOf" />:</p>
+        <c:if test="${permissions != null && !permissions.isEmpty()}">
+            <p><spring:message code="userAdmin.userMemberOf" />:</p>
             <table class="table" style="width: 80%">
-                <s:iterator var="perms" value="permissions">
+                <c:forEach var="perms" items="${permissions}">
                     <tr>
                         <td width="%30">
-                            <a href='<s:property value="#perms.weblog.absoluteURL" />'>
-                                <s:property value="#perms.weblog.name" /> [<s:property value="#perms.weblog.handle" />]
+                            <a href='${perms.weblog.absoluteURL}'>
+                                ${fn:escapeXml(perms.weblog.name)} [${fn:escapeXml(perms.weblog.handle)}]
                             </a>
                         </td>
                         <td width="%15">
-                            <s:url action="entryAdd" namespace="/roller-ui/authoring" var="newEntry">
-                                <s:param name="weblog" value="#perms.weblog.handle" />
-                            </s:url>
-                            <img src='<s:url value="/images/page_white_edit.png"/>' />
-                            <a href='<s:property value="newEntry" />'>
-                            <s:text name="userAdmin.newEntry" /></a>
+                            <c:url var="newEntry" value="/roller-ui/authoring/entryAdd.rol">
+                                <c:param name="weblog" value="${perms.weblog.handle}" />
+                            </c:url>
+                            <img src='<c:url value="/images/page_white_edit.png"/>' />
+                            <a href='${newEntry}'>
+                            <spring:message code="userAdmin.newEntry" /></a>
                         </td>
                         <td width="%15">
-                            <s:url action="entries" namespace="/roller-ui/authoring" var="editEntries">
-                                <s:param name="weblog" value="#perms.weblog.handle" />
-                            </s:url>
-                            <img src='<s:url value="/images/page_white_edit.png"/>' />
-                            <a href='<s:property value="editEntries" />'>
-                            <s:text name="userAdmin.editEntries" /></a>
+                            <c:url var="editEntries" value="/roller-ui/authoring/entries.rol">
+                                <c:param name="weblog" value="${perms.weblog.handle}" />
+                            </c:url>
+                            <img src='<c:url value="/images/page_white_edit.png"/>' />
+                            <a href='${editEntries}'>
+                            <spring:message code="userAdmin.editEntries" /></a>
                         </td>
                         <td width="%15">
-                            <s:url action="weblogConfig" namespace="/roller-ui/authoring" var="manageWeblog">
-                                <s:param name="weblog" value="#perms.weblog.handle" />
-                            </s:url>
-                            <img src='<s:url value="/images/page_white_edit.png"/>' />
-                            <a href='<s:property value="manageWeblog" />'>
-                            <s:text name="userAdmin.manage" /></a>
+                            <c:url var="manageWeblog" value="/roller-ui/authoring/weblogConfig.rol">
+                                <c:param name="weblog" value="${perms.weblog.handle}" />
+                            </c:url>
+                            <img src='<c:url value="/images/page_white_edit.png"/>' />
+                            <a href='${manageWeblog}'>
+                            <spring:message code="userAdmin.manage" /></a>
                         </td>
                     </tr>
-                </s:iterator>
+                </c:forEach>
             </table>
-        </s:if>
-        <s:else>
-            <s:text name="userAdmin.userHasNoWeblogs" />
-        </s:else>
-    </s:if>
+        </c:if>
+        <c:if test="${permissions == null || permissions.isEmpty()}">
+            <spring:message code="userAdmin.userHasNoWeblogs" />
+        </c:if>
+    </c:if>
 
     <br />
     <br />
 
     <div class="control">
-        <s:if test="actionName == 'createUser'">
-            <s:submit cssClass="btn btn-default" id="save_button"
-                      value="%{getText('generic.save')}" action="createUser!save"/>
-            <s:submit cssClass="btn"
-                      value="%{getText('generic.cancel')}" action="createUser!cancel" />
-        </s:if>
-        <s:else>
-            <s:submit cssClass="btn btn-default" id="save_button"
-                      value="%{getText('generic.save')}" action="modifyUser!save"/>
-            <s:submit cssClass="btn"
-                      value="%{getText('generic.cancel')}" action="modifyUser!cancel" />
-        </s:else>
+        <button type="submit" class="btn btn-default" id="save_button">
+            <spring:message code="generic.save"/>
+        </button>
+        <a href="<c:url value='${cancelAction}'/>" class="btn">
+            <spring:message code="generic.cancel"/>
+        </a>
     </div>
 
-</s:form>
+</form>
 
 
 <script>

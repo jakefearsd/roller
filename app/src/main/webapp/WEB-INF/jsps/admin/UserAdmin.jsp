@@ -15,45 +15,52 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <script>
 <%@ include file="/roller-ui/scripts/ajax-user.js" %>
 </script>
 
 <p class="subtitle">
-<b><s:text name="userAdmin.subtitle.searchUser" /></b>
-<s:text name="userAdmin.prompt.searchUser" />
+<b><spring:message code="userAdmin.subtitle.searchUser" /></b>
+<spring:message code="userAdmin.prompt.searchUser" />
 </p>
 
-<s:form action="userAdmin!edit" method="POST" theme="bootstrap" cssClass="form-vertical">
-   	<s:hidden name="salt" />
+<form method="post" action="<c:url value='/roller-ui/admin/userAdmin!edit.rol'/>" class="form-vertical">
+    <sec:csrfInput/>
 
-    <s:textfield cssClass="form-control"
-        id="userName"
-        name="bean.userName"
-        label="%{getText('inviteMember.userName')}"
-        onfocus="onUserNameFocus(null)"
-        onkeyup="onUserNameChange(null)" />
+    <div class="form-group">
+        <label for="userName"><spring:message code="inviteMember.userName"/></label>
+        <input type="text" class="form-control" id="userName" name="bean.userName"
+               value="${fn:escapeXml(bean.userName)}"
+               onfocus="onUserNameFocus(null)"
+               onkeyup="onUserNameChange(null)" />
+    </div>
 
-    <s:select class="form-control" id="userList" size="10" onchange="onUserSelected()" list="bean.list" />
+    <div class="form-group">
+        <select class="form-control" id="userList" size="10" onchange="onUserSelected()">
+            <c:forEach var="item" items="${bean.list}">
+                <option value="${fn:escapeXml(item)}">${fn:escapeXml(item)}</option>
+            </c:forEach>
+        </select>
+    </div>
 
     <button type="submit" class="btn btn-default" id="user-submit">
-        <s:text name="generic.edit" />
+        <spring:message code="generic.edit" />
     </button>
 
-</s:form>
+</form>
 
-<s:if test="authMethod != 'LDAP'"> <%-- if we're not doing LDAP we can create new users in Roller --%>
+<c:if test="${authMethod != 'LDAP'}"> <%-- if we're not doing LDAP we can create new users in Roller --%>
 
-    <h3><s:text name="userAdmin.subtitle.userCreation" /></h3>
-    <s:text name="userAdmin.prompt.orYouCan" />
-    <s:url action="createUser" var="createUser" />
-    <a href="<s:property value="createUser" />">
-        <s:text name="userAdmin.prompt.createANewUser" />
+    <h3><spring:message code="userAdmin.subtitle.userCreation" /></h3>
+    <spring:message code="userAdmin.prompt.orYouCan" />
+    <c:url var="createUserUrl" value="/roller-ui/admin/createUser.rol" />
+    <a href="${createUserUrl}">
+        <spring:message code="userAdmin.prompt.createANewUser" />
     </a>
 
-</s:if>
+</c:if>
 
 <script>
 

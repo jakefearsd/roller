@@ -15,68 +15,81 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
-<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <%-- are we on a blog's comment management page or the global admin's comment management page? --%>
-<s:if test="actionName == 'comments'">
-    <s:set var="mainAction">comments</s:set>
-</s:if>
-<s:else>
-    <s:set var="mainAction">globalCommentManagement</s:set>
-</s:else>
+<c:choose>
+    <c:when test="${actionName == 'comments'}">
+        <c:set var="mainAction" value="comments"/>
+    </c:when>
+    <c:otherwise>
+        <c:set var="mainAction" value="globalCommentManagement"/>
+    </c:otherwise>
+</c:choose>
 
 
 <p class="subtitle">
-    <s:if test="actionName == 'comments'">
-        <s:if test="bean.entryId != null && !bean.entryId.equals('') ">
-            <s:text name="commentManagement.entry.subtitle">
-                <s:param value="queryEntry.title"/>
-            </s:text>
-        </s:if>
-        <s:else>
-            <s:text name="commentManagement.website.subtitle">
-                <s:param value="%{actionWeblog.handle}"/>
-            </s:text>
-        </s:else>
-    </s:if>
-    <s:else>
-        <s:text name="commentManagement.subtitle"/>
-    </s:else>
+    <c:choose>
+        <c:when test="${actionName == 'comments'}">
+            <c:choose>
+                <c:when test="${not empty bean.entryId}">
+                    <spring:message code="commentManagement.entry.subtitle" arguments="${queryEntry.title}"/>
+                </c:when>
+                <c:otherwise>
+                    <spring:message code="commentManagement.website.subtitle" arguments="${actionWeblog.handle}"/>
+                </c:otherwise>
+            </c:choose>
+        </c:when>
+        <c:otherwise>
+            <spring:message code="commentManagement.subtitle"/>
+        </c:otherwise>
+    </c:choose>
 </p>
 
-<s:if test="pager.items.isEmpty">
-    <s:text name="commentManagement.noCommentsFound"/>
-</s:if>
-<s:else>
+<c:choose>
+<c:when test="${empty pager.items}">
+    <spring:message code="commentManagement.noCommentsFound"/>
+</c:when>
+<c:otherwise>
     <p class="pagetip">
-        <s:if test="actionName == 'comments'">
-            <s:text name="commentManagement.tip"/>
-        </s:if>
-        <s:else>
-            <s:text name="commentManagement.globalTip"/>
-        </s:else>
+        <c:choose>
+            <c:when test="${actionName == 'comments'}">
+                <spring:message code="commentManagement.tip"/>
+            </c:when>
+            <c:otherwise>
+                <spring:message code="commentManagement.globalTip"/>
+            </c:otherwise>
+        </c:choose>
     </p>
 
     <%-- ============================================================= --%>
     <%-- Comment table / form with checkboxes --%>
 
-    <s:form action="%{#mainAction}!update">
-        <s:hidden name="salt"/>
-        <s:hidden name="bean.ids"/>
-        <s:hidden name="bean.startDateString"/>
-        <s:hidden name="bean.endDateString"/>
-        <s:if test="actionName == 'comments'">
-            <s:hidden name="bean.entryId"/>
-            <s:hidden name="bean.searchString"/>
-            <s:hidden name="bean.approvedString"/>
-            <s:hidden name="weblog"/>
-        </s:if>
-        <s:else>
-            <s:hidden name="bean.offset"/>
-            <s:hidden name="bean.count"/>
-            <s:hidden name="bean.pendingString"/>
-        </s:else>
+    <c:choose>
+        <c:when test="${actionName == 'comments'}">
+            <c:url var="updateUrl" value="/roller-ui/authoring/comments!update.rol"/>
+        </c:when>
+        <c:otherwise>
+            <c:url var="updateUrl" value="/roller-ui/admin/globalCommentManagement!update.rol"/>
+        </c:otherwise>
+    </c:choose>
+
+    <form method="post" action="${updateUrl}">
+        <sec:csrfInput/>
+        <input type="hidden" name="bean.ids" value="${fn:escapeXml(bean.ids)}"/>
+        <input type="hidden" name="bean.startDateString" value="${fn:escapeXml(bean.startDateString)}"/>
+        <input type="hidden" name="bean.endDateString" value="${fn:escapeXml(bean.endDateString)}"/>
+        <c:if test="${actionName == 'comments'}">
+            <input type="hidden" name="bean.entryId" value="${fn:escapeXml(bean.entryId)}"/>
+            <input type="hidden" name="bean.searchString" value="${fn:escapeXml(bean.searchString)}"/>
+            <input type="hidden" name="bean.approvedString" value="${fn:escapeXml(bean.approvedString)}"/>
+            <input type="hidden" name="weblog" value="${fn:escapeXml(param.weblog)}"/>
+        </c:if>
+        <c:if test="${actionName != 'comments'}">
+            <input type="hidden" name="bean.offset" value="${fn:escapeXml(bean.offset)}"/>
+            <input type="hidden" name="bean.count" value="${fn:escapeXml(bean.count)}"/>
+            <input type="hidden" name="bean.pendingString" value="${fn:escapeXml(bean.pendingString)}"/>
+        </c:if>
 
 
         <%-- ============================================================= --%>
@@ -85,22 +98,16 @@
         <div class="tablenav">
 
             <div style="float:left;">
-                <s:text name="commentManagement.nowShowing">
-                    <s:param value="pager.items.size()"/>
-                </s:text>
+                <spring:message code="commentManagement.nowShowing" arguments="${fn:length(pager.items)}"/>
             </div>
             <div style="float:right;">
-                <s:if test="firstComment.postTime != null">
-                    <s:text name="commentManagement.date.toStringFormat">
-                        <s:param value="firstComment.postTime"/>
-                    </s:text>
-                </s:if>
+                <c:if test="${firstComment.postTime != null}">
+                    <fmt:formatDate value="${firstComment.postTime}" type="both" dateStyle="short" timeStyle="short"/>
+                </c:if>
                 ---
-                <s:if test="lastComment.postTime != null">
-                    <s:text name="commentManagement.date.toStringFormat">
-                        <s:param value="lastComment.postTime"/>
-                    </s:text>
-                </s:if>
+                <c:if test="${lastComment.postTime != null}">
+                    <fmt:formatDate value="${lastComment.postTime}" type="both" dateStyle="short" timeStyle="short"/>
+                </c:if>
             </div>
             <br/>
 
@@ -110,18 +117,18 @@
 
             <nav>
                 <ul class="pager">
-                    <s:if test="pager.prevLink != null">
+                    <c:if test="${pager.prevLink != null}">
                         <li class="previous">
-                            <a href='<s:property value="pager.prevLink" />'>
+                            <a href='${pager.prevLink}'>
                                 <span aria-hidden="true">&larr;</span>Newer</a>
                         </li>
-                    </s:if>
-                    <s:if test="pager.nextLink != null">
+                    </c:if>
+                    <c:if test="${pager.nextLink != null}">
                         <li class="next">
-                            <a href='<s:property value="pager.nextLink"/>'>Older
+                            <a href='${pager.nextLink}'>Older
                                 <span aria-hidden="true">&rarr;</span></a>
                         </li>
-                    </s:if>
+                    </c:if>
                 </ul>
             </nav>
 
@@ -132,16 +139,14 @@
         <%-- Bulk comment delete link --%>
         <%-- ============================================================= --%>
 
-        <s:if test="bulkDeleteCount > 0">
+        <c:if test="${bulkDeleteCount > 0}">
             <p>
-                <s:text name="commentManagement.bulkDeletePrompt1">
-                    <s:param value="bulkDeleteCount"/>
-                </s:text>
+                <spring:message code="commentManagement.bulkDeletePrompt1" arguments="${bulkDeleteCount}"/>
                 <a href="#" onclick="bulkDelete()">
-                    <s:text name="commentManagement.bulkDeletePrompt2"/>
+                    <spring:message code="commentManagement.bulkDeletePrompt2"/>
                 </a>
             </p>
-        </s:if>
+        </c:if>
 
         <table class="rollertable table table-striped" width="100%">
 
@@ -149,19 +154,19 @@
                 <%-- Comment table header --%>
 
             <tr>
-                <s:if test="actionName == 'comments'">
+                <c:if test="${actionName == 'comments'}">
                     <th class="rollertable" width="5%">
-                        <s:text name="commentManagement.columnApproved"/>
+                        <spring:message code="commentManagement.columnApproved"/>
                     </th>
-                </s:if>
+                </c:if>
                 <th class="rollertable" width="5%">
-                    <s:text name="commentManagement.columnSpam"/>
+                    <spring:message code="commentManagement.columnSpam"/>
                 </th>
                 <th class="rollertable" width="5%">
-                    <s:text name="generic.delete"/>
+                    <spring:message code="generic.delete"/>
                 </th>
                 <th class="rollertable">
-                    <s:text name="commentManagement.columnComment"/>
+                    <spring:message code="commentManagement.columnComment"/>
                 </th>
             </tr>
 
@@ -169,32 +174,32 @@
                 <%-- Select ALL and NONE buttons --%>
 
             <tr class="actionrow">
-                <s:if test="actionName == 'comments'">
+                <c:if test="${actionName == 'comments'}">
                     <td align="center">
-                        <s:text name="commentManagement.select"/><br/>
+                        <spring:message code="commentManagement.select"/><br/>
 
-                        <span id="checkallapproved"><a href="#"><s:text name="generic.all"/></a></span><br/>
-                        <span id="clearallapproved"><a href="#"><s:text name="generic.none"/></a></span>
+                        <span id="checkallapproved"><a href="#"><spring:message code="generic.all"/></a></span><br/>
+                        <span id="clearallapproved"><a href="#"><spring:message code="generic.none"/></a></span>
                     </td>
-                </s:if>
+                </c:if>
                 <td align="center">
-                    <s:text name="commentManagement.select"/><br/>
+                    <spring:message code="commentManagement.select"/><br/>
 
-                    <span id="checkallspam"><a href="#"><s:text name="generic.all"/></a></span><br/>
-                    <span id="clearallspam"><a href="#"><s:text name="generic.none"/></a></span>
+                    <span id="checkallspam"><a href="#"><spring:message code="generic.all"/></a></span><br/>
+                    <span id="clearallspam"><a href="#"><spring:message code="generic.none"/></a></span>
                 </td>
                 <td align="center">
-                    <s:text name="commentManagement.select"/><br/>
+                    <spring:message code="commentManagement.select"/><br/>
 
-                    <span id="checkalldelete"><a href="#"><s:text name="generic.all"/></a></span><br/>
-                    <span id="clearalldelete"><a href="#"><s:text name="generic.none"/></a></span>
+                    <span id="checkalldelete"><a href="#"><spring:message code="generic.all"/></a></span><br/>
+                    <span id="clearalldelete"><a href="#"><spring:message code="generic.none"/></a></span>
                 </td>
                 <td align="right">
                     <br/>
                     <span class="pendingCommentBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                    <s:text name="commentManagement.pending"/>&nbsp;&nbsp;
+                    <spring:message code="commentManagement.pending"/>&nbsp;&nbsp;
                     <span class="spamCommentBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                    <s:text name="commentManagement.spam"/>&nbsp;&nbsp;
+                    <spring:message code="commentManagement.spam"/>&nbsp;&nbsp;
                 </td>
             </tr>
 
@@ -202,40 +207,51 @@
                 <%-- ========================================================= --%>
                 <%-- Loop through comments --%>
 
-                <%-- it is a bit funky to use checkbox list here, but using checkbox didn't work for me :( 
-                we are effectively just creating a checkbox list of 1 item for each iteration of our collection. --%>
-
-            <s:iterator var="comment" value="pager.items" status="rowstatus">
+            <c:forEach var="comment" items="${pager.items}" varStatus="rowstatus">
                 <tr>
-                    <s:if test="actionName == 'comments'">
+                    <c:if test="${actionName == 'comments'}">
                         <%-- only blog admins (not the global admin) can approve blog comments --%>
                         <td>
-                            <s:checkboxlist name="bean.approvedComments" cssClass="comment-select"
-                                            list="#comment" listKey="id" listValue="" />
+                            <c:set var="approvedChecked" value=""/>
+                            <c:forEach var="ac" items="${bean.approvedComments}">
+                                <c:if test="${ac == comment.id}"><c:set var="approvedChecked" value="checked='checked'"/></c:if>
+                            </c:forEach>
+                            <input type="checkbox" name="bean.approvedComments" class="comment-select"
+                                   value="${fn:escapeXml(comment.id)}" ${approvedChecked}/>
                         </td>
-                    </s:if>
+                    </c:if>
                     <td>
-                        <s:checkboxlist name="bean.spamComments" cssClass="comment-select"
-                                        list="#comment" listKey="id" listValue="" />
+                        <c:set var="spamChecked" value=""/>
+                        <c:forEach var="sc" items="${bean.spamComments}">
+                            <c:if test="${sc == comment.id}"><c:set var="spamChecked" value="checked='checked'"/></c:if>
+                        </c:forEach>
+                        <input type="checkbox" name="bean.spamComments" class="comment-select"
+                               value="${fn:escapeXml(comment.id)}" ${spamChecked}/>
                     </td>
                     <td>
-                        <s:checkboxlist name="bean.deleteComments" cssClass="comment-select"
-                                        list="#comment" listKey="id" listValue="" />
+                        <c:set var="deleteChecked" value=""/>
+                        <c:forEach var="dc" items="${bean.deleteComments}">
+                            <c:if test="${dc == comment.id}"><c:set var="deleteChecked" value="checked='checked'"/></c:if>
+                        </c:forEach>
+                        <input type="checkbox" name="bean.deleteComments" class="comment-select"
+                               value="${fn:escapeXml(comment.id)}" ${deleteChecked}/>
                     </td>
 
                         <%-- ======================================================== --%>
                         <%-- Display comment details and text --%>
 
                         <%-- <td> with style if comment is spam or pending --%>
-                    <s:if test="#comment.status.name() == 'SPAM'">
+                    <c:choose>
+                        <c:when test="${comment.status == 'SPAM'}">
                     <td class="spamcomment">
-                        </s:if>
-                        <s:elseif test="#comment.status.name() == 'PENDING'">
+                        </c:when>
+                        <c:when test="${comment.status == 'PENDING'}">
                     <td class="pendingcomment">
-                        </s:elseif>
-                        <s:else>
+                        </c:when>
+                        <c:otherwise>
                     <td>
-                        </s:else>
+                        </c:otherwise>
+                    </c:choose>
 
                             <%-- comment details table in table --%>
                         <table class="innertable">
@@ -245,46 +261,50 @@
                                     <div class="viewdetails bot">
 
                                         <div class="details">
-                                            <s:text name="commentManagement.entryTitled"/>&nbsp;:&nbsp;
-                                            <a href='<s:property value="#comment.weblogEntry.permalink" />'>
-                                                <s:property value="#comment.weblogEntry.title"/></a>
+                                            <spring:message code="commentManagement.entryTitled"/>&nbsp;:&nbsp;
+                                            <a href='${comment.weblogEntry.permalink}'>
+                                                ${fn:escapeXml(comment.weblogEntry.title)}</a>
                                         </div>
 
                                         <div class="details">
-                                            <s:text name="commentManagement.commentBy"/>&nbsp;:&nbsp;
-                                            <s:if test="#comment.email != null && #comment.name != null">
-                                                <s:text name="commentManagement.commentByBoth">
-                                                    <s:param><s:property value="#comment.name"/></s:param>
-                                                    <s:param><s:property value="#comment.email"/></s:param>
-                                                    <s:param><s:property value="#comment.email"/></s:param>
-                                                    <s:param><s:property value="#comment.remoteHost"/></s:param>
-                                                </s:text>
-                                            </s:if>
-                                            <s:elseif test="#comment.email == null && #comment.name == null">
-                                                <s:text name="commentManagement.commentByIP">
-                                                    <s:param><s:property value="#comment.remoteHost"/></s:param>
-                                                </s:text>
-                                            </s:elseif>
-                                            <s:else>
-                                                <s:text name="commentManagement.commentByName">
-                                                    <s:param><s:property value="#comment.name"/></s:param>
-                                                    <s:param><s:property value="#comment.remoteHost"/></s:param>
-                                                </s:text>
-                                            </s:else>
+                                            <spring:message code="commentManagement.commentBy"/>&nbsp;:&nbsp;
+                                            <c:choose>
+                                                <c:when test="${comment.email != null && comment.name != null}">
+                                                    <spring:message code="commentManagement.commentByBoth"
+                                                        arguments="${fn:escapeXml(comment.name)},${fn:escapeXml(comment.email)},${fn:escapeXml(comment.email)},${fn:escapeXml(comment.remoteHost)}"
+                                                        argumentSeparator=","/>
+                                                </c:when>
+                                                <c:when test="${comment.email == null && comment.name == null}">
+                                                    <spring:message code="commentManagement.commentByIP"
+                                                        arguments="${fn:escapeXml(comment.remoteHost)}"/>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <spring:message code="commentManagement.commentByName"
+                                                        arguments="${fn:escapeXml(comment.name)},${fn:escapeXml(comment.remoteHost)}"
+                                                        argumentSeparator=","/>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </div>
 
-                                        <s:if test="#comment.url != null && !#comment.url.equals('')">
+                                        <c:if test="${not empty comment.url}">
                                             <div class="details">
-                                                <s:text name="commentManagement.commentByURL"/>&nbsp;:&nbsp;
-                                                <a href='<s:property value="#comment.url" />'>
-                                                    <str:truncateNicely upper="60" appendToEnd="..."><s:property
-                                                            value="#comment.url"/></str:truncateNicely></a>
+                                                <spring:message code="commentManagement.commentByURL"/>&nbsp;:&nbsp;
+                                                <a href='${fn:escapeXml(comment.url)}'>
+                                                    <c:choose>
+                                                        <c:when test="${fn:length(comment.url) > 60}">
+                                                            ${fn:escapeXml(fn:substring(comment.url, 0, 60))}...
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            ${fn:escapeXml(comment.url)}
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </a>
                                             </div>
-                                        </s:if>
+                                        </c:if>
 
                                         <div class="details">
-                                            <s:text name="commentManagement.postTime"/>&nbsp;:&nbsp;
-                                            <s:date name="#comment.postTime"/>
+                                            <spring:message code="commentManagement.postTime"/>&nbsp;:&nbsp;
+                                            <fmt:formatDate value="${comment.postTime}" type="both" dateStyle="short" timeStyle="short"/>
                                         </div>
 
                                     </div>
@@ -292,45 +312,42 @@
 
                                         <div class="details bot">
 
-                                            <s:if test="#comment.content.length() > 1000">
-                                                <div class="bot" id="comment-<s:property value="#comment.id"/>">
-                                                    <str:truncateNicely upper="1000" appendToEnd="...">
-                                                        <s:property value="#comment.content" escapeHtml="true"/>
-                                                    </str:truncateNicely>
-                                                </div>
-                                                <div id="link-<s:property value="#comment.id"/>">
-                                                    <a onclick='readMoreComment("<s:property
-                                                            value="#comment.id"/>")'><s:text
-                                                            name="commentManagement.readmore"/></a>
-                                                </div>
-                                            </s:if>
-                                            <s:else>
-                                                <span width="200px"
-                                                      id="comment-<s:property value="#comment.id"/>"><s:property
-                                                        value="#comment.content" escapeHtml="true"/></span>
-                                            </s:else>
+                                            <c:choose>
+                                                <c:when test="${fn:length(comment.content) > 1000}">
+                                                    <div class="bot" id="comment-${comment.id}">
+                                                        ${fn:escapeXml(fn:substring(comment.content, 0, 1000))}...
+                                                    </div>
+                                                    <div id="link-${comment.id}">
+                                                        <a onclick='readMoreComment("${comment.id}")'><spring:message
+                                                                code="commentManagement.readmore"/></a>
+                                                    </div>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span width="200px"
+                                                          id="comment-${comment.id}">${fn:escapeXml(comment.content)}</span>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </div>
 
-                                        <s:if test="actionName == 'comments'">
+                                        <c:if test="${actionName == 'comments'}">
                                             <div class="details">
-                                                <a id="editlink-<s:property value="#comment.id"/>"
-                                                   onclick='editComment("<s:property value="#comment.id"/>")'>
-                                                    <s:text name="generic.edit"/>
+                                                <a id="editlink-${comment.id}"
+                                                   onclick='editComment("${comment.id}")'>
+                                                    <spring:message code="generic.edit"/>
                                                 </a>
                                             </div>
                                             <div class="details">
-                                              <span id="savelink-<s:property value="#comment.id"/>"
+                                              <span id="savelink-${comment.id}"
                                                     style="display: none">
-                                                   <a onclick='saveComment("<s:property value="#comment.id"/>")'><s:text
-                                                           name="generic.save"/></a> &nbsp;|&nbsp;
+                                                   <a onclick='saveComment("${comment.id}")'><spring:message
+                                                           code="generic.save"/></a> &nbsp;|&nbsp;
                                               </span>
-                                                <span id="cancellink-<s:property value="#comment.id"/>"
+                                                <span id="cancellink-${comment.id}"
                                                       style="display: none">
-                                                   <a onclick='editCommentCancel("<s:property
-                                                           value="#comment.id"/>")'><s:text name="generic.cancel"/></a>
+                                                   <a onclick='editCommentCancel("${comment.id}")'><spring:message code="generic.cancel"/></a>
                                               </span>
                                             </div>
-                                        </s:if>
+                                        </c:if>
 
                                     </div>
                             </tr>
@@ -338,7 +355,7 @@
                             <%-- end comment details table in table --%>
                     </td>
                 </tr>
-            </s:iterator>
+            </c:forEach>
         </table>
 
         <%-- ============================================================= --%>
@@ -346,18 +363,18 @@
 
         <nav>
             <ul class="pager">
-                <s:if test="pager.prevLink != null">
+                <c:if test="${pager.prevLink != null}">
                     <li class="previous">
-                        <a href='<s:property value="pager.prevLink" />'>
+                        <a href='${pager.prevLink}'>
                             <span aria-hidden="true">&larr;</span>Newer</a>
                     </li>
-                </s:if>
-                <s:if test="pager.nextLink != null">
+                </c:if>
+                <c:if test="${pager.nextLink != null}">
                     <li class="next">
-                        <a href='<s:property value="pager.nextLink"/>'>Older
+                        <a href='${pager.nextLink}'>Older
                             <span aria-hidden="true">&rarr;</span></a>
                     </li>
-                </s:if>
+                </c:if>
             </ul>
         </nav>
 
@@ -365,17 +382,19 @@
         <%-- Save changes and cancel buttons --%>
 
         <hr size="1" noshade="noshade"/>
-        <s:submit cssClass="btn btn-primary" value="%{getText('commentManagement.update')}"/>
+        <spring:message code="commentManagement.update" var="updateLabel"/>
+        <input type="submit" class="btn btn-primary" value="${updateLabel}"/>
 
-    </s:form>
+    </form>
 
-</s:else>
+</c:otherwise>
+</c:choose>
 
 
 <script>
 
     <%-- setup check all/none checkbox controls --%>
-    <s:if test="pager.items != null">
+    <c:if test="${not empty pager.items}">
     $(document).ready(function () {
         $('#checkallapproved').click(function () {
             toggleFunction(true, "bean.approvedComments");
@@ -396,12 +415,12 @@
             toggleFunction(false, "bean.deleteComments");
         });
     });
-    </s:if>
+    </c:if>
 
     <%-- TODO: hook this up; it is currently not working in Roller trunk either --%>
 
     function bulkDelete() {
-        if (window.confirm('<s:text name="commentManagement.confirmBulkDelete"><s:param value="bulkDeleteCount" /></s:text>')) {
+        if (window.confirm('<spring:message code="commentManagement.confirmBulkDelete" arguments="${bulkDeleteCount}" javaScriptEscape="true"/>')) {
             document.commentQueryForm.method.value = "bulkDelete";
             document.commentQueryForm.submit();
         }
@@ -426,10 +445,9 @@
 
     function saveComment(id) {
         var content = $("#comment-" + id).children()[0].value;
-        var salt = $("#comments_salt").val();
         $.ajax({
             type: "POST",
-            url: '<%= request.getContextPath()%>/roller-ui/authoring/commentdata?id=' + id + '&salt=' + salt,
+            url: '<%= request.getContextPath()%>/roller-ui/authoring/commentdata?id=' + id,
             data: content,
             dataType: "text",
             processData: "false",
@@ -442,7 +460,7 @@
                     $("#cancellink-" + id).hide();
                     $("#comment-" + id).html(cdata.content);
                 } else {
-                    alert('<s:text name="commentManagement.saveError" />');
+                    alert('<spring:message code="commentManagement.saveError" javaScriptEscape="true"/>');
                 }
             }
         });

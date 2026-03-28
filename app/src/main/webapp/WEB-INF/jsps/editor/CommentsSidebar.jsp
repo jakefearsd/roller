@@ -15,101 +15,103 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<s:if test="actionName == 'comments'">
-    <s:set var="mainAction">comments</s:set>
-</s:if>
-<s:else>
-    <s:set var="mainAction">globalCommentManagement</s:set>
-</s:else>
+<c:choose>
+    <c:when test="${actionName == 'comments'}">
+        <c:set var="mainAction" value="comments"/>
+        <c:url var="queryUrl" value="/roller-ui/authoring/comments!query.rol"/>
+    </c:when>
+    <c:otherwise>
+        <c:set var="mainAction" value="globalCommentManagement"/>
+        <c:url var="queryUrl" value="/roller-ui/admin/globalCommentManagement!query.rol"/>
+    </c:otherwise>
+</c:choose>
 
-<h3><s:text name="commentManagement.sidebarTitle"/></h3>
+<h3><spring:message code="commentManagement.sidebarTitle"/></h3>
 <hr size="1" noshade="noshade"/>
 
-<p><s:text name="commentManagement.sidebarDescription"/></p>
+<p><spring:message code="commentManagement.sidebarDescription"/></p>
 
-<s:form action="%{#mainAction}!query" id="commentsQuery" theme="bootstrap" cssClass="form-vertical">
-
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
+<form method="get" action="${queryUrl}" id="commentsQuery" class="form-vertical">
+    <c:if test="${actionName == 'comments'}">
+        <input type="hidden" name="weblog" value="${fn:escapeXml(param.weblog)}"/>
+    </c:if>
 
     <%-- ========================================================= --%>
     <%-- filter by search string --%>
 
-    <s:textfield name="bean.searchString" label="%{getText('commentManagement.searchString')}" size="15"/>
-
-    <script>
-        $(function () {
-            $("#entries_bean_startDateString").datepicker();
-        });
-    </script>
+    <div class="form-group">
+        <label for="bean_searchString"><spring:message code="commentManagement.searchString"/></label>
+        <input type="text" name="bean.searchString" id="bean_searchString"
+               value="${fn:escapeXml(bean.searchString)}" size="15" class="form-control"/>
+    </div>
 
     <%-- ========================================================= --%>
     <%-- filter by date --%>
 
     <script>
-        // jQuery UI Date Picker
         $(function () {
-            $("#commentsQuery_bean_startDateString").datepicker();
+            $("#bean_startDateString").datepicker();
         });
     </script>
-    
-    <div class="control-group">
-        <label for="bean.startDateString" class="control-label">
-            <s:text name="commentManagement.startDate"/>
+
+    <div class="form-group">
+        <label for="bean_startDateString">
+            <spring:message code="commentManagement.startDate"/>
         </label>
-        <div class="controls">
-            <div class="input-group">
-
-                <s:textfield name="bean.startDateString" readonly="true"
-                             theme="simple" cssClass="date-picker form-control"/>
-                <label for="bean.startDateString" class="input-group-addon btn">
-                    <span class="glyphicon glyphicon-calendar"></span>
-                </label>
-
-            </div>
+        <div class="input-group">
+            <input type="text" name="bean.startDateString" id="bean_startDateString"
+                   value="${fn:escapeXml(bean.startDateString)}" readonly="readonly"
+                   class="date-picker form-control"/>
+            <label for="bean_startDateString" class="input-group-addon btn">
+                <span class="glyphicon glyphicon-calendar"></span>
+            </label>
         </div>
     </div>
 
     <script>
-        // jQuery UI Date Picker
         $(function () {
-            $("#commentsQuery_bean_endDateString").datepicker();
+            $("#bean_endDateString").datepicker();
         });
     </script>
 
-    <div class="control-group">
-        <label for="bean.endDateString" class="control-label">
-            <s:text name="commentManagement.endDate"/>
+    <div class="form-group">
+        <label for="bean_endDateString">
+            <spring:message code="commentManagement.endDate"/>
         </label>
-        <div class="controls">
-            <div class="input-group">
-
-                <s:textfield name="bean.endDateString" readonly="true"
-                             theme="simple" cssClass="date-picker form-control"/>
-                <label for="bean.endDateString" class="input-group-addon btn">
-                    <span class="glyphicon glyphicon-calendar"></span>
-                </label>
-
-            </div>
+        <div class="input-group">
+            <input type="text" name="bean.endDateString" id="bean_endDateString"
+                   value="${fn:escapeXml(bean.endDateString)}" readonly="readonly"
+                   class="date-picker form-control"/>
+            <label for="bean_endDateString" class="input-group-addon btn">
+                <span class="glyphicon glyphicon-calendar"></span>
+            </label>
         </div>
     </div>
 
     <br/>
 
     <%-- ========================================================= --%>
-    <%-- filter by status--%>
+    <%-- filter by status --%>
 
-    <s:radio name="bean.approvedString" 
-             label="%{getText('commentManagement.pendingStatus')}" 
-             list="commentStatusOptions" listKey="key" listValue="value"/>
+    <div class="form-group">
+        <label><spring:message code="commentManagement.pendingStatus"/></label>
+        <c:forEach var="opt" items="${commentStatusOptions}">
+            <div class="radio">
+                <label>
+                    <input type="radio" name="bean.approvedString" value="${fn:escapeXml(opt.key)}"
+                        <c:if test="${bean.approvedString == opt.key}">checked="checked"</c:if>
+                    /> ${fn:escapeXml(opt.value)}
+                </label>
+            </div>
+        </c:forEach>
+    </div>
 
-    
     <%-- ========================================================= --%>
     <%-- filter button --%>
 
-    <s:submit cssClass="btn btn-default" value="%{getText('commentManagement.query')}"/>
+    <spring:message code="commentManagement.query" var="queryLabel"/>
+    <input type="submit" class="btn btn-default" value="${queryLabel}"/>
 
-</s:form>
-
+</form>
