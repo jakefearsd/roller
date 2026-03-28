@@ -18,7 +18,7 @@
 
 <%-- Body of the login page, invoked from login.jsp --%>
 <%@ page import="org.apache.roller.weblogger.config.WebloggerConfig" %>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <%!
     String securityCheckUrl = null;
@@ -33,76 +33,77 @@
     }
 %>
 
-    <s:if test="authMethod == 'OPENID' || authMethod == 'DB_OPENID'">
-
+    <c:if test="${authMethod == 'OPENID' || authMethod == 'DB_OPENID'}">
 
         <form method="post" id="loginOpenIDForm" class="form-horizontal"
               action="/roller/roller_j_openid_security_check" onsubmit="saveOpenidIdentifier(this)">
 
             <div class="form-group">
-                <legend><s:text name="loginPage.openIdPrompt"/></legend>
+                <legend><spring:message code="loginPage.openIdPrompt"/></legend>
             </div>
 
             <div class="form-group">
-                <label for="openid_identifier"><s:text name="loginPage.openID"/></label>
+                <label for="openid_identifier"><spring:message code="loginPage.openID"/></label>
                 <input class="form-control" type="text" name="openid_identifier" id="openid_identifier"/>
             </div>
 
+            <spring:message code="loginPage.loginOpenID" var="loginOpenIDLabel"/>
             <button type="submit" name="submit" id="submit" class="btn btn-primary"
-                value="<s:text name='loginPage.loginOpenID'/>"></button>
+                value="${loginOpenIDLabel}"></button>
 
         </form>
 
-    </s:if>
+    </c:if>
 
-    <s:if test="authMethod != 'OPENID'">
+    <c:if test="${authMethod != 'OPENID'}">
 
         <form method="post" id="loginForm" class="form-horizontal"
               action="<c:url value="<%= securityCheckUrl %>"/>" onsubmit="saveUsername(this)">
 
             <div class="form-group">
-                <s:if test="authMethod == 'DB_OPENID'">
-                    <legend><s:text name="loginPage.openIdHybridPrompt"/></legend>
-                </s:if>
-
-                <s:else>
-                    <legend><s:text name="loginPage.prompt"/></legend>
-                </s:else>
+                <c:choose>
+                    <c:when test="${authMethod == 'DB_OPENID'}">
+                        <legend><spring:message code="loginPage.openIdHybridPrompt"/></legend>
+                    </c:when>
+                    <c:otherwise>
+                        <legend><spring:message code="loginPage.prompt"/></legend>
+                    </c:otherwise>
+                </c:choose>
             </div>
 
             <div class="form-group">
-                <label for="j_username" > <s:text name="loginPage.userName"/> </label>
+                <label for="j_username" > <spring:message code="loginPage.userName"/> </label>
                 <input type="text" class="form-control" name="j_username" id="j_username" placeholder="Username"/>
             </div>
 
             <div class="form-group">
-                <label for="j_password" > <s:text name="loginPage.password"/> </label>
+                <label for="j_password" > <spring:message code="loginPage.password"/> </label>
                 <input type="password" class="form-control" name="j_password" id="j_password" placeholder="Password"/>
             </div>
 
             <c:if test="${rememberMeEnabled}">
                 <div class="form-group">
                     <input type="checkbox" name="_spring_security_remember_me" id="_spring_security_remember_me"/>
-                    <label for="_spring_security_remember_me" > <s:text name="loginPage.rememberMe"/> </label>
+                    <label for="_spring_security_remember_me" > <spring:message code="loginPage.rememberMe"/> </label>
                 </div>
             </c:if>
 
             <div class="form-group">
                 <button class="btn btn-primary" type="submit" name="login" id="login">
-                    <s:text name='loginPage.login'/>
+                    <spring:message code='loginPage.login'/>
                 </button>
 
                 <button class="btn" type="reset" name="reset" id="reset"
                         onclick="document.getElementById('j_username').focus()">
-                    <s:text name='loginPage.reset'/>
+                    <spring:message code='loginPage.reset'/>
                 </button>
             </div>
 
         </form>
-    </s:if>
+    </c:if>
 
 <script>
-    <s:if test="authMethod == 'OPENID' || authMethod == 'DB_OPENID'">
+    <c:if test="${authMethod == 'OPENID' || authMethod == 'DB_OPENID'}">
     function focusToOpenidForm() {
         return (document.getElementById && document.getElementById("j_username") === null) ||
                 getCookie("favorite_authentication_method") !== "username";
@@ -123,9 +124,9 @@
         setCookie("openid_identifier", theForm.openid_identifier.value, expires);
         setCookie("favorite_authentication_method", "openid");
     }
-    </s:if>
+    </c:if>
 
-    <s:if test="authMethod != 'OPENID'">
+    <c:if test="${authMethod != 'OPENID'}">
     function focusToUsernamePasswordForm() {
         return (document.getElementById && document.getElementById("openid_identifier") === null) ||
                 getCookie("favorite_authentication_method") === "username";
@@ -150,5 +151,5 @@
         setCookie("username", theForm.j_username.value, expires);
         setCookie("favorite_authentication_method", "username");
     }
-    </s:if>
+    </c:if>
 </script>

@@ -15,54 +15,49 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <div class="sidebarFade">
     <div class="menu-tr">
         <div class="menu-tl">
-            
+
             <div class="sidebarInner">
-                
-                <%-- 
-                <h4><s:text name="yourWebsites.actions" /></h4> 
-                <hr size="1" noshade="noshade" />
-                --%>
 
                 <%-- Edit profile --%>
 
                 <h4><span class="glyphicon glyphicon-user" aria-hidden="true"></span>
-                <a href="<s:url action="profile"/>"><s:text name="yourWebsites.editProfile" /></a></h4>
-                <p><s:text name="yourWebsites.editProfile.desc" /></p>
+                <a href="<c:url value='/roller-ui/profile.rol'/>"><spring:message code="yourWebsites.editProfile" /></a></h4>
+                <p><spring:message code="yourWebsites.editProfile.desc" /></p>
 
-                <%-- Edit profile --%>
-                
-                <s:if test="getBooleanProp('webservices.enableAtomPub') && getProp('webservices.atomPubAuth') == 'oauth'">
+                <%-- OAuth keys --%>
+
+                <c:if test="${getBooleanProp['webservices.enableAtomPub'] && getProp['webservices.atomPubAuth'] == 'oauth'}">
                     <h4><span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
-                    <a href="<s:url action="oauthKeys" />"><s:text name="yourWebsites.oauthKeys" /></a></h4>
-                    <p><s:text name="yourWebsites.oauthKeys.desc" /></p>
-                </s:if>
+                    <a href="<c:url value='/roller-ui/oauthKeys.rol'/>"><spring:message code="yourWebsites.oauthKeys" /></a></h4>
+                    <p><spring:message code="yourWebsites.oauthKeys.desc" /></p>
+                </c:if>
 
                 <%-- Create weblog --%>
-                
-                <s:if test="getBooleanProp('site.allowUserWeblogCreation') && (getBooleanProp('groupblogging.enabled') || (existingPermissions.isEmpty && pendingPermissions.isEmpty))">
-                    <h4><span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                    <a href="<s:url action="createWeblog" />"><s:text name="yourWebsites.createWeblog" /></a></h4>
-                    <p><s:text name="yourWebsites.createWeblog.desc" /></p>
-                </s:if>
 
-                <s:if test="userIsAdmin">
+                <c:if test="${getBooleanProp['site.allowUserWeblogCreation'] && (getBooleanProp['groupblogging.enabled'] || (empty existingPermissions && empty pendingPermissions))}">
+                    <h4><span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                    <a href="<c:url value='/roller-ui/createWeblog.rol'/>"><spring:message code="yourWebsites.createWeblog" /></a></h4>
+                    <p><spring:message code="yourWebsites.createWeblog.desc" /></p>
+                </c:if>
+
+                <c:if test="${userIsAdmin}">
 
                     <%-- Roller settings --%>
 
                     <h4><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
-                    <a href="<s:url action="globalConfig" namespace="/roller-ui/admin" />"><s:text name="yourWebsites.globalAdmin" /></a></h4>          
-                    <p><s:text name="yourWebsites.globalAdmin.desc" /></p>
+                    <a href="<c:url value='/roller-ui/admin/globalConfig.rol'/>"><spring:message code="yourWebsites.globalAdmin" /></a></h4>
+                    <p><spring:message code="yourWebsites.globalAdmin.desc" /></p>
 
-                </s:if>
-                
+                </c:if>
+
                 <br />
             </div>
-            
+
         </div>
     </div>
-</div>	
+</div>

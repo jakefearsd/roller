@@ -15,9 +15,9 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p style="margin-bottom:2em"><s:text name="index.prompt"/> </p>
+<p style="margin-bottom:2em"><spring:message code="index.prompt"/> </p>
 
 <%--
       Index page on Roller startup; tell the user how to complete their Roller install,
@@ -30,23 +30,21 @@
 <div class="panel panel-default">
     <div class="panel-heading">
         <h3 class="panel-title">
-            <s:text name="index.createUser"/>
-            <s:if test="userCount > 0"> -
-                <s:text name="index.createUserDone">
-                    <s:param value="userCount"/>
-                </s:text>
-            </s:if>
+            <spring:message code="index.createUser"/>
+            <c:if test="${userCount > 0}"> -
+                <spring:message code="index.createUserDone" arguments="${userCount}"/>
+            </c:if>
         </h3>
     </div>
 
     <div class="panel-body">
 
-        <p><s:text name="index.createUserHelp"/></p>
-        <p><s:if test="userCount == 0">
-            <s:text name="index.createUserBy"/>
-            <a id="a_createUser" href='<s:url action="register"/>'>
-                <s:text name="index.createUserPage"/></a>.
-        </s:if></p>
+        <p><spring:message code="index.createUserHelp"/></p>
+        <p><c:if test="${userCount == 0}">
+            <spring:message code="index.createUserBy"/>
+            <a id="a_createUser" href='<c:url value="/roller-ui/register.rol"/>'>
+                <spring:message code="index.createUserPage"/></a>.
+        </c:if></p>
 
     </div>
 </div>
@@ -56,23 +54,21 @@
 <div class="panel panel-default">
     <div class="panel-heading">
         <h3 class="panel-title">
-            <s:text name="index.createWeblog"/>
-            <s:if test="blogCount > 0"> -
-                <s:text name="index.createWeblogDone">
-                    <s:param value="blogCount"/>
-                </s:text>
-            </s:if>
+            <spring:message code="index.createWeblog"/>
+            <c:if test="${blogCount > 0}"> -
+                <spring:message code="index.createWeblogDone" arguments="${blogCount}"/>
+            </c:if>
         </h3>
     </div>
 
     <div class="panel-body">
 
-        <s:text name="index.createWeblogHelp"/><br/><br/>
-        <s:if test="userCount > 0 && blogCount == 0">
-            <s:text name="index.createWeblogBy"/>
-            <a id="a_createBlog" href='<s:url action="createWeblog"/>'>
-                <s:text name="index.createWeblogPage"/></a>.
-        </s:if>
+        <spring:message code="index.createWeblogHelp"/><br/><br/>
+        <c:if test="${userCount > 0 && blogCount == 0}">
+            <spring:message code="index.createWeblogBy"/>
+            <a id="a_createBlog" href='<c:url value="/roller-ui/createWeblog.rol"/>'>
+                <spring:message code="index.createWeblogPage"/></a>.
+        </c:if>
 
     </div>
 </div>
@@ -83,34 +79,43 @@
 <div class="panel panel-default">
     <div class="panel-heading">
         <h3 class="panel-title">
-            <s:text name="index.setFrontpage"/>
+            <spring:message code="index.setFrontpage"/>
         </h3>
     </div>
 
     <div class="panel-body">
 
-        <p><s:text name="index.setFrontpageHelp"/></p>
+        <p><spring:message code="index.setFrontpageHelp"/></p>
 
-        <s:if test="blogCount > 0">
+        <c:if test="${blogCount > 0}">
 
-            <s:form action="setup!save" theme="bootstrap" cssClass="form-horizontal">
-                <s:hidden name="salt"/>
+            <form action="${pageContext.request.contextPath}/roller-ui/setup!save.rol" method="post" class="form-horizontal">
+                <sec:csrfInput/>
 
-                <s:select list="weblogs"
-                          listKey="handle"
-                          listValue="name"
-                          label="%{getText('frontpageConfig.frontpageBlogName')}"
-                          name="frontpageBlog"
-                          value="frontpageBlog"/>
+                <div class="form-group">
+                    <spring:message code="frontpageConfig.frontpageBlogName" var="frontpageBlogLabel"/>
+                    <label class="col-sm-3 control-label">${frontpageBlogLabel}</label>
+                    <div class="col-sm-9 controls">
+                        <select name="frontpageBlog" class="form-control">
+                            <c:forEach items="${weblogs}" var="w">
+                                <option value="${fn:escapeXml(w.handle)}">${fn:escapeXml(w.name)}</option>
+                            </c:forEach>
+                        </select>
+                    </div>
+                </div>
 
-                <s:checkbox name="aggregated" value="aggregated"
-                            label="%{getText('frontpageConfig.frontpageAggregated')}"/>
+                <div class="form-group">
+                    <spring:message code="frontpageConfig.frontpageAggregated" var="aggregatedLabel"/>
+                    <label class="col-sm-3 control-label">${aggregatedLabel}</label>
+                    <div class="col-sm-9 controls">
+                        <input type="checkbox" name="aggregated" value="true"/>
+                    </div>
+                </div>
 
-                <s:submit value="%{getText('generic.save')}" cssClass="btn btn-default"/>
+                <button type="submit" class="btn btn-default"><spring:message code="generic.save"/></button>
 
-            </s:form>
+            </form>
 
-        </s:if>
+        </c:if>
     </div>
 </div>
-

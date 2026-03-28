@@ -15,125 +15,147 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 -->
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p><s:text name="userRegister.prompt" /></p>
+<p><spring:message code="userRegister.prompt" /></p>
 
-<s:form action="register!save"  theme="bootstrap" cssClass="form-horizontal">
-	<s:hidden name="salt" />
-    <s:hidden name="bean.id" />
+<form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/register!save.rol" method="post" cssClass="form-horizontal">
+    <sec:csrfInput/>
+    <form:hidden path="id" />
 
-    <h2><s:text name="userRegister.heading.identification" /></h2>
-    <p><s:text name="userRegister.tip.identification" /></p>
+    <h2><spring:message code="userRegister.heading.identification" /></h2>
+    <p><spring:message code="userRegister.tip.identification" /></p>
 
-    <s:if test="authMethod == 'LDAP'">
+    <c:if test="${authMethod == 'LDAP'}">
 
         <div class="form-group">
 
             <label class="col-sm-3 control-label">
-                <s:text name="userSettings.username" />
+                <spring:message code="userSettings.username" />
             </label>
 
             <div class="col-sm-9 controls">
                 <p class="form-control-static">
-                    <s:property value="bean.userName"/>
+                    ${fn:escapeXml(bean.userName)}
                 </p>
             </div>
 
         </div>
 
-    </s:if>
-    <s:else>
-        <s:textfield label="%{getText('userSettings.username')}"
-                     tooltip="%{getText('userRegister.tip.userName')}"
-                     onkeyup="onChange()"
-                     name="bean.userName" size="30" maxlength="30" />
-    </s:else>
+    </c:if>
+    <c:if test="${authMethod != 'LDAP'}">
+        <div class="form-group">
+            <spring:message code="userSettings.username" var="usernameLabel"/>
+            <label class="col-sm-3 control-label">${usernameLabel}</label>
+            <div class="col-sm-9 controls">
+                <form:input path="userName" cssClass="form-control" size="30" maxlength="30" onkeyup="onChange()"/>
+            </div>
+        </div>
+    </c:if>
 
-    <s:textfield label="%{getText('userSettings.screenname')}"
-                 tooltip="%{getText('userRegister.tip.screenName')}"
-                 onkeyup="onChange()"
-                 name="bean.screenName" size="30" maxlength="30" />
+    <div class="form-group">
+        <spring:message code="userSettings.screenname" var="screennameLabel"/>
+        <label class="col-sm-3 control-label">${screennameLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="screenName" cssClass="form-control" size="30" maxlength="30" onkeyup="onChange()"/>
+        </div>
+    </div>
 
-    <s:textfield label="%{getText('userSettings.fullname')}"
-                 tooltip="%{getText('userRegister.tip.fullName')}"
-                 onkeyup="onChange()"
-                 name="bean.fullName" size="30" maxlength="30" />
+    <div class="form-group">
+        <spring:message code="userSettings.fullname" var="fullnameLabel"/>
+        <label class="col-sm-3 control-label">${fullnameLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="fullName" cssClass="form-control" size="30" maxlength="30" onkeyup="onChange()"/>
+        </div>
+    </div>
 
-    <s:textfield label="%{getText('userSettings.email')}"
-                 tooltip="%{getText('userRegister.tip.email')}"
-                 onkeyup="onChange()"
-                 name="bean.emailAddress" size="40" maxlength="255" />
+    <div class="form-group">
+        <spring:message code="userSettings.email" var="emailLabel"/>
+        <label class="col-sm-3 control-label">${emailLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="emailAddress" cssClass="form-control" size="40" maxlength="255" onkeyup="onChange()"/>
+        </div>
+    </div>
 
-    <s:if test="authMethod != 'LDAP'">
+    <c:if test="${authMethod != 'LDAP'}">
 
-        <h2><s:text name="userRegister.heading.authentication" /></h2>
+        <h2><spring:message code="userRegister.heading.authentication" /></h2>
 
-        <s:if test="authMethod == 'ROLLERDB'">
-            <p><s:text name="userRegister.tip.openid.disabled" /></p>
-        </s:if>
+        <c:if test="${authMethod == 'ROLLERDB'}">
+            <p><spring:message code="userRegister.tip.openid.disabled" /></p>
+        </c:if>
 
-        <s:if test="authMethod == 'DB_OPENID'">
-            <p><s:text name="userRegister.tip.openid.hybrid" /></p>
-        </s:if>
+        <c:if test="${authMethod == 'DB_OPENID'}">
+            <p><spring:message code="userRegister.tip.openid.hybrid" /></p>
+        </c:if>
 
-        <s:if test="authMethod == 'OPENID'">
-            <p><s:text name="userRegister.tip.openid.only" /></p>
-        </s:if>
+        <c:if test="${authMethod == 'OPENID'}">
+            <p><spring:message code="userRegister.tip.openid.only" /></p>
+        </c:if>
 
-        <s:if test="authMethod == 'ROLLERDB' || authMethod == 'DB_OPENID'">
+        <c:if test="${authMethod == 'ROLLERDB' || authMethod == 'DB_OPENID'}">
+            <div class="form-group">
+                <spring:message code="userSettings.password" var="passwordLabel"/>
+                <label class="col-sm-3 control-label">${passwordLabel}</label>
+                <div class="col-sm-9 controls">
+                    <form:password path="passwordText" cssClass="form-control" size="20" maxlength="20" onkeyup="onChange()"/>
+                </div>
+            </div>
 
-            <s:password label="%{getText('userSettings.password')}"
-                         tooltip="%{getText('userRegister.tip.password')}"
-                         onkeyup="onChange()"
-                         name="bean.passwordText" size="20" maxlength="20" />
+            <div class="form-group">
+                <spring:message code="userSettings.passwordConfirm" var="passwordConfirmLabel"/>
+                <label class="col-sm-3 control-label">${passwordConfirmLabel}</label>
+                <div class="col-sm-9 controls">
+                    <form:password path="passwordConfirm" cssClass="form-control" size="20" maxlength="20" onkeyup="onChange()"/>
+                </div>
+            </div>
+        </c:if>
+        <c:if test="${authMethod != 'ROLLERDB' && authMethod != 'DB_OPENID'}">
+            <form:hidden path="password" />
+            <form:hidden path="passwordText" />
+            <form:hidden path="passwordConfirm" />
+        </c:if>
 
-            <s:password label="%{getText('userSettings.passwordConfirm')}"
-                         tooltip="%{getText('userRegister.tip.passwordConfirm')}"
-                         onkeyup="onChange()"
-                         name="bean.passwordConfirm" size="20" maxlength="20" />
+        <c:if test="${authMethod == 'OPENID' || authMethod == 'DB_OPENID'}">
+            <div class="form-group">
+                <spring:message code="userSettings.openIdUrl" var="openIdUrlLabel"/>
+                <label class="col-sm-3 control-label">${openIdUrlLabel}</label>
+                <div class="col-sm-9 controls">
+                    <form:input path="openIdUrl" cssClass="form-control" size="40" maxlength="255" onkeyup="onChange()"/>
+                </div>
+            </div>
+        </c:if>
 
-        </s:if>
-        <s:else>
-            <s:hidden name="bean.password" />
-            <s:hidden name="bean.passwordText" />
-            <s:hidden name="bean.passwordConfirm" />
-        </s:else>
+    </c:if>
 
-        <s:if test="authMethod == 'OPENID' || authMethod == 'DB_OPENID'">
+    <h2><spring:message code="userRegister.heading.locale" /></h2>
+    <p><spring:message code="userRegister.tip.localeAndTimeZone" /></p>
 
-            <s:textfield label="%{getText('userSettings.openIdUrl')}"
-                         tooltip="%{getText('userRegister.tip.openIdUrl')}"
-                         onkeyup="onChange()"
-                         name="bean.openIdUrl" size="40" maxlength="255" />
-        </s:if>
+    <div class="form-group">
+        <spring:message code="userSettings.locale" var="localeLabel"/>
+        <label class="col-sm-3 control-label">${localeLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:select path="locale" items="${localesList}" itemValue="toString()" itemLabel="displayName" cssClass="form-control"/>
+        </div>
+    </div>
 
-    </s:if>
+    <div class="form-group">
+        <spring:message code="userSettings.timeZone" var="tzLabel"/>
+        <label class="col-sm-3 control-label">${tzLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:select path="timeZone" items="${timeZonesList}" cssClass="form-control"/>
+        </div>
+    </div>
 
-    <h2><s:text name="userRegister.heading.locale" /></h2>
-    <p><s:text name="userRegister.tip.localeAndTimeZone" /></p>
+    <h2><spring:message code="userRegister.heading.ready" /></h2>
 
-    <s:select label="%{getText('userSettings.locale')}"
-            tooltip="%{getText('userRegister.tip.locale')}"
-            onkeyup="onChange()"
-            list="localesList" listValue="displayName"
-            name="bean.locale" />
+    <p id="readytip"><spring:message code="userRegister.tip.ready" /></p>
 
-    <s:select label="%{getText('userSettings.timeZone')}"
-            tooltip="%{getText('userRegister.tip.timeZone')}"
-            onkeyup="onChange()"
-            list="timeZonesList"
-            name="bean.timeZone" />
-
-    <h2><s:text name="userRegister.heading.ready" /></h2>
-
-    <p id="readytip"><s:text name="userRegister.tip.ready" /></p>
-
-    <s:submit id="submit" key="userRegister.button.save" cssClass="btn btn-default" />
+    <button type="submit" id="submit" class="btn btn-default"><spring:message code="userRegister.button.save"/></button>
     <input type="button" class="btn btn-cancel"
-           value="<s:text name="generic.cancel"/>" onclick="window.location='<s:url value="/"/>'" />
+           value="<spring:message code='generic.cancel'/>" onclick="window.location='<c:url value="/"/>'" />
 
-</s:form>
+</form:form>
 
 <%-- ============================================================================== --%>
 
@@ -141,8 +163,8 @@
 
     function onChange() {
         var disabled = true;
-        var authMethod    = "<s:property value='authMethod' />";
-        var emailAddress    = document.register['bean.emailAddress'].value;
+        var authMethod    = "${authMethod}";
+        var emailAddress    = document.querySelector('[name="emailAddress"]').value;
         var userName = passwordText = passwordConfirm = openIdUrl = "";
 
         if (!validateEmail(emailAddress)) {
@@ -151,17 +173,17 @@
         }
 
         if (authMethod === 'LDAP') {
-            userName = '<s:property value="bean.userName" />';
+            userName = '${fn:escapeXml(bean.userName)}';
         } else {
-            userName = document.register['bean.userName'].value;
+            userName = document.querySelector('[name="userName"]').value;
         }
 
         if (authMethod === "ROLLERDB" || authMethod === "DB_OPENID") {
-            passwordText    = document.register['bean.passwordText'].value;
-            passwordConfirm = document.register['bean.passwordConfirm'].value;
+            passwordText    = document.querySelector('[name="passwordText"]').value;
+            passwordConfirm = document.querySelector('[name="passwordConfirm"]').value;
         }
         if (authMethod === "OPENID" || authMethod === "DB_OPENID") {
-            openIdUrl = document.register['bean.openIdUrl'].value;
+            openIdUrl = document.querySelector('[name="openIdUrl"]').value;
         }
 
         if (authMethod === "LDAP") {
@@ -176,12 +198,12 @@
 
         if (authMethod !== 'LDAP') {
             if ((passwordText || passwordConfirm) && !(passwordText === passwordConfirm)) {
-                document.getElementById('readytip').innerHTML = '<s:text name="userRegister.error.mismatchedPasswords" />';
+                document.getElementById('readytip').innerHTML = '<spring:message code="userRegister.error.mismatchedPasswords" />';
                 disabled = true;
             } else if (disabled) {
-                document.getElementById('readytip').innerHTML = '<s:text name="userRegister.tip.ready" />'
+                document.getElementById('readytip').innerHTML = '<spring:message code="userRegister.tip.ready" />'
             } else {
-                document.getElementById('readytip').innerHTML = '<s:text name="userRegister.success.ready" />'
+                document.getElementById('readytip').innerHTML = '<spring:message code="userRegister.success.ready" />'
             }
         }
         document.getElementById('submit').disabled = disabled;

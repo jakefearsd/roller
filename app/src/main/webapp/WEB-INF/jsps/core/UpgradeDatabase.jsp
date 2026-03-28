@@ -15,53 +15,54 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
-<s:if test="error">
+<c:choose>
+<c:when test="${error}">
 
-    <h2><s:text name="installer.errorUpgradingTables"/></h2>
-    <p><s:text name="installer.errorUpgradingTablesExplanation"/></p>
+    <h2><spring:message code="installer.errorUpgradingTables"/></h2>
+    <p><spring:message code="installer.errorUpgradingTablesExplanation"/></p>
     <pre>
-        <s:iterator value="messages"><s:property/><br/></s:iterator>
+        <c:forEach items="${messages}" var="msg">${fn:escapeXml(msg)}<br/></c:forEach>
     </pre>
 
-</s:if>
-<s:elseif test="upgradeRequired">
+</c:when>
+<c:when test="${upgradeRequired}">
 
-    <h2><s:text name="installer.databaseUpgradeNeeded"/></h2>
+    <h2><spring:message code="installer.databaseUpgradeNeeded"/></h2>
 
     <p>
-        <s:text name="installer.databaseUpgradeNeededExplanation">
-            <s:param value="databaseProductName"/>
-        </s:text>
+        <spring:message code="installer.databaseUpgradeNeededExplanation" arguments="${databaseProductName}"/>
     </p>
-    <p><s:text name="installer.upgradeTables"/></p>
+    <p><spring:message code="installer.upgradeTables"/></p>
 
-    <s:form action="install!upgrade" class="form-horizontal">
-        <s:hidden name="salt"/>
-        <s:submit value="%{getText('installer.yesUpgradeTables')}" cssClass="btn btn-primary" />
-    </s:form>
+    <form action="${pageContext.request.contextPath}/roller-ui/install/install!upgrade.rol" method="post" class="form-horizontal">
+        <sec:csrfInput/>
+        <spring:message code="installer.yesUpgradeTables" var="upgradeTablesLabel"/>
+        <button type="submit" class="btn btn-primary">${upgradeTablesLabel}</button>
+    </form>
 
-</s:elseif>
-<s:else>
+</c:when>
+<c:otherwise>
 
-    <h2><s:text name="installer.tablesUpgraded"/></h2>
+    <h2><spring:message code="installer.tablesUpgraded"/></h2>
 
-    <p><s:text name="installer.tablesUpgradedExplanation"/></p>
+    <p><spring:message code="installer.tablesUpgradedExplanation"/></p>
+    <c:url value="/roller-ui/install/install!bootstrap.rol" var="bootstrapUrl"/>
     <p>
-        <s:text name="installer.tryBootstrapping">
-            <s:param><s:url action="install!bootstrap"/></s:param>
-        </s:text>
+        <spring:message code="installer.tryBootstrapping" arguments="${bootstrapUrl}" />
     </p>
 
     <pre>
-        <s:iterator value="messages"><s:property/><br/></s:iterator>
+        <c:forEach items="${messages}" var="msg">${fn:escapeXml(msg)}<br/></c:forEach>
     </pre>
 
-    <s:form action="install!bootstrap" class="form-horizontal">
-        <s:hidden name="salt"/>
-        <s:submit value="%{getText('installer.finishUpgrade')}" cssClass="btn btn-primary" />
-    </s:form>
+    <form action="${pageContext.request.contextPath}/roller-ui/install/install!bootstrap.rol" method="post" class="form-horizontal">
+        <sec:csrfInput/>
+        <spring:message code="installer.finishUpgrade" var="finishUpgradeLabel"/>
+        <button type="submit" class="btn btn-primary">${finishUpgradeLabel}</button>
+    </form>
 
-</s:else>
+</c:otherwise>
+</c:choose>

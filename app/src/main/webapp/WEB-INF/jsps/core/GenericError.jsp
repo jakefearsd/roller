@@ -20,4 +20,4 @@ This JSP is intended for cannot proceed error messages, perhaps due to lack of s
 To use: addError() messages and they will appear here, also configure in struts.xml.
 See CreateWeblog.java and Register.java for examples of this JSP.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>

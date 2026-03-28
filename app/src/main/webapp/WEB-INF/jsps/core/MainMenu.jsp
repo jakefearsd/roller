@@ -15,161 +15,161 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <%-- PROMPT: Welcome... you have no blog --%>
-<s:if test="existingPermissions.isEmpty && pendingPermissions.isEmpty"> 
-    <p><s:text name="yourWebsites.prompt.noBlog" />
-    <a id="createWeblogLink" href="<s:url action="createWeblog"/>">
-        <s:text name="yourWebsites.createOne" />
+<c:if test="${empty existingPermissions && empty pendingPermissions}">
+    <p><spring:message code="yourWebsites.prompt.noBlog" />
+    <a id="createWeblogLink" href="<c:url value='/roller-ui/createWeblog.rol'/>">
+        <spring:message code="yourWebsites.createOne" />
     </a></p>
-</s:if>    
+</c:if>
 
 <%-- PROMPT: You have invitation(s) --%>
-<s:elseif test="! pendingPermissions.isEmpty">
-    <p><s:text name="yourWebsites.invitationsPrompt" /></p>
-    
-    <s:iterator var="invite" value="pendingPermissions">
-        <s:text name="yourWebsites.youAreInvited" >
-            <s:param value="#invite.weblog.handle" />
-        </s:text>
-        
-        <s:url action="menu!accept" var="acceptInvite">
-            <s:param name="inviteId" value="#invite.weblog.id" />
-        </s:url>
-        <a href='<s:property value="acceptInvite" />'>
-            <s:text name="yourWebsites.accept" />
-        </a> 
+<c:if test="${not empty pendingPermissions}">
+    <p><spring:message code="yourWebsites.invitationsPrompt" /></p>
+
+    <c:forEach items="${pendingPermissions}" var="invite">
+        <spring:message code="yourWebsites.youAreInvited" arguments="${invite.weblog.handle}" />
+
+        <c:url value="/roller-ui/menu!accept.rol" var="acceptInvite">
+            <c:param name="inviteId" value="${invite.weblog.id}" />
+        </c:url>
+        <a href='${acceptInvite}'>
+            <spring:message code="yourWebsites.accept" />
+        </a>
         &nbsp;|&nbsp;
-        <s:url action="menu!decline" var="declineInvite">
-            <s:param name="inviteId" value="#invite.weblog.id" />
-        </s:url>
-        <a href='<s:property value="declineInvite" />'>
-            <s:text name="yourWebsites.decline" />
+        <c:url value="/roller-ui/menu!decline.rol" var="declineInvite">
+            <c:param name="inviteId" value="${invite.weblog.id}" />
+        </c:url>
+        <a href='${declineInvite}'>
+            <spring:message code="yourWebsites.decline" />
         </a><br />
-    </s:iterator>
+    </c:forEach>
     <br />
-</s:elseif>
+</c:if>
 
 <%-- PROMPT: default ... select a weblog to edit --%>
-<s:else> 
-    <p class="subtitle"><s:text name="yourWebsites.prompt.hasBlog" /></p>        
-</s:else>
+<c:if test="${not empty existingPermissions && empty pendingPermissions}">
+    <p class="subtitle"><spring:message code="yourWebsites.prompt.hasBlog" /></p>
+</c:if>
 
 <%-- if we have weblogs, then loop through and list them --%>
-<s:if test="! existingPermissions.isEmpty">
-    
-    <s:iterator var="perms" value="existingPermissions">
+<c:if test="${not empty existingPermissions}">
+
+    <c:forEach items="${existingPermissions}" var="perms">
 
         <div class="well yourWeblogBox">
 
             <h3 class="mm_weblog_name">
                 <span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span>
-                &nbsp;<s:property value="#perms.weblog.name" />
+                &nbsp;${fn:escapeXml(perms.weblog.name)}
             </h3>
 
-            <p> <a href='<s:property value="#perms.weblog.absoluteURL" />'>
-            <s:property value="#perms.weblog.absoluteURL" /></a></p>
+            <p> <a href='${fn:escapeXml(perms.weblog.absoluteURL)}'>
+            ${fn:escapeXml(perms.weblog.absoluteURL)}</a></p>
 
-            <p><s:property value="#perms.weblog.about" escapeHtml="false" /></p>
+            <p><c:out value="${perms.weblog.about}" escapeXml="false"/></p>
 
-            <p>You have 
-            <s:if test='#perms.hasAction("admin")'>ADMIN </s:if>
-            <s:if test='#perms.hasAction("post")'>AUTHOR </s:if>
-            <s:if test='#perms.hasAction("edit_draft")'>LIMITED </s:if>
-            <s:text name='yourWebsites.permission'/></p>
-            
+            <p>You have
+            <c:if test='${perms.hasAction("admin")}'>ADMIN </c:if>
+            <c:if test='${perms.hasAction("post")}'>AUTHOR </c:if>
+            <c:if test='${perms.hasAction("edit_draft")}'>LIMITED </c:if>
+            <spring:message code='yourWebsites.permission'/></p>
+
             <div class="btn-group" role="group" aria-label="...">
 
                 <%-- New entry button --%>
-                <s:url action="entryAdd" namespace="/roller-ui/authoring" var="newEntry">
-                    <s:param name="weblog" value="#perms.weblog.handle"/>
-                </s:url>
-                <s:a href="%{newEntry}" cssClass="btn btn-default">
+                <c:url value="/roller-ui/authoring/entryAdd.rol" var="newEntry">
+                    <c:param name="weblog" value="${perms.weblog.handle}"/>
+                </c:url>
+                <a href="${newEntry}" class="btn btn-default">
                     <span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
-                    <s:text name="yourWebsites.newEntry"/>
-                </s:a>
+                    <spring:message code="yourWebsites.newEntry"/>
+                </a>
 
-                <s:if test='!(#perms.hasAction("edit_draft"))'>
-                    
+                <c:if test='${!perms.hasAction("edit_draft")}'>
+
                     <%-- Show Entries button with count for users above LIMITED permission --%>
-                    <s:url action="entries" namespace="/roller-ui/authoring" var="editEntries">
-                        <s:param name="weblog" value="#perms.weblog.handle"/>
-                    </s:url>
-                    <s:a href="%{editEntries}" cssClass="btn btn-default">
+                    <c:url value="/roller-ui/authoring/entries.rol" var="editEntries">
+                        <c:param name="weblog" value="${perms.weblog.handle}"/>
+                    </c:url>
+                    <a href="${editEntries}" class="btn btn-default">
                         <span class="glyphicon glyphicon-list" aria-hidden="true"></span>
-                        <s:text name="yourWebsites.editEntries"/>
-                        <span class="badge"><s:property value="#perms.weblog.entryCount"/></span>
-                    </s:a>
+                        <spring:message code="yourWebsites.editEntries"/>
+                        <span class="badge">${perms.weblog.entryCount}</span>
+                    </a>
 
-                </s:if>
+                </c:if>
 
-                <s:if test='!(#perms.hasAction("edit_draft"))'>
-                    
+                <c:if test='${!perms.hasAction("edit_draft")}'>
+
                     <%-- Show Comments button with count for users above LIMITED permission --%>
-                    <s:url action="comments" namespace="/roller-ui/authoring" var="manageComments">
-                        <s:param name="weblog" value="#perms.weblog.handle"/>
-                    </s:url>
-                    <s:a href="%{manageComments}" cssClass="btn btn-default">
+                    <c:url value="/roller-ui/authoring/comments.rol" var="manageComments">
+                        <c:param name="weblog" value="${perms.weblog.handle}"/>
+                    </c:url>
+                    <a href="${manageComments}" class="btn btn-default">
                         <span class="glyphicon glyphicon-comment" aria-hidden="true"></span>
-                        <s:text name="yourWebsites.manageComments"/>
-                        <span class="badge"><s:property value="#perms.weblog.commentCount"/></span>
-                    </s:a>
+                        <spring:message code="yourWebsites.manageComments"/>
+                        <span class="badge">${perms.weblog.commentCount}</span>
+                    </a>
 
-                </s:if>
+                </c:if>
 
 
                 <%-- Only admins get access to theme and config settings --%>
-                <s:if test='#perms.hasAction("admin")'>
+                <c:if test='${perms.hasAction("admin")}'>
 
                     <%-- And only show theme option if custom themes are enabled --%>
-                    <s:if test="getProp('themes.customtheme.allowed')">
-                        <s:if test="#perms.weblog.editorTheme == 'custom'">
-                            <s:url action="templates" namespace="/roller-ui/authoring" var="weblogTheme">
-                                <s:param name="weblog" value="#perms.weblog.handle" />
-                            </s:url>
-                        </s:if>
-                        <s:else>
-                            <s:url action="themeEdit" namespace="/roller-ui/authoring" var="weblogTheme">
-                                <s:param name="weblog" value="#perms.weblog.handle" />
-                            </s:url>
-                        </s:else>
-                        <a href='<s:property value="weblogTheme" />' class="btn btn-default">
+                    <c:if test="${getProp['themes.customtheme.allowed']}">
+                        <c:choose>
+                            <c:when test="${perms.weblog.editorTheme == 'custom'}">
+                                <c:url value="/roller-ui/authoring/templates.rol" var="weblogTheme">
+                                    <c:param name="weblog" value="${perms.weblog.handle}" />
+                                </c:url>
+                            </c:when>
+                            <c:otherwise>
+                                <c:url value="/roller-ui/authoring/themeEdit.rol" var="weblogTheme">
+                                    <c:param name="weblog" value="${perms.weblog.handle}" />
+                                </c:url>
+                            </c:otherwise>
+                        </c:choose>
+                        <a href='${weblogTheme}' class="btn btn-default">
                             <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
-                            <s:text name="yourWebsites.theme" />
+                            <spring:message code="yourWebsites.theme" />
                         </a>
-                    </s:if>
-                    
+                    </c:if>
+
                     <%-- settings button --%>
-                    <s:url action="weblogConfig" namespace="/roller-ui/authoring" var="manageWeblog">
-                        <s:param name="weblog" value="#perms.weblog.handle"/>
-                    </s:url>
-                    <a href='<s:property value="manageWeblog" />' class="btn btn-default">
+                    <c:url value="/roller-ui/authoring/weblogConfig.rol" var="manageWeblog">
+                        <c:param name="weblog" value="${perms.weblog.handle}"/>
+                    </c:url>
+                    <a href='${manageWeblog}' class="btn btn-default">
                         <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                        <s:text name="yourWebsites.manage"/>
+                        <spring:message code="yourWebsites.manage"/>
                     </a>
 
-                </s:if>
+                </c:if>
 
                 <%-- don't allow last admin to resign from blog --%>
-                <s:if test='!(#perms.hasAction("admin") && #perms.weblog.adminUserCount == 1)'>
+                <c:if test='${!(perms.hasAction("admin") && perms.weblog.adminUserCount == 1)}'>
 
                     <button type="button" class="btn btn-default">
                         <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
-                        <s:url action="memberResign" namespace="/roller-ui/authoring" var="resignWeblog">
-                            <s:param name="weblog" value="#perms.weblog.handle"/>
-                        </s:url>
-                        <a href='<s:property value="resignWeblog" />'>
-                            <s:text name='yourWebsites.resign'/>
+                        <c:url value="/roller-ui/authoring/memberResign.rol" var="resignWeblog">
+                            <c:param name="weblog" value="${perms.weblog.handle}"/>
+                        </c:url>
+                        <a href='${resignWeblog}'>
+                            <spring:message code='yourWebsites.resign'/>
                         </a>
                     </button>
 
-                </s:if>
+                </c:if>
 
             </div>
 
         </div>
-        
-    </s:iterator>
 
-</s:if>
+    </c:forEach>
+
+</c:if>

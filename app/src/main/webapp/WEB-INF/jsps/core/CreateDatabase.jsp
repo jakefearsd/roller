@@ -15,50 +15,50 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<s:if test="error">
-    
-    <h2><s:text name="installer.errorCreatingTables" /></h2> 
-    <p><s:text name="installer.errorCreatingTablesExplanation" /></p> 
-<pre>
-<s:iterator value="messages"><s:property/><br /></s:iterator>
-</pre>
-    
-</s:if>
-<s:elseif test="success">
+<c:choose>
+<c:when test="${error}">
 
-    <h2><s:text name="installer.tablesCreated" /></h2>
-    
-    <p><s:text name="installer.tablesCreatedExplanation" /></p>
-    <p>
-        <s:text name="installer.tryBootstrapping">
-            <s:param><s:url action="install!bootstrap"/></s:param>
-        </s:text>
-    </p>
-    
+    <h2><spring:message code="installer.errorCreatingTables" /></h2>
+    <p><spring:message code="installer.errorCreatingTablesExplanation" /></p>
 <pre>
-<s:iterator value="messages"><s:property/><br /></s:iterator>
+<c:forEach items="${messages}" var="msg">${fn:escapeXml(msg)}<br /></c:forEach>
 </pre>
 
-</s:elseif>
-<s:else>
-    
-    <h2><s:text name="installer.noDatabaseTablesFound" /></h2>
+</c:when>
+<c:when test="${success}">
+
+    <h2><spring:message code="installer.tablesCreated" /></h2>
+
+    <p><spring:message code="installer.tablesCreatedExplanation" /></p>
+    <c:url value="/roller-ui/install/install!bootstrap.rol" var="bootstrapUrl"/>
+    <p>
+        <spring:message code="installer.tryBootstrapping" arguments="${bootstrapUrl}" />
+    </p>
+
+<pre>
+<c:forEach items="${messages}" var="msg">${fn:escapeXml(msg)}<br /></c:forEach>
+</pre>
+
+</c:when>
+<c:otherwise>
+
+    <h2><spring:message code="installer.noDatabaseTablesFound" /></h2>
 
     <p>
-        <s:text name="installer.noDatabaseTablesExplanation">
-            <s:param value="databaseProductName" />
-        </s:text>
+        <spring:message code="installer.noDatabaseTablesExplanation" arguments="${databaseProductName}" />
     </p>
-    <p><s:text name="installer.createTables" /></p>
+    <p><spring:message code="installer.createTables" /></p>
 
-    <s:form action="install!create">
-		<s:hidden name="salt" />
-        <s:submit value="%{getText('installer.yesCreateTables')}" cssClass="btn btn-default" />
-    </s:form>
-    
-</s:else>
+    <form action="${pageContext.request.contextPath}/roller-ui/install/install!create.rol" method="post">
+        <sec:csrfInput/>
+        <spring:message code="installer.yesCreateTables" var="createTablesLabel"/>
+        <button type="submit" class="btn btn-default">${createTablesLabel}</button>
+    </form>
+
+</c:otherwise>
+</c:choose>
 
 <br />
 <br />

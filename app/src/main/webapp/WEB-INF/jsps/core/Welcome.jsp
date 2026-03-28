@@ -15,24 +15,26 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 -->
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<s:if test="activationStatus == null">
-    <p><s:text name="welcome.accountCreated" /></p>
-    <p><a id="a_clickHere" href="<s:url action="login-redirect"/>" ><s:text name="welcome.clickHere" /></a>
-    <s:text name="welcome.toLoginAndPost" /></p>
-</s:if>
+<c:choose>
+    <c:when test="${activationStatus == null}">
+        <p><spring:message code="welcome.accountCreated" /></p>
+        <p><a id="a_clickHere" href="<c:url value='/roller-ui/login-redirect.rol'/>" ><spring:message code="welcome.clickHere" /></a>
+        <spring:message code="welcome.toLoginAndPost" /></p>
+    </c:when>
 
-<s:elseif test="activationStatus == 'pending'">
-    <p><s:text name="welcome.accountCreated" /></p>
-    <p><s:text name="welcome.user.account.not.activated" /></p>
-</s:elseif>
+    <c:when test="${activationStatus == 'pending'}">
+        <p><spring:message code="welcome.accountCreated" /></p>
+        <p><spring:message code="welcome.user.account.not.activated" /></p>
+    </c:when>
 
-<s:elseif test="activationStatus == 'active'">
-    <p><s:text name="welcome.user.account.activated" /></p>
-    <p><a href="<s:url action="login-redirect"/>" ><s:text name="welcome.clickHere" /></a>
-    <s:text name="welcome.toLoginAndPost" /></p>
-</s:elseif>
+    <c:when test="${activationStatus == 'active'}">
+        <p><spring:message code="welcome.user.account.activated" /></p>
+        <p><a href="<c:url value='/roller-ui/login-redirect.rol'/>" ><spring:message code="welcome.clickHere" /></a>
+        <spring:message code="welcome.toLoginAndPost" /></p>
+    </c:when>
+</c:choose>
 
 <br />
 <br />

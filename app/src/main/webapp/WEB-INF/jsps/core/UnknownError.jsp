@@ -15,24 +15,24 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h2><s:text name="installer.unknownError" /></h2>
+<h2><spring:message code="installer.unknownError" /></h2>
 
-<h3><s:text name="installer.whatHappened" /></h3>
+<h3><spring:message code="installer.whatHappened" /></h3>
 
-<p><s:text name="installer.whatHappenedUnknown" /></p>
-    
-<h3><s:text name="installer.whyDidThatHappen" /></h3>
+<p><spring:message code="installer.whatHappenedUnknown" /></p>
+
+<h3><spring:message code="installer.whyDidThatHappen" /></h3>
 
 <p>
-    <s:text name="installer.aboutTheException" />
-    [<s:property value="getRootCauseException().getClass().getName()" />]
+    <spring:message code="installer.aboutTheException" />
+    [${rootCauseException['class'].name}]
 </p>
 
-<p><s:text name="installer.heresTheStackTrace" /></p>
+<p><spring:message code="installer.heresTheStackTrace" /></p>
 <pre>
-    [<s:property value="getRootCauseStackTrace()" />]
+    [${fn:escapeXml(rootCauseStackTrace)}]
 </pre>
 
 <br />

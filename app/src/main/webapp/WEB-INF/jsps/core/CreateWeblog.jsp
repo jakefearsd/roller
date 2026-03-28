@@ -15,70 +15,92 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p class="subtitle"><s:text name="createWebsite.prompt"/></p>
+<p class="subtitle"><spring:message code="createWebsite.prompt"/></p>
 
 <br/>
 
-<s:form action="createWeblog!save" theme="bootstrap" cssClass="form-horizontal validate-form">
+<form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/createWeblog!save.rol"
+           method="post" cssClass="form-horizontal validate-form">
 
-    <s:hidden name="salt"/>
+    <sec:csrfInput/>
 
-    <s:textfield label="%{getText('generic.name')}"
-                 tooltip="%{getText('createWebsite.tip.name')}"
-                 name="bean.name" size="30" maxlength="30" data-msg-required="%{getText('CreateWeblog.error.nameNull')}" required="required"/>
+    <spring:message code="CreateWeblog.error.nameNull" var="nameRequired"/>
+    <div class="form-group">
+        <spring:message code="generic.name" var="nameLabel"/>
+        <label class="col-sm-3 control-label">${nameLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="name" cssClass="form-control" size="30" maxlength="30"
+                        data-msg-required="${nameRequired}" required="required"/>
+        </div>
+    </div>
 
-    <s:textfield label="%{getText('createWebsite.handle')}"
-                 tooltip="%{getText('createWebsite.tip.handle')}"
-                 name="bean.handle" size="30" maxlength="30"
-                 onkeyup="handlePreview(this)" data-msg-required="%{getText('CreateWeblog.error.handleNull')}" required="required"/>
+    <spring:message code="CreateWeblog.error.handleNull" var="handleRequired"/>
+    <div class="form-group">
+        <spring:message code="createWebsite.handle" var="handleLabel"/>
+        <label class="col-sm-3 control-label">${handleLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="handle" cssClass="form-control" size="30" maxlength="30"
+                        onkeyup="handlePreview(this)" data-msg-required="${handleRequired}" required="required"/>
+        </div>
+    </div>
 
     <div class="form-group">
         <label class="col-sm-3"></label>
         <div class="col-sm-9 controls">
-            <s:text name="createWebsite.weblogUrl" />:&nbsp;
-            <s:property value="absoluteSiteURL" />/<span id="handlePreview" style="color:red">
-            <s:if test="bean.handle != null">
-                <s:property value="bean.handle"/>
-            </s:if>
-            <s:else>handle</s:else></span>
+            <spring:message code="createWebsite.weblogUrl" />:&nbsp;
+            ${absoluteSiteURL}/<span id="handlePreview" style="color:red"><c:choose><c:when test="${bean.handle != null}">${fn:escapeXml(bean.handle)}</c:when><c:otherwise>handle</c:otherwise></c:choose></span>
             <br>
         </div>
     </div>
 
-    <s:textfield label="%{getText('createWebsite.emailAddress')}" cssClass="validate-email" data-msg="%{getText('CreateWeblog.error.emailAddressInvalid')}"
-                 tooltip="%{getText('createWebsite.tip.email')}" data-msg-required="%{getText('CreateWeblog.error.emailAddressNull')}" required="required"
-                 name="bean.emailAddress" size="40" maxlength="50"/>
+    <spring:message code="CreateWeblog.error.emailAddressNull" var="emailRequired"/>
+    <spring:message code="CreateWeblog.error.emailAddressInvalid" var="emailInvalid"/>
+    <div class="form-group">
+        <spring:message code="createWebsite.emailAddress" var="emailLabel"/>
+        <label class="col-sm-3 control-label">${emailLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="emailAddress" cssClass="form-control validate-email" size="40" maxlength="50"
+                        data-msg="${emailInvalid}" data-msg-required="${emailRequired}" required="required"/>
+        </div>
+    </div>
 
-    <s:select label="%{getText('createWebsite.locale')}"
-              tooltip="%{getText('createWebsite.tip.locale')}"
-              name="bean.locale" size="1" list="localesList" listValue="displayName"/>
+    <div class="form-group">
+        <spring:message code="createWebsite.locale" var="localeLabel"/>
+        <label class="col-sm-3 control-label">${localeLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:select path="locale" items="${localesList}" itemValue="toString()" itemLabel="displayName" cssClass="form-control"/>
+        </div>
+    </div>
 
-    <s:select label="%{getText('createWebsite.timezone')}"
-              tooltip="%{getText('createWebsite.tip.timezone')}"
-              name="bean.timeZone" size="1" list="timeZonesList"/>
+    <div class="form-group">
+        <spring:message code="createWebsite.timezone" var="tzLabel"/>
+        <label class="col-sm-3 control-label">${tzLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:select path="timeZone" items="${timeZonesList}" cssClass="form-control"/>
+        </div>
+    </div>
 
     <div class="form-group" ng-app="themeSelectModule" ng-controller="themeController">
-        <label class="col-sm-3 control-label" for="createWeblog_bean_timeZone">
-            <s:text name="createWebsite.theme" />
+        <label class="col-sm-3 control-label">
+            <spring:message code="createWebsite.theme" />
         </label>
         <div class="col-sm-9 controls">
-            <s:select name="bean.theme" size="1" list="themes" listKey="id" listValue="name"
-                      onchange="previewImage(this[selectedIndex].value)"/>
+            <form:select path="theme" items="${themes}" itemValue="id" itemLabel="name" cssClass="form-control"
+                         onchange="previewImage(this[selectedIndex].value)"/>
             <p id="themedescription"></p>
             <p><img id="themeThumbnail" src="" class="img-responsive img-thumbnail" style="max-width: 30em" /></p>
 
         </div>
     </div>
 
-    <s:submit cssClass="btn btn-default"
-              value="%{getText('createWebsite.button.save')}"/>
+    <button type="submit" class="btn btn-default"><spring:message code="createWebsite.button.save"/></button>
 
-    <input class="btn" type="button" value="<s:text name="generic.cancel"/>"
-           onclick="window.location='<s:url action="menu"/>'"/>
+    <input class="btn" type="button" value="<spring:message code='generic.cancel'/>"
+           onclick="window.location='<c:url value='/roller-ui/menu.rol'/>'"/>
 
-</s:form>
+</form:form>
 
 <%-- ============================================================================== --%>
 
@@ -90,14 +112,16 @@
 
     $( document ).ready(function() {
 
-        saveButton = $("#createWeblog_0");
+        saveButton = $("button[type='submit']");
 
-        <s:if test="bean.theme == null">
-        previewImage('<s:property value="themes[0].id"/>');
-        </s:if>
-        <s:else>
-        previewImage('<s:property value="bean.theme"/>');
-        </s:else>
+        <c:choose>
+        <c:when test="${bean.theme == null}">
+        previewImage('${themes[0].id}');
+        </c:when>
+        <c:otherwise>
+        previewImage('${bean.theme}');
+        </c:otherwise>
+        </c:choose>
 
     });
 
@@ -113,10 +137,10 @@
     }
 
     function previewImage(themeId) {
-        $.ajax({ url: "<s:property value='siteURL' />/roller-ui/authoring/themedata",
+        $.ajax({ url: "${siteURL}/roller-ui/authoring/themedata",
             data: {theme:themeId}, success: function(data) {
                 $('#themedescription').html(data.description);
-                $('#themeThumbnail').attr('src','<s:property value="siteURL" />' + data.previewPath);
+                $('#themeThumbnail').attr('src','${siteURL}' + data.previewPath);
             }
         });
     }

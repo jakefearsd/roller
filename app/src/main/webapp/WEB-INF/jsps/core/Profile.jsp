@@ -15,76 +15,112 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p class="subtitle"><s:text name="userAdmin.title.editUser"/></p>
+<p class="subtitle"><spring:message code="userAdmin.title.editUser"/></p>
 
-<s:if test="authMethod == 'DB_OPENID'">
+<c:if test="${authMethod == 'DB_OPENID'}">
     <p class="pagetip">
-        <s:text name="userAdmin.noPasswordForOpenID"/>
+        <spring:message code="userAdmin.noPasswordForOpenID"/>
     </p>
-</s:if>
+</c:if>
 
 
-<s:form action="profile!save" theme="bootstrap" cssClass="form-horizontal">
-    <s:hidden name="salt"/>
+<form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/profile!save.rol" method="post" cssClass="form-horizontal">
+    <sec:csrfInput/>
 
-    <s:textfield label="%{getText('userSettings.username')}"
-                 tooltip="%{getText('userRegister.tip.userName')}"
-                 onchange="formChanged()" onkeyup="formChanged()"
-                 name="bean.userName" size="30" maxlength="30" readonly="true"/>
+    <div class="form-group">
+        <spring:message code="userSettings.username" var="usernameLabel"/>
+        <label class="col-sm-3 control-label">${usernameLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="userName" cssClass="form-control" size="30" maxlength="30" readonly="true"
+                        onchange="formChanged()" onkeyup="formChanged()"/>
+        </div>
+    </div>
 
-    <s:textfield label="%{getText('userSettings.screenname')}"
-                 tooltip="%{getText('userRegister.tip.screenName')}"
-                 onchange="formChanged()" onkeyup="formChanged()"
-                 name="bean.screenName" size="30" maxlength="30"/>
+    <div class="form-group">
+        <spring:message code="userSettings.screenname" var="screennameLabel"/>
+        <label class="col-sm-3 control-label">${screennameLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="screenName" cssClass="form-control" size="30" maxlength="30"
+                        onchange="formChanged()" onkeyup="formChanged()"/>
+        </div>
+    </div>
 
-    <s:textfield label="%{getText('userSettings.fullname')}"
-                 tooltip="%{getText('')}"
-                 onchange="formChanged()" onkeyup="formChanged()"
-                 name="bean.fullName" size="30" maxlength="30"/>
+    <div class="form-group">
+        <spring:message code="userSettings.fullname" var="fullnameLabel"/>
+        <label class="col-sm-3 control-label">${fullnameLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="fullName" cssClass="form-control" size="30" maxlength="30"
+                        onchange="formChanged()" onkeyup="formChanged()"/>
+        </div>
+    </div>
 
-    <s:textfield label="%{getText('userSettings.email')}"
-                 tooltip="%{getText('userRegister.tip.email')}"
-                 onchange="formChanged()" onkeyup="formChanged()"
-                 name="bean.emailAddress" size="40" maxlength="40"/>
+    <div class="form-group">
+        <spring:message code="userSettings.email" var="emailLabel"/>
+        <label class="col-sm-3 control-label">${emailLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:input path="emailAddress" cssClass="form-control" size="40" maxlength="40"
+                        onchange="formChanged()" onkeyup="formChanged()"/>
+        </div>
+    </div>
 
-    <s:if test="authMethod == 'ROLLERDB' || authMethod == 'DB_OPENID'">
-        <s:password label="%{getText('userSettings.password')}"
-                    tooltip="%{getText('userSettings.tip.password')}"
-                    onchange="formChanged()" onkeyup="formChanged()"
-                    name="bean.passwordText" size="20" maxlength="20"/>
+    <c:if test="${authMethod == 'ROLLERDB' || authMethod == 'DB_OPENID'}">
+        <div class="form-group">
+            <spring:message code="userSettings.password" var="passwordLabel"/>
+            <label class="col-sm-3 control-label">${passwordLabel}</label>
+            <div class="col-sm-9 controls">
+                <form:password path="passwordText" cssClass="form-control" size="20" maxlength="20"
+                               onchange="formChanged()" onkeyup="formChanged()"/>
+            </div>
+        </div>
 
-        <s:password label="%{getText('userSettings.passwordConfirm')}"
-                    tooltip="%{getText('userRegister.tip.passwordConfirm')}"
-                    onchange="formChanged()" onkeyup="formChanged()"
-                    name="bean.passwordConfirm" size="20" maxlength="20"/>
-    </s:if>
-    <s:else>
-        <s:hidden name="bean.password"/>
-    </s:else>
+        <div class="form-group">
+            <spring:message code="userSettings.passwordConfirm" var="passwordConfirmLabel"/>
+            <label class="col-sm-3 control-label">${passwordConfirmLabel}</label>
+            <div class="col-sm-9 controls">
+                <form:password path="passwordConfirm" cssClass="form-control" size="20" maxlength="20"
+                               onchange="formChanged()" onkeyup="formChanged()"/>
+            </div>
+        </div>
+    </c:if>
+    <c:if test="${authMethod != 'ROLLERDB' && authMethod != 'DB_OPENID'}">
+        <form:hidden path="password"/>
+    </c:if>
 
-    <s:if test="authMethod == 'OPENID' || authMethod == 'DB_OPENID'">
-        <s:textfield label="%{getText('userSettings.openIdUrl')}"
-                     tooltip="%{getText('userRegister.tip.openIdUrl')}"
-                     name="bean.openIdUrl" size="40" maxlength="255"
-                     style="width:75%" id="f_openid_identifier"/>
-    </s:if>
+    <c:if test="${authMethod == 'OPENID' || authMethod == 'DB_OPENID'}">
+        <div class="form-group">
+            <spring:message code="userSettings.openIdUrl" var="openIdUrlLabel"/>
+            <label class="col-sm-3 control-label">${openIdUrlLabel}</label>
+            <div class="col-sm-9 controls">
+                <form:input path="openIdUrl" cssClass="form-control" size="40" maxlength="255"
+                            id="f_openid_identifier" style="width:75%"/>
+            </div>
+        </div>
+    </c:if>
 
-    <s:select label="%{getText('userSettings.locale')}"
-              tooltip="%{getText('userRegister.tip.locale')}"
-              name="bean.locale" size="1" list="localesList" listValue="displayName"/>
+    <div class="form-group">
+        <spring:message code="userSettings.locale" var="localeLabel"/>
+        <label class="col-sm-3 control-label">${localeLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:select path="locale" items="${localesList}" itemValue="toString()" itemLabel="displayName" cssClass="form-control"/>
+        </div>
+    </div>
 
-    <s:select label="%{getText('userSettings.timeZone')}"
-              tooltip="%{getText('userRegister.tip.timeZone')}"
-              name="bean.timeZone" size="1" list="timeZonesList"/>
+    <div class="form-group">
+        <spring:message code="userSettings.timeZone" var="tzLabel"/>
+        <label class="col-sm-3 control-label">${tzLabel}</label>
+        <div class="col-sm-9 controls">
+            <form:select path="timeZone" items="${timeZonesList}" cssClass="form-control"/>
+        </div>
+    </div>
 
-    <s:submit cssClass="btn btn-default" value="%{getText('generic.save')}"/>
+    <button type="submit" id="saveButton" class="btn btn-default"><spring:message code="generic.save"/></button>
 
-    <input class="btn" type="button" value="<s:text name="generic.cancel"/>"
-           onclick="window.location='<s:url action="menu"/>'"/>
+    <input class="btn" type="button" value="<spring:message code='generic.cancel'/>"
+           onclick="window.location='<c:url value='/roller-ui/menu.rol'/>'"/>
 
-</s:form>
+</form:form>
 
 <%-- -------------------------------------------------------- --%>
 
@@ -93,18 +129,18 @@
     var saveButton;
 
     $(document).ready(function () {
-        saveButton = $("#profile_0");
+        saveButton = $("#saveButton");
         formChanged();
     });
 
     function formChanged() {
         var valid = false;
 
-        var screenName = $("#profile_bean_screenName:first").val();
-        var fullName = $("#profile_bean_fullName:first").val();
-        var email = $("#profile_bean_emailAddress:first").val();
-        var password = $("#profile_bean_passwordText:first").val();
-        var passwordConfirm = $("#profile_bean_passwordConfirm:first").val();
+        var screenName = $("[name='screenName']").val();
+        var fullName = $("[name='fullName']").val();
+        var email = $("[name='emailAddress']").val();
+        var password = $("[name='passwordText']").val();
+        var passwordConfirm = $("[name='passwordConfirm']").val();
 
         if (screenName && screenName.trim().length > 0
             && fullName && fullName.trim().length > 0

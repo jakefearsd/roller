@@ -15,58 +15,56 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-   <s:text name="oauthKeys.description" >
-       <s:param value="authenticatedUser.userName" />
-   </s:text>
+   <spring:message code="oauthKeys.description" arguments="${authenticatedUser.userName}" />
 </p>
 
 <p class="pagetip">
-   <s:text name="oauthKeys.tip" />
+   <spring:message code="oauthKeys.tip" />
 </p>
 
 
-<h2><s:text name="oauthKeys.userKeys" /></h2>
+<h2><spring:message code="oauthKeys.userKeys" /></h2>
 
-<p><s:text name="oauthKeys.userKeysTip" /></p>
+<p><spring:message code="oauthKeys.userKeysTip" /></p>
 
-    <p style="margin-left:2em"><b><s:text name="oauthKeys.consumerKey" /></b>:
-        <s:property value="userConsumer.consumerKey" /></p>
+    <p style="margin-left:2em"><b><spring:message code="oauthKeys.consumerKey" /></b>:
+        ${fn:escapeXml(userConsumer.consumerKey)}</p>
 
-    <p style="margin-left:2em"><b><s:text name="oauthKeys.consumerSecret" /></b>:
-        <s:property value="userConsumer.consumerSecret" /></p>
-
-
-<s:if test="siteWideConsumer">
-
-<h2><s:text name="oauthKeys.siteWideKeys" /></h2>
-
-<p><s:text name="oauthKeys.siteWideKeysTip" /></p>
-
-    <p style="margin-left:2em"><b><s:text name="oauthKeys.consumerKey" /></b>:
-        <s:property value="siteWideConsumer.consumerKey" /></p>
-
-    <p style="margin-left:2em"><b><s:text name="oauthKeys.consumerSecret" /></b>:
-        <s:property value="siteWideConsumer.consumerSecret" /></p>
-
-</s:if>
+    <p style="margin-left:2em"><b><spring:message code="oauthKeys.consumerSecret" /></b>:
+        ${fn:escapeXml(userConsumer.consumerSecret)}</p>
 
 
-<h2><s:text name="oauthKeys.urls" /></h2>
+<c:if test="${not empty siteWideConsumer}">
 
-<p><s:text name="oauthKeys.urlsTip" /></p>
+<h2><spring:message code="oauthKeys.siteWideKeys" /></h2>
 
-    <p style="margin-left:2em"><b><s:text name="oauthKeys.requestTokenURL" /></b>:
-        <s:property value="requestTokenURL" /></p>
+<p><spring:message code="oauthKeys.siteWideKeysTip" /></p>
 
-    <p style="margin-left:2em"><b><s:text name="oauthKeys.authorizationURL" /></b>:
-        <s:property value="authorizationURL" /></p>
+    <p style="margin-left:2em"><b><spring:message code="oauthKeys.consumerKey" /></b>:
+        ${fn:escapeXml(siteWideConsumer.consumerKey)}</p>
 
-    <p style="margin-left:2em"><b><s:text name="oauthKeys.accessTokenURL" /></b>:
-        <s:property value="accessTokenURL" /></p>
+    <p style="margin-left:2em"><b><spring:message code="oauthKeys.consumerSecret" /></b>:
+        ${fn:escapeXml(siteWideConsumer.consumerSecret)}</p>
+
+</c:if>
+
+
+<h2><spring:message code="oauthKeys.urls" /></h2>
+
+<p><spring:message code="oauthKeys.urlsTip" /></p>
+
+    <p style="margin-left:2em"><b><spring:message code="oauthKeys.requestTokenURL" /></b>:
+        ${fn:escapeXml(requestTokenURL)}</p>
+
+    <p style="margin-left:2em"><b><spring:message code="oauthKeys.authorizationURL" /></b>:
+        ${fn:escapeXml(authorizationURL)}</p>
+
+    <p style="margin-left:2em"><b><spring:message code="oauthKeys.accessTokenURL" /></b>:
+        ${fn:escapeXml(accessTokenURL)}</p>
 
 <br />
 
-<input type="button" value="<s:text name="generic.cancel"/>" onclick="window.location='<s:url action="menu"/>'" />
+<input type="button" value="<spring:message code='generic.cancel'/>" onclick="window.location='<c:url value='/roller-ui/menu.rol'/>'" />

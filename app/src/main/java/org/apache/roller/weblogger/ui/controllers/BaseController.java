@@ -123,6 +123,28 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     }
 
     /**
+     * Add an error message (resolved from the message source) with a parameter to the model.
+     */
+    @SuppressWarnings("unchecked")
+    protected void addError(Model model, String key, String param, HttpServletRequest request) {
+        List<String> errors = (List<String>) model.getAttribute("errors");
+        if (errors == null) {
+            errors = new ArrayList<>();
+            model.addAttribute("errors", errors);
+        }
+        errors.add(getText(key, new Object[]{param}, request));
+    }
+
+    /**
+     * Check whether any error messages have been added to the model.
+     */
+    @SuppressWarnings("unchecked")
+    protected boolean hasErrors(Model model) {
+        List<String> errors = (List<String>) model.getAttribute("errors");
+        return errors != null && !errors.isEmpty();
+    }
+
+    /**
      * Add a status message (resolved from the message source) to the model.
      */
     @SuppressWarnings("unchecked")
@@ -133,6 +155,19 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
             model.addAttribute("messages", messages);
         }
         messages.add(getText(key, request));
+    }
+
+    /**
+     * Add a status message (resolved from the message source) with a parameter to the model.
+     */
+    @SuppressWarnings("unchecked")
+    protected void addMessage(Model model, String key, String param, HttpServletRequest request) {
+        List<String> messages = (List<String>) model.getAttribute("messages");
+        if (messages == null) {
+            messages = new ArrayList<>();
+            model.addAttribute("messages", messages);
+        }
+        messages.add(getText(key, new Object[]{param}, request));
     }
 
     // --- Configuration property helpers ---

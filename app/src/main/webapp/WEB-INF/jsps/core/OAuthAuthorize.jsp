@@ -15,26 +15,20 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-   <s:text name="oauthAuthorize.description" >
-       <s:param value="authenticatedUser.userName" />
-   </s:text>
+   <spring:message code="oauthAuthorize.description" arguments="${authenticatedUser.userName}" />
 </p>
 
 <p class="pagetip">
-   <s:text name="oauthAuthorize.tip" >
-       <s:param value="appDesc" />
-   </s:text>
+   <spring:message code="oauthAuthorize.tip" arguments="${appDesc}" />
 </p>
 
 <form name="authZForm" action="authorize" method="POST">
-    <input type="hidden" name="userId" value="<s:property value="userName" />" size="20" /><br>
-    <input type="hidden" name="oauth_token" value='<s:property value="token" />' />
-    <input type="hidden" name="oauth_callback" value='<s:property value="callback" />' />
+    <input type="hidden" name="userId" value="${fn:escapeXml(userName)}" /><br>
+    <input type="hidden" name="oauth_token" value='${fn:escapeXml(token)}' />
+    <input type="hidden" name="oauth_callback" value='${fn:escapeXml(callback)}' />
+    <sec:csrfInput/>
     <input type="submit" name="Authorize" value="Authorize"/>
 </form>
-    
-</body>
-</html>
