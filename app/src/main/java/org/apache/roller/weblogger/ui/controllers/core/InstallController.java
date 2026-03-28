@@ -39,6 +39,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 
 /**
@@ -62,7 +63,7 @@ public class InstallController extends BaseController {
 
     @GetMapping("/install.rol")
     public String execute(HttpServletRequest request, Model model) {
-        populateCommonModel(request, model);
+        // populateCommonModel skipped - runs before bootstrap
 
         if (WebloggerFactory.isBootstrapped()) {
             return "redirect:/";
@@ -110,7 +111,7 @@ public class InstallController extends BaseController {
 
     @PostMapping("/install!create.rol")
     public String create(HttpServletRequest request, Model model) {
-        populateCommonModel(request, model);
+        // populateCommonModel skipped - runs before bootstrap
 
         if (WebloggerFactory.isBootstrapped()) {
             return "redirect:/";
@@ -132,7 +133,7 @@ public class InstallController extends BaseController {
 
     @PostMapping("/install!upgrade.rol")
     public String upgrade(HttpServletRequest request, Model model) {
-        populateCommonModel(request, model);
+        // populateCommonModel skipped - runs before bootstrap
 
         if (WebloggerFactory.isBootstrapped()) {
             return "redirect:/";
@@ -152,9 +153,9 @@ public class InstallController extends BaseController {
         return ".UpgradeDatabase";
     }
 
-    @PostMapping("/install!bootstrap.rol")
+    @RequestMapping(value = "/install!bootstrap.rol", method = {RequestMethod.GET, RequestMethod.POST})
     public String bootstrap(HttpServletRequest request, Model model) {
-        populateCommonModel(request, model);
+        // populateCommonModel skipped - runs before bootstrap
 
         log.info("ENTERING");
 
