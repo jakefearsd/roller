@@ -15,20 +15,20 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
 <%-- ================================================================== --%>
 <%-- add new custom planet group --%>
 
-<h3><s:text name="mainPage.actions"/></h3>
+<h3><spring:message code="mainPage.actions"/></h3>
 <hr size="1" noshade="noshade"/>
 
-<s:url var="createNewUrl" action="planetGroupSubs" namespace="/roller-ui/admin">
-    <s:param name="createNew">true</s:param>
-</s:url>
+<c:url var="createNewUrl" value="/roller-ui/admin/planetGroupSubs.rol">
+    <c:param name="createNew">true</c:param>
+</c:url>
 
-<s:a href="%{createNewUrl}">
+<a href="${createNewUrl}">
     <span class="glyphicon glyphicon-plus" aria-hidden="true"> </span>
     Create new Custom Planet Group
-</s:a>
+</a>

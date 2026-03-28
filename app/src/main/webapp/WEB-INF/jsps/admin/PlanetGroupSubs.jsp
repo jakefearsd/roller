@@ -15,137 +15,146 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-        
+
 <%-- ================================================================== --%>
 <%-- add/edit custom planet group form --%>
 
 
 <%-- title for default planet group --%>
-<s:if test="groupHandle == 'all'" >
-    <p class="subtitle"><s:text name="planetGroupSubs.default.subtitle" /></p>
-    <p><s:text name="planetGroupSubs.default.desc" /></p>
-</s:if>
+<c:if test="${groupHandle == 'all'}">
+    <p class="subtitle"><spring:message code="planetGroupSubs.default.subtitle" /></p>
+    <p><spring:message code="planetGroupSubs.default.desc" /></p>
+</c:if>
 
 <%-- title for a custom planet group --%>
-<s:else>
-    <s:if test="createNew">
+<c:if test="${groupHandle != 'all'}">
+    <c:if test="${createNew}">
         <p class="subtitle">
-            <s:text name="planetGroupSubs.custom.subtitle.new" />
+            <spring:message code="planetGroupSubs.custom.subtitle.new" />
         </p>
-    </s:if>
-    <s:else>
+    </c:if>
+    <c:if test="${!createNew}">
         <p class="subtitle">
-            <s:text name="planetGroupSubs.custom.subtitle" >
-                <s:param value="groupHandle" />
-            </s:text>
+            <spring:message code="planetGroupSubs.custom.subtitle" arguments="${groupHandle}" />
         </p>
-    </s:else>
-    <p><s:text name="planetGroupSubs.custom.desc" /></p>
-</s:else>
+    </c:if>
+    <p><spring:message code="planetGroupSubs.custom.desc" /></p>
+</c:if>
 
 
 <%-- only show edit form for custom group --%>
-<s:if test="groupHandle != 'all'">
+<c:if test="${groupHandle != 'all'}">
 
     <div class="panel panel-default">
         <div class="panel-heading">
-            <p><s:text name="planetGroupSubs.properties"/></p>
+            <p><spring:message code="planetGroupSubs.properties"/></p>
         </div>
         <div class="panel-body">
-            <s:if test="createNew">
-                <s:text name="planetGroupSubs.creatingNewGroup" />
-            </s:if>
-            <s:else>
-                <s:text name="planetGroupSubs.editingExistingGroup" />
-            </s:else>
+            <c:if test="${createNew}">
+                <spring:message code="planetGroupSubs.creatingNewGroup" />
+            </c:if>
+            <c:if test="${!createNew}">
+                <spring:message code="planetGroupSubs.editingExistingGroup" />
+            </c:if>
 
-            <s:form action="planetGroupSubs!saveGroup" theme="bootstrap" cssClass="form-horizontal" style="margin-top:1em">
-                <s:hidden name="salt"/>
-                <s:hidden name="group.id"/>
+            <form method="post" action="<c:url value='/roller-ui/admin/planetGroupSubs!saveGroup.rol'/>"
+                  class="form-horizontal" style="margin-top:1em">
+                <sec:csrfInput/>
+                <input type="hidden" name="group.id" value="${fn:escapeXml(group.id)}"/>
 
-                <s:textfield name="group.title" size="40" maxlength="255"
-                             onchange="validate()" onkeyup="validate()"
-                             label="%{getText('planetGroups.title')}"
-                             tooltip="%{getText('planetGroups.tip.title')}"/>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label"><spring:message code="planetGroups.title"/></label>
+                    <div class="col-sm-9 controls">
+                        <input type="text" name="group.title" size="40" maxlength="255"
+                               value="${fn:escapeXml(group.title)}"
+                               onchange="validate()" onkeyup="validate()"
+                               class="form-control"/>
+                    </div>
+                </div>
 
-                <s:textfield name="group.handle" size="40" maxlength="255"
-                             onchange="validate()" onkeyup="validate()"
-                             label="%{getText('planetGroups.handle')}"
-                             tooltip="%{getText('planetGroups.tip.handle')}"/>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label"><spring:message code="planetGroups.handle"/></label>
+                    <div class="col-sm-9 controls">
+                        <input type="text" name="group.handle" size="40" maxlength="255"
+                               value="${fn:escapeXml(group.handle)}"
+                               onchange="validate()" onkeyup="validate()"
+                               class="form-control"/>
+                    </div>
+                </div>
 
 
                 <div class="form-group ">
                     <label class="col-sm-3 control-label"></label>
                     <div class="col-sm-9 controls">
-                        <s:submit value="%{getText('generic.save')}" cssClass="btn btn-default"/>
-                        <s:if test="createNew">
+                        <button type="submit" class="btn btn-default"><spring:message code="generic.save"/></button>
+                        <c:if test="${createNew}">
                             <input type="button" class="btn"
-                                   value='<s:text name="generic.cancel" />'
-                                   onclick="window.location='<s:url action="planetGroups"/>'"/>
-                        </s:if>
+                                   value='<spring:message code="generic.cancel" />'
+                                   onclick="window.location='<c:url value="/roller-ui/admin/planetGroups.rol"/>'"/>
+                        </c:if>
                     </div>
                 </div>
 
-            </s:form>
+            </form>
 
         </div>
     </div>
 
-</s:if>
+</c:if>
 
 
 <%-- ================================================================== --%>
 <%-- table of planet group's subscription  --%>
 
-<s:if test="!createNew">
+<c:if test="${!createNew}">
 
-    <h3><s:text name="planetGroupSubs.subscriptions"/></h3>
-    <s:text name="planetGroupSubs.subscriptionDesc" />
+    <h3><spring:message code="planetGroupSubs.subscriptions"/></h3>
+    <spring:message code="planetGroupSubs.subscriptionDesc" />
 
-    <s:if test="%{subscriptions.isEmpty()}">
-        <s:if test="groupHandle == 'all'">
-            <s:text name="planetGroupSubs.noneDefinedDefault" />
-        </s:if>
-        <s:else>
-            <s:text name="planetGroupSubs.noneDefinedCustom" />
-        </s:else>
-    </s:if>
-    <s:else>
+    <c:if test="${empty subscriptions}">
+        <c:if test="${groupHandle == 'all'}">
+            <spring:message code="planetGroupSubs.noneDefinedDefault" />
+        </c:if>
+        <c:if test="${groupHandle != 'all'}">
+            <spring:message code="planetGroupSubs.noneDefinedCustom" />
+        </c:if>
+    </c:if>
+    <c:if test="${!empty subscriptions}">
 
         <table class="table">
             <tr>
-                <th width="30%"> <s:text name="planetGroupSubs.column.title"/> </th>
-                <th width="55%"> <s:text name="planetGroupSubs.column.feedUrl"/> </th>
-                <th width="15%"> <s:text name="generic.delete"/> </th>
+                <th width="30%"> <spring:message code="planetGroupSubs.column.title"/> </th>
+                <th width="55%"> <spring:message code="planetGroupSubs.column.feedUrl"/> </th>
+                <th width="15%"> <spring:message code="generic.delete"/> </th>
             </tr>
 
-            <s:iterator var="sub" value="subscriptions">
+            <c:forEach var="sub" items="${subscriptions}">
                 <tr>
-                    <td class="rollertable"><s:property value="#sub.title"/></td>
-                    <td><s:set var="feedURL" value="#sub.feedURL"/> ${fn:substring(feedURL, 0, 100)} </td>
+                    <td class="rollertable">${fn:escapeXml(sub.title)}</td>
+                    <td><c:set var="feedURL" value="${sub.feedURL}"/> ${fn:substring(feedURL, 0, 100)} </td>
                     <td>
-                        <a href="javascript: void(0);" onclick="confirmDelete('<s:property value="feedURL"/>')">
+                        <a href="javascript: void(0);" onclick="confirmDelete('${fn:escapeXml(feedURL)}')">
                             <span class="glyphicon glyphicon-remove" aria-hidden="true"> </span>
-                            <s:text name="generic.delete"/>
+                            <spring:message code="generic.delete"/>
                         </a>
                     </td>
                 </tr>
-            </s:iterator>
+            </c:forEach>
         </table>
 
         <%-- planet subscription delete logic --%>
 
-        <s:form action="planetGroupSubs!deleteSubscription" id="deleteForm">
-            <s:hidden name="salt"/>
-            <s:hidden name="group.handle"/>
+        <form method="post" action="<c:url value='/roller-ui/admin/planetGroupSubs!deleteSubscription.rol'/>" id="deleteForm">
+            <sec:csrfInput/>
+            <input type="hidden" name="group.handle" value="${fn:escapeXml(group.handle)}"/>
             <input type="hidden" name="subUrl"/>
-        </s:form>
+        </form>
 
-    </s:else>
+    </c:if>
 
-</s:if>
+</c:if>
 
 
 <%-- ================================================================== --%>
@@ -153,10 +162,10 @@
 <script>
 
     function confirmDelete(subUrl) {
-        if (window.confirm('<s:text name="planetGroupSubs.delete.confirm" />')) {
+        if (window.confirm('<spring:message code="planetGroupSubs.delete.confirm" />')) {
             var form = $("#deleteForm");
             form.find('input[name="subUrl"]').val(subUrl);
-            form.find('input[name="groupHandle"]').val('<s:property value="groupHandle" />');
+            form.find('input[name="groupHandle"]').val('${fn:escapeXml(groupHandle)}');
             form.submit();
         }
     }

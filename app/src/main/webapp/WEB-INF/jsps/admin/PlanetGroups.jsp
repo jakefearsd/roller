@@ -15,62 +15,62 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p class="subtitle"><s:text name="planetGroups.subtitle"/></p>
+<p class="subtitle"><spring:message code="planetGroups.subtitle"/></p>
 
 
 <%-- ================================================================== --%>
 <%-- table of custom planet groups (excluding the default group) --%>
 
-<s:if test="%{!groups.isEmpty()}">
+<c:if test="${!empty groups}">
 
     <table class="table">
 
         <tr>
-            <th width="50%"> <s:text name="planetGroups.column.title"/> </th>
-            <th width="20%"> <s:text name="planetGroups.column.handle"/> </th>
-            <th width="15%"> <s:text name="generic.edit"/> </th>
-            <th width="15%"> <s:text name="generic.delete"/> </th>
+            <th width="50%"> <spring:message code="planetGroups.column.title"/> </th>
+            <th width="20%"> <spring:message code="planetGroups.column.handle"/> </th>
+            <th width="15%"> <spring:message code="generic.edit"/> </th>
+            <th width="15%"> <spring:message code="generic.delete"/> </th>
         </tr>
 
-        <s:iterator var="group" value="groups">
+        <c:forEach var="group" items="${groups}">
             <tr>
-                <td> <s:property value="#group.title"/> </td>
-                <td> <s:property value="#group.handle"/> </td>
+                <td> ${fn:escapeXml(group.title)} </td>
+                <td> ${fn:escapeXml(group.handle)} </td>
 
                 <td>
-                    <s:url var="groupUrl" action="planetGroupSubs">
-                        <s:param name="group.id" value="#group.id"/>
-                    </s:url>
-                    <s:a href="%{groupUrl}">
+                    <c:url var="groupUrl" value="/roller-ui/admin/planetGroupSubs.rol">
+                        <c:param name="group.id" value="${group.id}"/>
+                    </c:url>
+                    <a href="${groupUrl}">
                         <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
-                        <s:text name='generic.edit'/>
-                    </s:a>
+                        <spring:message code='generic.edit'/>
+                    </a>
                 </td>
 
                 <td>
-                    <a href="javascript: void(0);" onclick="confirmDelete('<s:property value="#group.handle"/>')">
+                    <a href="javascript: void(0);" onclick="confirmDelete('${fn:escapeXml(group.handle)}')">
                         <span class="glyphicon glyphicon-remove" aria-hidden="true"> </span>
-                        <s:text name="generic.delete"/>
+                        <spring:message code="generic.delete"/>
                     </a>
                 </td>
 
             </tr>
-        </s:iterator>
+        </c:forEach>
 
     </table>
 
     <%-- planet group delete logic --%>
 
-    <s:form action="planetGroups!delete" id="deleteForm">
-        <input type="hidden" name="salt" value='<s:property value="salt" />' />
+    <form method="post" action="<c:url value='/roller-ui/admin/planetGroups!delete.rol'/>" id="deleteForm">
+        <sec:csrfInput/>
         <input type="hidden" name="group.handle"/>
-    </s:form>
+    </form>
 
     <script>
         function confirmDelete(groupHandle) {
-            if (window.confirm('<s:text name="planetGroups.delete.confirm" />')) {
+            if (window.confirm('<spring:message code="planetGroups.delete.confirm" />')) {
                 var form = $("#deleteForm");
                 form.find('input[name="group.handle"]').val(groupHandle);
                 form.submit();
@@ -78,8 +78,7 @@
         }
     </script>
 
-</s:if>
-<s:else>
-    <s:text name="planetGroups.noneDefined"/>
-</s:else>
-
+</c:if>
+<c:if test="${empty groups}">
+    <spring:message code="planetGroups.noneDefined"/>
+</c:if>

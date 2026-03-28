@@ -16,58 +16,73 @@
   directory of this distribution.
 --%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/xml" prefix="x" %>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
-<p class="subtitle"><s:text name="planetConfig.subtitle"/></p>
-<p><s:text name="planetConfig.prompt"/></p>
+<p class="subtitle"><spring:message code="planetConfig.subtitle"/></p>
+<p><spring:message code="planetConfig.prompt"/></p>
 
 
-<s:form action="planetConfig!save" theme="bootstrap" cssClass="form-horizontal">
-    <s:hidden name="salt"/>
+<form method="post" action="<c:url value='/roller-ui/admin/planetConfig!save.rol'/>" class="form-horizontal">
+    <sec:csrfInput/>
 
-    <s:iterator var="dg" value="globalConfigDef.displayGroups">
+    <c:forEach var="dg" items="${globalConfigDef.displayGroups}">
 
-        <h2><s:text name="%{#dg.key}"/></h2>
+        <h2><spring:message code="${dg.key}"/></h2>
 
-        <s:iterator var="pd" value="#dg.propertyDefs">
+        <c:forEach var="pd" items="${dg.propertyDefs}">
 
             <%-- "string" type means use a simple textbox --%>
-            <s:if test="#pd.type == 'string'">
-                <s:textfield name="%{#pd.name}" label="%{getText(#pd.key)}" size="35"
-                             value="%{properties[#pd.name].value} "/>
-            </s:if>
+            <c:if test="${pd.type == 'string'}">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                    <div class="col-sm-9 controls">
+                        <input type="text" name="${fn:escapeXml(pd.name)}" size="35"
+                               value="${fn:escapeXml(properties[pd.name].value)}"
+                               class="form-control"/>
+                    </div>
+                </div>
+            </c:if>
 
             <%-- "text" type means use a full textarea --%>
-            <s:elseif test="#pd.type == 'text'">
-                <s:textarea name="%{#pd.name}" label="%{getText(#pd.key)}" rows="#pd.rows" cols="#pd.cols"
-                            value="%{properties[#pd.name].value} "/>
-            </s:elseif>
+            <c:if test="${pd.type == 'text'}">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                    <div class="col-sm-9 controls">
+                        <textarea name="${fn:escapeXml(pd.name)}" rows="${pd.rows}" cols="${pd.cols}"
+                                  class="form-control">${fn:escapeXml(properties[pd.name].value)}</textarea>
+                    </div>
+                </div>
+            </c:if>
 
             <%-- "boolean" type means use a checkbox --%>
-            <s:elseif test="#pd.type == 'boolean'">
-
-                <s:if test="properties[#pd.name].value == 'true'">
-                    <s:checkbox name="%{#pd.name}" label="%{getText(#pd.key)}" cssClass="boolean"
-                                fieldValue="true" checked="true" onchange="formChanged()"/>
-                </s:if>
-                <s:if test="properties[#pd.name].value != 'true'">
-                    <s:checkbox name="%{#pd.name}" label="%{getText(#pd.key)}" cssClass="boolean"
-                                fieldValue="false" onchange="formChanged()"/>
-                </s:if>
-
-            </s:elseif>
+            <c:if test="${pd.type == 'boolean'}">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                    <div class="col-sm-9 controls">
+                        <input type="checkbox" name="${fn:escapeXml(pd.name)}" value="true"
+                            <c:if test="${properties[pd.name].value == 'true'}">checked="checked"</c:if>
+                               onchange="formChanged()" class="boolean"/>
+                    </div>
+                </div>
+            </c:if>
 
             <%-- if it's something we don't understand then use textbox --%>
-            <s:else>
-                <s:textfield name="%{#pd.name}" label="%{getText(#pd.key)}" size="35"
-                             value="%{properties[#pd.name].value}"/>
-            </s:else>
+            <c:if test="${pd.type != 'string' && pd.type != 'text' && pd.type != 'boolean'}">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                    <div class="col-sm-9 controls">
+                        <input type="text" name="${fn:escapeXml(pd.name)}" size="35"
+                               value="${fn:escapeXml(properties[pd.name].value)}"
+                               class="form-control"/>
+                    </div>
+                </div>
+            </c:if>
 
-        </s:iterator>
+        </c:forEach>
 
-    </s:iterator>
+    </c:forEach>
 
-     <input class="btn btn-default" type="submit" value="<s:text name="generic.save"/>"/>
+     <input class="btn btn-default" type="submit" value="<spring:message code="generic.save"/>"/>
 
-</s:form>
+</form>

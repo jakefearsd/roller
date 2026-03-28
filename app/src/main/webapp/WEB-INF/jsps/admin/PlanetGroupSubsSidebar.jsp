@@ -15,32 +15,41 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
 <%-- ================================================================== --%>
 <%-- add new planet feed subscription --%>
 
-<s:if test="!createNew">
+<c:if test="${!createNew}">
 
-    <h3><s:text name="mainPage.actions"/></h3>
+    <h3><spring:message code="mainPage.actions"/></h3>
     <hr size="1" noshade="noshade"/>
 
-    <s:text name="planetGroupSubs.addFeed"/>
+    <spring:message code="planetGroupSubs.addFeed"/>
 
-    <s:form action="planetGroupSubs!saveSubscription"
-            theme="bootstrap" cssClass="form-horizontal" style="margin-top:1em">
-        <s:hidden name="salt"/>
-        <s:hidden name="group.handle"/>
+    <form method="post" action="<c:url value='/roller-ui/admin/planetGroupSubs!saveSubscription.rol'/>"
+          class="form-horizontal" style="margin-top:1em">
+        <sec:csrfInput/>
+        <input type="hidden" name="group.handle" value="${fn:escapeXml(group.handle)}"/>
 
-        <s:textfield name="subUrl" size="40" maxlength="255" label="%{getText('planetSubscription.feedUrl')}"
-            onchange="validateUrl()" onkeyup="validateUrl()" />
+        <div class="form-group">
+            <label class="col-sm-3 control-label"><spring:message code="planetSubscription.feedUrl"/></label>
+            <div class="col-sm-9 controls">
+                <input type="text" name="subUrl" id="planetGroupSubs_subUrl"
+                       size="40" maxlength="255"
+                       onchange="validateUrl()" onkeyup="validateUrl()"
+                       class="form-control"/>
+            </div>
+        </div>
 
         <p id="feedback-area" style="clear:right; width:100%"></p>
 
-        <s:submit value="%{getText('generic.save')}" cssClass="btn btn-default" />
+        <button type="submit" id="planetGroupSubs_0" class="btn btn-default">
+            <spring:message code="generic.save"/>
+        </button>
 
-    </s:form>
+    </form>
 
     <script>
 
@@ -52,7 +61,7 @@
             if (url && url.trim() !== '') {
                 if (!isValidUrl(url)) {
                     saveButton.attr("disabled", true);
-                    feedbackArea.html('<s:text name="planetGroupSubs.badFeedURL" />');
+                    feedbackArea.html('<spring:message code="planetGroupSubs.badFeedURL" />');
                     feedbackArea.css("color", "red");
                     return;
                 }
@@ -68,5 +77,4 @@
         });
     </script>
 
-</s:if>
-
+</c:if>

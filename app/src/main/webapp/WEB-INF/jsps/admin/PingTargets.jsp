@@ -15,87 +15,84 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
-<%@ include file="/WEB-INF/jsps/taglibs-struts2.jsp" %>
+<%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p class="subtitle"><s:text name="commonPingTargets.subtitle"/></p>
+<p class="subtitle"><spring:message code="commonPingTargets.subtitle"/></p>
 
-<p><s:text name="commonPingTargets.explanation"/></p>
+<p><spring:message code="commonPingTargets.explanation"/></p>
 
 
 <table class="rollertable table table-striped">
 
     <%-- Headings --%>
     <tr class="rollertable">
-        <th class="rollertable" width="20%%"><s:text name="generic.name"/></th>
-        <th class="rollertable" width="55%"><s:text name="pingTarget.pingUrl"/></th>
-        <th class="rollertable" width="15%" colspan="2"><s:text name="pingTarget.autoEnabled"/></th>
-        <th class="rollertable" width="5%"><s:text name="generic.edit"/></th>
-        <th class="rollertable" width="5%"><s:text name="pingTarget.remove"/></th>
+        <th class="rollertable" width="20%%"><spring:message code="generic.name"/></th>
+        <th class="rollertable" width="55%"><spring:message code="pingTarget.pingUrl"/></th>
+        <th class="rollertable" width="15%" colspan="2"><spring:message code="pingTarget.autoEnabled"/></th>
+        <th class="rollertable" width="5%"><spring:message code="generic.edit"/></th>
+        <th class="rollertable" width="5%"><spring:message code="pingTarget.remove"/></th>
     </tr>
 
     <%-- Listing of current common targets --%>
-    <s:iterator var="pingTarget" value="pingTargets" status="rowstatus">
+    <c:forEach var="pingTarget" items="${pingTargets}" varStatus="rowstatus">
 
         <tr class="rollertable_odd">
 
-            <td class="rollertable"><s:property value="#pingTarget.name"/></td>
+            <td class="rollertable">${fn:escapeXml(pingTarget.name)}</td>
 
-            <td class="rollertable"><s:property value="#pingTarget.pingUrl"/></td>
+            <td class="rollertable">${fn:escapeXml(pingTarget.pingUrl)}</td>
 
             <td class="rollertable" align="center">
-                <s:if test="#pingTarget.autoEnabled">
-                    <span style="color: #00aa00; font-weight: bold;"><s:text name="pingTarget.enabled"/></span>&nbsp;
-                </s:if>
-                <s:else>
-                    <span style="color: #aaaaaa; font-weight: bold;"><s:text name="pingTarget.disabled"/></span>&nbsp;
-                </s:else>
+                <c:if test="${pingTarget.autoEnabled}">
+                    <span style="color: #00aa00; font-weight: bold;"><spring:message code="pingTarget.enabled"/></span>&nbsp;
+                </c:if>
+                <c:if test="${!pingTarget.autoEnabled}">
+                    <span style="color: #aaaaaa; font-weight: bold;"><spring:message code="pingTarget.disabled"/></span>&nbsp;
+                </c:if>
             </td>
 
             <td class="rollertable" align="center">
-                <s:if test="#pingTarget.autoEnabled">
-                    <s:url var="disablePing" action="commonPingTargets!disable">
-                        <s:param name="pingTargetId" value="#pingTarget.id"/>
-                    </s:url>
-                    <s:a href="%{disablePing}">
-                        <s:text name="pingTarget.disable"/>
-                    </s:a>
-                </s:if>
-                <s:else>
-                    <s:url var="enablePing" action="commonPingTargets!enable">
-                        <s:param name="pingTargetId" value="#pingTarget.id"/>
-                    </s:url>
-                    <s:a href="%{enablePing}">
-                        <s:text name="pingTarget.enable"/></s:a>
-                </s:else>
+                <c:if test="${pingTarget.autoEnabled}">
+                    <c:url var="disablePing" value="/roller-ui/admin/commonPingTargets!disable.rol">
+                        <c:param name="pingTargetId" value="${pingTarget.id}"/>
+                    </c:url>
+                    <a href="${disablePing}">
+                        <spring:message code="pingTarget.disable"/>
+                    </a>
+                </c:if>
+                <c:if test="${!pingTarget.autoEnabled}">
+                    <c:url var="enablePing" value="/roller-ui/admin/commonPingTargets!enable.rol">
+                        <c:param name="pingTargetId" value="${pingTarget.id}"/>
+                    </c:url>
+                    <a href="${enablePing}">
+                        <spring:message code="pingTarget.enable"/></a>
+                </c:if>
             </td>
 
             <td class="rollertable" align="center">
-                <a href="#" onclick="showAddEditModal('<s:property value="#pingTarget.id"/>',
-                        '<s:property value="#pingTarget.name" />',
-                        '<s:property value="#pingTarget.pingUrl" />'
+                <a href="#" onclick="showAddEditModal('${fn:escapeXml(pingTarget.id)}',
+                        '${fn:escapeXml(pingTarget.name)}',
+                        '${fn:escapeXml(pingTarget.pingUrl)}'
                         )">
                     <span class="glyphicon glyphicon-edit" aria-hidden="true"> </span>
                 </a>
             </td>
 
             <td class="rollertable" align="center">
-                <a href="#" onclick="showDeleteModal('<s:property value="#pingTarget.id"/>')">
+                <a href="#" onclick="showDeleteModal('${fn:escapeXml(pingTarget.id)}')">
                     <span class="glyphicon glyphicon-trash" aria-hidden="true"> </span>
                 </a>
             </td>
 
         </tr>
-    </s:iterator>
+    </c:forEach>
 
 </table>
 
 <div style="padding: 4px; font-weight: bold;">
-    <s:url var="addPing" action="commonPingTargetAdd">
-        <s:param name="weblog" value="actionWeblog.handle"/>
-    </s:url>
     <a href="#" onclick="showAddEditModal()">
         <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"> </span>
-        <s:text name="pingTarget.addTarget"/>
+        <spring:message code="pingTarget.addTarget"/>
     </a>
 </div>
 
@@ -108,29 +105,30 @@
 
         <div class="modal-content">
 
-            <s:form theme="bootstrap" cssClass="form-horizontal">
-                <s:hidden name="salt"/>
-                <s:hidden id="removeId" name="pingTargetId"/>
+            <form method="post" action="<c:url value='/roller-ui/admin/commonPingTargets!delete.rol'/>" class="form-horizontal">
+                <sec:csrfInput/>
+                <input type="hidden" id="removeId" name="pingTargetId"/>
 
                 <div class="modal-header">
                     <div class="modal-title">
-                        <h3><s:text name="pingTarget.confirmRemoveTitle"/></h3>
+                        <h3><spring:message code="pingTarget.confirmRemoveTitle"/></h3>
                     </div>
                 </div>
 
                 <div class="modal-body">
-                    <s:text name="pingTarget.confirmCommonRemove"/>
+                    <spring:message code="pingTarget.confirmCommonRemove"/>
                 </div>
 
                 <div class="modal-footer">
-                    <s:submit cssClass="btn btn-danger"
-                              value="%{getText('generic.yes')}" action="commonPingTargets!delete"/>
+                    <button type="submit" class="btn btn-danger">
+                        <spring:message code="generic.yes"/>
+                    </button>
                     <button type="button" class="btn" data-dismiss="modal">
-                        <s:text name="generic.cancel"/>
+                        <spring:message code="generic.cancel"/>
                     </button>
                 </div>
 
-            </s:form>
+            </form>
 
         </div>
 
@@ -151,34 +149,48 @@
 
             <div class="modal-header">
 
-                <s:if test="actionName == 'commonPingTargetEdit'">
-                    <s:set var="subtitleKey">pingTargetEdit.subtitle</s:set>
-                </s:if>
-                <s:else>
-                    <s:set var="subtitleKey">pingTargetAdd.subtitle</s:set>
-                </s:else>
+                <c:choose>
+                    <c:when test="${actionName == 'commonPingTargetEdit'}">
+                        <c:set var="subtitleKey" value="pingTargetEdit.subtitle"/>
+                    </c:when>
+                    <c:otherwise>
+                        <c:set var="subtitleKey" value="pingTargetAdd.subtitle"/>
+                    </c:otherwise>
+                </c:choose>
 
                 <div class="modal-title">
-                    <h3> <s:text name="%{#subtitleKey}"> </s:text> </h3>
+                    <h3> <spring:message code="${subtitleKey}"/> </h3>
                 </div>
 
             </div> <%-- modal header --%>
 
             <div class="modal-body">
 
-                <s:form id="pingTargetEditForm" theme="bootstrap" cssClass="form-horizontal">
-                    <s:hidden name="bean.id"/>
-                    <s:hidden name="salt"/>
-                    <s:hidden name="actionName"/>
+                <form id="pingTargetEditForm" method="post" class="form-horizontal">
+                    <sec:csrfInput/>
+                    <input type="hidden" name="bean.id" id="pingTargetEditForm_bean_id"/>
+                    <input type="hidden" name="actionName" id="pingTargetEditForm_actionName"/>
 
-                    <s:textfield name="bean.name" size="30" maxlength="30" style="width:50%"
-                                 onchange="validate()" onkeyup="validate()"
-                                 label="%{getText('generic.name')}" />
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label"><spring:message code="generic.name"/></label>
+                        <div class="col-sm-9 controls">
+                            <input type="text" name="bean.name" id="pingTargetEditForm_bean_name"
+                                   size="30" maxlength="30" style="width:50%"
+                                   onchange="validate()" onkeyup="validate()"
+                                   class="form-control"/>
+                        </div>
+                    </div>
 
-                    <s:textfield name="bean.pingUrl" size="100" maxlength="255" style="width:50%"
-                                 onchange="validate()" onkeyup="validate()"
-                                 label="%{getText('pingTarget.pingUrl')}" />
-                </s:form>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label"><spring:message code="pingTarget.pingUrl"/></label>
+                        <div class="col-sm-9 controls">
+                            <input type="text" name="bean.pingUrl" id="pingTargetEditForm_bean_pingUrl"
+                                   size="100" maxlength="255" style="width:50%"
+                                   onchange="validate()" onkeyup="validate()"
+                                   class="form-control"/>
+                        </div>
+                    </div>
+                </form>
 
             </div> <%-- modal body --%>
 
@@ -187,11 +199,11 @@
                 <p id="feedback-area-edit"></p>
 
                 <button type="button" id="save_ping_target" onclick="savePingTarget()" class="btn btn-success">
-                    <s:text name="generic.save"/>
+                    <spring:message code="generic.save"/>
                 </button>
 
                 <button type="button" class="btn" data-dismiss="modal">
-                    <s:text name="generic.cancel"/>
+                    <spring:message code="generic.cancel"/>
                 </button>
 
             </div> <%-- modal footer --%>
@@ -204,10 +216,10 @@
 
 
 <%-- page reload mechanism --%>
-<s:form action="commonPingTargets!execute">
-    <s:hidden name="salt"/>
-    <s:hidden name="weblog"/>
-</s:form>
+<form id="commonPingTargets" method="post" action="<c:url value='/roller-ui/admin/commonPingTargets!execute.rol'/>">
+    <sec:csrfInput/>
+    <input type="hidden" name="weblog" value="${fn:escapeXml(weblog)}"/>
+</form>
 
 
 <%-- ================================================================================================ --%>
@@ -221,22 +233,22 @@
 
     function showAddEditModal(pingTargetId, name, url) {
         if ( pingTargetId ) {
-            $('#pingTargetEditForm_actionName:first').val("commonPingTargetEdit");
-            $('#pingTargetEditForm_bean_id:first').val(pingTargetId);
-            $('#pingTargetEditForm_bean_name:first').val(name);
-            $('#pingTargetEditForm_bean_pingUrl:first').val(url);
+            $('#pingTargetEditForm_actionName').val("commonPingTargetEdit");
+            $('#pingTargetEditForm_bean_id').val(pingTargetId);
+            $('#pingTargetEditForm_bean_name').val(name);
+            $('#pingTargetEditForm_bean_pingUrl').val(url);
         } else {
-            $('#pingTargetEditForm_actionName:first').val("commonPingTargetAdd");
-            $('#pingTargetEditForm_bean_name:first').val("");
-            $('#pingTargetEditForm_bean_pingUrl:first').val("");
+            $('#pingTargetEditForm_actionName').val("commonPingTargetAdd");
+            $('#pingTargetEditForm_bean_name').val("");
+            $('#pingTargetEditForm_bean_pingUrl').val("");
         }
         $('#addedit-pingtarget-modal').modal({show: true});
     }
 
     function validate() {
         var savePingTargetButton = $('#save-button:first');
-        var name = $('#pingTargetEditForm_bean_name:first').val().trim();
-        var url = $('#pingTargetEditForm_bean_pingUrl:first').val().trim();
+        var name = $('#pingTargetEditForm_bean_name').val().trim();
+        var url = $('#pingTargetEditForm_bean_pingUrl').val().trim();
         if ( name.length > 0 && url.length > 0 && isValidUrl(url) ) {
             savePingTargetButton.attr("disabled", false);
         } else {
@@ -266,7 +278,7 @@
 
         var feedbackAreaEdit = $("#feedback-area-edit");
 
-        var actionName = $('#pingTargetEditForm_actionName:first').val();
+        var actionName = $('#pingTargetEditForm_actionName').val();
 
         // post ping target via AJAX
         $.ajax({
@@ -279,14 +291,14 @@
 
             // kludge: scrape response status from HTML returned by Struts
             var alertEnd = data.indexOf("ALERT_END");
-            var notUnique = data.indexOf("<s:text name='pingTarget.nameNotUnique' />");
+            var notUnique = data.indexOf("<spring:message code='pingTarget.nameNotUnique' />");
             if (notUnique > 0 && notUnique < alertEnd) {
                 feedbackAreaEdit.css("color", "red");
-                feedbackAreaEdit.html('<s:text name="pingTarget.nameNotUnique" />');
+                feedbackAreaEdit.html('<spring:message code="pingTarget.nameNotUnique" />');
 
             } else {
                 feedbackAreaEdit.css("color", "green");
-                feedbackAreaEdit.html('<s:text name="generic.success" />');
+                feedbackAreaEdit.html('<spring:message code="generic.success" />');
                 $('#addedit-pingtarget-modal').modal("hide");
 
                 // cause page to be reloaded so that edit appears
@@ -294,10 +306,9 @@
             }
 
         }).error(function (data) {
-            feedbackAreaEdit.html('<s:text name="generic.error.check.logs" />');
+            feedbackAreaEdit.html('<spring:message code="generic.error.check.logs" />');
             feedbackAreaEdit.css("color", "red");
         });
     }
 
 </script>
-
