@@ -61,8 +61,8 @@
 
     <%-- title --%>
     <div class="form-group">
-        <label class="col-md-3 control-label"><spring:message code="weblogEdit.title"/></label>
-        <div class="col-md-9">
+        <label class="col-sm-3 control-label"><spring:message code="weblogEdit.title"/></label>
+        <div class="col-sm-9">
             <input type="text" name="bean.title" value="${bean.title}" maxlength="255" tabindex="1" class="form-control"/>
         </div>
     </div>
@@ -71,11 +71,11 @@
     <c:if test="${actionName == 'entryEdit'}">
         <div class="form-group">
 
-            <label class="col-md-3" for="entry_bean_permalink">
+            <label class="col-sm-3" for="entry_bean_permalink">
                 <spring:message code="weblogEdit.permaLink"/>
             </label>
 
-            <div class="controls col-md-9">
+            <div class="controls col-sm-9">
                 <p class="form-control-static">
                     <c:choose>
 <c:when test="${bean.published}">
@@ -95,16 +95,16 @@
 
     <%-- tags --%>
     <div class="form-group">
-        <label class="col-md-3 control-label"><spring:message code="weblogEdit.tags"/></label>
-        <div class="col-md-9">
+        <label class="col-sm-3 control-label"><spring:message code="weblogEdit.tags"/></label>
+        <div class="col-sm-9">
             <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" id="tagAutoComplete" maxlength="255" tabindex="2" class="form-control"/>
         </div>
     </div>
 
     <%-- category --%>
     <div class="form-group">
-        <label class="col-md-3 control-label"><spring:message code="weblogEdit.category"/></label>
-        <div class="col-md-9">
+        <label class="col-sm-3 control-label"><spring:message code="weblogEdit.category"/></label>
+        <div class="col-sm-9">
             <select name="bean.categoryId" class="form-control" tabindex="3">
 <c:forEach items="${categories}" var="opt">
 <option value="${opt.id}" ${opt.id == bean.categoryId ? 'selected' : ''}>${opt.name}</option>
@@ -117,8 +117,8 @@
 <c:when test="${actionWeblog.enableMultiLang}">
         <%-- language / locale --%>
         <div class="form-group">
-            <label class="col-md-3 control-label"><spring:message code="weblogEdit.locale"/></label>
-            <div class="col-md-9">
+            <label class="col-sm-3 control-label"><spring:message code="weblogEdit.locale"/></label>
+            <div class="col-sm-9">
                 <select name="bean.locale" class="form-control" tabindex="4">
 <c:forEach items="${localesList}" var="opt">
 <option value="${opt}" ${opt == bean.locale ? 'selected' : ''}>${opt}</option>
@@ -132,9 +132,9 @@
     </c:otherwise>
 </c:choose><%-- status --%>
     <div class="form-group">
-        <label class="col-md-3" for="weblogEdit.status"><spring:message code="weblogEdit.status"/></label>
+        <label class="col-sm-3" for="weblogEdit.status"><spring:message code="weblogEdit.status"/></label>
 
-        <div class="controls col-md-9">
+        <div class="controls col-sm-9">
 
             <p class="form-control-static">
                 <c:choose>
@@ -228,9 +228,9 @@
 
                     <div class="form-group">
 
-                        <label class="control-label col-md-3"><spring:message code="weblogEdit.pubTime"/></label>
+                        <label class="control-label col-sm-3"><spring:message code="weblogEdit.pubTime"/></label>
 
-                        <div class="controls col-md-9">
+                        <div class="controls col-sm-9">
 
                             <select name="bean.hours">
 <c:forEach items="${hoursList}" var="opt">
@@ -265,8 +265,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="col-md-3 control-label"><spring:message code="weblogEdit.commentDays"/></label>
-                        <div class="col-md-9">
+                        <label class="col-sm-3 control-label"><spring:message code="weblogEdit.commentDays"/></label>
+                        <div class="col-sm-9">
                             <select name="bean.commentDays" class="form-control">
 <c:forEach items="${commentDaysList}" var="opt">
 <option value="${opt.key}" ${opt.key == bean.commentDays ? 'selected' : ''}>${opt.value}</option>
@@ -276,7 +276,7 @@
                     </div>
 
                     <div class="form-group">
-                        <div class="col-md-offset-3 col-md-9">
+                        <div class="col-sm-offset-3 col-sm-9">
                             <label><input type="checkbox" name="bean.rightToLeft" value="true" ${bean.rightToLeft ? 'checked' : ''}/> <spring:message code="weblogEdit.rightToLeft"/></label>
                         </div>
                     </div>
@@ -284,22 +284,22 @@
                         <%-- global admin can pin items to front page weblog --%>
                     <c:if test="${authenticatedUser.hasGlobalPermission('admin')}">
                         <div class="form-group">
-                            <div class="col-md-offset-3 col-md-9">
+                            <div class="col-sm-offset-3 col-sm-9">
                                 <label><input type="checkbox" name="bean.pinnedToMain" value="true" ${bean.pinnedToMain ? 'checked' : ''}/> <spring:message code="weblogEdit.pinnedToMain"/></label>
                             </div>
                         </div>
                     </c:if>
 
                     <div class="form-group">
-                        <label class="col-md-3 control-label"><spring:message code="weblogEdit.searchDescription"/></label>
-                        <div class="col-md-9">
+                        <label class="col-sm-3 control-label"><spring:message code="weblogEdit.searchDescription"/></label>
+                        <div class="col-sm-9">
                             <input type="text" name="bean.searchDescription" value="${bean.searchDescription}" maxlength="255" class="form-control"/>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="col-md-3 control-label"><spring:message code="weblogEdit.enclosureURL"/></label>
-                        <div class="col-md-9">
+                        <label class="col-sm-3 control-label"><spring:message code="weblogEdit.enclosureURL"/></label>
+                        <div class="col-sm-9">
                             <input type="text" name="bean.enclosureURL" value="${bean.enclosureURL}" maxlength="255" class="form-control"/>
                         </div>
                     </div>

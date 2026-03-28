@@ -42,8 +42,8 @@
     <%-- Title, category, dates and other metadata --%>
 
     <div class="form-group">
-        <label class="col-md-3 control-label"><spring:message code="generic.name"/></label>
-        <div class="col-md-9">
+        <label class="col-sm-3 control-label"><spring:message code="generic.name"/></label>
+        <div class="col-sm-9">
             <input type="text" name="bean.name" value="${bean.name}" size="35" maxlength="100" tabindex="1" class="form-control"/>
         </div>
     </div>
@@ -79,29 +79,29 @@
     </div>
 
     <div class="form-group">
-        <label class="col-md-3 control-label"><spring:message code="generic.description"/></label>
-        <div class="col-md-9">
+        <label class="col-sm-3 control-label"><spring:message code="generic.description"/></label>
+        <div class="col-sm-9">
             <textarea name="bean.description" rows="2" cols="50" tabindex="2" class="form-control">${bean.description}</textarea>
         </div>
     </div>
 
     <div class="form-group">
-        <label class="col-md-3 control-label"><spring:message code="mediaFileEdit.tags"/></label>
-        <div class="col-md-9">
+        <label class="col-sm-3 control-label"><spring:message code="mediaFileEdit.tags"/></label>
+        <div class="col-sm-9">
             <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" size="30" maxlength="100" tabindex="3" class="form-control"/>
         </div>
     </div>
 
     <div class="form-group">
-        <label class="col-md-3 control-label"><spring:message code="mediaFileEdit.copyright"/></label>
-        <div class="col-md-9">
+        <label class="col-sm-3 control-label"><spring:message code="mediaFileEdit.copyright"/></label>
+        <div class="col-sm-9">
             <input type="text" name="bean.copyrightText" value="${bean.copyrightText}" size="30" maxlength="100" tabindex="4" class="form-control"/>
         </div>
     </div>
 
     <div class="form-group">
-        <label class="col-md-3 control-label"><spring:message code="mediaFileEdit.directory"/></label>
-        <div class="col-md-9">
+        <label class="col-sm-3 control-label"><spring:message code="mediaFileEdit.directory"/></label>
+        <div class="col-sm-9">
             <select name="bean.directoryId" class="form-control" tabindex="5">
                 <c:forEach items="${allDirectories}" var="opt">
                     <option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
@@ -111,7 +111,7 @@
     </div>
 
     <div class="form-group">
-        <div class="col-md-offset-3 col-md-9">
+        <div class="col-sm-offset-3 col-sm-9">
             <label><input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''} tabindex="6"/> <spring:message code="mediaFileEdit.includeGalleryHelp"/></label>
         </div>
     </div>

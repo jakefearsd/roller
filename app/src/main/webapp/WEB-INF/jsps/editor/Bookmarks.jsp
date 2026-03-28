@@ -95,8 +95,8 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
     <%-- allow user to select the bookmark folder to view --%>
 
     <div class="form-group">
-        <label class="col-md-3 control-label"><spring:message code="bookmarksForm.switchTo"/></label>
-        <div class="col-md-9">
+        <label class="col-sm-3 control-label"><spring:message code="bookmarksForm.switchTo"/></label>
+        <div class="col-sm-9">
             <select name="viewFolderId" class="form-control" onchange="viewChanged()" onmouseup="viewChanged()">
 <option value=""></option>
 <c:forEach items="${allFolders}" var="opt">
@@ -351,7 +351,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
     function onMoveToFolder() {
         var bookmarksForm = $("#bookmarks")[0];
-        bookmarksForm.action = "bookmarks!move.rol";
+        bookmarksForm.action = "${pageContext.request.contextPath}/roller-ui/authoring/bookmarks!move.rol";
         bookmarksForm.submit();
     }
 
@@ -365,7 +365,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
 
         } else {
             // user changed the blogroll/folder, post to "view" action to get new page
-            bookmarksForm.action = "bookmarks!view.rol";
+            bookmarksForm.action = "${pageContext.request.contextPath}/roller-ui/authoring/bookmarks!view.rol";
             bookmarksForm.submit();
         }
     }
@@ -375,7 +375,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
         // user selected New Blogroll option, show the add/edit blogroll modal
         $('#blogroll-edit-title').html('<spring:message code="bookmarksForm.addBlogroll.title"/>');
 
-        folderEditForm.action = "folderAdd!save.rol";
+        folderEditForm.action = "${pageContext.request.contextPath}/roller-ui/authoring/folderAdd!save.rol";
         folderEditForm.actionName.value = "folderAdd";
 
         // disable save button until valid name is entered
@@ -408,12 +408,9 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
                     <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                     <input type="hidden" name="bean.id" value="${bean.id}"/>
 
-                    <%-- action needed here because we are using AJAX to post this form --%>
-                    <input type="hidden" name="action:folderEdit!save" value="${save}"/>
-
                     <div class="form-group">
-                        <label class="col-md-3 control-label"><spring:message code="generic.name"/></label>
-                        <div class="col-md-9">
+                        <label class="col-sm-3 control-label"><spring:message code="generic.name"/></label>
+                        <div class="col-sm-9">
                             <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control" onchange="onBlogrollFormChanged()" onkeyup="onBlogrollFormChanged()"/>
                         </div>
                     </div>
@@ -499,7 +496,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
                 $("#bookmarks_viewFolderId").val(newFolderId);
 
                 var bookmarksForm = $("#bookmarks")[0];
-                bookmarksForm.action = "bookmarks!view.rol";
+                bookmarksForm.action = "${pageContext.request.contextPath}/roller-ui/authoring/bookmarks!view.rol";
                 bookmarksForm.submit();
             }
 
@@ -637,36 +634,36 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
                     <input type="hidden" name="bean.id" value="${bean.id}"/>
 
                     <div class="form-group">
-                        <label class="col-md-3 control-label"><spring:message code="generic.name"/></label>
-                        <div class="col-md-9">
+                        <label class="col-sm-3 control-label"><spring:message code="generic.name"/></label>
+                        <div class="col-sm-9">
                             <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="col-md-3 control-label"><spring:message code="bookmarkForm.url"/></label>
-                        <div class="col-md-9">
+                        <label class="col-sm-3 control-label"><spring:message code="bookmarkForm.url"/></label>
+                        <div class="col-sm-9">
                             <input type="text" name="bean.url" value="${bean.url}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="col-md-3 control-label"><spring:message code="bookmarkForm.rssUrl"/></label>
-                        <div class="col-md-9">
+                        <label class="col-sm-3 control-label"><spring:message code="bookmarkForm.rssUrl"/></label>
+                        <div class="col-sm-9">
                             <input type="text" name="bean.feedUrl" value="${bean.feedUrl}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="col-md-3 control-label"><spring:message code="generic.description"/></label>
-                        <div class="col-md-9">
+                        <label class="col-sm-3 control-label"><spring:message code="generic.description"/></label>
+                        <div class="col-sm-9">
                             <input type="text" name="bean.description" value="${bean.description}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="col-md-3 control-label"><spring:message code="bookmarkForm.image"/></label>
-                        <div class="col-md-9">
+                        <label class="col-sm-3 control-label"><spring:message code="bookmarkForm.image"/></label>
+                        <div class="col-sm-9">
                             <input type="text" name="bean.image" value="${bean.image}" maxlength="255" class="form-control" onchange="onBookmarkFormChanged()" onkeyup="onBookmarkFormChanged()"/>
                         </div>
                     </div>
@@ -820,7 +817,7 @@ We used to call them Bookmarks and Folders, now we call them Blogroll links and 
         // post bookmark via AJAX
         $.ajax({
             method: 'post',
-            url: "bookmarkEdit!save.rol",
+            url: "${pageContext.request.contextPath}/roller-ui/authoring/bookmarkEdit!save.rol",
             data: $("#bookmarkEdit").serialize(),
             context: document.body
 

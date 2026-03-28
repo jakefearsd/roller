@@ -216,9 +216,7 @@
 
 
 <%-- page reload mechanism --%>
-<form id="commonPingTargets" method="post" action="<c:url value='/roller-ui/admin/commonPingTargets!execute.rol'/>">
-    <sec:csrfInput/>
-    <input type="hidden" name="weblog" value="${fn:escapeXml(weblog)}"/>
+<form id="commonPingTargets" method="GET" action="<c:url value='/roller-ui/admin/commonPingTargets.rol'/>">
 </form>
 
 
