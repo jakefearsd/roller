@@ -16,6 +16,15 @@
   directory of this distribution.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
+<%@ page import="org.apache.roller.weblogger.ui.core.util.menu.Menu" %>
+
+<%-- Extract the menu from the request. The model attribute "menu" may collide
+     with other attributes during request dispatching, so we safely cast it. --%>
+<%
+    Object menuObj = request.getAttribute("menu");
+    Menu navMenu = (menuObj instanceof Menu) ? (Menu) menuObj : null;
+    request.setAttribute("navMenu", navMenu);
+%>
 
 <nav class="navbar navbar-default navbar-static-top navbar-inverse">
     <div class="container-fluid">
@@ -34,57 +43,35 @@
 
             <ul class="nav navbar-nav">
 
-                <c:choose>
-                    <c:when test="${actionWeblog != null}">
-
-                        <c:set var="tabMenu" value="${menu}"/>
-                        <c:if test="${tabMenu != null}">
-                            <c:forEach items="${tabMenu.tabs}" var="tab">
-                                <li class="dropdown">
-                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-                                       aria-haspopup="true" aria-expanded="false">
-                                        <spring:message code="${tab.key}"/> <span class="caret"></span>
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
-                                            <li>
+                <c:if test="${navMenu != null}">
+                    <c:forEach items="${navMenu.tabs}" var="tab">
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">
+                                <spring:message code="${tab.key}"/> <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
+                                    <li>
+                                        <c:choose>
+                                            <c:when test="${actionWeblog != null}">
                                                 <a href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol">
                                                     <c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
                                                     <spring:message code="${tabItem.key}"/>
                                                 </a>
-                                            </li>
-                                        </c:forEach>
-                                    </ul>
-                                </li>
-                            </c:forEach>
-                        </c:if>
-
-                    </c:when>
-                    <c:otherwise>
-
-                        <c:set var="tabMenu" value="${menu}"/>
-                        <c:if test="${tabMenu != null}">
-                            <c:forEach items="${tabMenu.tabs}" var="tab">
-                                <li class="dropdown">
-                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-                                       aria-haspopup="true" aria-expanded="false">
-                                        <spring:message code="${tab.key}"/> <span class="caret"></span>
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
-                                            <li>
-                                                <a href="<c:url value='/roller-ui/authoring/${tabItem.action}.rol'/>">
+                                            </c:when>
+                                            <c:otherwise>
+                                                <a href="<c:url value='/roller-ui/admin/${tabItem.action}.rol'/>">
                                                     <spring:message code="${tabItem.key}"/>
                                                 </a>
-                                            </li>
-                                        </c:forEach>
-                                    </ul>
-                                </li>
-                            </c:forEach>
-                        </c:if>
-
-                    </c:otherwise>
-                </c:choose>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </li>
+                                </c:forEach>
+                            </ul>
+                        </li>
+                    </c:forEach>
+                </c:if>
 
             </ul>
 
@@ -111,7 +98,7 @@
                         </li>
 
                         <c:choose>
-                            <c:when test="${rc:getBooleanProp('users.registration.enabled') && getProp('authentication.method') != 'ldap'}">
+                            <c:when test="${rc:getBooleanProp('users.registration.enabled') && rc:getProp('authentication.method') != 'ldap'}">
                                 <li>
                                     <a href="<c:url value="/roller-ui/register.rol"/>">
                                         <spring:message code="navigationBar.register"/></a>
