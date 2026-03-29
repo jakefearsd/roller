@@ -171,14 +171,6 @@ public class InstallController extends BaseController {
             // trigger initialization process
             WebloggerFactory.getWeblogger().initialize();
 
-            // also need to do planet if it's configured
-            if (WebloggerConfig.getBooleanProperty("planet.aggregator.enabled")) {
-                try {
-                    WebloggerStartup.prepare();
-                } catch (Exception ex) {
-                    log.fatal("Roller Planet startup failed during app preparation", ex);
-                }
-            }
             log.info("EXITING - Bootstrap successful, forwarding to Roller");
             return "redirect:/";
 

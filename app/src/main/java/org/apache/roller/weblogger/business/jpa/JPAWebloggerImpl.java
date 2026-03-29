@@ -17,9 +17,6 @@
  */
 package org.apache.roller.weblogger.business.jpa;
 
-import org.apache.roller.planet.business.PlanetManager;
-import org.apache.roller.planet.business.PlanetURLStrategy;
-import org.apache.roller.planet.business.fetcher.FeedFetcher;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.*;
 import org.apache.roller.weblogger.business.pings.AutoPingManager;
@@ -62,11 +59,8 @@ public class JPAWebloggerImpl extends WebloggerImpl {
         WeblogManager        weblogManager,
         WeblogEntryManager   weblogEntryManager,
         OAuthManager         oauthManager,
-		FeedFetcher          feedFetcher,
-        PlanetManager        planetManager,
-        PlanetURLStrategy    planetUrlStrategy,
         URLStrategy          urlStrategy) throws WebloggerException {
-        
+
         super(
             autoPingManager,
             bookmarkManager,
@@ -83,9 +77,6 @@ public class JPAWebloggerImpl extends WebloggerImpl {
             weblogManager,
             weblogEntryManager,
             oauthManager,
-            feedFetcher,
-            planetManager,
-            planetUrlStrategy,
             urlStrategy);
         
         this.strategy = strategy;

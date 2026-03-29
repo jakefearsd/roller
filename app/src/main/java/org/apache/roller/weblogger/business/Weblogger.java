@@ -18,8 +18,6 @@
 
 package org.apache.roller.weblogger.business;
 
-import org.apache.roller.planet.business.PlanetManager;
-import org.apache.roller.planet.business.fetcher.FeedFetcher;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.pings.AutoPingManager;
@@ -177,9 +175,4 @@ public interface Weblogger {
      */
     String getBuildUser();
 
-	FeedFetcher getFeedFetcher();
-
-	PlanetManager getPlanetManager();
-
-	org.apache.roller.planet.business.PlanetURLStrategy getPlanetURLStrategy();
 }

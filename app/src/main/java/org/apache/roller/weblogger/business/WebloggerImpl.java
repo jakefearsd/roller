@@ -20,8 +20,6 @@ package org.apache.roller.weblogger.business;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.planet.business.PlanetManager;
-import org.apache.roller.planet.business.fetcher.FeedFetcher;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.pings.AutoPingManager;
 import org.apache.roller.weblogger.business.pings.PingQueueManager;
@@ -69,12 +67,9 @@ public abstract class WebloggerImpl implements Weblogger {
     private final WeblogManager        weblogManager;
     private final WeblogEntryManager   weblogEntryManager;
     private final OAuthManager         oauthManager;
-    private final FeedFetcher          feedFetcher;
-    private final PlanetManager        planetManager;
-    
+
     // url strategy
     private final URLStrategy          urlStrategy;
-    private final org.apache.roller.planet.business.PlanetURLStrategy planetUrlStrategy;
     
     // some simple attributes
     private final String version;
@@ -99,10 +94,7 @@ public abstract class WebloggerImpl implements Weblogger {
         WeblogManager        weblogManager,
         WeblogEntryManager   weblogEntryManager,
         OAuthManager         oauthManager,
-        FeedFetcher          feedFetcher,
-        PlanetManager        planetManager,
-        org.apache.roller.planet.business.PlanetURLStrategy planetUrlStrategy,
-        URLStrategy          urlStrategy) throws WebloggerException { 
+        URLStrategy          urlStrategy) throws WebloggerException {
                 
         this.autoPingManager     = autoPingManager;
         this.bookmarkManager     = bookmarkManager;
@@ -120,9 +112,6 @@ public abstract class WebloggerImpl implements Weblogger {
         this.weblogEntryManager  = weblogEntryManager;
         this.oauthManager        = oauthManager;
         this.urlStrategy         = urlStrategy;
-        this.feedFetcher         = feedFetcher;
-        this.planetManager       = planetManager;
-        this.planetUrlStrategy   = planetUrlStrategy;
 
         Properties props = new Properties();
         try {
@@ -310,21 +299,6 @@ public abstract class WebloggerImpl implements Weblogger {
         return urlStrategy;
     }
 	
-    @Override
-    public FeedFetcher getFeedFetcher() {
-        return feedFetcher;
-    }
-
-    @Override
-    public PlanetManager getPlanetManager() {
-        return planetManager;
-    }
-
-    @Override
-	public org.apache.roller.planet.business.PlanetURLStrategy getPlanetURLStrategy() {
-		return planetUrlStrategy;
-	}
-
     /**
      * @inheritDoc
      */

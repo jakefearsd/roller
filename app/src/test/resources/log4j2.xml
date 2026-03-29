@@ -62,17 +62,11 @@ limitations under the License.
         <Logger name="com.rometools"       level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.webjars"         level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         
-        <!-- 
-        <Logger name="org.apache.roller.planet.business.jpa.JPAPropertiesManagerImpl"    level="debug" additivity="false"> <AppenderRef ref="roller"/> </Logger>
+        <!--
         <Logger name="org.apache.roller.weblogger.business.jpa.JPAPropertiesManagerImpl" level="debug" additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.apache.roller.weblogger.business"                              level="debug" additivity="false"> <AppenderRef ref="roller"/> </Logger>
 
-        <Logger name="org.apache.roller.planet.config.PlanetConfig"       level="debug" additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.apache.roller.weblogger.config.WebloggerConfig" level="debug" additivity="false"> <AppenderRef ref="roller"/> </Logger>
-
-        <Logger name="org.apache.roller.weblogger.planet.tasks"     level="debug" additivity="false"> <AppenderRef ref="roller"/> </Logger>
-        <Logger name="org.apache.roller.planet.business"            level="debug" additivity="false"> <AppenderRef ref="roller"/> </Logger>
-        <Logger name="org.apache.roller.weblogger.planet.business"  level="debug" additivity="false"> <AppenderRef ref="roller"/> </Logger>
         -->
         
         <!-- server.log catches everything that hasn't been logged yet-->

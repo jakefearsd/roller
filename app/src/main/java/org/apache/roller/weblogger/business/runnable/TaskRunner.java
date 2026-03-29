@@ -30,7 +30,7 @@ public class TaskRunner {
     
     public static void main(String[] args) throws Exception {
         if (args.length < 3) {
-            System.err.println("USAGE: java -cp roller-planet.jar TaskRunner WEBAPPDIR JARSDIR CLASSNAME");
+            System.err.println("USAGE: java -cp roller.jar TaskRunner WEBAPPDIR JARSDIR CLASSNAME");
             System.err.println("WEBAPPDIR: The directory path to the web application ");
             System.err.println("           (e.g. $CATALINA_HOME/webapps/roller)");
             System.err.println("JARSDIR:   The directory path to the additional jars ");
@@ -65,14 +65,13 @@ public class TaskRunner {
 
 
 /* for example:
- 
+
 java \
-    -Dplanet.custom.config=planet-custom.properties \
     -Dcatalina.base=. \
     -cp ./build/webapp/WEB-INF/lib/roller-business.jar \
     org.apache.roller.weblogger.business.runnable.TaskRunner \
-    ~/roller_trunk/sandbox/planetroller/build/webapp \
+    ~/roller_trunk/build/webapp \
     /Applications/Java/jakarta-tomcat-5.5.9/common/lib \
-    org.apache.roller.weblogger.planet.tasks.GeneratePlanetTask
- 
+    org.apache.roller.weblogger.business.runnable.ScheduledEntriesTask
+
  */

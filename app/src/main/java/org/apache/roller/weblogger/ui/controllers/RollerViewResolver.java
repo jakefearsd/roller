@@ -274,21 +274,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
         addExtendedDefinition(".CacheInfo", ".tiles-tabbedpage",
                 Map.of("content", "/WEB-INF/jsps/admin/CacheInfo.jsp"));
 
-        addExtendedDefinition(".PlanetConfig", ".tiles-tabbedpage",
-                Map.of("content", "/WEB-INF/jsps/admin/PlanetConfig.jsp"));
-
-        addExtendedDefinition(".PlanetGroupSubs", ".tiles-tabbedpage",
-                Map.of(
-                        "content", "/WEB-INF/jsps/admin/PlanetGroupSubs.jsp",
-                        "sidebar", "/WEB-INF/jsps/admin/PlanetGroupSubsSidebar.jsp"
-                ));
-
-        addExtendedDefinition(".PlanetGroups", ".tiles-tabbedpage",
-                Map.of(
-                        "content", "/WEB-INF/jsps/admin/PlanetGroups.jsp",
-                        "sidebar", "/WEB-INF/jsps/admin/PlanetGroupSidebar.jsp"
-                ));
-
         // ---- weblog editor pages ----
 
         addExtendedDefinition(".MediaFileAdd", ".tiles-tabbedpage",
