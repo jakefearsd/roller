@@ -265,12 +265,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
 
-        addExtendedDefinition(".PingTargets", ".tiles-tabbedpage",
-                Map.of("content", "/WEB-INF/jsps/admin/PingTargets.jsp"));
-
-        addExtendedDefinition(".PingTargetEdit", ".tiles-tabbedpage",
-                Map.of("content", "/WEB-INF/jsps/tiles/empty.jsp"));
-
         addExtendedDefinition(".CacheInfo", ".tiles-tabbedpage",
                 Map.of("content", "/WEB-INF/jsps/admin/CacheInfo.jsp"));
 
@@ -437,9 +431,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
 
         addExtendedDefinition(".MemberResign", ".tiles-simplepage",
                 Map.of("content", "/WEB-INF/jsps/editor/MemberResign.jsp"));
-
-        addExtendedDefinition(".Pings", ".tiles-tabbedpage",
-                Map.of("content", "/WEB-INF/jsps/editor/Pings.jsp"));
 
         addExtendedDefinition(".Maintenance", ".tiles-tabbedpage",
                 Map.of("content", "/WEB-INF/jsps/editor/Maintenance.jsp"));

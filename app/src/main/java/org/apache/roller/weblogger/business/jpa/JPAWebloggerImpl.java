@@ -19,9 +19,6 @@ package org.apache.roller.weblogger.business.jpa;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.*;
-import org.apache.roller.weblogger.business.pings.AutoPingManager;
-import org.apache.roller.weblogger.business.pings.PingQueueManager;
-import org.apache.roller.weblogger.business.pings.PingTargetManager;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
@@ -44,12 +41,9 @@ public class JPAWebloggerImpl extends WebloggerImpl {
     @com.google.inject.Inject
     protected JPAWebloggerImpl(
         JPAPersistenceStrategy strategy,
-        AutoPingManager      autoPingManager,
         IndexManager         indexManager,
         MediaFileManager     mediaFileManager,
         FileContentManager   fileContentManager,
-        PingQueueManager     pingQueueManager,
-        PingTargetManager    pingTargetManager,
         PluginManager        pluginManager,
         PropertiesManager    propertiesManager,
         ThemeManager         themeManager,
@@ -61,12 +55,9 @@ public class JPAWebloggerImpl extends WebloggerImpl {
         URLStrategy          urlStrategy) throws WebloggerException {
 
         super(
-            autoPingManager,
             indexManager,
             mediaFileManager,
             fileContentManager,
-            pingQueueManager,
-            pingTargetManager,
             pluginManager,
             propertiesManager,
             themeManager,

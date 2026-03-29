@@ -245,10 +245,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             roller.getWeblogManager().saveWeblog(entry.getWebsite());
         }
         
-        if(entry.isPublished()) {
-            // Queue applicable pings for this update.
-            roller.getAutopingManager().queueApplicableAutoPings(entry);
-        }
     }
     
     /**

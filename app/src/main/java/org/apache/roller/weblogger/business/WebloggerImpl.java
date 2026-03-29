@@ -21,14 +21,10 @@ package org.apache.roller.weblogger.business;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.pings.AutoPingManager;
-import org.apache.roller.weblogger.business.pings.PingQueueManager;
-import org.apache.roller.weblogger.business.pings.PingTargetManager;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
-import org.apache.roller.weblogger.config.PingConfig;
 import org.apache.xmlrpc.util.SAXParsers;
 import org.xml.sax.SAXNotRecognizedException;
 import org.xml.sax.SAXNotSupportedException;
@@ -52,12 +48,9 @@ public abstract class WebloggerImpl implements Weblogger {
     private static final Log log = LogFactory.getLog(WebloggerImpl.class);
     
     // managers
-    private final AutoPingManager      autoPingManager;
     private final IndexManager         indexManager;
     private final MediaFileManager     mediaFileManager;
     private final FileContentManager   fileContentManager;
-    private final PingQueueManager     pingQueueManager;
-    private final PingTargetManager    pingTargetManager;
     private final PluginManager        pluginManager;
     private final PropertiesManager    propertiesManager;
     private final ThemeManager         themeManager;
@@ -78,12 +71,9 @@ public abstract class WebloggerImpl implements Weblogger {
     
     
     protected WebloggerImpl(
-        AutoPingManager      autoPingManager,
         IndexManager         indexManager,
         MediaFileManager     mediaFileManager,
         FileContentManager   fileContentManager,
-        PingQueueManager     pingQueueManager,
-        PingTargetManager    pingTargetManager,
         PluginManager        pluginManager,
         PropertiesManager    propertiesManager,
         ThemeManager         themeManager,
@@ -93,13 +83,10 @@ public abstract class WebloggerImpl implements Weblogger {
         WeblogEntryManager   weblogEntryManager,
         OAuthManager         oauthManager,
         URLStrategy          urlStrategy) throws WebloggerException {
-                
-        this.autoPingManager     = autoPingManager;
+
         this.indexManager        = indexManager;
         this.mediaFileManager    = mediaFileManager;
         this.fileContentManager  = fileContentManager;
-        this.pingQueueManager    = pingQueueManager;
-        this.pingTargetManager   = pingTargetManager;
         this.pluginManager       = pluginManager;
         this.propertiesManager   = propertiesManager;
         this.themeManager        = themeManager;
@@ -223,39 +210,6 @@ public abstract class WebloggerImpl implements Weblogger {
     
     
     /**
-     * 
-     * 
-     * @see org.apache.roller.weblogger.business.Weblogger#getPingTargetManager()
-     */
-    @Override
-    public PingQueueManager getPingQueueManager() {
-        return pingQueueManager;
-    }
-    
-    
-    /**
-     * 
-     * 
-     * @see org.apache.roller.weblogger.business.Weblogger#getPingTargetManager()
-     */
-    @Override
-    public AutoPingManager getAutopingManager() {
-        return autoPingManager;
-    }
-    
-    
-    /**
-     * 
-     * 
-     * @see org.apache.roller.weblogger.business.Weblogger#getPingTargetManager()
-     */
-    @Override
-    public PingTargetManager getPingTargetManager() {
-        return pingTargetManager;
-    }
-    
-    
-    /**
      *
      *
      * @see org.apache.roller.weblogger.business.Weblogger#getPluginManager()
@@ -291,11 +245,8 @@ public abstract class WebloggerImpl implements Weblogger {
     @Override
     public void release() {
         try {
-            autoPingManager.release();
             mediaFileManager.release();
             fileContentManager.release();
-            pingTargetManager.release();
-            pingQueueManager.release();
             pluginManager.release();
             threadManager.release();
             userManager.release();
@@ -336,25 +287,6 @@ public abstract class WebloggerImpl implements Weblogger {
             }
         }
 
-        try {
-            // Initialize ping systems
-            // TODO: this should probably be moving inside ping manager initialize() methods?
-            
-            // Initialize common targets from the configuration
-            PingConfig.initializeCommonTargets();
-            
-            // Initialize ping variants
-            PingConfig.initializePingVariants();
-            
-            // Remove all autoping configurations if ping usage has been disabled.
-            if (PingConfig.getDisablePingUsage()) {
-                log.info("Ping usage has been disabled.  Removing any existing auto ping configurations.");
-                WebloggerFactory.getWeblogger().getAutopingManager().removeAllAutoPings();
-            }
-        } catch (Exception e) {
-            throw new InitializationException("Error initializing ping systems", e);
-        }
-        
         // we always need to do a flush after initialization because it's
         // possible that some changes need to be persisted
         try {

@@ -147,7 +147,7 @@ public final class WeblogEntryCommentWrapper {
     
     
     /**
-     * Get the http referrer of the comment poster, used for trackbacks.
+     * Get the http referrer of the comment poster.
      *
      * Value is always html escaped.
      */

@@ -56,7 +56,6 @@ public class WeblogRequestMapper implements RequestMapper {
     private static final String RSD_SERVLET = "/roller-ui/rendering/rsd";
     
     private static final String COMMENT_SERVLET = "/roller-ui/rendering/comment";
-    private static final String TRACKBACK_SERVLET = "/roller-ui/rendering/trackback";
     
     
     // url patterns that are not allowed to be considered weblog handles
@@ -259,29 +258,12 @@ public class WeblogRequestMapper implements RequestMapper {
         
         StringBuilder forwardUrl = new StringBuilder(64);
         
-        // POST urls, like comment and trackback servlets
+        // POST urls, like comment servlet
         if("POST".equals(request.getMethod())) {
-            // posting to permalink, this means comment or trackback
+            // posting to permalink, this means comment
             if(context.equals("entry")) {
-                // trackback requests are required to have an "excerpt" param
-                if(request.getParameter("excerpt") != null) {
-                    
-                    forwardUrl.append(TRACKBACK_SERVLET);
-                    forwardUrl.append('/');
-                    forwardUrl.append(handle);
-                    if(locale != null) {
-                        forwardUrl.append('/');
-                        forwardUrl.append(locale);
-                    }
-                    forwardUrl.append('/');
-                    forwardUrl.append(context);
-                    if(data != null) {
-                        forwardUrl.append('/');
-                        forwardUrl.append(data);
-                    }
-                    
                 // comment requests are required to have a "content" param
-                } else if(request.getParameter("content") != null) {
+                if(request.getParameter("content") != null) {
                     
                     forwardUrl.append(COMMENT_SERVLET);
                     forwardUrl.append('/');

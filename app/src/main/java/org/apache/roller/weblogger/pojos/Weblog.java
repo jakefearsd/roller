@@ -491,12 +491,8 @@ public class Weblog implements Serializable {
     
     /**
      * The last time any visible part of this weblog was modified.
-     * This includes a change to weblog settings, entries, themes, templates, 
+     * This includes a change to weblog settings, entries, themes, templates,
      * comments, categories, etc.
-     *
-     * Pings are explicitly not included because pings do not
-     * affect visible changes to a weblog.
-     *
      */
     public Date getLastModified() {
         return lastModified;

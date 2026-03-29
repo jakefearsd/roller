@@ -357,18 +357,6 @@
     </c:if>
 
 
-    <%-- Trackback control
-    <c:if test="${actionName == 'entryEdit' && userAnAuthor}">
-        <br/>
-        <h2><spring:message code="weblogEdit.trackback"/></h2>
-        <spring:message code="weblogEdit.trackbackUrl"/>
-        <br/>
-        <input type="text" name="trackbackUrl" value="${trackbackUrl}" size="80" maxlength="255" class="form-control"/>
-
-        <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!trackback.rol"><spring:message code="weblogEdit.sendTrackback"/></button>
-    </c:if>
-    --%>
-
 <sec:csrfInput/>
 </form>
 

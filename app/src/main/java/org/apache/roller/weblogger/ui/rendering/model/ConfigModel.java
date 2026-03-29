@@ -101,8 +101,9 @@ public class ConfigModel implements Model {
         return getBooleanProperty("users.comments.emailnotify");
     }
     
+    /** @deprecated Trackbacks have been removed. Always returns false. */
     public boolean getTrackbacksEnabled() {
-        return getBooleanProperty("users.trackbacks.enabled");
+        return false;
     }
     
     

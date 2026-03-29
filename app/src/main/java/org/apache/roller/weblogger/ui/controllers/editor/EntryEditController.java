@@ -20,10 +20,8 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,10 +54,6 @@ import org.apache.roller.weblogger.util.MailUtil;
 import org.apache.roller.weblogger.util.MediacastException;
 import org.apache.roller.weblogger.util.MediacastResource;
 import org.apache.roller.weblogger.util.MediacastUtil;
-import org.apache.roller.weblogger.util.RollerMessages;
-import org.apache.roller.weblogger.util.RollerMessages.RollerMessage;
-import org.apache.roller.weblogger.util.Trackback;
-import org.apache.roller.weblogger.util.TrackbackNotAllowedException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -123,13 +117,6 @@ public class EntryEditController extends BaseController {
     public String entryAddPublish(HttpServletRequest request, Model model,
                                   @ModelAttribute("bean") EntryBean bean) {
         return doEntryAddSave(request, model, bean, "publish");
-    }
-
-    @PostMapping("/entryAdd!trackback.rol")
-    public String entryAddTrackback(HttpServletRequest request, Model model,
-                                    @ModelAttribute("bean") EntryBean bean,
-                                    @RequestParam(value = "trackbackUrl", required = false) String trackbackUrl) {
-        return doTrackback(request, model, bean, trackbackUrl, "entryAdd");
     }
 
     private String doEntryAddSave(HttpServletRequest request, Model model, EntryBean bean, String action) {
@@ -202,13 +189,6 @@ public class EntryEditController extends BaseController {
     public String entryEditPublish(HttpServletRequest request, Model model,
                                    @ModelAttribute("bean") EntryBean bean) {
         return doEntryEditSave(request, model, bean, "publish");
-    }
-
-    @PostMapping("/entryEdit!trackback.rol")
-    public String entryEditTrackback(HttpServletRequest request, Model model,
-                                     @ModelAttribute("bean") EntryBean bean,
-                                     @RequestParam(value = "trackbackUrl", required = false) String trackbackUrl) {
-        return doTrackback(request, model, bean, trackbackUrl, "entryEdit");
     }
 
     private String doEntryEditSave(HttpServletRequest request, Model model, EntryBean bean, String action) {
@@ -312,10 +292,6 @@ public class EntryEditController extends BaseController {
 
                 CacheManager.invalidate(entry);
 
-                if (entry.isPublished()) {
-                    WebloggerFactory.getWeblogger().getAutopingManager().queueApplicableAutoPings(entry);
-                }
-
                 if (entry.isPending() && MailUtil.isMailConfigured()) {
                     MailUtil.sendPendingEntryNotice(entry);
                 }
@@ -337,49 +313,6 @@ public class EntryEditController extends BaseController {
         if ("entryAdd".equals(actionName)) {
             bean.setStatus(null);
         }
-        return ".EntryEdit";
-    }
-
-    private String doTrackback(HttpServletRequest request, Model model, EntryBean bean,
-                               String trackbackUrl, String actionName) {
-        populateCommonModel(request, model);
-        model.addAttribute("actionName", actionName);
-
-        WeblogEntry entry = lookupEntry(bean.getId());
-        if (entry == null) {
-            return "redirect:/roller-ui/menu.rol";
-        }
-        if (!entry.getWebsite().equals(getActionWeblog(request))) {
-            return ".denied";
-        }
-
-        if (!StringUtils.isEmpty(trackbackUrl)) {
-            RollerMessages results = null;
-            try {
-                Trackback trackback = new Trackback(entry, trackbackUrl);
-                results = trackback.send();
-            } catch (TrackbackNotAllowedException ex) {
-                addError(model, "error.trackbackNotAllowed", request);
-            } catch (Exception e) {
-                log.error("Error sending trackback", e);
-                addError(model, "error.general", e.getMessage(), request);
-            }
-
-            if (results != null) {
-                for (Iterator<RollerMessage> mit = results.getMessages(); mit.hasNext();) {
-                    RollerMessage msg = mit.next();
-                    addMessage(model, msg.getKey(), request);
-                }
-                for (Iterator<RollerMessage> eit = results.getErrors(); eit.hasNext();) {
-                    RollerMessage err = eit.next();
-                    addError(model, err.getKey(), request);
-                }
-            }
-        }
-
-        bean.copyFrom(entry, request.getLocale());
-        model.addAttribute("entry", entry);
-        addEntryModelAttributes(request, model, entry);
         return ".EntryEdit";
     }
 
