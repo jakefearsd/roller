@@ -265,9 +265,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
 
-        addExtendedDefinition(".CacheInfo", ".tiles-tabbedpage",
-                Map.of("content", "/WEB-INF/jsps/admin/CacheInfo.jsp"));
-
         // ---- weblog editor pages ----
 
         addExtendedDefinition(".MediaFileAdd", ".tiles-tabbedpage",

@@ -23,9 +23,6 @@ See comments in editor-menu.xml for info about attributes.
         <menu-item action="globalCommentManagement" 
                    name="tabbedmenu.admin.commentManagement" />
         
-        <!-- globalPerms="admin" -->
-        <menu-item action="cacheInfo"
-                   name="tabbedmenu.admin.cacheInfo" />
     </menu>
 
 </menu-bar>
