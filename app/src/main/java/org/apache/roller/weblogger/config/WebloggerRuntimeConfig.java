@@ -83,10 +83,13 @@ public final class WebloggerRuntimeConfig {
      * Retrieve a property as a boolean ... defaults to false if there is an error
      **/
     public static boolean getBooleanProperty(String name) {
-        
-        // get the value first, then convert
+
+        // check runtime config first, then fall through to static config
         String value = WebloggerRuntimeConfig.getProperty(name);
-        
+        if (value == null) {
+            value = WebloggerConfig.getProperty(name);
+        }
+
         if (value == null) {
             return false;
         }
