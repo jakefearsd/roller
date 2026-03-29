@@ -14,26 +14,13 @@
 -- copyright in this work, please see the NOTICE file in the top level
 -- directory of this distribution.
 
--- planet tables
-drop table rag_entry;
-drop table rag_group_subscription;
-drop table rag_subscription;
-drop table rag_group;
-drop table rag_planet;
-drop table rag_properties;
-
 -- non-associated tables
 drop table newsfeed;
 drop table roller_properties;
 drop table roller_audit_log;
 drop table roller_tasklock;
 
--- supplemental services tables
-drop table pingqueueentry;
-drop table autoping;
-drop table pingtarget;
-drop table bookmark;
-drop table bookmark_folder;
+-- media file tables
 drop table roller_mediafiletag;
 drop table roller_mediafile;
 drop table roller_mediafiledir;
