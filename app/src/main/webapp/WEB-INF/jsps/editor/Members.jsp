@@ -70,7 +70,7 @@ function save() {
 <c:when test="${perm.pending}">
                 <tr class="rollertable_pending">
             </c:when>
-<c:when test="${rowstatus.odd == true}">
+<c:when test="${rowstatus.index % 2 != 0}">
                 <tr class="rollertable_odd">
             </c:when>
             <c:otherwise>

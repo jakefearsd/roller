@@ -86,6 +86,22 @@ public class MaintenanceController extends BaseController {
         return ".Maintenance";
     }
 
+    @PostMapping("/maintenance!index.rol")
+    public String index(HttpServletRequest request, Model model) {
+        populateCommonModel(request, model);
+
+        try {
+            IndexManager manager = WebloggerFactory.getWeblogger().getIndexManager();
+            manager.rebuildWeblogIndex(getActionWeblog(request));
+            addMessage(model, "maintenance.message.indexed", request);
+        } catch (Exception ex) {
+            log.error("Error doing index rebuild", ex);
+            addError(model, "maintenance.message.indexed.failure", request);
+        }
+
+        return ".Maintenance";
+    }
+
     @PostMapping("/maintenance!reset.rol")
     public String reset(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);

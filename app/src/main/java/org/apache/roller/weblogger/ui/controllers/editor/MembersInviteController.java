@@ -150,4 +150,10 @@ public class MembersInviteController extends BaseController {
         model.addAttribute("permissionString", permissionString);
         return ".MembersInvite";
     }
+
+    @PostMapping("/invite!cancel.rol")
+    public String cancel(HttpServletRequest request) {
+        return "redirect:/roller-ui/authoring/members.rol?weblog="
+                + getActionWeblog(request).getHandle();
+    }
 }
