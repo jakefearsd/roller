@@ -31,7 +31,6 @@ import org.apache.roller.weblogger.pojos.Template;
 import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
-import org.apache.roller.weblogger.ui.rendering.mobile.MobileDeviceRepository.DeviceType;
 import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
 import org.apache.roller.weblogger.util.cache.CachedContent;
@@ -137,7 +136,7 @@ public class WeblogCacheWarmupJob implements Job {
                 Renderer renderer;
                 Template template = new StaticTemplate(
 					"weblog-"+type+"-"+format+".vm", TemplateLanguage.VELOCITY);
-                renderer = RendererManager.getRenderer(template, DeviceType.standard);
+                renderer = RendererManager.getRenderer(template);
                 
                 
                 // render content.  use default size of about 24K for a standard page

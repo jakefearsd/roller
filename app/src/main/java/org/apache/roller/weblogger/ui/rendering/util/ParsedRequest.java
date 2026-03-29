@@ -25,7 +25,6 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.User;
-import org.apache.roller.weblogger.ui.rendering.mobile.MobileDeviceRepository;
 
 
 /**
@@ -48,9 +47,6 @@ public abstract class ParsedRequest {
     // lightweight attributes
     private String authenticUser = null;
 
-    private MobileDeviceRepository.DeviceType deviceType = 
-			MobileDeviceRepository.DeviceType.standard;
-    
     // heavyweight attributes
     private User user = null;
     
@@ -74,8 +70,6 @@ public abstract class ParsedRequest {
         if(prince != null) {
             this.authenticUser = prince.getName();
         }
-        // set the detected type of the request
-        deviceType = MobileDeviceRepository.getRequestType(request);
     }
     
     
@@ -113,11 +107,4 @@ public abstract class ParsedRequest {
         return (this.authenticUser != null);
     }
 
-    public MobileDeviceRepository.DeviceType getDeviceType() {
-        return deviceType;
-    }
-
-    public void setDeviceType(MobileDeviceRepository.DeviceType type) {
-        this.deviceType = type;
-    }
 }

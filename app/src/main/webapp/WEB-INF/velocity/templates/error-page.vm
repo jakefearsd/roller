@@ -64,10 +64,6 @@
       </span>
       <table width="80%" class="dottedtable" style="border-collapse: collapse;">
         <tr>
-          <td class="dottedtable" width="20%">Velocity Exception</td>
-          <td class="dottedtable">Velocity template error : $exceptionDevice</td>
-        </tr>
-        <tr>
           <td class="dottedtable" width="20%">Message</td>
           <td class="dottedtable">$utils.autoformat($utils.escapeHTML($exception.getMessage()))</td>
         </tr>

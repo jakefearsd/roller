@@ -73,7 +73,7 @@ public class RollerResourceLoader extends ResourceLoader {
 					"Need to specify a template name!");
 		}
 
-		// theme templates name are <template>|<deviceType>
+		// theme template names are <template>|<renditionType> (e.g., mytemplate|standard)
 		RenditionType renditionType = RenditionType.STANDARD;
 		if (name.contains("|")) {
 			String[] pair = name.split("\\|");
@@ -93,10 +93,6 @@ public class RollerResourceLoader extends ResourceLoader {
 			}
 			String contents = "";
 			TemplateRendition templateCode = page.getTemplateRendition(renditionType);
-            if (templateCode == null && renditionType != RenditionType.STANDARD) {
-                // fall back to standard rendition if mobile or other unavailable
-                templateCode = page.getTemplateRendition(RenditionType.STANDARD);
-            }
 			if (templateCode != null) {
 				contents = templateCode.getTemplate();
 			}

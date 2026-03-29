@@ -40,16 +40,12 @@ public class TemplateEditBean {
     private String description = null;
     private String link = null;
     private String contentsStandard = null;
-    private String contentsMobile = null;
     private String templateLanguage = null;
     private boolean navbar= false;
     private boolean hidden = false;
     private Boolean autoContentType = Boolean.FALSE;
     private String manualContentType = null;
     private String type = null;
-
-     // template ID of mobile template version
-    private String mobileTemplateId = null;
 
     // template ID of standard template version
     private String standardTemplateId = null;
@@ -102,15 +98,7 @@ public class TemplateEditBean {
     public void setContentsStandard( String contents ) {
         this.contentsStandard = contents;
     }
-    
-     public String getContentsMobile() {
-        return this.contentsMobile;
-    }
 
-    public void setContentsMobile( String contents ) {
-        this.contentsMobile = contents;
-    }
-    
     public String getTemplateLanguage() {
         return this.templateLanguage;
     }
@@ -166,12 +154,6 @@ public class TemplateEditBean {
             WebloggerFactory.getWeblogger().getWeblogManager().saveTemplateRendition(tc);
         }
 
-        if (dataHolder.getTemplateRendition(RenditionType.MOBILE) != null) {
-            CustomTemplateRendition tc = dataHolder.getTemplateRendition(RenditionType.MOBILE);
-            tc.setTemplate(contentsMobile);
-            WebloggerFactory.getWeblogger().getWeblogManager().saveTemplateRendition(tc);
-        }
-
         // the rest of the template properties can be modified only when
         // dealing with a CUSTOM weblog template
         if (dataHolder.isCustom()) {
@@ -197,10 +179,7 @@ public class TemplateEditBean {
         } else {
             this.contentsStandard = "";
         }
-        if (dataHolder.getTemplateRendition(RenditionType.MOBILE) != null) {
-            this.contentsMobile = dataHolder.getTemplateRendition(RenditionType.MOBILE).getTemplate();
-        }
-		log.debug("Standard: " + this.contentsStandard + " Mobile: " + this.contentsMobile); 
+		log.debug("Standard: " + this.contentsStandard);
 
         this.navbar = dataHolder.isNavbar();
         this.hidden = dataHolder.isHidden();
@@ -210,24 +189,12 @@ public class TemplateEditBean {
         }
     }
 
-    public String getMobileTemplateId() {
-        return mobileTemplateId;
-    }
-
-    public void setMobileTemplateId(String mobileTemplateId) {
-        this.mobileTemplateId = mobileTemplateId;
-    }
-
     public String getStandardTemplateId() {
         return standardTemplateId;
     }
 
     public void setStandardTemplateId(String standardTemplateId) {
         this.standardTemplateId = standardTemplateId;
-    }
-
-    public boolean isMobile() {
-        return (id.equals(mobileTemplateId));
     }
 
     public String getType() {

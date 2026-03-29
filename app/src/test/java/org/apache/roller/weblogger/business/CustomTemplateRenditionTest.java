@@ -41,7 +41,6 @@ public class CustomTemplateRenditionTest  {
        Weblog testWeblog = null;
        WeblogTemplate testPage = null;
        CustomTemplateRendition standardCode = null;
-       CustomTemplateRendition mobileCode = null;
 
 
        /**
@@ -102,11 +101,6 @@ public class CustomTemplateRenditionTest  {
            standardTemplateCode.setTemplate("standard.template.code");
            standardTemplateCode.setTemplateLanguage(TemplateLanguage.VELOCITY);
 
-           //create mobile code
-           CustomTemplateRendition mobileTemplateCode = new CustomTemplateRendition(testPage, RenditionType.MOBILE);
-           mobileTemplateCode.setTemplate("mobile.template.code");
-           mobileTemplateCode.setTemplateLanguage(TemplateLanguage.VELOCITY);
-
            TestUtils.endSession(true);
 
            // check that create was successful
@@ -118,20 +112,11 @@ public class CustomTemplateRenditionTest  {
            assertNotNull(standardCode);
            assertEquals(standardTemplateCode.getTemplate(), standardCode.getTemplate());
 
-           mobileCode = testPageCheck.getTemplateRendition(RenditionType.MOBILE);
-           assertNotNull(mobileCode);
-           assertEquals(mobileTemplateCode.getTemplate() ,mobileCode.getTemplate());
-
-           // update template Code
+           // update template code
            standardCode = null;
            standardCode = testPageCheck.getTemplateRendition(RenditionType.STANDARD);
            standardCode.setTemplate("update.standard.template");
            mgr.saveTemplateRendition(standardCode);
-
-           mobileCode = null;
-           mobileCode = testPageCheck.getTemplateRendition(RenditionType.MOBILE);
-           mobileCode.setTemplate("update.mobile.template");
-           mgr.saveTemplateRendition(mobileCode);
 
            TestUtils.endSession(true);
 
@@ -139,10 +124,6 @@ public class CustomTemplateRenditionTest  {
            standardCode = null;
            standardCode = testPageCheck.getTemplateRendition(RenditionType.STANDARD);
            assertEquals("update.standard.template",standardCode.getTemplate());
-
-           mobileCode = null;
-           mobileCode = testPageCheck.getTemplateRendition(RenditionType.MOBILE);
-           assertEquals("update.mobile.template",mobileCode.getTemplate());
 
            WeblogTemplate page = mgr.getTemplate(testPage.getId());
            mgr.removeTemplate(page);

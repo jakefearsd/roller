@@ -82,10 +82,6 @@ public class StylesheetEditController extends BaseController {
                 } else {
                     model.addAttribute("contentsStandard", "");
                 }
-                if (template.getTemplateRendition(RenditionType.MOBILE) != null) {
-                    model.addAttribute("contentsMobile",
-                            template.getTemplateRendition(RenditionType.MOBILE).getTemplate());
-                }
             } catch (WebloggerException e) {
                 log.error("Error loading template renditions for stylesheet", e);
             }
@@ -130,15 +126,6 @@ public class StylesheetEditController extends BaseController {
                     weblogManager.saveTemplateRendition(standardRendition);
                 }
 
-                TemplateRendition mCode = stylesheet.getTemplateRendition(RenditionType.MOBILE);
-                if (mCode != null) {
-                    CustomTemplateRendition mobileRendition = new CustomTemplateRendition(
-                            stylesheetTmpl, RenditionType.MOBILE);
-                    mobileRendition.setTemplate(mCode.getTemplate());
-                    mobileRendition.setTemplateLanguage(mCode.getTemplateLanguage());
-                    weblogManager.saveTemplateRendition(mobileRendition);
-                }
-
                 weblogManager.saveTemplate(stylesheetTmpl);
                 WebloggerFactory.getWeblogger().flush();
                 addMessage(model, "stylesheetEdit.create.success", request);
@@ -154,8 +141,7 @@ public class StylesheetEditController extends BaseController {
 
     @PostMapping("/stylesheetEdit!save.rol")
     public String save(HttpServletRequest request, Model model,
-                       @RequestParam(value = "contentsStandard", required = false) String contentsStandard,
-                       @RequestParam(value = "contentsMobile", required = false) String contentsMobile) {
+                       @RequestParam(value = "contentsStandard", required = false) String contentsStandard) {
         populateCommonModel(request, model);
 
         WeblogManager weblogManager = WebloggerFactory.getWeblogger().getWeblogManager();
@@ -176,12 +162,6 @@ public class StylesheetEditController extends BaseController {
                     weblogManager.saveTemplateRendition(tc);
                 }
 
-                if (template.getTemplateRendition(RenditionType.MOBILE) != null) {
-                    CustomTemplateRendition tc = template.getTemplateRendition(RenditionType.MOBILE);
-                    tc.setTemplate(contentsMobile);
-                    weblogManager.saveTemplateRendition(tc);
-                }
-
                 weblogManager.saveTemplate(template);
                 WebloggerFactory.getWeblogger().flush();
                 CacheManager.invalidate(template);
@@ -195,7 +175,6 @@ public class StylesheetEditController extends BaseController {
 
         model.addAttribute("template", template);
         model.addAttribute("contentsStandard", contentsStandard);
-        model.addAttribute("contentsMobile", contentsMobile);
         model.addAttribute("sharedThemeStylesheet", isSharedThemeStylesheet(request));
         model.addAttribute("customTheme", isCustomTheme(request));
         model.addAttribute("sharedTheme", !isCustomTheme(request));
@@ -221,12 +200,6 @@ public class StylesheetEditController extends BaseController {
                     existingTemplateCode.setTemplate(templateCode.getTemplate());
                     weblogManager.saveTemplateRendition(existingTemplateCode);
                 }
-                if (template.getTemplateRendition(RenditionType.MOBILE) != null) {
-                    TemplateRendition templateCode = theme.getStylesheet().getTemplateRendition(RenditionType.MOBILE);
-                    CustomTemplateRendition existingTemplateCode = template.getTemplateRendition(RenditionType.MOBILE);
-                    existingTemplateCode.setTemplate(templateCode.getTemplate());
-                }
-
                 weblogManager.saveTemplate(template);
                 WebloggerFactory.getWeblogger().flush();
                 CacheManager.invalidate(template);

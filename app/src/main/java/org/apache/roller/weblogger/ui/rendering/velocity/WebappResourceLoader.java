@@ -139,7 +139,7 @@ public class WebappResourceLoader extends ResourceLoader {
 					"WebappResourceLoader: No template name provided");
 		}
 
-		// names are <template>|<deviceType>
+		// names are <template>|<renditionType>
 		// loading weblog.vm etc will not have the type so only check for
 		// one.
 		String[] split = name.split("\\|", 2);
@@ -215,7 +215,7 @@ public class WebappResourceLoader extends ResourceLoader {
 
 		String savedPath = templatePaths.get(fileName);
 
-		// names are <template>|<deviceType>
+		// names are <template>|<renditionType>
 		// loading weblog.vm etc will not have the type so only check for
 		// one.
 		String[] split = fileName.split("\\|", 2);

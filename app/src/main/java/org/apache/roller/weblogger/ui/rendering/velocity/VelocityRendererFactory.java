@@ -27,7 +27,6 @@ import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererFactory;
-import org.apache.roller.weblogger.ui.rendering.mobile.MobileDeviceRepository;
 import org.apache.velocity.exception.ResourceNotFoundException;
 
 
@@ -38,8 +37,7 @@ public class VelocityRendererFactory implements RendererFactory {
     private static final Log log = LogFactory.getLog(VelocityRendererFactory.class);
     
     @Override
-    public Renderer getRenderer(Template template, 
-			MobileDeviceRepository.DeviceType deviceType) {
+    public Renderer getRenderer(Template template) {
 
         // nothing we can do with null values
         if (template == null || template.getId() == null) {
@@ -57,17 +55,17 @@ public class VelocityRendererFactory implements RendererFactory {
         }
 
         Renderer renderer = null;
-        
+
         if (TemplateLanguage.VELOCITY.equals(tr.getTemplateLanguage())) {
             // standard velocity template
             try {
-               renderer = new VelocityRenderer(template, deviceType);
+               renderer = new VelocityRenderer(template);
             } catch (ResourceNotFoundException ex) {
-                // allready logged in VelocityRenderer
+                // already logged in VelocityRenderer
             } catch(Exception ex) {
                 // some kind of exception so we don't have a renderer
-				log.error("ERROR creating VelocityRenderer", ex);
-            }            
+                log.error("ERROR creating VelocityRenderer", ex);
+            }
         }
         return renderer;
     }

@@ -28,7 +28,6 @@ import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.pojos.Template;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RenderingException;
-import org.apache.roller.weblogger.ui.rendering.mobile.MobileDeviceRepository;
 import org.apache.roller.weblogger.ui.rendering.model.UtilitiesModel;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.context.Context;
@@ -44,7 +43,6 @@ public class VelocityRenderer implements Renderer {
 
     // the original template we are supposed to render
     private final Template renderTemplate;
-    private final MobileDeviceRepository.DeviceType deviceType;
 
     // the velocity templates
     private org.apache.velocity.Template velocityTemplate = null;
@@ -53,18 +51,15 @@ public class VelocityRenderer implements Renderer {
     // a possible exception
     private Exception velocityException = null;
 
-    public VelocityRenderer(Template template,
-            MobileDeviceRepository.DeviceType deviceType) throws Exception {
+    public VelocityRenderer(Template template) throws Exception {
 
         // the Template we are supposed to render
         this.renderTemplate = template;
-        this.deviceType = deviceType;
 
         try {
             // make sure that we can locate the template
             // if we can't then this will throw an exception
-            velocityTemplate = RollerVelocity.getTemplate(template.getId(),
-                    deviceType, "UTF-8");
+            velocityTemplate = RollerVelocity.getTemplate(template.getId(), "UTF-8");
 
         } catch (ResourceNotFoundException ex) {
             // velocity couldn't find the resource so lets log a warning
@@ -81,7 +76,7 @@ public class VelocityRenderer implements Renderer {
             velocityException = ex;
 
             // need to lookup error page template
-            velocityTemplate = RollerVelocity.getTemplate("error-page.vm", deviceType);
+            velocityTemplate = RollerVelocity.getTemplate("error-page.vm");
 
         } catch (Exception ex) {
             // some kind of generic/unknown exception, dump it to the logs
@@ -184,14 +179,12 @@ public class VelocityRenderer implements Renderer {
 
             if (template != null) {
                 // need to lookup error page template
-                velocityTemplate = RollerVelocity.getTemplate(template,
-                        deviceType);
+                velocityTemplate = RollerVelocity.getTemplate(template);
             }
 
             Context ctx = new VelocityContext(model);
             ctx.put("exception", velocityException);
             ctx.put("exceptionSource", renderTemplate.getId());
-            ctx.put("exceptionDevice", deviceType);
             ctx.put("utils", new UtilitiesModel());
 
             // render output to Writer

@@ -24,7 +24,6 @@ import org.apache.roller.weblogger.pojos.Template;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.roller.weblogger.ui.rendering.mobile.MobileDeviceRepository;
 import org.apache.roller.weblogger.util.Reflection;
 
 /**
@@ -78,7 +77,7 @@ public final class RendererManager {
      * instance and tries to find a Renderer for the content.  If no Renderer
      * can be found then we throw an exception.
      */
-    public static Renderer getRenderer(Template template, MobileDeviceRepository.DeviceType deviceType)
+    public static Renderer getRenderer(Template template)
             throws RenderingException {
 
         Renderer renderer;
@@ -86,7 +85,7 @@ public final class RendererManager {
         // iterate over our renderer factories and see if one of them
         // wants to handle this content
         for (RendererFactory rendererFactory : rendererFactories) {
-            renderer = rendererFactory.getRenderer(template, deviceType);
+            renderer = rendererFactory.getRenderer(template);
             if (renderer != null) {
                 return renderer;
             }

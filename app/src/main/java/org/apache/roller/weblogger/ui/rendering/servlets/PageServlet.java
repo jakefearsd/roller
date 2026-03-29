@@ -192,12 +192,11 @@ public class PageServlet extends HttpServlet {
         // views their weblog, logs in, then gets a 304 without the 'edit' links
         if (!pageRequest.isLoggedIn()) {
             if (ModDateHeaderUtil.respondIfNotModified(request, response,
-                    lastModified, pageRequest.getDeviceType())) {
+                    lastModified)) {
                 return;
             } else {
                 // set last-modified date
-                ModDateHeaderUtil.setLastModifiedHeader(response, lastModified,
-                        pageRequest.getDeviceType());
+                ModDateHeaderUtil.setLastModifiedHeader(response, lastModified);
             }
         }
 
@@ -492,8 +491,7 @@ public class PageServlet extends HttpServlet {
         Renderer renderer;
         try {
             log.debug("Looking up renderer");
-            renderer = RendererManager.getRenderer(page,
-                    pageRequest.getDeviceType());
+            renderer = RendererManager.getRenderer(page);
         } catch (Exception e) {
             // nobody wants to render my content :(
             log.error("Couldn't find renderer for page " + page.getId(), e);

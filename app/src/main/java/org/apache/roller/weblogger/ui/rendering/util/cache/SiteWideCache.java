@@ -238,8 +238,6 @@ public final class SiteWideCache implements CacheHandler {
         if(pageRequest.getAuthenticUser() != null) {
             key.append("/user=").append(pageRequest.getAuthenticUser());
         }
-      
-        key.append("/deviceType=").append(pageRequest.getDeviceType().toString());
 
         // we allow for arbitrary query params for custom pages
         if(!pageRequest.getCustomParams().isEmpty()) {

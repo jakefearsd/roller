@@ -42,7 +42,6 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
-import org.apache.roller.weblogger.ui.rendering.mobile.MobileDeviceRepository;
 import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.ui.rendering.model.SearchResultsFeedModel;
 import org.apache.roller.weblogger.ui.rendering.util.cache.SiteWideCache;
@@ -125,13 +124,12 @@ public class FeedServlet extends HttpServlet {
 
         // Respond with 304 Not Modified if it is not modified.
         if (ModDateHeaderUtil.respondIfNotModified(request, response,
-                lastModified, feedRequest.getDeviceType())) {
+                lastModified)) {
             return;
         }
 
         // set last-modified date
-        ModDateHeaderUtil.setLastModifiedHeader(response, lastModified,
-                feedRequest.getDeviceType());
+        ModDateHeaderUtil.setLastModifiedHeader(response, lastModified);
 
         // set content type
         String accepts = request.getHeader("Accept");
@@ -285,8 +283,7 @@ public class FeedServlet extends HttpServlet {
         try {
             log.debug("Looking up renderer");
             Template template = new StaticTemplate(pageId, TemplateLanguage.VELOCITY);
-            renderer = RendererManager.getRenderer(template,
-                    MobileDeviceRepository.DeviceType.standard);
+            renderer = RendererManager.getRenderer(template);
         } catch (Exception e) {
             // nobody wants to render my content :(
 

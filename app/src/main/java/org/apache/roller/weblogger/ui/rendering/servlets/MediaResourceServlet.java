@@ -108,12 +108,11 @@ public class MediaResourceServlet extends HttpServlet {
 
         // Respond with 304 Not Modified if it is not modified.
         if (ModDateHeaderUtil.respondIfNotModified(request, response,
-                resourceLastMod, resourceRequest.getDeviceType())) {
+                resourceLastMod)) {
             return;
         } else {
             // set last-modified date
-            ModDateHeaderUtil.setLastModifiedHeader(response, resourceLastMod,
-                    resourceRequest.getDeviceType());
+            ModDateHeaderUtil.setLastModifiedHeader(response, resourceLastMod);
         }
 
         // set the content type based on whatever is in our web.xml mime defs

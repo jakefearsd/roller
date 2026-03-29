@@ -32,7 +32,6 @@ import org.apache.roller.weblogger.pojos.wrapper.ThemeTemplateWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogCategoryWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
-import org.apache.roller.weblogger.ui.rendering.mobile.MobileDeviceRepository.DeviceType;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesDayPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesLatestPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesMonthPager;
@@ -55,7 +54,6 @@ public class PageModel implements Model {
     private WeblogEntryCommentForm commentForm = null;
     private Map<String, String[]> requestParameters = null;
     private Weblog weblog = null;
-    private DeviceType deviceType = null;
     
     
     /**
@@ -111,8 +109,6 @@ public class PageModel implements Model {
         
         // extract weblog object
         weblog = pageRequest.getWeblog();
-
-        this.deviceType = weblogRequest.getDeviceType();
     }    
     
     
@@ -196,15 +192,6 @@ public class PageModel implements Model {
         return pageRequest.getTags();
     }
     
-
-	/**
-	 * Access to device type, which is either 'mobile' or 'standard'
-	 * @return 
-	 */
-	public String getDeviceType() {
-		return deviceType.toString();
-	}
-
 
     /**
      * A map of entries representing this page. The collection is grouped by 

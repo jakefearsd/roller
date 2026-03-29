@@ -211,9 +211,7 @@ public final class WeblogPageCache {
         if(pageRequest.getAuthenticUser() != null) {
             key.append("/user=").append(pageRequest.getAuthenticUser());
         }
-        
-        key.append("/deviceType=").append(pageRequest.getDeviceType().toString());
-        
+
         // we allow for arbitrary query params for custom pages
         if(pageRequest.getWeblogPageName() != null && !pageRequest.getCustomParams().isEmpty()) {
             String queryString = paramsToString(pageRequest.getCustomParams());

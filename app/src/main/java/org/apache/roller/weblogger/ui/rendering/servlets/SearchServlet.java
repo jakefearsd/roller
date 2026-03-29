@@ -170,7 +170,6 @@ public class SearchServlet extends HttpServlet {
             pageRequest.setWeblogHandle(searchRequest.getWeblogHandle());
             pageRequest.setWeblogCategoryName(searchRequest.getWeblogCategoryName());
             pageRequest.setLocale(searchRequest.getLocale());
-            pageRequest.setDeviceType(searchRequest.getDeviceType());
             pageRequest.setAuthenticUser(searchRequest.getAuthenticUser());
 
             // populate the rendering model
@@ -205,7 +204,7 @@ public class SearchServlet extends HttpServlet {
         Renderer renderer;
         try {
             log.debug("Looking up renderer");
-            renderer = RendererManager.getRenderer(page, searchRequest.getDeviceType());
+            renderer = RendererManager.getRenderer(page);
         } catch (Exception e) {
             // nobody wants to render my content :(
             log.error("Couldn't find renderer for rsd template", e);

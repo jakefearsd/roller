@@ -3,3 +3,6 @@
 
 DROP TABLE IF EXISTS roller_oauthaccessor;
 DROP TABLE IF EXISTS roller_oauthconsumer;
+
+-- Remove mobile template renditions (mobile device detection removed in 6.0)
+DELETE FROM custom_template_rendition WHERE type = 'MOBILE';

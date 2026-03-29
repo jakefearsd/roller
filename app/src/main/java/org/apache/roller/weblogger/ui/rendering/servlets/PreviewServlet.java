@@ -47,7 +47,6 @@ import jakarta.servlet.jsp.PageContext;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.roller.weblogger.ui.rendering.mobile.MobileDeviceRepository;
 
 
 /**
@@ -105,16 +104,6 @@ public class PreviewServlet extends HttpServlet {
             return;
         }
         
-        // Get the deviceType from user agent
-        MobileDeviceRepository.DeviceType deviceType = previewRequest.getDeviceType();
-
-        // for previews we explicitly set the deviceType attribute
-        if (request.getParameter("type") != null) {
-            deviceType = request.getParameter("type").equals("standard") 
-				? MobileDeviceRepository.DeviceType.standard
-				: MobileDeviceRepository.DeviceType.mobile;
-        }
-
 		Weblog tmpWebsite = weblog;
         
         if (previewRequest.getThemeName() != null) {
@@ -251,7 +240,7 @@ public class PreviewServlet extends HttpServlet {
         Renderer renderer;
         try {
             log.debug("Looking up renderer");
-            renderer = RendererManager.getRenderer(page, deviceType);
+            renderer = RendererManager.getRenderer(page);
         } catch(Exception e) {
             // nobody wants to render my content :(
             log.error("Couldn't find renderer for page "+page.getId(), e);

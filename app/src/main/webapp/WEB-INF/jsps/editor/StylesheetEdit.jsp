@@ -28,38 +28,9 @@
     <form action="${pageContext.request.contextPath}/roller-ui/authoring/stylesheetEdit!save.rol" method="post" class="form-vertical">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
-        <%-- Tabs for each of the two content areas: Standard and Mobile --%>
-        <ul id="template-code-tabs" class="nav nav-tabs" role="tablist" style="margin-bottom: 1em">
-
-            <li role="presentation" class="active">
-                <a href="#tabStandard" aria-controls="home" role="tab" data-toggle="tab">
-                    <em><spring:message code="stylesheetEdit.standard"/></em>
-                </a>
-            </li>
-
-            <c:if test="${contentsMobile != null}">
-                <li role="presentation">
-                    <a href="#tabMobile" aria-controls="home" role="tab" data-toggle="tab">
-                        <em><spring:message code="stylesheetEdit.mobile"/></em>
-                    </a>
-                </li>
-            </c:if>
-
-        </ul>
-
-        <%-- Tab content for each of the two content areas: Standard and Mobile --%>
+        <%-- Stylesheet content area --%>
         <div class="tab-content">
-
-            <div role="tabpanel" class="tab-pane active" id="tabStandard">
-                <textarea name="contentsStandard" rows="30" cols="80" style="width:100%">${contentsStandard}</textarea>
-            </div>
-
-            <c:if test="${contentsMobile != null}">
-                <div role="tabpanel" class="tab-pane" id="tabMobile">
-                    <textarea name="contentsMobile" rows="30" cols="80" style="width:100%">${contentsMobile}</textarea>
-                </div>
-            </c:if>
-
+            <textarea name="contentsStandard" rows="30" cols="80" style="width:100%">${contentsStandard}</textarea>
         </div>
 
         <%-- Save, Close and Resize text area buttons--%>

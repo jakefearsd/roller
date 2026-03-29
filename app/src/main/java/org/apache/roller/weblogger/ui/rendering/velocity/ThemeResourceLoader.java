@@ -80,8 +80,8 @@ public class ThemeResourceLoader extends ResourceLoader {
         }
 
         try {
-            // parse the name ... theme templates name are
-            // <theme>:<template>|<deviceType>
+            // parse the name ... theme template names are
+            // <theme>:<template>|<renditionType> (e.g., mytheme:mytemplate|standard)
             String[] split = name.split(":", 2);
             if (split.length < 2) {
                 throw new ResourceNotFoundException("Invalid ThemeRL key "
@@ -104,10 +104,6 @@ public class ThemeResourceLoader extends ResourceLoader {
 
             if (template.getTemplateRendition(renditionType) != null) {
                 contents = template.getTemplateRendition(renditionType).getTemplate();
-            } else if (renditionType != RenditionType.STANDARD
-                    && template.getTemplateRendition(RenditionType.STANDARD) != null) {
-                // fall back to standard rendition type if others not defined
-                contents = template.getTemplateRendition(RenditionType.STANDARD).getTemplate();
             } else {
                 throw new ResourceNotFoundException("Rendering [" + renditionType.name()
                         + "] of Template [" + split[1] + "] not found.");

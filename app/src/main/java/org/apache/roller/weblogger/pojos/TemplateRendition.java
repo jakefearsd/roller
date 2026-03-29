@@ -23,7 +23,7 @@ package org.apache.roller.weblogger.pojos;
  */
 public interface TemplateRendition {
 
-    public enum RenditionType {STANDARD, MOBILE}
+    public enum RenditionType {STANDARD}
 
     public enum TemplateLanguage {
         VELOCITY("Velocity");

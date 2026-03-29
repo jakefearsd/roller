@@ -38,7 +38,6 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
-import org.apache.roller.weblogger.ui.rendering.mobile.MobileDeviceRepository.DeviceType;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 
 /**
@@ -102,13 +101,12 @@ public class RSDServlet extends HttpServlet {
             lastModified = weblog.getLastModified().getTime();
         }
         if (ModDateHeaderUtil.respondIfNotModified(request, response,
-                lastModified, weblogRequest.getDeviceType())) {
+                lastModified)) {
             return;
         }
 
         // set last-modified date
-        ModDateHeaderUtil.setLastModifiedHeader(response, lastModified,
-                weblogRequest.getDeviceType());
+        ModDateHeaderUtil.setLastModifiedHeader(response, lastModified);
 
         // set the content type
         response.setContentType("application/rsd+xml; charset=utf-8");
@@ -123,8 +121,7 @@ public class RSDServlet extends HttpServlet {
         try {
             log.debug("Looking up renderer");
             Template template = new StaticTemplate("weblog/rsd.vm", TemplateLanguage.VELOCITY);
-            renderer = RendererManager.getRenderer(template,
-                    DeviceType.standard);
+            renderer = RendererManager.getRenderer(template);
         } catch (Exception e) {
             // nobody wants to render my content :(
             log.error("Couldn't find renderer for rsd template", e);

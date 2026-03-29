@@ -40,8 +40,8 @@
         <label class="col-sm-3 control-label"><spring:message code="generic.name"/></label>
         <div class="col-sm-9">
             <c:choose>
-                <c:when test="${template.required || bean.mobile}">
-                    <%-- Cannot edit name of a reqired template --%>
+                <c:when test="${template.required}">
+                    <%-- Cannot edit name of a required template --%>
                     <input type="text" name="bean.name" value="${bean.name}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
                 </c:when>
                 <c:otherwise>
@@ -105,38 +105,9 @@
 
     <%-- ================================================================== --%>
 
-    <%-- Tabs for each of the two content areas: Standard and Mobile --%>
-    <ul id="template-code-tabs" class="nav nav-tabs" role="tablist" style="margin-bottom: 1em">
-
-        <li role="presentation" class="active">
-            <a href="#tabStandard" aria-controls="home" role="tab" data-toggle="tab">
-                <em><spring:message code="stylesheetEdit.standard"/></em>
-            </a>
-        </li>
-
-        <c:if test="${bean.contentsMobile != null}">
-            <li role="presentation">
-                <a href="#tabMobile" aria-controls="home" role="tab" data-toggle="tab">
-                    <em><spring:message code="stylesheetEdit.mobile"/></em>
-                </a>
-            </li>
-        </c:if>
-
-    </ul>
-
-    <%-- Tab content for each of the two content areas: Standard and Mobile --%>
+    <%-- Template content area --%>
     <div class="tab-content">
-
-        <div role="tabpanel" class="tab-pane active" id="tabStandard">
-            <textarea name="bean.contentsStandard" rows="30" cols="80" style="width:100%">${bean.contentsStandard}</textarea>
-        </div>
-
-        <c:if test="${bean.contentsMobile != null}">
-            <div role="tabpanel" class="tab-pane" id="tabMobile">
-                <textarea name="bean.contentsMobile" rows="30" cols="80" style="width:100%">${bean.contentsMobile}</textarea>
-            </div>
-        </c:if>
-
+        <textarea name="bean.contentsStandard" rows="30" cols="80" style="width:100%">${bean.contentsStandard}</textarea>
     </div>
 
     <%-- ================================================================== --%>
