@@ -72,16 +72,6 @@ public interface UserManager {
     long getUserCount() throws WebloggerException;
     
     
-    /**
-     * get a user by activation code
-     * @param activationCode
-     * @return
-     * @throws WebloggerException
-     */
-    User getUserByActivationCode(String activationCode)
-            throws WebloggerException;
-    
-          
     //------------------------------------------------------------ user queries
 
     /**

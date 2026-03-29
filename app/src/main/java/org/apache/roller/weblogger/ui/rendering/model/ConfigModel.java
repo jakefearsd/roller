@@ -59,14 +59,6 @@ public class ConfigModel implements Model {
         return getProperty("site.adminemail");
     }
     
-    public boolean getRegistrationEnabled() {
-        return getBooleanProperty("users.registration.enabled");
-    }
-    
-    public String getRegistrationURL() {
-        return getProperty("users.registration.url");
-    }
-
     public boolean getFeedHistoryEnabled() {
         return getBooleanProperty("site.newsfeeds.history.enabled");
     }

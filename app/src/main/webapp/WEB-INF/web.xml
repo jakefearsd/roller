@@ -387,8 +387,6 @@
         <web-resource-collection>
             <web-resource-name>HTTPS resources</web-resource-name>
             <url-pattern>/roller-ui/login.rol</url-pattern>
-            <url-pattern>/roller-ui/register.rol</url-pattern>
-            <url-pattern>/roller-ui/register!save.rol</url-pattern>
             <url-pattern>/roller-ui/profile.rol</url-pattern>
             <url-pattern>/roller-ui/profile!save.rol</url-pattern>
             <url-pattern>/roller-ui/admin/*</url-pattern>

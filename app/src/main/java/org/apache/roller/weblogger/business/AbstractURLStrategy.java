@@ -76,26 +76,6 @@ public abstract class AbstractURLStrategy implements URLStrategy {
     }
     
     /**
-     * Url to register page.
-     */
-    @Override
-    public String getRegisterURL(boolean absolute) {
-
-        StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
-        
-        if(absolute) {
-            url.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
-        } else {
-            url.append(WebloggerRuntimeConfig.getRelativeContextURL());
-        }
-        
-        url.append("/roller-ui/register.rol");
-        
-        return url.toString();
-    }
-    
-    
-    /**
      * Get a url to a UI action in a given namespace, optionally specifying
      * a weblogHandle parameter if that is needed by the action.
      */

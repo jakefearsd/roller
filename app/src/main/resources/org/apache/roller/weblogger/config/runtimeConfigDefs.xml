@@ -83,18 +83,6 @@
    <!-- User Settings Group -->
    <display-group name="userSettings" key="configForm.userSettings" >
    
-      <property-def name="users.registration.enabled"  key="configForm.allowNewUsers">
-         <type>boolean</type>
-         <default-value>false</default-value>
-      </property-def>
-      <property-def name="user.account.email.activation"  key="configForm.requireEmailActivation">
-         <type>boolean</type>
-         <default-value>false</default-value>
-      </property-def>
-      <property-def  name="users.registration.url"  key="configForm.registrationUrl">
-          <type>string</type>
-          <default-value></default-value>
-      </property-def>
        <property-def name="site.allowUserWeblogCreation" key="configForm.allowUserWeblogCreation">
            <type>boolean</type>
            <default-value>true</default-value>

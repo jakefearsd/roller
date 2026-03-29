@@ -97,20 +97,6 @@
                                 <spring:message code="navigationBar.login"/></a>
                         </li>
 
-                        <c:choose>
-                            <c:when test="${rc:getBooleanProp('users.registration.enabled') && rc:getProp('authentication.method') != 'ldap'}">
-                                <li>
-                                    <a href="<c:url value="/roller-ui/register.rol"/>">
-                                        <spring:message code="navigationBar.register"/></a>
-                                </li>
-                            </c:when>
-                            <c:when test="${not empty rc:getProp('users.registration.url')}">
-                                <li>
-                                    <a href="${rc:getProp('users.registration.url')}">
-                                        <spring:message code="navigationBar.register"/></a>
-                                </li>
-                            </c:when>
-                        </c:choose>
                     </c:otherwise>
                 </c:choose>
 

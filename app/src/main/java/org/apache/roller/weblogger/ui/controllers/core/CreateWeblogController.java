@@ -37,6 +37,7 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.apache.roller.weblogger.ui.controllers.util.UIUtils;
 import org.apache.roller.weblogger.util.Utilities;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -177,7 +178,7 @@ public class CreateWeblogController extends BaseController {
     private void myValidate(HttpServletRequest request, Model model, CreateWeblogBean bean) {
         String allowed = WebloggerConfig.getProperty("username.allowedChars");
         if (allowed == null || allowed.isBlank()) {
-            allowed = RegisterController.DEFAULT_ALLOWED_CHARS;
+            allowed = UIUtils.DEFAULT_ALLOWED_CHARS;
         }
 
         String safe = CharSetUtils.keep(bean.getHandle(), allowed);

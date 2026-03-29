@@ -6,7 +6,6 @@ create table testrolleruser (
     screenname      varchar(255) not null,
     fullname        varchar(255) not null,
     emailaddress    varchar(255) not null,
-    activationcode	varchar(48),
     datecreated     datetime not null,
     locale          varchar(20),  
     timezone        varchar(50),    

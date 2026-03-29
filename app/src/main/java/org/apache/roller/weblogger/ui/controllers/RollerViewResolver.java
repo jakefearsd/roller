@@ -185,20 +185,11 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "styles",  "/WEB-INF/jsps/core/Login-css.jsp"
                 ));
 
-        addExtendedDefinition(".Register", ".tiles-simplepage",
-                Map.of("content", "/WEB-INF/jsps/core/Register.jsp"));
-
         addExtendedDefinition(".Welcome", ".tiles-simplepage",
                 Map.of("content", "/WEB-INF/jsps/core/Welcome.jsp"));
 
         addExtendedDefinition(".Profile", ".tiles-simplepage",
                 Map.of("content", "/WEB-INF/jsps/core/Profile.jsp"));
-
-        addExtendedDefinition(".OAuthKeys", ".tiles-simplepage",
-                Map.of("content", "/WEB-INF/jsps/core/OAuthKeys.jsp"));
-
-        addExtendedDefinition(".OAuthAuthorize", ".tiles-simplepage",
-                Map.of("content", "/WEB-INF/jsps/core/OAuthAuthorize.jsp"));
 
         addExtendedDefinition(".CreateWeblog", ".tiles-simplepage",
                 Map.of("content", "/WEB-INF/jsps/core/CreateWeblog.jsp"));

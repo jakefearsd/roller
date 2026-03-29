@@ -113,12 +113,6 @@ public class URLModel implements Model {
         return urlStrategy.getLogoutURL(false);
     }
     
-    /** URL for registering */
-    public String getRegister() {
-        return urlStrategy.getRegisterURL(false);
-    }
-    
-    
     /** URL for a specific UI action */
     public String action(String action, String namespace) {
         if(namespace != null) {

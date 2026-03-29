@@ -12,9 +12,6 @@
         <named-query name="User.getByEnabled">
             <query>SELECT u FROM User u WHERE u.enabled = ?1</query>
         </named-query>
-        <named-query name="User.getUserByActivationCode">
-            <query>SELECT u FROM User u WHERE u.activationCode = ?1</query>
-        </named-query>
         <named-query name="User.getByEnabled&amp;EndDateOrderByStartDateDesc">
             <query>SELECT u FROM User u WHERE u.enabled = ?1 AND u.dateCreated &lt; ?2 ORDER BY u.dateCreated DESC</query>
         </named-query>
@@ -66,9 +63,6 @@
             </basic>
             <basic name="screenName">
                 <column name="screenname" insertable="true" updatable="true" unique="true"/>
-            </basic>
-            <basic name="activationCode">
-                <column name="activationcode" insertable="true" updatable="true" unique="true"/>
             </basic>
             <basic name="password">
                 <column name="passphrase" insertable="true" updatable="true" unique="false"/>

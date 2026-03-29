@@ -50,8 +50,7 @@ public class User implements Serializable {
     private String  locale;
     private String  timeZone;
     private Boolean enabled = Boolean.TRUE;
-    private String  activationCode;
-    
+
     public User() {
     }
     
@@ -219,15 +218,6 @@ public class User implements Serializable {
         this.enabled = enabled;
     }
     
-    public String getActivationCode() {
-        return activationCode;
-    }
-    
-    public void setActivationCode(String activationCode) {
-        this.activationCode =  HTMLSanitizer.conditionallySanitize(activationCode);
-    }
-    
-     
     public boolean hasGlobalPermission(String action) {
         return hasGlobalPermissions(Collections.singletonList(action));
     }

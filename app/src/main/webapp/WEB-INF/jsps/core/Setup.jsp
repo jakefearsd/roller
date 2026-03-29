@@ -42,7 +42,7 @@
         <p><spring:message code="index.createUserHelp"/></p>
         <p><c:if test="${userCount == 0}">
             <spring:message code="index.createUserBy"/>
-            <a id="a_createUser" href='<c:url value="/roller-ui/register.rol"/>'>
+            <a id="a_createUser" href='<c:url value="/roller-ui/admin/createUser.rol"/>'>
                 <spring:message code="index.createUserPage"/></a>.
         </c:if></p>
 

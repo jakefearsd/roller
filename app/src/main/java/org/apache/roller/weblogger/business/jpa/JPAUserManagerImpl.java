@@ -102,10 +102,7 @@ public class JPAUserManagerImpl implements UserManager {
             // Make first user an admin
             adminUser = true;
 
-            //if user was disabled (because of activation user 
-            // account with e-mail property), enable it for admin user
             newUser.setEnabled(Boolean.TRUE);
-            newUser.setActivationCode(null);
         }
 
         if (getUserByUserName(newUser.getUserName()) != null ||
@@ -334,21 +331,6 @@ public class JPAUserManagerImpl implements UserManager {
         return results.get(0);
     }
 
-    @Override
-    public User getUserByActivationCode(String activationCode) throws WebloggerException {
-        if (activationCode == null) {
-            throw new WebloggerException("activationcode is null");
-        }
-        TypedQuery<User> q = strategy.getNamedQuery("User.getUserByActivationCode", User.class);
-        q.setParameter(1, activationCode);
-        try {
-            return q.getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
-    }
-    
-    
     //-------------------------------------------------------- permissions CRUD
  
     @Override

@@ -43,7 +43,6 @@ public class CreateUserBean {
     private String timeZone = null;
     private String openIdUrl = null;
     private Boolean enabled = Boolean.FALSE;
-    private String activationCode = null;
     private boolean administrator = false;
     private List<String> list = new ArrayList<>();
 
@@ -135,14 +134,6 @@ public class CreateUserBean {
         this.enabled = enabled;
     }
 
-    public String getActivationCode() {
-        return activationCode;
-    }
-
-    public void setActivationCode(String activationCode) {
-        this.activationCode = activationCode;
-    }
-
     public boolean isAdministrator() {
         return administrator;
     }
@@ -160,7 +151,6 @@ public class CreateUserBean {
         dataHolder.setTimeZone(this.timeZone);
         dataHolder.setOpenIdUrl(this.openIdUrl);
         dataHolder.setEnabled(this.enabled);
-        dataHolder.setActivationCode(this.activationCode);
     }
 
 
@@ -176,7 +166,6 @@ public class CreateUserBean {
         this.timeZone = dataHolder.getTimeZone();
         this.openIdUrl = dataHolder.getOpenIdUrl();
         this.enabled = dataHolder.getEnabled();
-        this.activationCode = dataHolder.getActivationCode();
 
         try {
             GlobalPermission adminPerm =

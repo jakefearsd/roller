@@ -18,6 +18,6 @@
 <%--
 This JSP is intended for cannot proceed error messages, perhaps due to lack of system permissions.
 To use: addError() messages and they will appear here.
-See CreateWeblogController.java and RegisterController.java for examples of this JSP.
+See CreateWeblogController.java for an example of this JSP.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
