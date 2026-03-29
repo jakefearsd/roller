@@ -402,10 +402,8 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         if (length != -1) {
             query.setMaxResults(length);
         }
-        for (int i=0; i<params.size(); i++) {
-           query.setParameter(i+1, params.get(i));
-        }
-        
+        bindParams(query, params);
+
         return query.getResultList();
     }
 
@@ -652,6 +650,12 @@ public class JPAWeblogManagerImpl implements WeblogManager {
             }
         }
         return true;
+    }
+
+    private static void bindParams(Query query, List<Object> params) {
+        for (int i = 0; i < params.size(); i++) {
+            query.setParameter(i + 1, params.get(i));
+        }
     }
 
 }

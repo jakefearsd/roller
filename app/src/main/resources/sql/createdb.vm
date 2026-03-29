@@ -255,12 +255,6 @@ create index ea_entryid_idx on entryattribute( entryid );
 alter table entryattribute add constraint ea_name_uq unique ( entryid, name$!db.INDEXSIZE );
 
 
-create table rag_properties (
-    name     varchar(255) not null primary key,
-    value    $db.TEXT_SQL_TYPE
-);
-
-
 -- MEDIA BLOGGING
 
 create table roller_mediafile (

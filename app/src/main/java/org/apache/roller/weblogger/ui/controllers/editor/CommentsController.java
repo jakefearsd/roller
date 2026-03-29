@@ -44,7 +44,6 @@ import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.controllers.pagers.CommentsPager;
-import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.util.I18nMessages;
 import org.apache.roller.weblogger.util.MailUtil;
@@ -323,16 +322,6 @@ public class CommentsController extends BaseController {
         }
         return WebloggerFactory.getWeblogger().getUrlStrategy()
                 .getActionURL("comments", "/roller-ui/authoring", getActionWeblog(request).getHandle(), params, false);
-    }
-
-    private List<KeyValueObject> getCommentStatusOptions(HttpServletRequest request) {
-        List<KeyValueObject> opts = new ArrayList<>();
-        opts.add(new KeyValueObject("ALL", getText("generic.all", request)));
-        opts.add(new KeyValueObject("ONLY_PENDING", getText("commentManagement.onlyPending", request)));
-        opts.add(new KeyValueObject("ONLY_APPROVED", getText("commentManagement.onlyApproved", request)));
-        opts.add(new KeyValueObject("ONLY_DISAPPROVED", getText("commentManagement.onlyDisapproved", request)));
-        opts.add(new KeyValueObject("ONLY_SPAM", getText("commentManagement.onlySpam", request)));
-        return opts;
     }
 
     @ModelAttribute("bean")

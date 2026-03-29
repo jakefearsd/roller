@@ -110,7 +110,7 @@ public class FeedServlet extends HttpServlet {
         } catch (Exception e) {
             // invalid feed request format or weblog doesn't exist
             log.debug("error creating weblog feed request", e);
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            RenderingServletUtils.sendNotFound(response);
             return;
         }
 
@@ -204,10 +204,7 @@ public class FeedServlet extends HttpServlet {
         }
 
         if (invalid) {
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            RenderingServletUtils.sendNotFound(response);
             return;
         }
 
@@ -296,30 +293,15 @@ public class FeedServlet extends HttpServlet {
             // get this far if we expect the template to be found
             // log.error("Couldn't find renderer for page "+pageId, e);
 
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            RenderingServletUtils.sendNotFound(response);
             return;
         }
 
         // render content. use default size of 24K for a standard page
-        CachedContent rendererOutput = new CachedContent(RollerConstants.TWENTYFOUR_KB_IN_BYTES);
-        try {
-            log.debug("Doing rendering");
-            renderer.render(model, rendererOutput.getCachedWriter());
-
-            // flush rendered output and close
-            rendererOutput.flush();
-            rendererOutput.close();
-        } catch (Exception e) {
-            // bummer, error during rendering
-            log.error("Error during rendering for page " + pageId, e);
-
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+        CachedContent rendererOutput = RenderingServletUtils.render(
+                renderer, model, RollerConstants.TWENTYFOUR_KB_IN_BYTES,
+                "feed " + pageId, response);
+        if (rendererOutput == null) {
             return;
         }
 

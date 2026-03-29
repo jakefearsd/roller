@@ -188,9 +188,7 @@ public class JPAUserManagerImpl implements UserManager {
                     "User.getByUserName", User.class);
             params = new Object[] {userName};
         }
-        for (int i=0; i<params.length; i++) {
-            query.setParameter(i+1, params[i]);
-        }
+        bindParams(query, params);
         User user;
         try {
             user = query.getSingleResult();
@@ -609,6 +607,12 @@ public class JPAUserManagerImpl implements UserManager {
 
         } catch (NoResultException e) {
             throw new WebloggerException("ERROR: removing role", e);
+        }
+    }
+
+    private static void bindParams(TypedQuery<?> query, Object[] params) {
+        for (int i = 0; i < params.length; i++) {
+            query.setParameter(i + 1, params[i]);
         }
     }
 }

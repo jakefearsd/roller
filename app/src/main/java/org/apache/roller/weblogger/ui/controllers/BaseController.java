@@ -30,6 +30,7 @@ import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
 import org.apache.roller.weblogger.ui.core.util.menu.MenuHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,27 +127,15 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     /**
      * Add an error message (resolved from the message source) to the model.
      */
-    @SuppressWarnings("unchecked")
     protected void addError(Model model, String key, HttpServletRequest request) {
-        List<String> errors = (List<String>) model.getAttribute("errors");
-        if (errors == null) {
-            errors = new ArrayList<>();
-            model.addAttribute("errors", errors);
-        }
-        errors.add(getText(key, request));
+        addToModel(model, "errors", getText(key, request));
     }
 
     /**
      * Add an error message (resolved from the message source) with a parameter to the model.
      */
-    @SuppressWarnings("unchecked")
     protected void addError(Model model, String key, String param, HttpServletRequest request) {
-        List<String> errors = (List<String>) model.getAttribute("errors");
-        if (errors == null) {
-            errors = new ArrayList<>();
-            model.addAttribute("errors", errors);
-        }
-        errors.add(getText(key, new Object[]{param}, request));
+        addToModel(model, "errors", getText(key, new Object[]{param}, request));
     }
 
     /**
@@ -161,27 +150,15 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     /**
      * Add a status message (resolved from the message source) to the model.
      */
-    @SuppressWarnings("unchecked")
     protected void addMessage(Model model, String key, HttpServletRequest request) {
-        List<String> messages = (List<String>) model.getAttribute("messages");
-        if (messages == null) {
-            messages = new ArrayList<>();
-            model.addAttribute("messages", messages);
-        }
-        messages.add(getText(key, request));
+        addToModel(model, "messages", getText(key, request));
     }
 
     /**
      * Add a status message (resolved from the message source) with a parameter to the model.
      */
-    @SuppressWarnings("unchecked")
     protected void addMessage(Model model, String key, String param, HttpServletRequest request) {
-        List<String> messages = (List<String>) model.getAttribute("messages");
-        if (messages == null) {
-            messages = new ArrayList<>();
-            model.addAttribute("messages", messages);
-        }
-        messages.add(getText(key, new Object[]{param}, request));
+        addToModel(model, "messages", getText(key, new Object[]{param}, request));
     }
 
     // --- Flash attribute helpers (for messages that survive redirects) ---
@@ -189,53 +166,64 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     /**
      * Add a flash message that survives a redirect.
      */
-    @SuppressWarnings("unchecked")
     protected void addFlashMessage(RedirectAttributes redirectAttributes, String key, HttpServletRequest request) {
-        List<String> messages = (List<String>) redirectAttributes.getFlashAttributes().get("messages");
-        if (messages == null) {
-            messages = new ArrayList<>();
-        }
-        messages.add(getText(key, request));
-        redirectAttributes.addFlashAttribute("messages", messages);
+        addToFlash(redirectAttributes, "messages", getText(key, request));
     }
 
     /**
      * Add a flash message with a parameter that survives a redirect.
      */
-    @SuppressWarnings("unchecked")
     protected void addFlashMessage(RedirectAttributes redirectAttributes, String key, String param, HttpServletRequest request) {
-        List<String> messages = (List<String>) redirectAttributes.getFlashAttributes().get("messages");
-        if (messages == null) {
-            messages = new ArrayList<>();
-        }
-        messages.add(getText(key, new Object[]{param}, request));
-        redirectAttributes.addFlashAttribute("messages", messages);
+        addToFlash(redirectAttributes, "messages", getText(key, new Object[]{param}, request));
     }
 
     /**
      * Add a flash error that survives a redirect.
      */
-    @SuppressWarnings("unchecked")
     protected void addFlashError(RedirectAttributes redirectAttributes, String key, HttpServletRequest request) {
-        List<String> errors = (List<String>) redirectAttributes.getFlashAttributes().get("errors");
-        if (errors == null) {
-            errors = new ArrayList<>();
-        }
-        errors.add(getText(key, request));
-        redirectAttributes.addFlashAttribute("errors", errors);
+        addToFlash(redirectAttributes, "errors", getText(key, request));
     }
 
     /**
      * Add a flash error with a parameter that survives a redirect.
      */
-    @SuppressWarnings("unchecked")
     protected void addFlashError(RedirectAttributes redirectAttributes, String key, String param, HttpServletRequest request) {
-        List<String> errors = (List<String>) redirectAttributes.getFlashAttributes().get("errors");
-        if (errors == null) {
-            errors = new ArrayList<>();
+        addToFlash(redirectAttributes, "errors", getText(key, new Object[]{param}, request));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addToModel(Model model, String attrName, String text) {
+        List<String> list = (List<String>) model.getAttribute(attrName);
+        if (list == null) {
+            list = new ArrayList<>();
+            model.addAttribute(attrName, list);
         }
-        errors.add(getText(key, new Object[]{param}, request));
-        redirectAttributes.addFlashAttribute("errors", errors);
+        list.add(text);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addToFlash(RedirectAttributes redirectAttributes, String attrName, String text) {
+        List<String> list = (List<String>) redirectAttributes.getFlashAttributes().get(attrName);
+        if (list == null) {
+            list = new ArrayList<>();
+        }
+        list.add(text);
+        redirectAttributes.addFlashAttribute(attrName, list);
+    }
+
+    // --- Comment management helpers ---
+
+    /**
+     * Returns the list of comment status filter options for comment management pages.
+     */
+    protected List<KeyValueObject> getCommentStatusOptions(HttpServletRequest request) {
+        List<KeyValueObject> opts = new ArrayList<>();
+        opts.add(new KeyValueObject("ALL", getText("generic.all", request)));
+        opts.add(new KeyValueObject("ONLY_PENDING", getText("commentManagement.onlyPending", request)));
+        opts.add(new KeyValueObject("ONLY_APPROVED", getText("commentManagement.onlyApproved", request)));
+        opts.add(new KeyValueObject("ONLY_DISAPPROVED", getText("commentManagement.onlyDisapproved", request)));
+        opts.add(new KeyValueObject("ONLY_SPAM", getText("commentManagement.onlySpam", request)));
+        return opts;
     }
 
     // --- Configuration property helpers ---

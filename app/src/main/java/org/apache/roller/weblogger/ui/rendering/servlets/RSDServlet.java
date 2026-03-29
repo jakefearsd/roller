@@ -91,7 +91,7 @@ public class RSDServlet extends HttpServlet {
         } catch (Exception e) {
             // invalid rsd request format or weblog doesn't exist
             log.debug("error creating weblog request", e);
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            RenderingServletUtils.sendNotFound(response);
             return;
         }
 
@@ -125,31 +125,15 @@ public class RSDServlet extends HttpServlet {
         } catch (Exception e) {
             // nobody wants to render my content :(
             log.error("Couldn't find renderer for rsd template", e);
-
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            RenderingServletUtils.sendNotFound(response);
             return;
         }
 
         // render content
-        CachedContent rendererOutput = new CachedContent(RollerConstants.FOUR_KB_IN_BYTES);
-        try {
-            log.debug("Doing rendering");
-            renderer.render(model, rendererOutput.getCachedWriter());
-
-            // flush rendered output and close
-            rendererOutput.flush();
-            rendererOutput.close();
-        } catch (Exception e) {
-            // bummer, error during rendering
-            log.error("Error during rendering for rsd template", e);
-
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+        CachedContent rendererOutput = RenderingServletUtils.render(
+                renderer, model, RollerConstants.FOUR_KB_IN_BYTES,
+                "rsd template", response);
+        if (rendererOutput == null) {
             return;
         }
 

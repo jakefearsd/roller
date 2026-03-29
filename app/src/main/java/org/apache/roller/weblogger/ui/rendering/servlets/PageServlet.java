@@ -175,7 +175,7 @@ public class PageServlet extends HttpServlet {
         } catch (Exception e) {
             // some kind of error parsing the request or looking up weblog
             log.debug("error creating page request", e);
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            RenderingServletUtils.sendNotFound(response);
             return;
         }
 
@@ -293,10 +293,7 @@ public class PageServlet extends HttpServlet {
             // if we don't have this page then 404, we don't let
             // this one fall through to the default template
             if (page == null) {
-                if (!response.isCommitted()) {
-                    response.reset();
-                }
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                RenderingServletUtils.sendNotFound(response);
                 return;
             }
 
@@ -314,10 +311,7 @@ public class PageServlet extends HttpServlet {
             // if we don't have a custom tags page then 404, we don't let
             // this one fall through to the default template
             if (page == null) {
-                if (!response.isCommitted()) {
-                    response.reset();
-                }
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                RenderingServletUtils.sendNotFound(response);
                 return;
             }
 
@@ -344,10 +338,7 @@ public class PageServlet extends HttpServlet {
 
         // Still no page? Then that is a 404
         if (page == null) {
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            RenderingServletUtils.sendNotFound(response);
             return;
         }
 
@@ -400,10 +391,7 @@ public class PageServlet extends HttpServlet {
 
         if (invalid) {
             log.debug("page failed validation, bailing out");
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            RenderingServletUtils.sendNotFound(response);
             return;
         }
 
@@ -495,32 +483,15 @@ public class PageServlet extends HttpServlet {
         } catch (Exception e) {
             // nobody wants to render my content :(
             log.error("Couldn't find renderer for page " + page.getId(), e);
-
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            RenderingServletUtils.sendNotFound(response);
             return;
         }
 
         // render content
-        CachedContent rendererOutput = new CachedContent(
-                RollerConstants.TWENTYFOUR_KB_IN_BYTES, contentType);
-        try {
-            log.debug("Doing rendering");
-            renderer.render(model, rendererOutput.getCachedWriter());
-
-            // flush rendered output and close
-            rendererOutput.flush();
-            rendererOutput.close();
-        } catch (Exception e) {
-            // bummer, error during rendering
-            log.error("Error during rendering for page " + page.getId(), e);
-
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+        CachedContent rendererOutput = RenderingServletUtils.render(
+                renderer, model, RollerConstants.TWENTYFOUR_KB_IN_BYTES, contentType,
+                "page " + page.getId(), response);
+        if (rendererOutput == null) {
             return;
         }
 

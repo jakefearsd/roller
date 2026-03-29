@@ -210,39 +210,29 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                 mediaFile.getContentType(), mediaFile.getLength(), errors)) {
             return;
         }
-        strategy.store(mediaFile);
-
-        // Refresh associated parent for changes
-        roller.flush();
-        strategy.refresh(mediaFile.getDirectory());
-
-        // update weblog last modified date. date updated by saveWeblog()
-        roller.getWeblogManager().saveWeblog(weblog);
-
-        cmgr.saveFileContent(weblog, mediaFile.getId(),
-                mediaFile.getInputStream());
-
-        if (mediaFile.isImageFile()) {
-            updateThumbnail(mediaFile);
-        }
+        persistNewMediaFile(weblog, mediaFile.getDirectory(), mediaFile, mediaFile.getInputStream());
     }
 
     @Override
     public void createThemeMediaFile(Weblog weblog, MediaFile mediaFile,
                                 RollerMessages errors) throws WebloggerException {
 
+        persistNewMediaFile(weblog, mediaFile.getDirectory(), mediaFile, mediaFile.getInputStream());
+    }
+
+    private void persistNewMediaFile(Weblog weblog, MediaFileDirectory directory,
+            MediaFile mediaFile, InputStream is) throws WebloggerException {
         FileContentManager cmgr = WebloggerFactory.getWeblogger().getFileContentManager();
         strategy.store(mediaFile);
 
         // Refresh associated parent for changes
         roller.flush();
-        strategy.refresh(mediaFile.getDirectory());
+        strategy.refresh(directory);
 
         // update weblog last modified date. date updated by saveWeblog()
         roller.getWeblogManager().saveWeblog(weblog);
 
-        cmgr.saveFileContent(weblog, mediaFile.getId(),
-            mediaFile.getInputStream());
+        cmgr.saveFileContent(weblog, mediaFile.getId(), is);
 
         if (mediaFile.isImageFile()) {
             updateThumbnail(mediaFile);
@@ -314,15 +304,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
     @Override
     public void updateMediaFile(Weblog weblog, MediaFile mediaFile,
             InputStream is) throws WebloggerException {
-        mediaFile.setLastUpdated(new Timestamp(System.currentTimeMillis()));
-        strategy.store(mediaFile);
-
-        roller.flush();
-        // Refresh associated parent for changes
-        strategy.refresh(mediaFile.getDirectory());
-
-        // update weblog last modified date. date updated by saveWeblog()
-        roller.getWeblogManager().saveWeblog(weblog);
+        updateMediaFile(weblog, mediaFile);
 
         FileContentManager cmgr = WebloggerFactory.getWeblogger()
                 .getFileContentManager();

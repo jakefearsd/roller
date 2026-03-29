@@ -35,7 +35,6 @@ import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.controllers.pagers.CommentsPager;
-import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.util.Utilities;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
@@ -333,13 +332,4 @@ public class GlobalCommentManagementController extends BaseController {
                 "globalCommentManagement", "/roller-ui/admin", null, params, false);
     }
 
-    private List<KeyValueObject> getCommentStatusOptions(HttpServletRequest request) {
-        List<KeyValueObject> opts = new ArrayList<>();
-        opts.add(new KeyValueObject("ALL", getText("generic.all", request)));
-        opts.add(new KeyValueObject("ONLY_PENDING", getText("commentManagement.onlyPending", request)));
-        opts.add(new KeyValueObject("ONLY_APPROVED", getText("commentManagement.onlyApproved", request)));
-        opts.add(new KeyValueObject("ONLY_DISAPPROVED", getText("commentManagement.onlyDisapproved", request)));
-        opts.add(new KeyValueObject("ONLY_SPAM", getText("commentManagement.onlySpam", request)));
-        return opts;
-    }
 }

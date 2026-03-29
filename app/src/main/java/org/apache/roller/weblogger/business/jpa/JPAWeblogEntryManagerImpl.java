@@ -346,9 +346,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             whereClause.append(" ORDER BY e.pubTime DESC");
         }
         query = strategy.getDynamicQuery(queryString + whereClause.toString(), WeblogEntry.class);
-        for (int i=0; i<params.size(); i++) {
-            query.setParameter(i+1, params.get(i));
-        }
+        bindParams(query, params);
         query.setMaxResults(maxEntries);
         
         return query.getResultList();
@@ -462,10 +460,8 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         
         
         TypedQuery<WeblogEntry> query = strategy.getDynamicQuery(queryString.toString(), WeblogEntry.class);
-        for (int i=0; i<params.size(); i++) {
-            query.setParameter(i+1, params.get(i));
-        }
-        
+        bindParams(query, params);
+
         setFirstMax( query, wesc.getOffset(), wesc.getMaxResults() );
         return query.getResultList();
     }
@@ -672,9 +668,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         
         TypedQuery<WeblogEntryComment> query = strategy.getDynamicQuery(queryString.toString(), WeblogEntryComment.class);
         setFirstMax( query, csc.getOffset(), csc.getMaxResults());
-        for (int i=0; i<params.size(); i++) {
-            query.setParameter(i+1, params.get(i));
-        }
+        bindParams(query, params);
         return query.getResultList();
         
     }
@@ -1026,12 +1020,10 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         queryString.append(" GROUP BY w.name, w.total ORDER BY ").append(sortBy);
 
         query = strategy.getDynamicQuery(queryString.toString());
-        for (int i=0; i<params.size(); i++) {
-            query.setParameter(i+1, params.get(i));
-        }
+        bindParams(query, params);
         setFirstMax( query, offset, limit);
         queryResults = query.getResultList();
-        
+
         List<TagStat> results = new ArrayList<>();
         if (queryResults != null) {
             for (Object obj : queryResults) {
@@ -1091,9 +1083,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         }
         
         TypedQuery<String> q = strategy.getDynamicQuery(queryString.toString(), String.class);
-        for (int j=0; j<params.size(); j++) {
-            q.setParameter(j+1, params.get(j));
-        }
+        bindParams(q, params);
         List<String> results = q.getResultList();
         
         //TODO: DatamapperPort: Since we are only interested in knowing whether
@@ -1148,36 +1138,29 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             siteTagData = null;
         }
         Timestamp lastUsed = new Timestamp((new Date()).getTime());
-        
-        // create it only if we are going to need it.
-        if (weblogTagData == null && amount > 0) {
-            weblogTagData = new WeblogEntryTagAggregate(null, website, name, amount);
-            weblogTagData.setLastUsed(lastUsed);
-            strategy.store(weblogTagData);
-            
-        } else if (weblogTagData != null) {
-            weblogTagData.setTotal(weblogTagData.getTotal() + amount);
-            weblogTagData.setLastUsed(lastUsed);
-            strategy.store(weblogTagData);
-        }
-        
-        // create it only if we are going to need it.
-        if (siteTagData == null && amount > 0) {
-            siteTagData = new WeblogEntryTagAggregate(null, null, name, amount);
-            siteTagData.setLastUsed(lastUsed);
-            strategy.store(siteTagData);
-            
-        } else if (siteTagData != null) {
-            siteTagData.setTotal(siteTagData.getTotal() + amount);
-            siteTagData.setLastUsed(lastUsed);
-            strategy.store(siteTagData);
-        }
-        
+
+        upsertTagAggregate(weblogTagData, name, website, amount, lastUsed);
+        upsertTagAggregate(siteTagData, name, null, amount, lastUsed);
+
         // delete all bad counts
         Query removeq = strategy.getNamedUpdate(
                 "WeblogEntryTagAggregate.removeByTotalLessEqual");
         removeq.setParameter(1, 0);
         removeq.executeUpdate();
+    }
+
+    private void upsertTagAggregate(WeblogEntryTagAggregate tagData, String name,
+            Weblog website, int amount, Timestamp lastUsed) throws WebloggerException {
+        // create it only if we are going to need it.
+        if (tagData == null && amount > 0) {
+            tagData = new WeblogEntryTagAggregate(null, website, name, amount);
+            tagData.setLastUsed(lastUsed);
+            strategy.store(tagData);
+        } else if (tagData != null) {
+            tagData.setTotal(tagData.getTotal() + amount);
+            tagData.setLastUsed(lastUsed);
+            strategy.store(tagData);
+        }
     }
     
     /**
@@ -1231,6 +1214,12 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         }
         if (length != -1) {
             query.setMaxResults(length);
+        }
+    }
+
+    private static void bindParams(Query query, List<Object> params) {
+        for (int i = 0; i < params.size(); i++) {
+            query.setParameter(i + 1, params.get(i));
         }
     }
 
