@@ -310,10 +310,6 @@ public final class WeblogWrapper {
     }
     
     
-    public WeblogBookmarkFolderWrapper getBookmarkFolder(String folderName) {
-        return WeblogBookmarkFolderWrapper.wrap(this.pojo.getBookmarkFolder(folderName));
-    }
-
     public int getTodaysHits() {
         return this.pojo.getTodaysHits();
     }

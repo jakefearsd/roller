@@ -22,7 +22,6 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import net.oauth.OAuthValidator;
 import net.oauth.SimpleOAuthValidator;
-import org.apache.roller.weblogger.business.BookmarkManager;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.FileContentManagerImpl;
 import org.apache.roller.weblogger.business.MediaFileManager;
@@ -59,7 +58,6 @@ public class JPAWebloggerModule implements Module {
         binder.bind(JPAPersistenceStrategy.class);       
         
         binder.bind(AutoPingManager.class).to(     JPAAutoPingManagerImpl.class);   
-        binder.bind(BookmarkManager.class).to(     JPABookmarkManagerImpl.class);  
         binder.bind(PingQueueManager.class).to(    JPAPingQueueManagerImpl.class);   
         binder.bind(PingTargetManager.class).to(   JPAPingTargetManagerImpl.class); 
         binder.bind(PropertiesManager.class).to(   JPAPropertiesManagerImpl.class);   

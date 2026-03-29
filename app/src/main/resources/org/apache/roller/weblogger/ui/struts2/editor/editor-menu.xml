@@ -11,7 +11,7 @@ Each menu or menu item is governed by four attributes:
        Use "any" to indicate that role is not required to view item
        
     2) weblogPerms: these are the weblog specific permissions required to view item
-       - post:        edit and publish entries, bookmarks
+       - post:        edit and publish entries
        - edit_draft:  create and edit draft posts only
        - admin:       edit and publish entries, edit categories, manage users, etc.
        Use "any" to indicate that website perms are not required to view item
@@ -52,12 +52,6 @@ Each menu or menu item is governed by four attributes:
                    weblogPerms="post"
                    subactions="categoryAdd,categoryEdit,categoryRemove" />
         
-        <!-- globalPerms="login" -->
-        <menu-item action="bookmarks"    
-                   name="tabbedmenu.bookmarks.allFolders" 
-                   weblogPerms="admin"
-                   subactions="bookmarkAdd,bookmarkEdit,folderAdd,folderEdit,bookmarksImport" />
-
         <!-- globalPerms="login" -->
         <menu-item action="mediaFileView"
                    name="tabbedmenu.weblog.mediaFiles"

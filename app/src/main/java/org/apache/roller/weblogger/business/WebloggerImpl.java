@@ -53,7 +53,6 @@ public abstract class WebloggerImpl implements Weblogger {
     
     // managers
     private final AutoPingManager      autoPingManager;
-    private final BookmarkManager      bookmarkManager;
     private final IndexManager         indexManager;
     private final MediaFileManager     mediaFileManager;
     private final FileContentManager   fileContentManager;
@@ -80,7 +79,6 @@ public abstract class WebloggerImpl implements Weblogger {
     
     protected WebloggerImpl(
         AutoPingManager      autoPingManager,
-        BookmarkManager      bookmarkManager,
         IndexManager         indexManager,
         MediaFileManager     mediaFileManager,
         FileContentManager   fileContentManager,
@@ -97,7 +95,6 @@ public abstract class WebloggerImpl implements Weblogger {
         URLStrategy          urlStrategy) throws WebloggerException {
                 
         this.autoPingManager     = autoPingManager;
-        this.bookmarkManager     = bookmarkManager;
         this.indexManager        = indexManager;
         this.mediaFileManager    = mediaFileManager;
         this.fileContentManager  = fileContentManager;
@@ -172,19 +169,8 @@ public abstract class WebloggerImpl implements Weblogger {
     
     
     /**
-     * 
-     * 
-     * @see org.apache.roller.weblogger.business.Weblogger#getBookmarkManager()
-     */
-    @Override
-    public BookmarkManager getBookmarkManager() {
-        return bookmarkManager;
-    }
-    
-    
-    /**
-     * 
-     * 
+     *
+     *
      * @see org.apache.roller.weblogger.business.Weblogger#getMediaFileManager()
      */
     @Override
@@ -306,7 +292,6 @@ public abstract class WebloggerImpl implements Weblogger {
     public void release() {
         try {
             autoPingManager.release();
-            bookmarkManager.release();
             mediaFileManager.release();
             fileContentManager.release();
             pingTargetManager.release();

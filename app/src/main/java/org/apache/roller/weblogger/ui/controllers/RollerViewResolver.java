@@ -386,31 +386,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
 
-        addExtendedDefinition(".Bookmarks", ".tiles-tabbedpage",
-                Map.of(
-                        "content", "/WEB-INF/jsps/editor/Bookmarks.jsp",
-                        "sidebar", "/WEB-INF/jsps/editor/BookmarksSidebar.jsp",
-                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
-                ));
-
-        addExtendedDefinition(".BookmarksImport", ".tiles-tabbedpage",
-                Map.of(
-                        "content", "/WEB-INF/jsps/editor/BookmarksImport.jsp",
-                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
-                ));
-
-        addExtendedDefinition(".BookmarkEdit", ".tiles-tabbedpage",
-                Map.of(
-                        "content", "/WEB-INF/jsps/tiles/empty.jsp",
-                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
-                ));
-
-        addExtendedDefinition(".FolderEdit", ".tiles-tabbedpage",
-                Map.of(
-                        "content", "/WEB-INF/jsps/tiles/empty.jsp",
-                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
-                ));
-
         // ---- weblog admin pages ----
 
         addExtendedDefinition(".WeblogConfig", ".tiles-tabbedpage",

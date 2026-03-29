@@ -30,9 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
-import org.apache.roller.weblogger.pojos.WeblogBookmark;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
-import org.apache.roller.weblogger.pojos.WeblogBookmarkFolder;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -332,28 +330,6 @@ public final class SiteWideCache implements CacheHandler {
         
         this.contentCache.clear();
         this.lastUpdateTime = null;
-    }
-    
-    
-    /**
-     * A bookmark has changed.
-     */
-    @Override
-    public void invalidate(WeblogBookmark bookmark) {
-        if(WebloggerRuntimeConfig.isSiteWideWeblog(bookmark.getWebsite().getHandle())) {
-            invalidate(bookmark.getWebsite());
-        }
-    }
-    
-    
-    /**
-     * A folder has changed.
-     */
-    @Override
-    public void invalidate(WeblogBookmarkFolder folder) {
-        if(WebloggerRuntimeConfig.isSiteWideWeblog(folder.getWeblog().getHandle())) {
-            invalidate(folder.getWeblog());
-        }
     }
     
     

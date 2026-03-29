@@ -36,7 +36,7 @@ import org.apache.roller.weblogger.pojos.WeblogTemplate;
 public interface WeblogManager {
     
     /**
-     * Add new website, give creator admin permission, creates blogroll,
+     * Add new website, give creator admin permission,
      * creates categories and other objects required for new website.
      * @param newWebsite New website to be created, must have creator.
      */

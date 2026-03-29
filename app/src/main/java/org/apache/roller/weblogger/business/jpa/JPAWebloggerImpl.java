@@ -45,7 +45,6 @@ public class JPAWebloggerImpl extends WebloggerImpl {
     protected JPAWebloggerImpl(
         JPAPersistenceStrategy strategy,
         AutoPingManager      autoPingManager,
-        BookmarkManager      bookmarkManager,
         IndexManager         indexManager,
         MediaFileManager     mediaFileManager,
         FileContentManager   fileContentManager,
@@ -63,7 +62,6 @@ public class JPAWebloggerImpl extends WebloggerImpl {
 
         super(
             autoPingManager,
-            bookmarkManager,
             indexManager,
             mediaFileManager,
             fileContentManager,
