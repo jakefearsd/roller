@@ -49,8 +49,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 
 /**
- * Action that allows an admin to create or modify a user profile.
- * Two struts.xml mappings: createUser and modifyUser.
+ * Controller that allows an admin to create or modify a user profile.
  */
 @Controller
 @RequestMapping("/roller-ui/admin")

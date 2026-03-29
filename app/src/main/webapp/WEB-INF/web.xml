@@ -176,12 +176,6 @@
     </servlet>
 
     <servlet>
-        <servlet-name>OpenSearchServlet</servlet-name>
-        <servlet-class>org.apache.roller.weblogger.webservices.opensearch.OpenSearchServlet</servlet-class>
-        <load-on-startup>10</load-on-startup>
-    </servlet>
-
-    <servlet>
         <servlet-name>CommentServlet</servlet-name>
         <servlet-class>org.apache.roller.weblogger.ui.rendering.servlets.CommentServlet</servlet-class>
         <load-on-startup>7</load-on-startup>
@@ -211,8 +205,6 @@
         <load-on-startup>9</load-on-startup>
     </servlet>
 
-    <!-- AtomServlet removed: rome-propono uses javax.servlet (incompatible with Jakarta) -->
-
     <servlet>
         <servlet-name>CommentDataServlet</servlet-name>
         <servlet-class>org.apache.roller.weblogger.ui.controllers.ajax.CommentDataServlet</servlet-class>
@@ -227,13 +219,6 @@
         <servlet-name>ThemeDataServlet</servlet-name>
         <servlet-class>org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet</servlet-class>
     </servlet>
-
-    <servlet>
-        <servlet-name>TagDataServlet</servlet-name>
-        <servlet-class>org.apache.roller.weblogger.webservices.tagdata.TagDataServlet</servlet-class>
-    </servlet>
-
-    <!-- XmlRpcServlet disabled: xmlrpc-server 3.1.3 uses javax.servlet (incompatible with Jakarta) -->
 
     <!-- WebjarsServlet removed (javax-only). Webjars served by Spring MVC resource handler
          or directly from classpath via the default servlet. -->
@@ -255,40 +240,6 @@
         <servlet-name>springMvc</servlet-name>
         <url-pattern>*.rol</url-pattern>
     </servlet-mapping>
-
-    <!-- BEGIN OAUTH -->
-
-    <servlet>
-        <servlet-name>RequestTokenServlet</servlet-name>
-        <servlet-class>org.apache.roller.weblogger.webservices.oauth.RequestTokenServlet</servlet-class>
-    </servlet>
-
-    <servlet>
-        <servlet-name>AuthorizationServlet</servlet-name>
-        <servlet-class>org.apache.roller.weblogger.webservices.oauth.AuthorizationServlet</servlet-class>
-    </servlet>
-    
-    <servlet>
-        <servlet-name>AccessTokenServlet</servlet-name>
-        <servlet-class>org.apache.roller.weblogger.webservices.oauth.AccessTokenServlet</servlet-class>
-    </servlet>
-
-    <servlet-mapping>
-        <servlet-name>RequestTokenServlet</servlet-name>
-        <url-pattern>/roller-services/oauth/requestToken</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>AuthorizationServlet</servlet-name>
-        <url-pattern>/roller-services/oauth/authorize</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>AccessTokenServlet</servlet-name>
-        <url-pattern>/roller-services/oauth/accessToken</url-pattern>
-    </servlet-mapping>
-
-    <!-- END OAUTH -->
 
     <!-- Rendering Servlets -->
     <servlet-mapping>
@@ -357,21 +308,6 @@
     <servlet-mapping>
         <servlet-name>ThemeDataServlet</servlet-name>
         <url-pattern>/roller-ui/authoring/themedata/*</url-pattern>
-    </servlet-mapping>
-
-    <!-- Web Service Servlets -->
-    <!-- XmlRpcServlet mapping disabled (servlet removed - javax incompatible) -->
-
-    <!-- AtomServlet mapping removed (servlet removed - javax incompatible) -->
-
-    <servlet-mapping>
-        <servlet-name>TagDataServlet</servlet-name>
-        <url-pattern>/roller-services/tagdata/*</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>OpenSearchServlet</servlet-name>
-        <url-pattern>/roller-services/opensearch/*</url-pattern>
     </servlet-mapping>
 
     <!-- Webjars mapping now handled by Spring MVC resource handler -->

@@ -202,37 +202,4 @@ public abstract class AbstractURLStrategy implements URLStrategy {
     }
     
     
-    @Override
-    public String getXmlrpcURL(boolean absolute) {
-
-        StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
-        
-        if(absolute) {
-            url.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
-        } else {
-            url.append(WebloggerRuntimeConfig.getRelativeContextURL());
-        }
-        
-        url.append("/roller-services/xmlrpc");
-        
-        return url.toString();
-    }
-    
-    
-    @Override
-    public String getAtomProtocolURL(boolean absolute) {
-
-        StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
-        
-        if(absolute) {
-            url.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
-        } else {
-            url.append(WebloggerRuntimeConfig.getRelativeContextURL());
-        }
-        
-        url.append("/roller-services/app");
-        
-        return url.toString();
-    }
-    
 }

@@ -18,7 +18,14 @@
 package org.apache.roller.weblogger.business.jpa;
 
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.*;
+import org.apache.roller.weblogger.business.FileContentManager;
+import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.UserManager;
+import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.business.WebloggerImpl;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
@@ -51,7 +58,6 @@ public class JPAWebloggerImpl extends WebloggerImpl {
         UserManager          userManager,
         WeblogManager        weblogManager,
         WeblogEntryManager   weblogEntryManager,
-        OAuthManager         oauthManager,
         URLStrategy          urlStrategy) throws WebloggerException {
 
         super(
@@ -65,7 +71,6 @@ public class JPAWebloggerImpl extends WebloggerImpl {
             userManager,
             weblogManager,
             weblogEntryManager,
-            oauthManager,
             urlStrategy);
         
         this.strategy = strategy;

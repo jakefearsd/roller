@@ -25,7 +25,7 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.enclosureURL" value="${bean.enclosureURL}" id="enclosureURL"/>
 
-    <c:if test="${newImages.size() > 0}">
+    <c:if test="${fn:length(newImages) > 0}">
         <h4><spring:message code="mediaFileSuccess.selectImagesTitle"/></h4>
         <p><spring:message code="mediaFileSuccess.selectImages"/></p>
 
@@ -80,7 +80,7 @@
 
     </c:if>
 
-    <c:if test="${newFiles.size() > 0}">
+    <c:if test="${fn:length(newFiles) > 0}">
 
         <%-- select enclosure file via radio boxes --%>
 

@@ -58,6 +58,15 @@ p {
     transition: opacity 1.25s linear;
 }
 
+/* page tips - instructional text below page subtitle */
+
+p.pagetip {
+    color: #666;
+    font-size: 0.9em;
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
 /* bootstrap tweaks */
 
 .glyphicon-info-sign {

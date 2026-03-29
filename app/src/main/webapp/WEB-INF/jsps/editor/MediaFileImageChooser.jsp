@@ -60,11 +60,11 @@
 
                 <ul>
 
-                    <c:if test="${childFiles.size() == 0}">
+                    <c:if test="${fn:length(childFiles) == 0}">
                         <p style="text-align: center"><spring:message code="mediaFileView.noFiles"/></p>
                     </c:if>
 
-                    <c:if test="${childFiles.size() > 0}">
+                    <c:if test="${fn:length(childFiles) > 0}">
 
                         <c:forEach items="${childFiles}" var="mediaFile">
 

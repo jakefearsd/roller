@@ -55,10 +55,8 @@ limitations under the License.
         <Logger name="org.apache.roller"   level="debug"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.apache.velocity" level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.springframework" level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
-        <Logger name="org.apache.struts2"  level="debug" additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.openid4java"     level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.apache.tiles"    level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
-        <Logger name="com.opensymphony"    level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="com.rometools"       level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.webjars"         level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         

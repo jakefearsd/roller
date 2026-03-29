@@ -111,12 +111,6 @@ public interface URLStrategy {
     String getWeblogSearchPageURLTemplate(Weblog weblog);
 
     
-    String getXmlrpcURL(boolean absolute);
-    
-    
-    String getAtomProtocolURL(boolean absolute);
-    
-    
     /**
      * Get root url for a given weblog.  Optionally for a certain locale.
      */
@@ -237,12 +231,4 @@ public interface URLStrategy {
     String getWeblogTagsJsonURL(Weblog weblog, boolean absolute, int pageNum);
 
 
-    /* Get URL for obtaining OAuth Request Token */
-    String getOAuthRequestTokenURL();
-
-    /* Get URL authorizing an OAuth Request Token */
-    String getOAuthAuthorizationURL();
-
-    /* Get URL for obtaining OAuth Access Token */
-    String getOAuthAccessTokenURL();
 }

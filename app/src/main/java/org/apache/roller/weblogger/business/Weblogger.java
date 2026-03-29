@@ -39,13 +39,6 @@ public interface Weblogger {
     
     
     /**
-     *
-     * Get OAuthManager associated with this Weblogger instance.
-     */
-    OAuthManager getOAuthManager();
-
-
-    /**
      * 
      * Get WeblogManager associated with this Weblogger instance.
      */

@@ -64,11 +64,11 @@
                     </td>
 
                     <td class="rollertable" align="center">
-                        <c:if test="${allCategories.size() > 1}">
+                        <c:if test="${fn:length(allCategories) > 1}">
 
                             <c:set var="categoryId" value="${category.id}"/>
                             <c:set var="categoryName" value="${category.name}"/>
-                            <c:set var="categoryInUse" value="${category.inUse.toString()}"/>
+                            <c:set var="categoryInUse" value="${category.inUse}"/>
                             <a href="#" onclick="showCategoryDeleteModal(
                                     '${categoryId}',
                                     '${categoryName}',

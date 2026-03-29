@@ -68,12 +68,12 @@ public final class MenuHelper {
             // parse menus and cache so we can efficiently reuse them
             String menu = "editor";
             ParsedMenu editorMenu = unmarshall( menu,
-                MenuHelper.class.getResourceAsStream("/org/apache/roller/weblogger/ui/struts2/editor/editor-menu.xml"));
+                MenuHelper.class.getResourceAsStream("/org/apache/roller/weblogger/ui/menu/editor-menu.xml"));
             menus.put(menu, editorMenu);
 
             menu = "admin";
             ParsedMenu adminMenu = unmarshall( menu,
-                MenuHelper.class.getResourceAsStream("/org/apache/roller/weblogger/ui/struts2/admin/admin-menu.xml"));
+                MenuHelper.class.getResourceAsStream("/org/apache/roller/weblogger/ui/menu/admin-menu.xml"));
             menus.put(menu, adminMenu);
 
         } catch (Exception ex) {

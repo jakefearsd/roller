@@ -29,14 +29,6 @@
                 <a href="<c:url value='/roller-ui/profile.rol'/>"><spring:message code="yourWebsites.editProfile" /></a></h4>
                 <p><spring:message code="yourWebsites.editProfile.desc" /></p>
 
-                <%-- OAuth keys --%>
-
-                <c:if test="${rc:getBooleanProp('webservices.enableAtomPub') && rc:getProp('webservices.atomPubAuth') == 'oauth'}">
-                    <h4><span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
-                    <a href="<c:url value='/roller-ui/oauthKeys.rol'/>"><spring:message code="yourWebsites.oauthKeys" /></a></h4>
-                    <p><spring:message code="yourWebsites.oauthKeys.desc" /></p>
-                </c:if>
-
                 <%-- Create weblog --%>
 
                 <c:if test="${rc:getBooleanProp('site.allowUserWeblogCreation') && (rc:getBooleanProp('groupblogging.enabled') || (empty existingPermissions && empty pendingPermissions))}">

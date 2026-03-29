@@ -40,7 +40,7 @@
     </p>
 
 </c:when>
-<c:when test='${pager}'>
+<c:when test='${not empty pager}'>
 
     <p class="subtitle">
         <spring:message code="mediaFileView.searchTitle"/>
@@ -50,8 +50,8 @@
             <%-- display summary of the search results and terms --%>
 
         <c:choose>
-<c:when test="${pager.items.size() > 0}">
-        <spring:message code="mediaFileView.matchingResults" arguments="${pager.items.size()}"/>
+<c:when test="${fn:length(pager.items) > 0}">
+        <spring:message code="mediaFileView.matchingResults" arguments="${fn:length(pager.items)}"/>
         </c:when>
 <c:otherwise>
             <spring:message code="mediaFileView.noResults"/>
@@ -93,7 +93,7 @@
     </p>
 
 </c:otherwise>
-</c:choose><c:if test="${childFiles || (pager && pager.items.size() > 0)}">
+</c:choose><c:if test="${not empty childFiles || (not empty pager && fn:length(pager.items) > 0)}">
 
     <form id="mediaFileViewForm" name="mediaFileViewForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
@@ -143,13 +143,13 @@
                 <ul>
 
                     <c:choose>
-<c:when test="${!pager}">
+<c:when test="${empty pager}">
 
                         <%-- ----------------------------------------------------- --%>
 
                         <%-- NOT SEARCH RESULTS --%>
 
-                        <c:if test="${childFiles.size() ==0}">
+                        <c:if test="${fn:length(childFiles) == 0}">
                             <spring:message code="mediaFileView.noFiles"/>
                         </c:if>
 
@@ -263,11 +263,11 @@
 
         <div style="clear:left;"></div>
 
-        <c:if test="${(!pager && childFiles.size() > 0) || (pager && pager.items.size() > 0) || (currentDirectory.name != 'default' && !pager)}">
+        <c:if test="${(empty pager && fn:length(childFiles) > 0) || (not empty pager && fn:length(pager.items) > 0) || (currentDirectory.name != 'default' && empty pager)}">
 
             <div class="image-controls">
 
-                <c:if test="${(!pager && childFiles.size() > 0) || (pager && pager.items.size() > 0)}">
+                <c:if test="${(empty pager && fn:length(childFiles) > 0) || (not empty pager && fn:length(pager.items) > 0)}">
                     <input id="toggleButton" type="button" class="btn" style="display: inline"
                            value='<spring:message code="generic.toggle"/>' onclick="onToggle()"/>
 
@@ -284,7 +284,7 @@
 </c:forEach>
 </select>
 
-                <c:if test="${currentDirectory.name != 'default' && !pager}">
+                <c:if test="${currentDirectory.name != 'default' && empty pager}">
                     <input id="deleteFolderButton" type="button" class="btn" style="display: inline"
                            value='<spring:message code="mediaFileView.deleteFolder"/>' onclick="onDeleteFolder()"/>
                 </c:if>

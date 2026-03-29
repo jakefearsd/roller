@@ -36,7 +36,7 @@
                     </a>
                 </div>
 
-                <c:if test="${!pager}">
+                <c:if test="${empty pager}">
                     <%-- Only show Create New Directory control when NOT showing search results --%>
 
                     <div style="clear:right; margin-top: 1em">

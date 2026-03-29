@@ -25,12 +25,6 @@ import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
-import org.apache.xmlrpc.util.SAXParsers;
-import org.xml.sax.SAXNotRecognizedException;
-import org.xml.sax.SAXNotSupportedException;
-
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParserFactory;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -58,7 +52,6 @@ public abstract class WebloggerImpl implements Weblogger {
     private final UserManager          userManager;
     private final WeblogManager        weblogManager;
     private final WeblogEntryManager   weblogEntryManager;
-    private final OAuthManager         oauthManager;
 
     // url strategy
     private final URLStrategy          urlStrategy;
@@ -81,7 +74,6 @@ public abstract class WebloggerImpl implements Weblogger {
         UserManager          userManager,
         WeblogManager        weblogManager,
         WeblogEntryManager   weblogEntryManager,
-        OAuthManager         oauthManager,
         URLStrategy          urlStrategy) throws WebloggerException {
 
         this.indexManager        = indexManager;
@@ -94,7 +86,6 @@ public abstract class WebloggerImpl implements Weblogger {
         this.userManager         = userManager;
         this.weblogManager       = weblogManager;
         this.weblogEntryManager  = weblogEntryManager;
-        this.oauthManager        = oauthManager;
         this.urlStrategy         = urlStrategy;
 
         Properties props = new Properties();
@@ -221,17 +212,6 @@ public abstract class WebloggerImpl implements Weblogger {
 
 
     /**
-     *
-     *
-     * @see org.apache.roller.weblogger.business.Weblogger#getOAuthManager()
-     */
-    @Override
-    public OAuthManager getOAuthManager() {
-        return oauthManager;
-    }
-
-
-    /**
      * @inheritDoc
      */
     @Override
@@ -272,20 +252,6 @@ public abstract class WebloggerImpl implements Weblogger {
         getThreadManager().initialize();
         getIndexManager().initialize();
         getMediaFileManager().initialize();
-
-        // Turn off External DTD support in SAXParser to protect Roller from vulnerability.
-        SAXParserFactory spf = SAXParsers.getSAXParserFactory();
-        try {
-            spf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-            spf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-        } catch (ParserConfigurationException | SAXNotRecognizedException | SAXNotSupportedException e) {
-            String message = "Unable to turn off External DTD support in SAXParser. XML-RLC is vulnerable";
-            if ( log.isDebugEnabled() ) {
-                log.error(message, e);
-            } else {
-                log.error(message);
-            }
-        }
 
         // we always need to do a flush after initialization because it's
         // possible that some changes need to be persisted
