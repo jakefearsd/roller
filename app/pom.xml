@@ -24,7 +24,7 @@ limitations under the License.
     <parent>
         <groupId>org.apache.roller</groupId>
         <artifactId>roller-project</artifactId>
-        <version>6.1.5</version>
+        <version>6.2.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -36,7 +36,6 @@ limitations under the License.
         <servlet.version>6.0.0</servlet.version>
         <jsp-api.version>3.1.1</jsp-api.version>
         <angular.version>1.7.8</angular.version>
-        <ant.version>1.10.15</ant.version>
         <asm.version>9.9.1</asm.version>
         <bouncycastle.version>1.83</bouncycastle.version>
         <commons-validator.version>1.10.1</commons-validator.version>
@@ -50,7 +49,7 @@ limitations under the License.
         <lucene.version>9.12.3</lucene.version> <!-- lucene 10 requires JDK 21 -->
         <maven-war.version>3.4.0</maven-war.version>
         <maven-surefire.version>3.5.2</maven-surefire.version>
-        <maven-antrun.version>1.0b3</maven-antrun.version>
+        <postgresql.version>42.7.9</postgresql.version>
         <rome.version>1.19.0</rome.version>
         <slf4j.version>2.0.17</slf4j.version>
         <spring.version>6.2.17</spring.version>
@@ -129,6 +128,13 @@ limitations under the License.
             <groupId>org.eclipse.persistence</groupId>
             <artifactId>org.eclipse.persistence.extension</artifactId>
             <version>${eclipse-link.version}</version>
+        </dependency>
+
+        <!-- PostgreSQL is the only database Roller supports as of 6.2.0. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
         </dependency>
 
         <!-- Alternative testing with Hibernate (used by default with JBoss)
@@ -427,24 +433,23 @@ limitations under the License.
             <scope>test</scope>
         </dependency>
 
+        <!-- RollerTestBootstrap is a LauncherSessionListener, so the launcher
+             API must be on the test classpath at compile time. -->
         <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-            <version>${ant.version}</version>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.derby</groupId>
-            <artifactId>derbynet</artifactId>
-            <version>${derby.version}</version>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.derby</groupId>
-            <artifactId>derbyclient</artifactId>
-            <version>${derby.version}</version>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -505,24 +510,16 @@ limitations under the License.
                 </configuration>
                 <dependencies>
                     <dependency>
-                        <groupId>org.apache.roller</groupId>
-                        <artifactId>db-utils</artifactId>
-                        <version>6.1.5</version>
-                    </dependency>
-                    <dependency>
                         <groupId>org.apache.commons</groupId>
                         <artifactId>commons-dbcp2</artifactId>
                         <version>2.14.0</version>
                     </dependency>
+                    <!-- jetty:run connects to the PostgreSQL started by
+                         `docker compose up -d postgres` (see ./roller dev). -->
                     <dependency>
-                        <groupId>org.apache.derby</groupId>
-                        <artifactId>derby</artifactId>
-                        <version>${derby.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.apache.derby</groupId>
-                        <artifactId>derbyclient</artifactId>
-                        <version>${derby.version}</version>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${postgresql.version}</version>
                     </dependency>
                     <dependency>
                         <groupId>jakarta.mail</groupId>
@@ -560,19 +557,26 @@ limitations under the License.
                         </configuration>
                     </execution>
 
+                    <!-- The canonical schema migrations live in bin/db/migrations so that
+                         bin/db/migrate.sh can read them directly. Copy them onto the
+                         classpath as /dbmigrations so they also ship inside the WAR and
+                         can be applied by DatabaseInstaller (the web install wizard).
+                         One source of truth, two entry points. -->
                     <execution>
-                        <id>copy-dbscripts-resources</id>
+                        <id>copy-db-migrations</id>
                         <phase>generate-resources</phase>
                         <goals>
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <includeEmptyDirs>true</includeEmptyDirs>
-                            <outputDirectory>${basedir}/target/classes/dbscripts</outputDirectory>
+                            <outputDirectory>${basedir}/target/classes/dbmigrations</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>${basedir}/src/main/resources/sql</directory>
+                                    <directory>${basedir}/../bin/db/migrations</directory>
                                     <filtering>false</filtering>
+                                    <includes>
+                                        <include>V*.sql</include>
+                                    </includes>
                                 </resource>
                             </resources>
                         </configuration>
@@ -618,63 +622,6 @@ limitations under the License.
                     </systemProperties>
                     <trimStackTrace>false</trimStackTrace>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.1.0</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>ant-contrib</groupId>
-                        <artifactId>ant-contrib</artifactId>
-                        <version>${maven-antrun.version}</version>
-                        <exclusions>
-                            <exclusion>
-                                <groupId>ant</groupId>
-                                <artifactId>ant</artifactId>
-                            </exclusion>
-                        </exclusions>
-                    </dependency>
-                    <!-- last velocity version which had the Ant TexenTask -->
-                    <dependency>
-                        <groupId>org.apache.velocity</groupId>
-                        <artifactId>velocity</artifactId>
-                        <version>1.7</version>
-                    </dependency>
-                </dependencies>
-
-                <executions>
-                    <execution>
-                        <id>gen-db-scripts</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <!-- Workaround for git distribution that doesn't keep empty directories.
-                                     For detail check [ROL-2086] -->
-                                <taskdef resource="net/sf/antcontrib/antlib.xml" />
-                                <property file="${basedir}/src/main/resources/sql/dbscripts.properties" />
-                                <for list="${databases}" param="database" delimiter=" ">
-                                    <sequential>
-                                        <mkdir dir="${basedir}/target/classes/dbscripts/@{database}" />
-                                    </sequential>
-                                </for>
-
-                                <taskdef name="texen"
-                                         classname="org.apache.velocity.texen.ant.TexenTask"
-                                         classpathref="maven.plugin.classpath"/>
-                                <texen
-                                    controlTemplate  ="control.vm"
-                                    contextProperties="${basedir}/src/main/resources/sql/dbscripts.properties"
-                                    templatePath     ="${basedir}/src/main/resources/sql"
-                                    outputDirectory  ="${basedir}/target/classes/dbscripts"
-                                    outputFile       ="README.txt"/>
-                            </target>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
 
             <plugin>

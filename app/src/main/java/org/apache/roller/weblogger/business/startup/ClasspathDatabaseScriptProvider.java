@@ -22,30 +22,36 @@ import java.io.InputStream;
 import java.net.URL;
 
 /**
- * Reads dbscripts from the classpath.
+ * Reads schema migrations from the classpath.
+ *
+ * <p>Migrations are copied by the build from {@code bin/db/migrations} into
+ * {@code /dbmigrations} so they ship inside the WAR. Use {@link MigrationCatalog}
+ * to discover which migrations exist.
  */
 public class ClasspathDatabaseScriptProvider implements DatabaseScriptProvider {
+
+    private static String resourcePath(String path) {
+        return "/" + MigrationCatalog.MIGRATIONS_PATH + "/" + path;
+    }
 
     /**
      * @see org.apache.roller.weblogger.business.startup.DatabaseScriptProvider#getDatabaseScript(java.lang.String)
      */
     @Override
     public InputStream getDatabaseScript(String path) {
-        String resourcePath = "/dbscripts/" + path;
-        return this.getClass().getResourceAsStream(resourcePath);
+        return this.getClass().getResourceAsStream(resourcePath(path));
     }
 
     /**
-     * Gets the script url.
-     * 
+     * Gets the script url, for logging which file was actually resolved.
+     *
      * @param path
-     *            the path
-     * 
-     * @return the script url
+     *            the migration file name, e.g. {@code V002__baseline_schema.sql}
+     *
+     * @return the script url, or null if not on the classpath
      */
     public URL getScriptURL(String path) {
-        String resourcePath = "/dbscripts/" + path;
-        return ClasspathDatabaseScriptProvider.class.getResource(resourcePath);
+        return ClasspathDatabaseScriptProvider.class.getResource(resourcePath(path));
     }
 
 }

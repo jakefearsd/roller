@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Roller development entry point.
+#
+# Usage:
+#   ./roller dev        start postgres, apply migrations, run the app on Jetty
+#   ./roller db         start postgres only and apply migrations
+#   ./roller migrate    apply pending migrations to the dev database
+#   ./roller status     show which migrations have been applied
+#   ./roller stop       stop the dev database (data is preserved)
+#   ./roller reset      DESTROY the dev database volume, then recreate it
+#
+# The dev database is the `postgres` service in docker-compose.yml. Its data
+# lives in the roller-pgdata named volume and survives restarts; only
+# `./roller reset` removes it.
+set -euo pipefail
+
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "${SCRIPT_DIR}"
+
+DB_NAME="${DB_NAME:-rollerdb}"
+DB_APP_USER="${DB_APP_USER:-roller}"
+DB_PORT="${DB_PORT:-5432}"
+
+GREEN="\033[0;32m"
+RED="\033[0;31m"
+NC="\033[0m"
+print_ok()  { echo -e "${GREEN}✓${NC} $*"; }
+print_err() { echo -e "${RED}✗${NC} $*" >&2; }
+
+usage() { awk '/^#!/{next} !/^#/{exit} {sub(/^# ?/,""); print}' "$0"; }
+
+compose() {
+    if docker compose version >/dev/null 2>&1; then
+        docker compose "$@"
+    else
+        docker-compose "$@"
+    fi
+}
+
+start_db() {
+    compose up -d postgres
+    echo -n "Waiting for PostgreSQL"
+    for _ in $(seq 1 60); do
+        if PGPASSWORD="${DB_APP_USER}" pg_isready \
+                -h localhost -p "${DB_PORT}" -U "${DB_APP_USER}" -d "${DB_NAME}" -t 1 \
+                >/dev/null 2>&1; then
+            echo
+            print_ok "PostgreSQL ready on localhost:${DB_PORT}"
+            return 0
+        fi
+        echo -n "."
+    done
+    echo
+    print_err "PostgreSQL did not become ready. Check: compose logs postgres"
+    exit 1
+}
+
+run_migrations() {
+    DB_NAME="${DB_NAME}" DB_APP_USER="${DB_APP_USER}" \
+        PGHOST=localhost PGPORT="${DB_PORT}" PGUSER="${DB_APP_USER}" \
+        PGPASSWORD="${DB_APP_USER}" \
+        bin/db/migrate.sh "$@"
+}
+
+case "${1:-dev}" in
+    -h|--help|help)
+        usage
+        ;;
+    db)
+        start_db
+        run_migrations
+        ;;
+    dev)
+        start_db
+        run_migrations
+        print_ok "Starting Roller on http://localhost:8083/roller"
+        mvn -pl app jetty:run
+        ;;
+    migrate)
+        run_migrations
+        ;;
+    status)
+        run_migrations --status
+        ;;
+    stop)
+        compose stop postgres
+        print_ok "Dev database stopped (data preserved)"
+        ;;
+    reset)
+        echo "This DESTROYS the dev database and all its content."
+        read -r -p "Type 'yes' to continue: " confirm
+        if [[ "${confirm}" != "yes" ]]; then
+            echo "Aborted."
+            exit 1
+        fi
+        compose down -v
+        start_db
+        run_migrations
+        print_ok "Dev database recreated"
+        ;;
+    *)
+        print_err "Unknown command: ${1}"
+        usage
+        exit 2
+        ;;
+esac

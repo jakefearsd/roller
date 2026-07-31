@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export rcstring="-rc2"
-export vstring="6.1.5"
+export vstring="6.2.0"
 
 # for rc releases we rename the release files
 if [ rcstring != "" ]; then

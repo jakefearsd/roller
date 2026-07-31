@@ -714,8 +714,8 @@ When upgrading Roller versions:
 #!/bin/bash
 # upgrade.sh - Upgrade Roller to new version
 
-OLD_VERSION="6.1.0"
-NEW_VERSION="6.1.5"
+OLD_VERSION="6.1.5"
+NEW_VERSION="6.2.0"
 BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
 
 # 1. Create full backup

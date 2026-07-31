@@ -2,7 +2,7 @@
 
 [Apache Roller](http://roller.apache.org) is a Java-based, full-featured, multi-user and group-blog server suitable for blog sites of any size. First created in 2002 and maintained by the Apache Software Foundation, Roller powers everything from personal blogs to large-scale multi-tenant blogging platforms.
 
-**Current Version:** 6.1.5 | **License:** Apache 2.0 | **Java:** 11+
+**Current Version:** 6.2.0 | **License:** Apache 2.0 | **Java:** 21+
 
 ---
 
@@ -71,24 +71,23 @@
 
 | Database   | Use Case |
 |------------|----------|
-| PostgreSQL | Recommended for production |
-| MySQL      | Production |
-| Oracle     | Production |
-| SQL Server | Production |
-| DB2        | Production |
-| Derby      | Embedded development and testing |
+| PostgreSQL | Development, testing, and production |
+
+Roller is PostgreSQL-only as of 6.2.0. Earlier releases generated vendor-specific
+DDL for DB2, Derby, HSQLDB, SQL Server, MySQL and Oracle; that layer has been
+removed in favour of a single, tested schema.
 
 ---
 
 ## Quick Start
 
-### Option 1: Maven + Embedded Derby (development)
+### Option 1: Maven + Jetty (development)
 
 ```bash
 git clone https://github.com/apache/roller.git
 cd roller
 mvn -DskipTests=true install
-cd app && mvn jetty:run
+./roller dev     # starts PostgreSQL, applies migrations, runs Jetty
 ```
 
 Browse to http://localhost:8083/roller
@@ -109,9 +108,9 @@ Browse to http://localhost:8083/roller
 
 | Module             | Description |
 |--------------------|-------------|
-| `app/`             | Main web application (WAR) — Struts actions, JSP pages, Velocity templates, business logic |
+| `app/`             | Main web application (WAR) — Spring MVC controllers, JSP pages, Velocity templates, business logic |
 | `docs/`            | Install, User, and Template guides in AsciiDoc format |
-| `db-utils/`        | Database utilities and Derby lifecycle management |
+| `bin/db/`          | Schema migrations and the migrate/install scripts |
 | `it-selenium/`     | Selenium-based integration tests |
 | `assembly-release/`| Release packaging and distribution |
 

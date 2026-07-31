@@ -630,8 +630,12 @@ public class MediaFileTest  {
                         .getId());
                 testWeblog = TestUtils.getManagedWebsite(testWeblog);
                 MediaFile mediaFile = new MediaFile();
-                mediaFile.setName("test_file<index>.jpg".replace("<index>", i
-                        + ""));
+                // Zero-padded so the ORDER BY m.name paging below sorts the
+                // same way under any database collation. Unpadded names put
+                // test_file10 before test_file1 under en_US.UTF-8 but after it
+                // under a binary collation, which made these assertions
+                // database-specific.
+                mediaFile.setName(String.format("test_file%02d.jpg", i));
                 mediaFile.setDescription("This is a test image");
                 mediaFile.setCopyrightText("test copyright text");
                 mediaFile.setSharedForGallery(true);
@@ -667,7 +671,7 @@ public class MediaFileTest  {
                     filter2);
             assertFalse(searchResults2.isEmpty());
             assertEquals(3, searchResults2.size());
-            assertEquals("test_file13.jpg", searchResults2.get(0).getName());
+            assertEquals("test_file05.jpg", searchResults2.get(0).getName());
 
             MediaFileFilter filter3 = new MediaFileFilter();
             filter3.setSize(1000);
@@ -678,7 +682,7 @@ public class MediaFileTest  {
                     filter3);
             assertFalse(searchResults3.isEmpty());
             assertEquals(2, searchResults3.size());
-            assertEquals("test_file8.jpg", searchResults3.get(0).getName());
+            assertEquals("test_file13.jpg", searchResults3.get(0).getName());
 
             MediaFileFilter filter4 = new MediaFileFilter();
             filter4.setSize(1000);
@@ -689,7 +693,7 @@ public class MediaFileTest  {
                     filter4);
             assertFalse(searchResults4.isEmpty());
             assertEquals(1, searchResults4.size());
-            assertEquals("test_file9.jpg", searchResults4.get(0).getName());
+            assertEquals("test_file14.jpg", searchResults4.get(0).getName());
 
             TestUtils.endSession(true);
         } finally {

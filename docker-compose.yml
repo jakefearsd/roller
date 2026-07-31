@@ -1,4 +1,3 @@
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  The ASF licenses this file to You
 # under the Apache License, Version 2.0 (the "License"); you may not
@@ -15,33 +14,51 @@
 # copyright in this work, please see the NOTICE file in the top level
 # directory of this distribution.
 
-
-# Example Docker Compose setup for running Roller and PostgreSQL locally
-
-
-version: '3.7'
+# Local development stack for Roller.
+#
+#   ./roller dev     start postgres, apply migrations, run the app on Jetty
+#   ./roller db      start postgres only
+#
+# Bringing up Roller itself in a container is closer to production but loses
+# Jetty's fast redeploy and hot theme reload:
+#
+#   docker compose --profile full up
 
 services:
 
-   postgresql:
-      image: "postgres:10.0"
-      ports:
-         - "5432:5432"
-      volumes:
-         - type: bind
-           source: ./docker/postgresql-data
-           target: /var/lib/postgresql/data
-      environment:
-         - POSTGRES_DB=rollerdb
-         - POSTGRES_USER=scott
-         - POSTGRES_PASSWORD=tiger
+  postgres:
+    # Pinned by digest (postgres:16 at time of pin). Testcontainers uses the
+    # same major version — see RollerPostgresContainer.
+    image: postgres:16@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: rollerdb
+      POSTGRES_USER: roller
+      POSTGRES_PASSWORD: roller
+    volumes:
+      # Named volume, not a bind mount: dev content survives restarts and
+      # `docker compose down`. Use `docker compose down -v` to wipe it.
+      - roller-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roller -d rollerdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
-   roller:
-      build: .
-      ports:
-         - "8080:8080"
-      volumes:
-         - type: bind
-           source: ./docker/roller-data
-           target: /var/lib/roller/data
+  roller:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - roller-data:/var/lib/roller/data
+    profiles:
+      # Not started by default; ./roller dev runs the app on Jetty instead.
+      - full
 
+volumes:
+  roller-pgdata:
+  roller-data:

@@ -23,20 +23,15 @@
 
 package org.apache.roller.weblogger;
 
-import java.io.InputStream;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.roller.weblogger.business.DatabaseProvider;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.business.startup.ClasspathDatabaseScriptProvider;
-import org.apache.roller.weblogger.business.startup.SQLScriptRunner;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
-import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.testing.RollerDatabaseExtension;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -46,7 +41,6 @@ import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogHitCount;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
-import org.apache.roller.util.DerbyManager;
 
 /**
  * Utility class for unit test classes.
@@ -56,17 +50,13 @@ public final class TestUtils {
     // Username prefix we are using (simplifies local testing)
     public static final String JUNIT_PREFIX = "junit_";
 
-    private static DerbyManager derbyManager = null;
 
     public static void setupWeblogger() throws Exception {
 
         if (!WebloggerFactory.isBootstrapped()) {
-            synchronized (TestUtils.class) {
-                if (derbyManager == null) {
-                    derbyManager = new DerbyManager("./target/testdb", "./target/classes/dbscripts", 4225);
-                    derbyManager.startDerby();
-                }
-            }
+            // Starts the PostgreSQL container, points Roller's config at it and
+            // applies bin/db/migrations. Safe to call repeatedly.
+            RollerDatabaseExtension.ensureSchema();
 
             // do core services preparation
             WebloggerStartup.prepare();
@@ -76,35 +66,11 @@ public final class TestUtils {
 
             // always initialize the properties manager and flush
             WebloggerFactory.getWeblogger().initialize();
-
-            // Reset data for local tests see
-            // docs/testing/roller-junit.properties for howto
-            Boolean local = WebloggerConfig.getBooleanProperty(
-                    "junit.testdata.reset", false);
-
-            if (local) {
-
-                System.out
-                        .println("Reseting tables for local tests: junit.testdata.reset="
-                                + local);
-
-                try {
-                    clearTestData();
-                } catch (Exception e) {
-                    System.out.println("Error reseting tables : "
-                            + e.getMessage());
-                }
-            }
-
         }
     }
 
     public static void shutdownWeblogger() throws Exception {
-
-        // trigger shutdown
         WebloggerFactory.getWeblogger().shutdown();
-
-        derbyManager.stopDerby();
     }
 
     /**
@@ -121,68 +87,6 @@ public final class TestUtils {
             WebloggerFactory.getWeblogger().flush();
         }
         WebloggerFactory.getWeblogger().release();
-    }
-
-    /**
-     * Clear test data.
-     * 
-     * @throws Exception
-     *             the exception
-     */
-    private static void clearTestData() throws Exception {
-
-        String scriptFile = "junit-cleartables-mysql.sql";
-
-        ClasspathDatabaseScriptProvider scriptProvider = new ClasspathDatabaseScriptProvider();
-        InputStream script = scriptProvider.getDatabaseScript(scriptFile);
-
-        if (script == null) {
-
-            System.out.println("File /dbscripts/" + scriptFile
-                    + " not found on class path.");
-            return;
-
-        }
-
-        // Run script to remove the junit test user
-        try {
-
-            DatabaseProvider dbp = WebloggerStartup.getDatabaseProvider();
-            Connection con = dbp.getConnection();
-
-            SQLScriptRunner runner = new SQLScriptRunner(script);
-
-            if (runner != null) {
-
-                System.out.println("Clearing files using script file : "
-                        + scriptProvider.getScriptURL(scriptFile));
-
-                // Loop script and remove invalid lines
-                List<String> updatedCommands = new ArrayList<>();
-                List<String> commands = runner.getCommands();
-                for (String command : commands) {
-                    if (!command.startsWith("--")) {
-                        updatedCommands.add(command);
-                    }
-                }
-
-                // Run script
-                runner.setCommands(updatedCommands);
-                runner.runScript(con, true);
-
-                // Flush for this update
-                WebloggerFactory.getWeblogger().flush();
-                WebloggerFactory.getWeblogger().release();
-
-            }
-
-        } finally {
-            try {
-                script.close();
-            } catch (Exception e) {
-                // ignored
-            }
-        }
     }
 
     /**

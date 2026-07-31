@@ -10,18 +10,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Basic Build Commands
 ```bash
-# Full build with tests
+# Full build with tests (tests need Docker: they run against a PostgreSQL container)
 mvn clean install
 
 # Build without tests (faster for development)
 mvn -DskipTests=true install
 
-# Run development server with embedded Derby database
-cd app && mvn jetty:run
+# Run the dev server: starts PostgreSQL, applies migrations, runs Jetty
+./roller dev
 # Access at http://localhost:8083/roller
 
-# Run with Docker and PostgreSQL
-docker-compose up
+# Database-only helpers
+./roller db          # start PostgreSQL and migrate, without running the app
+./roller migrate     # apply pending migrations
+./roller status      # show applied migrations
+./roller stop        # stop the dev database (data preserved)
+./roller reset       # DESTROY the dev database volume and rebuild it
 ```
 
 ### Testing Commands
@@ -32,22 +36,46 @@ mvn test
 # Run specific test class
 mvn test -Dtest=TestClassName
 
-# Run tests with Derby database integration
-mvn test -Dtest.database=derby
+# Coverage report (JaCoCo)
+mvn clean test && mvn jacoco:report -pl app
+# HTML: app/target/site/jacoco/index.html
 ```
 
-### Development Database Setup
-- **Development**: Uses embedded Derby database on port 4224
-- **Testing**: In-memory Derby database
-- **Docker**: PostgreSQL database via docker-compose
+Tests require Docker. A single PostgreSQL container is started once per JVM by
+`RollerTestBootstrap` (a JUnit `LauncherSessionListener`) and its schema is built
+by applying the real `bin/db/migrations` chain — there is no separate test
+schema. `RollerDatabaseExtension` truncates all data tables before each test, so
+tests do not need to unwind their own fixtures.
+
+### Database
+
+Roller is **PostgreSQL-only** as of 6.2.0. Development, test, and production all
+run the same engine; the previous Derby-in-test / PostgreSQL-in-prod split and
+the Velocity/Texen layer that generated DDL for seven vendors are gone.
+
+- **Development**: PostgreSQL 16 via `docker-compose.yml` (named volume, data persists)
+- **Testing**: PostgreSQL 16 via Testcontainers, schema from the migration chain
 - **JNDI Name**: `jdbc/rollerdb`
+
+#### Schema changes
+
+**Every commit that changes the schema MUST add a numbered migration** under
+`bin/db/migrations/`. Take the next `V<NNN>__description.sql`, write idempotent
+DDL, and never edit a migration that has already been applied anywhere but local
+dev — fix mistakes with a follow-up migration. See
+`bin/db/migrations/README.md` for the full convention; `SchemaMigrationTest`
+enforces discoverability, schema shape, and idempotency.
+
+Migrations reach a database three ways, all reading the same files:
+`bin/db/migrate.sh` (deploy), `DatabaseInstaller` (web install wizard), and the
+test harness.
 
 ## Architecture Overview
 
 Apache Roller is a multi-user blog server built with:
 - **Web Framework**: Spring MVC with `@Controller` classes and `*.rol` URL mappings
 - **Security**: Spring Security with role-based access control and built-in CSRF
-- **Persistence**: JPA with EclipseLink (supports multiple databases)
+- **Persistence**: JPA with EclipseLink on PostgreSQL
 - **Templating**: Dual system - Velocity for blog rendering, JSP/JSTL for admin UI
 - **Search**: Apache Lucene for full-text search
 - **DI Container**: Google Guice (business layer), Spring (web layer)
@@ -119,7 +147,7 @@ Key domain entities:
 ## Module Organization
 
 - **`app/`** - Main web application (WAR artifact)
-- **`db-utils/`** - Database utilities and Derby lifecycle management
+- **`bin/db/`** - Schema migrations and the migrate/install scripts
 - **`it-selenium/`** - Integration tests (currently disabled)
 - **`assembly-release/`** - Release packaging and distribution
 
@@ -133,8 +161,8 @@ Key domain entities:
 - **Velocity Templates**: `app/src/main/webapp/WEB-INF/velocity/templates/`
 
 ### Development vs Production
-- **Development**: Uses Derby, theme reload enabled, caching disabled
-- **Production**: Typically MySQL/PostgreSQL, optimized caching, theme compilation
+- **Development**: PostgreSQL via docker-compose, theme reload enabled, caching disabled
+- **Production**: PostgreSQL, optimized caching, theme compilation
 
 ## Plugin System
 Roller supports plugins for:

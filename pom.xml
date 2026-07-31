@@ -22,7 +22,7 @@ limitations under the License.
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.roller</groupId>
     <artifactId>roller-project</artifactId>
-    <version>6.1.5</version>
+    <version>6.2.0</version>
     <packaging>pom</packaging>
 
     <name>Roller</name>
@@ -40,17 +40,25 @@ limitations under the License.
     </scm>
 
     <properties>
-        <derby.version>10.17.1.0</derby.version>
+        <jacoco-plugin.version>0.8.15</jacoco-plugin.version>
         <jetty.plugin.version>11.0.26</jetty.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <roller.version>6.1.5</roller.version>
+        <roller.version>6.2.0</roller.version>
         <slf4j.version>2.0.17</slf4j.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
+
+        <!-- JaCoCo coverage gate (jacoco:check on verify). The machinery is wired
+             but skipped by default; raise the minimums and flip jacoco.check.skip
+             to false per package as coverage lands. Targets are documented in
+             CLAUDE.md. -->
+        <jacoco.line.minimum>0.00</jacoco.line.minimum>
+        <jacoco.branch.minimum>0.00</jacoco.branch.minimum>
+        <jacoco.check.skip>true</jacoco.check.skip>
     </properties>
 
     <modules>
         <module>app</module>
-        <module>db-utils</module>
         <!-- <module>it-selenium</module> -->
     </modules>
 
@@ -94,8 +102,58 @@ limitations under the License.
                         <rulesUri>file:version-rules.xml</rulesUri>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco-plugin.version}</version>
+                </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <!-- Coverage floor. Skipped by default (jacoco.check.skip=true)
+                         so it can be ratcheted per package without blocking the
+                         build until the targets are real. -->
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacoco.check.skip}</skip>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>${jacoco.line.minimum}</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>${jacoco.branch.minimum}</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 
     <dependencyManagement>
@@ -105,6 +163,22 @@ limitations under the License.
                 <artifactId>junit-jupiter-engine</artifactId>
                 <version>5.14.3</version>
                 <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>5.14.3</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
