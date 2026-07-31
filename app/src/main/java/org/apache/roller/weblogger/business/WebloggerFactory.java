@@ -46,6 +46,25 @@ public final class WebloggerFactory {
     public static boolean isBootstrapped() {
         return (webloggerProvider != null);
     }
+
+
+    /**
+     * Test seam: install a ready-made provider, skipping the startup sequence.
+     *
+     * <p>{@link #bootstrap(WebloggerProvider)} refuses to run until
+     * {@link org.apache.roller.weblogger.business.startup.WebloggerStartup#isPrepared()},
+     * which needs a real database. That check exists to stop a half-started
+     * application serving requests, but it is redundant when the caller supplies a
+     * fully-formed provider, and it is what made the 179 static
+     * {@code WebloggerFactory.getWeblogger()} call sites in the controllers
+     * untestable without a container.
+     *
+     * <p>Package-private on purpose: only test support in this package can reach it,
+     * so it cannot become a production back door. Pass {@code null} to reset.
+     */
+    static void installProvider(WebloggerProvider provider) {
+        webloggerProvider = provider;
+    }
     
     
     /**
