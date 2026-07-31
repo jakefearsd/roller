@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Important Rules
 
 - **Never commit or push unless explicitly asked.** Wait for the user to request a commit or push. Do not proactively create commits or push to remote.
+- **Work directly on `master`.** This is a solo-developer repo; do not create a feature branch before committing unless explicitly asked.
 
 ## Build and Development Commands
 
