@@ -62,15 +62,14 @@
 
 <script>
 
-    if (document.getElementById) {
-        if (getCookie("username") != null) {
-            if (document.getElementById) {
-                document.getElementById("j_username").value = getCookie("username");
-                document.getElementById("j_password").focus();
-            }
-        } else if (focusToUsernamePasswordForm()) {
-            document.getElementById("j_username").focus();
-        }
+    // There used to be a second, OpenID login form on this page, and
+    // focusToUsernamePasswordForm() decided which of the two deserved focus.
+    // With OpenID gone there is only one form, so focus is unconditional.
+    if (getCookie("username") != null) {
+        document.getElementById("j_username").value = getCookie("username");
+        document.getElementById("j_password").focus();
+    } else {
+        document.getElementById("j_username").focus();
     }
 
     function saveUsername(theForm) {

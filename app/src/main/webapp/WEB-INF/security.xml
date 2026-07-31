@@ -36,6 +36,13 @@
         <intercept-url pattern="/roller-ui/menu**" access="admin,editor"/>
         <intercept-url pattern="/roller-ui/authoring/**" access="admin,editor"/>
         <intercept-url pattern="/roller-ui/admin/**" access="admin"/>
+        <!-- setup.rol lists every weblog plus user/blog counts, and setup!save.rol
+             writes the site.frontpage.weblog.* runtime properties. Neither
+             SetupController nor this file previously required a role, so any
+             anonymous visitor could read the site inventory and repoint the site
+             front page - the CSRF token is no defence, since an anonymous GET of
+             the form hands one out. -->
+        <intercept-url pattern="/roller-ui/setup**" access="admin"/>
         <intercept-url pattern="/rewrite-status*" access="admin"/>
 
         <form-login login-page="/roller-ui/login.rol"

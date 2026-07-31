@@ -48,6 +48,11 @@ limitations under the License.
         <slf4j.version>2.0.17</slf4j.version>
         <testcontainers.version>2.0.5</testcontainers.version>
 
+        <!-- Shared by app (WAR + jetty dev server) and it-selenium (cargo's Tomcat
+             needs the driver too). Defined here so the two cannot drift apart. -->
+        <postgresql.version>42.7.9</postgresql.version>
+        <maven-surefire.version>3.5.2</maven-surefire.version>
+
         <!-- JaCoCo coverage gate (jacoco:check on verify). The machinery is wired
              but skipped by default; raise the minimums and flip jacoco.check.skip
              to false per package as coverage lands. Targets are documented in
@@ -59,8 +64,23 @@ limitations under the License.
 
     <modules>
         <module>app</module>
-        <!-- <module>it-selenium</module> -->
     </modules>
+
+    <profiles>
+        <!-- Browser integration tests. Kept out of the default build because they
+             deploy the WAR to a downloaded Tomcat against a PostgreSQL container and
+             drive a real Chrome, costing minutes rather than seconds.
+
+                 mvn verify -Pit
+
+             Requires Docker and Google Chrome on the host. -->
+        <profile>
+            <id>it</id>
+            <modules>
+                <module>it-selenium</module>
+            </modules>
+        </profile>
+    </profiles>
 
     <build>
         <pluginManagement>

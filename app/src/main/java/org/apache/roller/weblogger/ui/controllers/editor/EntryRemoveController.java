@@ -65,16 +65,6 @@ public class EntryRemoveController extends BaseController {
         return "weblogEdit.deleteEntry";
     }
 
-    @GetMapping("/entryRemove.rol")
-    public String execute(HttpServletRequest request, Model model,
-                          @RequestParam(value = "removeId", required = false) String removeId) {
-        populateCommonModel(request, model);
-        model.addAttribute("actionName", "entryRemove");
-        WeblogEntry entry = lookupEntry(removeId);
-        model.addAttribute("removeEntry", entry);
-        model.addAttribute("removeId", removeId);
-        return ".EntryRemove";
-    }
 
     @PostMapping("/entryRemove!remove.rol")
     public String remove(HttpServletRequest request, Model model,
@@ -121,21 +111,13 @@ public class EntryRemoveController extends BaseController {
             return "redirect:/roller-ui/menu.rol";
         }
 
-        model.addAttribute("removeEntry", entry);
-        model.addAttribute("removeId", removeId);
-        return ".EntryRemove";
+        // The delete is driven by a modal on the entry list, so there is no
+        // confirmation page to fall back to; return to the list with the error.
+        addFlashError(redirectAttributes, "generic.error.check.logs", request);
+        return "redirect:/roller-ui/authoring/entries.rol?weblog="
+                + getActionWeblog(request).getHandle();
     }
 
-    @GetMapping("/entryRemoveViaList.rol")
-    public String entryRemoveViaListExecute(HttpServletRequest request, Model model,
-                                            @RequestParam(value = "removeId", required = false) String removeId) {
-        populateCommonModel(request, model);
-        model.addAttribute("actionName", "entryRemoveViaList");
-        WeblogEntry entry = lookupEntry(removeId);
-        model.addAttribute("removeEntry", entry);
-        model.addAttribute("removeId", removeId);
-        return ".EntryRemove";
-    }
 
     @PostMapping("/entryRemoveViaList!remove.rol")
     public String entryRemoveViaListRemove(HttpServletRequest request, Model model,
@@ -181,9 +163,11 @@ public class EntryRemoveController extends BaseController {
             return "redirect:/roller-ui/menu.rol";
         }
 
-        model.addAttribute("removeEntry", entry);
-        model.addAttribute("removeId", removeId);
-        return ".EntryRemove";
+        // The delete is driven by a modal on the entry list, so there is no
+        // confirmation page to fall back to; return to the list with the error.
+        addFlashError(redirectAttributes, "generic.error.check.logs", request);
+        return "redirect:/roller-ui/authoring/entries.rol?weblog="
+                + getActionWeblog(request).getHandle();
     }
 
     private WeblogEntry lookupEntry(String id) {

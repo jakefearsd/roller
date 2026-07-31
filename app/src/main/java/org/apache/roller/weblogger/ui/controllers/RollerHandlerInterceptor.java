@@ -54,7 +54,7 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
     private static final Log log = LogFactory.getLog(RollerHandlerInterceptor.class);
 
     private static final String LOGIN_URL = "/roller-ui/login.rol";
-    private static final String ACCESS_DENIED_URL = "/roller-ui/access-denied";
+    private static final String ACCESS_DENIED_URL = "/roller-ui/access-denied.rol";
 
     @Override
     public boolean preHandle(HttpServletRequest request,

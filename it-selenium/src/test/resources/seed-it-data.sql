@@ -1,0 +1,85 @@
+-- Licensed to the Apache Software Foundation (ASF) under one or more
+-- contributor license agreements.  The ASF licenses this file to You
+-- under the Apache License, Version 2.0 (the "License"); you may not
+-- use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+
+-- Seed data for the browser integration tests.
+--
+-- Runs after bin/db/migrate.sh and before Tomcat starts, because Roller reads
+-- much of this at bootstrap and caches it in-process. Creating it afterwards
+-- would leave the running app with a stale view.
+--
+-- Integration tests never delete: each test creates its own uniquely-named
+-- it_<test>_<n> entities on top of this baseline. The database is disposable,
+-- recreated from scratch on every run.
+--
+-- Idempotent so a re-run against a surviving container is harmless.
+
+-- The password hash is bcrypt with Spring Security's DelegatingPasswordEncoder
+-- {id} prefix, matching passwds.encryption.algorithm=bcrypt in roller.properties.
+-- Plaintext is 'it-admin-password'. Deliberately a real bcrypt hash rather than
+-- {noop}, so the tests exercise the same login path production uses.
+INSERT INTO roller_user (id, username, passphrase, screenname, fullname,
+                         emailaddress, datecreated, locale, timezone, isenabled)
+VALUES ('it-admin-0000-0000-0000-000000000001',
+        'it_admin',
+        '{bcrypt}$2a$10$hZG/myoZ4z70o1csg5pw7eGtSiViWPsKRz05QD0Qqz41vE5dFFrfO',
+        'IT Admin', 'Integration Test Admin', 'it-admin@example.invalid',
+        NOW(), 'en_US', 'UTC', true)
+ON CONFLICT (username) DO NOTHING;
+
+-- Roller's authorities come from userrole; 'admin' also implies editor access.
+INSERT INTO userrole (id, rolename, username)
+VALUES ('it-role-0000-0000-0000-000000000001', 'admin', 'it_admin')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO userrole (id, rolename, username)
+VALUES ('it-role-0000-0000-0000-000000000002', 'editor', 'it_admin')
+ON CONFLICT (id) DO NOTHING;
+
+-- One weblog: the ~20 /roller-ui/authoring/ routes all require a resolvable
+-- weblog= request parameter (see RollerHandlerInterceptor), so without this the
+-- reachability sweep could only reach the handful of global pages.
+INSERT INTO weblog (id, name, handle, tagline, creator, enablebloggerapi,
+                    allowcomments, emailcomments, emailaddress, editortheme,
+                    locale, timezone, visible, isactive, datecreated,
+                    defaultallowcomments, defaultcommentdays, commentmod,
+                    displaycnt, enablemultilang, showalllangs)
+VALUES ('it-weblog-0000-0000-0000-00000000001',
+        'IT Weblog', 'it_weblog', 'Integration test weblog', 'it_admin', false,
+        true, false, 'it-admin@example.invalid', 'basic',
+        'en_US', 'UTC', true, true, NOW(),
+        true, 7, false, 15, false, true)
+ON CONFLICT (handle) DO NOTHING;
+
+-- Weblog ADMIN permission: the authoring routes check WeblogPermission, and
+-- several (templates, theme, config, members) require ADMIN specifically.
+--
+-- objectid holds the weblog HANDLE, not its id: WeblogPermission sets
+-- objectId = weblog.getHandle() and resolves it with getWeblogByHandle().
+-- Seeding the uuid here makes the main menu throw
+-- "WebloggerException: Invalid handle".
+INSERT INTO roller_permission (id, username, actions, objectid, objecttype,
+                               pending, datecreated)
+VALUES ('it-perm-0000-0000-0000-000000000001',
+        'it_admin', 'admin,post,edit_draft',
+        'it_weblog', 'Weblog',
+        false, NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Entries require a category, and the weblog needs at least one for the
+-- entry-add page to render its category selector.
+INSERT INTO weblogcategory (id, name, description, websiteid, position)
+VALUES ('it-cat-0000-0000-0000-000000000001',
+        'General', 'Integration test category',
+        'it-weblog-0000-0000-0000-00000000001', 0)
+ON CONFLICT (id) DO NOTHING;

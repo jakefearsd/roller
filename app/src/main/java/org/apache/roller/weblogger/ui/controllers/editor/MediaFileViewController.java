@@ -129,7 +129,7 @@ public class MediaFileViewController extends MediaFileBase {
         populateCommonModel(request, model);
         model.addAttribute("allDirectories", refreshAllDirectories(request));
         loadDirectory(request, model, directoryId, directoryName, sortBy);
-        return "/WEB-INF/jsps/editor/MediaFileViewLight";
+        return "editor/MediaFileViewLight";
     }
 
     @PostMapping("/mediaFileView!deleteSelected.rol")

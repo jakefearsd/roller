@@ -41,4 +41,19 @@ public class RedirectController extends BaseController {
     public String logout() {
         return "forward:/roller-ui/logout-redirect.jsp";
     }
+
+    /**
+     * Landing page for authorization failures.
+     *
+     * <p>RollerHandlerInterceptor redirects here whenever a request fails a
+     * permission check, which includes the very common case of hitting an
+     * /authoring/ route without a resolvable {@code weblog} parameter. The target
+     * previously had no handler and no {@code .rol} suffix, so the DispatcherServlet
+     * never saw it and every denial produced a bare 404 instead of the
+     * denied page that has existed all along.
+     */
+    @GetMapping("/access-denied.rol")
+    public String accessDenied() {
+        return "forward:/roller-ui/errors/denied.jsp";
+    }
 }

@@ -63,14 +63,6 @@ public class CategoryEditController extends BaseController {
 
     // --- categoryAdd ---
 
-    @GetMapping("/categoryAdd.rol")
-    public String categoryAddExecute(HttpServletRequest request, Model model,
-                                     @ModelAttribute("bean") CategoryBean bean) {
-        populateCommonModel(request, model);
-        model.addAttribute("actionName", "categoryAdd");
-        model.addAttribute("pageTitle", getText("categoryForm.add.title", request));
-        return ".CategoryEdit";
-    }
 
     @PostMapping("/categoryAdd!save.rol")
     public String categoryAddSave(HttpServletRequest request, Model model,
@@ -106,30 +98,15 @@ public class CategoryEditController extends BaseController {
             }
         }
 
-        return ".CategoryEdit";
+        // Add/edit is driven by #category-edit-modal on the category list; there
+        // is no standalone form page to redisplay, so report and go back.
+        addFlashError(redirectAttributes, "generic.error.check.logs", request);
+        return "redirect:/roller-ui/authoring/categories.rol?weblog="
+                + getActionWeblog(request).getHandle();
     }
 
     // --- categoryEdit ---
 
-    @GetMapping("/categoryEdit.rol")
-    public String categoryEditExecute(HttpServletRequest request, Model model,
-                                      @ModelAttribute("bean") CategoryBean bean) {
-        populateCommonModel(request, model);
-        model.addAttribute("actionName", "categoryEdit");
-        model.addAttribute("pageTitle", getText("categoryForm.edit.title", request));
-
-        try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-            WeblogCategory category = wmgr.getWeblogCategory(bean.getId());
-            if (category != null) {
-                bean.copyFrom(category);
-            }
-        } catch (WebloggerException ex) {
-            log.error("Error looking up category", ex);
-        }
-
-        return ".CategoryEdit";
-    }
 
     @PostMapping("/categoryEdit!save.rol")
     public String categoryEditSave(HttpServletRequest request, Model model,
@@ -161,7 +138,11 @@ public class CategoryEditController extends BaseController {
             }
         }
 
-        return ".CategoryEdit";
+        // Add/edit is driven by #category-edit-modal on the category list; there
+        // is no standalone form page to redisplay, so report and go back.
+        addFlashError(redirectAttributes, "generic.error.check.logs", request);
+        return "redirect:/roller-ui/authoring/categories.rol?weblog="
+                + getActionWeblog(request).getHandle();
     }
 
     private void myValidate(CategoryBean bean, boolean isAdd, HttpServletRequest request, Model model) {

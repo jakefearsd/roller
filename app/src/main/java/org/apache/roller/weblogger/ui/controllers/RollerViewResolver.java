@@ -185,8 +185,11 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "styles",  "/WEB-INF/jsps/core/Login-css.jsp"
                 ));
 
-        addExtendedDefinition(".Welcome", ".tiles-simplepage",
-                Map.of("content", "/WEB-INF/jsps/core/Welcome.jsp"));
+
+        // ---- setup / install pages ----
+
+        addExtendedDefinition(".Setup", ".tiles-simplepage",
+                Map.of("content", "/WEB-INF/jsps/core/Setup.jsp"));
 
         addExtendedDefinition(".Profile", ".tiles-simplepage",
                 Map.of("content", "/WEB-INF/jsps/core/Profile.jsp"));
@@ -203,11 +206,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "sidebar", "/WEB-INF/jsps/core/MainMenuSidebar.jsp",
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
-
-        // ---- setup / install pages ----
-
-        addExtendedDefinition(".Setup", ".tiles-simplepage",
-                Map.of("content", "/WEB-INF/jsps/core/Setup.jsp"));
 
         addExtendedDefinition(".CreateDatabase", ".tiles-installpage",
                 Map.of(
@@ -272,11 +270,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "content", "/WEB-INF/jsps/editor/MediaFileEdit.jsp"
                 ));
 
-        addExtendedDefinition(".MediaFileAddExternalInclude", ".tiles-popuppage-only-content",
-                Map.of(
-                        "head",    "/WEB-INF/jsps/tiles/head.jsp",
-                        "content", "/WEB-INF/jsps/editor/MediaFileAddExternalInclude.jsp"
-                ));
 
         addExtendedDefinition(".MediaFileImageChooser", ".tiles-popuppage-only-content",
                 Map.of(
@@ -356,17 +349,11 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
 
-        addExtendedDefinition(".CategoryEdit", ".tiles-tabbedpage",
-                Map.of(
-                        "content", "/WEB-INF/jsps/tiles/empty.jsp",
-                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
-                ));
-
-        addExtendedDefinition(".CategoryRemove", ".tiles-tabbedpage",
-                Map.of(
-                        "content", "/WEB-INF/jsps/tiles/empty.jsp",
-                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
-                ));
+        // .CategoryEdit and .CategoryRemove used to live here. Their content tiles
+        // pointed at empty.jsp because CategoryEdit.jsp and CategoryRemove.jsp were
+        // deleted in 8da2fc0b2 when the forms moved into #category-edit-modal on
+        // Categories.jsp. The definitions survived, so the routes returned a
+        // healthy-looking 200 with no form on the page.
 
         // ---- weblog admin pages ----
 

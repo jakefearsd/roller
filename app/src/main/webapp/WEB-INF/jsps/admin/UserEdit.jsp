@@ -74,7 +74,7 @@
                 <div class="col-sm-9 controls">
                     <input type="text" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
                            size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
-                           title="<spring:message code='userAdmin.tip.username'/>"/>
+                           title="<spring:message code='userAdmin.tip.userName'/>"/>
                 </div>
             </div>
         </c:otherwise>
@@ -150,7 +150,7 @@
         <div class="col-sm-9 controls">
             <input type="checkbox" name="bean.enabled" value="true"
                 <c:if test="${bean.enabled}">checked="checked"</c:if>
-                   title="<spring:message code='userAdmin.tip.userEnabled'/>"/>
+                   title="<spring:message code='userAdmin.tip.enabled'/>"/>
         </div>
     </div>
 

@@ -1,24 +1,24 @@
-<?xml version="1.0" encoding="UTF-8"?><!--
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to You under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -28,107 +28,340 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <name>Roller Selenium tests</name>
     <artifactId>roller-selenium-tests</artifactId>
-    <packaging>war</packaging>
+    <name>Roller browser integration tests</name>
+    <description>
+        Selenide integration tests. The WAR is deployed to Tomcat by cargo against a
+        dedicated PostgreSQL container whose schema is built by the real
+        bin/db/migrations chain. Every test inherits browser-health checking, so a page
+        that renders while its assets 404 fails rather than passing.
 
-    <!-- Process to run Selenium tests (actually no tests right now, just a skeleton)
-         1. Tests presently require Firefox browser, Chrome on the to-do list.
+        Runs under `mvn verify -Pit`; excluded from the default build because it costs
+        minutes rather than seconds.
+    </description>
 
-         2. Run mvn clean install from the roller trunk or app folder, that will install Roller in your
-         local Maven Repository.
+    <properties>
+        <!-- Versions match the sibling jspwiki/wikantik Selenide suite. -->
+        <selenide.version>7.17.0</selenide.version>
+        <selenium.version>4.46.0</selenium.version>
+        <cargo.plugin.version>1.10.20</cargo.plugin.version>
+        <docker.plugin.version>0.48.1</docker.plugin.version>
+        <build-helper.version>3.6.0</build-helper.version>
+        <exec.plugin.version>3.6.3</exec.plugin.version>
+        <maven-clean.version>3.5.0</maven-clean.version>
 
-         3. Navigate to this directory and run mvn integration-test or clean install.  Test results will
-            be in target/failsafe-reports.
+        <!-- Tomcat 10.1, not 9: Roller uses jakarta.servlet 6.0, which Tomcat 9
+             (Java EE 8, javax.*) cannot run. -->
+        <it.tomcat.version>10.1.57</it.tomcat.version>
 
-         4. Feel free to add more Selenium tests!
-    -->
+        <it.db.name>roller_it</it.db.name>
+        <it.db.user>roller</it.db.user>
+        <it.db.password>roller</it.db.password>
+        <it.db.container-alias>roller-it-postgres</it.db.container-alias>
+        <it.postgres.image>postgres:16</it.postgres.image>
+
+        <it.context.path>roller</it.context.path>
+    </properties>
+
     <dependencies>
-
         <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-java</artifactId>
-            <version>4.28.0</version>
+            <groupId>com.codeborne</groupId>
+            <artifactId>selenide</artifactId>
+            <version>${selenide.version}</version>
             <scope>test</scope>
         </dependency>
 
+        <!-- Browser-health checks read sub-resource status codes over the Chrome
+             DevTools Protocol; Selenium 4's W3C API does not expose them. Selenium
+             bundles the v150 bindings transitively, but pin them so a Selenium bump
+             that drops v150 fails the build instead of failing at runtime. CDP
+             bindings tolerate a couple of Chrome majors of drift. -->
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-firefox-driver</artifactId>
-            <version>4.28.0</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>javax.servlet</groupId>
-                    <artifactId>javax.servlet-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>xerces</groupId>
-                    <artifactId>xercesImpl</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>xalan</groupId>
-                    <artifactId>xalan</artifactId>
-                </exclusion>
-            </exclusions>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>${jaxb.version}</version>
-            <exclusions>
-                <exclusion>
-                    <!--api is already in the javax.activation artifact-->
-                    <groupId>javax.activation</groupId>
-                    <artifactId>javax.activation-api</artifactId>
-                </exclusion>
-            </exclusions>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Will bring in once we configure a Chrome option -->
-        <!--dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-chrome-driver</artifactId>
+            <artifactId>selenium-devtools-v150</artifactId>
             <version>${selenium.version}</version>
-        </dependency-->
-
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
 
-        <!--
-             Type "war" listed below makes this a WAR overlay (i.e., incorporating
-             another WAR into this project in making a new WAR, with any additional
-             WAR configuration provided (here, none) going into the new WAR.
-        -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Pulls the WAR into the reactor so cargo deploys the artifact this build
+             produced, not a stale one from the local repository. -->
         <dependency>
             <groupId>org.apache.roller</groupId>
             <artifactId>roller-webapp</artifactId>
             <version>${project.version}</version>
             <type>war</type>
+            <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
         <plugins>
-            
-            <!-- bump plugin version for JDK 16 compatibility (old guice version),
-                 can be removed once maven itself bumped the version -->
+
+            <!-- Reserve free ports so a developer's local PostgreSQL on 5432, or the
+                 dev Jetty on 8083, cannot collide with a test run. -->
             <plugin>
-               <artifactId>maven-war-plugin</artifactId>
-               <version>3.4.0</version>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper.version}</version>
+                <executions>
+                    <execution>
+                        <id>reserve-it-ports</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>reserve-network-port</goal>
+                        </goals>
+                        <configuration>
+                            <portNames>
+                                <portName>it.db.port</portName>
+                                <portName>it.http.port</portName>
+                                <portName>it.rmi.port</portName>
+                                <portName>it.ajp.port</portName>
+                            </portNames>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
-             
-            <!-- Activates integration tests (by default, classes under tests that end with "IT") -->
+
+            <!-- Delete the previous run's Tomcat configuration before deploying.
+                 Cargo reuses target/cargo/configurations/, and Tomcat leaves an
+                 exploded webapps/roller/ behind. Redeploying the WAR over a stale
+                 explosion leaves a directory that shadows the new archive but is
+                 missing jars, so the context fails to start with
+                 ClassNotFoundException for Roller's own classes, and because it depends
+                 on what the last run left behind, it fails intermittently.
+                 Declared before cargo so it runs first within the phase. -->
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>${maven-clean.version}</version>
+                <executions>
+                    <execution>
+                        <id>clean-cargo-configuration</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>clean</goal></goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.directory}/cargo/configurations</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>${docker.plugin.version}</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <alias>${it.db.container-alias}</alias>
+                            <name>${it.postgres.image}</name>
+                            <run>
+                                <containerNamePattern>%a</containerNamePattern>
+                                <ports>
+                                    <port>${it.db.port}:5432</port>
+                                </ports>
+                                <env>
+                                    <POSTGRES_USER>${it.db.user}</POSTGRES_USER>
+                                    <POSTGRES_PASSWORD>${it.db.password}</POSTGRES_PASSWORD>
+                                    <POSTGRES_DB>${it.db.name}</POSTGRES_DB>
+                                </env>
+                                <!-- The log line alone is not enough: the postgres image
+                                     prints it once for its unix-socket-only init server
+                                     before restarting to listen on TCP, so a log-only
+                                     wait returns while the mapped port still refuses
+                                     connections. Wait on the port as well. -->
+                                <wait>
+                                    <log>database system is ready to accept connections</log>
+                                    <tcp>
+                                        <mode>mapped</mode>
+                                        <ports>
+                                            <port>5432</port>
+                                        </ports>
+                                    </tcp>
+                                    <time>60000</time>
+                                </wait>
+                            </run>
+                        </image>
+                    </images>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>pg-start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>start</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>pg-stop</id>
+                        <phase>post-integration-test</phase>
+                        <goals><goal>stop</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>${exec.plugin.version}</version>
+                <executions>
+                    <!-- Belt and braces on top of the docker tcp wait: the port can be
+                         open a moment before the server will answer queries, and
+                         migrate.sh fails fast rather than retrying. Executions in the
+                         same phase run in declaration order, so this must stay first. -->
+                    <execution>
+                        <id>pg-wait-ready</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>bash</executable>
+                            <arguments>
+                                <argument>-c</argument>
+                                <argument>for i in $(seq 1 60); do pg_isready -h localhost -p ${it.db.port} -U ${it.db.user} -d ${it.db.name} -t 1 &amp;&amp; exit 0; sleep 1; done; echo "pg_isready timed out after 60s" &gt;&amp;2; exit 1</argument>
+                            </arguments>
+                            <environmentVariables>
+                                <PGPASSWORD>${it.db.password}</PGPASSWORD>
+                            </environmentVariables>
+                        </configuration>
+                    </execution>
+                    <!-- Schema comes from the same migration chain production uses.
+                         There is deliberately no test-specific DDL to drift. -->
+                    <execution>
+                        <id>pg-apply-migrations</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>${project.basedir}/../bin/db/migrate.sh</executable>
+                            <environmentVariables>
+                                <DB_NAME>${it.db.name}</DB_NAME>
+                                <DB_APP_USER>${it.db.user}</DB_APP_USER>
+                                <PGHOST>localhost</PGHOST>
+                                <PGPORT>${it.db.port}</PGPORT>
+                                <PGUSER>${it.db.user}</PGUSER>
+                                <PGPASSWORD>${it.db.password}</PGPASSWORD>
+                            </environmentVariables>
+                        </configuration>
+                    </execution>
+                    <!-- Seeds the admin user, weblog and category the sweep logs in
+                         with. Must run before Tomcat starts: Roller caches
+                         aggressively in-process. -->
+                    <execution>
+                        <id>pg-seed-it-data</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>psql</executable>
+                            <arguments>
+                                <argument>-v</argument><argument>ON_ERROR_STOP=1</argument>
+                                <argument>-h</argument><argument>localhost</argument>
+                                <argument>-p</argument><argument>${it.db.port}</argument>
+                                <argument>-U</argument><argument>${it.db.user}</argument>
+                                <argument>-d</argument><argument>${it.db.name}</argument>
+                                <argument>-f</argument>
+                                <argument>${project.basedir}/src/test/resources/seed-it-data.sql</argument>
+                            </arguments>
+                            <environmentVariables>
+                                <PGPASSWORD>${it.db.password}</PGPASSWORD>
+                            </environmentVariables>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.cargo</groupId>
+                <artifactId>cargo-maven3-plugin</artifactId>
+                <version>${cargo.plugin.version}</version>
+                <configuration>
+                    <container>
+                        <containerId>tomcat10x</containerId>
+                        <artifactInstaller>
+                            <groupId>org.apache.tomcat</groupId>
+                            <artifactId>tomcat</artifactId>
+                            <version>${it.tomcat.version}</version>
+                        </artifactInstaller>
+                        <log>${project.build.directory}/cargo.log</log>
+                        <output>${project.build.directory}/tomcat.log</output>
+                    </container>
+                    <configuration>
+                        <properties>
+                            <cargo.servlet.port>${it.http.port}</cargo.servlet.port>
+                            <cargo.rmi.port>${it.rmi.port}</cargo.rmi.port>
+                            <cargo.tomcat.ajp.port>${it.ajp.port}</cargo.tomcat.ajp.port>
+                            <cargo.jvmargs>-Djava.awt.headless=true</cargo.jvmargs>
+                        </properties>
+                        <!-- Roller looks up jdbc/rollerdb from JNDI; cargo writes the
+                             Tomcat resource definition, so there is no hand-maintained
+                             context.xml to keep in sync. -->
+                        <datasources>
+                            <datasource>
+                                <jndiName>jdbc/rollerdb</jndiName>
+                                <driverClass>org.postgresql.Driver</driverClass>
+                                <url>jdbc:postgresql://localhost:${it.db.port}/${it.db.name}</url>
+                                <username>${it.db.user}</username>
+                                <password>${it.db.password}</password>
+                            </datasource>
+                        </datasources>
+                    </configuration>
+                    <deployables>
+                        <deployable>
+                            <groupId>org.apache.roller</groupId>
+                            <artifactId>roller-webapp</artifactId>
+                            <type>war</type>
+                            <properties>
+                                <context>${it.context.path}</context>
+                            </properties>
+                            <!-- Block until Roller itself answers, not merely until
+                                 Tomcat's port opens. Without this the first tests can
+                                 race the WAR deployment and get a context-not-found
+                                 404, which surfaces as a pile of confusing assertion
+                                 failures instead of one clear "the app never came up". -->
+                            <pingURL>http://127.0.0.1:${it.http.port}/${it.context.path}/roller-ui/login.rol</pingURL>
+                            <pingTimeout>180000</pingTimeout>
+                        </deployable>
+                    </deployables>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${postgresql.version}</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>cargo-start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>start</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>cargo-stop</id>
+                        <phase>post-integration-test</phase>
+                        <goals><goal>stop</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>3.5.2</version>
+                <version>${maven-surefire.version}</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!-- 127.0.0.1, not localhost: Tomcat binds IPv4 while Chrome resolves
+                             localhost to ::1 first, so the browser gets connection-refused
+                             against a server that is demonstrably listening. -->
+                        <it.base.url>http://127.0.0.1:${it.http.port}/${it.context.path}</it.base.url>
+                    </systemPropertyVariables>
+                    <trimStackTrace>false</trimStackTrace>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -137,82 +370,7 @@
                         </goals>
                     </execution>
                 </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>javax.xml.bind</groupId>
-                        <artifactId>jaxb-api</artifactId>
-                        <version>2.3.1</version>
-                    </dependency>
-                </dependencies>                    
-            </plugin>
-
-            <!-- Activates the Roller application during the integration test phase -->
-            <plugin>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-maven-plugin</artifactId>
-                <configuration>
-                    <stopKey>selenium</stopKey>
-                    <stopPort>9999</stopPort>
-                    <webApp>
-                        <contextPath>/roller</contextPath>
-                    </webApp>
-                    <webAppSourceDirectory>target/roller-selenium-tests-${project.version}</webAppSourceDirectory>
-                    <jettyXmls>${project.parent.basedir}/app/src/test/resources/jetty.xml</jettyXmls>
-                    <systemProperties>
-                        <roller.custom.config>
-                            src/test/resources/roller-jettyrun.properties
-                        </roller.custom.config>
-                    </systemProperties>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>start-jetty</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <goal>start</goal>
-                        </goals>
-                        <configuration>
-                            <!-- great for debugging classpath issues -->
-                            <dumpOnStart>false</dumpOnStart> 
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>stop-jetty</id>
-                        <phase>post-integration-test</phase>
-                        <goals>
-                            <goal>stop</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.apache.roller</groupId>
-                        <artifactId>db-utils</artifactId>
-                        <version>6.2.0</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>commons-dbcp</groupId>
-                        <artifactId>commons-dbcp</artifactId>
-                        <version>1.4</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.apache.derby</groupId>
-                        <artifactId>derby</artifactId>
-                        <version>${derby.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.apache.derby</groupId>
-                        <artifactId>derbyclient</artifactId>
-                        <version>${derby.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>javax.mail</groupId>
-                        <artifactId>mail</artifactId>
-                        <version>${java-mail.version}</version>
-                    </dependency>
-                </dependencies>
             </plugin>
         </plugins>
     </build>
-
 </project>

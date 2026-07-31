@@ -71,32 +71,6 @@ public class CategoryRemoveController extends BaseController {
         return "categoryDeleteOK.title";
     }
 
-    @GetMapping("/categoryRemove.rol")
-    public String execute(HttpServletRequest request, Model model,
-                          @RequestParam(value = "removeId", required = false) String removeId) {
-        populateCommonModel(request, model);
-
-        WeblogCategory category = lookupCategory(removeId);
-        model.addAttribute("category", category);
-        model.addAttribute("removeId", removeId);
-
-        try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-            List<WeblogCategory> cats = wmgr.getWeblogCategories(getActionWeblog(request));
-            List<WeblogCategory> allCategories = new ArrayList<>();
-            for (WeblogCategory cat : cats) {
-                if (!cat.getId().equals(removeId)) {
-                    allCategories.add(cat);
-                }
-            }
-            model.addAttribute("allCategories", allCategories);
-        } catch (WebloggerException ex) {
-            log.error("Error building categories list", ex);
-            addError(model, "generic.error.check.logs", request);
-        }
-
-        return ".CategoryRemove";
-    }
 
     @PostMapping("/categoryRemove!remove.rol")
     public String remove(HttpServletRequest request, Model model,
@@ -126,11 +100,16 @@ public class CategoryRemoveController extends BaseController {
                         + getActionWeblog(request).getHandle();
             } catch (Exception ex) {
                 log.error("Error removing category - " + removeId, ex);
-                addError(model, "generic.error.check.logs", request);
+                addFlashError(redirectAttributes, "generic.error.check.logs", request);
             }
+        } else {
+            addFlashError(redirectAttributes, "categoryForm.error.notFound", request);
         }
 
-        return execute(request, model, removeId);
+        // Removal is driven by a modal on the category list, so there is no
+        // confirmation page to redisplay; return to the list with the error.
+        return "redirect:/roller-ui/authoring/categories.rol?weblog="
+                + getActionWeblog(request).getHandle();
     }
 
     private WeblogCategory lookupCategory(String id) {
