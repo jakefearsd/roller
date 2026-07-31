@@ -49,6 +49,11 @@ limitations under the License.
         <log4j2.version>2.25.4</log4j2.version>
         <lucene.version>9.12.3</lucene.version> <!-- lucene 10 requires JDK 21 -->
         <maven-war.version>3.4.0</maven-war.version>
+        <pitest.version>1.25.8</pitest.version>
+        <pitest-junit5.version>1.2.3</pitest-junit5.version>
+        <!-- Overridden on the command line to scope a mutation run. -->
+        <pit.targets>org.apache.roller.weblogger.util.*</pit.targets>
+        <pit.tests>org.apache.roller.weblogger.util.*</pit.tests>
         <rome.version>1.19.0</rome.version>
         <slf4j.version>2.0.17</slf4j.version>
         <spring.version>6.2.17</spring.version>
@@ -693,6 +698,49 @@ limitations under the License.
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- Mutation testing. JaCoCo says which lines ran; PIT says whether a
+                 test would have noticed them changing. Not bound to a lifecycle
+                 phase because a full run over ~19k lines is slow; scope it to the
+                 code you are working on:
+
+                   mvn -pl app test-compile org.pitest:pitest-maven:mutationCoverage \
+                       -Dpit.targets='org.apache.roller.weblogger.util.*' \
+                       -Dpit.tests='org.apache.roller.weblogger.util.*'
+
+                 Report: app/target/pit-reports/index.html -->
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>${pitest.version}</version>
+                <configuration>
+                    <targetClasses>
+                        <param>${pit.targets}</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>${pit.tests}</param>
+                    </targetTests>
+                    <outputFormats>
+                        <outputFormat>HTML</outputFormat>
+                        <outputFormat>XML</outputFormat>
+                    </outputFormats>
+                    <timestampedReports>false</timestampedReports>
+                    <!-- Tests that need Docker/Testcontainers are excluded: PIT reruns
+                         the suite once per mutant and container startup would dominate
+                         the runtime. Mutation testing targets pure logic anyway. -->
+                    <excludedTestClasses>
+                        <param>org.apache.roller.weblogger.business.*</param>
+                        <param>org.apache.roller.weblogger.ui.rendering.model.SearchResults*</param>
+                    </excludedTestClasses>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>${pitest-junit5.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>
