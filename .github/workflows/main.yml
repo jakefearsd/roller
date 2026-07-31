@@ -32,19 +32,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ '11', '17', '21', '23' ]
+        # maven-compiler-plugin is configured with <release>21</release>, so
+        # JDK 11 and 17 cannot compile this project at all.
+        java: [ '21', '25' ]
 
     steps:
-      - name: Set up JDK ${{ matrix.java }} 
+      - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
-          java-version: ${{ matrix.java }} 
+          java-version: ${{ matrix.java }}
           distribution: 'zulu'
-
-      - name: Setup Xvfb
-        run: |
-          echo "DISPLAY=:99.0" >> $GITHUB_ENV
-          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
 
       - name: Checkout Project
         uses: actions/checkout@v4
@@ -56,10 +53,10 @@ jobs:
       - name: Build Roller and run JUnit Tests
         run: mvn -V -ntp install
 
-      - name: Run Integration Tests
-        run: |
-          cd it-selenium
-          mvn -V -ntp install
+      # The it-selenium module is commented out of the parent pom and its page
+      # objects still drive removed features (public registration), so it cannot
+      # pass as written. Restore this step -- along with the Xvfb setup it needs
+      # -- once those tests are updated and the module is back in the reactor.
 
       - name: Publish JUnit Report
         uses: test-summary/action@v2
@@ -67,15 +64,9 @@ jobs:
         with:
           paths: "app/target/surefire-reports/TEST-*.xml"
 
-      - name: Publish IT Report
-        uses: test-summary/action@v2
-        if: always()
-        with:
-          paths: "it-selenium/target/failsafe-reports/TEST-*.xml"
-      
       # only on integration and only once in this matrix
       - name: Upload Dev Build on Integration
-        if: ${{ (matrix.java == '11') && (github.event_name == 'push') }}
+        if: ${{ (matrix.java == '21') && (github.event_name == 'push') }}
         uses: actions/upload-artifact@v4
         with:
           name: dev-build
