@@ -17,59 +17,16 @@
 --%>
 
 <%-- Body of the login page, invoked from login.jsp --%>
-<%@ page import="org.apache.roller.weblogger.config.WebloggerConfig" %>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<%!
-    String securityCheckUrl = null;
-    boolean cmaEnabled = "CMA".equals( WebloggerConfig.getAuthMethod() );
-%>
 
-<%
-    if (cmaEnabled) {
-        securityCheckUrl = "/j_security_check";
-    } else {
-        securityCheckUrl = "/roller_j_security_check";
-    }
-%>
 
-    <c:if test="${authMethod == 'OPENID' || authMethod == 'DB_OPENID'}">
-
-        <form method="post" id="loginOpenIDForm" class="form-horizontal"
-              action="/roller/roller_j_openid_security_check" onsubmit="saveOpenidIdentifier(this)">
-
-            <div class="form-group">
-                <legend><spring:message code="loginPage.openIdPrompt"/></legend>
-            </div>
-
-            <div class="form-group">
-                <label for="openid_identifier"><spring:message code="loginPage.openID"/></label>
-                <input class="form-control" type="text" name="openid_identifier" id="openid_identifier"/>
-            </div>
-
-            <sec:csrfInput/>
-            <spring:message code="loginPage.loginOpenID" var="loginOpenIDLabel"/>
-            <button type="submit" name="submit" id="submit" class="btn btn-primary"
-                value="${loginOpenIDLabel}"></button>
-
-        </form>
-
-    </c:if>
-
-    <c:if test="${authMethod != 'OPENID'}">
 
         <form method="post" id="loginForm" class="form-horizontal"
-              action="<c:url value="<%= securityCheckUrl %>"/>" onsubmit="saveUsername(this)">
+              action="<c:url value='/roller_j_security_check'/>" onsubmit="saveUsername(this)">
 
             <div class="form-group">
-                <c:choose>
-                    <c:when test="${authMethod == 'DB_OPENID'}">
-                        <legend><spring:message code="loginPage.openIdHybridPrompt"/></legend>
-                    </c:when>
-                    <c:otherwise>
-                        <legend><spring:message code="loginPage.prompt"/></legend>
-                    </c:otherwise>
-                </c:choose>
+                <legend><spring:message code="loginPage.prompt"/></legend>
             </div>
 
             <div class="form-group">
@@ -102,45 +59,14 @@
             </div>
 
         </form>
-    </c:if>
 
 <script>
-    <c:if test="${authMethod == 'OPENID' || authMethod == 'DB_OPENID'}">
-    function focusToOpenidForm() {
-        return (document.getElementById && document.getElementById("j_username") === null) ||
-                getCookie("favorite_authentication_method") !== "username";
-    }
-
-    if (document.getElementById) {
-        if (document.getElementById && getCookie("openid_identifier") !== null) {
-            document.getElementById("openid_identifier").value = getCookie("openid_identifier");
-        }
-        if (focusToOpenidForm()) {
-            document.getElementById("openid_identifier").focus();
-        }
-    }
-
-    function saveOpenidIdentifier(theForm) {
-        var expires = new Date();
-        expires.setTime(expires.getTime() + 24 * 30 * 60 * 60 * 1000); // sets it for approx 30 days.
-        setCookie("openid_identifier", theForm.openid_identifier.value, expires);
-        setCookie("favorite_authentication_method", "openid");
-    }
-    </c:if>
-
-    <c:if test="${authMethod != 'OPENID'}">
-    function focusToUsernamePasswordForm() {
-        return (document.getElementById && document.getElementById("openid_identifier") === null) ||
-                getCookie("favorite_authentication_method") === "username";
-    }
 
     if (document.getElementById) {
         if (getCookie("username") != null) {
             if (document.getElementById) {
                 document.getElementById("j_username").value = getCookie("username");
-                if (focusToUsernamePasswordForm()) {
-                    document.getElementById("j_password").focus();
-                }
+                document.getElementById("j_password").focus();
             }
         } else if (focusToUsernamePasswordForm()) {
             document.getElementById("j_username").focus();
@@ -153,5 +79,4 @@
         setCookie("username", theForm.j_username.value, expires);
         setCookie("favorite_authentication_method", "username");
     }
-    </c:if>
 </script>

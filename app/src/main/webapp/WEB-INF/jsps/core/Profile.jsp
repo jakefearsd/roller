@@ -19,11 +19,6 @@
 
 <p class="subtitle"><spring:message code="userAdmin.title.editUser"/></p>
 
-<c:if test="${authMethod == 'DB_OPENID'}">
-    <p class="pagetip">
-        <spring:message code="userAdmin.noPasswordForOpenID"/>
-    </p>
-</c:if>
 
 
 <form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/profile!save.rol" method="post" cssClass="form-horizontal">
@@ -65,7 +60,6 @@
         </div>
     </div>
 
-    <c:if test="${authMethod == 'ROLLERDB' || authMethod == 'DB_OPENID'}">
         <div class="form-group">
             <spring:message code="userSettings.password" var="passwordLabel"/>
             <label class="col-sm-3 control-label">${passwordLabel}</label>
@@ -83,21 +77,7 @@
                                onchange="formChanged()" onkeyup="formChanged()"/>
             </div>
         </div>
-    </c:if>
-    <c:if test="${authMethod != 'ROLLERDB' && authMethod != 'DB_OPENID'}">
-        <form:hidden path="password"/>
-    </c:if>
 
-    <c:if test="${authMethod == 'OPENID' || authMethod == 'DB_OPENID'}">
-        <div class="form-group">
-            <spring:message code="userSettings.openIdUrl" var="openIdUrlLabel"/>
-            <label class="col-sm-3 control-label">${openIdUrlLabel}</label>
-            <div class="col-sm-9 controls">
-                <form:input path="openIdUrl" cssClass="form-control" size="40" maxlength="255"
-                            id="f_openid_identifier" style="width:75%"/>
-            </div>
-        </div>
-    </c:if>
 
     <div class="form-group">
         <spring:message code="userSettings.locale" var="localeLabel"/>

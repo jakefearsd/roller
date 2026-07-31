@@ -113,41 +113,6 @@ public class ProfileController extends BaseController {
             // copy updated attributes
             bean.copyTo(existingUser);
 
-            if (StringUtils.isNotEmpty(bean.getOpenIdUrl())) {
-                try {
-                    String openidurl = bean.getOpenIdUrl();
-                    if (openidurl != null && openidurl.endsWith("/")) {
-                        openidurl = openidurl.substring(0, openidurl.length() - 1);
-                    }
-                    existingUser.setOpenIdUrl(openidurl);
-                } catch (Exception ex) {
-                    log.error("Unexpected error saving user OpenID URL", ex);
-                    addError(model, "generic.error.check.logs", request);
-                    return ".Profile";
-                }
-            }
-
-            if (authMethod == AuthMethod.DB_OPENID) {
-                if (StringUtils.isEmpty(existingUser.getPassword())
-                        && StringUtils.isEmpty(bean.getPasswordText())
-                        && StringUtils.isEmpty(bean.getOpenIdUrl())) {
-                    addError(model, "userRegister.error.missingOpenIDOrPassword", request);
-                    return ".Profile";
-                } else if (StringUtils.isNotEmpty(bean.getOpenIdUrl())
-                        && StringUtils.isNotEmpty(bean.getPasswordText())) {
-                    addError(model, "userRegister.error.bothOpenIDAndPassword", request);
-                    return ".Profile";
-                }
-            }
-
-            // User.password does not allow null, so generate one
-            if (authMethod.equals(AuthMethod.OPENID)
-                    || (authMethod.equals(AuthMethod.DB_OPENID)
-                    && !StringUtils.isEmpty(bean.getOpenIdUrl()))) {
-                String randomString = RandomStringUtils.secure().nextAlphanumeric(255);
-                existingUser.resetPassword(randomString);
-            }
-
             // If user set both password and passwordConfirm then reset password
             if (!StringUtils.isEmpty(bean.getPasswordText())
                     && !StringUtils.isEmpty(bean.getPasswordConfirm())) {
@@ -169,24 +134,8 @@ public class ProfileController extends BaseController {
     }
 
     private void myValidate(HttpServletRequest request, Model model, ProfileBean bean) {
-        if (StringUtils.isEmpty(bean.getOpenIdUrl())) {
-            if (!StringUtils.equals(bean.getPasswordText(), bean.getPasswordConfirm())) {
-                addError(model, "userRegister.error.mismatchedPasswords", request);
-            }
-            if (authMethod == AuthMethod.OPENID) {
-                addError(model, "userRegister.error.missingOpenID", request);
-            }
-        } else {
-            try {
-                UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
-                User user = mgr.getUserByOpenIdUrl(bean.getOpenIdUrl());
-                if (user != null && !(user.getUserName().equals(bean.getUserName()))) {
-                    addError(model, "error.add.user.openIdInUse", request);
-                }
-            } catch (WebloggerException ex) {
-                log.error("error checking OpenID URL", ex);
-                addError(model, "generic.error.check.logs", request);
-            }
+        if (!StringUtils.equals(bean.getPasswordText(), bean.getPasswordConfirm())) {
+            addError(model, "userRegister.error.mismatchedPasswords", request);
         }
 
         // validate timezone

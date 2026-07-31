@@ -18,11 +18,14 @@
 package org.apache.roller.weblogger.config;
 
 public enum AuthMethod {
-    ROLLERDB("db"),
-    LDAP("ldap"),
-    OPENID("openid"),
-    DB_OPENID("db-openid"),
-    CMA("cma");
+    /**
+     * Database-backed authentication, the only method Roller supports. The
+     * LDAP, OpenID, db-openid and container-managed options were removed along
+     * with their implementations; the enum is kept so an unsupported value in
+     * roller.properties still fails loudly at startup rather than silently
+     * behaving like "db".
+     */
+    ROLLERDB("db");
 
     private final String propertyName;
 

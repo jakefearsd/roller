@@ -116,26 +116,6 @@ public class UserEditController extends BaseController {
         if (!hasErrors(model)) {
             bean.copyTo(user);
 
-            if (authMethod == AuthMethod.DB_OPENID) {
-                if (StringUtils.isEmpty(user.getPassword())
-                        && StringUtils.isEmpty(bean.getPassword())
-                        && StringUtils.isEmpty(bean.getOpenIdUrl())) {
-                    addError(model, "userRegister.error.missingOpenIDOrPassword", request);
-                    return ".UserEdit";
-                } else if (StringUtils.isNotEmpty(bean.getOpenIdUrl())
-                        && StringUtils.isNotEmpty(bean.getPassword())) {
-                    addError(model, "userRegister.error.bothOpenIDAndPassword", request);
-                    return ".UserEdit";
-                }
-            }
-
-            // User.password does not allow null, so generate one
-            if (authMethod.equals(AuthMethod.OPENID) ||
-                    (authMethod.equals(AuthMethod.DB_OPENID) && !StringUtils.isEmpty(bean.getOpenIdUrl()))) {
-                String randomString = RandomStringUtils.secure().nextAlphanumeric(255);
-                user.resetPassword(randomString);
-            }
-
             // reset password if set
             if (!StringUtils.isEmpty(bean.getPassword())) {
                 user.resetPassword(bean.getPassword());
@@ -231,26 +211,6 @@ public class UserEditController extends BaseController {
         if (!hasErrors(model)) {
             bean.copyTo(user);
 
-            if (authMethod == AuthMethod.DB_OPENID) {
-                if (StringUtils.isEmpty(user.getPassword())
-                        && StringUtils.isEmpty(bean.getPassword())
-                        && StringUtils.isEmpty(bean.getOpenIdUrl())) {
-                    addError(model, "userRegister.error.missingOpenIDOrPassword", request);
-                    return ".UserEdit";
-                } else if (StringUtils.isNotEmpty(bean.getOpenIdUrl())
-                        && StringUtils.isNotEmpty(bean.getPassword())) {
-                    addError(model, "userRegister.error.bothOpenIDAndPassword", request);
-                    return ".UserEdit";
-                }
-            }
-
-            // User.password does not allow null, so generate one
-            if (authMethod.equals(AuthMethod.OPENID) ||
-                    (authMethod.equals(AuthMethod.DB_OPENID) && !StringUtils.isEmpty(bean.getOpenIdUrl()))) {
-                String randomString = RandomStringUtils.secure().nextAlphanumeric(255);
-                user.resetPassword(randomString);
-            }
-
             // reset password if set
             if (!StringUtils.isEmpty(bean.getPassword())) {
                 user.resetPassword(bean.getPassword());
@@ -343,31 +303,12 @@ public class UserEditController extends BaseController {
             } else if (!safe.equals(bean.getUserName())) {
                 addError(model, "error.add.user.badUserName", request);
             }
-            if ((authMethod == AuthMethod.ROLLERDB ||
-                    (authMethod == AuthMethod.DB_OPENID && StringUtils.isEmpty(bean.getOpenIdUrl())))
-                    && StringUtils.isEmpty(bean.getPassword())) {
+            if (StringUtils.isEmpty(bean.getPassword())) {
                 addError(model, "error.add.user.missingPassword", request);
             }
         } else {
             if (user.getUserName() == null) {
                 addError(model, "userAdmin.error.userNotFound", request);
-            }
-        }
-        if ((authMethod == AuthMethod.OPENID) && StringUtils.isEmpty(bean.getOpenIdUrl())) {
-            addError(model, "userRegister.error.missingOpenID", request);
-        }
-
-        // check that OpenID, if provided, is not taken
-        if (!StringUtils.isEmpty(bean.getOpenIdUrl())) {
-            try {
-                UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
-                User existingUser = mgr.getUserByOpenIdUrl(bean.getOpenIdUrl());
-                if (existingUser != null && !(existingUser.getUserName().equals(bean.getUserName()))) {
-                    addError(model, "error.add.user.openIdInUse", request);
-                }
-            } catch (WebloggerException ex) {
-                log.error("error checking OpenID URL", ex);
-                addError(model, "generic.error.check.logs", request);
             }
         }
     }

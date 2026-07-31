@@ -63,11 +63,7 @@ public class LoginController extends BaseController {
 
         // set action error message if there was login error
         if (error != null) {
-            if (authMethod == AuthMethod.OPENID) {
-                addError(model, "error.unmatched.openid", request);
-            } else {
-                addError(model, "error.password.mismatch", request);
-            }
+            addError(model, "error.password.mismatch", request);
         }
 
         return ".Login";

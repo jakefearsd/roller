@@ -31,7 +31,9 @@ services:
     # same major version — see RollerPostgresContainer.
     image: postgres:16@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20
     ports:
-      - "5432:5432"
+      # 5433 on the host: 5432 is commonly taken by a locally-installed
+      # PostgreSQL. Override with ROLLER_DB_PORT if 5433 is busy too.
+      - "${ROLLER_DB_PORT:-5433}:5432"
     environment:
       POSTGRES_DB: rollerdb
       POSTGRES_USER: roller

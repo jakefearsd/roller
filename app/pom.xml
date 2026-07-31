@@ -80,6 +80,15 @@ limitations under the License.
             <groupId>org.glassfish.web</groupId>
             <artifactId>jakarta.servlet.jsp.jstl</artifactId>
             <version>3.0.1</version>
+            <exclusions>
+                <!-- Drags slf4j-api 1.7.36, which silently downgraded the 2.0.x
+                     API that jcl-over-slf4j and jul-to-slf4j are built against.
+                     slf4j-api is declared explicitly below instead. -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Jakarta Mail API 2.1+ uses jakarta.mail.MailLogger (not com.sun.mail).
@@ -264,6 +273,15 @@ limitations under the License.
         <!-- slf4j implementing the apache commons-logging interfaces -->
         <!-- note: commons-logging needs to be excluded in all dependencies transitive depending on it.
         See 2006 RFE https://issues.apache.org/jira/browse/MNG-1977 for maven's missing feature of global exclusions -->
+        <!-- Pinned explicitly: transitive callers would otherwise decide the API
+             version, and a 1.7.x slf4j-api is binary-incompatible with the 2.0.x
+             ServiceLoader-based provider lookup used below. -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
@@ -277,10 +295,13 @@ limitations under the License.
             <version>${slf4j.version}</version>
         </dependency>
 
-        <!-- the actual logging impl below slf4j: log4j2 -->
+        <!-- the actual logging impl below slf4j: log4j2.
+             log4j-slf4j2-impl, not log4j-slf4j-impl: the latter binds the
+             SLF4J 1.7 StaticLoggerBinder API and would pull slf4j-api back
+             down to 1.7.x. -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
             <version>${log4j2.version}</version>
         </dependency>
 
@@ -360,11 +381,6 @@ limitations under the License.
             <version>${spring.security.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-ldap</artifactId>
-            <version>${spring.security.version}</version>
-        </dependency>
 
         <!-- spring-security-openid removed in Spring Security 6.0;
              OpenID Connect (OIDC) via OAuth2 client is the replacement -->
@@ -509,6 +525,24 @@ limitations under the License.
                     </systemProperties>
                 </configuration>
                 <dependencies>
+                    <!-- jetty-maven-plugin pulls glassfish-jstl, which brings
+                         jakarta.servlet.jsp.jstl 2.0.0. The WAR ships 3.0.1, so
+                         both land on the dev-server classpath and Jetty's
+                         annotation scanner reports ~15 duplicate taglib classes.
+                         Re-declared here purely to exclude the older copy; the
+                         webapp's own JSTL is the one Roller's JSPs compile
+                         against. -->
+                    <dependency>
+                        <groupId>org.eclipse.jetty</groupId>
+                        <artifactId>glassfish-jstl</artifactId>
+                        <version>${jetty.plugin.version}</version>
+                        <exclusions>
+                            <exclusion>
+                                <groupId>org.glassfish.web</groupId>
+                                <artifactId>jakarta.servlet.jsp.jstl</artifactId>
+                            </exclusion>
+                        </exclusions>
+                    </dependency>
                     <dependency>
                         <groupId>org.apache.commons</groupId>
                         <artifactId>commons-dbcp2</artifactId>
@@ -622,6 +656,32 @@ limitations under the License.
                     </systemProperties>
                     <trimStackTrace>false</trimStackTrace>
                 </configuration>
+            </plugin>
+
+            <!-- Compile every JSP at build time. JSP syntax and taglib errors
+                 otherwise only surface when a page is first requested, and pages
+                 behind authentication can sit broken indefinitely. -->
+            <plugin>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-jspc-maven-plugin</artifactId>
+                <version>${jetty.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>jspc-validate</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>jspc</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Validation only: the WAR ships .jsp sources and lets
+                                 the container compile them, so this output is
+                                 discarded and never merged into web.xml. -->
+                            <generatedClasses>${project.build.directory}/jspc-validation</generatedClasses>
+                            <webXmlFragment>${project.build.directory}/jspc-validation/web-fragment.xml</webXmlFragment>
+                            <includes>**/*.jsp</includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>

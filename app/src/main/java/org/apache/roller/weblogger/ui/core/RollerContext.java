@@ -44,7 +44,6 @@ import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.ui.core.plugins.UIPluginManager;
 import org.apache.roller.weblogger.ui.core.plugins.UIPluginManagerImpl;
-import org.apache.roller.weblogger.ui.core.security.AutoProvision;
 import org.apache.roller.weblogger.util.Reflection;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.velocity.runtime.RuntimeSingleton;
@@ -357,33 +356,4 @@ public class RollerContext extends ContextLoaderListener
     }
 
 
-    /**
-     * Get an instance of AutoProvision, if available in roller.properties
-     *
-     * @return AutoProvision
-     */
-    public static AutoProvision getAutoProvision() {
-        String clazzName = WebloggerConfig.getProperty("users.ldap.autoProvision.className");
-
-        if (null == clazzName) {
-            return null;
-        }
-
-        Class<?> clazz;
-        try {
-            clazz = Class.forName(clazzName);
-        } catch (ClassNotFoundException e) {
-            log.warn("Unable to found specified Auto Provision class.", e);
-            return null;
-        }
-
-        if (Reflection.implementsInterface(clazz, AutoProvision.class)) {
-            try {
-                return (AutoProvision) Reflection.newInstance(clazz);
-            } catch (ReflectiveOperationException e) {
-                log.warn("ReflectiveOperationException while creating: " + clazzName, e);
-            }
-        }
-        return null;
-    }
 }

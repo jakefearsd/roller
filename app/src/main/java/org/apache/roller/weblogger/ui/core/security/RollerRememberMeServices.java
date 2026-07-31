@@ -52,20 +52,9 @@ public class RollerRememberMeServices extends TokenBasedRememberMeServices {
     /**
      * Calculates the digital signature to be put in the cookie. Default value is
      * SHA-512 ("username:tokenExpiryTime:password:key")
-     *
-     * If LDAP is enabled then a configurable dummy password is used in the calculation.
      */
     @Override
     protected String makeTokenSignature(long tokenExpiryTime, String username, String password) {
-
-        boolean usingLDAP = WebloggerConfig.getAuthMethod() == AuthMethod.LDAP;
-        if (usingLDAP) {
-            log.debug("LDAP is enabled; using dummy password in remember me signature.");
-
-            // for LDAP we don't store its password in the roller_users table,
-            // just an string indicating external auth method being used.
-            password = WebloggerConfig.getProperty("users.passwords.externalAuthValue","<externalAuth>");
-        }
 
         String data = username + ":" + tokenExpiryTime + ":" + password + ":" + getKey();
         MessageDigest digest;

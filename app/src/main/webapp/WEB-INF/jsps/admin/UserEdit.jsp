@@ -36,9 +36,6 @@
     <c:if test="${actionName == 'createUser'}">
         <spring:message code="userAdmin.addInstructions"/>
     </c:if>
-    <c:if test="${authMethod == 'DB_OPENID'}">
-         <spring:message code="userAdmin.noPasswordForOpenID"/>
-    </c:if>
 </p>
 
 <c:choose>
@@ -101,7 +98,6 @@
         </div>
     </div>
 
-    <c:if test="${authMethod == 'ROLLERDB' || authMethod == 'DB_OPENID'}">
         <div class="form-group">
             <label class="col-sm-3 control-label"><spring:message code="userSettings.password"/></label>
             <div class="col-sm-9 controls">
@@ -110,18 +106,7 @@
                        title="<spring:message code='userAdmin.tip.password'/>"/>
             </div>
         </div>
-    </c:if>
 
-    <c:if test="${authMethod == 'OPENID' || authMethod == 'DB_OPENID'}">
-        <div class="form-group">
-            <label class="col-sm-3 control-label"><spring:message code="userSettings.openIdUrl"/></label>
-            <div class="col-sm-9 controls">
-                <input type="text" name="bean.openIdUrl" value="${fn:escapeXml(bean.openIdUrl)}"
-                       size="30" maxlength="255" id="f_openid_identifier" class="form-control"
-                       title="<spring:message code='userAdmin.tip.openIdUrl'/>"/>
-            </div>
-        </div>
-    </c:if>
 
     <div class="form-group">
         <label class="col-sm-3 control-label"><spring:message code="userSettings.email"/></label>

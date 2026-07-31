@@ -34,7 +34,6 @@ public class ProfileBean {
     private String emailAddress = null;
     private String locale = null;
     private String timeZone = null;
-    private String openIdUrl = null;
 
     private String passwordText = null;
     private String passwordConfirm = null;
@@ -104,13 +103,6 @@ public class ProfileBean {
         this.timeZone = timeZone;
     }
 
-    public String getOpenIdUrl() {
-        return openIdUrl;
-    }
-
-    public void setOpenIdUrl(String openIdUrl) {
-        this.openIdUrl = openIdUrl;
-    }
 
     public String getPasswordText() {
         return passwordText;
@@ -136,7 +128,6 @@ public class ProfileBean {
         dataHolder.setEmailAddress(this.emailAddress);
         dataHolder.setLocale(this.locale);
         dataHolder.setTimeZone(this.timeZone);
-        dataHolder.setOpenIdUrl(this.openIdUrl);
     }
 
 
@@ -149,7 +140,6 @@ public class ProfileBean {
         this.emailAddress = dataHolder.getEmailAddress();
         this.locale = dataHolder.getLocale();
         this.timeZone = dataHolder.getTimeZone();
-        this.openIdUrl = dataHolder.getOpenIdUrl();
     }
 
 }
