@@ -49,6 +49,8 @@ limitations under the License.
         <build-helper.version>3.6.0</build-helper.version>
         <exec.plugin.version>3.6.3</exec.plugin.version>
         <maven-clean.version>3.5.0</maven-clean.version>
+        <maven-dependency.version>3.9.0</maven-dependency.version>
+        <it.exploded.webapp>${project.build.directory}/it-webapp</it.exploded.webapp>
 
         <!-- Tomcat 10.1, not 9: Roller uses jakarta.servlet 6.0, which Tomcat 9
              (Java EE 8, javax.*) cannot run. -->
@@ -276,6 +278,43 @@ limitations under the License.
                 </executions>
             </plugin>
 
+            <!-- Unpack the WAR ourselves rather than letting Tomcat do it.
+                 Tomcat opens its HTTP connector while HostConfig is still
+                 exploding the archive on a background thread. A request that
+                 arrives inside that window sees WEB-INF/lib jars that do not
+                 exist yet, and Tomcat caches those misses: StandardRoot caches
+                 the missing resource and WebappClassLoader caches the failed
+                 class definition. The context never recovers, so cargo's ping
+                 fails for its full timeout even though the directory is complete
+                 seconds later. Whether it happens at all depends on when the
+                 first ping lands, which is what made it intermittent.
+
+                 Deploying an already-exploded directory removes the window. -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>${maven-dependency.version}</version>
+                <executions>
+                    <execution>
+                        <id>unpack-war-for-deployment</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>unpack</goal></goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.apache.roller</groupId>
+                                    <artifactId>roller-webapp</artifactId>
+                                    <version>${project.version}</version>
+                                    <type>war</type>
+                                    <outputDirectory>${it.exploded.webapp}</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                            <overWriteReleases>true</overWriteReleases>
+                            <overWriteSnapshots>true</overWriteSnapshots>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.codehaus.cargo</groupId>
                 <artifactId>cargo-maven3-plugin</artifactId>
@@ -316,6 +355,9 @@ limitations under the License.
                             <groupId>org.apache.roller</groupId>
                             <artifactId>roller-webapp</artifactId>
                             <type>war</type>
+                            <!-- The exploded directory produced above, not the
+                                 archive. See the unpack plugin for why. -->
+                            <location>${it.exploded.webapp}</location>
                             <properties>
                                 <context>${it.context.path}</context>
                             </properties>

@@ -23,6 +23,7 @@ import com.codeborne.selenide.Selenide;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.webdriver;
@@ -126,10 +127,16 @@ public abstract class RollerIT {
         $("#j_password").setValue(ADMIN_PASSWORD);
         $("#login").click();
 
-        // Let the POST and its redirect finish before navigating again. Without
-        // this the next open() can race the authentication round-trip, arrive
-        // unauthenticated, and get bounced to the front page - which shows up as
-        // one route in twenty-odd failing for no reason of its own.
+        // Wait for the login form to go away before navigating again.
+        //
+        // Settling on network silence is not enough on its own: the POST and its
+        // redirect can still be in flight when the quiet period expires, and the
+        // next open() then arrives unauthenticated and gets bounced to the front
+        // page. That showed up as one route in twenty-odd failing for a reason
+        // that had nothing to do with the route under test. Waiting on a DOM
+        // condition ties us to the thing we actually care about - that the
+        // browser has left the login page.
+        $("#j_username").should(disappear);
         BrowserHealth.current().settle();
 
         openPath(MENU_PATH);
