@@ -28,7 +28,6 @@ import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.Theme;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
-import org.apache.roller.weblogger.util.URLUtilities;
 
 
 /**
@@ -67,7 +66,7 @@ public class WeblogPreviewRequest extends WeblogPageRequest {
         
         // we may also have a specific entry to preview
         if(request.getParameter("previewEntry") != null) {
-            this.previewEntry = URLUtilities.decode(request.getParameter("previewEntry"));
+            this.previewEntry = decodeOrReject(request.getParameter("previewEntry"), request);
         }
 
         if(log.isDebugEnabled()) {

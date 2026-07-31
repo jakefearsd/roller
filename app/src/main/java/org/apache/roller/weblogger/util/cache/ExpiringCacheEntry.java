@@ -37,11 +37,24 @@ public class ExpiringCacheEntry implements Serializable {
     
     
     public ExpiringCacheEntry(Object value, long timeout) {
+        this(value, timeout, System.currentTimeMillis());
+    }
+
+
+    /**
+     * Cache an entry as if it had been created at the given time.
+     *
+     * Package private: this exists so that caches in this package (and their
+     * tests) can decide for themselves what "now" means instead of being tied
+     * to the system clock.  Expiry is the whole point of this class, and a test
+     * that has to sleep to observe it is a test that will eventually lie.
+     */
+    ExpiringCacheEntry(Object value, long timeout, long timeCached) {
         this.value = value;
         this.timeout = Math.max(0, timeout);  // make sure that we don't support negative values
-        this.timeCached = System.currentTimeMillis();
+        this.timeCached = timeCached;
     }
-    
+
     
     public long getTimeCached() {
         return this.timeCached;
@@ -59,21 +72,34 @@ public class ExpiringCacheEntry implements Serializable {
      * If the value has expired then we return null.
      */
     public Object getValue() {
-        if(this.hasExpired()) {
+        return getValue(System.currentTimeMillis());
+    }
+
+
+    /**
+     * Retrieve the value of this cache entry as of the given time.
+     */
+    Object getValue(long now) {
+        if(this.hasExpired(now)) {
             return null;
         } else {
             return this.value;
         }
     }
-    
-    
+
+
     /**
      * Determine if this cache entry has expired.
      */
     public boolean hasExpired() {
-        
-        long now = System.currentTimeMillis();
-        
+        return hasExpired(System.currentTimeMillis());
+    }
+
+
+    /**
+     * Determine if this cache entry has expired as of the given time.
+     */
+    boolean hasExpired(long now) {
         return ((this.timeCached + this.timeout) < now);
     }
     

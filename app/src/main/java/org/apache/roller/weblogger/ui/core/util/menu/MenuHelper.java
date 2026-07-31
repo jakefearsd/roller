@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,9 +57,6 @@ public final class MenuHelper {
 
     private static Map<String, ParsedMenu> menus = new HashMap<>();
 
-    // menu, menuName, tabName action/subaction check
-    private static Map<String, HashMap<String, HashSet<String>>> itemMenu = new HashMap<>();
-
     private MenuHelper() {
     }
 
@@ -66,15 +64,11 @@ public final class MenuHelper {
         try {
 
             // parse menus and cache so we can efficiently reuse them
-            String menu = "editor";
-            ParsedMenu editorMenu = unmarshall( menu,
-                MenuHelper.class.getResourceAsStream("/org/apache/roller/weblogger/ui/menu/editor-menu.xml"));
-            menus.put(menu, editorMenu);
+            menus.put("editor", unmarshall(
+                MenuHelper.class.getResourceAsStream("/org/apache/roller/weblogger/ui/menu/editor-menu.xml")));
 
-            menu = "admin";
-            ParsedMenu adminMenu = unmarshall( menu,
-                MenuHelper.class.getResourceAsStream("/org/apache/roller/weblogger/ui/menu/admin-menu.xml"));
-            menus.put(menu, adminMenu);
+            menus.put("admin", unmarshall(
+                MenuHelper.class.getResourceAsStream("/org/apache/roller/weblogger/ui/menu/admin-menu.xml")));
 
         } catch (Exception ex) {
             log.error("Error parsing menu configs", ex);
@@ -108,7 +102,9 @@ public final class MenuHelper {
         ParsedMenu menuConfig = menus.get(menuId);
         if (menuConfig != null) {
             try {
-                menu = buildMenu(menuId, menuConfig, currentAction, user, weblog);
+                menu = buildMenu(menuId, menuConfig, currentAction, user, weblog,
+                        WebloggerFactory.getWeblogger().getUserManager(),
+                        MenuHelper::getBooleanProperty);
             } catch (WebloggerException ex) {
                 log.error("ERROR: fethcing user roles", ex);
             }
@@ -118,8 +114,26 @@ public final class MenuHelper {
     }
 
     /**
+     * Returns the parsed configuration for a menu, or null if there is no such
+     * menu. Package visible so tests can assert on what the XML parsed into.
+     *
+     * @param menuId
+     *            the menu id
+     *
+     * @return the parsed menu, or null
+     */
+    static ParsedMenu getParsedMenu(String menuId) {
+        return menus.get(menuId);
+    }
+
+    /**
      * Builds the menu.
-     * 
+     *
+     * <p>The user manager and the property lookup are parameters rather than
+     * static calls so that the filtering rules -- which decide whether a user
+     * sees a menu item at all -- can be exercised without a running business
+     * tier. {@link #getMenu} supplies the real collaborators.
+     *
      * @param menuId
      *            the menu id
      * @param menuConfig
@@ -130,20 +144,24 @@ public final class MenuHelper {
      *            the user
      * @param weblog
      *            the weblog
-     * 
+     * @param umgr
+     *            the user manager used for permission checks
+     * @param propertyEnabled
+     *            resolves an enabled/disabled property name to a boolean
+     *
      * @return the menu
-     * 
+     *
      * @throws WebloggerException
      *             the weblogger exception
      */
-    private static Menu buildMenu(String menuId, ParsedMenu menuConfig,
-            String currentAction, User user, Weblog weblog)
+    static Menu buildMenu(String menuId, ParsedMenu menuConfig,
+            String currentAction, User user, Weblog weblog, UserManager umgr,
+            Predicate<String> propertyEnabled)
             throws WebloggerException {
 
         // log.debug("creating menu for action - " + currentAction);
 
         Menu tabMenu = new Menu();
-        UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
 
 
         // Hack - for blogger convenience, the design tab of the edit
@@ -160,9 +178,9 @@ public final class MenuHelper {
             // does this tab have an enabledProperty?
             boolean includeTab = true;
             if (configTab.getEnabledProperty() != null) {
-                includeTab = getBooleanProperty(configTab.getEnabledProperty());
+                includeTab = propertyEnabled.test(configTab.getEnabledProperty());
             } else if (configTab.getDisabledProperty() != null) {
-                includeTab = !getBooleanProperty(configTab.getDisabledProperty());
+                includeTab = !propertyEnabled.test(configTab.getDisabledProperty());
             }
 
             // user roles check
@@ -203,9 +221,9 @@ public final class MenuHelper {
                     boolean includeItem = true;
 
                     if (configTabItem.getEnabledProperty() != null) {
-                        includeItem = getBooleanProperty(configTabItem.getEnabledProperty());
+                        includeItem = propertyEnabled.test(configTabItem.getEnabledProperty());
                     } else if (configTabItem.getDisabledProperty() != null) {
-                        includeItem = !getBooleanProperty(configTabItem.getDisabledProperty());
+                        includeItem = !propertyEnabled.test(configTabItem.getDisabledProperty());
                     }
 
                     // user roles check
@@ -310,20 +328,21 @@ public final class MenuHelper {
 
     /**
      * Unmarshall the given input stream into our defined set of Java objects.
-     * 
-     * @param menuId
-     *            the menu id
+     *
+     * <p>Package visible so tests can parse a purpose-built menu definition
+     * without going through the two menus cached at class load.
+     *
      * @param instream
      *            the instream
-     * 
+     *
      * @return the parsed menu
-     * 
+     *
      * @throws IOException
      *             Signals that an I/O exception has occurred.
      * @throws JDOMException
      *             the jDOM exception
      */
-    private static ParsedMenu unmarshall(String menuId, InputStream instream)
+    static ParsedMenu unmarshall(InputStream instream)
             throws IOException, JDOMException {
 
         if (instream == null) {
@@ -338,7 +357,7 @@ public final class MenuHelper {
         Element root = doc.getRootElement();
         List<Element> parsedMenus = root.getChildren("menu");
         for (Element e : parsedMenus) {
-            config.addTab(elementToParsedTab(menuId, e));
+            config.addTab(elementToParsedTab(e));
         }
 
         return config;
@@ -346,15 +365,13 @@ public final class MenuHelper {
 
     /**
      * Element to parsed tab.
-     * 
-     * @param menuId
-     *            the menu id
+     *
      * @param element
      *            the element
-     * 
+     *
      * @return the parsed tab
      */
-    private static ParsedTab elementToParsedTab(String menuId, Element element) {
+    private static ParsedTab elementToParsedTab(Element element) {
 
         ParsedTab tab = new ParsedTab();
 
@@ -370,47 +387,9 @@ public final class MenuHelper {
         tab.setEnabledProperty(element.getAttributeValue("enabledProperty"));
         tab.setDisabledProperty(element.getAttributeValue("disabledProperty"));
 
-        List<Element> menuItems = element.getChildren("menu-item");
-
-        // Build our tab action relation
-        HashMap<String, HashSet<String>> menu = itemMenu.get(menuId);
-        if (menu == null) {
-            menu = new HashMap<>();
+        for (Element e : element.getChildren("menu-item")) {
+            tab.addItem(elementToParsedTabItem(e));
         }
-
-        for (Element e : menuItems) {
-
-            ParsedTabItem tabItem = elementToParsedTabItem(e);
-
-            HashSet<String> item = menu.get(tab.getName());
-            if (item != null) {
-                if (!item.contains(tabItem.getAction())) {
-                    item.add(tabItem.getAction());
-                }
-            } else {
-                item = new HashSet<>();
-                item.add(tabItem.getAction());
-            }
-
-            // Add subaction items
-            Set<String> subActions = tabItem.getSubActions();
-            if (subActions != null) {
-                for (String subAction : subActions) {
-                    if (!item.contains(subAction)) {
-                        item.add(subAction);
-                    }
-                }
-            }
-
-            // save our tab action relation
-            menu.put(tab.getName(), item);
-
-            tab.addItem(tabItem);
-
-        }
-
-        // Save relation
-        itemMenu.put(menuId, menu);
 
         return tab;
     }

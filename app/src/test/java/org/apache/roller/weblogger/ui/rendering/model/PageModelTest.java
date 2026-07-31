@@ -1,0 +1,465 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+
+package org.apache.roller.weblogger.ui.rendering.model;
+
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.MultiWeblogURLStrategy;
+import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogCategory;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogTemplate;
+import org.apache.roller.weblogger.pojos.WeblogTheme;
+import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesDayPager;
+import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesLatestPager;
+import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesMonthPager;
+import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesPager;
+import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesPermalinkPager;
+import org.apache.roller.weblogger.ui.rendering.util.WeblogEntryCommentForm;
+import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
+import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+
+/**
+ * Unit tests for {@link PageModel}, the {@code $model} object on every weblog
+ * page. Themes reach for {@code $model.weblog}, {@code $model.weblogEntry},
+ * {@code $model.permalink} and {@code $model.getWeblogEntriesPager()} on
+ * essentially every request.
+ *
+ * <p>The most consequential logic here is the choice of pager: which one gets
+ * built decides whether a URL shows one post, one day, one month or the latest
+ * entries. Getting it wrong turns a permalink into a front page, which search
+ * engines and feed readers both notice.
+ */
+class PageModelTest {
+
+    private MockedStatic<WebloggerFactory> factory;
+    private Weblogger weblogger;
+    private Weblog weblog;
+    private String previousRelativeContextURL;
+
+    @BeforeEach
+    void setUp() {
+        weblogger = mock(Weblogger.class);
+        when(weblogger.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
+        factory = mockStatic(WebloggerFactory.class);
+        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+
+        previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+
+        weblog = new Weblog("testblog", "testuser", "Test Blog", "a test blog",
+                "blog@example.com", "basic", "en_US", "UTC");
+    }
+
+    @AfterEach
+    void tearDown() {
+        WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
+        factory.close();
+    }
+
+    private WeblogPageRequest pageRequest() {
+        WeblogPageRequest request = new WeblogPageRequest();
+        request.setWeblog(weblog);
+        request.setWeblogHandle(weblog.getHandle());
+        return request;
+    }
+
+    private PageModel modelFor(WeblogPageRequest request, Map<String, Object> extras)
+            throws WebloggerException {
+        Map<String, Object> initData = new HashMap<>(extras);
+        initData.put("parsedRequest", request);
+        initData.putIfAbsent("urlStrategy", new MultiWeblogURLStrategy());
+        PageModel model = new PageModel();
+        model.init(initData);
+        return model;
+    }
+
+    private PageModel modelFor(WeblogPageRequest request) throws WebloggerException {
+        return modelFor(request, Map.of());
+    }
+
+    // ------------------------------------------------------------------ init
+
+    @Test
+    void modelIsRegisteredUnderTheNameThemesUse() {
+        assertEquals("model", new PageModel().getModelName(),
+                "Themes reference this model as $model.");
+    }
+
+    @Test
+    void initWithoutAParsedRequestFails() {
+        PageModel model = new PageModel();
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(new HashMap<>()),
+                "init() must reject init data with no request.");
+        assertTrue(thrown.getMessage().contains("weblogRequest"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
+    }
+
+    @Test
+    void initRejectsRequestsThatAreNotPageRequests() {
+        // PageModel casts the request to a WeblogPageRequest. Loading it for a
+        // feed would otherwise fail with a bare ClassCastException halfway
+        // through rendering.
+        WeblogFeedRequest feedRequest = new WeblogFeedRequest();
+        feedRequest.setWeblog(weblog);
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("parsedRequest", feedRequest);
+
+        PageModel model = new PageModel();
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "PageModel must refuse a request it cannot serve.");
+        assertTrue(thrown.getMessage().contains("WeblogPageRequest"),
+                "The failure should say which request type is required; was: "
+                        + thrown.getMessage());
+    }
+
+    @Test
+    void initFallsBackToTheConfiguredUrlStrategyWhenNoneIsSupplied() throws Exception {
+        // Only the preview renderer supplies its own strategy; everything else
+        // relies on this fallback. Without it every link on the page is null.
+        URLStrategy configured = mock(URLStrategy.class);
+        when(configured.getWeblogCollectionURL(any(), any(), any(), any(), any(),
+                anyInt(), anyBoolean())).thenReturn("/from-the-configured-strategy");
+        when(weblogger.getUrlStrategy()).thenReturn(configured);
+
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("parsedRequest", pageRequest());
+        PageModel model = new PageModel();
+        model.init(initData);
+
+        assertEquals("/from-the-configured-strategy",
+                model.getWeblogEntriesPager().getHomeLink(),
+                "With no 'urlStrategy' in the init data the model must fall back to "
+                        + "WebloggerFactory's strategy.");
+    }
+
+    // ---------------------------------------------------------- request data
+
+    @Test
+    void theModelExposesTheRequestsLocaleAndWeblog() throws Exception {
+        WeblogPageRequest request = pageRequest();
+        request.setLocale("fr_FR");
+
+        PageModel model = modelFor(request);
+
+        assertEquals("fr_FR", model.getLocale(),
+                "$model.locale drives which translation a theme renders.");
+        assertEquals("testblog", model.getWeblog().getHandle(),
+                "$model.weblog must be the blog the request is for.");
+    }
+
+    @Test
+    void permalinkIsTrueOnlyWhenTheRequestNamesAnEntry() throws Exception {
+        assertFalse(modelFor(pageRequest()).isPermalink(),
+                "A collection view is not a permalink.");
+
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogAnchor("hello-world");
+        assertTrue(modelFor(request).isPermalink(),
+                "$model.permalink gates the comment form and the canonical link tag.");
+    }
+
+    @Test
+    void aPlainPageIsNeverSearchResults() throws Exception {
+        // SearchResultsModel overrides this; the base page must say no, or every
+        // page would render the "results for ..." heading.
+        assertFalse(modelFor(pageRequest()).isSearchResults(),
+                "PageModel itself never represents search results.");
+    }
+
+    @Test
+    void theWeblogEntryIsExposedOnlyWhenTheRequestResolvedOne() throws Exception {
+        assertNull(modelFor(pageRequest()).getWeblogEntry(),
+                "With no entry on the request $model.weblogEntry must be null so the "
+                        + "theme's #if guard works.");
+
+        WeblogEntry entry = new WeblogEntry();
+        entry.setAnchor("hello-world");
+        entry.setTitle("Hello World");
+        entry.setWebsite(weblog);
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogAnchor("hello-world");
+        request.setWeblogEntry(entry);
+
+        assertEquals("Hello World", modelFor(request).getWeblogEntry().getTitle(),
+                "The wrapped entry must be the one the request resolved.");
+    }
+
+    @Test
+    void theWeblogCategoryIsExposedOnlyWhenTheRequestResolvedOne() throws Exception {
+        assertNull(modelFor(pageRequest()).getWeblogCategory(),
+                "A category name that matches nothing must yield null, not a blank "
+                        + "wrapper.");
+
+        WeblogCategory category = new WeblogCategory();
+        category.setName("Java");
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogCategoryName("Java");
+        request.setWeblogCategory(category);
+
+        assertEquals("Java", modelFor(request).getWeblogCategory().getName(),
+                "The wrapped category must be the one the request resolved.");
+    }
+
+    @Test
+    void theRequestedTagsAreExposedAsIs() throws Exception {
+        assertNull(modelFor(pageRequest()).getTags(),
+                "No /tags/ in the URL means no tag list.");
+
+        WeblogPageRequest request = pageRequest();
+        request.setTags(List.of("java", "roller"));
+        assertEquals(List.of("java", "roller"), modelFor(request).getTags(),
+                "$model.tags is what a theme prints as 'showing posts tagged ...'.");
+    }
+
+    @Test
+    void theNamedTemplateIsExposedWhenTheRequestAsksForOne() throws Exception {
+        WeblogTemplate template = new WeblogTemplate();
+        template.setName("Sidebar");
+        template.setLink("sidebar");
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogPageName("sidebar");
+        request.setWeblogPage(template);
+
+        assertEquals("Sidebar", modelFor(request).getWeblogPage().getName(),
+                "$model.weblogPage must be the template the URL named.");
+    }
+
+    @Test
+    void withNoNamedTemplateTheThemesDefaultIsUsed() throws Exception {
+        // Every blog URL that is not /page/<something> renders through the
+        // theme's default template, so $model.weblogPage must resolve to it.
+        WeblogTemplate template = new WeblogTemplate();
+        template.setName("Weblog");
+        template.setLink("weblog");
+        WeblogTheme theme = mock(WeblogTheme.class);
+        when(theme.getDefaultTemplate()).thenReturn(template);
+        Weblog themed = mock(Weblog.class);
+        when(themed.getTheme()).thenReturn(theme);
+
+        WeblogPageRequest request = new WeblogPageRequest();
+        request.setWeblog(themed);
+
+        assertEquals("Weblog", modelFor(request).getWeblogPage().getName(),
+                "With no template named in the URL the theme's default must be used.");
+    }
+
+    @Test
+    void aThemeThatCannotSupplyADefaultTemplateYieldsNull() throws Exception {
+        // A broken or half-uploaded custom theme must not take the page down; the
+        // renderer above this decides what to do about the missing template.
+        WeblogTheme theme = mock(WeblogTheme.class);
+        when(theme.getDefaultTemplate()).thenThrow(new WebloggerException("no templates"));
+        Weblog themed = mock(Weblog.class);
+        when(themed.getTheme()).thenReturn(theme);
+
+        WeblogPageRequest request = new WeblogPageRequest();
+        request.setWeblog(themed);
+
+        assertNull(modelFor(request).getWeblogPage(),
+                "A theme that cannot supply a default template must yield null "
+                        + "rather than propagating out of the renderer.");
+    }
+
+    // ---------------------------------------------------------- comment form
+
+    @Test
+    void theCommentFormFromTheRequestIsHandedStraightBack() throws Exception {
+        // After a failed or previewed submission the renderer passes the form
+        // back in so the visitor does not lose what they typed.
+        WeblogEntryCommentForm submitted = new WeblogEntryCommentForm();
+        submitted.setName("Alice");
+
+        PageModel model = modelFor(pageRequest(), Map.of("commentForm", submitted));
+
+        assertSame(submitted, model.getCommentForm(),
+                "The submitted form must survive the round trip, otherwise a visitor "
+                        + "whose comment failed validation retypes it from scratch.");
+    }
+
+    @Test
+    void anEmptyCommentFormIsCreatedOnceAndReused() throws Exception {
+        PageModel model = modelFor(pageRequest());
+
+        WeblogEntryCommentForm first = model.getCommentForm();
+        assertNotNull(first, "A page with no submission still needs a blank form.");
+        assertSame(first, model.getCommentForm(),
+                "Repeat references to $model.commentForm inside one template must see "
+                        + "the same object.");
+    }
+
+    // ------------------------------------------------------ request parameters
+
+    @Test
+    void requestParametersAreExposedByName() throws Exception {
+        Map<String, String[]> params = Map.of(
+                "page", new String[]{"2", "3"},
+                "empty", new String[0]);
+
+        PageModel model = modelFor(pageRequest(), Map.of("requestParameters", params));
+
+        assertEquals("2", model.getRequestParameter("page"),
+                "The first value wins when a parameter is repeated.");
+        assertNull(model.getRequestParameter("empty"),
+                "A parameter present but valueless must read as null.");
+        assertNull(model.getRequestParameter("absent"),
+                "An absent parameter must read as null.");
+    }
+
+    @Test
+    void requestParametersReadAsNullWhenTheRendererPassedNone() throws Exception {
+        // Feeds and previews do not pass a parameter map at all.
+        assertNull(modelFor(pageRequest()).getRequestParameter("page"),
+                "With no parameter map the accessor must return null, not throw.");
+    }
+
+    // ----------------------------------------------------------------- pagers
+
+    @Test
+    void anAnchorInTheRequestSelectsThePermalinkPager() throws Exception {
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogAnchor("hello-world");
+
+        assertInstanceOf(WeblogEntriesPermalinkPager.class,
+                modelFor(request).getWeblogEntriesPager(),
+                "A permalink URL must show exactly one entry.");
+    }
+
+    @Test
+    void anEightCharacterDateSelectsTheDayPager() throws Exception {
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogDate("20240115");
+
+        assertInstanceOf(WeblogEntriesDayPager.class,
+                modelFor(request).getWeblogEntriesPager(),
+                "/date/YYYYMMDD is a single day's archive.");
+    }
+
+    @Test
+    void aSixCharacterDateSelectsTheMonthPager() throws Exception {
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogDate("202401");
+
+        assertInstanceOf(WeblogEntriesMonthPager.class,
+                modelFor(request).getWeblogEntriesPager(),
+                "/date/YYYYMM is a month's archive.");
+    }
+
+    @Test
+    void aDateOfAnyOtherLengthFallsBackToTheLatestPager() throws Exception {
+        // Only 6 and 8 characters are meaningful; anything else must not be
+        // mistaken for an archive request.
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogDate("2024");
+
+        assertInstanceOf(WeblogEntriesLatestPager.class,
+                modelFor(request).getWeblogEntriesPager(),
+                "An unrecognised date must degrade to the latest-entries view.");
+    }
+
+    @Test
+    void aPlainRequestSelectsTheLatestPager() throws Exception {
+        assertInstanceOf(WeblogEntriesLatestPager.class,
+                modelFor(pageRequest()).getWeblogEntriesPager(),
+                "The blog home page shows the latest entries.");
+    }
+
+    @Test
+    void anExplicitCategoryArgumentOverridesTheOneInTheUrl() throws Exception {
+        // $model.getWeblogEntriesPager("Java") inside a sidebar must be able to
+        // show a different category from the one the visitor navigated to.
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogCategoryName("News");
+
+        WeblogEntriesPager pager = modelFor(request).getWeblogEntriesPager("Java");
+
+        assertTrue(pager.getHomeLink().contains("category/Java"),
+                "The argument must win over the request's category; link was: "
+                        + pager.getHomeLink());
+    }
+
+    @Test
+    void theNilAndEmptyCategoryArgumentsMeanUseWhateverTheUrlSaid() throws Exception {
+        // "nil" is the documented way for a theme to say "no override" because
+        // Velocity has no null literal. An empty string means the same.
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogCategoryName("News");
+
+        assertTrue(modelFor(request).getWeblogEntriesPager("nil").getHomeLink()
+                        .contains("category/News"),
+                "'nil' must not become a literal category name.");
+        assertTrue(modelFor(request).getWeblogEntriesPager("").getHomeLink()
+                        .contains("category/News"),
+                "An empty override must not blank out the request's category.");
+    }
+
+    @Test
+    void anExplicitTagArgumentReplacesTheTagsInTheUrl() throws Exception {
+        WeblogPageRequest request = pageRequest();
+        request.setTags(List.of("news"));
+
+        WeblogEntriesPager pager = modelFor(request).getWeblogEntriesPagerByTag("java");
+
+        assertTrue(pager.getHomeLink().contains("tags/java"),
+                "$model.getWeblogEntriesPagerByTag('java') must show that tag; link "
+                        + "was: " + pager.getHomeLink());
+    }
+
+    @Test
+    void theNilAndEmptyTagArgumentsLeaveTheUrlsTagsAlone() throws Exception {
+        WeblogPageRequest request = pageRequest();
+        request.setTags(List.of("news"));
+
+        assertTrue(modelFor(request).getWeblogEntriesPagerByTag("nil").getHomeLink()
+                        .contains("tags/news"),
+                "'nil' must not become a literal tag.");
+        assertTrue(modelFor(request).getWeblogEntriesPagerByTag("").getHomeLink()
+                        .contains("tags/news"),
+                "An empty override must not blank out the request's tags.");
+    }
+}

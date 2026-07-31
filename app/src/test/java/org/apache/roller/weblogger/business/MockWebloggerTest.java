@@ -69,14 +69,42 @@ class MockWebloggerTest {
     }
 
     @Test
-    void uninstallLeavesTheFactoryUnbootstrapped() {
+    void uninstallRestoresWhateverWasInstalledBefore() {
+        // The database-backed tests bootstrap a real Weblogger into this same
+        // static field and reuse it for the whole JVM, so uninstall() restores
+        // the previous provider rather than clearing it. Nesting proves the
+        // restore actually happens rather than the field merely being non-null.
+        MockWeblogger outer = MockWeblogger.install();
+        assertSame(outer.weblogger(), WebloggerFactory.getWeblogger());
+
+        MockWeblogger inner = MockWeblogger.install();
+        assertSame(inner.weblogger(), WebloggerFactory.getWeblogger(),
+                "the second install must take over");
+
+        MockWeblogger.uninstall();
+        assertSame(outer.weblogger(), WebloggerFactory.getWeblogger(),
+                "uninstall must hand the factory back to the provider that was "
+                        + "installed before, not null and not the inner mock");
+
+        MockWeblogger.uninstall();
+    }
+
+    @Test
+    void uninstallingWithNothingPreviouslyInstalledLeavesTheFactoryUnbootstrapped() {
+        // Guard the other direction: in a JVM where no real Weblogger was ever
+        // bootstrapped, uninstall must leave the factory refusing service rather
+        // than holding a stale mock.
+        WebloggerProvider before = WebloggerFactory.currentProvider();
+        WebloggerFactory.installProvider(null);
+
         MockWeblogger.install();
         MockWeblogger.uninstall();
 
         assertFalse(WebloggerFactory.isBootstrapped(),
-                "uninstall() must clear the provider; the factory is static, so a leaked "
-                        + "mock would silently serve whatever test runs next in this JVM");
+                "with no prior provider, uninstall must leave the factory unbootstrapped");
         assertThrows(IllegalStateException.class, WebloggerFactory::getWeblogger,
                 "an unbootstrapped factory must still refuse to hand out a Weblogger");
+
+        WebloggerFactory.installProvider(before);
     }
 }

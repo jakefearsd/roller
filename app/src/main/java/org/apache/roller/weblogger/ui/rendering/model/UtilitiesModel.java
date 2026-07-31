@@ -22,8 +22,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -233,11 +231,6 @@ public class UtilitiesModel implements Model {
     
     public String replace(String src, String target, String rWith, int maxCount) {
         return StringUtils.replace(src, target, rWith, maxCount);
-    }
-    
-    private String replace(String string, Pattern pattern, String replacement) {
-        Matcher m = pattern.matcher(string);
-        return m.replaceAll(replacement);
     }
     
     /**

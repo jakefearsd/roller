@@ -135,7 +135,9 @@ public class ProfileController extends BaseController {
 
     private void myValidate(HttpServletRequest request, Model model, ProfileBean bean) {
         if (!StringUtils.equals(bean.getPasswordText(), bean.getPasswordConfirm())) {
-            addError(model, "userRegister.error.mismatchedPasswords", request);
+            // userRegister.* went away with public self-registration; this page
+            // has its own key for the same message.
+            addError(model, "yourProfile.passwordsNotSame", request);
         }
 
         // validate timezone

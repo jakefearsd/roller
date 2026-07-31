@@ -231,10 +231,12 @@ public class Utilities {
             String link = html.substring(start, end);
             buf.append(html.substring(0, start));
             if (link.contains("rel=\"nofollow\"")) {
+                // already tagged, leave it alone rather than emitting a second
+                // rel attribute (invalid HTML; browsers honour only the first)
+                buf.append(link);
+            } else {
                 buf.append(link.substring(0, link.length() - 1)
                         + " rel=\"nofollow\">");
-            } else {
-                buf.append(link);
             }
             html = html.substring(end, html.length());
             m = mLinkPattern.matcher(html);
@@ -654,10 +656,6 @@ public class Utilities {
                 // get all the HTML from original str after loc
                 str3 = extractHTML(str.substring(loc));
 
-                // remove any tags which generate visible HTML
-                // This call is unecessary, all HTML has already been stripped
-                // str3 = removeVisibleHTMLTags(str3);
-
                 // append the appendToEnd String and
                 // add extracted HTML back onto truncated string
                 str = str2 + appendToEnd + str3;
@@ -702,103 +700,6 @@ public class Utilities {
             str = str2 + appendToEnd;
         }
         return str;
-    }
-
-    /**
-     * @param str
-     * @return
-     */
-    private static String stripLineBreaks(String str) {
-        // TODO: use a string buffer, ignore case !
-        str = str.replace("<br>", "");
-        str = str.replace("<br/>", "");
-        str = str.replace("<br />", "");
-        str = str.replace("<p></p>", "");
-        str = str.replace("<p/>", "");
-        str = str.replace("<p />", "");
-        return str;
-    }
-
-    /**
-     * Need need to get rid of any user-visible HTML tags once all text has been
-     * removed such as &lt;BR&gt;. This sounds like a better approach than
-     * removing all HTML tags and taking the chance to leave some tags
-     * un-closed.
-     * 
-     * WARNING: this method has serious performance problems a
-     * 
-     * @author Alexis Moussine-Pouchkine
-     *         (alexis.moussine-pouchkine@france.sun.com)
-     * @author Lance Lavandowska
-     * @param str
-     *            the String object to modify
-     * @return the new String object without the HTML "visible" tags
-     */
-    private static String removeVisibleHTMLTags(String str) {
-        str = stripLineBreaks(str);
-        StringBuilder result = new StringBuilder(str);
-        StringBuilder lcresult = new StringBuilder(str.toLowerCase());
-
-        // <img should take care of smileys, others to add?
-        String[] visibleTags = { "<img" };
-        int stringIndex;
-        for (int j = 0; j < visibleTags.length; j++) {
-            while ((stringIndex = lcresult.indexOf(visibleTags[j])) != -1) {
-                if (visibleTags[j].endsWith(">")) {
-                    result.delete(stringIndex,
-                            stringIndex + visibleTags[j].length());
-                    lcresult.delete(stringIndex,
-                            stringIndex + visibleTags[j].length());
-                } else {
-                    // need to delete everything up until next closing '>', for
-                    // <img for instance
-                    int endIndex = result.indexOf(">", stringIndex);
-                    if (endIndex > -1) {
-                        // only delete it if we find the end! If we don't the
-                        // HTML may be messed up, but we
-                        // can't safely delete anything.
-                        result.delete(stringIndex, endIndex + 1);
-                        lcresult.delete(stringIndex, endIndex + 1);
-                    }
-                }
-            }
-        }
-
-        // TODO: This code is buggy by nature. It doesn't deal with nesting of
-        // tags properly.
-        // remove certain elements with open & close tags, more available?
-        String[] openCloseTags = { "li", "a", "div", "h1", "h2", "h3", "h4" };
-        for (int j = 0; j < openCloseTags.length; j++) {
-            // could this be better done with a regular expression?
-            String closeTag = "</" + openCloseTags[j] + ">";
-            int lastStringIndex = 0;
-            while ((stringIndex = lcresult.indexOf("<" + openCloseTags[j],
-                    lastStringIndex)) > -1) {
-                lastStringIndex = stringIndex;
-                // Try to find the matching closing tag (ignores possible
-                // nesting!)
-                int endIndex = lcresult.indexOf(closeTag, stringIndex);
-                if (endIndex > -1) {
-                    // If we found it delete it.
-                    result.delete(stringIndex, endIndex + closeTag.length());
-                    lcresult.delete(stringIndex, endIndex + closeTag.length());
-                } else {
-                    // Try to see if it is a self-closed empty content tag, i.e.
-                    // closed with />.
-                    endIndex = lcresult.indexOf(">", stringIndex);
-                    int nextStart = lcresult.indexOf("<", stringIndex + 1);
-                    if (endIndex > stringIndex
-                            && lcresult.charAt(endIndex - 1) == '/'
-                            && (endIndex < nextStart || nextStart == -1)) {
-                        // Looks like it, so remove it.
-                        result.delete(stringIndex, endIndex + 1);
-                        lcresult.delete(stringIndex, endIndex + 1);
-                    }
-                }
-            }
-        }
-
-        return result.toString();
     }
 
     /**

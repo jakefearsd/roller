@@ -168,20 +168,24 @@ public final class I18nMessages {
 	 */
 	public static void reloadBundle(Locale key) {
 
+		// Drop our own cached instance first. This is the part that decides
+		// what callers actually get, so it must not be skipped when one of the
+		// cache-clearing calls below fails.
+		messagesMap.remove(key);
+
 		try {
 
-			Class<?> type = ResourceBundle.class;
-			Field cacheList = type.getDeclaredField("cacheList");
-
-			synchronized (cacheList) {
-				cacheList.setAccessible(true);
-				((Map<?, ?>) cacheList.get(ResourceBundle.class)).clear();
+			// ResourceBundle.clearCache has been the supported way to do this
+			// since Java 6. The previous implementation reached into the
+			// private ResourceBundle.cacheList field by reflection, which the
+			// JDK now refuses: the call threw before the cached instance was
+			// evicted, so "reload messages" quietly did nothing at all.
+			ClassLoader loader = I18nMessages.class.getClassLoader();
+			if (loader != null) {
+				ResourceBundle.clearCache(loader);
 			}
 
 			clearTomcatCache();
-
-			// Remove cached bundle
-			messagesMap.remove(key);
 
 		} catch (Exception e) {
 			LOG.error("Error clearing message resource bundles", e);

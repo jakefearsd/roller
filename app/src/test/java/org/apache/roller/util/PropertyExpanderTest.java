@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Unit test for org.apache.roller.weblogger.util.PropertyExpander.
@@ -48,6 +49,13 @@ class PropertyExpanderTest  {
         assertEquals(expanded,
             "String with value one and value two and $2 and ${undefined.property} and some stuff.",
             "Expanded string doesn't match expected");
+    }
+
+    @Test
+    void nullInputExpandsToNull() {
+        // Documented contract: callers pass optional configuration values
+        // straight in, so null has to come back rather than throw.
+        assertNull(PropertyExpander.expandProperties(null, props));
     }
 
     @Test

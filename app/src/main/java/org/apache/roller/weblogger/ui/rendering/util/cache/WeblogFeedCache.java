@@ -18,9 +18,6 @@
 
 package org.apache.roller.weblogger.ui.rendering.util.cache;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
-import org.apache.roller.weblogger.util.Utilities;
 import org.apache.roller.weblogger.util.cache.Cache;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.util.cache.LazyExpiringCacheEntry;
@@ -54,9 +50,20 @@ public final class WeblogFeedCache {
     
     
     private WeblogFeedCache() {
-        
-        cacheEnabled = WebloggerConfig.getBooleanProperty(CACHE_ID+".enabled");
-        
+        this(WebloggerConfig.getBooleanProperty(CACHE_ID+".enabled"));
+    }
+
+
+    /**
+     * Package private so that tests can build an instance with caching turned
+     * off. The singleton reads that flag once, when the class is loaded, and
+     * running with the feed cache disabled is a supported (and, in development,
+     * the usual) configuration.
+     */
+    WeblogFeedCache(boolean cacheEnabled) {
+
+        this.cacheEnabled = cacheEnabled;
+
         Map<String, String> cacheProps = new HashMap<>();
         cacheProps.put("id", CACHE_ID);
         
@@ -151,49 +158,49 @@ public final class WeblogFeedCache {
      * Generate a cache key from a parsed weblog feed request.
      * This generates a key of the form ...
      *
-     * <handle>/<type>/<format>/<term>[/category][/language][/excerpts]
+     * <handle>/<type>/<format>[/search/<term>][/cat/<category>][/tags/<tags>][/language][/excerpts]
      *
      * examples ...
      *
-     * foo/entries/rss/en
-     * foo/comments/rss/MyCategory/en
-     * foo/entries/atom/en/excerpts
+     * cache.weblogfeed:foo/entries/rss/en
+     * cache.weblogfeed:foo/comments/rss/cat/MyCategory/en
+     * cache.weblogfeed:foo/entries/atom/en/excerpts
      *
+     * Every segment built from request data is labelled and escaped: a search
+     * for "foo/en" must not produce the key of the English feed for "foo".
      */
     public String generateKey(WeblogFeedRequest feedRequest) {
-        
+
         StringBuilder key = new StringBuilder(128);
-        
+
         key.append(CACHE_ID).append(':');
         key.append(feedRequest.getWeblogHandle());
-        
+
         key.append('/').append(feedRequest.getType());
         key.append('/').append(feedRequest.getFormat());
-        
+
         if (feedRequest.getTerm() != null) {
-            key.append("/search/").append(feedRequest.getTerm());
+            // arbitrary text straight off the query string
+            key.append("/search/").append(CacheKeys.encode(feedRequest.getTerm()));
         }
-        
+
         if(feedRequest.getWeblogCategoryName() != null) {
-            String cat = URLEncoder.encode(feedRequest.getWeblogCategoryName(), StandardCharsets.UTF_8);
-            key.append('/').append(cat);
+            key.append("/cat/").append(CacheKeys.encode(feedRequest.getWeblogCategoryName()));
         }
-        
+
         if(feedRequest.getTags() != null && !feedRequest.getTags().isEmpty()) {
-            String[] tags = feedRequest.getTags().toArray(new String[0]);
-            Arrays.sort(tags);
-            key.append("/tags/").append(Utilities.stringArrayToString(tags,"+"));
-        }        
-        
+            key.append("/tags/").append(CacheKeys.tags(feedRequest.getTags()));
+        }
+
         if(feedRequest.getLocale() != null) {
             key.append('/').append(feedRequest.getLocale());
         }
-        
+
         if(feedRequest.isExcerpts()) {
             key.append("/excerpts");
         }
-        
+
         return key.toString();
     }
-    
+
 }

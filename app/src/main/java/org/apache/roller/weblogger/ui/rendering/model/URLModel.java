@@ -214,7 +214,7 @@ public class URLModel implements Model {
     
     
     public String tags(List<String> tags, int pageNum) {
-        return urlStrategy.getWeblogCollectionURL(weblog, locale, null, null, tags, -1, true);
+        return urlStrategy.getWeblogCollectionURL(weblog, locale, null, null, tags, pageNum, true);
     }
     
     

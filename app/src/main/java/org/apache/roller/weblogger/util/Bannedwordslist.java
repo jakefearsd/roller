@@ -26,9 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -49,7 +46,7 @@ import org.apache.roller.util.DateUtil;
  * strings against the bannedwordslist and (optionally) addition bannedwordslists.
  * <br />
  * First looks for bannedwordslist.txt in uploads directory, than in classpath
- * as /bannedwordslist.txt. Download from web feature disabled.
+ * as /bannedwordslist.txt.
  * <br />
  * Bannedwordslist is formatted one entry per line.
  * Any line that begins with # is considered to be a comment. 
@@ -69,9 +66,6 @@ public final class Bannedwordslist {
     private static final String BANNEDWORDSLIST_FILE = "bannedwordslist.txt";
     private static final String LAST_UPDATE_STR = "Last update:";
 
-    /** We no longer have a bannedwordslist update URL */
-    private static final String BANNEDWORDSLIST_URL = null;
-
     private Date lastModified = null;
     private final List<String> bannedwordslistStr = new ArrayList<>();
     private final List<Pattern> bannedwordslistRegex = new ArrayList<>();
@@ -83,8 +77,12 @@ public final class Bannedwordslist {
         bannedwordslist.loadBannedwordslistFromFile(null);
     }
     
-    /** Hide constructor */
-    private Bannedwordslist() {
+    /**
+     * Hidden constructor; package-private rather than private so that tests
+     * can build an isolated list instead of loading rules into the singleton,
+     * whose rules accumulate for the life of the JVM.
+     */
+    Bannedwordslist() {
     }
       
     /** Singleton factory method. */
@@ -92,88 +90,6 @@ public final class Bannedwordslist {
         return bannedwordslist;
     }
     
-    /** Non-Static update method. */
-    public void update() {
-        if (BANNEDWORDSLIST_URL != null) {
-            boolean bannedwordslist_updated = this.downloadBannedwordslist();
-            if (bannedwordslist_updated) {
-                this.loadBannedwordslistFromFile(null);
-            }
-        }
-    }
-        
-    /** Download the MT bannedwordslist from the web to our uploads directory. */
-    private boolean downloadBannedwordslist() {
-        
-        boolean bannedwordslistUpdated = false;
-        try {
-            mLogger.debug("Attempting to download MT bannedwordslist");
-            
-            URL url = new URL(BANNEDWORDSLIST_URL);
-            HttpURLConnection connection = 
-                    (HttpURLConnection) url.openConnection();
-            
-            // after spending way too much time debugging i've discovered
-            // that the bannedwordslist server is selective based on the User-Agent
-            // header.  without this header set i always get a 403 response :(
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0");
-            
-            if (this.lastModified != null) {
-                connection.setRequestProperty("If-Modified-Since",
-                        DateUtil.formatRfc822(this.lastModified));
-            }
-            
-            int responseCode = connection.getResponseCode();
-            
-            mLogger.debug("HttpConnection response = "+responseCode);
-            
-            // did the connection return NotModified? If so, no need to parse
-            if (responseCode == HttpURLConnection.HTTP_NOT_MODIFIED) {
-                mLogger.debug("MT bannedwordslist site says we are current");
-                return false;
-            }
-            
-            // did the connection return a LastModified header?
-            long lastModifiedLong = 
-                    connection.getHeaderFieldDate("Last-Modified", -1);
-            
-            // if the file is newer than our current then we need do update it
-            if (responseCode == HttpURLConnection.HTTP_OK &&
-                    (this.lastModified == null ||
-                    this.lastModified.getTime() < lastModifiedLong)) {
-
-                mLogger.debug("my last modified = " + (this.lastModified == null ? "(null)" :
-                        this.lastModified.getTime()));
-                mLogger.debug("MT last modified = " + lastModifiedLong);
-                
-                // save the new bannedwordslist
-                try (InputStream instream = connection.getInputStream()) {
-                    String uploadDir = WebloggerConfig.getProperty("uploads.dir");
-                    String path = uploadDir + File.separator + BANNEDWORDSLIST_FILE;
-                    
-                    mLogger.debug("writing updated MT bannedwordslist to "+path);
-                    
-                    // read from url and write to file
-                    try (FileOutputStream outstream = new FileOutputStream(path)) {
-                        instream.transferTo(outstream);
-                    }
-                }
-                
-                bannedwordslistUpdated = true;
-                
-                mLogger.debug("MT bannedwordslist download completed.");
-                
-            } else {
-                mLogger.debug("bannedwordslist *NOT* saved, assuming we are current");
-            }
-            
-        } catch (Exception e) {
-            mLogger.error("error downloading bannedwordslist", e);
-        }
-        
-        return bannedwordslistUpdated;
-    }
-        
     /**
      * Load the MT bannedwordslist from the file system.
      * We look for a previously downloaded version of the bannedwordslist first and
@@ -266,8 +182,9 @@ public final class Bannedwordslist {
         // line has a comment?
         if (str.indexOf('#') > 0) {
             int commentLoc = str.indexOf('#');
-            // strip comment
-            rule = str.substring(0, commentLoc-1).trim();
+            // strip comment; cut at the '#' itself, not one character before
+            // it, or a rule written as "word# note" loses its last letter
+            rule = str.substring(0, commentLoc).trim();
         }
 
         // regex rule?

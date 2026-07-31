@@ -21,7 +21,6 @@ package org.apache.roller.weblogger.ui.rendering.util;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.util.URLUtilities;
 
 
 /**
@@ -76,7 +75,7 @@ public class WeblogResourceRequest extends WeblogRequest {
             this.resourcePath = this.resourcePath.replace("+", "%2B");
             
             // now we really decode the URL
-            this.resourcePath = URLUtilities.decode(this.resourcePath);
+            this.resourcePath = decodeOrReject(this.resourcePath, request);
         
         } else {
             throw new InvalidRequestException("invalid resource path info, "+

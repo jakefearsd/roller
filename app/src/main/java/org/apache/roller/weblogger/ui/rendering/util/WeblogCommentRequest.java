@@ -18,8 +18,6 @@
 
 package org.apache.roller.weblogger.ui.rendering.util;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -86,7 +84,7 @@ public class WeblogCommentRequest extends WeblogRequest {
                 
                 String context = pathElements[0];
                 if("entry".equals(context)) {
-                    this.weblogAnchor = URLDecoder.decode(pathElements[1], StandardCharsets.UTF_8);
+                    this.weblogAnchor = decodeOrReject(pathElements[1], request);
                 } else {
                     throw new InvalidRequestException("bad path info, "+
                             request.getRequestURL());

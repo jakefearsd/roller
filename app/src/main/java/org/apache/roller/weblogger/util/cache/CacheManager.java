@@ -193,6 +193,20 @@ public final class CacheManager {
     }
     
     
+    /**
+     * The live handler registry.
+     *
+     * Package private, and there for the tests in this package: handlers are
+     * registered for the life of the JVM and there is no way to take one back
+     * out, so a test that wants to observe a fan-out in isolation has to
+     * snapshot this set, empty it, and put it back afterwards.  Production code
+     * should call {@link #registerHandler} and nothing else.
+     */
+    static Set<CacheHandler> handlers() {
+        return cacheHandlers;
+    }
+
+
     public static void invalidate(WeblogEntry entry) {
         
         log.debug("invalidating entry = "+entry.getAnchor());

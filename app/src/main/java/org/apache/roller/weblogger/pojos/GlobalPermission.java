@@ -137,10 +137,6 @@ public class GlobalPermission extends RollerPermission {
         return false;
     }
     
-    private boolean actionImplies(String action1, String action2) {
-        return action1.equals(ADMIN) || (action1.equals(WEBLOG) && action2.equals(LOGIN));
-    }
-    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

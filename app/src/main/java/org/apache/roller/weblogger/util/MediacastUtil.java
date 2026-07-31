@@ -78,6 +78,12 @@ public final class MediacastUtil {
         } catch (MalformedURLException mfue) {
             LOG.debug("Malformed MediaCast url: " + url);
             throw new MediacastException(BAD_URL, "weblogEdit.mediaCastUrlMalformed", mfue);
+        } catch (MediacastException me) {
+            // Already diagnosed above (bad response, or missing content type or
+            // length). Without this the generic handler below would swallow it
+            // and the editor would report "failed fetching info" for every
+            // failure, whatever actually went wrong.
+            throw me;
         } catch (Exception e) {
             LOG.error("ERROR while checking MediaCast URL: " + url + ": " + e.getMessage());
             throw new MediacastException(CHECK_FAILED, "weblogEdit.mediaCastFailedFetchingInfo", e);

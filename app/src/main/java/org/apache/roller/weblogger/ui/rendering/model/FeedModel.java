@@ -44,8 +44,20 @@ import org.apache.roller.weblogger.util.URLUtilities;
  */
 public class FeedModel implements Model {
     
-    private static final int DEFAULT_ENTRIES = WebloggerRuntimeConfig.getIntProperty("site.newsfeeds.defaultEntries");
-    
+    /**
+     * How many entries a feed carries, read fresh on every request.
+     *
+     * <p>This used to be a {@code static final} field initialised when the class
+     * was first loaded. That made the value depend on whether the runtime
+     * properties table happened to be reachable at class-load time, and meant an
+     * administrator changing the setting in the admin UI saw no effect until the
+     * application was restarted. {@code ConfigModel.getFeedSize()} has always
+     * read it live; this keeps the two consistent.
+     */
+    private static int defaultEntries() {
+        return WebloggerRuntimeConfig.getIntProperty("site.newsfeeds.defaultEntries");
+    }
+
     private WeblogFeedRequest feedRequest = null;
     private URLStrategy urlStrategy = null;
     private Weblog weblog = null;
@@ -149,7 +161,36 @@ public class FeedModel implements Model {
      */
     public List<String> getTags() {
         return feedRequest.getTags();
-    }    
+    }
+
+    /**
+     * Add the filters this feed was requested with to a set of URL parameters,
+     * so that a link built from them stays inside the same slice of the blog.
+     *
+     * <p>Returns a copy rather than mutating the argument: {@code AbstractPager}
+     * builds its next/previous links from {@code Map.of("page", ...)}, which is
+     * immutable, so writing into it threw {@code UnsupportedOperationException}
+     * and broke paging on every filtered feed.
+     */
+    private static Map<String, String> withFeedFilters(WeblogFeedRequest feedRequest,
+            Map<String, String> params) {
+
+        Map<String, String> withFilters = new HashMap<>(params);
+
+        List<String> tags = feedRequest.getTags();
+        if(tags != null && !tags.isEmpty()) {
+            withFilters.put("tags", URLUtilities.getEncodedTagsString(tags));
+        }
+        String category = feedRequest.getWeblogCategoryName();
+        if(category != null && !category.isBlank()) {
+            withFilters.put("cat", URLUtilities.encode(category));
+        }
+        if(feedRequest.isExcerpts()) {
+            withFilters.put("excerpts", "true");
+        }
+
+        return withFilters;
+    }
 
     public class FeedEntriesPager extends WeblogEntriesListPager {
         
@@ -160,32 +201,21 @@ public class FeedModel implements Model {
                     feedRequest.getLocale(), feedRequest.getType(),
                     feedRequest.getFormat(), null, null, null, false, true), 
                     feedRequest.getWeblog(), null, feedRequest.getWeblogCategoryName(), feedRequest.getTags(),
-                    feedRequest.getLocale(), -1, feedRequest.getPage(), DEFAULT_ENTRIES);
+                    feedRequest.getLocale(), -1, feedRequest.getPage(), defaultEntries());
             this.feedRequest = feedRequest;
         }
         
         @Override
         protected String createURL(String url, Map<String, String> params) {
-            List<String> tags = feedRequest.getTags();
-            if(tags != null && !tags.isEmpty()) {
-                params.put("tags", URLUtilities.getEncodedTagsString(tags));
-            }
-            String category = feedRequest.getWeblogCategoryName();
-            if(category != null && !category.isBlank()) {
-                params.put("cat", URLUtilities.encode(category));
-            }  
-            if(feedRequest.isExcerpts()) {
-                params.put("excerpts", "true");
-            }            
-            return super.createURL(url, params);
+            return super.createURL(url, withFeedFilters(feedRequest, params));
         }
-        
+
         @Override
         public String getUrl() {
             return createURL(super.getUrl(), new HashMap<>());
         }
     }
-    
+
     public class FeedCommentsPager extends CommentsPager {
         
         private final WeblogFeedRequest feedRequest;
@@ -194,31 +224,20 @@ public class FeedModel implements Model {
             super(urlStrategy, urlStrategy.getWeblogFeedURL(feedRequest.getWeblog(), 
                     feedRequest.getLocale(), feedRequest.getType(),
                     feedRequest.getFormat(), null, null,
-                    null, false, true), feedRequest.getWeblog(), -1, feedRequest.getPage(), DEFAULT_ENTRIES);
+                    null, false, true), feedRequest.getWeblog(), -1, feedRequest.getPage(), defaultEntries());
             this.feedRequest = feedRequest;
         }
         
         @Override
         protected String createURL(String url, Map<String, String> params) {
-            List<String> tags = feedRequest.getTags();
-            if(tags != null && !tags.isEmpty()) {
-                params.put("tags", URLUtilities.getEncodedTagsString(tags));
-            }
-            String category = feedRequest.getWeblogCategoryName();
-            if(category != null && !category.isBlank()) {
-                params.put("cat", URLUtilities.encode(category));
-            }  
-            if(feedRequest.isExcerpts()) {
-                params.put("excerpts", "true");
-            }   
-            return super.createURL(url, params);
+            return super.createURL(url, withFeedFilters(feedRequest, params));
         }
-        
+
         @Override
         public String getUrl() {
             return createURL(super.getUrl(), new HashMap<>());
         }
-    }      
+    }
 
     public class FeedFilesPager extends MediaFilesPager {
         
@@ -234,23 +253,12 @@ public class FeedModel implements Model {
         
         @Override
         protected String createURL(String url, Map<String, String> params) {
-            List<String> tags = feedRequest.getTags();
-            if(tags != null && !tags.isEmpty()) {
-                params.put("tags", URLUtilities.getEncodedTagsString(tags));
-            }
-            String category = feedRequest.getWeblogCategoryName();
-            if(category != null && !category.isBlank()) {
-                params.put("cat", URLUtilities.encode(category));
-            }  
-            if(feedRequest.isExcerpts()) {
-                params.put("excerpts", "true");
-            }   
-            return super.createURL(url, params);
+            return super.createURL(url, withFeedFilters(feedRequest, params));
         }
-        
+
         @Override
         public String getUrl() {
             return createURL(super.getUrl(), new HashMap<>());
         }
-    }      
+    }
 }

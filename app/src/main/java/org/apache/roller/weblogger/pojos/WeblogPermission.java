@@ -83,9 +83,17 @@ public class WeblogPermission extends ObjectPermission implements Serializable {
 
     @Override
     public boolean implies(Permission perm) {
+        if (getActionsAsList().isEmpty()) {
+            // Grants nothing, so implies nothing. Without this guard the ladder
+            // below falls through every branch to "return true" and a permission
+            // row with an empty or NULL actions column would imply every action,
+            // weblog administration included. GlobalPermission.implies() has the
+            // same guard for the same reason.
+            return false;
+        }
         if (perm instanceof WeblogPermission) {
             WeblogPermission rperm = (WeblogPermission)perm;
-            
+
             if (hasAction(ADMIN)) {
                 // admin implies all other permissions
                 return true;
@@ -115,8 +123,8 @@ public class WeblogPermission extends ObjectPermission implements Serializable {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("GlobalPermission: ");
-        for (String action : getActionsAsList()) { 
+        sb.append("WeblogPermission: ");
+        for (String action : getActionsAsList()) {
             sb.append(" ").append(action).append(" ");
         }
         return sb.toString();

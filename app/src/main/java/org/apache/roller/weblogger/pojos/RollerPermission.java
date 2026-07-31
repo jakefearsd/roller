@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.pojos;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,7 +44,20 @@ public abstract class RollerPermission extends java.security.Permission {
     @Override
     public abstract String getActions();
 
+    /**
+     * The granted actions, or an empty list if none are granted.
+     *
+     * <p>{@code roller_permission.actions} is a nullable column and
+     * {@link #isEmpty()} already treats null as "grants nothing"; this method
+     * has to agree, because {@code Utilities.stringToStringList} throws
+     * NullPointerException on a null input. The returned list is mutable --
+     * {@link #addActions(List)} and {@link #removeActions(List)} both modify it
+     * in place.
+     */
     public List<String> getActionsAsList() {
+        if (getActions() == null) {
+            return new ArrayList<>();
+        }
         return Utilities.stringToStringList(getActions(), ",");
     }
     

@@ -181,23 +181,29 @@ public class CreateWeblogController extends BaseController {
             allowed = UIUtils.DEFAULT_ALLOWED_CHARS;
         }
 
+        // A missing handle used to reach CharSetUtils.keep(null, ...), which
+        // returns null and blew up on the comparison below; an empty one passed
+        // every check and created a weblog with no URL of its own.
+        if (StringUtils.isBlank(bean.getHandle())) {
+            addError(model, "createWeblog.error.invalidHandle", request);
+            return;
+        }
+
         String safe = CharSetUtils.keep(bean.getHandle(), allowed);
         if (!safe.equals(bean.getHandle())) {
             addError(model, "createWeblog.error.invalidHandle", request);
             return;
         }
 
-        if (!StringUtils.isEmpty(bean.getHandle())) {
-            try {
-                if (WebloggerFactory.getWeblogger().getWeblogManager()
-                        .getWeblogByHandle(bean.getHandle()) != null) {
-                    addError(model, "createWeblog.error.handleExists", request);
-                    bean.setHandle(null);
-                }
-            } catch (WebloggerException ex) {
-                log.error("error checking for weblog", ex);
-                addError(model, "Unexpected error validating weblog -- check Roller logs", request);
+        try {
+            if (WebloggerFactory.getWeblogger().getWeblogManager()
+                    .getWeblogByHandle(bean.getHandle()) != null) {
+                addError(model, "createWeblog.error.handleExists", request);
+                bean.setHandle(null);
             }
+        } catch (WebloggerException ex) {
+            log.error("error checking for weblog", ex);
+            addError(model, "Unexpected error validating weblog -- check Roller logs", request);
         }
     }
 

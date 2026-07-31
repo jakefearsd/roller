@@ -37,3 +37,4 @@ socket:*
 # Selenide writes failure screenshots and page dumps here (Configuration.reportsFolder
 # defaults to build/reports/tests, not target/).
 it-selenium/build/
+.claude/worktrees/

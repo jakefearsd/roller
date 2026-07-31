@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.util.cache;
 
+import java.util.function.LongSupplier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.RollerConstants;
@@ -27,29 +28,44 @@ import org.apache.roller.util.RollerConstants;
  * An LRU cache where entries expire after a given timeout period.
  */
 public class ExpiringLRUCacheImpl extends LRUCacheImpl {
-    
+
     private static Log log = LogFactory.getLog(ExpiringLRUCacheImpl.class);
-    
+
     private long timeout = 0;
-    
-    
+
+
     protected ExpiringLRUCacheImpl(String id) {
-        
+
         super(id);
         this.timeout = RollerConstants.HOUR_IN_MS;
     }
-    
-    
+
+
     protected ExpiringLRUCacheImpl(String id, int maxsize, long timeout) {
-        
-        super(id, maxsize);
-        
+        this(id, maxsize, timeout, System::currentTimeMillis);
+    }
+
+
+    ExpiringLRUCacheImpl(String id, int maxsize, long timeout, LongSupplier clock) {
+
+        super(id, maxsize, clock);
+
         // timeout is specified in seconds; only positive values allowed
         if (timeout > 0) {
             this.timeout = timeout * RollerConstants.SEC_IN_MS;
         }
     }
-    
+
+
+    /**
+     * How long a cached entry survives, in milliseconds. Package private: the
+     * constructor takes seconds and the entries expire in milliseconds, and
+     * that conversion is worth being able to assert on directly.
+     */
+    long getTimeoutMillis() {
+        return this.timeout;
+    }
+
     
     /**
      * Store an entry in the cache.
@@ -60,7 +76,7 @@ public class ExpiringLRUCacheImpl extends LRUCacheImpl {
     @Override
     public synchronized void put(String key, Object value) {
         
-        ExpiringCacheEntry entry = new ExpiringCacheEntry(value, this.timeout);
+        ExpiringCacheEntry entry = new ExpiringCacheEntry(value, this.timeout, clock.getAsLong());
         super.put(key, entry);
     }
     
@@ -79,7 +95,7 @@ public class ExpiringLRUCacheImpl extends LRUCacheImpl {
         
         if (entry != null) {
             
-            value = entry.getValue();
+            value = entry.getValue(clock.getAsLong());
             
             // if the value is null then that means this entry expired
             if (value == null) {

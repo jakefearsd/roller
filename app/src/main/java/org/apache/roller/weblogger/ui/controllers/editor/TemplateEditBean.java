@@ -147,10 +147,14 @@ public class TemplateEditBean {
             CustomTemplateRendition tc = dataHolder.getTemplateRendition(RenditionType.STANDARD);
             tc.setTemplate(contentsStandard);
             WebloggerFactory.getWeblogger().getWeblogManager().saveTemplateRendition(tc);
-        } else { 
-            // otherwise create it, then set it
+        } else {
+            // otherwise create it, then set it -- with the edited contents, not
+            // an empty string. Writing "" here silently threw away everything
+            // the user had typed whenever the template had no STANDARD
+            // rendition yet, and still reported the save as successful. The
+            // column is NOT NULL, hence the fallback for an absent field.
             CustomTemplateRendition tc = new CustomTemplateRendition(dataHolder, RenditionType.STANDARD);
-			tc.setTemplate("");
+            tc.setTemplate(contentsStandard == null ? "" : contentsStandard);
             WebloggerFactory.getWeblogger().getWeblogManager().saveTemplateRendition(tc);
         }
 

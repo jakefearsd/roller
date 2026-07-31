@@ -25,7 +25,6 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
-import org.apache.roller.weblogger.util.URLUtilities;
 
 
 /**
@@ -96,7 +95,7 @@ public class WeblogSearchRequest extends WeblogRequest {
         
         if(request.getParameter("cat") != null && !request.getParameter("cat").isBlank()) {
             this.weblogCategoryName =
-                    URLUtilities.decode(request.getParameter("cat"));
+                    decodeOrReject(request.getParameter("cat"), request);
         }
     }
 

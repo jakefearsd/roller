@@ -65,6 +65,12 @@ public final class WebloggerFactory {
     static void installProvider(WebloggerProvider provider) {
         webloggerProvider = provider;
     }
+
+
+    /** Test seam companion: the provider currently installed, or null. */
+    static WebloggerProvider currentProvider() {
+        return webloggerProvider;
+    }
     
     
     /**

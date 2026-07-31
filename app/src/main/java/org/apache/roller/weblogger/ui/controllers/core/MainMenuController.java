@@ -77,8 +77,14 @@ public class MainMenuController extends BaseController {
             UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
             WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
             Weblog weblog = wmgr.getWeblog(inviteId);
-            umgr.confirmWeblogPermission(weblog, getAuthenticatedUser(request));
-            WebloggerFactory.getWeblogger().flush();
+            if (weblog == null) {
+                // Revoked invitation, deleted weblog, or a hand-made link. The
+                // null used to travel on into the permission code.
+                addError(model, "yourWebsites.permNotFound", request);
+            } else {
+                umgr.confirmWeblogPermission(weblog, getAuthenticatedUser(request));
+                WebloggerFactory.getWeblogger().flush();
+            }
         } catch (WebloggerException ex) {
             log.error("Error handling invitation accept weblog id - " + inviteId, ex);
             addError(model, "yourWebsites.permNotFound", request);
@@ -98,10 +104,16 @@ public class MainMenuController extends BaseController {
             UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
             WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
             Weblog weblog = wmgr.getWeblog(inviteId);
-            String handle = weblog.getHandle();
-            umgr.declineWeblogPermission(weblog, getAuthenticatedUser(request));
-            WebloggerFactory.getWeblogger().flush();
-            addMessage(model, "yourWebsites.declined", handle, request);
+            if (weblog == null) {
+                // Same stale-invitation case as accept, except here the missing
+                // weblog was dereferenced straight away for its handle.
+                addError(model, "yourWebsites.permNotFound", request);
+            } else {
+                String handle = weblog.getHandle();
+                umgr.declineWeblogPermission(weblog, getAuthenticatedUser(request));
+                WebloggerFactory.getWeblogger().flush();
+                addMessage(model, "yourWebsites.declined", handle, request);
+            }
         } catch (WebloggerException ex) {
             log.error("Error handling invitation decline weblog id - " + inviteId, ex);
             addError(model, "yourWebsites.permNotFound", request);

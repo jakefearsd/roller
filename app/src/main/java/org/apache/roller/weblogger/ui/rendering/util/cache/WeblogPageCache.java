@@ -18,9 +18,6 @@
 
 package org.apache.roller.weblogger.ui.rendering.util.cache;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
-import org.apache.roller.weblogger.util.Utilities;
 import org.apache.roller.weblogger.util.cache.Cache;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.util.cache.LazyExpiringCacheEntry;
@@ -54,9 +50,20 @@ public final class WeblogPageCache {
     
     
     private WeblogPageCache() {
-        
-        cacheEnabled = WebloggerConfig.getBooleanProperty(CACHE_ID+".enabled");
-        
+        this(WebloggerConfig.getBooleanProperty(CACHE_ID+".enabled"));
+    }
+
+
+    /**
+     * Package private so that tests can build an instance with caching turned
+     * off. The singleton reads that flag once, when the class is loaded, and
+     * running with the page cache disabled is a supported (and, in development,
+     * the usual) configuration.
+     */
+    WeblogPageCache(boolean cacheEnabled) {
+
+        this.cacheEnabled = cacheEnabled;
+
         Map<String, String> cacheProps = new HashMap<>();
         cacheProps.put("id", CACHE_ID);
         Enumeration<Object> allProps = WebloggerConfig.keys();
@@ -149,64 +156,62 @@ public final class WeblogPageCache {
      * Generate a cache key from a parsed weblog page request.
      * This generates a key of the form ...
      *
-     * <handle>/<ctx>[/anchor][/language][/user]
+     * <handle>[/entry/<anchor>][/<language>][/page=<num>][/user=<user>]
      *   or
-     * <handle>/<ctx>[/weblogPage][/date][/category][/language][/user]
+     * <handle>[/page/<weblogPage>][/date/<date>][/cat/<category>][/tags/<tags>][/<language>][/page=<num>][/user=<user>][/qp=<params>]
      *
      *
      * examples ...
      *
-     * foo/en
-     * foo/entry_anchor
-     * foo/20051110/en
-     * foo/MyCategory/en/user=myname
+     * cache.weblogpage:foo/en/page=0
+     * cache.weblogpage:foo/entry/entry_anchor/en
+     * cache.weblogpage:foo/date/20051110/en/page=0
+     * cache.weblogpage:foo/cat/MyCategory/en/page=0/user=myname
      *
+     * Every segment built from request data is labelled and escaped: a category
+     * called "en" must not produce the key of the English homepage.
      */
     public String generateKey(WeblogPageRequest pageRequest) {
-        
+
         StringBuilder key = new StringBuilder(128);
-        
+
         key.append(CACHE_ID).append(':');
         key.append(pageRequest.getWeblogHandle());
-        
+
         if(pageRequest.getWeblogAnchor() != null) {
             // may contain spaces or other bad chars
-            String anchor = URLEncoder.encode(pageRequest.getWeblogAnchor(), StandardCharsets.UTF_8);
-            key.append("/entry/").append(anchor);
+            key.append("/entry/").append(CacheKeys.encode(pageRequest.getWeblogAnchor()));
         } else {
-            
+
             if(pageRequest.getWeblogPageName() != null) {
-                key.append("/page/").append(pageRequest.getWeblogPageName());
+                // comes straight off the url path, so it may contain slashes
+                key.append("/page/").append(CacheKeys.encode(pageRequest.getWeblogPageName()));
             }
-            
+
             if(pageRequest.getWeblogDate() != null) {
-                key.append('/').append(pageRequest.getWeblogDate());
+                key.append("/date/").append(pageRequest.getWeblogDate());
             }
-            
+
             if(pageRequest.getWeblogCategoryName() != null) {
                 // may contain spaces or other bad chars
-                String cat = URLEncoder.encode(pageRequest.getWeblogCategoryName(), StandardCharsets.UTF_8);
-                key.append('/').append(cat);
+                key.append("/cat/").append(CacheKeys.encode(pageRequest.getWeblogCategoryName()));
             }
-            
-            if("tags".equals(pageRequest.getContext())) {
-                if(pageRequest.getTags() != null && !pageRequest.getTags().isEmpty()) {
-                    String[] tags = pageRequest.getTags().toArray(new String[0]);
-                    Arrays.sort(tags);
-                    key.append("/tags/").append(Utilities.stringArrayToString(tags,"+"));
-                }
+
+            if("tags".equals(pageRequest.getContext())
+                    && pageRequest.getTags() != null && !pageRequest.getTags().isEmpty()) {
+                key.append("/tags/").append(CacheKeys.tags(pageRequest.getTags()));
             }
         }
-        
+
         if(pageRequest.getLocale() != null) {
             key.append('/').append(pageRequest.getLocale());
         }
-        
+
         // add page number when applicable
         if(pageRequest.getWeblogAnchor() == null) {
             key.append("/page=").append(pageRequest.getPageNum());
         }
-        
+
         // add login state
         if(pageRequest.getAuthenticUser() != null) {
             key.append("/user=").append(pageRequest.getAuthenticUser());
@@ -214,28 +219,9 @@ public final class WeblogPageCache {
 
         // we allow for arbitrary query params for custom pages
         if(pageRequest.getWeblogPageName() != null && !pageRequest.getCustomParams().isEmpty()) {
-            String queryString = paramsToString(pageRequest.getCustomParams());
-            
-            key.append("/qp=").append(queryString);
+            key.append("/qp=").append(CacheKeys.params(pageRequest.getCustomParams()));
         }
-        
+
         return key.toString();
-    }
-    
-    private String paramsToString(Map<String, String[]> map) {
-
-        if (map == null) {
-            return null;
-        }
-
-        StringBuilder string = new StringBuilder();
-
-        for (Map.Entry<String, String[]> entry : map.entrySet()) {
-            if(entry.getKey() != null) {
-                string.append(',').append(entry.getKey()).append('=').append(entry.getValue()[0]);
-            }
-        }
-
-        return Utilities.toBase64(string.toString().substring(1).getBytes());
     }
 }

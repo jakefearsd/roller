@@ -73,6 +73,40 @@ public class LRUCache2Test  {
     }
 
     @Test
+    public void entryAgeIsMeasuredFromWhenItWasCachedNotFromTheEpoch() {
+        // With a clock well past zero, an entry stored and read back at the
+        // same instant is zero milliseconds old and must still be a hit. This
+        // fails if the age arithmetic uses the absolute clock value rather
+        // than the difference, which would expire everything on a real
+        // (System.currentTimeMillis) clock immediately.
+        TestEnvironment env = new TestEnvironment();
+        LRUCache2 cache = new LRUCache2(env, 100, 15000);
+
+        env.time = 20000;
+        cache.put("key1", "string1");
+        assertNotNull(cache.get("key1"),
+                "An entry read back at the moment it was cached must not be considered "
+                        + "expired, whatever the absolute value of the clock.");
+
+        env.time = 34999;
+        assertNotNull(cache.get("key1"), "still one millisecond inside the timeout");
+
+        env.time = 35000;
+        assertNull(cache.get("key1"), "the timeout is exclusive: at exactly timeout ms the entry is gone");
+    }
+
+    @Test
+    public void theDefaultEnvironmentUsesTheRealClock() {
+        // The no-environment constructor is what production code uses.
+        LRUCache2 cache = new LRUCache2(10, 60000);
+
+        cache.put("key1", "string1");
+
+        assertNotNull(cache.get("key1"));
+        assertEquals(1, cache.size());
+    }
+
+    @Test
     public void testPurge() {
         // Create cache with 100 item limit and 15 second timeout
         TestEnvironment env = new TestEnvironment();

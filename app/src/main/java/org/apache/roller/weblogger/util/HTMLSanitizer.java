@@ -67,7 +67,11 @@ public class HTMLSanitizer {
     // color:red;
     private static final Pattern stylePattern = Pattern.compile("([^\\s^:]+)\\s*:\\s*([^;]+);?");
     // url('....')"
-    private static final Pattern urlStylePattern = Pattern.compile("(?i).*\\b\\s*url\\s*\\(['\"]([^)]*)['\"]\\)");
+    // The captured group stops at the closing quote rather than at the first
+    // ')': a value such as url('javascript:evil()') contains a ')' of its own,
+    // and matching up to it made the pattern fail to match at all, which let
+    // the whole declaration through unvalidated.
+    private static final Pattern urlStylePattern = Pattern.compile("(?i).*\\b\\s*url\\s*\\(['\"]([^'\"]*)['\"]\\)");
     // expression(....)"   thanks to Ben Summer
     private static final Pattern forbiddenStylePattern = Pattern.compile("(?:(expression|eval|javascript))\\s*\\(");
 

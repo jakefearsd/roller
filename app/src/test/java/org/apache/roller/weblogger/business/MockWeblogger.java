@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.business;
 
 import org.apache.roller.weblogger.business.plugins.PluginManager;
+import org.mockito.Mockito;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
@@ -69,8 +70,11 @@ public final class MockWeblogger {
     private final PluginManager pluginManager = mock(PluginManager.class);
     private final MediaFileManager mediaFileManager = mock(MediaFileManager.class);
     private final FileContentManager fileContentManager = mock(FileContentManager.class);
+    private final URLStrategy urlStrategy = mock(URLStrategy.class);
 
-    private MockWeblogger() {
+    private int flushCount;
+
+    private MockWeblogger() throws org.apache.roller.weblogger.WebloggerException {
         when(weblogger.getUserManager()).thenReturn(userManager);
         when(weblogger.getWeblogManager()).thenReturn(weblogManager);
         when(weblogger.getWeblogEntryManager()).thenReturn(weblogEntryManager);
@@ -81,6 +85,28 @@ public final class MockWeblogger {
         when(weblogger.getPluginManager()).thenReturn(pluginManager);
         when(weblogger.getMediaFileManager()).thenReturn(mediaFileManager);
         when(weblogger.getFileContentManager()).thenReturn(fileContentManager);
+        when(weblogger.getUrlStrategy()).thenReturn(urlStrategy);
+
+        // Count commits. A manager call that is never flushed is a change that
+        // never reaches the database, and nothing else these tests can observe
+        // tells the two apart.
+        Mockito.doAnswer(invocation -> {
+            flushCount++;
+            return null;
+        }).when(weblogger).flush();
+    }
+
+    public URLStrategy getUrlStrategy() {
+        return urlStrategy;
+    }
+
+    public URLStrategy urlStrategy() {
+        return urlStrategy;
+    }
+
+    /** How many times the code under test committed its work. */
+    public int flushCount() {
+        return flushCount;
     }
 
     /**
@@ -90,8 +116,17 @@ public final class MockWeblogger {
      * state, so a test that installs without uninstalling leaks its mocks into
      * whatever runs next in the same JVM.
      */
+    private static WebloggerProvider previousProvider;
+
     public static MockWeblogger install() {
-        MockWeblogger mocks = new MockWeblogger();
+        MockWeblogger mocks;
+        try {
+            mocks = new MockWeblogger();
+        } catch (org.apache.roller.weblogger.WebloggerException e) {
+            // Only the Mockito stubbing above declares it; it cannot actually throw.
+            throw new IllegalStateException("Could not build the mock business tier", e);
+        }
+        previousProvider = WebloggerFactory.currentProvider();
         WebloggerFactory.installProvider(new WebloggerProvider() {
             @Override
             public void bootstrap() {
@@ -106,13 +141,74 @@ public final class MockWeblogger {
         return mocks;
     }
 
-    /** Clears the installed provider so the next test starts unbootstrapped. */
+    /**
+     * Restores whatever provider was installed before, rather than clearing it.
+     *
+     * <p>The database-backed tests bootstrap a real Weblogger into this same static
+     * field and reuse it for the whole JVM. Nulling it here would force them to
+     * bootstrap again mid-run, or fail outright, depending on test order.
+     */
     public static void uninstall() {
+        WebloggerFactory.installProvider(previousProvider);
+        previousProvider = null;
+    }
+
+    /**
+     * Leaves the factory reporting itself NOT bootstrapped.
+     *
+     * <p>InstallController and SetupController branch on
+     * {@code WebloggerFactory.isBootstrapped()}, so the pre-bootstrap path is
+     * only reachable with no provider installed at all.
+     */
+    public static void installNotBootstrapped() {
+        previousProvider = WebloggerFactory.currentProvider();
         WebloggerFactory.installProvider(null);
     }
 
     public Weblogger weblogger() {
         return weblogger;
+    }
+
+    // getX() aliases mirror the Weblogger facade, so a test can read either
+    // mocks.weblogManager() or mocks.getWeblogManager() without surprise.
+    public UserManager getUserManager() {
+        return userManager;
+    }
+
+    public WeblogManager getWeblogManager() {
+        return weblogManager;
+    }
+
+    public WeblogEntryManager getWeblogEntryManager() {
+        return weblogEntryManager;
+    }
+
+    public PropertiesManager getPropertiesManager() {
+        return propertiesManager;
+    }
+
+    public ThreadManager getThreadManager() {
+        return threadManager;
+    }
+
+    public IndexManager getIndexManager() {
+        return indexManager;
+    }
+
+    public ThemeManager getThemeManager() {
+        return themeManager;
+    }
+
+    public PluginManager getPluginManager() {
+        return pluginManager;
+    }
+
+    public MediaFileManager getMediaFileManager() {
+        return mediaFileManager;
+    }
+
+    public FileContentManager getFileContentManager() {
+        return fileContentManager;
     }
 
     public UserManager userManager() {

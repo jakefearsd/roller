@@ -30,7 +30,6 @@ import org.apache.roller.weblogger.pojos.ThemeTemplate;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
-import org.apache.roller.weblogger.util.URLUtilities;
 import org.apache.roller.weblogger.util.Utilities;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -122,7 +121,7 @@ public class WeblogPageRequest extends WeblogRequest {
             if (pathElements.length == 2) {
 
                 if ("entry".equals(this.context)) {
-                    this.weblogAnchor = URLUtilities.decode(pathElements[1]);
+                    this.weblogAnchor = decodeOrReject(pathElements[1], request);
 
                     // Other page
                     otherPageHit = true;
@@ -139,8 +138,8 @@ public class WeblogPageRequest extends WeblogRequest {
                     otherPageHit = true;
 
                 } else if ("category".equals(this.context)) {
-                    this.weblogCategoryName = URLUtilities
-                            .decode(pathElements[1]);
+                    this.weblogCategoryName = decodeOrReject(pathElements[1],
+                            request);
 
                     // Other page
                     otherPageHit = true;
@@ -149,8 +148,7 @@ public class WeblogPageRequest extends WeblogRequest {
                     this.weblogPageName = pathElements[1];
                     String tagsString = request.getParameter("tags");
                     if (tagsString != null) {
-                        this.tags = Utilities.splitStringAsTags(URLUtilities
-                                .decode(tagsString));
+                        this.tags = parseTags(tagsString, request);
                     }
 
                     // Other page, we do not want css etc stuff so filter out
@@ -159,16 +157,7 @@ public class WeblogPageRequest extends WeblogRequest {
                     }
 
                 } else if ("tags".equals(this.context)) {
-                    String tagsString = pathElements[1].replace('+', ' ');
-                    this.tags = Utilities.splitStringAsTags(URLUtilities
-                            .decode(tagsString));
-                    int maxSize = WebloggerConfig.getIntProperty(
-                            "tags.queries.maxIntersectionSize", 3);
-                    if (this.tags.size() > maxSize) {
-                        throw new InvalidRequestException(
-                                "max number of tags allowed is " + maxSize
-                                        + ", " + request.getRequestURL());
-                    }
+                    this.tags = parseTags(pathElements[1].replace('+', ' '), request);
 
                     // Other page
                     otherPageHit = true;
@@ -230,8 +219,8 @@ public class WeblogPageRequest extends WeblogRequest {
                 }
 
                 if (request.getParameter("cat") != null) {
-                    this.weblogCategoryName = URLUtilities.decode(request
-                            .getParameter("cat"));
+                    this.weblogCategoryName = decodeOrReject(
+                            request.getParameter("cat"), request);
                 }
             }
         }
@@ -269,6 +258,29 @@ public class WeblogPageRequest extends WeblogRequest {
 
     boolean isValidDestination(String servlet) {
         return (servlet != null && PAGE_SERVLET.equals(servlet));
+    }
+
+    /**
+     * Decode and split a tag list, refusing lists longer than
+     * tags.queries.maxIntersectionSize.
+     *
+     * The ceiling is a cost guard: each additional tag adds another join to the
+     * entry intersection query. It applies to every way a tag list can enter a
+     * page request -- the /tags/ path and the ?tags= parameter that custom
+     * pages accept -- because both end up in the same query.
+     */
+    private static List<String> parseTags(String tagsString, HttpServletRequest request)
+            throws InvalidRequestException {
+
+        List<String> parsed = Utilities.splitStringAsTags(decodeOrReject(tagsString, request));
+
+        int maxSize = WebloggerConfig.getIntProperty("tags.queries.maxIntersectionSize", 3);
+        if (parsed.size() > maxSize) {
+            throw new InvalidRequestException("max number of tags allowed is "
+                    + maxSize + ", " + request.getRequestURL());
+        }
+
+        return parsed;
     }
 
     private boolean isValidDateString(String dateString) {

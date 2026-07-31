@@ -18,6 +18,8 @@
 
 package org.apache.roller.weblogger.ui.rendering.util;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
@@ -125,6 +127,30 @@ public class WeblogRequest extends ParsedRequest {
         }
     }
     
+
+    /**
+     * Percent-decode a piece of a request that has already been decoded once by
+     * the servlet container.
+     *
+     * The parsed-request classes deliberately decode a second time so that
+     * sequences such as %2B survive as a literal '+'. The cost is that a
+     * segment which legitimately decodes to a bare '%' -- for example a
+     * category named "100%", requested as .../category/100%25 -- makes
+     * URLDecoder throw an unchecked IllegalArgumentException. Callers of these
+     * classes are documented to expect InvalidRequestException for any input
+     * they cannot parse, so translate it here rather than letting an unchecked
+     * exception escape the constructor.
+     */
+    static String decodeOrReject(String value, HttpServletRequest request)
+            throws InvalidRequestException {
+        try {
+            return URLDecoder.decode(value, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidRequestException("invalid URL encoding in request, "
+                    + request.getRequestURL(), ex);
+        }
+    }
+
 
     /**
      * Convenience method which determines if the given string is a valid

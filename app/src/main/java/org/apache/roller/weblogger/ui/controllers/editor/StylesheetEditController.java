@@ -157,8 +157,13 @@ public class StylesheetEditController extends BaseController {
                     tc.setTemplate(contentsStandard);
                     weblogManager.saveTemplateRendition(tc);
                 } else {
+                    // Store the submitted stylesheet, not an empty one: this is
+                    // the branch taken the first time a weblog overrides its
+                    // theme's stylesheet, and writing "" here discarded the
+                    // user's CSS while still reporting success. The column is
+                    // NOT NULL, hence the fallback for an absent field.
                     CustomTemplateRendition tc = new CustomTemplateRendition(template, RenditionType.STANDARD);
-                    tc.setTemplate("");
+                    tc.setTemplate(contentsStandard == null ? "" : contentsStandard);
                     weblogManager.saveTemplateRendition(tc);
                 }
 
@@ -185,8 +190,12 @@ public class StylesheetEditController extends BaseController {
     public String revert(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
 
-        if (!isCustomTheme(request) && !hasErrors(model)) {
-            WeblogTemplate template = loadTemplate(request);
+        // loadTemplate returns null when the weblog has no stylesheet override
+        // (or the shared theme has no stylesheet at all). Only WebloggerException
+        // is caught below, so without this guard the null dereference on the
+        // next line escapes as a 500. delete() already guards the same way.
+        WeblogTemplate template = loadTemplate(request);
+        if (template != null && !isCustomTheme(request) && !hasErrors(model)) {
             try {
                 WeblogManager weblogManager = WebloggerFactory.getWeblogger().getWeblogManager();
                 ThemeManager tmgr = WebloggerFactory.getWeblogger().getThemeManager();

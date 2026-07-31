@@ -88,7 +88,12 @@ public abstract class AbstractWeblogEntriesPager implements WeblogEntriesPager {
         this.length = Math.min(weblog.getEntryDisplayCount(), maxLength);
         
         this.page = Math.max(0, page);
-        this.offset = length * page;
+        // NOTE: must multiply by the clamped field, not the raw parameter. The
+        // page number arrives straight off the query string and is not clamped
+        // by WeblogPageRequest, so ?page=-1 used to produce a negative offset.
+        // The entry query rejects that, the pager swallowed the failure, and the
+        // weblog rendered with no entries at all.
+        this.offset = length * this.page;
         
         // get a message utils instance to handle i18n of messages
         Locale viewLocale = null;

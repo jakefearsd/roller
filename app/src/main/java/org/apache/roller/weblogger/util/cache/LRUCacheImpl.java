@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.LongSupplier;
 import org.apache.roller.util.RollerConstants;
 
 
@@ -29,30 +30,45 @@ import org.apache.roller.util.RollerConstants;
  * A simple LRU Cache.
  */
 public class LRUCacheImpl implements Cache {
-    
+
     private final String id;
     private final Map<String, Object> cache;
-    
+
+    /**
+     * Where "now" comes from. Always the system clock in production; tests in
+     * this package substitute a clock they can wind forward, so that anything
+     * time dependent can be tested at its exact boundary rather than by
+     * sleeping and hoping.
+     */
+    protected final LongSupplier clock;
+
     // for metrics
     protected double hits = 0;
     protected double misses = 0;
     protected double puts = 0;
     protected double removes = 0;
-    protected Date startTime = new Date();
-    
-    
+    protected Date startTime;
+
+
     protected LRUCacheImpl(String id) {
-        
+
         this(id, 100);
     }
-    
-    
+
+
     protected LRUCacheImpl(String id, int maxsize) {
-        
+        this(id, maxsize, System::currentTimeMillis);
+    }
+
+
+    LRUCacheImpl(String id, int maxsize, LongSupplier clock) {
+
         this.id = id;
         this.cache = new LRULinkedHashMap<>(maxsize);
+        this.clock = clock;
+        this.startTime = new Date(clock.getAsLong());
     }
-    
+
     
     @Override
     public String getId() {
@@ -108,7 +124,7 @@ public class LRUCacheImpl implements Cache {
         misses = 0;
         puts = 0;
         removes = 0;
-        startTime = new Date();
+        startTime = new Date(clock.getAsLong());
     }
     
     

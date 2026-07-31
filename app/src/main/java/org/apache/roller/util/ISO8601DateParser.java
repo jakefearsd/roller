@@ -98,27 +98,21 @@ public class ISO8601DateParser {
     }
 
     public static String toString( Date date ) {
-        
-        SimpleDateFormat df = new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ssz" );
-        
+
+        // The date is always rendered in UTC, so the zone designator is a
+        // constant. The previous implementation formatted the zone with 'z'
+        // and then cut fixed-width slices out of the result, which assumed the
+        // JDK would print a nine character "GMT+00:00"; it prints "UTC", and
+        // the slices then silently dropped the minutes field (19:20:30 came
+        // out as 19:30).
+        SimpleDateFormat df = new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss" );
+
         TimeZone tz = TimeZone.getTimeZone( "UTC" );
-        
+
         df.setTimeZone( tz );
 
-        String output = df.format( date );
+        return df.format( date ) + "+00:00";
 
-        int inset0 = 9;
-        int inset1 = 6;
-        
-        String s0 = output.substring( 0, output.length() - inset0 );
-        String s1 = output.substring( output.length() - inset1, output.length() );
-
-        String result = s0 + s1;
-
-        result = result.replace( "UTC", "+00:00" );
-        
-        return result;
-        
     }
 
 }

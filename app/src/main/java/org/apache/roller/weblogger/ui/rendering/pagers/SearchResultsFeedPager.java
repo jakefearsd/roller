@@ -101,24 +101,35 @@ public class SearchResultsFeedPager extends AbstractPager<WeblogEntryWrapper> {
         return messageUtils.getString("searchPager.home");
     }  
     
+    /**
+     * Adds the search criteria back onto a pager link so that paging through a
+     * search feed keeps the query, category, tags and excerpt flag.
+     *
+     * NOTE: the caller's map is copied rather than added to. AbstractPager
+     * builds its next/prev params with Map.of(), which is immutable, so writing
+     * through to it threw UnsupportedOperationException on every search feed
+     * that carried any criteria at all -- which is all of them, since the
+     * search term is always present.
+     */
     @Override
     protected String createURL(String url, Map<String, String> params) {
+        Map<String, String> allParams = new HashMap<>(params);
         String category = feedRequest.getWeblogCategoryName();
         if(category != null && !category.isBlank()) {
-            params.put("cat", URLUtilities.encode(category));
+            allParams.put("cat", URLUtilities.encode(category));
         }
         String term = feedRequest.getTerm();
         if(term != null && !term.isBlank()) {
-            params.put("q", URLUtilities.encode(term.trim()));
-        }     
+            allParams.put("q", URLUtilities.encode(term.trim()));
+        }
         List<String> tags = feedRequest.getTags();
         if(tags != null && !tags.isEmpty()) {
-            params.put("tags", URLUtilities.getEncodedTagsString(tags));
+            allParams.put("tags", URLUtilities.getEncodedTagsString(tags));
         }
         if(feedRequest.isExcerpts()) {
-            params.put("excerpts", "true");
-        }        
-        return super.createURL(url, params);
+            allParams.put("excerpts", "true");
+        }
+        return super.createURL(url, allParams);
     }
     
     @Override

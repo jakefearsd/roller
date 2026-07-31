@@ -1,0 +1,606 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+
+package org.apache.roller.weblogger.ui.rendering.model;
+
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.MultiWeblogURLStrategy;
+import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+
+/**
+ * Unit tests for {@link URLModel}, the {@code $url} object themes use to build
+ * every link on a blog — permalinks, category and date archives, feeds, search
+ * and their paging links.
+ *
+ * <p>The tests run against the real {@link MultiWeblogURLStrategy} rather than a
+ * mock, because the thing worth protecting is the shape of the emitted URL, not
+ * the fact that a delegation happened. A URL that changes shape breaks
+ * permalinks and feed identity for every existing post.
+ *
+ * <p>{@link WebloggerFactory} is stubbed out so nothing reaches the database:
+ * the strategy only needs the two context URLs, which are plain static fields.
+ */
+class URLModelTest {
+
+    private static final String SITE = "/roller";
+    private static final String ABSOLUTE_SITE = "http://blogs.example.com/roller";
+
+    private MockedStatic<WebloggerFactory> factory;
+    private Weblogger weblogger;
+    private Weblog weblog;
+    private URLModel model;
+
+    private String previousRelativeContextURL;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        // WebloggerRuntimeConfig reads site.absoluteurl through the properties
+        // manager before falling back to the value the InitFilter published.
+        // Stubbing the factory keeps that lookup from throwing (and from
+        // logging a stack trace) on every single URL we build.
+        weblogger = mock(Weblogger.class);
+        PropertiesManager properties = mock(PropertiesManager.class);
+        when(weblogger.getPropertiesManager()).thenReturn(properties);
+        factory = mockStatic(WebloggerFactory.class);
+        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+
+        previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setRelativeContextURL(SITE);
+        WebloggerRuntimeConfig.setAbsoluteContextURL(ABSOLUTE_SITE);
+
+        weblog = new Weblog("testblog", "testuser", "Test Blog", "a test blog",
+                "blog@example.com", "basic", "en_US", "UTC");
+
+        model = modelFor(weblog, null, new MultiWeblogURLStrategy());
+    }
+
+    @AfterEach
+    void tearDown() {
+        WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
+        WebloggerRuntimeConfig.setAbsoluteContextURL(null);
+        factory.close();
+    }
+
+    private static URLModel modelFor(Weblog weblog, String locale, URLStrategy strategy)
+            throws WebloggerException {
+        WeblogRequest request = new WeblogRequest();
+        request.setWeblog(weblog);
+        request.setLocale(locale);
+
+        Map<String, Object> initData = new LinkedHashMap<>();
+        initData.put("parsedRequest", request);
+        if (strategy != null) {
+            initData.put("urlStrategy", strategy);
+        }
+
+        URLModel model = new URLModel();
+        model.init(initData);
+        return model;
+    }
+
+    /** Everything before the '?'. */
+    private static String path(String url) {
+        int q = url.indexOf('?');
+        return q < 0 ? url : url.substring(0, q);
+    }
+
+    /**
+     * The query string as a map, values left percent-encoded. Compared as a map
+     * because the strategy builds it from a HashMap, so the order of the pairs
+     * is an implementation detail we must not depend on.
+     */
+    private static Map<String, String> queryParams(String url) {
+        int q = url.indexOf('?');
+        Map<String, String> params = new LinkedHashMap<>();
+        if (q < 0) {
+            return params;
+        }
+        for (String pair : url.substring(q + 1).split("&")) {
+            int eq = pair.indexOf('=');
+            params.put(pair.substring(0, eq), pair.substring(eq + 1));
+        }
+        return params;
+    }
+
+    // ------------------------------------------------------------------ init
+
+    @Test
+    void modelIsRegisteredUnderTheNameThemesUse() {
+        assertEquals("url", new URLModel().getModelName(),
+                "Themes reference this model as $url; renaming it blanks every link "
+                        + "in every theme at once.");
+    }
+
+    @Test
+    void initWithoutAParsedRequestFails() {
+        URLModel bare = new URLModel();
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> bare.init(new LinkedHashMap<>()),
+                "init() must reject init data with no request rather than building "
+                        + "URLs for a null weblog.");
+        assertTrue(thrown.getMessage().contains("weblogRequest"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
+    }
+
+    @Test
+    void initFallsBackToTheConfiguredUrlStrategyWhenNoneIsSupplied() throws Exception {
+        // Renderers that do not pass a strategy (previews pass their own) must
+        // get the application's. Silently getting none would NPE mid-render.
+        URLStrategy configured = mock(URLStrategy.class);
+        when(configured.getWeblogCollectionURL(any(), any(), any(), any(), any(), anyInt(), anyBoolean()))
+                .thenReturn("/fallback");
+        when(weblogger.getUrlStrategy()).thenReturn(configured);
+
+        URLModel withoutStrategy = modelFor(weblog, null, null);
+
+        assertEquals("/fallback", withoutStrategy.getHome(),
+                "With no 'urlStrategy' in the init data the model must fall back to "
+                        + "WebloggerFactory's strategy.");
+    }
+
+    // ------------------------------------------------------------ site roots
+
+    @Test
+    void siteUrlsComeFromTheContextTheApplicationIsDeployedUnder() {
+        assertEquals(SITE, model.getSite(),
+                "$url.site is the relative context path; every hand-built link in a "
+                        + "theme is prefixed with it.");
+        assertEquals(ABSOLUTE_SITE, model.getAbsoluteSite(),
+                "$url.absoluteSite is what feeds and e-mails use, so it must be the "
+                        + "absolute form.");
+    }
+
+    @Test
+    void aWeblogCanOverrideTheAbsoluteSiteUrlWithItsOwnDomain() {
+        // weblog.absoluteurl.<handle> in roller-custom.properties is how a blog
+        // gets served from a vanity domain. Feed and e-mail links have to use
+        // that host, not the installation's.
+        try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class)) {
+            config.when(() -> WebloggerConfig.getProperty("weblog.absoluteurl.testblog"))
+                    .thenReturn("https://vanity.example.com");
+
+            assertEquals("https://vanity.example.com", model.getAbsoluteSite(),
+                    "A weblog with its own absolute URL configured must use it in "
+                            + "preference to the installation's.");
+        }
+    }
+
+    @Test
+    void loginAndLogoutPointAtTheSpringSecurityEndpoints() {
+        assertEquals(SITE + "/roller-ui/login-redirect.rol", model.getLogin(),
+                "The login link must match the URL security.xml protects.");
+        assertEquals(SITE + "/roller-ui/logout.rol", model.getLogout(),
+                "The logout link must match the URL Spring Security listens on.");
+    }
+
+    @Test
+    void actionUrlsAreBuiltPerNamespaceAndUnknownNamespacesYieldNothing() {
+        assertEquals(ABSOLUTE_SITE + "/roller-ui/login.rol",
+                model.action("login", "/roller-ui"),
+                "Site-level actions take no weblog parameter.");
+
+        String authoring = model.action("entryAdd", "/roller-ui/authoring");
+        assertEquals(ABSOLUTE_SITE + "/roller-ui/authoring/entryAdd.rol", path(authoring),
+                "Authoring actions live under the authoring namespace.");
+        assertEquals(Map.of("weblog", "testblog"), queryParams(authoring),
+                "Authoring actions must carry the weblog handle or the action cannot "
+                        + "tell which blog it is editing.");
+
+        assertEquals(ABSOLUTE_SITE + "/roller-ui/admin/globalConfig.rol",
+                model.action("globalConfig", "/roller-ui/admin"),
+                "Admin actions live under the admin namespace.");
+
+        assertNull(model.action("whatever", "/made/up"),
+                "An unrecognised namespace must yield null rather than a link that "
+                        + "404s; the theme then renders nothing.");
+        assertNull(model.action("whatever", null),
+                "A null namespace must yield null.");
+    }
+
+    @Test
+    void commentAuthenticatorAndThemeResourceUrlsHangOffTheSiteRoot() {
+        assertEquals(SITE + "/CommentAuthenticatorServlet?weblog=testblog",
+                model.getCommentAuthenticator(),
+                "The comment authenticator servlet needs the weblog handle to pick "
+                        + "the right blog's settings.");
+        assertEquals(SITE + "/themes/basic/style.css",
+                model.themeResource("basic", "style.css"),
+                "Theme resources are served straight off the site root.");
+        assertEquals(ABSOLUTE_SITE + "/themes/basic/style.css",
+                model.themeResource("basic", "style.css", true),
+                "The absolute form is needed inside feeds.");
+        assertEquals(SITE + "/themes/basic/style.css",
+                model.themeResource("basic", "style.css", false),
+                "absolute=false must behave like the two-argument form.");
+    }
+
+    // -------------------------------------------------------- weblog content
+
+    @Test
+    void homeUrlsCarryTheLocaleAndPageNumber() {
+        assertEquals(ABSOLUTE_SITE + "/testblog/", model.getHome(),
+                "The blog home page is the weblog root.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/?page=2", model.home(2),
+                "Paging the home page adds ?page=N.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/", model.home(0),
+                "Page 0 is the first page and must not add a page parameter.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/fr/", model.home("fr"),
+                "A locale becomes a path segment after the handle.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/fr/?page=3", model.home("fr", 3),
+                "Locale and page number must combine.");
+    }
+
+    @Test
+    void aLocalisedRequestPutsTheLocaleInEveryUrl() throws Exception {
+        // The locale is picked up from the request, not passed per call, so a
+        // mistake here silently drops visitors back to the default language.
+        URLModel french = modelFor(weblog, "fr_FR", new MultiWeblogURLStrategy());
+        assertEquals(ABSOLUTE_SITE + "/testblog/fr_FR/", french.getHome(),
+                "The request locale must appear in generated URLs.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/fr_FR/entry/hello", french.entry("hello"),
+                "Permalinks must stay inside the locale the visitor is reading.");
+    }
+
+    @Test
+    void entryAndCommentPermalinksEncodeTheAnchor() {
+        // The anchor comes from the entry title, so it can contain anything a
+        // user can type. Leaving it raw would produce links that break at the
+        // first space or ampersand.
+        assertEquals(ABSOLUTE_SITE + "/testblog/entry/hello+%26+goodbye",
+                model.entry("hello & goodbye"),
+                "The anchor must be URL-encoded into the path.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/entry/hello#comments",
+                model.comments("hello"),
+                "The comments link is the permalink plus the #comments fragment.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/entry/hello#comment-1705320000000",
+                model.comment("hello", "1705320000000"),
+                "A single comment is addressed by its timestamp fragment.");
+    }
+
+    @Test
+    void dateArchiveUrlsUseThePathFormTheRequestParserExpects() {
+        // WeblogPageRequest only recognises /date/YYYYMMDD (or YYYYMM), so this
+        // shape has to match on both sides or archive links 404.
+        assertEquals(ABSOLUTE_SITE + "/testblog/date/20240115", model.date("20240115"),
+                "Day archives are /date/YYYYMMDD.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/date/202401?page=2", model.date("202401", 2),
+                "Month archives page with ?page=N.");
+    }
+
+    @Test
+    void categoryUrlsEncodeTheCategoryName() {
+        // Category names are free text: "C++ & friends" is legal.
+        assertEquals(ABSOLUTE_SITE + "/testblog/category/Java+%26+C%2B%2B",
+                model.category("Java & C++"),
+                "A category name must be encoded into the path or the '&' starts a "
+                        + "bogus query parameter.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/category/Java?page=2",
+                model.category("Java", 2),
+                "Category archives page with ?page=N.");
+    }
+
+    @Test
+    void theRootCategorySentinelMeansNoCategoryFilter() {
+        // "root" is how the older templates spelled "all categories"; it must
+        // not become a literal /category/root path.
+        assertEquals(ABSOLUTE_SITE + "/testblog/", model.category("root"),
+                "$url.category('root') must be the unfiltered blog home.");
+    }
+
+    @Test
+    void tagUrlsEncodeAndJoinTagsWithAPlus() {
+        assertEquals(ABSOLUTE_SITE + "/testblog/tags/foo+bar", model.tag("foo bar"),
+                "A single tag containing a space is encoded, and '+' is the encoded "
+                        + "space — the same character used to join tags.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/tags/foo?page=2", model.tag("foo", 2),
+                "Tag archives page with ?page=N.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/tags/foo+bar",
+                model.tags(List.of("foo", "bar")),
+                "Multiple tags are joined with '+' to mean intersection.");
+    }
+
+    /**
+     * Regression test for a copy/paste bug: {@code tags(List, int)} passed a
+     * hard-coded -1 as the page number, so "older entries" on any multi-tag
+     * view linked back to page 1 and the reader could never page past the
+     * first screen.
+     */
+    @Test
+    void pagingAMultiTagViewActuallyChangesThePage() {
+        assertEquals(ABSOLUTE_SITE + "/testblog/tags/foo+bar?page=2",
+                model.tags(List.of("foo", "bar"), 2),
+                "$url.tags($tags, 2) must produce page 2, not page 1.");
+    }
+
+    @Test
+    void combiningADateAndACategoryFallsBackToQueryParameters() {
+        // There is no path form for "this category in this month", so both go
+        // in the query string.
+        String url = model.collection("20240115", "Java & C++");
+        assertEquals(ABSOLUTE_SITE + "/testblog/", path(url),
+                "A combined filter has no path segment of its own.");
+        assertEquals(Map.of("date", "20240115", "cat", "Java+%26+C%2B%2B"),
+                queryParams(url),
+                "Both filters must survive as encoded query parameters.");
+
+        String paged = model.collection("20240115", "Java", 2);
+        assertEquals(Map.of("date", "20240115", "cat", "Java", "page", "2"),
+                queryParams(paged),
+                "The page number joins the other filters.");
+    }
+
+    @Test
+    void customPageUrlsCarryTheirFiltersAsQueryParameters() {
+        assertEquals(ABSOLUTE_SITE + "/testblog/page/sidebar", model.page("sidebar"),
+                "A custom template is addressed as /page/<link>.");
+
+        String url = model.page("sidebar", "20240115", "Java", 2);
+        assertEquals(ABSOLUTE_SITE + "/testblog/page/sidebar", path(url),
+                "The filters must not disturb the page path.");
+        assertEquals(Map.of("date", "20240115", "cat", "Java", "page", "2"),
+                queryParams(url),
+                "Custom pages only support query-parameter filters.");
+    }
+
+    @Test
+    void resourceUrlsEncodeEachPathSegmentButKeepTheSlashes() {
+        assertEquals(ABSOLUTE_SITE + "/testblog/resource/my+images/holiday+snap.png",
+                model.resource("my images/holiday snap.png"),
+                "Directory separators must survive encoding or the file cannot be "
+                        + "found; everything else in each segment is encoded.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/resource/logo.png",
+                model.resource("/logo.png"),
+                "A leading slash is stripped so the path is not doubled.");
+    }
+
+    @Test
+    void rsdUrlHangsOffTheWeblogRoot() {
+        assertEquals(ABSOLUTE_SITE + "/testblog/rsd", model.getRsd(),
+                "Blog editors discover the posting API through this URL.");
+    }
+
+    // -------------------------------------------------------------- searching
+
+    @Test
+    void theBareSearchUrlIsRelativeAndCarriesNoQuery() {
+        // The search box posts to this URL, so it must be relative (same origin)
+        // and must not arrive with a stale query already attached.
+        assertEquals(SITE + "/testblog/search", model.getSearch(),
+                "$url.search is the search form's action.");
+    }
+
+    @Test
+    void searchUrlsEncodeTheQueryAndCarryTheCategoryAndPage() {
+        String url = model.search("c++ tricks", 2);
+        assertEquals(SITE + "/testblog/search", path(url), "Search stays at /search");
+        assertEquals(Map.of("q", "c%2B%2B+tricks", "page", "2"), queryParams(url),
+                "The query must be encoded — a raw '+' would decode as a space and "
+                        + "silently change what the reader searched for.");
+
+        assertEquals(Map.of("q", "java", "cat", "Tech+News", "page", "3"),
+                queryParams(model.search("java", "Tech News", 3)),
+                "Category-scoped search keeps all three parameters.");
+
+        assertEquals(Map.of("q", "java"), queryParams(model.search("java", null, 0)),
+                "Page 0 and a null category must not add empty parameters.");
+    }
+
+    @Test
+    void absoluteSearchUrlsAreUsableOutsideTheSite() {
+        String url = model.absoluteSearch("java", null, 0);
+        assertEquals(ABSOLUTE_SITE + "/testblog/search", path(url),
+                "OpenSearch descriptors are consumed by browsers, so the URL has to "
+                        + "be absolute.");
+        assertEquals(Map.of("q", "java"), queryParams(url), "The term must survive.");
+    }
+
+    @Test
+    void openSearchDescriptorUrlsAreAbsolute() {
+        assertEquals(ABSOLUTE_SITE + "/roller-services/opensearch/",
+                model.getOpenSearchSite(),
+                "The site-wide OpenSearch descriptor is registered by absolute URL.");
+        assertEquals(ABSOLUTE_SITE + "/roller-services/opensearch/testblog",
+                model.getOpenSearchWeblog(),
+                "The per-blog descriptor is keyed by weblog handle.");
+    }
+
+    // ------------------------------------------------------------------ feeds
+
+    @Test
+    void entryFeedUrlsAreAbsoluteAndTypedByFormat() {
+        // Feed URLs are a feed's identity: readers de-duplicate on them, so a
+        // change here makes every subscriber re-download every old post.
+        assertEquals(ABSOLUTE_SITE + "/testblog/feed/entries/rss",
+                model.getFeed().getEntries().getRss(),
+                "$url.feed.entries.rss must be the absolute RSS URL.");
+        assertEquals(ABSOLUTE_SITE + "/testblog/feed/entries/atom",
+                model.getFeed().getEntries().getAtom(),
+                "$url.feed.entries.atom must be the absolute Atom URL.");
+    }
+
+    @Test
+    void entryFeedUrlsCanBeNarrowedByCategoryTagsAndExcerpts() {
+        assertEquals(Map.of("cat", "Tech+News", "excerpts", "true"),
+                queryParams(model.getFeed().getEntries().rss("Tech News", true)),
+                "A category-scoped excerpt feed carries both parameters, encoded.");
+        assertEquals(Map.of("cat", "Tech+News"),
+                queryParams(model.getFeed().getEntries().atom("Tech News", false)),
+                "excerpts=false must be omitted rather than sent as false.");
+        assertEquals(Map.of("tags", "foo+bar"),
+                queryParams(model.getFeed().getEntries().rssByTags(List.of("foo", "bar"), false)),
+                "Tag feeds join tags with '+'.");
+        assertEquals(Map.of("tags", "foo+bar", "excerpts", "true"),
+                queryParams(model.getFeed().getEntries().atomByTags(List.of("foo", "bar"), true)),
+                "Tag feeds can also be excerpt-only.");
+    }
+
+    @Test
+    void feedSearchUrlsCarryTheTermAsQ() {
+        String url = model.getFeed().getEntries().search("c++", "Tech");
+        assertEquals(ABSOLUTE_SITE + "/testblog/feed/entries/atom", path(url),
+                "Search results are delivered as an Atom feed.");
+        assertEquals(Map.of("q", "c%2B%2B", "cat", "Tech"), queryParams(url),
+                "The search term must be encoded into q.");
+    }
+
+    @Test
+    void commentAndMediaFileFeedsUseTheirOwnFeedType() {
+        assertEquals(ABSOLUTE_SITE + "/testblog/feed/comments/rss",
+                model.getFeed().getComments().getRss(),
+                "Comment feeds are /feed/comments/...");
+        assertEquals(ABSOLUTE_SITE + "/testblog/feed/comments/atom",
+                model.getFeed().getComments().getAtom(),
+                "Comment feeds are available as Atom too.");
+        assertEquals(Map.of("cat", "Tech", "excerpts", "true"),
+                queryParams(model.getFeed().getComments().rss("Tech", true)),
+                "Comment feeds accept the same narrowing parameters.");
+        assertEquals(Map.of("cat", "Tech"),
+                queryParams(model.getFeed().getComments().atom("Tech", false)),
+                "Comment Atom feeds accept a category.");
+
+        assertEquals(ABSOLUTE_SITE + "/testblog/feed/files/rss",
+                model.getFeed().getMediaFiles().getRss(),
+                "Media file feeds are /feed/files/...");
+        assertEquals(ABSOLUTE_SITE + "/testblog/feed/files/atom",
+                model.getFeed().getMediaFiles().getAtom(),
+                "Media file feeds are available as Atom too.");
+        assertEquals(Map.of("cat", "Photos"),
+                queryParams(model.getFeed().getMediaFiles().rss("Photos", false)),
+                "Media file feeds accept a category.");
+        assertEquals(Map.of("cat", "Photos", "excerpts", "true"),
+                queryParams(model.getFeed().getMediaFiles().atom("Photos", true)),
+                "Media file Atom feeds accept excerpts.");
+    }
+
+    // ------------------------------------------------------------ editor links
+
+    @Test
+    void editorLinksAreRelativeAndIdentifyTheWeblog() {
+        String add = model.getCreateEntry();
+        assertEquals(SITE + "/roller-ui/authoring/entryAdd.rol", path(add),
+                "The 'new entry' link points at the authoring UI.");
+        assertEquals(Map.of("weblog", "testblog"), queryParams(add),
+                "The editor needs to know which blog it is posting to.");
+
+        String settings = model.getEditSettings();
+        assertEquals(SITE + "/roller-ui/authoring/weblogConfig.rol", path(settings),
+                "The settings link points at the weblog config screen.");
+        assertEquals(Map.of("weblog", "testblog"), queryParams(settings),
+                "The settings screen needs the weblog handle.");
+    }
+
+    @Test
+    void editEntryResolvesTheAnchorToAnEntryId() throws Exception {
+        // Themes render this next to each post for logged-in authors. The
+        // anchor is all the template has; the edit screen needs the id.
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-42");
+        WeblogEntryManager entries = mock(WeblogEntryManager.class);
+        when(entries.getWeblogEntryByAnchor(weblog, "hello")).thenReturn(entry);
+        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
+
+        String url = model.editEntry("hello");
+
+        assertEquals(SITE + "/roller-ui/authoring/entryEdit.rol", path(url),
+                "The edit link points at the entry editor.");
+        assertEquals(Map.of("weblog", "testblog", "bean.id", "entry-42"),
+                queryParams(url),
+                "The editor is addressed by entry id, resolved from the anchor.");
+    }
+
+    @Test
+    void editEntryYieldsNothingWhenTheAnchorMatchesNoEntry() throws Exception {
+        WeblogEntryManager entries = mock(WeblogEntryManager.class);
+        when(entries.getWeblogEntryByAnchor(weblog, "missing")).thenReturn(null);
+        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
+
+        assertNull(model.editEntry("missing"),
+                "An unknown anchor must yield null so the theme renders nothing, "
+                        + "rather than a link into the editor for a missing entry.");
+    }
+
+    @Test
+    void editEntrySurvivesALookupFailure() throws Exception {
+        // A database hiccup while rendering must not take the whole page down;
+        // losing one edit link is the correct degradation.
+        WeblogEntryManager entries = mock(WeblogEntryManager.class);
+        when(entries.getWeblogEntryByAnchor(weblog, "hello"))
+                .thenThrow(new WebloggerException("database is down"));
+        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
+
+        assertNull(model.editEntry("hello"),
+                "A failed lookup must be swallowed and yield null.");
+    }
+
+    // ----------------------------------------------------------------- handles
+
+    /**
+     * The weblog handle is the one part of a URL that is <em>not</em> encoded —
+     * it is spliced straight into the path by
+     * {@code MultiWeblogURLStrategy.getWeblogURL}. That is only safe because
+     * handles are constrained to alphanumerics when a blog is created
+     * ({@code JPAWeblogManagerImpl.addWeblog}) and again when a request is
+     * parsed ({@code WeblogRequest}). If that constraint is ever relaxed, every
+     * URL below becomes an injection point and this test is where to start.
+     */
+    @Test
+    void theWeblogHandleAppearsVerbatimInEveryUrlFamily() throws Exception {
+        Weblog other = new Weblog("myBlog2024", "testuser", "Other", "d",
+                "e@example.com", "basic", "en_US", "UTC");
+        URLModel otherModel = modelFor(other, null, new MultiWeblogURLStrategy());
+
+        assertEquals(ABSOLUTE_SITE + "/myBlog2024/", otherModel.getHome(),
+                "Handles keep their case and digits in the path.");
+        assertEquals(ABSOLUTE_SITE + "/myBlog2024/entry/x", otherModel.entry("x"),
+                "Permalinks embed the handle verbatim.");
+        assertEquals(ABSOLUTE_SITE + "/myBlog2024/feed/entries/atom",
+                otherModel.getFeed().getEntries().getAtom(),
+                "Feed URLs embed the handle verbatim.");
+        assertEquals(SITE + "/CommentAuthenticatorServlet?weblog=myBlog2024",
+                otherModel.getCommentAuthenticator(),
+                "The handle is also spliced into a query parameter unencoded.");
+    }
+}

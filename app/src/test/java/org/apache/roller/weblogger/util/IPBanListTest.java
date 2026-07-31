@@ -28,10 +28,11 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import org.junit.jupiter.api.Disabled;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IPBanListTest {
@@ -88,15 +89,30 @@ class IPBanListTest {
         assertFalse(ipBanList.isBanned(null));
     }
 
-    @Disabled
     @Test
-    @DisplayName("isBanned() reads the file if needed")
+    @DisplayName("isBanned() re-reads the file when it has changed underneath us")
     void isBanned4() {
+        // Administrators edit ipbanlist.txt by hand while the server runs, so
+        // a change has to take effect without a restart. This used to be
+        // @Disabled as "intermittently failing": the reload is triggered by
+        // the file's modification time, and writing immediately after creating
+        // the file often left that time unchanged on a coarse-grained
+        // filesystem. Moving the timestamp explicitly makes the trigger
+        // deterministic rather than depending on clock resolution.
         writeIpBanList("10.0.0.1");
-        try { // work around for intermittently failing test
-            Thread.sleep(500);
-        } catch (InterruptedException ignored) {}
-        assertTrue(ipBanList.isBanned("10.0.0.1"));
+        touch(ipBanListPath, System.currentTimeMillis() + 5000);
+
+        assertTrue(ipBanList.isBanned("10.0.0.1"),
+                "The banned-ips file changed on disk but the in-memory list was not "
+                        + "refreshed, so edits to it only take effect after a restart.");
+    }
+
+    @Test
+    @DisplayName("the singleton is shared")
+    void singleton() {
+        // Everything that bans an address goes through this one instance.
+        assertNotNull(IPBanList.getInstance());
+        assertSame(IPBanList.getInstance(), IPBanList.getInstance());
     }
 
     private void writeIpBanList(String ipAddress) {
@@ -105,6 +121,11 @@ class IPBanListTest {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private void touch(Path path, long lastModified) {
+        assertTrue(path.toFile().setLastModified(lastModified),
+                "Could not set the modification time of " + path);
     }
 
     private List<String> readIpBanList() {

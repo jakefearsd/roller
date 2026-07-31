@@ -30,7 +30,6 @@ import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
-import org.apache.roller.weblogger.util.URLUtilities;
 import org.apache.roller.weblogger.util.Utilities;
 
 
@@ -125,7 +124,7 @@ public class WeblogFeedRequest extends WeblogRequest {
         if(request.getParameter("cat") != null) {
             // replacing plus sign below with its encoded equivalent (http://stackoverflow.com/a/6926987)
             this.weblogCategoryName =
-                    URLUtilities.decode(request.getParameter("cat").replace("+", "%2B"));
+                    decodeOrReject(request.getParameter("cat").replace("+", "%2B"), request);
         }
         
         if(request.getParameter("tags") != null) {
@@ -150,7 +149,7 @@ public class WeblogFeedRequest extends WeblogRequest {
         }     
         
         if(request.getParameter("q") != null && !request.getParameter("q").isBlank()) {
-            this.term = URLUtilities.decode(request.getParameter("q"));
+            this.term = decodeOrReject(request.getParameter("q"), request);
         }        
         
         if(this.tags != null && !this.tags.isEmpty() && this.weblogCategoryName != null) {

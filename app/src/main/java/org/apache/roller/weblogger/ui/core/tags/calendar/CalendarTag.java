@@ -113,9 +113,6 @@ public class CalendarTag extends TagSupport {
      */
     public int doStartTag( PrintWriter pw ) throws JspException {
         try {
-            // build week day names
-            this.buildDayNames();
-
             // day to be displayed
             Date day;
             // set to day to be displayed
@@ -146,7 +143,12 @@ public class CalendarTag extends TagSupport {
             if (model == null) {
                 return SKIP_BODY;
             }
-            
+
+            // Build the week day headings from the same calendar the grid is
+            // laid out with, so the headings always describe the columns
+            // underneath them.
+            this.buildDayNames(model.getCalendar());
+
             day = model.getDay();
             
             // ceate object to represent today
@@ -325,16 +327,30 @@ public class CalendarTag extends TagSupport {
      * Helper method to build the names of the weekdays. This
      * used to take place in the <code>CalendarTag</code> constructor,
      * but there, <code>mLocale</code> doesn't have the correct value yet.
+     *
+     * <p>The <em>order</em> of the names comes from the supplied calendar --
+     * the same calendar the grid below is laid out with -- so that heading
+     * <code>n</code> always names the weekday of column <code>n</code>. The
+     * names themselves are still rendered in the tag's locale. Deriving the
+     * first day of the week from the tag's locale instead would rotate the
+     * headings out from under their columns whenever the tag locale and the
+     * weblog locale disagree about where a week starts.
+     *
+     * @param gridCalendar a calendar carrying the weblog's time zone and
+     *                     first-day-of-week; it is modified by this method
      */
-    private void buildDayNames() {
+    private void buildDayNames(Calendar gridCalendar) {
         // build array of names of days of week
         mDayNames = new String[7];
-        Calendar dayNameCal = Calendar.getInstance(mLocale);
         SimpleDateFormat dayFormatter = new SimpleDateFormat("EEE", mLocale);
-        dayNameCal.set(Calendar.DAY_OF_WEEK, dayNameCal.getFirstDayOfWeek());
+        dayFormatter.setTimeZone(gridCalendar.getTimeZone());
+        // Take the names from noon rather than from the current time, so which
+        // names come out cannot depend on what time of day the page is served.
+        DateUtil.getNoonOfDay(gridCalendar.getTime(), gridCalendar);
+        gridCalendar.set(Calendar.DAY_OF_WEEK, gridCalendar.getFirstDayOfWeek());
         for (int dnum = 0; dnum < 7; dnum++) {
-            mDayNames[dnum] = dayFormatter.format(dayNameCal.getTime());
-            dayNameCal.add(Calendar.DATE, 1);
+            mDayNames[dnum] = dayFormatter.format(gridCalendar.getTime());
+            gridCalendar.add(Calendar.DATE, 1);
         }
     }
     

@@ -159,8 +159,11 @@ public class WeblogCacheWarmupJob implements Job {
         }
         
         long end = System.currentTimeMillis();
-        long time = (end-start) * RollerConstants.SEC_IN_MS;
-        
+        // elapsed milliseconds reported in seconds; this used to multiply
+        // rather than divide, so a warmup that took 2 seconds was logged as
+        // having taken 2,000,000
+        long time = (end-start) / RollerConstants.SEC_IN_MS;
+
         log.info("Completed warmup for "+type+"/"+format+" in "+time+" secs.");
         
     }

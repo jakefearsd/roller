@@ -155,7 +155,13 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
                 Timestamp newest = (getItems().get(0)).getUpdateTime();
                 for (WeblogEntryWrapper e : items) {
                     if (e.getUpdateTime().after(newest)) {
-                        newest = e.getPubTime();
+                        // NOTE: must store the update time we just compared. Storing
+                        // the publication time instead dragged the running maximum
+                        // back to a much older instant for any entry published long
+                        // ago and edited recently, so the site-wide feed advertised
+                        // an <updated> older than its own entries and aggregators
+                        // holding a newer If-Modified-Since never saw the change.
+                        newest = e.getUpdateTime();
                     }
                 }
                 lastUpdated = new Date(newest.getTime());

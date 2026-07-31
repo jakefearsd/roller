@@ -1,0 +1,185 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.ui.controllers.admin;
+
+import java.util.List;
+
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.pojos.GlobalPermission;
+import org.apache.roller.weblogger.pojos.User;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
+/**
+ * Tests for {@link CreateUserBean}, the form object behind the admin user
+ * screens. What it copies -- and just as importantly what it refuses to copy --
+ * decides which fields an admin can change on an existing account.
+ */
+class CreateUserBeanTest {
+
+    private MockWeblogger weblogger;
+
+    @BeforeEach
+    void setUp() {
+        weblogger = MockWeblogger.install();
+    }
+
+    @AfterEach
+    void tearDown() {
+        MockWeblogger.uninstall();
+    }
+
+    @Test
+    void copyToWritesTheProfileFieldsOntoTheUser() {
+        CreateUserBean bean = new CreateUserBean();
+        bean.setScreenName("Jake");
+        bean.setFullName("Jake Fear");
+        bean.setEmailAddress("jake@example.com");
+        bean.setLocale("en_GB");
+        bean.setTimeZone("Europe/Berlin");
+        bean.setEnabled(Boolean.TRUE);
+
+        User user = new User();
+        bean.copyTo(user);
+
+        assertEquals("Jake", user.getScreenName());
+        assertEquals("Jake Fear", user.getFullName());
+        assertEquals("jake@example.com", user.getEmailAddress());
+        assertEquals("en_GB", user.getLocale());
+        assertEquals("Europe/Berlin", user.getTimeZone());
+        assertEquals(Boolean.TRUE, user.getEnabled());
+    }
+
+    @Test
+    void copyToLeavesIdentityAndCredentialsAlone() {
+        // Username and password are deliberately not part of copyTo: the
+        // username identifies an existing account and the password has to go
+        // through the encoder, so letting the form overwrite either directly
+        // would be a way to hijack an account.
+        CreateUserBean bean = new CreateUserBean();
+        bean.setUserName("attacker");
+        bean.setPassword("plaintext");
+
+        User user = new User();
+        user.setUserName("victim");
+        user.setPassword("{noop}original");
+        bean.copyTo(user);
+
+        assertEquals("victim", user.getUserName());
+        assertEquals("{noop}original", user.getPassword());
+    }
+
+    @Test
+    void copyFromReadsTheProfileAndTheAdminRole() throws Exception {
+        User user = new User();
+        user.setId("u1");
+        user.setUserName("jake");
+        user.setPassword("{noop}secret");
+        user.setScreenName("Jake");
+        user.setFullName("Jake Fear");
+        user.setEmailAddress("jake@example.com");
+        user.setLocale("en_GB");
+        user.setTimeZone("Europe/Berlin");
+        user.setEnabled(Boolean.FALSE);
+        when(weblogger.userManager().checkPermission(any(GlobalPermission.class), eq(user))).thenReturn(true);
+
+        CreateUserBean bean = new CreateUserBean();
+        bean.copyFrom(user);
+
+        assertEquals("u1", bean.getId());
+        assertEquals("jake", bean.getUserName());
+        assertEquals("{noop}secret", bean.getPassword());
+        assertEquals("Jake", bean.getScreenName());
+        assertEquals("Jake Fear", bean.getFullName());
+        assertEquals("jake@example.com", bean.getEmailAddress());
+        assertEquals("en_GB", bean.getLocale());
+        assertEquals("Europe/Berlin", bean.getTimeZone());
+        assertEquals(Boolean.FALSE, bean.getEnabled());
+        assertTrue(bean.isAdministrator(), "the admin checkbox comes from the user's real role");
+    }
+
+    @Test
+    void copyFromLeavesTheAdminBoxUntickedForAnOrdinaryUser() throws Exception {
+        User user = new User();
+        user.setUserName("jake");
+        when(weblogger.userManager().checkPermission(any(GlobalPermission.class), eq(user))).thenReturn(false);
+
+        CreateUserBean bean = new CreateUserBean();
+        bean.copyFrom(user);
+
+        assertFalse(bean.isAdministrator());
+    }
+
+    @Test
+    void copyFromDoesNotTickTheAdminBoxWhenTheRoleLookupFails() throws Exception {
+        // Failing open here would offer to make somebody an admin on the
+        // strength of a database error.
+        User user = new User();
+        user.setUserName("jake");
+        when(weblogger.userManager().checkPermission(any(GlobalPermission.class), eq(user)))
+                .thenThrow(new WebloggerException("database down"));
+
+        CreateUserBean bean = new CreateUserBean();
+        bean.copyFrom(user);
+
+        assertFalse(bean.isAdministrator());
+        assertEquals("jake", bean.getUserName(), "the rest of the profile is still loaded");
+    }
+
+    @Test
+    void aFreshBeanIsDisabledAndNotAnAdmin() {
+        // The create form starts from this, so the defaults decide what an admin
+        // gets if they save without touching the checkboxes.
+        CreateUserBean bean = new CreateUserBean();
+
+        assertEquals(Boolean.FALSE, bean.getEnabled());
+        assertFalse(bean.isAdministrator());
+        assertNull(bean.getUserName());
+        assertNull(bean.getPassword());
+        assertTrue(bean.getList().isEmpty());
+    }
+
+    @Test
+    void theEnabledFlagIsCarriedBothWays() {
+        // It is the difference between an account that can sign in and one that
+        // cannot, so the getter has to report what was set.
+        CreateUserBean bean = new CreateUserBean();
+        bean.setEnabled(Boolean.TRUE);
+
+        assertEquals(Boolean.TRUE, bean.getEnabled());
+    }
+
+    @Test
+    void theListPropertyIsCarriedBothWays() {
+        CreateUserBean bean = new CreateUserBean();
+        List<String> values = List.of("one", "two");
+        bean.setList(values);
+
+        assertEquals(values, bean.getList());
+    }
+}
