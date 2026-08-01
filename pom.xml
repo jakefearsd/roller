@@ -54,7 +54,7 @@ limitations under the License.
              carries its own bundled driver, instead of cargo deploying to an
              externally managed Tomcat with a hand-declared JNDI datasource. -->
         <postgresql.version>42.7.9</postgresql.version>
-        <maven-surefire.version>3.5.2</maven-surefire.version>
+        <maven-surefire.version>3.5.6</maven-surefire.version>
 
         <!-- JaCoCo coverage gate (jacoco:check on verify). The ratchet is ACTIVE:
              these floors are measured minus a 0.01 margin, and later stages only
