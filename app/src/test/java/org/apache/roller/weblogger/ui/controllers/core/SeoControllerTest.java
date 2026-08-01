@@ -19,10 +19,17 @@ package org.apache.roller.weblogger.ui.controllers.core;
 
 import java.io.StringReader;
 import java.lang.reflect.Field;
+import java.util.List;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -35,12 +42,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link SeoController}, run against the real business tier the way
@@ -209,12 +221,152 @@ class SeoControllerTest {
     }
 
     @Test
-    void weblogSitemapReturns404ForAnUnknownHandle() {
+    void weblogSitemapReturns404ForANonexistentHandle() {
+        // valid handle syntax, no such weblog: exercises the plain null-lookup
+        // path, not the invalid-handle exception below
+        ResponseEntity<String> response = controller.weblogSitemap("nosuchweblog");
+        assertEquals(404, response.getStatusCode().value());
+    }
+
+    @Test
+    void weblogSitemapReturns404ForASyntacticallyInvalidHandle() {
+        // dashes fail getWeblogByHandle's alphanumeric validation, which
+        // throws; crawlers probing /sitemap-*.xml must get a 404, not a 500
         ResponseEntity<String> response = controller.weblogSitemap("no-such-weblog-handle");
         assertEquals(404, response.getStatusCode().value());
     }
 
+    // --- security metadata (what RollerHandlerInterceptor enforces) ---
+
+    @Test
+    void seoEndpointsAreServableToAnonymousReaders() {
+        assertFalse(controller.isUserRequired(),
+                "Crawlers are not logged in; the SEO surface must not require a user");
+        assertFalse(controller.isWeblogRequired(),
+                "The routes carry no weblog request parameter");
+        assertTrue(controller.requiredGlobalPermissionActions().isEmpty(),
+                "No global permission may gate the SEO surface");
+    }
+
+    // --- business-tier failures (mocked: the real tier cannot be made to throw) ---
+
+    @Test
+    void sitemapIndexReturns500WhenTheWeblogListCannotBeLoaded() throws Exception {
+        Weblogger broken = mock(Weblogger.class);
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        when(broken.getWeblogManager()).thenReturn(weblogManager);
+        when(weblogManager.getWeblogs(any(), any(), any(), any(), anyInt(), anyInt()))
+                .thenThrow(new WebloggerException("database down"));
+        SeoController failing = new SeoController();
+        inject(failing, "weblogger", broken);
+
+        ResponseEntity<String> response = failing.sitemapIndex();
+
+        assertEquals(500, response.getStatusCode().value(),
+                "A failing weblog query must surface as a server error, not an empty index");
+    }
+
+    @Test
+    void weblogSitemapReturns500WhenTheEntryQueryFails() throws Exception {
+        Weblogger broken = mock(Weblogger.class);
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        WeblogEntryManager entryManager = mock(WeblogEntryManager.class);
+        when(broken.getWeblogManager()).thenReturn(weblogManager);
+        when(broken.getWeblogEntryManager()).thenReturn(entryManager);
+        when(weblogManager.getWeblogByHandle("mockblog", Boolean.TRUE))
+                .thenReturn(activeWeblog("mockblog"));
+        when(entryManager.getWeblogEntries(any()))
+                .thenThrow(new WebloggerException("database down"));
+        SeoController failing = new SeoController();
+        inject(failing, "weblogger", broken);
+
+        ResponseEntity<String> response = failing.weblogSitemap("mockblog");
+
+        assertEquals(500, response.getStatusCode().value(),
+                "A failing entry query must surface as a server error, not a truncated sitemap");
+    }
+
+    /**
+     * Three edge cases in one document, asserted separately: a media-file
+     * lookup that <em>throws</em> (not just misses) must only cost the image
+     * entry; entries and weblogs without any dates must omit {@code lastmod}
+     * rather than emit an empty element; and a URL containing {@code &} must
+     * be escaped on the wire yet round-trip back to the original through a
+     * real XML parser.
+     */
+    @Test
+    void weblogSitemapSurvivesThrowingMediaLookupMissingDatesAndAmpersands() throws Exception {
+        String rawEntryURL = "http://localhost:8080/roller/mockblog/entry/mock-entry?a=1&b=2";
+
+        Weblogger broken = mock(Weblogger.class);
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        WeblogEntryManager entryManager = mock(WeblogEntryManager.class);
+        MediaFileManager mediaFileManager = mock(MediaFileManager.class);
+        URLStrategy urlStrategy = mock(URLStrategy.class);
+        when(broken.getWeblogManager()).thenReturn(weblogManager);
+        when(broken.getWeblogEntryManager()).thenReturn(entryManager);
+        when(broken.getMediaFileManager()).thenReturn(mediaFileManager);
+        when(broken.getUrlStrategy()).thenReturn(urlStrategy);
+
+        Weblog mockWeblog = activeWeblog("mockblog");
+        when(weblogManager.getWeblogByHandle("mockblog", Boolean.TRUE)).thenReturn(mockWeblog);
+
+        WeblogEntry entry = new WeblogEntry();
+        entry.setAnchor("mock-entry");
+        entry.setFeaturedImageId("throwing-image-id");
+        // no pubTime, no updateTime -- appendLastmod must skip the element
+        when(entryManager.getWeblogEntries(any())).thenReturn(List.of(entry));
+        when(mediaFileManager.getMediaFile("throwing-image-id"))
+                .thenThrow(new WebloggerException("storage exploded"));
+        when(urlStrategy.getWeblogURL(mockWeblog, null, true))
+                .thenReturn("http://localhost:8080/roller/mockblog/");
+        when(urlStrategy.getWeblogEntryURL(mockWeblog, null, "mock-entry", true))
+                .thenReturn(rawEntryURL);
+
+        SeoController failing = new SeoController();
+        inject(failing, "weblogger", broken);
+
+        ResponseEntity<String> response = failing.weblogSitemap("mockblog");
+
+        assertEquals(200, response.getStatusCode().value(),
+                "A throwing media-file lookup must not take down the whole sitemap");
+        String body = response.getBody();
+        assertNotNull(body);
+        Document doc = parse(body);
+        assertFalse(body.contains("image:loc"),
+                "The image whose lookup threw must be omitted:\n" + body);
+        assertTrue(body.contains("/entry/mock-entry"),
+                "The entry itself must still be listed:\n" + body);
+        assertFalse(body.contains("<lastmod>"),
+                "With no dates anywhere, no lastmod element may be emitted:\n" + body);
+        assertTrue(body.contains("?a=1&amp;b=2</loc>"),
+                "The ampersand must be escaped on the wire:\n" + body);
+        assertTrue(locTexts(doc).contains(rawEntryURL),
+                "The escaped loc must round-trip back to the original URL through "
+                        + "a real XML parser:\n" + body);
+    }
+
     // --- support ---
+
+    private static Weblog activeWeblog(String handle) {
+        Weblog mockWeblog = new Weblog();
+        mockWeblog.setHandle(handle);
+        mockWeblog.setActive(Boolean.TRUE);
+        mockWeblog.setVisible(Boolean.TRUE);
+        mockWeblog.setLastModified(null);
+        return mockWeblog;
+    }
+
+    /** The decoded text of every (namespaced) {@code loc} element. */
+    private static List<String> locTexts(Document doc) {
+        NodeList locs = doc.getElementsByTagNameNS(
+                "http://www.sitemaps.org/schemas/sitemap/0.9", "loc");
+        java.util.ArrayList<String> texts = new java.util.ArrayList<>();
+        for (int i = 0; i < locs.getLength(); i++) {
+            texts.add(locs.item(i).getTextContent());
+        }
+        return texts;
+    }
 
     private static Document parse(String xml) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
