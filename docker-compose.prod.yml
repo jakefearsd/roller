@@ -41,7 +41,7 @@ services:
     # `build:` section below lets this same file build from the local tree
     # instead (`docker compose -f docker-compose.prod.yml build app`),
     # which is what local verification and deploy.sh's --build flag use.
-    image: ${ROLLER_IMAGE:-ghcr.io/apache/roller:latest}
+    image: ${ROLLER_IMAGE:-ghcr.io/jakefearsd/roller:latest}
     build:
       context: .
       dockerfile: Dockerfile

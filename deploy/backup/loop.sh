@@ -12,12 +12,17 @@ last_run_day=""
 echo "[$(date -u +%FT%TZ)] Backup loop started; running daily around ${BACKUP_HOUR}:00 UTC."
 
 while true; do
-    # Force base-10: date can print hours with a leading zero ("08", "09"),
-    # which bash's arithmetic context would otherwise misread as octal.
+    # Force base-10 on BOTH operands: date can print hours with a leading
+    # zero ("08", "09"), which bash's arithmetic/[[ -eq ]] context would
+    # otherwise misread as octal -- and an operator is just as likely to
+    # write a zero-padded BACKUP_HOUR (e.g. "08") in .env, which would
+    # crash this same comparison ("value too great for base") if left
+    # unconverted.
     current_hour=$((10#$(date -u +%H)))
+    backup_hour=$((10#${BACKUP_HOUR}))
     current_day="$(date -u +%Y-%m-%d)"
 
-    if [[ "${current_hour}" -eq "${BACKUP_HOUR}" && "${current_day}" != "${last_run_day}" ]]; then
+    if [[ "${current_hour}" -eq "${backup_hour}" && "${current_day}" != "${last_run_day}" ]]; then
         if /backup.sh; then
             last_run_day="${current_day}"
         else

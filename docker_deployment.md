@@ -53,12 +53,12 @@ checkout on the host — the compose file bind-mounts `deploy/config` and
 repo directly on the deploy host:
 
 ```bash
-git clone https://github.com/apache/roller.git /opt/roller
+git clone https://github.com/jakefearsd/roller.git /opt/roller
 cd /opt/roller
 ```
 
-(If you maintain a fork, clone that instead — the `ROLLER_IMAGE` value in
-your `.env` should then point at your fork's GHCR path; see below.)
+(If you maintain a different fork, clone that instead — the `ROLLER_IMAGE`
+value in your `.env` should then point at your fork's GHCR path; see below.)
 
 ## Configure `.env`
 
@@ -74,12 +74,22 @@ Edit `.env`:
 - `ROLLER_DOMAIN` — your real domain (e.g. `blog.example.com`) for
   auto-TLS, or `:80` for a domain-less LAN/testing deployment with plain
   HTTP only (see [TLS](#tls)).
-- `ROLLER_IMAGE` — defaults to `ghcr.io/apache/roller:latest`, published by
-  CI on every push to master (`.github/workflows/main.yml`, job
+- `ROLLER_IMAGE` — defaults to `ghcr.io/jakefearsd/roller:latest`, published
+  by CI on every push to master (`.github/workflows/main.yml`, job
   `publish-image`). Pin to a `:<git-sha>` tag for a reproducible deploy
   instead of floating on `:latest`, or point it at your own fork's GHCR
   path if you cloned a fork. This value is ignored if you deploy with
   `deploy/deploy.sh --build` (build locally instead of pulling).
+
+  **After the first CI publish:** GHCR packages are private by default the
+  first time they're published, so an anonymous `docker pull` of
+  `ROLLER_IMAGE` will fail with "denied"/"unauthorized" until you do one of
+  the following: on GitHub, go to the package's own page (under your
+  account/org's Packages tab) → Package settings → Change visibility →
+  Public; or, keep it private and instead `docker login ghcr.io` on the VPS
+  with a PAT that has `read:packages`. Until either is done, deploy with
+  `deploy/deploy.sh --build` (builds from the local checkout, no pull
+  needed).
 - `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` — generate a real
   password for `POSTGRES_PASSWORD` (e.g. `openssl rand -base64 24`). These
   three are shared by the `app`, `postgres`, and `backup` services.
@@ -234,6 +244,11 @@ orphaned `.tmp` file instead, which rotation also cleans up once it ages
 past the retention window. Backups land in the `roller-backups` named
 volume.
 
+These dumps contain the full database, including user password hashes —
+treat them as sensitive. Copy nightly dumps off-host regularly (e.g. an
+`rclone`/`rsync` cron job to remote storage) and restrict filesystem access
+to wherever they land, both on this host and off it.
+
 Run a backup by hand at any time:
 
 ```bash
@@ -248,13 +263,24 @@ Full restore commands (with exact flags) live in the header comment of
 
 **Database** (app must be stopped first):
 
+The restore command must be run as a single-quoted `bash -c '...'` INSIDE
+the postgres container, exactly like below — `$POSTGRES_USER` /
+`$POSTGRES_PASSWORD` / `$POSTGRES_DB` only exist in the postgres container's
+own environment (set by `docker-compose.prod.yml`). A double-quoted or
+unquoted command would instead expand them in your host shell, where
+they're unset, and `pg_restore` would silently get empty values (this is
+the same in-container pattern `deploy.sh` uses for migrations):
+
 ```bash
 docker compose -f docker-compose.prod.yml stop app
 
-docker compose -f docker-compose.prod.yml exec -T \
-    -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
-    pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists \
-    < /path/on/host/to/rollerdb-<timestamp>.dump
+docker compose -f docker-compose.prod.yml exec -T postgres bash -c '
+    set -euo pipefail
+    export PGHOST=localhost
+    export PGUSER="${POSTGRES_USER}"
+    export PGPASSWORD="${POSTGRES_PASSWORD}"
+    pg_restore -d "${POSTGRES_DB}" --clean --if-exists
+' < /path/on/host/to/rollerdb-<timestamp>.dump
 
 docker compose -f docker-compose.prod.yml start app
 ```
@@ -266,21 +292,25 @@ if restoring from a different machine than the one that made it.)
 **Media/search-index/uploads volumes** (stack must be fully down — the
 archive extracts to `/data/...` paths matching the volume mount points):
 
+The volume names below are Compose's default PROJECT-PREFIXED names, not
+the bare names declared in `docker-compose.prod.yml` — the project name is
+derived from the directory the compose file lives in (`roller` if you
+cloned to `/opt/roller` per [Get the code onto the
+host](#get-the-code-onto-the-host)), giving e.g. `roller_roller-mediafiles`.
+Run `docker volume ls` FIRST to confirm the exact names on your host and
+substitute them below if they differ:
+
 ```bash
 docker compose -f docker-compose.prod.yml down
 docker run --rm \
-    -v roller-mediafiles:/data/mediafiles \
-    -v roller-search-index:/data/search-index \
-    -v roller-uploads:/data/uploads \
-    -v roller-backups:/backups \
+    -v roller_roller-mediafiles:/data/mediafiles \
+    -v roller_roller-search-index:/data/search-index \
+    -v roller_roller-uploads:/data/uploads \
+    -v roller_roller-backups:/backups \
     postgres:16@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20 \
     tar xzf /backups/volumes-<timestamp>.tar.gz -C /
 docker compose -f docker-compose.prod.yml up -d
 ```
-
-(Volume names above are Compose's default project-prefixed names, e.g.
-`roller_roller-mediafiles` — check `docker volume ls` for the exact names on
-your host.)
 
 Test your restore procedure at least once before you need it for real —
 against a scratch copy of the stack, not production.

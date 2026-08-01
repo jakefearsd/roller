@@ -17,12 +17,25 @@
 # =======
 #
 # Database (drops and recreates objects in place -- take the app down first
-# with `docker compose -f docker-compose.prod.yml stop app`):
+# with `docker compose -f docker-compose.prod.yml stop app`).
 #
-#   docker compose -f docker-compose.prod.yml exec -T \
-#     -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
-#     pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists \
-#     < /path/on/host/to/rollerdb-<timestamp>.dump
+# IMPORTANT: run this via `exec ... bash -c '...'` with the command
+# SINGLE-QUOTED, exactly like below -- $POSTGRES_USER/$POSTGRES_PASSWORD/
+# $POSTGRES_DB only exist inside the postgres container's environment (set
+# by docker-compose.prod.yml). A double-quoted or unquoted command expands
+# them in your HOST shell instead, where they're unset, and pg_restore/psql
+# silently gets empty values (see deploy.sh's own migration step for the
+# same pattern):
+#
+#   docker compose -f docker-compose.prod.yml exec -T postgres bash -c '
+#     set -euo pipefail
+#     export PGHOST=localhost
+#     export PGUSER="${POSTGRES_USER}"
+#     export PGPASSWORD="${POSTGRES_PASSWORD}"
+#     pg_restore -d "${POSTGRES_DB}" --clean --if-exists
+#   ' < /path/on/host/to/rollerdb-<timestamp>.dump
+#
+#   docker compose -f docker-compose.prod.yml start app
 #
 #   (The dump lives in the roller-backups volume, at
 #   /backups/rollerdb-<timestamp>.dump inside the backup container --
@@ -30,21 +43,24 @@
 #   onto the host first if restoring from a different machine.)
 #
 # Media/search-index/uploads volumes (stack must be down -- the archive
-# extracts to /data/... paths, matching the volume mount points):
+# extracts to /data/... paths, matching the volume mount points).
+#
+# The volume names below are Compose's default PROJECT-PREFIXED names, not
+# the bare names declared in docker-compose.prod.yml -- the project name is
+# derived from the directory the compose file lives in (`roller` if you
+# cloned to /opt/roller per docker_deployment.md), giving e.g.
+# `roller_roller-mediafiles`. Run `docker volume ls` FIRST to confirm the
+# exact names on your host and substitute them below if they differ:
 #
 #   docker compose -f docker-compose.prod.yml down
 #   docker run --rm \
-#     -v roller-mediafiles:/data/mediafiles \
-#     -v roller-search-index:/data/search-index \
-#     -v roller-uploads:/data/uploads \
-#     -v roller-backups:/backups \
+#     -v roller_roller-mediafiles:/data/mediafiles \
+#     -v roller_roller-search-index:/data/search-index \
+#     -v roller_roller-uploads:/data/uploads \
+#     -v roller_roller-backups:/backups \
 #     postgres:16@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20 \
 #     tar xzf /backups/volumes-<timestamp>.tar.gz -C /
 #   docker compose -f docker-compose.prod.yml up -d
-#
-#   (Volume names above are Compose's default project-prefixed names, e.g.
-#   roller_roller-mediafiles -- check `docker volume ls` for the exact names
-#   on your host.)
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
