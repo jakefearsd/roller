@@ -112,10 +112,12 @@ abstract class EditorControllerTestSupport {
 
     /**
      * Finish wiring a controller the way Spring would: inject the message
-     * source that {@code BaseController} declares {@code @Autowired}.
+     * source and the {@code Weblogger} that {@code BaseController} declares
+     * {@code @Autowired}.
      */
     protected <T extends BaseController> T prepare(T controller) {
         setField(controller, "messageSource", messageSource);
+        setField(controller, "weblogger", weblogger.weblogger());
         return controller;
     }
 

@@ -33,7 +33,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -102,7 +101,7 @@ public class CommentsController extends BaseController {
         bean.loadCheckboxes(((CommentsPager) model.getAttribute("pager")).getItems());
 
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             CommentSearchCriteria csc = getCommentSearchCriteria(request, bean);
             List<WeblogEntryComment> allMatchingComments = wmgr.getComments(csc);
             if (allMatchingComments.size() > COUNT) {
@@ -122,7 +121,7 @@ public class CommentsController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             Set<WeblogEntry> reindexEntries = new HashSet<>();
 
             if (WebloggerConfig.getBooleanProperty("search.enabled")) {
@@ -137,7 +136,7 @@ public class CommentsController extends BaseController {
                     bean.getSearchString(), bean.getStartDate(), bean.getEndDate(), bean.getStatus());
 
             if (!reindexEntries.isEmpty()) {
-                IndexManager imgr = WebloggerFactory.getWeblogger().getIndexManager();
+                IndexManager imgr = weblogger.getIndexManager();
                 for (WeblogEntry entry : reindexEntries) {
                     imgr.addEntryReIndexOperation(entry);
                 }
@@ -165,7 +164,7 @@ public class CommentsController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             List<WeblogEntryComment> flushList = new ArrayList<>();
             Set<WeblogEntry> reindexList = new HashSet<>();
 
@@ -215,7 +214,7 @@ public class CommentsController extends BaseController {
                 }
             }
 
-            WebloggerFactory.getWeblogger().flush();
+            weblogger.flush();
             CacheManager.invalidate(getActionWeblog(request));
 
             if (MailUtil.isMailConfigured()) {
@@ -224,7 +223,7 @@ public class CommentsController extends BaseController {
             }
 
             if (!reindexList.isEmpty()) {
-                IndexManager imgr = WebloggerFactory.getWeblogger().getIndexManager();
+                IndexManager imgr = weblogger.getIndexManager();
                 for (WeblogEntry entry : reindexList) {
                     imgr.addEntryReIndexOperation(entry);
                 }
@@ -261,7 +260,7 @@ public class CommentsController extends BaseController {
         WeblogEntry queryEntry = null;
 
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             if (!StringUtils.isEmpty(bean.getEntryId())) {
                 queryEntry = wmgr.getWeblogEntry(bean.getEntryId());
             }
@@ -320,7 +319,7 @@ public class CommentsController extends BaseController {
         if (!StringUtils.isEmpty(bean.getApprovedString())) {
             params.put("bean.approvedString", bean.getApprovedString());
         }
-        return WebloggerFactory.getWeblogger().getUrlStrategy()
+        return weblogger.getUrlStrategy()
                 .getActionURL("comments", "/roller-ui/authoring", getActionWeblog(request).getHandle(), params, false);
     }
 

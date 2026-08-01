@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
@@ -94,7 +93,7 @@ public class MediaFileAddController extends MediaFileBase {
         }
 
         if (!hasErrors(model) && uploadedFiles != null && uploadedFiles.length > 0) {
-            MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager manager = weblogger.getMediaFileManager();
             RollerMessages errors = new RollerMessages();
             List<MediaFile> uploaded = new ArrayList<>();
             List<MediaFile> newImages = new ArrayList<>();
@@ -137,7 +136,7 @@ public class MediaFileAddController extends MediaFileBase {
                     mediaFile.setContentType(contentType);
 
                     manager.createMediaFile(getActionWeblog(request), mediaFile, errors);
-                    WebloggerFactory.getWeblogger().flush();
+                    weblogger.flush();
 
                     if (mediaFile.isImageFile()) {
                         newImages.add(mediaFile);
@@ -180,7 +179,7 @@ public class MediaFileAddController extends MediaFileBase {
 
     private MediaFileDirectory resolveDirectory(HttpServletRequest request, Model model, MediaFileBean bean) {
         try {
-            MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager mgr = weblogger.getMediaFileManager();
             MediaFileDirectory directory;
 
             if (!StringUtils.isEmpty(bean.getDirectoryId())) {
@@ -201,7 +200,7 @@ public class MediaFileAddController extends MediaFileBase {
                 bean.setDirectoryId(directory.getId());
                 model.addAttribute("directory", directory);
             }
-            WebloggerFactory.getWeblogger().flush();
+            weblogger.flush();
             return directory;
 
         } catch (WebloggerException ex) {

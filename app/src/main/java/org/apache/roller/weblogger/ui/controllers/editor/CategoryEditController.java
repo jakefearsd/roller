@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -83,9 +82,9 @@ public class CategoryEditController extends BaseController {
                 getActionWeblog(request).addCategory(category);
                 category.calculatePosition();
 
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 wmgr.saveWeblogCategory(category);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
                 CacheManager.invalidate(getActionWeblog(request));
                 addFlashMessage(redirectAttributes, "categoryForm.created", category.getName(), request);
@@ -120,12 +119,12 @@ public class CategoryEditController extends BaseController {
 
         if (!hasErrors(model)) {
             try {
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 WeblogCategory category = wmgr.getWeblogCategory(bean.getId());
                 bean.copyTo(category);
 
                 wmgr.saveWeblogCategory(category);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
                 CacheManager.invalidate(getActionWeblog(request));
                 addFlashMessage(redirectAttributes, "categoryForm.changesSaved", category.getName(), request);

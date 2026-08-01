@@ -26,7 +26,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -71,7 +70,7 @@ public class CategoriesController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             model.addAttribute("allCategories", wmgr.getWeblogCategories(getActionWeblog(request)));
         } catch (WebloggerException ex) {
             log.error("Error building categories list", ex);

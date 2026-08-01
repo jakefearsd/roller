@@ -34,7 +34,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
@@ -242,8 +241,8 @@ public class EntryEditController extends BaseController {
                           WeblogEntry entry, String actionName) {
         if (!hasErrors(model)) {
             try {
-                WeblogEntryManager weblogEntryManager = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-                IndexManager indexMgr = WebloggerFactory.getWeblogger().getIndexManager();
+                WeblogEntryManager weblogEntryManager = weblogger.getWeblogEntryManager();
+                IndexManager indexMgr = weblogger.getIndexManager();
 
                 entry.setUpdateTime(new Timestamp(new Date().getTime()));
                 entry.setPubTime(bean.getPubTime(request.getLocale(),
@@ -257,7 +256,7 @@ public class EntryEditController extends BaseController {
 
                 GlobalPermission adminPerm = new GlobalPermission(
                         Collections.singletonList(GlobalPermission.ADMIN));
-                if (WebloggerFactory.getWeblogger().getUserManager()
+                if (weblogger.getUserManager()
                         .checkPermission(adminPerm, getAuthenticatedUser(request))) {
                     entry.setPinnedToMain(bean.getPinnedToMain());
                 }
@@ -282,7 +281,7 @@ public class EntryEditController extends BaseController {
                 }
 
                 weblogEntryManager.saveWeblogEntry(entry);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
                 if (entry.isPublished()) {
                     indexMgr.addEntryReIndexOperation(entry);
@@ -339,7 +338,7 @@ public class EntryEditController extends BaseController {
             return null;
         }
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             return wmgr.getWeblogEntry(id);
         } catch (WebloggerException ex) {
             log.error("Error looking up entry by id - " + id, ex);
@@ -353,11 +352,11 @@ public class EntryEditController extends BaseController {
         model.addAttribute("editor", getEditor(request));
         model.addAttribute("userAnAuthor", getActionWeblog(request).hasUserPermission(
                 getAuthenticatedUser(request), WeblogPermission.POST));
-        model.addAttribute("jsonAutocompleteUrl", WebloggerFactory.getWeblogger().getUrlStrategy()
+        model.addAttribute("jsonAutocompleteUrl", weblogger.getUrlStrategy()
                 .getWeblogTagsJsonURL(getActionWeblog(request), false, 0));
 
         if (entry.getId() != null) {
-            model.addAttribute("previewURL", WebloggerFactory.getWeblogger().getUrlStrategy()
+            model.addAttribute("previewURL", weblogger.getUrlStrategy()
                     .getPreviewURLStrategy(null)
                     .getWeblogEntryURL(getActionWeblog(request), null, entry.getAnchor(), true));
         }
@@ -405,7 +404,7 @@ public class EntryEditController extends BaseController {
 
     private List<WeblogCategory> getCategories(HttpServletRequest request) {
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             return wmgr.getWeblogCategories(getActionWeblog(request));
         } catch (WebloggerException ex) {
             log.error("Error getting category list", ex);
@@ -415,7 +414,7 @@ public class EntryEditController extends BaseController {
 
     private List<WeblogEntryPlugin> getEntryPlugins(HttpServletRequest request) {
         try {
-            PluginManager ppmgr = WebloggerFactory.getWeblogger().getPluginManager();
+            PluginManager ppmgr = weblogger.getPluginManager();
             Map<String, WeblogEntryPlugin> plugins = ppmgr.getWeblogEntryPlugins(getActionWeblog(request));
             if (!plugins.isEmpty()) {
                 return new ArrayList<>(plugins.values());
@@ -439,7 +438,7 @@ public class EntryEditController extends BaseController {
             wesc.setMaxResults(20);
             wesc.setStatus(pubStatus);
             wesc.setSortBy(sortBy);
-            return WebloggerFactory.getWeblogger().getWeblogEntryManager().getWeblogEntries(wesc);
+            return weblogger.getWeblogEntryManager().getWeblogEntries(wesc);
         } catch (WebloggerException ex) {
             log.error("Error getting entries list", ex);
         }
