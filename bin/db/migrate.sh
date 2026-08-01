@@ -26,6 +26,11 @@
 # Roller also applies these same migrations at startup through the web install
 # wizard (see DatabaseInstaller). Both paths read the same V*.sql files and the
 # same schema_migrations table, so it does not matter which one runs first.
+#
+# deploy/deploy.sh (production deploys) runs this exact script too: it copies
+# this file and migrations/ into the postgres container unmodified and execs
+# it there, so a production deploy's migration step and a manual
+# ./migrate.sh run can never disagree about what "applied" means.
 set -euo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
