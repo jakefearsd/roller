@@ -114,3 +114,53 @@ jobs:
         if: always()
         with:
           paths: "it-selenium/target/failsafe-reports/TEST-*.xml"
+
+  publish-image:
+    name: Publish production image to GHCR
+    needs: [build-test, integration-test]
+    # The workflow's own `on.push.branches: [master]` trigger filter (above)
+    # already restricts push events to master, so this only re-states the
+    # push-vs-pull_request distinction: never publish from a PR build.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+          show-progress: false
+
+      # GHCR requires an all-lowercase repository path, but
+      # github.repository preserves the owner/repo casing as configured on
+      # GitHub, so it may contain uppercase characters. Lowercase it into an
+      # env var here rather than assuming the repo name is already lowercase.
+      - name: Compute lowercase image repository
+        run: echo "IMAGE_REPO=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_REPO }}:latest
+            ghcr.io/${{ env.IMAGE_REPO }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # This job's first real proof is its first run on the next push to
+      # master -- GHCR auth, the lowercasing step, and build-push-action's
+      # layer-cache behavior can't be exercised from a local `docker build`.
