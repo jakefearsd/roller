@@ -42,10 +42,19 @@ import org.springframework.stereotype.Component;
  * used to run from {@code ServletContextListener.contextInitialized}/
  * {@code contextDestroyed}.
  *
- * <p>Registered as a Boot {@link SmartLifecycle} bean at the default phase
- * (0), which runs {@link #start()} before Boot's own
- * {@code WebServerStartStopLifecycle} (a much later phase) opens the
- * connector, and {@link #stop()} after that connector has closed --
+ * <p>Registered as a Boot {@link SmartLifecycle} bean at phase 0 (explicit
+ * {@link #getPhase()} override -- {@code SmartLifecycle}'s own default phase
+ * is {@link SmartLifecycle#DEFAULT_PHASE}, {@code Integer.MAX_VALUE}, which
+ * is numerically *larger* than Boot's own
+ * {@code WebServerStartStopLifecycle} phase
+ * ({@code Integer.MAX_VALUE - 2048}, verified via {@code javap} against
+ * {@code spring-boot-web-server-4.1.0.jar}). {@code DefaultLifecycleProcessor}
+ * starts phases in ascending order and stops them in descending order, so
+ * leaving the default phase in place would start Roller *after* the
+ * connector opens and stop it *before* the connector closes -- exactly
+ * inverted from what's wanted. Phase 0 is safely below
+ * {@code WebServerStartStopLifecycle}'s phase, so {@link #start()} runs
+ * before the connector opens and {@link #stop()} runs after it has closed --
  * requests never see a half-started or half-shutdown Roller.
  *
  * <p>This transcribes {@code RollerContext.contextInitialized}'s behavior
@@ -157,6 +166,8 @@ public class RollerLifecycle implements SmartLifecycle {
             RollerContext.initializeSecurityFeatures(servletContext);
             RollerContext.setupVelocity();
         } catch (Exception ex) {
+            // TODO(Stage1B Task 4): narrow to WebloggerException once security
+            // beans are real Spring beans.
             // Deliberately wider than the original catch(WebloggerException):
             // initializeSecurityFeatures looks up Spring beans by the names
             // the security.xml namespace parser assigns them, and that XML
@@ -225,7 +236,17 @@ public class RollerLifecycle implements SmartLifecycle {
         return running;
     }
 
-    // default phase 0: starts before WebServerStartStopLifecycle (a much
-    // later phase), stops after it -- requests never see a half-started or
-    // half-shutdown Roller.
+    /**
+     * Explicit phase 0 -- see the class javadoc. {@code SmartLifecycle}'s
+     * own default ({@link SmartLifecycle#DEFAULT_PHASE}) is
+     * {@code Integer.MAX_VALUE}, which is *higher* than Boot's
+     * {@code WebServerStartStopLifecycle} phase
+     * ({@code Integer.MAX_VALUE - 2048}); leaving the default in place would
+     * start Roller after the connector opens and stop it before the
+     * connector closes. Phase 0 fixes both.
+     */
+    @Override
+    public int getPhase() {
+        return 0;
+    }
 }
