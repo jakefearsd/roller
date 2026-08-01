@@ -87,6 +87,23 @@ fi
 echo "    postgres healthy."
 
 echo "==> Applying database migrations..."
+
+# `docker compose cp` (like `docker cp`) nests the source INSIDE an existing
+# destination directory rather than replacing it. If a previous run failed
+# mid-migration (or was interrupted) and left /tmp/migrate.sh + /tmp/migrations
+# staged in the postgres container, copying fresh files on top would nest the
+# new migrations/ under the stale one, and migrate.sh would keep reading the
+# OLD (possibly broken) SQL forever -- the operator's fix would never take
+# effect and a retry would be unrecoverable without manual cleanup. Guard
+# against that two ways: (1) clear any staging idempotently before copying
+# fresh files in, and (2) register the same cleanup as an EXIT trap so it
+# also runs after this run, on failure, or on interruption (Ctrl-C).
+cleanup_migration_staging() {
+    "${COMPOSE[@]}" exec -T postgres rm -rf /tmp/migrate.sh /tmp/migrations >/dev/null 2>&1 || true
+}
+trap cleanup_migration_staging EXIT
+cleanup_migration_staging
+
 "${COMPOSE[@]}" cp bin/db/migrate.sh postgres:/tmp/migrate.sh
 "${COMPOSE[@]}" cp bin/db/migrations postgres:/tmp/migrations
 "${COMPOSE[@]}" exec -T postgres bash -c '
@@ -97,7 +114,7 @@ echo "==> Applying database migrations..."
     export DB_NAME="${POSTGRES_DB}"
     bash /tmp/migrate.sh
 '
-"${COMPOSE[@]}" exec -T postgres rm -rf /tmp/migrate.sh /tmp/migrations
+cleanup_migration_staging
 
 echo "==> Starting app..."
 "${COMPOSE[@]}" up -d app
