@@ -153,9 +153,15 @@ public class BigWeblogCalendarModel extends WeblogCalendarModel {
             return null;
         }
         else if (dateString == null && !nextPrevMonthURL) {
-            dateString = DateUtil.format8chars(day);
+            // Format in the weblog's own zone: DateUtil.format8chars(Date) uses the
+            // JVM default zone, which can land on the wrong day when the server's
+            // zone differs from the weblog's (e.g. UTC CI runners vs. a Paris blog).
+            dateString = DateUtil.format8chars(day, weblog.getTimeZoneInstance());
         } else if (dateString == null) {
-            dateString = DateUtil.format6chars(day);
+            // Same fix for the month arrows: without the weblog's zone, an instant
+            // near a month boundary can format into the wrong month on a server
+            // whose default zone differs from the weblog's.
+            dateString = DateUtil.format6chars(day, weblog.getTimeZoneInstance());
         }
         try {
             if (nextPrevMonthURL && pageLink != null) { 
