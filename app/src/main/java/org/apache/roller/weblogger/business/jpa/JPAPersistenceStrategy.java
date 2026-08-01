@@ -494,9 +494,23 @@ public class JPAPersistenceStrategy {
     }
     
     /**
-     * Release database session, rolls back any uncommitted changes.
+     * Release database session, rolls back any uncommitted changes. Tolerates
+     * being called more than once: the {@code Weblogger} bean's {@code
+     * destroyMethod="shutdown"} and a caller invoking {@code
+     * Weblogger.shutdown()} directly can both reach here for the same
+     * instance (see {@link #shutdown()}'s javadoc for the exact dual-
+     * invocation), and {@code JPAWebloggerImpl.shutdown()} calls {@code
+     * release()} before closing the {@code EntityManagerFactory}, so a second
+     * pass lands here against an already-closed factory. Once closed,
+     * {@code EntityManagerFactory.createEntityManager()} throws {@code
+     * IllegalStateException}, which without this guard was caught below and
+     * logged at ERROR on every graceful stop.
      */
     public void release() {
+        if (emf == null || !emf.isOpen()) {
+            threadLocalEntityManager.remove();
+            return;
+        }
         EntityManager em = null;
         try {
             em = getEntityManager(false);
@@ -709,7 +723,10 @@ public class JPAPersistenceStrategy {
      * once: the {@code Weblogger} bean's {@code destroyMethod="shutdown"} and
      * a caller invoking {@code Weblogger.shutdown()} directly can both reach
      * here for the same instance, and EclipseLink's {@code EntityManagerFactory.close()}
-     * throws {@code IllegalStateException} on a second close.
+     * throws {@code IllegalStateException} on a second close. {@link #release()}
+     * guards against this same dual invocation, since {@code
+     * JPAWebloggerImpl.shutdown()} calls {@code release()} before this method
+     * on every pass.
      */
     public void shutdown() {
         if (emf != null && emf.isOpen()) {

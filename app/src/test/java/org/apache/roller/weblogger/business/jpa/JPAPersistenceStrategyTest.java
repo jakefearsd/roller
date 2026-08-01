@@ -55,6 +55,31 @@ class JPAPersistenceStrategyTest {
     }
 
     @Test
+    void releaseToleratesBeingCalledAfterShutdown() throws Exception {
+        // JPAWebloggerImpl.shutdown() calls release() and then shutdown() on
+        // this strategy on every pass, and (per shutdownToleratesBeingCalled-
+        // MoreThanOnce above) that whole sequence can itself run twice for
+        // the same instance. On the second pass, release() is reached against
+        // an already-closed EntityManagerFactory; before this guard, that
+        // threw IllegalStateException out of EntityManagerFactory.createEntityManager(),
+        // caught and logged at ERROR rather than propagated, on every
+        // graceful stop.
+        RollerDatabaseExtension.ensureSchema();
+        if (!WebloggerStartup.isPrepared()) {
+            WebloggerStartup.prepare();
+        }
+
+        JPAPersistenceStrategy strategy =
+                new JPAPersistenceStrategy(WebloggerStartup.getDatabaseProvider());
+
+        strategy.shutdown();
+        assertDoesNotThrow(strategy::release,
+                "release() after shutdown() must be a no-op, not throw");
+        assertDoesNotThrow(strategy::shutdown,
+                "shutdown() after release()-after-shutdown() must still be a no-op, not throw");
+    }
+
+    @Test
     void handBuiltPersistenceUnitInfoBuildsAWorkingEmfAndAWeblogManagerQueryRoundTrips() throws Exception {
         // Task 2b: the constructor now builds the EntityManagerFactory via
         // PersistenceProvider#createContainerEntityManagerFactory with a
