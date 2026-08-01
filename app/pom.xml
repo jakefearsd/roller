@@ -799,10 +799,15 @@ limitations under the License.
                         </configuration>
                     </execution>
                 </executions>
-                <!-- The plugin bundles Jasper 10.1.x by default; override every
-                     Tomcat artifact it pulls in (not just tomcat-jasper) so the
-                     classpath is a consistent Tomcat 11 set matching the
-                     tomcat-embed-jasper version the app runs on in production. -->
+                <!-- The plugin bundles Jasper 10.1.x by default. Only tomcat-jasper
+                     is a direct dependency of the plugin; the other eight Tomcat
+                     artifacts below are pulled in transitively from it, so
+                     overriding tomcat-jasper alone is enough to bring the whole
+                     set to 11.0.22 today. They're pinned here anyway, defensively,
+                     so a future plugin release restructuring its dependency graph
+                     (e.g. flattening a transitive dep to direct, or dropping the
+                     transitive relationship) cannot silently mix Jasper versions
+                     on the validation classpath. -->
                 <dependencies>
                     <dependency>
                         <groupId>org.apache.tomcat</groupId>
