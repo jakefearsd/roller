@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.BootstrapException;
+import org.apache.roller.weblogger.business.SpringWebloggerProvider;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -179,8 +180,11 @@ public class RollerContext extends ContextLoaderListener
 
             Weblogger weblogger = null;
             try {
-                // trigger bootstrapping process
-                WebloggerFactory.bootstrap();
+                // trigger bootstrapping process, reusing the root web application
+                // context (which already imports WebloggerBeanConfig) so that
+                // controllers and the business tier share a single Spring context
+                WebloggerFactory.bootstrap(new SpringWebloggerProvider(
+                        WebApplicationContextUtils.getRequiredWebApplicationContext(servletContext)));
 
                 // trigger initialization process
                 weblogger = WebloggerFactory.getWeblogger();
@@ -215,9 +219,12 @@ public class RollerContext extends ContextLoaderListener
      */
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        WebloggerFactory.getWeblogger().shutdown();
+        if (WebloggerFactory.isBootstrapped()) {
+            WebloggerFactory.getWeblogger().shutdown();
+        }
         // do we need a more generic mechanism for presentation layer shutdown?
         CacheManager.shutdown();
+        super.contextDestroyed(sce);   // closes the root context (was never called before)
     }
 
     /**

@@ -28,12 +28,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.SpringWebloggerProvider;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.beans.FatalBeanException;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,6 +52,12 @@ import org.springframework.web.bind.annotation.RequestMethod;
 public class InstallController extends BaseController {
 
     private static final Log log = LogFactory.getLog(InstallController.class);
+
+    private final ApplicationContext applicationContext;
+
+    public InstallController(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
 
     @Override
     public boolean isUserRequired() {
@@ -165,8 +173,10 @@ public class InstallController extends BaseController {
         }
 
         try {
-            // trigger bootstrapping process
-            WebloggerFactory.bootstrap();
+            // trigger bootstrapping process, reusing the root web application
+            // context (which already imports WebloggerBeanConfig) so that
+            // controllers and the business tier share a single Spring context
+            WebloggerFactory.bootstrap(new SpringWebloggerProvider(applicationContext));
 
             // trigger initialization process
             WebloggerFactory.getWeblogger().initialize();
