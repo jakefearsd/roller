@@ -2,7 +2,7 @@
 # Roller development entry point.
 #
 # Usage:
-#   ./roller dev        start postgres, apply migrations, run the app on Jetty
+#   ./roller dev        start postgres, apply migrations, run the app via spring-boot:run
 #   ./roller db         start postgres only and apply migrations
 #   ./roller migrate    apply pending migrations to the dev database
 #   ./roller status     show which migrations have been applied
@@ -74,7 +74,13 @@ case "${1:-dev}" in
         start_db
         run_migrations
         print_ok "Starting Roller on http://localhost:8083/roller"
-        mvn -pl app jetty:run
+        # process-test-resources runs first so roller-boot-dev.properties is
+        # filtered into target/test-classes before spring-boot:run starts the
+        # app; without it, ${basedir}-style filtering never happens and the
+        # custom config points at a file that doesn't exist yet.
+        mvn -ntp -pl app process-test-resources spring-boot:run \
+            -Dspring-boot.run.arguments="--server.port=8083" \
+            -Dspring-boot.run.jvmArguments="-Droller.custom.config=${SCRIPT_DIR}/app/target/test-classes/roller-boot-dev.properties"
         ;;
     migrate)
         run_migrations

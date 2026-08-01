@@ -674,67 +674,6 @@ limitations under the License.
             </plugin>
 
             <plugin>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-maven-plugin</artifactId>
-                <configuration>
-                    <httpConnector>
-                        <port>8083</port>
-                    </httpConnector>
-                    <webApp>
-                        <contextPath>/roller</contextPath>
-                    </webApp>
-                    <jettyXmls>src/test/resources/jetty.xml</jettyXmls>
-                    <systemProperties>
-                        <roller.custom.config>
-                            ${project.build.directory}/test-classes/roller-jettyrun.properties
-                        </roller.custom.config>
-                    </systemProperties>
-                </configuration>
-                <dependencies>
-                    <!-- jetty-maven-plugin pulls glassfish-jstl, which brings
-                         jakarta.servlet.jsp.jstl 2.0.0. The WAR ships 3.0.1, so
-                         both land on the dev-server classpath and Jetty's
-                         annotation scanner reports ~15 duplicate taglib classes.
-                         Re-declared here purely to exclude the older copy; the
-                         webapp's own JSTL is the one Roller's JSPs compile
-                         against. -->
-                    <dependency>
-                        <groupId>org.eclipse.jetty</groupId>
-                        <artifactId>glassfish-jstl</artifactId>
-                        <version>${jetty.plugin.version}</version>
-                        <exclusions>
-                            <exclusion>
-                                <groupId>org.glassfish.web</groupId>
-                                <artifactId>jakarta.servlet.jsp.jstl</artifactId>
-                            </exclusion>
-                        </exclusions>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.apache.commons</groupId>
-                        <artifactId>commons-dbcp2</artifactId>
-                        <version>2.14.0</version>
-                    </dependency>
-                    <!-- jetty:run connects to the PostgreSQL started by
-                         `docker compose up -d postgres` (see ./roller dev). -->
-                    <dependency>
-                        <groupId>org.postgresql</groupId>
-                        <artifactId>postgresql</artifactId>
-                        <version>${postgresql.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>jakarta.mail</groupId>
-                        <artifactId>jakarta.mail-api</artifactId>
-                        <version>2.1.3</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.eclipse.angus</groupId>
-                        <artifactId>angus-mail</artifactId>
-                        <version>2.0.5</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-
-            <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
 

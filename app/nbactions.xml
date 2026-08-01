@@ -26,17 +26,19 @@
 
     <action>
         <actionName>run</actionName>
-        <displayName>jetty:run</displayName>
+        <displayName>spring-boot:run</displayName>
         <goals>
-            <goal>jetty:run</goal>
+            <goal>process-test-resources</goal>
+            <goal>spring-boot:run</goal>
         </goals>
     </action>
 
     <action>
         <actionName>debug</actionName>
-        <displayName>jetty:run+debug</displayName>
+        <displayName>spring-boot:run+debug</displayName>
         <goals>
-            <goal>jetty:run</goal>
+            <goal>process-test-resources</goal>
+            <goal>spring-boot:run</goal>
         </goals>
         <properties>
             <jpda.listen>maven</jpda.listen>

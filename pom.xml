@@ -41,6 +41,9 @@ limitations under the License.
 
     <properties>
         <jacoco-plugin.version>0.8.15</jacoco-plugin.version>
+        <!-- Only the jetty-jspc-maven-plugin (app/pom.xml, JSP-compile-time
+             validation) still uses this; the jetty-maven-plugin dev server is
+             gone (Stage 1B Task 5 - dev runs on spring-boot:run). -->
         <jetty.plugin.version>11.0.26</jetty.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -48,8 +51,9 @@ limitations under the License.
         <slf4j.version>2.0.17</slf4j.version>
         <testcontainers.version>2.0.5</testcontainers.version>
 
-        <!-- Shared by app (WAR + jetty dev server) and it-selenium (cargo's Tomcat
-             needs the driver too). Defined here so the two cannot drift apart. -->
+        <!-- Shared by app (WAR + spring-boot:run dev server) and it-selenium
+             (cargo's Tomcat needs the driver too). Defined here so the two
+             cannot drift apart. -->
         <postgresql.version>42.7.9</postgresql.version>
         <maven-surefire.version>3.5.2</maven-surefire.version>
 
@@ -108,11 +112,6 @@ limitations under the License.
                     <configuration>
                         <downloadSources>true</downloadSources>
                     </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.eclipse.jetty</groupId>
-                    <artifactId>jetty-maven-plugin</artifactId>
-                    <version>${jetty.plugin.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
