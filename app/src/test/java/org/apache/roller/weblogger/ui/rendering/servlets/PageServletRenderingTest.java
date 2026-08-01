@@ -13,6 +13,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -74,6 +75,35 @@ class PageServletRenderingTest {
         String body = response.getContentAsString();
         assertTrue(body.contains("perma-entry"), "permalink must show the entry:\n" + body);
         assertTrue(body.contains("blah blah entry"), "permalink must show the text:\n" + body);
+    }
+
+    @Test
+    void anImageShortcodeExpandsOnTheLivePermalink() throws Exception {
+        // End-to-end render-pipeline proof for the unconditional shortcode
+        // expander: a real uploaded image (hawk.jpg, 500w, so only the 480
+        // rung exists), a real entry naming NO plugins, the real PageServlet.
+        org.apache.roller.weblogger.pojos.MediaFile image =
+                TestUtils.setupImageMediaFile(weblog, "page-hawk.jpg");
+        WeblogEntry entry = TestUtils.setupWeblogEntry("shortcode-entry", weblog, user);
+        entry.setText("before [image id=" + image.getId() + " caption=\"A hawk\"] after");
+        org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger()
+                .getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagerenderblog/entry/shortcode-entry");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+        assertTrue(body.contains("<figure class=\"shortcode-image\">"),
+                "the [image] shortcode must expand on the live permalink:\n" + body);
+        assertTrue(body.contains(image.getId() + "?w=480 480w"),
+                "srcset must point the ladder rung at the media-resource URL:\n" + body);
+        assertTrue(body.contains("<figcaption>A hawk</figcaption>"), body);
+        assertFalse(body.contains("[image id="),
+                "the raw shortcode text must not leak to readers:\n" + body);
     }
 
     @Test

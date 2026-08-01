@@ -17,11 +17,13 @@
  */
 package org.apache.roller.weblogger.pojos;
 
+import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
+import org.apache.roller.weblogger.business.plugins.PluginManagerImpl;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ import org.mockito.MockedStatic;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,9 +45,11 @@ import static org.mockito.Mockito.when;
 /**
  * Covers how a {@link WeblogEntry} turns itself into the text a theme renders.
  *
- * <p>Two rules live here. Plugins named in the entry's {@code plugins} column
+ * <p>Three rules live here. Plugins named in the entry's {@code plugins} column
  * are applied, and ones that are not named are left alone -- an entry must not
- * silently pick up a plugin its author did not choose. And
+ * silently pick up a plugin its author did not choose. Shortcodes, by contrast,
+ * expand unconditionally in every render path (Stage 2 Wave 1 T3 contract
+ * change; see docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md). And
  * {@code displayContent} decides between the summary and the full text
  * depending on whether it was given a "read more" link, which is what makes the
  * same entry render short on the front page and in full on its permalink page.
@@ -110,6 +115,13 @@ class WeblogEntryRenderingTest {
 
     @Test
     void anEntryThatNamesNoPluginsIsRenderedUntouched() throws Exception {
+        // DELIBERATE contract change (Stage 2 Wave 1 T3, see
+        // docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md):
+        // "untouched" now means untouched by PLUGINS. Named entry plugins stay
+        // opt-in per entry, but the shortcode expander is a platform feature
+        // that runs unconditionally -- shortcode-free text like this still
+        // comes back verbatim, while shortcodesExpandEvenWhenTheEntryNamesNoPlugins
+        // below covers the unconditional half of the contract.
         installPlugins(Map.of("Shout", shouting()));
         entry.setText("hello");
         entry.setPlugins(null);
@@ -117,6 +129,62 @@ class WeblogEntryRenderingTest {
         assertEquals("hello", withWeblogger(entry::getTransformedText),
                 "An entry that opted into no plugins must not have one applied anyway; "
                         + "the plugin list is per-entry precisely so authors can choose");
+    }
+
+    @Test
+    void shortcodesExpandEvenWhenTheEntryNamesNoPlugins() throws Exception {
+        // The other half of the deliberate contract change documented above:
+        // shortcodes are NOT opt-in. An entry that names no plugins still gets
+        // [image] expanded, in this render seam, before sanitization.
+        installPlugins(Map.of("Shout", shouting()));
+        installMediaFile();
+
+        entry.setText("look: [image id=mf-1]");
+        entry.setPlugins(null);
+
+        String rendered = withWeblogger(entry::getTransformedText);
+
+        assertTrue(rendered.startsWith("look: <figure class=\"shortcode-image\">"),
+                "the [image] shortcode must expand without the entry opting in: " + rendered);
+        assertTrue(rendered.contains("http://example.com/f?w=480 480w"),
+                "srcset must climb the rendition ladder: " + rendered);
+        assertTrue(rendered.contains("http://example.com/f 1200w"), rendered);
+        assertFalse(rendered.contains("[image"), rendered);
+    }
+
+    @Test
+    void theBusinessPluginSeamExpandsShortcodesUnconditionallyToo() throws Exception {
+        // Same contract, second render call-site: PluginManagerImpl's
+        // applyWeblogEntryPlugins (used with an explicit plugin map) must also
+        // expand shortcodes even when the entry names no plugins.
+        installMediaFile();
+        entry.setText("irrelevant");
+        entry.setPlugins(null);
+
+        String rendered = withWeblogger(() -> new PluginManagerImpl()
+                .applyWeblogEntryPlugins(Map.of(), entry, "see [image id=mf-1] here"));
+
+        assertTrue(rendered.contains("<figure class=\"shortcode-image\">"), rendered);
+        assertFalse(rendered.contains("[image"), rendered);
+    }
+
+    /** Wires a 1200x800 image media file "mf-1" into the mocked Weblogger. */
+    private void installMediaFile() throws Exception {
+        MediaFile photo = new MediaFile();
+        photo.setId("mf-1");
+        photo.setWeblog(weblog);
+        photo.setName("hawk.jpg");
+        photo.setContentType("image/jpeg");
+        photo.setWidth(1200);
+        photo.setHeight(800);
+
+        MediaFileManager mediaFiles = mock(MediaFileManager.class);
+        when(mediaFiles.getMediaFile("mf-1")).thenReturn(photo);
+        when(weblogger.getMediaFileManager()).thenReturn(mediaFiles);
+
+        URLStrategy urls = mock(URLStrategy.class);
+        when(urls.getMediaFileURL(weblog, "mf-1", true)).thenReturn("http://example.com/f");
+        when(weblogger.getUrlStrategy()).thenReturn(urls);
     }
 
     @Test

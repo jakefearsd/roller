@@ -50,6 +50,7 @@ import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
+import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
@@ -1032,7 +1033,11 @@ public class WeblogEntry implements Serializable {
                     }
                 }
             }
-        } 
+        }
+        // Shortcodes are NOT opt-in the way named plugins are: they expand
+        // unconditionally in every render path, before sanitization
+        // (see docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md).
+        ret = ShortcodeExpander.defaultExpander().expand(this, ret);
         return HTMLSanitizer.conditionallySanitize(ret);
     }
     

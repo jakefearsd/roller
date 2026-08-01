@@ -52,18 +52,24 @@ public class HTMLSanitizer {
     public static Boolean xssEnabled = WebloggerConfig.getBooleanProperty("weblogAdminsUntrusted", Boolean.FALSE);
 
     public static Pattern forbiddenTags = Pattern.compile("^(script|object|embed|link|style|form|input)$");
+    // figure/figcaption/picture/source are emitted by the [image] shortcode
+    // (responsive <figure><picture> blocks) and must survive sanitizing.
     public static Pattern allowedTags = Pattern.compile("^(b|p|i|s|a|img|table|thead|tbody|tfoot|tr|th|td|dd|dl|dt|em|h1|h2|h3|h4|h5|h6|li|ul|ol|span|div|strike|strong|"
-            + "sub|sup|pre|del|code|blockquote|kbd|br|hr|area|map|object|embed|param|link|form|small|big)$");
+            + "sub|sup|pre|del|code|blockquote|kbd|br|hr|area|map|object|embed|param|link|form|small|big|figure|figcaption|picture|source)$");
     // <!--.........>
     private static final Pattern commentPattern = Pattern.compile("<!--.*");
     // <tag ....props.....>
     private static final Pattern tagStartPattern = Pattern.compile("<(?i)(\\w+\\b)\\s*(.*)/?>$");
     // </tag .........>
     private static final Pattern tagClosePattern = Pattern.compile("</(?i)(\\w+\\b)\\s*>$");
-    private static final Pattern standAloneTags = Pattern.compile("^(img|br|hr)$");
+    // source is a void element: without this it would be pushed as an open
+    // tag and the sanitizer would emit a spurious </source> at document end.
+    private static final Pattern standAloneTags = Pattern.compile("^(img|br|hr|source)$");
     private static final Pattern selfClosed = Pattern.compile("<.+/>");
-    // prop="...."
-    private static final Pattern attributesPattern = Pattern.compile("(\\w*)\\s*=\\s*\"([^\"]*)\"");
+    // prop="...."  ([\w-] rather than \w: data-* attribute names -- e.g. the
+    // shortcode's data-blurhash -- must keep their prefix, not be truncated
+    // at the dash)
+    private static final Pattern attributesPattern = Pattern.compile("([\\w-]*)\\s*=\\s*\"([^\"]*)\"");
     // color:red;
     private static final Pattern stylePattern = Pattern.compile("([^\\s^:]+)\\s*:\\s*([^;]+);?");
     // url('....')"

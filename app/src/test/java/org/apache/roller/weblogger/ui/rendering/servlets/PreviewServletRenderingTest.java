@@ -12,6 +12,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -95,6 +96,37 @@ class PreviewServletRenderingTest {
                 .execute(RenderingTestSupport.previewServlet(), request);
 
         assertEquals(404, response.getStatus());
+    }
+
+    @Test
+    void anImageShortcodeExpandsInThePreviewToo() throws Exception {
+        // The preview renders through the same wrapper/transformation chain as
+        // the live site (PreviewPageModel wraps the same WeblogEntry), so the
+        // unconditional shortcode expander must already be live here -- authors
+        // see the responsive figure before publishing.
+        org.apache.roller.weblogger.pojos.MediaFile image =
+                TestUtils.setupImageMediaFile(weblog, "preview-hawk.jpg");
+        org.apache.roller.weblogger.pojos.WeblogEntry entry =
+                TestUtils.setupWeblogEntry("shortcode-preview", weblog, user);
+        entry.setText("before [image id=" + image.getId() + " caption=\"A hawk\"] after");
+        org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger()
+                .getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/authoring/preview", "/previewblog/entry/shortcode-preview");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.previewServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+        assertTrue(body.contains("<figure class=\"shortcode-image\">"),
+                "the [image] shortcode must expand in the preview:\n" + body);
+        assertTrue(body.contains("?w=480 480w"),
+                "srcset must offer the 480w ladder rendition (hawk.jpg is 500w):\n" + body);
+        assertTrue(body.contains("<figcaption>A hawk</figcaption>"), body);
+        assertFalse(body.contains("[image id="),
+                "the raw shortcode text must not leak into the preview:\n" + body);
     }
 
     @Test

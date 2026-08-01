@@ -32,6 +32,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.plugins.comment.WeblogEntryCommentPlugin;
+import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.apache.roller.weblogger.util.Reflection;
@@ -104,6 +105,11 @@ public class PluginManagerImpl implements PluginManager {
                 log.warn("plugin not found: " + key);
             }
         }
+
+        // Shortcodes are NOT opt-in the way named plugins are: they expand
+        // unconditionally in every render path, before sanitization
+        // (see docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md).
+        ret = ShortcodeExpander.defaultExpander().expand(entry, ret);
 
         return HTMLSanitizer.conditionallySanitize(ret);
     }
