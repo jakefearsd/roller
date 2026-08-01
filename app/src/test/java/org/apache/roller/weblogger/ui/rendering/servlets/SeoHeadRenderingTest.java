@@ -1,18 +1,27 @@
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.imageio.ImageIO;
+
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.MediaFileDirectory;
+import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.util.RollerMessages;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -276,6 +285,86 @@ class SeoHeadRenderingTest {
         JsonNode posting = singleLdJson(body, "BlogPosting");
         assertEquals(imageUrl, posting.path("image").asString(),
                 "the JSON-LD image must match og:image: " + posting);
+    }
+
+    /**
+     * Persists a content-backed media file from a generated blank image of
+     * the given pixel size and format. setupImageMediaFile always uploads
+     * the 500px hawk.jpg, which can never exercise the >1600px og:image
+     * branch in either direction.
+     */
+    private MediaFile setupGeneratedImage(String name, String contentType,
+            String format, int width, int height) throws Exception {
+        java.util.Map<String, RuntimeConfigProperty> config = WebloggerFactory
+                .getWeblogger().getPropertiesManager().getProperties();
+        config.get("uploads.enabled").setValue("true");
+
+        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        MediaFileDirectory root = mgr.getDefaultMediaFileDirectory(managed);
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        assertTrue(ImageIO.write(image, format, bytes),
+                "no ImageIO writer for format " + format);
+
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName(name);
+        mediaFile.setDirectory(root);
+        mediaFile.setWeblog(managed);
+        mediaFile.setContentType(contentType);
+        mediaFile.setInputStream(new ByteArrayInputStream(bytes.toByteArray()));
+        mgr.createMediaFile(managed, mediaFile, new RollerMessages());
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+        return mediaFile;
+    }
+
+    @Test
+    void aWideJpegOgImageUsesThe1600RenditionAndScaledDimensions() throws Exception {
+        MediaFile image = setupGeneratedImage("wide.jpg", "image/jpeg", "jpg", 2000, 1000);
+        String imageId = image.getId();
+        WeblogEntry entry = TestUtils.setupWeblogEntry("wide-jpg-entry", weblog, user);
+        updateEntry(entry, e -> e.setFeaturedImageId(imageId));
+
+        String body = render("/" + HANDLE + "/entry/wide-jpg-entry");
+
+        // jpeg is rendition-eligible, so the _1600 file exists and ?w=1600
+        // really serves a 1600px image: the metadata may claim it.
+        String imageUrl = BASE + "/mediaresource/" + imageId + "?w=1600";
+        assertTrue(body.contains("<meta property=\"og:image\" content=\"" + imageUrl + "\">"),
+                "a wide jpeg must use the 1600px rendition URL:\n" + body);
+        assertTrue(body.contains("<meta property=\"og:image:width\" content=\"1600\">"),
+                "the declared width must match the served rendition:\n" + body);
+        assertTrue(body.contains("<meta property=\"og:image:height\" content=\"800\">"),
+                "the declared height must be scaled to the rendition (2000x1000 -> 1600x800):\n" + body);
+        assertEquals(imageUrl,
+                singleLdJson(body, "BlogPosting").path("image").asString());
+    }
+
+    @Test
+    void aWideGifOgImageKeepsTheOriginalUrlAndDimensions() throws Exception {
+        // RenditionSupport only generates renditions for jpeg/png. For a
+        // wide GIF the ?w=1600 URL would silently serve the full-resolution
+        // original, so the macro must not claim 1600px dimensions for it.
+        MediaFile image = setupGeneratedImage("wide.gif", "image/gif", "gif", 2000, 1000);
+        String imageId = image.getId();
+        WeblogEntry entry = TestUtils.setupWeblogEntry("wide-gif-entry", weblog, user);
+        updateEntry(entry, e -> e.setFeaturedImageId(imageId));
+
+        String body = render("/" + HANDLE + "/entry/wide-gif-entry");
+
+        String imageUrl = BASE + "/mediaresource/" + imageId;
+        assertTrue(body.contains("<meta property=\"og:image\" content=\"" + imageUrl + "\">"),
+                "a wide gif must use the plain original URL:\n" + body);
+        assertFalse(body.contains("?w=1600"),
+                "no rendition URL may be emitted for a format with no renditions:\n" + body);
+        assertTrue(body.contains("<meta property=\"og:image:width\" content=\"2000\">"),
+                "the declared width must be the original's real width:\n" + body);
+        assertTrue(body.contains("<meta property=\"og:image:height\" content=\"1000\">"),
+                "the declared height must be the original's real height:\n" + body);
+        assertEquals(imageUrl,
+                singleLdJson(body, "BlogPosting").path("image").asString());
     }
 
     // ---------------------------------------------------------- other themes

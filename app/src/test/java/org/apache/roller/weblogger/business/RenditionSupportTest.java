@@ -82,6 +82,21 @@ class RenditionSupportTest {
     }
 
     @Test
+    void isLadderEligibleMatchesExactlyTheFormatsTheLadderGenerates() {
+        // Callers that declare the served image's dimensions (og:image) must
+        // be able to tell whether a ?w= URL really serves a resized file or
+        // silently falls back to the original.
+        assertTrue(RenditionSupport.isLadderEligible("image/jpeg"));
+        assertTrue(RenditionSupport.isLadderEligible("image/jpg"));
+        assertTrue(RenditionSupport.isLadderEligible("IMAGE/PNG"));
+        assertFalse(RenditionSupport.isLadderEligible("image/gif"),
+                "no gif renditions are ever generated");
+        assertFalse(RenditionSupport.isLadderEligible("image/bmp"));
+        assertFalse(RenditionSupport.isLadderEligible("image/webp"));
+        assertFalse(RenditionSupport.isLadderEligible(null));
+    }
+
+    @Test
     void renditionFileIdsListsEveryLadderWidthWithAndWithoutWebp() {
         List<String> ids = RenditionSupport.renditionFileIds("abc");
 

@@ -124,9 +124,11 @@ the Open Graph card, the Twitter card, and JSON-LD structured data
 
 og:image sizing: the rendition ladder tops out at 2400px, but social-card
 crawlers are happy with far less, so og:image points at the 1600px-wide
-rendition when the source image is wider than 1600px and at the original
-URL otherwise -- one URL, no srcset, keeps the card markup simple and
-never upscales.
+rendition when the source image is wider than 1600px AND its format is
+rendition-eligible (jpeg/png -- for gif/bmp the servlet would silently
+serve the full-size original at the ?w= URL, so the original URL and its
+real dimensions are declared instead), and at the original URL otherwise
+-- one URL, no srcset, keeps the card markup simple and never upscales.
 
 Every user-controlled value is escaped on the way out: HTML-attribute
 escaping via $utils.escapeHTML (a stored canonical URL or meta title
@@ -201,7 +203,11 @@ containing "</script>" cannot terminate the inline JSON-LD block).
         #end
     #end
     #if ($seoImage)
-        #if ($seoImage.width > 1600)
+        ## The 1600px rendition only exists for rendition-eligible formats
+        ## (jpeg/png); for anything else (gif, bmp, ...) the servlet silently
+        ## serves the full-resolution original at the ?w= URL, so declaring
+        ## 1600px dimensions there would lie to the card crawlers.
+        #if ($seoImage.renditionEligible && $seoImage.width > 1600)
             #set($seoImageUrl = $seoImage.url(1600))
             #set($seoImageWidth = 1600)
             #set($seoImageHeight = 1600 * $seoImage.height / $seoImage.width)
