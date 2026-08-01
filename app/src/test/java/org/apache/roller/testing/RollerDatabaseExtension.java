@@ -36,18 +36,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Gives every test a clean Roller database in a shared PostgreSQL container.
+ * Starts the shared PostgreSQL container and builds the schema that every
+ * test runs against.
  *
- * <p>Once per JVM this starts the container, points Roller's configuration at
- * it, and builds the schema by applying the real {@code bin/db/migrations}
- * chain. Before <em>each</em> test it truncates the data tables and clears
- * Roller's caches.
+ * <p>The live entry point is the static {@link #ensureSchema()}: once per JVM
+ * it starts the container, points Roller's configuration at it, and builds
+ * the schema by applying the real {@code bin/db/migrations} chain.
+ * {@code RollerTestBootstrap} and {@code TestUtils} call it directly. Tests
+ * currently tear down their own fixtures rather than relying on any
+ * per-test reset.
  *
- * <p>Truncating per test is what lets tests stop hand-rolling
- * {@code teardownUser}/{@code teardownWeblog} pairs: nothing survives a test,
- * so nothing needs unwinding and no test can depend on another's leftovers.
+ * <p>This class also implements {@link BeforeEachCallback} to truncate the
+ * data tables and clear Roller's caches before each test, which is what
+ * would let tests stop hand-rolling {@code teardownUser}/{@code
+ * teardownWeblog} pairs. That callback is <strong>not currently
+ * registered</strong> anywhere — there is no {@code @ExtendWith} on any test
+ * and no JUnit auto-detection configured — so {@link #beforeEach} never
+ * runs today. Anyone wiring it up should audit existing tests for
+ * cross-test state assumptions first.
  *
- * <p>Two tables are deliberately preserved:
+ * <p>Two tables are deliberately preserved from truncation:
  * <ul>
  *   <li>{@code schema_migrations} — truncating it would make the installer
  *       re-run every migration.</li>

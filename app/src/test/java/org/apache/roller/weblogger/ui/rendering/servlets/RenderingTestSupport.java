@@ -2,6 +2,8 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -74,7 +76,21 @@ final class RenderingTestSupport {
      */
     private static final class WebappServletContext extends MockServletContext {
         WebappServletContext() {
-            super("file:src/main/webapp");
+            super(webappRoot());
+        }
+
+        /**
+         * Resolves src/main/webapp whether the JVM's working directory is
+         * {@code app/} (the surefire default) or the repo root (common when
+         * running a single test from an IDE), and returns it as an absolute
+         * {@code file:} URI so MockServletContext doesn't have to guess.
+         */
+        private static String webappRoot() {
+            Path candidate = Path.of("src", "main", "webapp");
+            if (!Files.isDirectory(candidate)) {
+                candidate = Path.of("app", "src", "main", "webapp");
+            }
+            return candidate.toAbsolutePath().toUri().toString();
         }
 
         @Override
