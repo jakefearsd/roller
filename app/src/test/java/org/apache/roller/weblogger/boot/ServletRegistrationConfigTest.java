@@ -22,6 +22,8 @@ import java.util.function.Consumer;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletRegistration;
 
 import org.apache.roller.weblogger.ui.controllers.ajax.CommentDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet;
@@ -55,8 +57,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Every {@code @Bean} method here is a plain, side-effect-free registration
@@ -152,6 +157,29 @@ class ServletRegistrationConfigTest {
         assertSame(dispatcherServlet, bean.getServlet());
         assertEquals("*.rol", bean.getPath());
         assertEquals(1, loadOnStartupOf(bean));
+    }
+
+    /**
+     * The SEO endpoints (SeoController) ride on extra container mappings
+     * that DispatcherServletRegistrationBean's throwing
+     * {@code addUrlMappings()} forces through the {@code configure()} hook,
+     * so they are only observable at registration time -- hence the mocked
+     * ServletContext.
+     */
+    @Test
+    void dispatcherServletAlsoClaimsTheSeoUrlPatterns() throws Exception {
+        DispatcherServletRegistrationBean bean =
+                config.dispatcherServletRegistration(new DispatcherServlet(), noopMultipartProvider());
+
+        ServletContext servletContext = mock(ServletContext.class);
+        ServletRegistration.Dynamic registration = mock(ServletRegistration.Dynamic.class);
+        when(servletContext.addServlet(anyString(), any(DispatcherServlet.class)))
+                .thenReturn(registration);
+
+        bean.onStartup(servletContext);
+
+        verify(registration).addMapping("*.rol");
+        verify(registration).addMapping(ServletRegistrationConfig.SEO_URL_PATTERNS);
     }
 
     @Test

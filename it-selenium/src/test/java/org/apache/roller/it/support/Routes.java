@@ -30,8 +30,9 @@ import java.util.List;
  * from an integration-test module, so text is the only link -- see the comment
  * at the top of RouteCoverageTest for why that is deliberate rather than lazy.
  * The practical consequence: keep every route path in this file written as a
- * single {@code "/roller-ui/..."} string literal, never assembled from
- * fragments, or the coverage guard will not see it.
+ * single string literal ({@code "/roller-ui/..."}, or the root-level SEO
+ * routes {@code /sitemap-....xml} / {@code /robots.txt}), never assembled
+ * from fragments, or the coverage guard will not see it.
  *
  * <p>Derived by reading
  * {@code org.apache.roller.weblogger.ui.controllers.**} for {@code @GetMapping}
@@ -200,7 +201,17 @@ public final class Routes {
 
             // Reachable with no parameters: GlobalCommentManagementBean defaults
             // approvedString to "ALL", which getStatus() maps to a null filter.
-            new Route("/roller-ui/admin/globalCommentManagement!query.rol", Role.ADMIN, "", "p.subtitle")
+            new Route("/roller-ui/admin/globalCommentManagement!query.rol", Role.ADMIN, "", "p.subtitle"),
+
+            // SeoController's sitemap index. Not HTML: Chrome's built-in XML
+            // viewer keeps the source document's elements in the DOM (inside
+            // #webkit-xml-viewer-source-xml), so the root element works as a
+            // marker. PublicSurfaceIT asserts the document's content.
+            new Route("/sitemap.xml", Role.ANONYMOUS, "", "sitemapindex"),
+
+            // SeoController's generated robots policy (the static webapp
+            // robots.txt is gone). Chrome wraps text/plain bodies in a <pre>.
+            new Route("/robots.txt", Role.ANONYMOUS, "", "pre")
     );
 
     // ---------------------------------------------------------------- bucket b
@@ -288,6 +299,13 @@ public final class Routes {
      * the session, or they only do anything before bootstrap.
      */
     private static final List<SkippedRoute> SKIPPED = List.of(
+
+            // --- path templates the sweep cannot open literally ---
+
+            new SkippedRoute("/sitemap-{handle}.xml", Role.ANONYMOUS,
+                    "Path template, not an openable URL; the concrete "
+                            + "/sitemap-it_weblog.xml is fetched and content-asserted by "
+                            + "PublicSurfaceIT."),
 
             // --- need a seeded entity id ---
 
