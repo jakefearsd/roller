@@ -1144,10 +1144,6 @@ are hierarchical
 |String
 |Email address for from-address of notifications
 
-|$weblog.enableBloggerApi
-|Boolean
-|True if remote blogging API is enabled
-
 |$weblog.enabled
 |Boolean
 |True if weblog is enabled
@@ -1960,10 +1956,8 @@ often used:
 
 == Additional models
 
-There are some additional models that can be made available to Roller
-weblogs by a site administrator. These are the
-*$site* for accessing site-wide data,and the *planet* model for accessing Planet Roller data. Let’s start with the $site
-model.
+There is an additional model that can be made available to Roller
+weblogs by a site administrator: *$site*, for accessing site-wide data.
 
 === $site
 
@@ -2076,168 +2070,3 @@ days.
 sinceDays, int max)* Get most commented WeblogEntries in the form of
 StatCount objects, but only those updated in last sinceDays number of
 days.
-
-=== $planet
-
-The *$planet* model makes Planet Roller data available to weblog pages.
-It allows you to display the main aggregation (i.e. the one named
-"external"), any custom group aggregation, a feed and ranked
-subscriptions.
-
-==== Configuring the planet model
-
-The PlanetModel is not enabled by default in Roller, so before you can
-use it in your weblogs you’ll need to enable it. To do that, you need to
-define some properties in your Roller configuration and specifically, in
-your _roller-custom.properties_ override file, which is explained in
-STEP 8 and Appendix B of the Roller Installation Guide.
-
-If you want to make the Planet model available in weblog pages then add
-the Planet model to the list of models specified by the
-_rendering.pageModels_ property by overriding the property in your
-_roller-custom.properties_ file like so:
-
-----
-rendering.pageModels=\
-org.apache.roller.ui.rendering.model.PageModel,\
-org.apache.roller.ui.rendering.model.ConfigModel,\
-org.apache.roller.ui.rendering.model.UtilitiesModel,\
-org.apache.roller.ui.rendering.model.URLModel,\
-org.apache.roller.ui.rendering.model.MessageModel,\
-org.apache.roller.ui.rendering.model.CalendarModel,\
-org.apache.roller.ui.rendering.model.MenuModel, \
-org.apache.roller.ui.rendering.model.PlanetModel
-----
-
-That’s just a copy of the property setting from the default Roller
-properties file, plus the Planet model (shown in bold). Actually,
-depending on where want to use the Planet Model in Roller, you’ll need
-to add the Planet model to a couple of different properties.
-
-To make Planet model available in all blogs, you’ll want to add it to
-these model list properties:
-
-* rendering.pageModels: to make it available in blog pages.
-* rendering.previewModels: to make it available when entries are
-previewed in the blog editor
-
-To make Planet model available in the front page blog only:
-
-* rendering.siteModels: to make the model available in site-wide blogs
-
-Now let’s discuss the objects available from the Planet model.
-
-==== $planet Objects
-
-The $planet model returns two types of objects that we haven’t seen
-before: the PlanetSubscription object, which represents a feed
-subscription, and PlanetEntry, which represents one entry from a feed.
-
-*PlanetSubscription object*
-
-|===
-|Name |Type |Description
-
-| $sub.author
-|String
-|Author, from feed header
-
-|$sub.feedURL
-|String
-|URL of the feed
-
-|$sub.inboundBlogs
-|Integer
-|Number of weblogs that link to this weblog (or 0 if no Technorati license available)
-
-|$sub.inboundLinks
-|Integer
-|Number of links to this weblog (or 0 if no Technorati license available)
-
-|$sub.lastUpdated
-|Date
-|Last update time, from feed header
-
-|$sub.name
-|String
-|Name of the feed
-
-|$sub.title
-|String
-|Title of the feed
-
-|$sub.URL
-|String
-|Same as feedURL
-|===
-
-*PlanetEntry object*
-
-|===
-|Name |Type |Description
-
-|$entry.author
-|String
-|Name of author of entry
-
-|$entry.category
-|WeblogCategory
-|Category of entry
-
-|$entry.creator
-|User
-|User object representing author
-
-|$entry.guid
-|String
-|Unique ID of entry
-
-|$entry.permalink
-|String
-|Permanent link to entry
-
-|$entry.pubTime
-|Date
-|Time entry was published
-
-|$entry.summary
-|String
-|Entry summary text
-
-|$entry.text
-|String
-|Entry content text
-
-|$entry.title
-|String
-|Entry title
-
-|$entry.updateTime
-|Date
-|Time entry was last updated
-
-|$entry.website
-|PlanetSubscription
-|Subscription to which entry belongs
-|===
-
-==== $planet Methods
-
-* *Pager getAggregationPager(int sinceDays, int max)* Get pager that
-returns PlanetEntry objects from the main aggregation. Will only return
-entries created in last sinceDays number of days and never more than max
-items.
-* *Pager getAggregationPager(String groupHandle, int sinceDays, int
-max)* Get pager that returns PlanetEntry objects from the specified
-group aggregation. Will only return entries created in last sinceDays
-number of days and never more than max items.
-* *Pager getFeedPager(String feedURL, int max)* Get pager that returns
-PlanetEntry objects from the specified feed, up to max items.
-* *List getRankedSubscriptions(int sinceDays, int max)* Get all
-PlanetSubscription objects ordered by Technorati ranking. Will only
-return subscriptions updated in last sinceDays number of days and never
-more than max items.
-* *List getRankedSubscriptions(String groupHandle, int sinceDays, int
-length)* Get PlanetSubscription objects in the specified group ordered
-by Technorati ranking. Will only return subscriptions updated in last
-sinceDays number of days and never more than max items.

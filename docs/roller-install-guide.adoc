@@ -383,20 +383,15 @@ database.jdbc.username=scott
 database.jdbc.password=tiger
 ----
 
-*Alternative Authentication Options*
+*Authentication*
 
-The above instructions rely on Roller’s default user authentication
-mechanism, i.e., using a Roller-provided database table (roller_user) to
-store usernames and encrypted passwords. Roller provides other
-authentication options defined under the "authentication.method"
-setting in the roller.properties file: OpenID, OpenID/DB combination,
-and LDAP
-(https://cwiki.apache.org/confluence/display/ROLLER/Roller+5.1+with+LDAP).
-These authentication methods are used less frequently so should be
-tested more thoroughly with your particular setup if you wish to use
-them. Check the roller.properties file included in your WAR for
-available options and configuration information, and consult the Roller
-User’s Mailing List should you need assistance.
+The above instructions rely on Roller’s default (and only supported)
+user authentication mechanism: a Roller-provided database table
+(roller_user) storing usernames and encrypted passwords. Earlier
+versions of Roller also supported OpenID, an OpenID/DB combination, and
+LDAP authentication; those methods have been removed, and
+"authentication.method" in roller.properties now only accepts the value
+_db_.
 
 Add Configuration file to Tomcat
 
@@ -651,103 +646,8 @@ https://cwiki.apache.org/confluence/display/ROLLER/Roller+Mailing+Lists
 == Configuration tips and tricks
 
 This section covers some tips and tricks that can help you get the most
-out of Roller. It covers Roller’s Planet feed aggregator and how to
-setup Roller to use server-provided resources.
-
-=== Setting up Roller’s Planet feed aggregator
-
-Roller includes a RSS/Atom feed aggregator that makes it possible to run
-a site like https://blogs.oracle.com/ which provides weblogs for
-thousands of writers and an aggregated front-page that displays the most
-recent posts from those plus dozens of Sun bloggers from other sites
-such as blogger.com, typepad.com and other services. Here’s what you
-need to do.
-
-==== STEP 1: Create a Planet cache directory
-
-Roller Planet needs a cache directory in which to store the feeds it
-fetches. By default, Roller Planet will put it’s cache in your home
-directory under _roller_data/planetcache_. If you want to place the
-cache somewhere else, you must override the planet.aggregator.cache.dir
-property in your _roller-custom.properties_ file. For example:
-
-`cache.dir=c:\\roller_data\planetcache`
-
-Whether you override that property or not, *you must create the cache
-directory*. Planet will not work unless the cache directory exists and
-is writable by Roller.
-
-==== STEP 2: Enable Planet via Roller custom properties
-
-Enable Planet by adding the following to your _roller-custom.properties_
-file:
-
-----
-planet.aggregator.enabled=true
-
-# Tasks which are enabled.  Only tasks listed here will be run.
-tasks.enabled=ScheduledEntriesTask,ResetHitCountsTask,\
-PingQueueTask,RefreshRollerPlanetTask,SyncWebsitesTask
-
-# Set of page models specifically for site-wide rendering
-rendering.siteModels=\
-org.apache.roller.weblogger.ui.rendering.model.SiteModel,\
-org.apache.roller.weblogger.ui.rendering.model.PlanetModel
-
-----
-
-
-Those property settings enable Planet and enable the Planet tasks, both
-the _RefreshRollerPlanetTask_, which runs every hour and fetches all
-RSS/Atom feed subsciptions, and the _SyncWebsitesTask_, which runs every
-midnight and ensures that each weblog in the Roller system is
-represented by a subscription in the Planet aggregator. To enable usage
-of the PlanetModel in the front-page weblog, we also override the
-_rendering.siteModels_ property.
-
-==== STEP 3: Configure Planet via Planet custom properties
-
-Create a new file called _planet-custom.properties_ and place it in the
-same directory as your existing _roller-custom.properties_ file. In this
-configuration file, add a property called __cache.dir __that points to
-the directory that you’d like Planet to use for caching it’s RSS and
-Atom newsfeeds. The default setting is:
-
-`_cache.dir=${user.home}/roller_data/planetcache_`
-
-Once you’ve made those property settings restart Roller and proceed to
-the next step.
-
-==== STEP 4: Display your Planet aggregations
-
-You can use Roller’s UI to add external RSS/Atom feeds to the Planet
-setup. To display these feeds you’ll need to do a little template
-customization. The easier way to get started is to Roller’s existing
-Front-Page theme. Here’s how.
-
-Create a weblog to server as the front-page of your Roller site. Start
-with the Front-Page theme and customize it. Edit the weblog template and
-look for the part that mentions PLANET-entries. Comment-out the
-SITE-WIDE part and un-comment the PLANET-entries part. The double hash
-"##" marks indicate a commented-out line. The code should look like
-this:
-
-----
-## 1) SITE-WIDE entries (the default)
-##set($pager = $site.getWeblogEntriesPager($since, $maxResults))
-
-## 2) PLANET-entries
-#set($pager = $planet.getAggregationPager($since, $maxResults))
-----
-
-With that in place, your front-page will be display your Planet entries.
-You can find your Planet feeds at the following URLs:
-
-* Main Planet feed
-http://localhost:8080/roller/planetrss
-* Per group feed
-http://localhost:8080/roller/planetrss?group=<group-name>[]
-
+out of Roller, including how to setup Roller to use server-provided
+resources.
 
 === Manual table creation and upgrade
 

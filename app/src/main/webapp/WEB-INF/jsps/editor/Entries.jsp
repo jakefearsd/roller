@@ -95,7 +95,7 @@
             <c:param name="bean.id" value="${post.id}"/>
         </c:url>
         <a href="${editUrl}">
-            <span class="bi bi-pencil-square" data-bs-toggle="tooltip" data-placement="top"
+            <span class="bi bi-pencil-square"
                   title="<spring:message code="generic.edit"/>">
             </span>
         </a>
@@ -136,7 +136,7 @@
         <a href="#"
             onclick="showDeleteModal('${postId}', '${postTitle}' )">
             <span class="bi bi-trash"
-                  data-bs-toggle="tooltip" data-placement="top" title="<spring:message code="generic.delete"/>">
+                  title="<spring:message code="generic.delete"/>">
             </span>
         </a>
     </td>
