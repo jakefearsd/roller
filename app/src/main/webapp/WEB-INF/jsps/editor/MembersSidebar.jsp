@@ -20,7 +20,7 @@
 <h3><spring:message code="mainPage.actions"/></h3>
 <hr size="1" noshade="noshade" />
 
-<span class="glyphicon glyphicon-plus"></span>
+<span class="bi bi-plus-lg"></span>
 <c:url var="inviteUrl" value="/roller-ui/authoring/invite.rol">
    <c:param name="weblog" value="${actionWeblog.handle}"/>
 </c:url>

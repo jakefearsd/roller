@@ -33,7 +33,7 @@
 <div class="row">
     <div class="col-md-2">
 
-        <form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogRemove!remove.rol" method="post" class="form-horizontal">
+        <form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogRemove!remove.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
             <button type="submit" class="btn btn-danger"><spring:message code="generic.yesRemove"/></button>
         <sec:csrfInput/>
@@ -42,7 +42,7 @@
     </div>
     <div class="col-md-2">
 
-        <form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig.rol" method="post" class="form-horizontal">
+        <form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
             <button type="submit" class="btn btn-success"><spring:message code="generic.cancel"/></button>
         <sec:csrfInput/>

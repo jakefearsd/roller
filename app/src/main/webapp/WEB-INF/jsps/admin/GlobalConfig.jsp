@@ -21,7 +21,7 @@
 <p><spring:message code="configForm.prompt"/></p>
 
 
-<form method="post" action="<c:url value='/roller-ui/admin/globalConfig!save.rol'/>" class="form-horizontal">
+<form method="post" action="<c:url value='/roller-ui/admin/globalConfig!save.rol'/>">
     <sec:csrfInput/>
 
     <c:forEach var="dg" items="${globalConfigDef.displayGroups}">
@@ -32,12 +32,12 @@
 
             <%-- special case for comment plugins --%>
             <c:if test="${pd.name == 'users.comments.plugins'}">
-                <div class="form-group">
-                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9 controls">
                         <c:forEach var="plugin" items="${pluginsList}">
-                            <label class="checkbox-inline">
-                                <input type="checkbox" name="commentPlugins" value="${fn:escapeXml(plugin.id)}"
+                            <label class="form-check form-check-inline">
+                                <input type="checkbox" class="form-check-input" name="commentPlugins" value="${fn:escapeXml(plugin.id)}"
                                     <c:forEach var="cp" items="${commentPlugins}">
                                         <c:if test="${cp == plugin.id}">checked="checked"</c:if>
                                     </c:forEach>
@@ -50,10 +50,10 @@
 
             <%-- special case for front page blog --%>
             <c:if test="${pd.name == 'site.frontpage.weblog.handle'}">
-                <div class="form-group">
-                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9 controls">
-                        <select name="${fn:escapeXml(pd.name)}" class="form-control">
+                        <select name="${fn:escapeXml(pd.name)}" class="form-select">
                             <c:forEach var="weblog" items="${weblogs}">
                                 <option value="${fn:escapeXml(weblog.handle)}"
                                     <c:if test="${properties[pd.name].value == weblog.handle}">selected="selected"</c:if>
@@ -66,8 +66,8 @@
 
             <%-- "string" type means use a simple textbox --%>
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'string'}">
-                <div class="form-group">
-                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9 controls">
                         <input type="text" name="${fn:escapeXml(pd.name)}" size="35"
                                value="${fn:escapeXml(properties[pd.name].value)}"
@@ -78,8 +78,8 @@
 
             <%-- "text" type means use a full textarea --%>
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'text'}">
-                <div class="form-group">
-                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9 controls">
                         <textarea name="${fn:escapeXml(pd.name)}" rows="${pd.rows}" cols="${pd.cols}"
                                   class="form-control">${fn:escapeXml(properties[pd.name].value)}</textarea>
@@ -89,8 +89,8 @@
 
             <%-- "boolean" type means use a checkbox --%>
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'boolean'}">
-                <div class="form-group">
-                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9 controls">
                         <input type="checkbox" name="${fn:escapeXml(pd.name)}" value="true"
                             <c:if test="${properties[pd.name].value == 'true'}">checked="checked"</c:if>
@@ -101,8 +101,8 @@
 
             <%-- "integer" use input type number --%>
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'integer'}">
-                <div class="form-group ">
-                    <label class="col-sm-3 control-label"
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label"
                            for='globalConfig_${pd.nameWithUnderbars}'>
                         <spring:message code="${pd.key}"/>
                     </label>
@@ -117,8 +117,8 @@
 
             <%-- "float" use input type number --%>
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'float'}">
-                <div class="form-group ">
-                    <label class="col-sm-3 control-label"
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label"
                            for='globalConfig_${pd.nameWithUnderbars}'>
                         <spring:message code="${pd.key}"/>
                     </label>
@@ -133,8 +133,8 @@
 
             <%-- if it's something we don't understand then use textbox --%>
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type != 'string' && pd.type != 'text' && pd.type != 'boolean' && pd.type != 'integer' && pd.type != 'float'}">
-                <div class="form-group">
-                    <label class="col-sm-3 control-label"><spring:message code="${pd.key}"/></label>
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9 controls">
                         <input type="text" name="${fn:escapeXml(pd.name)}" size="35"
                                value="${fn:escapeXml(properties[pd.name].value)}"
@@ -149,7 +149,7 @@
 
     </c:forEach>
 
-    <input id="saveButton" class="btn btn-default" type="submit" value="<spring:message code="generic.save"/>"/>
+    <input id="saveButton" class="btn btn-secondary" type="submit" value="<spring:message code="generic.save"/>"/>
 
 </form>
 

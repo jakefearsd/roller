@@ -54,7 +54,7 @@
     <form action="${pageContext.request.contextPath}/roller-ui/install/install!create.rol" method="post">
         <sec:csrfInput/>
         <spring:message code="installer.yesCreateTables" var="createTablesLabel"/>
-        <button type="submit" class="btn btn-default">${createTablesLabel}</button>
+        <button type="submit" class="btn btn-secondary">${createTablesLabel}</button>
     </form>
 
 </c:otherwise>

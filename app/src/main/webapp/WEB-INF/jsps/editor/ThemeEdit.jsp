@@ -28,9 +28,9 @@
 
     <div class="row row-display-flex">
 
-        <div class="col-xs-6">
-            <div class="panel panel-default">
-                <div class="panel-body" id="sharedChooser">
+        <div class="col-6">
+            <div class="card">
+                <div class="card-body" id="sharedChooser">
                     <h3>
                         <input id="sharedRadio" type="radio" name="themeType" value="shared"
                             <c:if test="${!customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
@@ -41,9 +41,9 @@
             </div>
         </div>
 
-        <div class="col-xs-6">
-            <div class="panel panel-default">
-                <div class="panel-body" id="customChooser">
+        <div class="col-6">
+            <div class="card">
+                <div class="card-body" id="customChooser">
                     <h3>
                         <input id="customRadio" type="radio" name="themeType" value="custom"
                             <c:if test="${customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
@@ -89,7 +89,7 @@
 </select>
         </p>
         <p><spring:message code="themeEditor.thisTheme"/> <p id="themeDescription"></p>
-        <p><img id="themeThumbnail" src="" class="img-responsive img-thumbnail" style="max-width: 30em" /></p>
+        <p><img id="themeThumbnail" src="" class="img-fluid img-thumbnail" style="max-width: 30em" /></p>
 
     </div>
 
@@ -97,7 +97,7 @@
 
     <div id="sharedChangeToShared" style="display:none;">
 
-        <div class="alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
+        <div class="alert alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
             <spring:message code="themeEditor.proposedSharedThemeChange"/>
         </div>
 
@@ -107,7 +107,7 @@
             value="<spring:message code="themeEditor.preview"/>"
             onclick="fullPreview($('#themeSelector').get(0))"/>
 
-        <button type="submit" class="btn btn-default"><spring:message code="themeEditor.save"/></button>
+        <button type="submit" class="btn btn-secondary"><spring:message code="themeEditor.save"/></button>
 
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
@@ -117,7 +117,7 @@
 
     <div id="sharedChangeToCustom" style="display:none;">
 
-        <div class="alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
+        <div class="alert alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
             <spring:message code="themeEditor.proposedSharedChangeToCustom"/>
         </div>
 
@@ -133,7 +133,7 @@
             <label><input type="checkbox" name="importTheme" value="true" ${importTheme ? 'checked' : ''}/> <spring:message code="themeEditor.importAndOverwriteTemplates"/></label>
         </c:otherwise>
 </c:choose><%-- Update button --%>
-        <button type="submit" class="btn btn-default"><spring:message code="themeEditor.save"/></button>
+        <button type="submit" class="btn btn-secondary"><spring:message code="themeEditor.save"/></button>
 
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
@@ -149,7 +149,7 @@
 
     <div id="customChangeToShared" style="display:none;">
 
-        <div class="alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
+        <div class="alert alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
             <spring:message code="themeEditor.proposedChangeToShared"/>
         </div>
 
@@ -159,7 +159,7 @@
             value="<spring:message code="themeEditor.preview"/>"
             onclick="fullPreview($('#themeSelector').get(0))"/>
 
-        <button type="submit" class="btn btn-default"><spring:message code="themeEditor.save"/></button>
+        <button type="submit" class="btn btn-secondary"><spring:message code="themeEditor.save"/></button>
 
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 

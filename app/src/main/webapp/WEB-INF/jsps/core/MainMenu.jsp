@@ -59,10 +59,10 @@
 
     <c:forEach items="${existingPermissions}" var="perms">
 
-        <div class="well yourWeblogBox">
+        <div class="card card-body yourWeblogBox">
 
             <h3 class="mm_weblog_name">
-                <span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span>
+                <span class="bi bi-folder2-open" aria-hidden="true"></span>
                 &nbsp;${fn:escapeXml(perms.weblog.name)}
             </h3>
 
@@ -83,8 +83,8 @@
                 <c:url value="/roller-ui/authoring/entryAdd.rol" var="newEntry">
                     <c:param name="weblog" value="${perms.weblog.handle}"/>
                 </c:url>
-                <a href="${newEntry}" class="btn btn-default">
-                    <span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
+                <a href="${newEntry}" class="btn btn-secondary">
+                    <span class="bi bi-pencil" aria-hidden="true"></span>
                     <spring:message code="yourWebsites.newEntry"/>
                 </a>
 
@@ -94,10 +94,10 @@
                     <c:url value="/roller-ui/authoring/entries.rol" var="editEntries">
                         <c:param name="weblog" value="${perms.weblog.handle}"/>
                     </c:url>
-                    <a href="${editEntries}" class="btn btn-default">
-                        <span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+                    <a href="${editEntries}" class="btn btn-secondary">
+                        <span class="bi bi-list" aria-hidden="true"></span>
                         <spring:message code="yourWebsites.editEntries"/>
-                        <span class="badge">${perms.weblog.entryCount}</span>
+                        <span class="badge bg-secondary">${perms.weblog.entryCount}</span>
                     </a>
 
                 </c:if>
@@ -108,10 +108,10 @@
                     <c:url value="/roller-ui/authoring/comments.rol" var="manageComments">
                         <c:param name="weblog" value="${perms.weblog.handle}"/>
                     </c:url>
-                    <a href="${manageComments}" class="btn btn-default">
-                        <span class="glyphicon glyphicon-comment" aria-hidden="true"></span>
+                    <a href="${manageComments}" class="btn btn-secondary">
+                        <span class="bi bi-chat" aria-hidden="true"></span>
                         <spring:message code="yourWebsites.manageComments"/>
-                        <span class="badge">${perms.weblog.commentCount}</span>
+                        <span class="badge bg-secondary">${perms.weblog.commentCount}</span>
                     </a>
 
                 </c:if>
@@ -134,8 +134,8 @@
                                 </c:url>
                             </c:otherwise>
                         </c:choose>
-                        <a href='${weblogTheme}' class="btn btn-default">
-                            <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                        <a href='${weblogTheme}' class="btn btn-secondary">
+                            <span class="bi bi-eye" aria-hidden="true"></span>
                             <spring:message code="yourWebsites.theme" />
                         </a>
                     </c:if>
@@ -144,8 +144,8 @@
                     <c:url value="/roller-ui/authoring/weblogConfig.rol" var="manageWeblog">
                         <c:param name="weblog" value="${perms.weblog.handle}"/>
                     </c:url>
-                    <a href='${manageWeblog}' class="btn btn-default">
-                        <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                    <a href='${manageWeblog}' class="btn btn-secondary">
+                        <span class="bi bi-gear" aria-hidden="true"></span>
                         <spring:message code="yourWebsites.manage"/>
                     </a>
 
@@ -154,8 +154,8 @@
                 <%-- resign from blog (last-admin check enforced server-side) --%>
                 <c:if test='${perms.hasAction("admin")}'>
 
-                    <button type="button" class="btn btn-default">
-                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                    <button type="button" class="btn btn-secondary">
+                        <span class="bi bi-trash" aria-hidden="true"></span>
                         <c:url value="/roller-ui/authoring/memberResign.rol" var="resignWeblog">
                             <c:param name="weblog" value="${perms.weblog.handle}"/>
                         </c:url>

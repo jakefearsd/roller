@@ -27,9 +27,9 @@
 
 <%-- STEP 1: Create a user if you don't already have one --%>
 
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <h3 class="panel-title">
+<div class="card">
+    <div class="card-header">
+        <h3 class="setup-section-title">
             <spring:message code="index.createUser"/>
             <c:if test="${userCount > 0}"> -
                 <spring:message code="index.createUserDone" arguments="${userCount}"/>
@@ -37,7 +37,7 @@
         </h3>
     </div>
 
-    <div class="panel-body">
+    <div class="card-body">
 
         <p><spring:message code="index.createUserHelp"/></p>
         <p><c:if test="${userCount == 0}">
@@ -51,9 +51,9 @@
 
 <%-- STEP 2: Create a weblog if you don't already have one --%>
 
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <h3 class="panel-title">
+<div class="card">
+    <div class="card-header">
+        <h3 class="setup-section-title">
             <spring:message code="index.createWeblog"/>
             <c:if test="${blogCount > 0}"> -
                 <spring:message code="index.createWeblogDone" arguments="${blogCount}"/>
@@ -61,7 +61,7 @@
         </h3>
     </div>
 
-    <div class="panel-body">
+    <div class="card-body">
 
         <spring:message code="index.createWeblogHelp"/><br/><br/>
         <c:if test="${userCount > 0 && blogCount == 0}">
@@ -76,27 +76,27 @@
 
 <%-- STEP 3: Designate a weblog to be the frontpage weblog --%>
 
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <h3 class="panel-title">
+<div class="card">
+    <div class="card-header">
+        <h3 class="setup-section-title">
             <spring:message code="index.setFrontpage"/>
         </h3>
     </div>
 
-    <div class="panel-body">
+    <div class="card-body">
 
         <p><spring:message code="index.setFrontpageHelp"/></p>
 
         <c:if test="${blogCount > 0}">
 
-            <form action="${pageContext.request.contextPath}/roller-ui/setup!save.rol" method="post" class="form-horizontal">
+            <form action="${pageContext.request.contextPath}/roller-ui/setup!save.rol" method="post">
                 <sec:csrfInput/>
 
-                <div class="form-group">
+                <div class="row mb-3">
                     <spring:message code="frontpageConfig.frontpageBlogName" var="frontpageBlogLabel"/>
-                    <label class="col-sm-3 control-label">${frontpageBlogLabel}</label>
+                    <label class="col-sm-3 col-form-label">${frontpageBlogLabel}</label>
                     <div class="col-sm-9 controls">
-                        <select name="frontpageBlog" class="form-control">
+                        <select name="frontpageBlog" class="form-select">
                             <c:forEach items="${weblogs}" var="w">
                                 <option value="${fn:escapeXml(w.handle)}">${fn:escapeXml(w.name)}</option>
                             </c:forEach>
@@ -104,15 +104,15 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="row mb-3">
                     <spring:message code="frontpageConfig.frontpageAggregated" var="aggregatedLabel"/>
-                    <label class="col-sm-3 control-label">${aggregatedLabel}</label>
+                    <label class="col-sm-3 col-form-label">${aggregatedLabel}</label>
                     <div class="col-sm-9 controls">
-                        <input type="checkbox" name="aggregated" value="true"/>
+                        <input type="checkbox" class="form-check-input" name="aggregated" value="true"/>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-default"><spring:message code="generic.save"/></button>
+                <button type="submit" class="btn btn-secondary"><spring:message code="generic.save"/></button>
 
             </form>
 

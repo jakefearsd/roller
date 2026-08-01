@@ -161,8 +161,10 @@ public final class Routes {
             // "admin" authority, so this route is reachable only because the
             // sweep is logged in as the seeded admin, not because it is public.
             // Every link on Setup.jsp is conditional on user/blog counts; the
-            // three panel headings are not.
-            new Route("/roller-ui/setup.rol", Role.ADMIN, "", "h3.panel-title"),
+            // three card headings are not. The marker is an app-owned class
+            // (not card-title) because Setup.jsp's headings sit in .card-header,
+            // not .card-body, where Bootstrap 5's card-title is normally used.
+            new Route("/roller-ui/setup.rol", Role.ADMIN, "", "h3.setup-section-title"),
 
             // The weblog list only renders under
             // <c:if test="${not empty existingPermissions}">, which holds because

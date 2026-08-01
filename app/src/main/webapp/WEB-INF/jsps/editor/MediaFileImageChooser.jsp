@@ -44,7 +44,7 @@
         <%-- Maybe show media directory selector --%>
 
         <c:if test="${not empty allDirectories}">
-            <select name="directoryId" class="form-control" onchange="onView()">
+            <select name="directoryId" class="form-select" onchange="onView()">
 <option value=""></option>
 <c:forEach items="${allDirectories}" var="opt">
 <option value="${opt.id}" ${opt.id == directoryId ? 'selected' : ''}>${opt.name}</option>
@@ -55,8 +55,8 @@
         <%-- ***************************************************************** --%>
         <%-- Media files grid --%>
 
-        <div id="imageGrid" class="panel panel-default">
-            <div class="panel-body">
+        <div id="imageGrid" class="card">
+            <div class="card-body">
 
                 <ul>
 
@@ -87,7 +87,7 @@
                                              alt='${mediaFile.name}'/>
                                     </c:when>
 <c:otherwise>
-                                        <span class="glyphicon glyphicon-file"></span>
+                                        <span class="bi bi-file-earmark"></span>
                                     </c:otherwise>
                                     </c:choose>
                                 </div>
