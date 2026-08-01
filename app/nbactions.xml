@@ -31,6 +31,10 @@
             <goal>process-test-resources</goal>
             <goal>spring-boot:run</goal>
         </goals>
+        <properties>
+            <spring-boot.run.arguments>--server.port=8083</spring-boot.run.arguments>
+            <spring-boot.run.jvmArguments>-Droller.custom.config=${basedir}/target/test-classes/roller-boot-dev.properties</spring-boot.run.jvmArguments>
+        </properties>
     </action>
 
     <action>
@@ -42,6 +46,8 @@
         </goals>
         <properties>
             <jpda.listen>maven</jpda.listen>
+            <spring-boot.run.arguments>--server.port=8083</spring-boot.run.arguments>
+            <spring-boot.run.jvmArguments>-Droller.custom.config=${basedir}/target/test-classes/roller-boot-dev.properties</spring-boot.run.jvmArguments>
         </properties>
     </action>
     
