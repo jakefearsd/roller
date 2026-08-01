@@ -17,11 +17,17 @@
  */
 package org.apache.roller.weblogger.business.jpa;
 
+import java.util.Date;
+
 import org.apache.roller.testing.RollerDatabaseExtension;
+import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Tests for {@link JPAPersistenceStrategy}.
@@ -46,5 +52,53 @@ class JPAPersistenceStrategyTest {
         strategy.shutdown();
         assertDoesNotThrow(strategy::shutdown,
                 "a second shutdown() on the same strategy must be a no-op, not throw");
+    }
+
+    @Test
+    void handBuiltPersistenceUnitInfoBuildsAWorkingEmfAndAWeblogManagerQueryRoundTrips() throws Exception {
+        // Task 2b: the constructor now builds the EntityManagerFactory via
+        // PersistenceProvider#createContainerEntityManagerFactory with a
+        // hand-built PersistenceUnitInfo instead of the classpath-scanning
+        // Persistence.createEntityManagerFactory("RollerPU", props). This
+        // proves that path actually produces a working EMF against a real
+        // (Testcontainers) database: store a Weblog directly through the
+        // strategy, then read it back through a JPA-backed WeblogManager
+        // named query, exactly as the web tier would.
+        RollerDatabaseExtension.ensureSchema();
+        if (!WebloggerStartup.isPrepared()) {
+            WebloggerStartup.prepare();
+        }
+
+        JPAPersistenceStrategy strategy =
+                new JPAPersistenceStrategy(WebloggerStartup.getDatabaseProvider());
+        try {
+            Weblog weblog = new Weblog();
+            weblog.setName("Persistence Strategy Test Weblog");
+            weblog.setHandle("jpapersistencestrategytest");
+            weblog.setEmailAddress("jpapersistencestrategytest@dev.null");
+            weblog.setEditorPage("editor-text.jsp");
+            weblog.setBannedwordslist("");
+            weblog.setEditorTheme("basic");
+            weblog.setLocale("en_US");
+            weblog.setTimeZone("America/Los_Angeles");
+            weblog.setDateCreated(new Date());
+            weblog.setCreatorUserName("nobody");
+
+            strategy.store(weblog);
+            strategy.flush();
+
+            WeblogManager weblogManager = new JPAWeblogManagerImpl(null, strategy);
+            Weblog reloaded = weblogManager.getWeblogByHandle("jpapersistencestrategytest");
+
+            assertNotNull(reloaded,
+                    "a WeblogManager named query through the hand-built PersistenceUnitInfo "
+                            + "path must find the weblog stored via the same EMF");
+            assertEquals(weblog.getId(), reloaded.getId());
+
+            strategy.remove(reloaded);
+            strategy.flush();
+        } finally {
+            strategy.shutdown();
+        }
     }
 }
