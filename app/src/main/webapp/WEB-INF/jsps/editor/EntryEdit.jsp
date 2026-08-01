@@ -181,7 +181,7 @@
 
             <%-- Weblog editor --%>
 
-        <jsp:include page="${editor.jspPage}"/>
+        <jsp:include page="/WEB-INF/jsps/editor/EntryEditor.jsp"/>
 
             <%-- Plugins --%>
 

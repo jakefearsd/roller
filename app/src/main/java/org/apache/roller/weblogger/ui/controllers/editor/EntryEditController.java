@@ -45,9 +45,6 @@ import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
-import org.apache.roller.weblogger.ui.core.RollerContext;
-import org.apache.roller.weblogger.ui.core.plugins.UIPluginManager;
-import org.apache.roller.weblogger.ui.core.plugins.WeblogEntryEditor;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.util.MailUtil;
 import org.apache.roller.weblogger.util.MediacastException;
@@ -349,7 +346,6 @@ public class EntryEditController extends BaseController {
     private void addEntryModelAttributes(HttpServletRequest request, Model model, WeblogEntry entry) {
         model.addAttribute("categories", getCategories(request));
         model.addAttribute("entryPlugins", getEntryPlugins(request));
-        model.addAttribute("editor", getEditor(request));
         model.addAttribute("userAnAuthor", getActionWeblog(request).hasUserPermission(
                 getAuthenticatedUser(request), WeblogPermission.POST));
         model.addAttribute("jsonAutocompleteUrl", weblogger.getUrlStrategy()
@@ -423,11 +419,6 @@ public class EntryEditController extends BaseController {
             log.error("Error getting plugins list", ex);
         }
         return Collections.emptyList();
-    }
-
-    private WeblogEntryEditor getEditor(HttpServletRequest request) {
-        UIPluginManager pmgr = RollerContext.getUIPluginManager();
-        return pmgr.getWeblogEntryEditor(getActionWeblog(request).getEditorPage());
     }
 
     private List<WeblogEntry> getRecentEntries(HttpServletRequest request, PubStatus pubStatus,

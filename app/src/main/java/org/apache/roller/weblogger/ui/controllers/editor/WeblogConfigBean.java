@@ -32,7 +32,6 @@ public class WeblogConfigBean {
     private String name = null;
     private String tagline = null;
     private boolean enableBloggerApi = false;
-    private String editorPage = null;
     private boolean allowComments = false;
     private boolean defaultAllowComments = false;
     private String defaultCommentDays = "0";
@@ -87,14 +86,6 @@ public class WeblogConfigBean {
     
     public void setEnableBloggerApi( boolean enableBloggerApi ) {
         this.enableBloggerApi = enableBloggerApi;
-    }
-    
-    public String getEditorPage() {
-        return this.editorPage;
-    }
-    
-    public void setEditorPage( String editorPage ) {
-        this.editorPage = editorPage;
     }
     
     public boolean getAllowComments() {
@@ -254,7 +245,6 @@ public class WeblogConfigBean {
         this.name = dataHolder.getName();
         this.tagline = dataHolder.getTagline();
         this.enableBloggerApi = dataHolder.getEnableBloggerApi();
-        this.editorPage = dataHolder.getEditorPage();
         this.allowComments = dataHolder.getAllowComments();
         this.defaultAllowComments = dataHolder.getDefaultAllowComments();
         this.defaultCommentDays = ""+dataHolder.getDefaultCommentDays();
@@ -285,7 +275,6 @@ public class WeblogConfigBean {
         dataHolder.setName(this.name);
         dataHolder.setTagline(this.tagline);
         dataHolder.setEnableBloggerApi(this.enableBloggerApi);
-        dataHolder.setEditorPage(this.editorPage);
         dataHolder.setAllowComments(this.allowComments);
         dataHolder.setDefaultAllowComments(this.defaultAllowComments);
         dataHolder.setModerateComments(this.moderateComments);

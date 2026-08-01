@@ -36,9 +36,6 @@ import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
-import org.apache.roller.weblogger.ui.core.RollerContext;
-import org.apache.roller.weblogger.ui.core.plugins.UIPluginManager;
-import org.apache.roller.weblogger.ui.core.plugins.WeblogEntryEditor;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -145,12 +142,6 @@ public class WeblogConfigController extends BaseController {
         try {
             WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             model.addAttribute("weblogCategories", wmgr.getWeblogCategories(getActionWeblog(request)));
-
-            UIPluginManager pmgr = RollerContext.getUIPluginManager();
-            List<WeblogEntryEditor> editorList = pmgr.getWeblogEntryEditors();
-            if (editorList != null) {
-                model.addAttribute("editorsList", editorList);
-            }
 
             PluginManager ppmgr = weblogger.getPluginManager();
             Map<String, WeblogEntryPlugin> pluginsMap = ppmgr.getWeblogEntryPlugins(getActionWeblog(request));

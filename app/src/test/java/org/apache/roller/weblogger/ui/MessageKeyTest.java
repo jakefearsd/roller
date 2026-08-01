@@ -124,10 +124,12 @@ public class MessageKeyTest {
      * cannot see because they are addressed dynamically rather than via a
      * literal {@code <spring:message code="...">}:
      * <ul>
-     *   <li>32 {@code configForm.*} keys read off {@code key="..."} attributes in
+     *   <li>31 {@code configForm.*} keys read off {@code key="..."} attributes in
      *       {@code runtimeConfigDefs.xml} (GlobalConfig.jsp renders display
      *       groups/properties generically via {@code ${dg.key}} / property
-     *       metadata, not a literal code).</li>
+     *       metadata, not a literal code; one fewer than before the Stage 1E
+     *       editor-plugin refactor dropped the {@code users.editor.pages}
+     *       property-def along with the dual-editor layer it configured).</li>
      *   <li>16 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
      *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
      *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
@@ -161,11 +163,11 @@ public class MessageKeyTest {
 
     /**
      * Keys the text scan cannot see: {@code runtimeConfigDefs.xml} {@code key=}
-     * attributes (32) + {@code admin-menu.xml}/{@code editor-menu.xml}
+     * attributes (31) + {@code admin-menu.xml}/{@code editor-menu.xml}
      * {@code name=} attributes (16). See the javadoc on
      * {@link #reportsBundleKeysNoJspOrControllerUses()}.
      */
-    private static final int KNOWN_DYNAMIC_KEY_COUNT = 48;
+    private static final int KNOWN_DYNAMIC_KEY_COUNT = 47;
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();

@@ -112,10 +112,6 @@ public final class WeblogWrapper {
         return WeblogCategoryWrapper.wrap(this.pojo.getBloggerCategory(), urlStrategy);
     }
     
-    public String getEditorPage() {
-        return this.pojo.getEditorPage();
-    }
-
     public Boolean getAllowComments() {
         return this.pojo.getAllowComments();
     }

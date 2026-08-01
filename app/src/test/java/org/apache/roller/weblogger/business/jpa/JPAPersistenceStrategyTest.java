@@ -101,7 +101,6 @@ class JPAPersistenceStrategyTest {
             weblog.setName("Persistence Strategy Test Weblog");
             weblog.setHandle("jpapersistencestrategytest");
             weblog.setEmailAddress("jpapersistencestrategytest@dev.null");
-            weblog.setEditorPage("editor-text.jsp");
             weblog.setEditorTheme("basic");
             weblog.setLocale("en_US");
             weblog.setTimeZone("America/Los_Angeles");

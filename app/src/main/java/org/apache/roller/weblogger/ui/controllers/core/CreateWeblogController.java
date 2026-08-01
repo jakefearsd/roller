@@ -37,7 +37,6 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.controllers.util.UIUtils;
-import org.apache.roller.weblogger.util.Utilities;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.WebDataBinder;
@@ -152,11 +151,6 @@ public class CreateWeblogController extends BaseController {
                     bean.getTheme(),
                     bean.getLocale(),
                     bean.getTimeZone());
-
-            // pick a weblog editor for this weblog
-            String def = WebloggerRuntimeConfig.getProperty("users.editor.pages");
-            String[] defs = Utilities.stringToStringArray(def, ",");
-            wd.setEditorPage(defs[0]);
 
             try {
                 weblogger.getWeblogManager().addWeblog(wd);

@@ -29,8 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.ui.core.plugins.UIPluginManager;
-import org.apache.roller.weblogger.ui.core.plugins.UIPluginManagerImpl;
 import org.apache.velocity.runtime.RuntimeSingleton;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
@@ -52,9 +50,8 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  * Spring Boot {@code SmartLifecycle} bean. This class now only holds the
  * statics that lifecycle/security config populate ({@link #getServletContext()},
  * {@link #getPasswordEncoder()}) plus the helper methods they call
- * ({@link #createPasswordEncoder()}, {@link #setupVelocity()}) and the ones
- * controllers/filters still call directly ({@link #getUIPluginManager()},
- * {@link #flushAuthenticationUserCache(String)}).
+ * ({@link #createPasswordEncoder()}, {@link #setupVelocity()}) and the one
+ * controllers/filters still call directly ({@link #flushAuthenticationUserCache(String)}).
  *
  * <p>Until Stage 1B Task 4, {@code initializeSecurityFeatures(ServletContext)}
  * built the password encoder and mutated Spring Security beans looked up by
@@ -87,16 +84,6 @@ public class RollerContext {
      */
     public static void hold(ServletContext sc) {
         servletContext = sc;
-    }
-
-
-    /**
-     * Access to the plugin manager for the UI layer. TODO: we may want
-     * something similar to the Roller interface for the UI layer if we dont
-     * want methods like this here in RollerContext.
-     */
-    public static UIPluginManager getUIPluginManager() {
-        return UIPluginManagerImpl.getInstance();
     }
 
 

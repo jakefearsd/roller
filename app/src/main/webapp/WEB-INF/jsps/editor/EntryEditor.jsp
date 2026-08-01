@@ -88,63 +88,6 @@
 
 <script>
 
-    <c:choose>
-<c:when test="${editor.id == 'editor-text.jsp'}">
-
-    <%-- Plain text editor functions --%>
-
-    function insertMediaFile(anchorTag) {
-        insertAtCursor(document.getElementById('edit_content'), anchorTag);
-    }
-
-    function insertAtCursor(textAreaElement, valueForInsertion) {
-        if (document.selection) {
-            textAreaElement.focus();
-            var range = document.selection.createRange();
-            range.text = valueForInsertion;
-        } else if (textAreaElement.selectionStart || textAreaElement.selectionStart === '0') {
-            var preText;
-            var postText;
-            if (textAreaElement.selectionStart === 0) {
-                preText = '';
-                postText = '';
-            } else {
-                preText = textAreaElement.value.substring(
-                    0, textAreaElement.selectionStart);
-                postText = textAreaElement.value.substring(
-                    textAreaElement.selectionEnd, textAreaElement.value.length);
-            }
-            textAreaElement.value = preText + valueForInsertion + postText;
-            textAreaElement.selectionStart = preText.length + valueForInsertion.length;
-            textAreaElement.selectionEnd = textAreaElement.selectionStart;
-            textAreaElement.focus();
-        } else {
-            textAreaElement.value += valueForInsertion;
-            textAreaElement.focus();
-        }
-    }
-    // Added event listener to confirm once the editor content is changed
-    $("#edit_content").one("change", function() {
-        var confirmFunction = function(event) {
-            // Chrome requires returnValue to be set and original event is found as originalEvent
-            // see https://developer.mozilla.org/en-US/docs/Web/API/WindowEventHandlers/onbeforeunload#Example
-            if (event.originalEvent)
-                event.originalEvent.returnValue = "Are you sure you want to leave?";
-            return "Are you sure you want to leave?";
-        }
-        $(window).on("beforeunload", confirmFunction);
-
-        // Remove it if it is form submit
-        $(this.form).on('submit', function() {
-            $(window).off("beforeunload", confirmFunction);
-        });
-    });
-
-    </c:when>
-<c:otherwise>
-
-    <%-- Rich text editor functions --%>
-
     $(document).ready(function () {
         $('#edit_content').summernote({
                 toolbar: [
@@ -183,8 +126,7 @@
         $('#edit_content').summernote("pasteHTML", toInsert);
     }
 
-    </c:otherwise>
-</c:choose><%-- Common functions --%>
+    <%-- Common functions --%>
 
     function onClickMediaFileInsert() {
         <c:url var="mediaFileImageChooser" value="/overlay/mediaFileImageChooser.rol">

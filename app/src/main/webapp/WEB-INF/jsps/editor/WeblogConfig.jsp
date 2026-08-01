@@ -64,17 +64,6 @@
     </div>
 
     <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="websiteSettings.editor"/></label>
-        <div class="col-sm-9">
-            <select name="bean.editorPage" class="form-control">
-                <c:forEach items="${editorsList}" var="opt">
-                    <option value="${opt.id}" ${opt.id == bean.editorPage ? 'selected' : ''}><spring:message code="${opt.name}"/></option>
-                </c:forEach>
-            </select>
-        </div>
-    </div>
-
-    <div class="form-group">
         <label class="col-sm-3 control-label"><spring:message code="websiteSettings.entryDisplayCount"/></label>
         <div class="col-sm-9">
             <input type="number" name="bean.entryDisplayCount" value="${bean.entryDisplayCount}" size="4" class="form-control"/>

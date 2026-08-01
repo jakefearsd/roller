@@ -68,7 +68,6 @@ class CreateWeblogControllerTest {
         previousGroupBlogging = ControllerTestFixture.setConfigProperty("groupblogging.enabled", "true");
         previousAllowedChars = ControllerTestFixture.setConfigProperty("username.allowedChars", "A-Za-z0-9");
         allowWeblogCreation(true);
-        runtimeProperty("users.editor.pages", "editor-text.jsp,editor-xinha.jsp");
     }
 
     @AfterEach
@@ -212,7 +211,6 @@ class CreateWeblogControllerTest {
         assertEquals("en_US", weblog.getLocale());
         assertEquals("America/New_York", weblog.getTimeZone());
         assertEquals("jake", weblog.getCreatorUserName(), "the signed-in user owns what they create");
-        assertEquals("editor-text.jsp", weblog.getEditorPage(), "the first configured editor is the default");
         verify(weblogger.weblogger()).flush();
         assertEquals(List.of("createWebsite.created[travelguide]"),
                 ControllerTestFixture.flashMessages(redirectAttributes));
