@@ -20,11 +20,31 @@ package org.apache.roller.weblogger.business;
 import org.apache.roller.testing.RollerDatabaseExtension;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationContext;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class SpringWebloggerProviderTest {
+
+    @Test
+    void bootstrapReusesAnExistingApplicationContextInsteadOfBuildingOne() {
+        // The two-arg constructor exists precisely so the webapp's root Spring
+        // context (which already imports WebloggerBeanConfig) is reused rather
+        // than a second, independent context being built and left orphaned.
+        Weblogger fakeWeblogger = mock(Weblogger.class);
+        ApplicationContext existingContext = mock(ApplicationContext.class);
+        when(existingContext.getBean(Weblogger.class)).thenReturn(fakeWeblogger);
+
+        SpringWebloggerProvider provider = new SpringWebloggerProvider(existingContext);
+        provider.bootstrap();
+
+        assertSame(fakeWeblogger, provider.getWeblogger(),
+                "bootstrap() must resolve the Weblogger bean from the supplied context, "
+                        + "not build a new self-owned one");
+    }
 
     @Test
     void bootstrapBuildsTheFullGraphWithSingletons() throws Exception {
