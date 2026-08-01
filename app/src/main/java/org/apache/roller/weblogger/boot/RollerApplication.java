@@ -16,13 +16,11 @@
  */
 package org.apache.roller.weblogger.boot;
 
-import org.apache.roller.weblogger.ui.core.RollerSession;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.web.servlet.ServletListenerRegistrationBean;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
-import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ImportResource;
 
 /**
  * Roller manages its own EntityManagerFactory (EclipseLink, via
@@ -40,6 +38,22 @@ import org.springframework.context.annotation.Bean;
  * (class-based) — it does not require the class to be resolvable at compile
  * time, and stays a guard against a future dependency pulling either module
  * in transitively.
+ *
+ * <p>{@code @ImportResource("classpath:security.xml")} is temporary
+ * scaffolding for the Stage 1B Task 3 -> Task 4 window: it loads the
+ * still-XML Spring Security configuration (moved unchanged from
+ * {@code app/src/main/webapp/WEB-INF/security.xml} to
+ * {@code app/src/main/resources/security.xml} -- a classpath resource, not
+ * a webapp resource, since Boot's embedded container never reads {@code
+ * WEB-INF/} contents from an unexploded/executable WAR) into this
+ * application context. Without it, {@code RollerContext.initializeSecurityFeatures}
+ * (called from {@link RollerLifecycle#start()}) throws {@code
+ * NoSuchBeanDefinitionException} looking up
+ * {@code org.springframework.security.authenticationManager} and the
+ * beans {@code security.xml} itself declares by name (e.g.
+ * {@code rollerRememberMeServices}). Task 4 replaces this XML file with
+ * real {@code @Configuration}/{@code SecurityFilterChain} beans and removes
+ * this annotation.
  */
 @SpringBootApplication(
         scanBasePackages = "org.apache.roller.weblogger",
@@ -47,6 +61,7 @@ import org.springframework.context.annotation.Bean;
                 "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration",
                 "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"
         })
+@ImportResource("classpath:security.xml")
 public class RollerApplication extends SpringBootServletInitializer {
 
     public static void main(String[] args) {
@@ -56,17 +71,5 @@ public class RollerApplication extends SpringBootServletInitializer {
     @Override
     protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
         return builder.sources(RollerApplication.class);
-    }
-
-    /**
-     * Temporary home for the {@code RollerSession} listener registration
-     * (formerly a {@code <listener>} in web.xml, which Boot's embedded
-     * container never reads). Moves into {@code ServletRegistrationConfig}
-     * alongside the rest of web.xml's servlet/filter registrations in a
-     * later task of this conversion.
-     */
-    @Bean
-    public ServletListenerRegistrationBean<RollerSession> rollerSessionListener() {
-        return new ServletListenerRegistrationBean<>(new RollerSession());
     }
 }

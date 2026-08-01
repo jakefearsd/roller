@@ -610,6 +610,13 @@ limitations under the License.
                 <version>${maven-war.version}</version>
                 <configuration>
                     <attachClasses>true</attachClasses>
+                    <!-- web.xml is deleted (Stage 1B Task 3): all its servlet/
+                         filter/error-page/welcome-file/jsp-config content is now
+                         Java config under org.apache.roller.weblogger.boot, and
+                         Boot's embedded container never read web.xml anyway.
+                         Without this flag maven-war-plugin fails the build
+                         outright when web.xml is missing. -->
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
                 </configuration>
             </plugin>
 

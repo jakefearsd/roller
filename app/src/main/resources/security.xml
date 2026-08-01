@@ -28,22 +28,64 @@
     <http pattern="/scripts/**" security="none"/>
     <http pattern="/styles/**" security="none"/>
 
-    <http auto-config="false" access-decision-manager-ref="accessDecisionManager"
-          use-expressions="false" use-authorization-manager="false">
-        <intercept-url pattern="/roller-ui/login-redirect**" access="admin,editor"/>
-        <intercept-url pattern="/roller-ui/profile**" access="admin,editor"/>
-        <intercept-url pattern="/roller-ui/createWeblog**" access="admin,editor"/>
-        <intercept-url pattern="/roller-ui/menu**" access="admin,editor"/>
-        <intercept-url pattern="/roller-ui/authoring/**" access="admin,editor"/>
-        <intercept-url pattern="/roller-ui/admin/**" access="admin"/>
+    <!-- use-authorization-manager defaults to true (and its predecessor,
+         the AccessDecisionManager/SecurityMetadataSource path this <http>
+         element used until Stage 1B Task 3, is no longer just deprecated
+         but gone: Spring Security 7.1, pulled in transitively by Spring
+         Boot 4.1's BOM, ships spring-security-core without
+         org.springframework.security.access.SecurityConfig, so
+         access-decision-manager-ref="accessDecisionManager" with
+         use-authorization-manager="false" throws NoClassDefFoundError the
+         moment this file is parsed. use-authorization-manager is omitted
+         below to take that true default; the accessDecisionManager/
+         roleVoter beans that configured the old path are gone too (see
+         below), replaced by the GrantedAuthorityDefaults bean, which is the
+         AuthorizationManager-path equivalent of roleVoter's
+         rolePrefix="": Roller's own granted authorities are bare role
+         names ("admin", "editor", see RollerUserDetailsService), not
+         Spring Security's default ROLE_-prefixed form.
+
+         use-expressions is flipped from false to true alongside this:
+         AuthorizationFilterParser (the AuthorizationManager-path
+         intercept-url parser) rejects use-expressions="false" outright
+         ("AuthorizationManager must be used with use-expressions=true")
+         unless use-authorization-manager="false" is also present, and
+         that combination is exactly the removed SecurityConfig path this
+         change is getting away from. The plain comma-separated role lists
+         below (access="admin,editor") are rewritten as the equivalent
+         hasRole()/hasAnyRole() SpEL expressions; hasRole() still honors the
+         GrantedAuthorityDefaults rolePrefix="" bean below, so the actual
+         authorization decision (which roles satisfy which pattern) is
+         unchanged from before. -->
+    <http auto-config="false" use-expressions="true">
+        <intercept-url pattern="/roller-ui/login-redirect**" access="hasAnyRole('admin','editor')"/>
+        <intercept-url pattern="/roller-ui/profile**" access="hasAnyRole('admin','editor')"/>
+        <intercept-url pattern="/roller-ui/createWeblog**" access="hasAnyRole('admin','editor')"/>
+        <intercept-url pattern="/roller-ui/menu**" access="hasAnyRole('admin','editor')"/>
+        <intercept-url pattern="/roller-ui/authoring/**" access="hasAnyRole('admin','editor')"/>
+        <intercept-url pattern="/roller-ui/admin/**" access="hasRole('admin')"/>
         <!-- setup.rol lists every weblog plus user/blog counts, and setup!save.rol
              writes the site.frontpage.weblog.* runtime properties. Neither
              SetupController nor this file previously required a role, so any
              anonymous visitor could read the site inventory and repoint the site
              front page - the CSRF token is no defence, since an anonymous GET of
              the form hands one out. -->
-        <intercept-url pattern="/roller-ui/setup**" access="admin"/>
-        <intercept-url pattern="/rewrite-status*" access="admin"/>
+        <intercept-url pattern="/roller-ui/setup**" access="hasRole('admin')"/>
+        <intercept-url pattern="/rewrite-status*" access="hasRole('admin')"/>
+        <!-- Catch-all, must be last (first-match-wins). The legacy
+             SecurityMetadataSource path (use-authorization-manager="false")
+             implicitly permitted any URL not matched by an <intercept-url>
+             above; RequestMatcherDelegatingAuthorizationManager (the
+             AuthorizationManager-path equivalent this file now uses) has no
+             such implicit fallback: an unmatched request is denied, sending
+             it through the same login-page redirect as a real
+             AccessDeniedException, which loops forever when the login page
+             itself is unmatched (i.e. this exact element was missing).
+             permitAll() here restores the old default: only the six
+             patterns above are actually gated; per-action authorization
+             below that (UISecurityEnforced, checked by
+             RollerHandlerInterceptor) is unaffected either way. -->
+        <intercept-url pattern="/**" access="permitAll()"/>
 
         <form-login login-page="/roller-ui/login.rol"
                     username-parameter="j_username" 
@@ -63,13 +105,16 @@
         </headers>
     </http>
 
-    <beans:bean id="accessDecisionManager" class="org.springframework.security.access.vote.AffirmativeBased">
-        <beans:constructor-arg ref="roleVoter"/>
-        <beans:property name="allowIfAllAbstainDecisions" value="false"/>
-    </beans:bean>
-
-    <beans:bean id="roleVoter" class="org.springframework.security.access.vote.RoleVoter">
-        <beans:property name="rolePrefix" value=""/>
+    <!-- Equivalent, under the AuthorizationManager path, of the old
+         roleVoter's rolePrefix="": picked up by type (not by bean name)
+         via GrantedAuthorityDefaultsParserUtils, which every <http>/
+         <intercept-url> element above implicitly consults when building its
+         AuthorityAuthorizationManager. Without this, "admin"/"editor" in
+         the access="..." lists above would never match, since Spring
+         Security's own default role prefix is "ROLE_" and
+         RollerUserDetailsService grants bare role names. -->
+    <beans:bean class="org.springframework.security.config.core.GrantedAuthorityDefaults">
+        <beans:constructor-arg value=""/>
     </beans:bean>
 
     <!-- Read users from Roller API -->
