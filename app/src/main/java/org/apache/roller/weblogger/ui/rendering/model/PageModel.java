@@ -28,6 +28,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.wrapper.ThemeTemplateWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogCategoryWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
@@ -145,6 +146,43 @@ public class PageModel implements Model {
     }
     
     
+    /**
+     * Absolute canonical URL of the page being rendered, for the
+     * {@code <link rel="canonical">} tag emitted by the {@code #showSeoHead}
+     * macro.
+     *
+     * <p>On permalinks a non-blank per-entry canonical-URL override wins (the
+     * entry is syndicated from elsewhere and canonical credit belongs there);
+     * otherwise this is the natural absolute URL of the request: the entry
+     * permalink, the custom page URL, or the collection URL
+     * (home/category/date/tags -- keeping the page number, so page 2
+     * canonicalizes to itself instead of claiming to duplicate page 1).
+     * Returns null on search results pages, which have no canonical form.
+     */
+    public String getCanonicalUrl() {
+        if (isSearchResults()) {
+            return null;
+        }
+        if (isPermalink()) {
+            WeblogEntry entry = pageRequest.getWeblogEntry();
+            if (entry != null && StringUtils.isNotBlank(entry.getCanonicalUrl())) {
+                return entry.getCanonicalUrl();
+            }
+            return urlStrategy.getWeblogEntryURL(weblog,
+                    pageRequest.getLocale(), pageRequest.getWeblogAnchor(), true);
+        }
+        if (pageRequest.getWeblogPageName() != null) {
+            return urlStrategy.getWeblogPageURL(weblog, pageRequest.getLocale(),
+                    pageRequest.getWeblogPageName(), null,
+                    pageRequest.getWeblogCategoryName(), pageRequest.getWeblogDate(),
+                    pageRequest.getTags(), pageRequest.getPageNum(), true);
+        }
+        return urlStrategy.getWeblogCollectionURL(weblog, pageRequest.getLocale(),
+                pageRequest.getWeblogCategoryName(), pageRequest.getWeblogDate(),
+                pageRequest.getTags(), pageRequest.getPageNum(), true);
+    }
+
+
     /**
      * Get weblog entry being displayed or null if none specified by request.
      */

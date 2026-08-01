@@ -188,6 +188,20 @@ class MediaFileWrapperTest {
     }
 
     @Test
+    void renditionEligibilityFollowsTheContentType() {
+        // #showSeoHead only declares rendition (?w=) URLs and their scaled
+        // dimensions when a rendition can actually exist; for gif/bmp the
+        // servlet would silently serve the full-size original at that URL.
+        assertTrue(wrapper.isRenditionEligible(),
+                "the fixture is image/jpeg, which the ladder covers");
+        pojo.setContentType("image/gif");
+        assertFalse(wrapper.isRenditionEligible(),
+                "gif never gets ladder renditions");
+        pojo.setContentType(null);
+        assertFalse(wrapper.isRenditionEligible());
+    }
+
+    @Test
     void thePojoEscapeHatchReturnsTheVeryObjectThatWasWrapped() {
         assertSame(pojo, wrapper.getPojo(),
                 "Rendering internals unwrap through getPojo(); handing back a copy would "

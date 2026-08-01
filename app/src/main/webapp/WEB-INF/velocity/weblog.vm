@@ -22,7 +22,9 @@ These are the documented macros in order defined in this file:
 
     #includeTemplate($weblog $pageName)
     #showAutodiscoveryLinks($weblog)
-    #showMetaDescription()
+    #showSeoHead()
+    #showEntryTitle($entry)
+    #showMetaDescription()          (superseded by #showSeoHead)
     #showAnalyticsTrackingCode($weblog)
 
     #showWeblogEntriesPager($pager)
@@ -109,6 +111,164 @@ Show RSS and Atom auto-discovery links as HTML link elements.
 
 
 #**
+Emits the automatic SEO baseline for the current page and supersedes
+#showMetaDescription (kept below for older custom themes). Call once from
+inside the <head> element of every theme page template.
+
+Emits, in order: a meta description (the entry search description on
+permalinks, else the weblog's about text), a robots noindex directive when
+the entry asks for one, rel=canonical from $model.canonicalUrl (the
+per-entry canonical override wins on permalinks; search pages get none),
+the Open Graph card, the Twitter card, and JSON-LD structured data
+(BlogPosting on permalinks, Blog on the weblog's other pages).
+
+og:image sizing: the rendition ladder tops out at 2400px, but social-card
+crawlers are happy with far less, so og:image points at the 1600px-wide
+rendition when the source image is wider than 1600px AND its format is
+rendition-eligible (jpeg/png -- for gif/bmp the servlet would silently
+serve the full-size original at the ?w= URL, so the original URL and its
+real dimensions are declared instead), and at the original URL otherwise
+-- one URL, no srcset, keeps the card markup simple and never upscales.
+
+Every user-controlled value is escaped on the way out: HTML-attribute
+escaping via $utils.escapeHTML (a stored canonical URL or meta title
+containing a double quote must not break out of its attribute) and JSON
+string escaping via $utils.escapeJson (which also escapes "/", so a value
+containing "</script>" cannot terminate the inline JSON-LD block).
+*#
+#macro(showSeoHead)
+    #set($seoEntry = false)
+    #if ($model.permalink && $model.weblogEntry)
+        #set($seoEntry = $model.weblogEntry)
+    #end
+    ## description: entry search description on permalinks, else weblog about.
+    ## Values are read RAW off the pojo and escaped exactly once at emit time:
+    ## the wrapper getters conditionally sanitize, which already entity-encodes
+    ## quotes when the sanitizer is on (double-escaping) and passes everything
+    ## through raw when it is off (no attribute safety at all). These are
+    ## plain-text fields, so a single deterministic escape is both safer and
+    ## cleaner than sanitizing.
+    #set($seoDescription = false)
+    #if ($seoEntry)
+        #if ($utils.isNotEmpty($seoEntry.pojo.searchDescription))
+            #set($seoDescription = $seoEntry.pojo.searchDescription)
+        #end
+    #elseif ($utils.isNotEmpty($model.weblog.pojo.about))
+        #set($seoDescription = $model.weblog.pojo.about)
+    #end
+    #if ($seoDescription)
+    <meta name="description" content="$utils.escapeHTML($seoDescription)">
+    #end
+    #if ($seoEntry && $seoEntry.noindex)
+    <meta name="robots" content="noindex">
+    #end
+    #set($seoCanonical = false)
+    #set($seoCanonical = $model.canonicalUrl)
+    #if ($seoCanonical)
+    <link rel="canonical" href="$utils.escapeHTML($seoCanonical)">
+    #end
+    ## Open Graph card. The title needs per-source escaping: entry titles and
+    ## meta titles are read raw off the pojo and escaped exactly once here
+    ## (see the description comment above), while the weblog name is already
+    ## HTML-escaped by WeblogWrapper.getName() -- escaping it again would
+    ## render "&amp;" literally in the card title.
+    #if ($seoEntry)
+        #if ($utils.isNotEmpty($seoEntry.pojo.metaTitle))
+            #set($seoTitleAttr = $utils.escapeHTML($seoEntry.pojo.metaTitle))
+            #set($seoTitleJson = $utils.escapeJson($seoEntry.pojo.metaTitle))
+        #else
+            #set($seoTitleAttr = $utils.escapeHTML($seoEntry.pojo.title))
+            #set($seoTitleJson = $utils.escapeJson($seoEntry.pojo.title))
+        #end
+    #else
+        #set($seoTitleAttr = $model.weblog.name)
+        #set($seoTitleJson = $utils.escapeJson($model.weblog.pojo.name))
+    #end
+    <meta property="og:type" content="#if($seoEntry)article#{else}website#end">
+    <meta property="og:title" content="$seoTitleAttr">
+    #if ($seoDescription)
+    <meta property="og:description" content="$utils.escapeHTML($seoDescription)">
+    #end
+    #if ($seoCanonical)
+    <meta property="og:url" content="$utils.escapeHTML($seoCanonical)">
+    #end
+    <meta property="og:site_name" content="$utils.escapeHTML($config.siteName)">
+    ## dedicated og:image wins, else the featured image (wrapper getOgImage
+    ## does not fall back on its own)
+    #set($seoImage = false)
+    #if ($seoEntry)
+        #set($seoImage = $seoEntry.ogImage)
+        #if (!$seoImage)
+            #set($seoImage = $seoEntry.featuredImage)
+        #end
+    #end
+    #if ($seoImage)
+        ## The 1600px rendition only exists for rendition-eligible formats
+        ## (jpeg/png); for anything else (gif, bmp, ...) the servlet silently
+        ## serves the full-resolution original at the ?w= URL, so declaring
+        ## 1600px dimensions there would lie to the card crawlers.
+        #if ($seoImage.renditionEligible && $seoImage.width > 1600)
+            #set($seoImageUrl = $seoImage.url(1600))
+            #set($seoImageWidth = 1600)
+            #set($seoImageHeight = 1600 * $seoImage.height / $seoImage.width)
+        #else
+            #set($seoImageUrl = $seoImage.permalink)
+            #set($seoImageWidth = $seoImage.width)
+            #set($seoImageHeight = $seoImage.height)
+        #end
+    <meta property="og:image" content="$utils.escapeHTML($seoImageUrl)">
+        #if ($seoImageWidth > 0 && $seoImageHeight > 0)
+    <meta property="og:image:width" content="$seoImageWidth">
+    <meta property="og:image:height" content="$seoImageHeight">
+        #end
+    <meta name="twitter:card" content="summary_large_image">
+    #else
+    <meta name="twitter:card" content="summary">
+    #end
+    ## JSON-LD: BlogPosting on permalinks, Blog on the weblog's other pages
+    #if ($seoEntry)
+        #set($seoAuthor = false)
+        #set($seoAuthor = $seoEntry.creator)
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        #if ($seoImage)"image": "$utils.escapeJson($seoImageUrl)",#end
+        #if ($seoEntry.pubTime)"datePublished": "$utils.formatIso8601Date($seoEntry.pubTime)",#end
+        #if ($seoEntry.updateTime)"dateModified": "$utils.formatIso8601Date($seoEntry.updateTime)",#end
+        #if ($seoDescription)"description": "$utils.escapeJson($seoDescription)",#end
+        #if ($seoAuthor)"author": { "@type": "Person", "name": "$utils.escapeJson($seoAuthor.screenName)" },#end
+        "mainEntityOfPage": "$utils.escapeJson($seoCanonical)",
+        "headline": "$seoTitleJson"
+    }
+    </script>
+    #elseif (!$model.searchResults)
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Blog",
+        #if ($seoDescription)"description": "$utils.escapeJson($seoDescription)",#end
+        #if ($seoCanonical)"url": "$utils.escapeJson($seoCanonical)",#end
+        "name": "$utils.escapeJson($model.weblog.pojo.name)"
+    }
+    </script>
+    #end
+#end
+
+
+#**
+Emits the text for an entry page's <title> element: the entry's SEO meta
+title when one is set, else the entry title (raw, exactly as the themes
+have always emitted it). The meta title is a new field so it is
+HTML-escaped on the way out.
+*#
+#macro(showEntryTitle $entry)#if($utils.isNotEmpty($entry.pojo.metaTitle))$utils.escapeHTML($entry.pojo.metaTitle)#else$entry.title#end#end
+
+
+#**
+SUPERSEDED by #showSeoHead, which emits this same meta description plus the
+rest of the SEO baseline; kept for older custom themes that still call it.
+
 Adds a meta description tag, suitable for use in HTML header sections.  This tag is frequently used by
 search engines to provide a short description for links returned.  The description value will set to the
 weblog's tagline if on a multiple blog entry page or the weblog entry search description if on a single

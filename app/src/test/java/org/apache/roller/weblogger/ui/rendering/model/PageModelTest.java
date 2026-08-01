@@ -79,6 +79,7 @@ class PageModelTest {
     private Weblogger weblogger;
     private Weblog weblog;
     private String previousRelativeContextURL;
+    private String previousAbsoluteContextURL;
 
     @BeforeEach
     void setUp() {
@@ -89,6 +90,8 @@ class PageModelTest {
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+        previousAbsoluteContextURL = WebloggerRuntimeConfig.getAbsoluteContextURL();
+        WebloggerRuntimeConfig.setAbsoluteContextURL("http://localhost:8080/roller");
 
         weblog = new Weblog("testblog", "testuser", "Test Blog", "a test blog",
                 "blog@example.com", "basic", "en_US", "UTC");
@@ -97,6 +100,7 @@ class PageModelTest {
     @AfterEach
     void tearDown() {
         WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
+        WebloggerRuntimeConfig.setAbsoluteContextURL(previousAbsoluteContextURL);
         factory.close();
     }
 
@@ -461,5 +465,103 @@ class PageModelTest {
         assertTrue(modelFor(request).getWeblogEntriesPagerByTag("").getHomeLink()
                         .contains("tags/news"),
                 "An empty override must not blank out the request's tags.");
+    }
+
+    // ---------------------------------------------------------- canonical URL
+
+    @Test
+    void canonicalUrlOnAPermalinkIsTheAbsoluteEntryUrl() throws Exception {
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogAnchor("my-entry");
+        request.setWeblogEntry(new WeblogEntry());
+
+        assertEquals("http://localhost:8080/roller/testblog/entry/my-entry",
+                modelFor(request).getCanonicalUrl(),
+                "With no per-entry override the canonical URL of a permalink is "
+                        + "the entry's natural absolute URL.");
+    }
+
+    @Test
+    void canonicalUrlHonoursThePerEntryOverride() throws Exception {
+        WeblogEntry entry = new WeblogEntry();
+        entry.setCanonicalUrl("https://elsewhere.example.com/original-post");
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogAnchor("my-entry");
+        request.setWeblogEntry(entry);
+
+        assertEquals("https://elsewhere.example.com/original-post",
+                modelFor(request).getCanonicalUrl(),
+                "A non-blank per-entry canonical URL must win on the permalink: "
+                        + "that is the whole point of the field.");
+    }
+
+    @Test
+    void aBlankPerEntryOverrideIsIgnored() throws Exception {
+        WeblogEntry entry = new WeblogEntry();
+        entry.setCanonicalUrl("   ");
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogAnchor("my-entry");
+        request.setWeblogEntry(entry);
+
+        assertEquals("http://localhost:8080/roller/testblog/entry/my-entry",
+                modelFor(request).getCanonicalUrl(),
+                "Whitespace in the editor field must not produce a blank "
+                        + "rel=canonical, which would deindex the entry.");
+    }
+
+    @Test
+    void canonicalUrlOnTheFrontPageIsTheAbsoluteHomeUrl() throws Exception {
+        assertEquals("http://localhost:8080/roller/testblog/",
+                modelFor(pageRequest()).getCanonicalUrl(),
+                "The front page canonicalises to the weblog's home URL.");
+    }
+
+    @Test
+    void canonicalUrlOnACollectionKeepsCategoryAndPageNumber() throws Exception {
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogCategoryName("News");
+        request.setPageNum(2);
+
+        String canonical = modelFor(request).getCanonicalUrl();
+
+        assertTrue(canonical.contains("category/News"),
+                "A category page canonicalises to that category, not to the home "
+                        + "page; was: " + canonical);
+        assertTrue(canonical.contains("page=2"),
+                "Page 2 must canonicalise to itself, not claim to be a duplicate "
+                        + "of page 1; was: " + canonical);
+    }
+
+    @Test
+    void canonicalUrlOnACustomPageUsesThePageUrl() throws Exception {
+        WeblogPageRequest request = pageRequest();
+        request.setWeblogPageName("directory");
+
+        String canonical = modelFor(request).getCanonicalUrl();
+
+        assertTrue(canonical.contains("page/directory"),
+                "A custom page canonicalises to its own URL; was: " + canonical);
+        assertTrue(canonical.startsWith("http://localhost:8080/roller/testblog/"),
+                "The canonical URL must be absolute; was: " + canonical);
+    }
+
+    @Test
+    void canonicalUrlIsNullOnSearchResults() throws Exception {
+        // SearchResultsModel overrides isSearchResults(); a search page has no
+        // canonical form, so the macro must get null and emit nothing.
+        WeblogPageRequest request = pageRequest();
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("parsedRequest", request);
+        initData.put("urlStrategy", new MultiWeblogURLStrategy());
+        PageModel model = new PageModel() {
+            @Override
+            public boolean isSearchResults() {
+                return true;
+            }
+        };
+        model.init(initData);
+
+        assertNull(model.getCanonicalUrl(),
+                "Search pages must not claim a canonical URL.");
     }
 }

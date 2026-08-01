@@ -21,6 +21,7 @@ import java.util.List;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.ServletRegistration;
 
 import org.apache.roller.weblogger.ui.controllers.ajax.CommentDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet;
@@ -177,12 +178,44 @@ public class ServletRegistrationConfig {
     // leave BOTH registrations active.
     // ------------------------------------------------------------------
 
+    /**
+     * Extra url-patterns routing the crawler-facing SEO endpoints
+     * ({@code SeoController}) to the dispatcher alongside {@code *.rol}.
+     *
+     * <p>The servlet spec allows only exact, prefix ({@code /foo/*}) and
+     * extension ({@code *.ext}) patterns; a middle wildcard like
+     * {@code /sitemap-*.xml} would be matched as an exact literal, so the
+     * per-weblog sitemaps at {@code /sitemap-<handle>.xml} ride on a
+     * {@code *.xml} extension mapping. Extension mappings lose to the
+     * longer-prefix rendering mappings above, and weblog-shaped URLs are
+     * forwarded by RequestMappingFilter before servlet resolution, so the
+     * observable effect is confined to root-level .xml paths: the container
+     * default servlet used to serve or 404 them (the only real static .xml
+     * files were the {@code /themes/<name>/theme.xml} metadata files, which
+     * have no business being crawlable); now the dispatcher 404s anything
+     * SeoController does not handle.
+     *
+     * <p>These cannot go through {@code addUrlMappings()}:
+     * DispatcherServletRegistrationBean overrides it (and setUrlMappings) to
+     * throw UnsupportedOperationException (verified via javap against
+     * spring-boot-webmvc-4.1.0.jar), so the bean below adds them in the
+     * protected {@code configure()} hook, directly on the container's
+     * ServletRegistration.
+     */
+    static final String[] SEO_URL_PATTERNS = {"/sitemap.xml", "*.xml", "/robots.txt"};
+
     @Bean
     public DispatcherServletRegistrationBean dispatcherServletRegistration(
             DispatcherServlet dispatcherServlet,
             ObjectProvider<MultipartConfigElement> multipartConfig) {
         DispatcherServletRegistrationBean registration =
-                new DispatcherServletRegistrationBean(dispatcherServlet, "*.rol");
+                new DispatcherServletRegistrationBean(dispatcherServlet, "*.rol") {
+                    @Override
+                    protected void configure(ServletRegistration.Dynamic servletRegistration) {
+                        super.configure(servletRegistration);
+                        servletRegistration.addMapping(SEO_URL_PATTERNS);
+                    }
+                };
         registration.setName("springMvc");
         registration.setLoadOnStartup(1);
         multipartConfig.ifAvailable(registration::setMultipartConfig);

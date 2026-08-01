@@ -224,7 +224,19 @@ public class UtilitiesModel implements Model {
     public String unescapeJavaScript(String str) {
         return StringEscapeUtils.unescapeEcmaScript(str);
     }
-    
+
+    /**
+     * Escape a value for embedding inside a JSON string literal, e.g. the
+     * JSON-LD block emitted by the {@code #showSeoHead} macro. Unlike
+     * {@link #escapeJavaScript} this never produces {@code \'} (invalid
+     * JSON), and it escapes the forward slash so a value containing
+     * {@code </script>} cannot terminate the surrounding inline script
+     * element.
+     */
+    public String escapeJson(String str) {
+        return StringEscapeUtils.escapeJson(str);
+    }
+
     public String replace(String src, String target, String rWith) {
         return StringUtils.replace(src, target, rWith);
     }

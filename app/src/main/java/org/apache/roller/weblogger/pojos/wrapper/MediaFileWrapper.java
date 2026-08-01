@@ -134,6 +134,19 @@ public final class MediaFileWrapper {
     }
 
     /**
+     * True when the rendition ladder covers this file's format (jpeg/png),
+     * i.e. when a {@link #url(int)} rendition URL really serves a resized
+     * image. For other formats (gif, bmp, ...) the servlet silently serves
+     * the full-resolution original at the same URL, so templates that
+     * declare the served image's dimensions -- the og:image:width/height
+     * pair in {@code #showSeoHead} -- must fall back to the original's URL
+     * and stored dimensions when this is false.
+     */
+    public boolean isRenditionEligible() {
+        return RenditionSupport.isLadderEligible(this.pojo.getContentType());
+    }
+
+    /**
      * Same URL as {@link #url(int)}: WebP is served for this same URL via
      * {@code Accept}-header content negotiation (see
      * {@code MediaResourceServlet}) rather than a distinct path, so a

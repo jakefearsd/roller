@@ -117,6 +117,19 @@ public final class RenditionSupport {
     }
 
     /**
+     * Returns true when the ladder covers this content type, i.e. when a
+     * {@code ?w=} rendition URL for such a file really serves a resized
+     * image. For every other format (gif, bmp, ...) no rendition is ever
+     * generated and the media-resource servlet silently falls back to the
+     * full-resolution original at the same URL -- so callers that declare
+     * the served image's dimensions (e.g. {@code og:image:width/height})
+     * must check this before pointing at a rendition.
+     */
+    public static boolean isLadderEligible(String contentType) {
+        return formatFor(contentType) != null;
+    }
+
+    /**
      * Maps a MediaFile content type to the ImageIO/cwebp-source format name
      * that preserves its format family (jpeg to jpeg, png to png). Returns
      * null for formats the ladder does not cover (e.g. gif, bmp, webp

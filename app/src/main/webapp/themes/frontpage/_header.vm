@@ -7,6 +7,7 @@
   <title>$model.weblog.name</title>
   <link href="$url.absoluteSite/favicon.svg" rel="shortcut icon" type="image/x-icon" />
   #showAutodiscoveryLinks($model.weblog)
+  #showSeoHead()
   <style>
   #includeTemplate($model.weblog "_css")
   </style>
