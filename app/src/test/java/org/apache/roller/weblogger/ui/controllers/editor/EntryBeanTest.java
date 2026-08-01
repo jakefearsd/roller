@@ -309,6 +309,11 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setSummary("A summary");
         bean.setSearchDescription("For search engines");
         bean.setLocale("fr_FR");
+        bean.setFeaturedImageId("mf-featured-1");
+        bean.setMetaTitle("Custom SEO Title");
+        bean.setOgImageId("mf-og-1");
+        bean.setCanonicalUrl("http://example.com/canonical");
+        bean.setNoindex(true);
 
         bean.copyTo(entry);
 
@@ -318,6 +323,27 @@ class EntryBeanTest extends EditorControllerTestSupport {
         assertEquals("A summary", entry.getSummary());
         assertEquals("For search engines", entry.getSearchDescription());
         assertEquals("fr_FR", entry.getLocale());
+        assertEquals("mf-featured-1", entry.getFeaturedImageId());
+        assertEquals("Custom SEO Title", entry.getMetaTitle());
+        assertEquals("mf-og-1", entry.getOgImageId());
+        assertEquals("http://example.com/canonical", entry.getCanonicalUrl());
+        assertEquals(Boolean.TRUE, entry.getNoindex());
+    }
+
+    @Test
+    void copyToCarriesTheNegativeCaseOfNoindexToo() throws Exception {
+        // Mirrors copyToCarriesTheNegativeCaseOfEveryFlagToo below, but for the
+        // SEO noindex flag: a copyTo that only ever flipped it on would still
+        // look correct in a test that never turns it back off.
+        WeblogEntry entry = entryInCategory("cat-1");
+        entry.setNoindex(Boolean.TRUE);
+        bean.setStatus(PubStatus.DRAFT.name());
+        bean.setCategoryId("cat-1");
+        bean.setNoindex(false);
+
+        bean.copyTo(entry);
+
+        assertEquals(Boolean.FALSE, entry.getNoindex());
     }
 
     @Test
@@ -436,6 +462,11 @@ class EntryBeanTest extends EditorControllerTestSupport {
         entry.setCommentDays(30);
         entry.setRightToLeft(Boolean.TRUE);
         entry.setPinnedToMain(Boolean.TRUE);
+        entry.setFeaturedImageId("mf-featured-1");
+        entry.setMetaTitle("Stored SEO Title");
+        entry.setOgImageId("mf-og-1");
+        entry.setCanonicalUrl("http://example.com/canonical");
+        entry.setNoindex(Boolean.TRUE);
 
         bean.copyFrom(entry, Locale.US);
 
@@ -452,6 +483,25 @@ class EntryBeanTest extends EditorControllerTestSupport {
         assertEquals(30, bean.getCommentDays());
         assertTrue(bean.getRightToLeft());
         assertTrue(bean.getPinnedToMain());
+        assertEquals("mf-featured-1", bean.getFeaturedImageId());
+        assertEquals("Stored SEO Title", bean.getMetaTitle());
+        assertEquals("mf-og-1", bean.getOgImageId());
+        assertEquals("http://example.com/canonical", bean.getCanonicalUrl());
+        assertTrue(bean.getNoindex());
+    }
+
+    @Test
+    void copyFromTreatsANullNoindexAsFalseRatherThanThrowing() throws Exception {
+        // WeblogEntry.noindex is a boxed Boolean (nullable column, entries
+        // persisted before this field existed have no value); EntryBean.noindex
+        // is a primitive boolean, so copyFrom must unbox defensively instead of
+        // NPEing on every pre-existing entry the moment this field shipped.
+        WeblogEntry entry = storedEntry();
+        entry.setNoindex(null);
+
+        bean.copyFrom(entry, Locale.US);
+
+        assertFalse(bean.getNoindex());
     }
 
     @Test

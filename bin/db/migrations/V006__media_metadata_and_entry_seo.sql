@@ -48,6 +48,6 @@ ALTER TABLE roller_mediafile ADD COLUMN IF NOT EXISTS exif_exposure VARCHAR(32);
 ALTER TABLE roller_mediafile ADD COLUMN IF NOT EXISTS exif_aperture VARCHAR(32);
 ALTER TABLE roller_mediafile ADD COLUMN IF NOT EXISTS exif_iso INTEGER;
 ALTER TABLE roller_mediafile ADD COLUMN IF NOT EXISTS exif_focal_length VARCHAR(32);
-ALTER TABLE roller_mediafile ADD COLUMN IF NOT EXISTS exif_taken TIMESTAMP;
+ALTER TABLE roller_mediafile ADD COLUMN IF NOT EXISTS exif_taken TIMESTAMP(3) WITH TIME ZONE;
 ALTER TABLE roller_mediafile ADD COLUMN IF NOT EXISTS gps_latitude DOUBLE PRECISION;
 ALTER TABLE roller_mediafile ADD COLUMN IF NOT EXISTS gps_longitude DOUBLE PRECISION;

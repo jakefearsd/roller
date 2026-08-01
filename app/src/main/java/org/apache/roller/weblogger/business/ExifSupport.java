@@ -108,6 +108,16 @@ public final class ExifSupport {
                 aperture = nullIfBlank(subIfd.getDescription(ExifDirectoryBase.TAG_FNUMBER));
                 iso = subIfd.getInteger(ExifDirectoryBase.TAG_ISO_EQUIVALENT);
                 focalLength = nullIfBlank(subIfd.getDescription(ExifDirectoryBase.TAG_FOCAL_LENGTH));
+                // EXIF's DateTimeOriginal (0x9003) is a bare "YYYY:MM:DD HH:MM:SS"
+                // string with no timezone/offset of its own -- the camera simply
+                // doesn't record one. getDate(int) with no TimeZone argument has
+                // metadata-extractor parse it in the JVM's default zone, which is
+                // an approximation (the photo may have been taken somewhere else)
+                // but matches how every other timestamp in this codebase is
+                // handled absent better information. EXIF 2.31+ can carry a
+                // separate OffsetTimeOriginal (0x9011) tag with the true UTC
+                // offset; a future refinement could consult it when present and
+                // fall back to this approximation only when it's absent.
                 Date takenDate = subIfd.getDate(ExifDirectoryBase.TAG_DATETIME_ORIGINAL);
                 if (takenDate != null) {
                     taken = new Timestamp(takenDate.getTime());
