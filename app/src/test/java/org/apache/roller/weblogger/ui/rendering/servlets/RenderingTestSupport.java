@@ -138,6 +138,10 @@ final class RenderingTestSupport {
         return init(new PageServlet());
     }
 
+    static PreviewServlet previewServlet() throws ServletException {
+        return init(new PreviewServlet());
+    }
+
     static FeedServlet feedServlet() throws ServletException {
         return init(new FeedServlet());
     }
