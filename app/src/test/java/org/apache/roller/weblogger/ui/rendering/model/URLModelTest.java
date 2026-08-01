@@ -211,7 +211,7 @@ class URLModelTest {
     @Test
     void loginAndLogoutPointAtTheSpringSecurityEndpoints() {
         assertEquals(SITE + "/roller-ui/login-redirect.rol", model.getLogin(),
-                "The login link must match the URL security.xml protects.");
+                "The login link must match the URL SecurityConfig protects.");
         assertEquals(SITE + "/roller-ui/logout.rol", model.getLogout(),
                 "The logout link must match the URL Spring Security listens on.");
     }

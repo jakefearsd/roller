@@ -29,11 +29,11 @@ jobs:
         # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed
 
     steps:
-      # Must be >= the maven-compiler-plugin <release> setting (21).
-      - name: Set up JDK 21
+      # Must be >= the maven-compiler-plugin <release> setting (25).
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
-          java-version: 21
+          java-version: 25
           distribution: 'zulu'
   
       - name: Checkout Project

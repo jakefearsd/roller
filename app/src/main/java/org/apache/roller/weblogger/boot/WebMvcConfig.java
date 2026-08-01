@@ -57,6 +57,19 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(new RollerHandlerInterceptor());
     }
 
+    /**
+     * Transcribed from {@code spring-mvc.xml}, but currently unreachable in
+     * practice: {@link ServletRegistrationConfig#dispatcherServletRegistration}
+     * maps {@code DispatcherServlet} to {@code *.rol} only, so a request for
+     * e.g. {@code /webjars/foo.js} never reaches this handler -- Tomcat's own
+     * default servlet answers it directly from the webjars jars'
+     * {@code META-INF/resources} (registered on the classpath, which the
+     * default servlet also serves from per
+     * {@code register-default-servlet=true}, added in Task 3). This handler
+     * is left in place for when {@code DispatcherServlet} is re-scoped to
+     * {@code /} in a future stage, at which point it becomes load-bearing
+     * again rather than redundant.
+     */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/webjars/**")

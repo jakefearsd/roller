@@ -17,9 +17,19 @@ mvn clean install
 # Build without tests (faster for development)
 mvn -DskipTests=true install
 
-# Run the dev server: starts PostgreSQL, applies migrations, runs Jetty
+# Run the dev server: starts PostgreSQL, applies migrations, runs the app
+# via `spring-boot:run` (embedded Tomcat) with roller-boot-dev.properties
 ./roller dev
 # Access at http://localhost:8083/roller
+
+# Or run the packaged executable WAR directly, no Maven/IDE involved
+# (default port 8080; point -Droller.custom.config at a real database
+# config, e.g. app/src/test/resources/roller-boot-dev.properties, or the
+# app fails to bootstrap):
+java -jar app/target/roller.war --server.port=8083 \
+    -Droller.custom.config=app/target/test-classes/roller-boot-dev.properties
+# Health check (works even before the business tier bootstraps):
+# curl http://localhost:8083/roller/actuator/health
 
 # Database-only helpers
 ./roller db          # start PostgreSQL and migrate, without running the app
@@ -87,6 +97,11 @@ test harness.
 ## Architecture Overview
 
 Apache Roller is a multi-user blog server built with:
+- **Runtime**: Spring Boot 4.1 executable WAR (`java -jar app/target/roller.war`,
+  or deployable to an external servlet container) on embedded Tomcat 11,
+  targeting Java 25. Servlets/filters are registered in Java config
+  (`ServletRegistrationConfig`, transcribed from the retired `web.xml`), not
+  a deployment descriptor; there is no `web.xml` in the built artifact.
 - **Web Framework**: Spring MVC with `@Controller` classes and `*.rol` URL mappings
 - **Security**: Spring Security with role-based access control and built-in CSRF
 - **Persistence**: JPA with EclipseLink on PostgreSQL
@@ -99,8 +114,9 @@ Apache Roller is a multi-user blog server built with:
   Controllers get the `Weblogger` facade via the `@Autowired @Lazy` field on
   `BaseController`. Rendering servlets/models/pagers, background tasks/beans,
   and `RollerHandlerInterceptor` intentionally still go through the
-  `WebloggerFactory` static shim, pending the Spring Boot conversion
-  (Stage 1B).
+  `WebloggerFactory` static shim -- out of scope for the Spring Boot
+  conversion (Stage 1B), which targeted the deployment/servlet layer, not
+  this DI seam; a candidate for a later stage.
 
 ### Core Package Structure
 ```
@@ -168,17 +184,24 @@ Key domain entities:
 
 ## Module Organization
 
-- **`app/`** - Main web application (WAR artifact)
+- **`app/`** - Main web application (executable WAR artifact)
 - **`bin/db/`** - Schema migrations and the migrate/install scripts
-- **`it-selenium/`** - Integration tests (currently disabled)
+- **`it-selenium/`** - Browser integration tests (Selenium, run via `mvn verify -Pit`
+  against the packaged executable WAR; see Coverage gates above)
 - **`assembly-release/`** - Release packaging and distribution
 
 ## Configuration Files
 
 ### Key Configuration Locations
-- **Jetty Development**: `app/src/test/resources/jetty.xml`
-- **Test Properties**: `app/src/test/resources/roller-jettyrun.properties`
-- **Security Config**: `app/src/main/webapp/WEB-INF/security.xml`
+- **Boot Config**: `app/src/main/resources/application.properties` (server
+  port/context-path, filter ordering, actuator exposure)
+- **Dev Properties**: `app/src/test/resources/roller-boot-dev.properties`
+  (loaded via `-Droller.custom.config` by `./roller dev` and NetBeans run/debug
+  actions)
+- **Servlets/Filters**: `app/src/main/java/.../boot/ServletRegistrationConfig.java`
+  (Java-config transcription of the retired `web.xml`)
+- **Security Config**: `app/src/main/java/.../boot/SecurityConfig.java`
+  (Java-config transcription of the retired `WEB-INF/security.xml`)
 - **JPA Mappings**: `app/src/main/resources/META-INF/*.orm.xml`
 - **Velocity Templates**: `app/src/main/webapp/WEB-INF/velocity/templates/`
 

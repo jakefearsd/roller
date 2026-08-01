@@ -35,8 +35,10 @@ import java.util.List;
  *
  * <p>Derived by reading
  * {@code org.apache.roller.weblogger.ui.controllers.**} for {@code @GetMapping}
- * and {@code @RequestMapping(method = GET)}, {@code WEB-INF/security.xml} for
- * the URL-pattern to role mapping, and {@code RollerHandlerInterceptor} plus
+ * and {@code @RequestMapping(method = GET)},
+ * {@code org.apache.roller.weblogger.boot.SecurityConfig} (Spring Boot's
+ * Java-config replacement for the old {@code WEB-INF/security.xml}) for the
+ * URL-pattern to role mapping, and {@code RollerHandlerInterceptor} plus
  * {@code BaseController} for the {@code weblog=} parameter rule: a controller
  * whose {@code isWeblogRequired()} is true (the {@code BaseController} default)
  * redirects to access-denied unless the request carries a {@code weblog}
@@ -51,17 +53,18 @@ public final class Routes {
     }
 
     /**
-     * The lowest role that can reach a route, from the intercept-url patterns
-     * in security.xml. The sweep logs in as the seeded admin, who holds both
-     * roles, so this is documentation and grouping rather than a gate -- but it
-     * is the thing to check first when a route starts redirecting to login.
+     * The lowest role that can reach a route, from
+     * {@code SecurityConfig.securityFilterChain}'s authorization rules. The
+     * sweep logs in as the seeded admin, who holds both roles, so this is
+     * documentation and grouping rather than a gate -- but it is the thing to
+     * check first when a route starts redirecting to login.
      */
     public enum Role {
-        /** No intercept-url pattern matches and the controller sets isUserRequired() false. */
+        /** No authorization rule matches and the controller sets isUserRequired() false. */
         ANONYMOUS,
-        /** security.xml grants access="admin,editor". */
+        /** SecurityConfig grants {@code hasAnyAuthority("admin", "editor")}. */
         EDITOR,
-        /** security.xml grants access="admin" only. */
+        /** SecurityConfig grants {@code hasAuthority("admin")} only. */
         ADMIN
     }
 
@@ -143,9 +146,9 @@ public final class Routes {
      */
     private static final List<Route> NO_PARAMETERS = List.of(
 
-            // LoginController.isUserRequired() is false and no security.xml
-            // pattern matches /roller-ui/login**, so this renders logged out or
-            // logged in. Login.jsp's form is unconditional.
+            // LoginController.isUserRequired() is false and no SecurityConfig
+            // authorization rule matches /roller-ui/login**, so this renders
+            // logged out or logged in. Login.jsp's form is unconditional.
             new Route("/roller-ui/login.rol", Role.ANONYMOUS, "", "#loginForm"),
 
             // Landing page for authorization failures. RollerHandlerInterceptor
@@ -153,10 +156,13 @@ public final class Routes {
             // produced a bare 404. denied.jsp's only distinctive element is its h2.
             new Route("/roller-ui/access-denied.rol", Role.ANONYMOUS, "", "h2"),
 
-            // SetupController.isUserRequired() is false and setup.rol matches no
-            // intercept-url pattern. Every link on Setup.jsp is conditional on
-            // user/blog counts; the three panel headings are not.
-            new Route("/roller-ui/setup.rol", Role.ANONYMOUS, "", "h3.panel-title"),
+            // SetupController.isUserRequired() is false, but SecurityConfig's
+            // authorization rule for /roller-ui/setup* still requires the
+            // "admin" authority, so this route is reachable only because the
+            // sweep is logged in as the seeded admin, not because it is public.
+            // Every link on Setup.jsp is conditional on user/blog counts; the
+            // three panel headings are not.
+            new Route("/roller-ui/setup.rol", Role.ADMIN, "", "h3.panel-title"),
 
             // The weblog list only renders under
             // <c:if test="${not empty existingPermissions}">, which holds because

@@ -16,23 +16,34 @@
  */
 package org.apache.roller.weblogger.boot;
 
+import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.ui.core.security.RollerUserDetailsService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.MockedStatic;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockServletContext;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mockStatic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -270,5 +281,93 @@ class SecurityConfigTest {
     void adminAuthorityIsAllowedOnAdminOnlySurfaces(String path) throws Exception {
         mockMvc.perform(get(path).with(user("adminUser").authorities(new SimpleGrantedAuthority("admin"))))
                 .andExpect(status().isOk());
+    }
+
+    // ------------------------------------------- rememberme.enabled=true
+
+    /**
+     * {@code authenticationManager}'s remember-me provider is only added
+     * when {@code rememberme.enabled=true} -- every test above runs under
+     * the real (default {@code false}) config, so that branch needs its own
+     * direct-call test. Bypasses the {@code AnnotationConfigWebApplicationContext}
+     * entirely: unlike {@code securityFilterChain} below, {@code
+     * authenticationManager} needs no {@code HttpSecurity} collaborator, so a
+     * plain call against a fresh {@link SecurityConfig} is enough.
+     */
+    @Test
+    void authenticationManagerAddsTheRememberMeProviderWhenEnabled() {
+        try (MockedStatic<WebloggerConfig> mocked = mockStatic(WebloggerConfig.class)) {
+            mocked.when(() -> WebloggerConfig.getBooleanProperty("rememberme.enabled")).thenReturn(true);
+            // RollerRememberMeAuthenticationProvider's own constructor refuses to
+            // build with rememberme.enabled=true and the "springRocks" default
+            // key (see its class-level guard) -- give it a real-looking one.
+            mocked.when(() -> WebloggerConfig.getProperty("rememberme.key", "springRocks"))
+                    .thenReturn("test-only-secret");
+
+            SecurityConfig config = new SecurityConfig();
+            PasswordEncoder encoder = config.passwordEncoder();
+            RollerUserDetailsService userDetailsService = config.rollerUserDetailsService();
+
+            AuthenticationManager manager = config.authenticationManager(userDetailsService, encoder);
+
+            ProviderManager providerManager = assertInstanceOf(ProviderManager.class, manager);
+            assertEquals(2, providerManager.getProviders().size(),
+                    "rememberme.enabled=true must add the remember-me provider ahead of the DAO "
+                            + "provider, not replace it");
+        }
+    }
+
+    @Test
+    void authenticationManagerOmitsTheRememberMeProviderWhenDisabled() {
+        try (MockedStatic<WebloggerConfig> mocked = mockStatic(WebloggerConfig.class)) {
+            mocked.when(() -> WebloggerConfig.getBooleanProperty("rememberme.enabled")).thenReturn(false);
+
+            SecurityConfig config = new SecurityConfig();
+            PasswordEncoder encoder = config.passwordEncoder();
+            RollerUserDetailsService userDetailsService = config.rollerUserDetailsService();
+
+            AuthenticationManager manager = config.authenticationManager(userDetailsService, encoder);
+
+            ProviderManager providerManager = assertInstanceOf(ProviderManager.class, manager);
+            assertEquals(1, providerManager.getProviders().size());
+        }
+    }
+
+    // -------------------------------------------- securelogin.enabled=true
+
+    /**
+     * {@code securelogin.enabled=true} makes {@code securityFilterChain}
+     * force HTTPS on the login entry point -- a branch none of the tests
+     * above exercise, since they all run under the real (default {@code
+     * false}) config. Builds a second, independent context under the same
+     * {@code CALLS_REAL_METHODS} static mock of {@link WebloggerConfig} used
+     * by {@link #authenticationManagerAddsTheRememberMeProviderWhenEnabled}:
+     * unlike that test, {@code securityFilterChain} needs a real {@code
+     * HttpSecurity} bean, which only Spring Security's own configuration
+     * machinery assembles, so the fix here is the same
+     * {@code AnnotationConfigWebApplicationContext} shape {@code setUpContext}
+     * uses, just with one property stubbed to {@code true} while every other
+     * {@code WebloggerConfig} call still reads the real classpath config.
+     */
+    @Test
+    void securityFilterChainForcesHttpsOnTheLoginEntryPointWhenSecureloginIsEnabled() {
+        try (MockedStatic<WebloggerConfig> mocked =
+                mockStatic(WebloggerConfig.class, CALLS_REAL_METHODS)) {
+            mocked.when(() -> WebloggerConfig.getBooleanProperty("securelogin.enabled")).thenReturn(true);
+
+            AnnotationConfigWebApplicationContext secureContext = new AnnotationConfigWebApplicationContext();
+            try {
+                secureContext.setServletContext(new MockServletContext());
+                secureContext.register(TestConfig.class);
+                secureContext.refresh();
+
+                assertNotNull(secureContext.getBean(
+                        org.springframework.security.web.SecurityFilterChain.class),
+                        "context refresh must succeed with securelogin.enabled=true, proving "
+                                + "forceHttpsEntryPoint() built without error");
+            } finally {
+                secureContext.close();
+            }
+        }
     }
 }

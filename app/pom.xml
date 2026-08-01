@@ -55,7 +55,6 @@ limitations under the License.
         <slf4j.version>2.0.17</slf4j.version>
         <spring-boot.version>4.1.0</spring-boot.version>
         <velocity.version>2.4.1</velocity.version>
-        <webjars.version>1.6</webjars.version>
 
         <!-- jspc-maven-plugin (process-classes JSP validation, below) ships
              Jasper 10.1.x by default. Pin its bundled Tomcat artifacts to the

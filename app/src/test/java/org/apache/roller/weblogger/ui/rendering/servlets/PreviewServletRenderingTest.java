@@ -16,8 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * PreviewServlet is the authoring-side render of a weblog. It requires no
- * request principal (access control is URL-layer, in security.xml) — so these
- * tests drive it exactly like the public servlets.
+ * request principal (access control is URL-layer, in SecurityConfig's
+ * authorization rules) — so these tests drive it exactly like the public
+ * servlets.
  */
 class PreviewServletRenderingTest {
 

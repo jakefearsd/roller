@@ -72,12 +72,11 @@ public class ServletRegistrationConfig {
     // ------------------------------------------------------------------
     // Rendering / AJAX servlets (org.apache.roller.weblogger.ui.rendering.servlets
     // unless noted). loadOnStartup values transcribed verbatim from web.xml;
-    // the three ajax servlets had no <load-on-startup> element, so they keep
-    // the servlet-container default (0, i.e. "no eager init requested"),
-    // matching setLoadOnStartup's default of not being called at all --
-    // ServletRegistrationBean defaults loadOnStartup to -1 (lazy) when never
-    // set, which is the closest equivalent to "element absent" and is left
-    // alone here rather than guessing a value web.xml never specified.
+    // the three ajax servlets had no <load-on-startup> element, so
+    // setLoadOnStartup is simply never called for them, leaving
+    // ServletRegistrationBean's own default of -1 (lazy init on first
+    // request) in effect -- the closest equivalent to "element absent" and
+    // left alone here rather than guessing a value web.xml never specified.
     // ------------------------------------------------------------------
 
     @Bean
