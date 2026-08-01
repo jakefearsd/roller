@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 public class I18nMessagesTest {
 
     private static final String KNOWN_KEY = "generic.tagline";
-    private static final String KEY_WITH_ARGUMENT = "bookmarkForm.created";
+    private static final String KEY_WITH_ARGUMENT = "categoryForm.changesSaved";
 
     @Test
     public void looksUpAMessageFromTheBundle() {
@@ -59,9 +59,9 @@ public class I18nMessagesTest {
     @Test
     public void substitutesArgumentsFromAnArrayAndFromAList() {
         I18nMessages messages = I18nMessages.getMessages(Locale.ENGLISH);
-        assertEquals("Bookmark \"Roller\" created",
+        assertEquals("Category \"Roller\" updated",
                 messages.getString(KEY_WITH_ARGUMENT, new Object[]{"Roller"}));
-        assertEquals("Bookmark \"Roller\" created",
+        assertEquals("Category \"Roller\" updated",
                 messages.getString(KEY_WITH_ARGUMENT, List.of("Roller")));
     }
 

@@ -89,7 +89,7 @@ class MessageModelTest {
     @Test
     void parameterisedMessagesSubstituteTheirArguments() throws Exception {
         // Themes pass a list because Velocity has no varargs.
-        String message = modelFor("fr").get("bookmarkForm.created", List.of("Roller"));
+        String message = modelFor("fr").get("categoryForm.changesSaved", List.of("Roller"));
 
         assertTrue(message.contains("Roller"),
                 "The argument must be substituted into the message; was: " + message);

@@ -116,7 +116,29 @@ public class MessageKeyTest {
                 userEdit + " no longer uses spring:message; update this test to follow it.");
     }
 
-    /** Bundle keys nothing refers to are dead weight in eight translated files. */
+    /**
+     * Bundle keys nothing refers to are dead weight in eight translated files.
+     *
+     * <p>Ratchet: after the Stage 1D i18n sweep the true orphan count is 0. The
+     * bundle still carries {@link #KNOWN_DYNAMIC_KEY_COUNT} keys this text scan
+     * cannot see because they are addressed dynamically rather than via a
+     * literal {@code <spring:message code="...">}:
+     * <ul>
+     *   <li>32 {@code configForm.*} keys read off {@code key="..."} attributes in
+     *       {@code runtimeConfigDefs.xml} (GlobalConfig.jsp renders display
+     *       groups/properties generically via {@code ${dg.key}} / property
+     *       metadata, not a literal code).</li>
+     *   <li>16 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
+     *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
+     *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
+     *       {@code key}, which the JSPs render as {@code <spring:message
+     *       code="${tab.key}">} -- see {@code tiles/menu.jsp} and
+     *       {@code admin/GlobalConfig.jsp}.</li>
+     * </ul>
+     * If this count grows beyond that known set, either a new key just went
+     * dynamic-only (extend the exclusion and document it here) or a genuine
+     * orphan was added (delete it instead of raising the ratchet).
+     */
     @Test
     public void reportsBundleKeysNoJspOrControllerUses() throws IOException {
         Properties bundle = loadDefaultBundle();
@@ -127,13 +149,23 @@ public class MessageKeyTest {
                 .sorted()
                 .toList();
 
-        // Informational rather than enforced: some keys are addressed dynamically
-        // (menu definitions, plugin names) and cannot be found by a text scan.
-        // Kept as a test so the number is visible and does not quietly grow.
         assertFalse(bundle.isEmpty(), "Default bundle is empty");
-        System.out.println("Message keys with no textual reference: " + unused.size()
-                + " of " + bundle.size());
+        assertTrue(unused.size() <= KNOWN_DYNAMIC_KEY_COUNT,
+                "Message keys with no textual reference grew to " + unused.size()
+                        + " (ratchet is " + KNOWN_DYNAMIC_KEY_COUNT + " of " + bundle.size()
+                        + "). New orphans should be deleted from the bundle rather than "
+                        + "raising this number; keys addressed dynamically (runtimeConfigDefs.xml, "
+                        + "admin/editor-menu.xml) should be added to the documented exclusion set "
+                        + "instead:\n  " + String.join("\n  ", unused));
     }
+
+    /**
+     * Keys the text scan cannot see: {@code runtimeConfigDefs.xml} {@code key=}
+     * attributes (32) + {@code admin-menu.xml}/{@code editor-menu.xml}
+     * {@code name=} attributes (16). See the javadoc on
+     * {@link #reportsBundleKeysNoJspOrControllerUses()}.
+     */
+    private static final int KNOWN_DYNAMIC_KEY_COUNT = 48;
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();
