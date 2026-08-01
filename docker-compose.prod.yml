@@ -1,0 +1,148 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  The ASF licenses this file to You
+# under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.  For additional information regarding
+# copyright in this work, please see the NOTICE file in the top level
+# directory of this distribution.
+
+# Production stack for Roller: app + postgres + caddy (TLS-terminating
+# reverse proxy) + backup (nightly pg_dump + volume snapshots).
+#
+# First-time setup (see docker_deployment.md for the full runbook):
+#   cp deploy/.env.example .env
+#   cp deploy/config/roller-production.properties.example \
+#      deploy/config/roller-production.properties
+#   # edit both: real domain, real DB password (must match in both files),
+#   # real SMTP settings
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Upgrades: see deploy/deploy.sh (Stage 1C Task 3).
+#
+# This file intentionally does NOT publish the app's own port or the
+# postgres port on the host -- caddy is the only public entrypoint (80/443),
+# and the app's management port (8090, actuator health) is reached only via
+# docker exec / the internal network, never published, per the runtime
+# contract (see Dockerfile).
+
+services:
+
+  app:
+    # Built by CI and published to GHCR on every push to master (Stage 1C
+    # Task 4). ROLLER_IMAGE lets an operator pin a specific sha tag; the
+    # `build:` section below lets this same file build from the local tree
+    # instead (`docker compose -f docker-compose.prod.yml build app`),
+    # which is what local verification and deploy.sh's --build flag use.
+    image: ${ROLLER_IMAGE:-ghcr.io/apache/roller:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS:-}
+    volumes:
+      - ./deploy/config/roller-production.properties:/config/roller-production.properties:ro
+      - roller-mediafiles:/data/mediafiles
+      - roller-search-index:/data/search-index
+      - roller-uploads:/data/uploads
+    healthcheck:
+      # Runs inside the container, against the management-only port --
+      # curl is installed in the runtime image for exactly this (Dockerfile).
+      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - internal
+
+  postgres:
+    # Same digest as the dev stack's postgres service (docker-compose.yml) --
+    # same major version discipline, see RollerPostgresContainer.
+    image: postgres:16@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rollerdb}
+      POSTGRES_USER: ${POSTGRES_USER:-roller}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - roller-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-roller} -d ${POSTGRES_DB:-rollerdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - internal
+    # No host port published by default: only the app and backup containers
+    # need to reach postgres, and they do so over the internal network. An
+    # operator who needs host access for one-off debugging can add a mapping
+    # in an override file rather than editing this one.
+
+  caddy:
+    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ROLLER_DOMAIN: ${ROLLER_DOMAIN:?ROLLER_DOMAIN must be set in .env (a real domain, or :80 for LAN/testing)}
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+    networks:
+      - internal
+
+  backup:
+    # Reuses the postgres image for pg_dump/psql; the loop and single-shot
+    # scripts are bind-mounted rather than baked into a custom image, so the
+    # backup logic can be edited without a rebuild. See deploy/backup/backup.sh
+    # for the RESTORE procedure.
+    image: postgres:16@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rollerdb}
+      POSTGRES_USER: ${POSTGRES_USER:-roller}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      PGHOST: postgres
+      BACKUP_HOUR: ${BACKUP_HOUR:-3}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ./deploy/backup/backup.sh:/backup.sh:ro
+      - ./deploy/backup/loop.sh:/loop.sh:ro
+      - roller-backups:/backups
+      - roller-mediafiles:/data/mediafiles:ro
+      - roller-search-index:/data/search-index:ro
+      - roller-uploads:/data/uploads:ro
+    entrypoint: ["/loop.sh"]
+    restart: unless-stopped
+    networks:
+      - internal
+
+networks:
+  internal:
+
+volumes:
+  roller-pgdata:
+  roller-mediafiles:
+  roller-search-index:
+  roller-uploads:
+  roller-backups:
+  caddy-data:
+  caddy-config:

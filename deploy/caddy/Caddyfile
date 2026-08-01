@@ -1,0 +1,14 @@
+# Caddy config for the production stack (docker-compose.prod.yml).
+#
+# {$ROLLER_DOMAIN} is substituted from the ROLLER_DOMAIN environment
+# variable (see deploy/.env.example). Two ways to run this:
+#
+#   - A real domain (e.g. blog.example.com): Caddy automatically obtains and
+#     renews a Let's Encrypt certificate for it and serves HTTPS on 443,
+#     redirecting HTTP (80) to HTTPS. Nothing else to configure.
+#   - ":80" (LAN/local testing, no public domain/DNS): a bare port with no
+#     hostname is not a certificate-able name, so Caddy's automatic HTTPS
+#     never activates for it -- it just serves plain HTTP on port 80.
+{$ROLLER_DOMAIN} {
+	reverse_proxy app:8080
+}

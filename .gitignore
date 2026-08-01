@@ -38,3 +38,10 @@ socket:*
 # defaults to build/reports/tests, not target/).
 it-selenium/build/
 .claude/worktrees/
+
+# Production deployment secrets -- operator-created from the .example
+# templates in deploy/, never committed (see docker-compose.prod.yml).
+/.env
+deploy/.env.test
+deploy/config/roller-production.properties
+

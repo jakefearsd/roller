@@ -20,10 +20,9 @@
 #                     spring-boot:run (embedded Tomcat)
 #   ./roller db      start postgres only
 #
-# Bringing up Roller itself in a container is closer to production but loses
-# spring-boot:run's fast redeploy and hot theme reload:
-#
-#   docker compose --profile full up
+# To run Roller itself in a container instead of via spring-boot:run, see
+# docker-compose.prod.yml (production stack: app + postgres + caddy +
+# backup) or build the image directly with `docker build .` (see Dockerfile).
 
 services:
 
@@ -49,20 +48,5 @@ services:
       timeout: 5s
       retries: 20
 
-  roller:
-    build: .
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "8080:8080"
-    volumes:
-      - roller-data:/var/lib/roller/data
-    profiles:
-      # Not started by default; ./roller dev runs the app via spring-boot:run
-      # (embedded Tomcat) instead.
-      - full
-
 volumes:
   roller-pgdata:
-  roller-data:
