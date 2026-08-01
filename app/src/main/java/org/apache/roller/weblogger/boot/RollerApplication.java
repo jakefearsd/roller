@@ -16,10 +16,13 @@
  */
 package org.apache.roller.weblogger.boot;
 
+import org.apache.roller.weblogger.ui.core.RollerSession;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.ServletListenerRegistrationBean;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import org.springframework.context.annotation.Bean;
 
 /**
  * Roller manages its own EntityManagerFactory (EclipseLink, via
@@ -53,5 +56,17 @@ public class RollerApplication extends SpringBootServletInitializer {
     @Override
     protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
         return builder.sources(RollerApplication.class);
+    }
+
+    /**
+     * Temporary home for the {@code RollerSession} listener registration
+     * (formerly a {@code <listener>} in web.xml, which Boot's embedded
+     * container never reads). Moves into {@code ServletRegistrationConfig}
+     * alongside the rest of web.xml's servlet/filter registrations in a
+     * later task of this conversion.
+     */
+    @Bean
+    public ServletListenerRegistrationBean<RollerSession> rollerSessionListener() {
+        return new ServletListenerRegistrationBean<>(new RollerSession());
     }
 }

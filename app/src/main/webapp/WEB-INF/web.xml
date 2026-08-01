@@ -132,16 +132,13 @@
         <dispatcher>REQUEST</dispatcher>
     </filter-mapping>
 
-    <!-- Context Listeners -->
-    <listener>
-        <listener-class>org.apache.roller.weblogger.ui.core.RollerSession</listener-class>
-    </listener>
-
-    <listener>
-        <listener-class>org.apache.roller.weblogger.ui.core.RollerContext</listener-class>
-    </listener>
-    
-    <!-- RollerContext extends ContextLoaderListener, so no separate one needed -->
+    <!-- Context Listeners: web.xml is not processed by Boot's embedded
+         container when running the executable WAR (`java -jar`), so these
+         listeners no longer run from here. RollerContext's startup role
+         moved to org.apache.roller.weblogger.boot.RollerLifecycle (a
+         SmartLifecycle bean); RollerSession is registered temporarily via a
+         ServletListenerRegistrationBean in RollerApplication and moves to
+         ServletRegistrationConfig in a later task. -->
 
 
     <!-- Servlet Definitions -->

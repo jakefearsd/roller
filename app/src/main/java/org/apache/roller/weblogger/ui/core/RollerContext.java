@@ -18,16 +18,12 @@
 
 package org.apache.roller.weblogger.ui.core;
 
-import java.io.File;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 
-import org.apache.roller.weblogger.business.Weblogger;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -37,16 +33,9 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.BootstrapException;
-import org.apache.roller.weblogger.business.SpringWebloggerProvider;
-import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.ui.core.plugins.UIPluginManager;
 import org.apache.roller.weblogger.ui.core.plugins.UIPluginManagerImpl;
-import org.apache.roller.weblogger.util.Reflection;
-import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.velocity.runtime.RuntimeSingleton;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
@@ -56,15 +45,23 @@ import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
-import org.springframework.web.context.ContextLoaderListener;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
 
 /**
- * Initialize the Roller web application/context.
+ * Statics and helper methods for the Roller web application/context.
+ *
+ * <p>Startup/shutdown used to happen here too (this class extended
+ * {@code ContextLoaderListener}/{@code ServletContextListener}); that role
+ * has moved to {@code org.apache.roller.weblogger.boot.RollerLifecycle}, a
+ * Spring Boot {@code SmartLifecycle} bean. This class now only holds the
+ * statics that lifecycle populates ({@link #getServletContext()},
+ * {@link #getPasswordEncoder()}) plus the helper methods the lifecycle calls
+ * ({@link #initializeSecurityFeatures(ServletContext)},
+ * {@link #setupVelocity()}) and the ones controllers/filters still call
+ * directly ({@link #getUIPluginManager()}, {@link #flushAuthenticationUserCache(String)}).
  */
-public class RollerContext extends ContextLoaderListener
-        implements ServletContextListener {
+public class RollerContext {
 
     private static final Log log = LogFactory.getLog(RollerContext.class);
 
@@ -72,8 +69,18 @@ public class RollerContext extends ContextLoaderListener
     private static DelegatingPasswordEncoder encoder;
 
 
-    public RollerContext() {
-        super();
+    private RollerContext() {
+        // static helpers only; RollerLifecycle owns the startup sequence now
+    }
+
+
+    /**
+     * Called once by {@code RollerLifecycle.start()} to publish the
+     * {@link ServletContext} that used to be captured in
+     * {@code contextInitialized}.
+     */
+    public static void hold(ServletContext sc) {
+        servletContext = sc;
     }
 
 
@@ -101,136 +108,12 @@ public class RollerContext extends ContextLoaderListener
     }
 
     /**
-     * Responds to app-init event and triggers startup procedures.
-     */
-    @Override
-    public void contextInitialized(ServletContextEvent sce) {
-
-        // First, initialize everything that requires no database
-
-        // Keep a reference to ServletContext object
-        RollerContext.servletContext = sce.getServletContext();
-
-        // Call Spring's context ContextLoaderListener to initialize all the
-        // context files specified in web.xml. This is necessary because
-        // listeners don't initialize in the order specified in 2.3 containers
-        super.contextInitialized(sce);
-
-        // get the *real* path to <context>/resources
-        String ctxPath = servletContext.getRealPath("/");
-        if (ctxPath == null) {
-            log.fatal("Roller requires an exploded WAR file to run.");
-            return;
-        }
-        if (!ctxPath.endsWith(File.separator)) {
-            ctxPath += File.separator + "resources";
-        } else {
-            ctxPath += "resources";
-        }
-
-        // try setting the uploads path to <context>/resources
-        // NOTE: this should go away at some point
-        // we leave it here for now to allow users to keep writing
-        // uploads into their webapp context, but this is a bad idea
-        //
-        // also, the WebloggerConfig.setUploadsDir() method is smart
-        // enough to disregard this call unless the uploads.path
-        // is set to ${webapp.context}
-        WebloggerConfig.setUploadsDir(ctxPath);
-
-        // try setting the themes path to <context>/themes
-        // NOTE: this should go away at some point
-        // we leave it here for now to allow users to keep using
-        // themes in their webapp context, but this is a bad idea
-        //
-        // also, the WebloggerConfig.setThemesDir() method is smart
-        // enough to disregard this call unless the themes.dir
-        // is set to ${webapp.context}
-        WebloggerConfig.setThemesDir(servletContext.getRealPath("/") + File.separator + "themes");
-
-
-        // Now prepare the core services of the app so we can bootstrap
-        try {
-            WebloggerStartup.prepare();
-        } catch (StartupException ex) {
-            log.fatal("Roller Weblogger startup failed during app preparation", ex);
-            return;
-        }
-
-        final boolean ittest = "ittest".equals(WebloggerConfig.getProperty("installation.type"));
-
-        // if preparation failed or is incomplete then we are done,
-        // otherwise try to bootstrap the business tier
-        if (!WebloggerStartup.isPrepared() && !ittest) {
-
-            StringBuilder buf = new StringBuilder();
-            buf.append("\n--------------------------------------------------------------");
-            buf.append("\nRoller Weblogger startup INCOMPLETE, user interaction required");
-            buf.append("\n--------------------------------------------------------------");
-            log.info(buf.toString());
-
-        } else {
-            if (ittest) {
-                try {
-                    WebloggerStartup.createDatabase();
-                } catch (StartupException e) {
-                    throw new RuntimeException("Failed to create database to IT testing", e);
-                }
-            }
-
-            Weblogger weblogger = null;
-            try {
-                // trigger bootstrapping process, reusing the root web application
-                // context (which already imports WebloggerBeanConfig) so that
-                // controllers and the business tier share a single Spring context
-                WebloggerFactory.bootstrap(new SpringWebloggerProvider(
-                        WebApplicationContextUtils.getRequiredWebApplicationContext(servletContext)));
-
-                // trigger initialization process
-                weblogger = WebloggerFactory.getWeblogger();
-                weblogger.initialize();
-
-            } catch (BootstrapException ex) {
-                log.fatal("Roller Weblogger bootstrap failed", ex);
-            } catch (WebloggerException ex) {
-                log.fatal("Roller Weblogger initialization failed", ex);
-            } finally {
-                if (weblogger != null) {
-                    weblogger.release();
-                }
-            }
-        }
-
-        // do a small amount of work to initialize the web tier
-        try {
-            // Initialize Spring Security based on Roller configuration
-            initializeSecurityFeatures(servletContext);
-
-            // Setup Velocity template engine
-            setupVelocity();
-        } catch (WebloggerException ex) {
-            log.fatal("Error initializing Roller Weblogger web tier", ex);
-        }
-    }
-
-
-    /**
-     * Responds to app-destroy event and triggers shutdown sequence.
-     */
-    @Override
-    public void contextDestroyed(ServletContextEvent sce) {
-        if (WebloggerFactory.isBootstrapped()) {
-            WebloggerFactory.getWeblogger().shutdown();
-        }
-        // do we need a more generic mechanism for presentation layer shutdown?
-        CacheManager.shutdown();
-        super.contextDestroyed(sce);   // closes the root context (was never called before)
-    }
-
-    /**
      * Initialize the Velocity rendering engine.
+     *
+     * <p>Called by {@code RollerLifecycle.start()}, in the same spot in the
+     * startup sequence that {@code contextInitialized} used to call it from.
      */
-    private void setupVelocity() throws WebloggerException {
+    public static void setupVelocity() throws WebloggerException {
         log.info("Initializing Velocity");
 
         // initialize the Velocity engine
@@ -255,8 +138,15 @@ public class RollerContext extends ContextLoaderListener
 
     /**
      * Setup Spring Security security features.
+     *
+     * <p>Called by {@code RollerLifecycle.start()}. Looks up beans by the
+     * internal names the {@code security.xml} namespace parser assigns them
+     * (e.g. {@code org.springframework.security.authenticationManager});
+     * that XML file is imported into the application context starting Task
+     * 3 of the Boot conversion, and Task 4 replaces this by-name lookup with
+     * proper {@code @Bean} wiring in {@code SecurityConfig}.
      */
-    protected void initializeSecurityFeatures(ServletContext context) {
+    public static void initializeSecurityFeatures(ServletContext context) {
 
         ApplicationContext ctx =
                 WebApplicationContextUtils.getRequiredWebApplicationContext(context);
@@ -294,7 +184,7 @@ public class RollerContext extends ContextLoaderListener
     }
 
     @SuppressWarnings("deprecation")
-    private DelegatingPasswordEncoder createPasswordEncoder() {
+    private static DelegatingPasswordEncoder createPasswordEncoder() {
 
         Map<String, PasswordEncoder> encoders = new HashMap<>();
 
