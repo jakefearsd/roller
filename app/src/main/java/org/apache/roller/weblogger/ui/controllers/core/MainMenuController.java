@@ -28,7 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -74,8 +73,8 @@ public class MainMenuController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
-            WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
+            UserManager umgr = weblogger.getUserManager();
+            WeblogManager wmgr = weblogger.getWeblogManager();
             Weblog weblog = wmgr.getWeblog(inviteId);
             if (weblog == null) {
                 // Revoked invitation, deleted weblog, or a hand-made link. The
@@ -83,7 +82,7 @@ public class MainMenuController extends BaseController {
                 addError(model, "yourWebsites.permNotFound", request);
             } else {
                 umgr.confirmWeblogPermission(weblog, getAuthenticatedUser(request));
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
             }
         } catch (WebloggerException ex) {
             log.error("Error handling invitation accept weblog id - " + inviteId, ex);
@@ -101,8 +100,8 @@ public class MainMenuController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
-            WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
+            UserManager umgr = weblogger.getUserManager();
+            WeblogManager wmgr = weblogger.getWeblogManager();
             Weblog weblog = wmgr.getWeblog(inviteId);
             if (weblog == null) {
                 // Same stale-invitation case as accept, except here the missing
@@ -111,7 +110,7 @@ public class MainMenuController extends BaseController {
             } else {
                 String handle = weblog.getHandle();
                 umgr.declineWeblogPermission(weblog, getAuthenticatedUser(request));
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
                 addMessage(model, "yourWebsites.declined", handle, request);
             }
         } catch (WebloggerException ex) {
@@ -132,7 +131,7 @@ public class MainMenuController extends BaseController {
 
     private List<WeblogPermission> getExistingPermissions(User user) {
         try {
-            UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+            UserManager mgr = weblogger.getUserManager();
             return mgr.getWeblogPermissions(user);
         } catch (Exception e) {
             return Collections.emptyList();
@@ -141,7 +140,7 @@ public class MainMenuController extends BaseController {
 
     private List<WeblogPermission> getPendingPermissions(User user) {
         try {
-            UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+            UserManager mgr = weblogger.getUserManager();
             return mgr.getPendingWeblogPermissions(user);
         } catch (Exception e) {
             return Collections.emptyList();
@@ -152,7 +151,7 @@ public class MainMenuController extends BaseController {
         try {
             GlobalPermission adminPerm = new GlobalPermission(
                     Collections.singletonList(GlobalPermission.ADMIN));
-            UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+            UserManager umgr = weblogger.getUserManager();
             return umgr.checkPermission(adminPerm, user);
         } catch (Exception e) {
             return false;

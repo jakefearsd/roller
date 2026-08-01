@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
@@ -83,10 +82,10 @@ public class MemberResignController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+            UserManager umgr = weblogger.getUserManager();
             umgr.revokeWeblogPermission(getActionWeblog(request), getAuthenticatedUser(request),
                     WeblogPermission.ALL_ACTIONS);
-            WebloggerFactory.getWeblogger().flush();
+            weblogger.flush();
 
             String weblogHandle = request.getParameter("weblog");
             addFlashMessage(redirectAttributes, "yourWebsites.resigned", weblogHandle != null ? weblogHandle : "", request);

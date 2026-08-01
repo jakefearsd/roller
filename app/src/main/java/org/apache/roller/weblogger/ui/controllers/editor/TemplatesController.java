@@ -33,7 +33,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.*;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
@@ -104,18 +103,18 @@ public class TemplatesController extends BaseController {
                     newTemplate.setName(WeblogTemplate.DEFAULT_PAGE);
                 }
 
-                WebloggerFactory.getWeblogger().getWeblogManager().saveTemplate(newTemplate);
+                weblogger.getWeblogManager().saveTemplate(newTemplate);
 
                 CustomTemplateRendition standardRendition = new CustomTemplateRendition(newTemplate, RenditionType.STANDARD);
                 standardRendition.setTemplate(getText("pageForm.newTemplateContent", request));
                 standardRendition.setTemplateLanguage(TemplateLanguage.VELOCITY);
-                WebloggerFactory.getWeblogger().getWeblogManager().saveTemplateRendition(standardRendition);
+                weblogger.getWeblogManager().saveTemplateRendition(standardRendition);
 
                 if (WeblogTemplate.DEFAULT_PAGE.equals(newTemplate.getName())) {
-                    WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(getActionWeblog(request));
+                    weblogger.getWeblogManager().saveWeblog(getActionWeblog(request));
                 }
 
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
             } catch (WebloggerException ex) {
                 log.error("Error adding new template for weblog - " + getActionWeblog(request).getHandle(), ex);
@@ -134,7 +133,7 @@ public class TemplatesController extends BaseController {
 
         WeblogTemplate template = null;
         try {
-            template = WebloggerFactory.getWeblogger().getWeblogManager().getTemplate(removeId);
+            template = weblogger.getWeblogManager().getTemplate(removeId);
         } catch (WebloggerException e) {
             addError(model, "Error deleting template - check Roller logs", request);
         }
@@ -144,7 +143,7 @@ public class TemplatesController extends BaseController {
                 if (!template.isRequired()
                         || !WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme())) {
 
-                    WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+                    WeblogManager mgr = weblogger.getWeblogManager();
 
                     if (template.getName().equals(WeblogTemplate.DEFAULT_PAGE)) {
                         ThemeTemplate stylesheet = getActionWeblog(request).getTheme().getStylesheet();
@@ -160,7 +159,7 @@ public class TemplatesController extends BaseController {
 
                     CacheManager.invalidate(template);
                     mgr.removeTemplate(template);
-                    WebloggerFactory.getWeblogger().flush();
+                    weblogger.flush();
                 } else {
                     addError(model, "editPages.remove.requiredTemplate", request);
                 }
@@ -178,12 +177,11 @@ public class TemplatesController extends BaseController {
 
     private void loadTemplatesList(HttpServletRequest request, Model model) {
         try {
-            List<WeblogTemplate> raw = WebloggerFactory.getWeblogger()
-                    .getWeblogManager().getTemplates(getActionWeblog(request));
+            List<WeblogTemplate> raw = weblogger.getWeblogManager().getTemplates(getActionWeblog(request));
             List<WeblogTemplate> pages = new ArrayList<>(raw);
 
             if (getActionWeblog(request).getTheme().getStylesheet() != null) {
-                pages.remove(WebloggerFactory.getWeblogger().getWeblogManager()
+                pages.remove(weblogger.getWeblogManager()
                         .getTemplateByLink(getActionWeblog(request),
                                 getActionWeblog(request).getTheme().getStylesheet().getLink()));
             }
@@ -234,7 +232,7 @@ public class TemplatesController extends BaseController {
         }
 
         try {
-            WeblogTemplate existingPage = WebloggerFactory.getWeblogger().getWeblogManager()
+            WeblogTemplate existingPage = weblogger.getWeblogManager()
                     .getTemplateByName(getActionWeblog(request), newTmplName);
             if (existingPage != null) {
                 addError(model, "pagesForm.error.alreadyExists", newTmplName, request);

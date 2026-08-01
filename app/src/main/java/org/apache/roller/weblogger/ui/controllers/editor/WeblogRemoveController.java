@@ -22,7 +22,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
@@ -68,8 +67,8 @@ public class WeblogRemoveController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            WebloggerFactory.getWeblogger().getWeblogManager().removeWeblog(getActionWeblog(request));
-            WebloggerFactory.getWeblogger().flush();
+            weblogger.getWeblogManager().removeWeblog(getActionWeblog(request));
+            weblogger.flush();
             CacheManager.invalidate(getActionWeblog(request));
             addFlashMessage(redirectAttributes, "websiteRemove.success", getActionWeblog(request).getName(), request);
 

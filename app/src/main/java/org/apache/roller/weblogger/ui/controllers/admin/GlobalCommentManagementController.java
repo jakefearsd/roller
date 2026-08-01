@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -120,7 +119,7 @@ public class GlobalCommentManagementController extends BaseController {
 
         int bulkDeleteCount = 0;
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
 
             CommentSearchCriteria csc = new CommentSearchCriteria();
             csc.setSearchText(bean.getSearchString());
@@ -153,7 +152,7 @@ public class GlobalCommentManagementController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             int deleted = wmgr.removeMatchingComments(
                     null,
                     null,
@@ -191,7 +190,7 @@ public class GlobalCommentManagementController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
 
             List<Weblog> flushList = new ArrayList<>();
 
@@ -240,7 +239,7 @@ public class GlobalCommentManagementController extends BaseController {
                 }
             }
 
-            WebloggerFactory.getWeblogger().flush();
+            weblogger.flush();
 
             // notify caches of changes, flush weblogs affected by changes
             for (Weblog weblog : flushList) {
@@ -276,7 +275,7 @@ public class GlobalCommentManagementController extends BaseController {
         WeblogEntryComment lastComment = null;
 
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
 
             CommentSearchCriteria csc = new CommentSearchCriteria();
             csc.setSearchText(bean.getSearchString());
@@ -328,7 +327,7 @@ public class GlobalCommentManagementController extends BaseController {
             params.put("bean.approvedString", bean.getApprovedString());
         }
 
-        return WebloggerFactory.getWeblogger().getUrlStrategy().getActionURL(
+        return weblogger.getUrlStrategy().getActionURL(
                 "globalCommentManagement", "/roller-ui/admin", null, params, false);
     }
 

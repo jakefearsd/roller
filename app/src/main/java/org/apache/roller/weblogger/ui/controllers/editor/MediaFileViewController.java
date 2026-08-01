@@ -28,7 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FileIOException;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileComparator;
 import org.apache.roller.weblogger.pojos.MediaFileComparator.MediaFileComparatorType;
@@ -95,10 +94,10 @@ public class MediaFileViewController extends MediaFileBase {
             addError(model, "mediaFile.error.view.dirNameInvalid", request);
         } else {
             try {
-                MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+                MediaFileManager manager = weblogger.getMediaFileManager();
                 if (!getActionWeblog(request).hasMediaFileDirectory(newDirectoryName)) {
                     MediaFileDirectory dir = manager.createMediaFileDirectory(getActionWeblog(request), newDirectoryName);
-                    WebloggerFactory.getWeblogger().flush();
+                    weblogger.flush();
                     addMessage(model, "mediaFile.directoryCreate.success", newDirectoryName, request);
                     directoryId = dir.getId();
                     dirCreated = true;
@@ -166,13 +165,13 @@ public class MediaFileViewController extends MediaFileBase {
         populateCommonModel(request, model);
 
         try {
-            MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager manager = weblogger.getMediaFileManager();
             if (directoryId != null) {
                 MediaFileDirectory mediaFileDir = manager.getMediaFileDirectory(directoryId);
                 manager.removeMediaFileDirectory(mediaFileDir);
-                WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(getActionWeblog(request));
-                WebloggerFactory.getWeblogger().flush();
-                WebloggerFactory.getWeblogger().release();
+                weblogger.getWeblogManager().saveWeblog(getActionWeblog(request));
+                weblogger.flush();
+                weblogger.release();
                 addMessage(model, "mediaFile.deleteFolder.success", request);
                 CacheManager.invalidate(getActionWeblog(request));
 
@@ -234,7 +233,7 @@ public class MediaFileViewController extends MediaFileBase {
 
         MediaFileFilter filter = new MediaFileFilter();
         bean.copyTo(filter);
-        MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager manager = weblogger.getMediaFileManager();
         try {
             List<MediaFile> rawResults = manager.searchMediaFiles(getActionWeblog(request), filter);
             boolean hasMore = false;
@@ -265,7 +264,7 @@ public class MediaFileViewController extends MediaFileBase {
 
     private void loadDirectory(HttpServletRequest request, Model model,
                                String directoryId, String directoryName, String sortBy) {
-        MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager manager = weblogger.getMediaFileManager();
         try {
             MediaFileDirectory directory;
             if (StringUtils.isNotEmpty(directoryId)) {

@@ -26,7 +26,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.springframework.stereotype.Controller;
@@ -68,7 +67,7 @@ public class EntryAddWithMediaFileController extends MediaFileBase {
                           @RequestParam(value = "selectedImage", required = false) String selectedImage) {
         populateCommonModel(request, model);
 
-        MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager manager = weblogger.getMediaFileManager();
         try {
             if (StringUtils.isNotEmpty(selectedImage) && selectedImages == null) {
                 selectedImages = new String[]{selectedImage};

@@ -31,7 +31,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.AuthMethod;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.User;
@@ -120,9 +119,9 @@ public class ProfileController extends BaseController {
             }
 
             try {
-                UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+                UserManager mgr = weblogger.getUserManager();
                 mgr.saveUser(existingUser);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
                 addFlashMessage(redirectAttributes, "generic.changes.saved", request);
                 return "redirect:/roller-ui/menu.rol";
             } catch (WebloggerException ex) {

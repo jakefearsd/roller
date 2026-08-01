@@ -24,6 +24,7 @@ import java.util.Locale;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -49,6 +50,13 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
 
     @Autowired
     protected MessageSource messageSource;
+
+    // @Lazy is load-bearing: controllers are constructed at context refresh,
+    // before WebloggerStartup.prepare() has run. The lazy proxy defers
+    // building the business-tier graph to first use rather than at wiring time.
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    protected Weblogger weblogger;
 
     /**
      * Allow form parameters prefixed with "bean." to bind to @ModelAttribute("bean").

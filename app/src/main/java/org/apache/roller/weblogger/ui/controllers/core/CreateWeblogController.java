@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -97,7 +96,7 @@ public class CreateWeblogController extends BaseController {
 
         try {
             if (!WebloggerConfig.getBooleanProperty("groupblogging.enabled")) {
-                UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+                UserManager mgr = weblogger.getUserManager();
                 List<WeblogPermission> permissions = mgr.getWeblogPermissions(user);
                 if (!permissions.isEmpty()) {
                     addError(model, "createWebsite.oneBlogLimit", request);
@@ -129,7 +128,7 @@ public class CreateWeblogController extends BaseController {
         User user = getAuthenticatedUser(request);
         try {
             if (!WebloggerConfig.getBooleanProperty("groupblogging.enabled")) {
-                UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+                UserManager mgr = weblogger.getUserManager();
                 List<WeblogPermission> permissions = mgr.getWeblogPermissions(user);
                 if (!permissions.isEmpty()) {
                     addFlashError(redirectAttributes, "createWebsite.oneBlogLimit", request);
@@ -160,8 +159,8 @@ public class CreateWeblogController extends BaseController {
             wd.setEditorPage(defs[0]);
 
             try {
-                WebloggerFactory.getWeblogger().getWeblogManager().addWeblog(wd);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.getWeblogManager().addWeblog(wd);
+                weblogger.flush();
 
                 addFlashMessage(redirectAttributes, "createWebsite.created", bean.getHandle(), request);
                 return "redirect:/roller-ui/menu.rol";
@@ -196,7 +195,7 @@ public class CreateWeblogController extends BaseController {
         }
 
         try {
-            if (WebloggerFactory.getWeblogger().getWeblogManager()
+            if (weblogger.getWeblogManager()
                     .getWeblogByHandle(bean.getHandle()) != null) {
                 addError(model, "createWeblog.error.handleExists", request);
                 bean.setHandle(null);
@@ -211,7 +210,7 @@ public class CreateWeblogController extends BaseController {
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
         model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
 
-        ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
+        ThemeManager themeMgr = weblogger.getThemeManager();
         List<SharedTheme> themes = themeMgr.getEnabledThemesList();
         model.addAttribute("themes", themes);
     }

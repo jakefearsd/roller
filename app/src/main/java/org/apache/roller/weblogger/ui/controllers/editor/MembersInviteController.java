@@ -26,7 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -91,7 +90,7 @@ public class MembersInviteController extends BaseController {
                     + getActionWeblog(request).getHandle();
         }
 
-        UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager umgr = weblogger.getUserManager();
         User user = null;
         try {
             user = umgr.getUserByUserName(userName);
@@ -125,7 +124,7 @@ public class MembersInviteController extends BaseController {
             try {
                 umgr.grantWeblogPermissionPending(getActionWeblog(request), user,
                         Collections.singletonList(permissionString));
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
                 addFlashMessage(redirectAttributes, "inviteMember.userInvited", request);
 

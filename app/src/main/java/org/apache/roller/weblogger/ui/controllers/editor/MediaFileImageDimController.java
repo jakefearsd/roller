@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -51,7 +50,7 @@ public class MediaFileImageDimController extends MediaFileBase {
         populateCommonModel(request, model);
 
         try {
-            MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager mgr = weblogger.getMediaFileManager();
             MediaFile mediaFile = mgr.getMediaFile(mediaFileId);
             MediaFileBean bean = new MediaFileBean();
             bean.copyFrom(mediaFile);

@@ -112,10 +112,15 @@ abstract class EditorControllerTestSupport {
 
     /**
      * Finish wiring a controller the way Spring would: inject the message
-     * source that {@code BaseController} declares {@code @Autowired}.
+     * source and the {@code Weblogger} that {@code BaseController} declares
+     * {@code @Autowired}. Production controllers get the latter as an
+     * {@code @Lazy} proxy; here it is simply the already-installed
+     * {@link MockWeblogger}, since {@link #installMockBusinessTier()} always
+     * runs before a subclass's own {@code @BeforeEach}.
      */
     protected <T extends BaseController> T prepare(T controller) {
         setField(controller, "messageSource", messageSource);
+        setField(controller, "weblogger", weblogger.weblogger());
         return controller;
     }
 

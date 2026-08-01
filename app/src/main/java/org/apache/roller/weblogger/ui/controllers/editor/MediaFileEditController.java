@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FileIOException;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.springframework.stereotype.Controller;
@@ -68,7 +67,7 @@ public class MediaFileEditController extends MediaFileBase {
         populateCommonModel(request, model);
         model.addAttribute("allDirectories", refreshAllDirectories(request));
 
-        MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager manager = weblogger.getMediaFileManager();
         try {
             MediaFile mediaFile = manager.getMediaFile(mediaFileId);
             bean.copyFrom(mediaFile);
@@ -95,7 +94,7 @@ public class MediaFileEditController extends MediaFileBase {
         // resolve directory for validation
         MediaFileDirectory directory = null;
         try {
-            MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager mgr = weblogger.getMediaFileManager();
             if (!StringUtils.isEmpty(bean.getDirectoryId())) {
                 directory = mgr.getMediaFileDirectory(bean.getDirectoryId());
             }
@@ -112,7 +111,7 @@ public class MediaFileEditController extends MediaFileBase {
         }
 
         if (!hasErrors(model)) {
-            MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager manager = weblogger.getMediaFileManager();
             try {
                 MediaFile mediaFile = manager.getMediaFile(mediaFileId);
                 bean.copyTo(mediaFile);
@@ -130,7 +129,7 @@ public class MediaFileEditController extends MediaFileBase {
                     doMoveSelected(new String[]{mediaFile.getId()}, bean.getDirectoryId(), request, model);
                 }
 
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
                 addMessage(model, "mediaFile.update.success", request);
                 return ".MediaFileEditSuccess";
 

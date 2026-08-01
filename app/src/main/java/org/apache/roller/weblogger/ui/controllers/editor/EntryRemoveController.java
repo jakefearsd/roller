@@ -26,7 +26,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -76,7 +75,7 @@ public class EntryRemoveController extends BaseController {
         WeblogEntry entry = lookupEntry(removeId);
         if (entry != null) {
             try {
-                IndexManager manager = WebloggerFactory.getWeblogger().getIndexManager();
+                IndexManager manager = weblogger.getIndexManager();
                 try {
                     WeblogEntry.PubStatus originalStatus = entry.getStatus();
                     entry.setStatus(WeblogEntry.PubStatus.DRAFT);
@@ -92,9 +91,9 @@ public class EntryRemoveController extends BaseController {
 
                 CacheManager.invalidate(entry);
 
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 wmgr.removeWeblogEntry(entry);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
                 addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);
 
@@ -129,7 +128,7 @@ public class EntryRemoveController extends BaseController {
         WeblogEntry entry = lookupEntry(removeId);
         if (entry != null) {
             try {
-                IndexManager manager = WebloggerFactory.getWeblogger().getIndexManager();
+                IndexManager manager = weblogger.getIndexManager();
                 try {
                     WeblogEntry.PubStatus originalStatus = entry.getStatus();
                     entry.setStatus(WeblogEntry.PubStatus.DRAFT);
@@ -145,9 +144,9 @@ public class EntryRemoveController extends BaseController {
 
                 CacheManager.invalidate(entry);
 
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 wmgr.removeWeblogEntry(entry);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
                 addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);
 
@@ -175,7 +174,7 @@ public class EntryRemoveController extends BaseController {
             return null;
         }
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             return wmgr.getWeblogEntry(id);
         } catch (WebloggerException ex) {
             log.error("Error looking up entry by id - " + id, ex);
