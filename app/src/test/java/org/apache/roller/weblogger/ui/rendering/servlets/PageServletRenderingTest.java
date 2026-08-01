@@ -3,7 +3,9 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,5 +58,71 @@ class PageServletRenderingTest {
                 "entry title must appear on the front page:\n" + body);
         assertTrue(body.contains("blah blah entry"),
                 "entry text must appear on the front page:\n" + body);
+    }
+
+    @Test
+    void permalinkRendersEntryContent() throws Exception {
+        TestUtils.setupWeblogEntry("perma-entry", weblog, user);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagerenderblog/entry/perma-entry");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+        assertTrue(body.contains("perma-entry"), "permalink must show the entry:\n" + body);
+        assertTrue(body.contains("blah blah entry"), "permalink must show the text:\n" + body);
+    }
+
+    @Test
+    void draftEntryPermalinkIsNotFound() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        WeblogCategory category = managed.getWeblogCategories().iterator().next();
+        TestUtils.setupWeblogEntry("draft-entry", category, PubStatus.DRAFT, managed, user);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagerenderblog/entry/draft-entry");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(404, response.getStatus(), "a draft must never render publicly");
+    }
+
+    @Test
+    void unknownWeblogIsNotFound() throws Exception {
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/nosuchblog");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(404, response.getStatus());
+    }
+
+    @Test
+    void categoryPageRendersItsEntries() throws Exception {
+        TestUtils.setupWeblogEntry("category-entry", weblog, user);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagerenderblog/category/General");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        assertTrue(response.getContentAsString().contains("category-entry"),
+                "category page must list the entry");
+    }
+
+    @Test
+    void unknownCategoryIsNotFound() throws Exception {
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagerenderblog/category/Nope");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(404, response.getStatus());
     }
 }
