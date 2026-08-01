@@ -17,11 +17,6 @@
  */
 package org.apache.roller.testing;
 
-import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.util.cache.CacheManager;
-import org.junit.jupiter.api.extension.BeforeEachCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -29,56 +24,26 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Starts the shared PostgreSQL container and builds the schema that every
  * test runs against.
  *
- * <p>The live entry point is the static {@link #ensureSchema()}: once per JVM
- * it starts the container, points Roller's configuration at it, and builds
- * the schema by applying the real {@code bin/db/migrations} chain.
+ * <p>The entry point is the static {@link #ensureSchema()}: once per JVM it
+ * starts the container, points Roller's configuration at it, and builds the
+ * schema by applying the real {@code bin/db/migrations} chain.
  * {@code RollerTestBootstrap} and {@code TestUtils} call it directly. Tests
- * currently tear down their own fixtures rather than relying on any
- * per-test reset.
- *
- * <p>This class also implements {@link BeforeEachCallback} to truncate the
- * data tables and clear Roller's caches before each test, which is what
- * would let tests stop hand-rolling {@code teardownUser}/{@code
- * teardownWeblog} pairs. That callback is <strong>not currently
- * registered</strong> anywhere — there is no {@code @ExtendWith} on any test
- * and no JUnit auto-detection configured — so {@link #beforeEach} never
- * runs today. Anyone wiring it up should audit existing tests for
- * cross-test state assumptions first.
- *
- * <p>Two tables are deliberately preserved from truncation:
- * <ul>
- *   <li>{@code schema_migrations} — truncating it would make the installer
- *       re-run every migration.</li>
- *   <li>{@code roller_properties} — runtime configuration populated at
- *       bootstrap, not test fixture data.</li>
- * </ul>
+ * tear down their own fixtures rather than relying on any per-test reset.
  */
-public class RollerDatabaseExtension implements BeforeEachCallback {
-
-    private static final List<String> PRESERVED_TABLES =
-            List.of("schema_migrations", "roller_properties");
+public class RollerDatabaseExtension {
 
     private static volatile boolean schemaReady;
 
-    @Override
-    public void beforeEach(ExtensionContext context) throws Exception {
-        ensureSchema();
-        truncateDataTables();
-        CacheManager.clear();
-        // Drop any EntityManager still holding rows that no longer exist.
-        if (WebloggerFactory.isBootstrapped()) {
-            WebloggerFactory.getWeblogger().release();
-        }
+    private RollerDatabaseExtension() {
+        // static utility
     }
 
     /**
@@ -160,39 +125,6 @@ public class RollerDatabaseExtension implements BeforeEachCallback {
                 ps.executeUpdate();
             }
         }
-    }
-
-    /**
-     * One TRUNCATE over every data table. CASCADE handles the foreign keys, so
-     * the order of the table list does not matter.
-     */
-    private static void truncateDataTables() {
-        try (Connection con = newConnection()) {
-            List<String> tables = dataTables(con);
-            if (tables.isEmpty()) {
-                return;
-            }
-            try (Statement st = con.createStatement()) {
-                st.execute("TRUNCATE TABLE " + String.join(", ", tables)
-                        + " RESTART IDENTITY CASCADE");
-            }
-        } catch (SQLException e) {
-            throw new IllegalStateException("Could not reset the test database", e);
-        }
-    }
-
-    private static List<String> dataTables(Connection con) throws SQLException {
-        List<String> tables = new ArrayList<>();
-        String sql = "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename";
-        try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) {
-                String table = rs.getString(1);
-                if (!PRESERVED_TABLES.contains(table.toLowerCase())) {
-                    tables.add(table);
-                }
-            }
-        }
-        return tables;
     }
 
     private static Connection newConnection() throws SQLException {

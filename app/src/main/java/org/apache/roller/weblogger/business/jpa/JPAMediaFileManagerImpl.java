@@ -23,9 +23,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -33,7 +30,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 
 import javax.imageio.ImageIO;
@@ -47,17 +43,14 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.FileIOException;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.FileContent;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.MediaFileFilter;
 import org.apache.roller.weblogger.pojos.MediaFileTag;
 import org.apache.roller.weblogger.pojos.MediaFileType;
-import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.apache.roller.weblogger.util.Utilities;
@@ -67,7 +60,6 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
     private final Weblogger roller;
     private final JPAPersistenceStrategy strategy;
     private static final Log log = LogFactory.getFactory().getInstance(JPAMediaFileManagerImpl.class);
-    public static final String MIGRATION_STATUS_FILENAME = "migration-status.properties";
 
     /**
      * Creates a new instance of MediaFileManagerImpl
@@ -79,16 +71,10 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
     }
 
     /**
-     * Initialize manager; deal with upgrade/migration if 'uploads.migrate.auto'
-     * is true.
+     * Initialize manager; currently a no-op.
      */
     @Override
     public void initialize() {
-        boolean autoUpgrade = WebloggerConfig
-                .getBooleanProperty("uploads.migrate.auto");
-        if (autoUpgrade && this.isFileStorageUpgradeRequired()) {
-            this.upgradeFileStorage();
-        }
     }
 
     /**
@@ -619,215 +605,6 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             query.setMaxResults(filter.getLength());
         }
         return query.getResultList();
-    }
-
-    /**
-     * Does mediafile storage require any upgrading; checks for existence of
-     * migration status file.
-     */
-    public boolean isFileStorageUpgradeRequired() {
-        String uploadsDirName = WebloggerConfig.getProperty("uploads.dir");
-        if (uploadsDirName != null) {
-            File uploadsDir = new File(uploadsDirName);
-            if (uploadsDir.exists() && uploadsDir.isDirectory()) {
-                Properties props = new Properties();
-                try {
-                    props.load(new FileInputStream(uploadsDirName
-                            + File.separator + MIGRATION_STATUS_FILENAME));
-
-                } catch (IOException ex) {
-                    return true;
-                }
-                if (props.getProperty("complete") != null) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Run mediafile storage upgrade, copying files to new storage system;
-     * creates migration status file only when work is complete.
-     */
-    public List<String> upgradeFileStorage() {
-        List<String> msgs = new ArrayList<>();
-        String oldDirName = WebloggerConfig.getProperty("uploads.dir");
-        String FS = File.separator;
-
-        if (oldDirName != null) {
-            try {
-
-                // loop through weblogs found in uploads directory
-                File uploadsDir = new File(oldDirName);
-                File[] dirs = uploadsDir.listFiles();
-                if (null != dirs) {
-                    for (File dir : dirs) {
-
-                        if (dir.isDirectory()) {
-                            WeblogManager wmgr = this.roller.getWeblogManager();
-                            Weblog weblog = wmgr.getWeblogByHandle(
-                                    dir.getName(), null);
-                            if (weblog != null) {
-
-                                log.info("Migrating weblog: "
-                                        + weblog.getHandle());
-
-                                // use 1st admin user found as file creator
-                                List<User> users = wmgr.getWeblogUsers(weblog,
-                                        true);
-                                User chosenUser = users.get(0);
-                                for (User user : users) {
-                                    chosenUser = user;
-                                    if (user.hasGlobalPermission("admin")) {
-                                        break;
-                                    }
-                                }
-
-                                try {
-                                    // create weblog's mediafile directory if
-                                    // needed
-                                    MediaFileDirectory root = this
-                                            .getDefaultMediaFileDirectory(weblog);
-                                    if (root == null) {
-                                        root = this
-                                                .createDefaultMediaFileDirectory(weblog);
-                                        roller.flush();
-                                    }
-
-                                    // upgrade!
-                                    upgradeUploadsDir(
-                                            weblog,
-                                            chosenUser,
-                                            new File(oldDirName + FS
-                                                    + dir.getName()), root);
-
-                                } catch (Exception e) {
-                                    log.error("ERROR upgading weblog", e);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Properties props = new Properties();
-                props.setProperty("complete", "true");
-                props.store(new FileOutputStream(oldDirName + File.separator
-                        + MIGRATION_STATUS_FILENAME), "Migration is complete!");
-
-            } catch (Exception ioex) {
-                log.error("ERROR upgrading", ioex);
-            }
-        }
-        msgs.add("Migration complete!");
-        return msgs;
-    }
-
-    private void upgradeUploadsDir(Weblog weblog, User user, File oldDir,
-            MediaFileDirectory newDir) {
-        RollerMessages messages = new RollerMessages();
-
-        log.debug("Upgrading dir: " + oldDir.getAbsolutePath());
-        if (newDir == null) {
-            log.error("newDir cannot be null");
-            return;
-        }
-
-        // loop through files and directories
-        int dirCount = 0;
-        int fileCount = 0;
-        File[] files = oldDir.listFiles();
-        if (files != null) {
-            for (File file: files) {
-
-                // a directory: go recursive
-                if (file.isDirectory()) {
-
-                    if (weblog.hasMediaFileDirectory(file.getName())) {
-                        // already have a mediafile directory for that
-                        upgradeUploadsDir(weblog, user, file,
-                                weblog.getMediaFileDirectory(file.getName()));
-
-                    } else {
-                        // need to create a new mediafile directory
-                        MediaFileDirectory secondDir = null;
-                        try {
-                            secondDir = new MediaFileDirectory(weblog, file.getName(), null);
-                            roller.getMediaFileManager().createMediaFileDirectory(secondDir);
-                            roller.flush();
-                            dirCount++;
-                        } catch (WebloggerException ex) {
-                            log.error("ERROR creating directory: "
-                                    + newDir.getName() + "/" + file.getName());
-                        }
-                        upgradeUploadsDir(weblog, user, file, secondDir);
-                    }
-
-                } else {
-                    // a file: create a database record for it
-                    // check to make sure that file does not already exist
-                    if (newDir.hasMediaFile(file.getName())) {
-                        log.debug("    Skipping file that already exists: "
-                                + file.getName());
-
-                    } else {
-
-                        String originalPath = "/" + newDir.getName() + "/" + file.getName();
-                        log.debug("Upgrade file with original path: " + originalPath);
-
-                        MediaFile mf = new MediaFile();
-                        try {
-                            mf.setName(file.getName());
-                            mf.setDescription(file.getName());
-                            mf.setOriginalPath(originalPath);
-
-                            mf.setDateUploaded(new Timestamp(file
-                                    .lastModified()));
-                            mf.setLastUpdated(new Timestamp(file.lastModified()));
-
-                            mf.setDirectory(newDir);
-                            mf.setWeblog(weblog);
-                            mf.setCreatorUserName(user.getUserName());
-                            mf.setSharedForGallery(Boolean.FALSE);
-
-                            mf.setLength(file.length());
-                            mf.setInputStream(new FileInputStream(file));
-                            mf.setContentType(Utilities
-                                    .getContentTypeFromFileName(file.getName()));
-
-                            // Create
-                            this.roller.getMediaFileManager().createMediaFile(
-                                    weblog, mf, messages);
-                            newDir.getMediaFiles().add(mf);
-
-                            log.info(messages.toString());
-
-                            fileCount++;
-
-                        } catch (WebloggerException ex) {
-                            log.error("ERROR writing file to new storage system: "
-                                    + file.getAbsolutePath(), ex);
-
-                        } catch (java.io.FileNotFoundException ex) {
-                            log.error(
-                                    "ERROR reading file from old storage system: "
-                                            + file.getAbsolutePath(), ex);
-                        }
-                    }
-                }
-            }
-        }
-
-        try {
-            // flush changes to this directory
-            roller.flush();
-
-            log.debug("Count of dirs created: " + dirCount);
-            log.debug("Count of files created: " + fileCount);
-
-        } catch (WebloggerException ex) {
-            log.error("ERROR flushing changes to dir: " + newDir.getName(), ex);
-        }
     }
 
     @Override

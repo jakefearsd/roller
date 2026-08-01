@@ -21,8 +21,6 @@ package org.apache.roller.weblogger.business;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
-import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.util.Reflection;
 
 
 /**
@@ -85,41 +83,6 @@ public final class WebloggerFactory {
         }
         
         return webloggerProvider.getWeblogger();
-    }
-    
-    
-    /**
-     * Bootstrap the Roller Weblogger business tier, uses default WebloggerProvider.
-     *
-     * Bootstrapping the application effectively instantiates all the necessary
-     * pieces of the business tier and wires them together so that the app is 
-     * ready to run.
-     *
-     * @throws IllegalStateException If the app has not been properly prepared yet.
-     * @throws BootstrapException If an error happens during the bootstrap process.
-     */
-    public static void bootstrap() throws BootstrapException {
-        
-        // if the app hasn't been properly started so far then bail
-        if (!WebloggerStartup.isPrepared()) {
-            throw new IllegalStateException("Cannot bootstrap until application has been properly prepared");
-        }
-        
-        // lookup our default provider and instantiate it
-        WebloggerProvider defaultProvider;
-        String providerClassname = WebloggerConfig.getProperty("weblogger.provider.class");
-        if(providerClassname != null) {
-            try {
-                defaultProvider = (WebloggerProvider) Reflection.newInstance(providerClassname);
-            } catch (ReflectiveOperationException ex) {
-                throw new BootstrapException("Error instantiating default provider: " + providerClassname + "; exception message: " + ex.getMessage(), ex);
-            }
-        } else {
-            throw new NullPointerException("No provider specified in config property 'weblogger.provider.class'");
-        }
-
-        // now just bootstrap using our default provider
-        bootstrap(defaultProvider);
     }
     
     

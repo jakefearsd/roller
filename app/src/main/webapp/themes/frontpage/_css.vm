@@ -316,10 +316,10 @@ input.searchButton {
 }
 
 td.menuTabSelected {
-    background: url("$url.absoluteSite/roller-ui/theme/tan/menutab-sel.gif") repeat-x;
+    background: url("$url.resource("menutab-sel.gif")") repeat-x;
 }
 td.menuTabUnselected {
-    background: url("$url.absoluteSite/roller-ui/theme/tan/menutab-unsel.gif") repeat-x;
+    background: url("$url.resource("menutab-unsel.gif")") repeat-x;
 }
 .menuItemTable {
     background-color: #c6ab74;

@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.SpringWebloggerProvider;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
@@ -68,7 +69,7 @@ public final class TestUtils {
             WebloggerStartup.prepare();
 
             // do application bootstrapping
-            WebloggerFactory.bootstrap();
+            WebloggerFactory.bootstrap(new SpringWebloggerProvider());
 
             // always initialize the properties manager and flush
             WebloggerFactory.getWeblogger().initialize();

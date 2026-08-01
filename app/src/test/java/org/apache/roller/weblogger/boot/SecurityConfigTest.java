@@ -41,8 +41,6 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mockStatic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -333,41 +331,4 @@ class SecurityConfigTest {
         }
     }
 
-    // -------------------------------------------- securelogin.enabled=true
-
-    /**
-     * {@code securelogin.enabled=true} makes {@code securityFilterChain}
-     * force HTTPS on the login entry point -- a branch none of the tests
-     * above exercise, since they all run under the real (default {@code
-     * false}) config. Builds a second, independent context under the same
-     * {@code CALLS_REAL_METHODS} static mock of {@link WebloggerConfig} used
-     * by {@link #authenticationManagerAddsTheRememberMeProviderWhenEnabled}:
-     * unlike that test, {@code securityFilterChain} needs a real {@code
-     * HttpSecurity} bean, which only Spring Security's own configuration
-     * machinery assembles, so the fix here is the same
-     * {@code AnnotationConfigWebApplicationContext} shape {@code setUpContext}
-     * uses, just with one property stubbed to {@code true} while every other
-     * {@code WebloggerConfig} call still reads the real classpath config.
-     */
-    @Test
-    void securityFilterChainForcesHttpsOnTheLoginEntryPointWhenSecureloginIsEnabled() {
-        try (MockedStatic<WebloggerConfig> mocked =
-                mockStatic(WebloggerConfig.class, CALLS_REAL_METHODS)) {
-            mocked.when(() -> WebloggerConfig.getBooleanProperty("securelogin.enabled")).thenReturn(true);
-
-            AnnotationConfigWebApplicationContext secureContext = new AnnotationConfigWebApplicationContext();
-            try {
-                secureContext.setServletContext(new MockServletContext());
-                secureContext.register(TestConfig.class);
-                secureContext.refresh();
-
-                assertNotNull(secureContext.getBean(
-                        org.springframework.security.web.SecurityFilterChain.class),
-                        "context refresh must succeed with securelogin.enabled=true, proving "
-                                + "forceHttpsEntryPoint() built without error");
-            } finally {
-                secureContext.close();
-            }
-        }
-    }
 }

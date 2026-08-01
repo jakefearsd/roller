@@ -21,7 +21,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.jpa.JPAMediaFileManagerImpl;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.*;
 import org.apache.roller.weblogger.pojos.MediaFileFilter.MediaFileOrder;
@@ -1043,82 +1042,6 @@ public class MediaFileTest  {
         } finally {
             TestUtils.endSession(true);
             TestUtils.teardownWeblog(testWeblog.getId());
-            TestUtils.teardownUser(testUser.getUserName());
-            TestUtils.endSession(true);
-        }
-    }
-
-    @Test
-    public void testStorageUpgrade() throws Exception {
-        User testUser = null;
-        Weblog testWeblog1 = null;
-        Weblog testWeblog2 = null;
-        String oldmax = "4";
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger()
-                .getPropertiesManager();
-        try {
-            // set dir max limit high so we won't bump into it
-            RuntimeConfigProperty prop = pmgr
-                    .getProperty("uploads.dir.maxsize");
-            oldmax = prop.getValue();
-            prop.setValue("20");
-            pmgr.saveProperty(prop);
-            TestUtils.endSession(true);
-
-            testUser = TestUtils.setupUser("mediaFileTestUser");
-            testWeblog1 = TestUtils.setupWeblog("testblog1", testUser);
-            testWeblog2 = TestUtils.setupWeblog("testblog2", testUser);
-            
-            TestUtils.endSession(true);
-
-            MediaFileManager mgr = WebloggerFactory.getWeblogger()
-                    .getMediaFileManager();
-            JPAMediaFileManagerImpl mmgr = (JPAMediaFileManagerImpl) mgr;
-
-            assertTrue(mmgr.isFileStorageUpgradeRequired(), "Upgrade required" );
-
-            mmgr.upgradeFileStorage();
-            TestUtils.endSession(true);
-
-            assertFalse(mmgr.isFileStorageUpgradeRequired(), "Upgrade required" );
-
-            // now, let's check to see if migration was successful
-
-            MediaFileDirectory root1 = mgr
-                    .getDefaultMediaFileDirectory(testWeblog1);
-            assertNotNull(root1, "testblog1's mediafile dir exists" );
-            assertNotNull(mgr.getMediaFileByPath(testWeblog1, "/sub1/hawk.jpg"));
-            assertNotNull(mgr.getMediaFileByPath(testWeblog1,
-                    "/sub2/nasa.jpg"));
-            assertNotNull(mgr.getMediaFileByPath(testWeblog1,
-                    "/roller50-prop.png"));
-
-            assertNotNull(mgr.getMediaFileByOriginalPath(testWeblog1,
-                    "/sub1/hawk.jpg"));
-
-            MediaFileDirectory root2 = mgr
-                    .getDefaultMediaFileDirectory(testWeblog2);
-            assertNotNull(root2, "testblog2's mediafile dir exists");
-            assertNotNull(root2.getMediaFile("amsterdam.jpg"));
-            assertNotNull(root2.getMediaFile("p47-thunderbolt.jpg"));
-            assertNotNull(root2.getMediaFile("rollerwiki.png"));
-
-        } finally {
-
-            File statusFile = new File(
-                    WebloggerConfig.getProperty("uploads.dir") + File.separator
-                            + JPAMediaFileManagerImpl.MIGRATION_STATUS_FILENAME);
-            statusFile.delete();
-
-            // reset dir max to old value
-            RuntimeConfigProperty prop = pmgr
-                    .getProperty("uploads.dir.maxsize");
-            prop.setValue(oldmax);
-            pmgr.saveProperty(prop);
-
-            TestUtils.endSession(true);
-            TestUtils.teardownWeblog(testWeblog1.getId());
-            TestUtils.teardownWeblog(testWeblog2.getId());
             TestUtils.teardownUser(testUser.getUserName());
             TestUtils.endSession(true);
         }

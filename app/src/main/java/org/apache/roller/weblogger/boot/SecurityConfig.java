@@ -34,9 +34,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 /**
@@ -258,21 +256,6 @@ public class SecurityConfig {
             // Roller's media-file editor uses iframes.
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
-        // securelogin.enabled is dead-listed in the modernization roadmap's
-        // fossil sweep (nothing in the current UI ever sets it), but
-        // roller.properties still carries the key (default false) and the
-        // old RollerContext.initializeSecurityFeatures still honored it, so
-        // the behavior is replicated here rather than dropped silently.
-        if (WebloggerConfig.getBooleanProperty("securelogin.enabled")) {
-            http.exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(forceHttpsEntryPoint()));
-        }
-
         return http.build();
-    }
-
-    private AuthenticationEntryPoint forceHttpsEntryPoint() {
-        LoginUrlAuthenticationEntryPoint entryPoint = new LoginUrlAuthenticationEntryPoint("/roller-ui/login.rol");
-        entryPoint.setForceHttps(true);
-        return entryPoint;
     }
 }
