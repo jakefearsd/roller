@@ -134,7 +134,7 @@ public class MessageKeyTest {
      *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
      *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
      *       {@code key}, which the JSPs render as {@code <spring:message
-     *       code="${tab.key}">} -- see {@code tiles/menu.jsp} and
+     *       code="${tab.key}">} -- see {@code tiles/bannerStatus.jsp} and
      *       {@code admin/GlobalConfig.jsp}.</li>
      * </ul>
      * If this count grows beyond that known set, either a new key just went
