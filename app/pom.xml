@@ -33,17 +33,13 @@ limitations under the License.
     <packaging>war</packaging>
 
     <properties>
-        <jstl-api.version>3.0.2</jstl-api.version>
         <asm.version>9.9.1</asm.version>
         <bouncycastle.version>1.83</bouncycastle.version>
         <commons-validator.version>1.10.1</commons-validator.version>
         <commons-beanutils.version>1.11.0</commons-beanutils.version>
-        <commons-codec.version>1.21.0</commons-codec.version>
         <commons-text.version>1.15.0</commons-text.version>
-        <commons-lang3.version>3.20.0</commons-lang3.version>
         <eclipse-link.version>5.0.0</eclipse-link.version>
         <jdom2.version>2.0.6.1</jdom2.version>
-        <log4j2.version>2.25.4</log4j2.version>
         <lucene.version>9.12.3</lucene.version> <!-- lucene 10 requires JDK 21 -->
         <maven-war.version>3.4.0</maven-war.version>
         <pitest.version>1.25.8</pitest.version>
@@ -51,7 +47,6 @@ limitations under the License.
         <!-- Overridden on the command line to scope a mutation run. -->
         <pit.targets>org.apache.roller.weblogger.util.*</pit.targets>
         <pit.tests>org.apache.roller.weblogger.util.*</pit.tests>
-        <slf4j.version>2.0.17</slf4j.version>
         <spring-boot.version>4.1.0</spring-boot.version>
         <velocity.version>2.4.1</velocity.version>
 
@@ -181,13 +176,11 @@ limitations under the License.
         <dependency>
             <groupId>jakarta.servlet.jsp.jstl</groupId>
             <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
-            <version>${jstl-api.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.glassfish.web</groupId>
             <artifactId>jakarta.servlet.jsp.jstl</artifactId>
-            <version>3.0.1</version>
             <exclusions>
                 <!-- Drags slf4j-api 1.7.36, which silently downgraded the 2.0.x
                      API that jcl-over-slf4j and jul-to-slf4j are built against.
@@ -201,31 +194,32 @@ limitations under the License.
 
         <!-- Jakarta Mail API 2.1+ uses jakarta.mail.MailLogger (not com.sun.mail).
              Must be compile scope and listed BEFORE angus-mail to override
-             the older 2.0.1 version that angus-mail pulls transitively. -->
+             the older 2.0.1 version that angus-mail pulls transitively.
+             Version comes from Spring Boot's BOM (jakarta-mail.version). -->
         <dependency>
             <groupId>jakarta.mail</groupId>
             <artifactId>jakarta.mail-api</artifactId>
-            <version>2.1.3</version>
         </dependency>
 
         <!-- Angus Mail provides the Jakarta Mail implementation. -->
         <dependency>
             <groupId>org.eclipse.angus</groupId>
             <artifactId>angus-mail</artifactId>
-            <version>2.0.5</version>
         </dependency>
 
         <dependency>
             <groupId>jakarta.activation</groupId>
             <artifactId>jakarta.activation-api</artifactId>
-            <version>2.1.3</version>
         </dependency>
 
-        <dependency>
-            <groupId>jakarta.xml.bind</groupId>
-            <artifactId>jakarta.xml.bind-api</artifactId>
-            <version>4.0.2</version>
-        </dependency>
+        <!-- jakarta.xml.bind-api removed: zero source references
+             (org.apache.roller.**), and `dependency:tree` shows it was only
+             present because of this now-deleted declaration - nothing else
+             in the graph pulls it transitively. Confirmed at runtime too: a
+             `java -jar` boot smoke against a migrated ./roller db dev
+             database - full RollerLifecycle/EclipseLink/Lucene bootstrap,
+             front page (302) and login page (200) both serve - with zero
+             JAXB-related exceptions in roller.log. -->
 
         <!-- Eclipselink is the only JPA implementation Roller supports.
              Logging, other special configuration during JUnit tests can be
@@ -244,11 +238,13 @@ limitations under the License.
             <version>${eclipse-link.version}</version>
         </dependency>
 
-        <!-- PostgreSQL is the only database Roller supports as of 6.2.0. -->
+        <!-- PostgreSQL is the only database Roller supports as of 6.2.0.
+             Version comes from Spring Boot's BOM; it-selenium runs its IT
+             Postgres as a Docker image (${it.postgres.image}), not this JDBC
+             driver, so nothing else needs a shared property here. -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>${postgresql.version}</version>
         </dependency>
 
         <!-- Apache deps include Velocity and Lucene -->
@@ -343,36 +339,35 @@ limitations under the License.
         <!-- slf4j implementing the apache commons-logging interfaces -->
         <!-- note: commons-logging needs to be excluded in all dependencies transitive depending on it.
         See 2006 RFE https://issues.apache.org/jira/browse/MNG-1977 for maven's missing feature of global exclusions -->
-        <!-- Pinned explicitly: transitive callers would otherwise decide the API
-             version, and a 1.7.x slf4j-api is binary-incompatible with the 2.0.x
-             ServiceLoader-based provider lookup used below. -->
+        <!-- Version comes from Spring Boot's BOM (slf4j.version, 2.0.18+):
+             still declared explicitly (not left to whatever a transitive
+             caller would pick) because a 1.7.x slf4j-api is binary-
+             incompatible with the 2.0.x ServiceLoader-based provider lookup
+             used below. -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
-            <version>${slf4j.version}</version>
         </dependency>
 
         <!-- slf4j implementing java.util.logging interfaces (needed for WebJars, ..) -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
-            <version>${slf4j.version}</version>
         </dependency>
 
         <!-- the actual logging impl below slf4j: log4j2.
              log4j-slf4j2-impl, not log4j-slf4j-impl: the latter binds the
              SLF4J 1.7 StaticLoggerBinder API and would pull slf4j-api back
-             down to 1.7.x. -->
+             down to 1.7.x. Version comes from Spring Boot's BOM
+             (log4j2.version, via its log4j-bom import). -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j2-impl</artifactId>
-            <version>${log4j2.version}</version>
         </dependency>
 
         <dependency>
@@ -400,10 +395,10 @@ limitations under the License.
             </exclusions>
         </dependency>
 
+        <!-- Version comes from Spring Boot's BOM (commons-codec.version). -->
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-            <version>${commons-codec.version}</version>
         </dependency>
 
         <dependency>
@@ -412,10 +407,10 @@ limitations under the License.
             <version>${commons-text.version}</version>
          </dependency>
 
+        <!-- Version comes from Spring Boot's BOM (commons-lang3.version). -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>${commons-lang3.version}</version>
         </dependency>
 
         <!-- Spring deps. Versions are no longer pinned here: spring-boot-dependencies
@@ -518,10 +513,11 @@ limitations under the License.
             <scope>test</scope>
         </dependency>
 
+        <!-- Version comes from Spring Boot's BOM (mockito.version, via its
+             mockito-bom import). -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.23.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -567,7 +563,6 @@ limitations under the License.
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.23.0</version>
             <scope>test</scope>
         </dependency>
 

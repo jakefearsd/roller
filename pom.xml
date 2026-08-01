@@ -44,16 +44,7 @@ limitations under the License.
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <roller.version>6.2.0</roller.version>
-        <slf4j.version>2.0.17</slf4j.version>
         <testcontainers.version>2.0.5</testcontainers.version>
-
-        <!-- Used by app (WAR + spring-boot:run dev server). Defined at this
-             level (not app/pom.xml) so a future consumer cannot drift from it.
-             it-selenium (Stage 1B Task 6) no longer needs its own copy: the
-             browser IT suite runs the executable WAR as a subprocess, which
-             carries its own bundled driver, instead of cargo deploying to an
-             externally managed Tomcat with a hand-declared JNDI datasource. -->
-        <postgresql.version>42.7.9</postgresql.version>
         <maven-surefire.version>3.5.6</maven-surefire.version>
 
         <!-- JaCoCo coverage gate (jacoco:check on verify). The ratchet is ACTIVE:
