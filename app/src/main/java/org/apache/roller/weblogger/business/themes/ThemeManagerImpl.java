@@ -85,7 +85,7 @@ public class ThemeManagerImpl implements ThemeManager {
 	private Map<String, SharedTheme> themes = null;
 
 	@com.google.inject.Inject
-	protected ThemeManagerImpl(Weblogger roller) {
+	public ThemeManagerImpl(Weblogger roller) {
 
 		this.roller = roller;
 

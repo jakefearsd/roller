@@ -47,7 +47,7 @@ public class JPAThreadManagerImpl extends ThreadManagerImpl {
 
 
     @com.google.inject.Inject
-    protected JPAThreadManagerImpl(JPAPersistenceStrategy strat) {
+    public JPAThreadManagerImpl(JPAPersistenceStrategy strat) {
         super();
 
         LOG.debug("Instantiating JPA Thread Manager");

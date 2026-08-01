@@ -46,7 +46,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
      * @throws org.apache.roller.weblogger.WebloggerException on any error
      */
     @com.google.inject.Inject
-    protected JPAWebloggerImpl(
+    public JPAWebloggerImpl(
         JPAPersistenceStrategy strategy,
         IndexManager         indexManager,
         MediaFileManager     mediaFileManager,

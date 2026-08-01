@@ -80,7 +80,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     
     
     @com.google.inject.Inject
-    protected JPAWeblogEntryManagerImpl(Weblogger roller, JPAPersistenceStrategy strategy) {
+    public JPAWeblogEntryManagerImpl(Weblogger roller, JPAPersistenceStrategy strategy) {
         LOG.debug("Instantiating JPA Weblog Manager");
         this.roller = roller;
         this.strategy = strategy;

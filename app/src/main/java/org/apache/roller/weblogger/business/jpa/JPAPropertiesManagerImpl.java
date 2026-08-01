@@ -56,7 +56,7 @@ public class JPAPropertiesManagerImpl implements PropertiesManager {
      * Creates a new instance of JPAPropertiesManagerImpl
      */
     @com.google.inject.Inject
-    protected JPAPropertiesManagerImpl(JPAPersistenceStrategy strategy) {
+    public JPAPropertiesManagerImpl(JPAPersistenceStrategy strategy) {
         log.debug("Instantiating JPA Properties Manager");
         this.strategy = strategy;
     }

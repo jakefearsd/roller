@@ -95,7 +95,7 @@ public class LuceneIndexManager implements IndexManager {
      * @param roller - the weblogger instance
      */
     @com.google.inject.Inject
-    protected LuceneIndexManager(Weblogger roller) {
+    public LuceneIndexManager(Weblogger roller) {
         this.roller = roller;
 
         // check config to see if the internal search is enabled

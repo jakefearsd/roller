@@ -54,7 +54,7 @@ public class JPAUserManagerImpl implements UserManager {
     
 
     @com.google.inject.Inject
-    protected JPAUserManagerImpl(JPAPersistenceStrategy strat) {
+    public JPAUserManagerImpl(JPAPersistenceStrategy strat) {
         log.debug("Instantiating JPA User Manager");
         this.strategy = strat;
     }

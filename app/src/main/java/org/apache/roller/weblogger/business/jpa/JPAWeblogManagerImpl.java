@@ -77,7 +77,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
     private final Map<String, String> weblogHandleToIdMap = Collections.synchronizedMap(new HashMap<>());
 
     @com.google.inject.Inject
-    protected JPAWeblogManagerImpl(Weblogger roller, JPAPersistenceStrategy strat) {
+    public JPAWeblogManagerImpl(Weblogger roller, JPAPersistenceStrategy strat) {
         log.debug("Instantiating JPA Weblog Manager");
         this.roller = roller;
         this.strategy = strat;

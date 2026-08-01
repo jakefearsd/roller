@@ -74,7 +74,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
      * Creates a new instance of MediaFileManagerImpl
      */
     @com.google.inject.Inject
-    protected JPAMediaFileManagerImpl(Weblogger roller,
+    public JPAMediaFileManagerImpl(Weblogger roller,
             JPAPersistenceStrategy persistenceStrategy) {
         this.roller = roller;
         this.strategy = persistenceStrategy;

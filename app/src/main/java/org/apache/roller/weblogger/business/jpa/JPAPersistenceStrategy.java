@@ -64,7 +64,7 @@ public class JPAPersistenceStrategy {
      * @throws org.apache.roller.weblogger.WebloggerException on any error
      */
     @com.google.inject.Inject
-    protected JPAPersistenceStrategy(DatabaseProvider dbProvider) throws WebloggerException {
+    public JPAPersistenceStrategy(DatabaseProvider dbProvider) throws WebloggerException {
         String jpaConfigurationType = WebloggerConfig.getProperty("jpa.configurationType");
         if ("jndi".equals(jpaConfigurationType)) {
             // Lookup EMF via JNDI: added for Geronimo

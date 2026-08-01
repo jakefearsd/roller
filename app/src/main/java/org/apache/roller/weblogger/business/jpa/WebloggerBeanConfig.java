@@ -1,0 +1,168 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.business.jpa;
+
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.DatabaseProvider;
+import org.apache.roller.weblogger.business.FileContentManager;
+import org.apache.roller.weblogger.business.FileContentManagerImpl;
+import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.MultiWeblogURLStrategy;
+import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.UserManager;
+import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.plugins.PluginManager;
+import org.apache.roller.weblogger.business.plugins.PluginManagerImpl;
+import org.apache.roller.weblogger.business.runnable.ThreadManager;
+import org.apache.roller.weblogger.business.search.IndexManager;
+import org.apache.roller.weblogger.business.search.lucene.LuceneIndexManager;
+import org.apache.roller.weblogger.business.startup.WebloggerStartup;
+import org.apache.roller.weblogger.business.themes.ThemeManager;
+import org.apache.roller.weblogger.business.themes.ThemeManagerImpl;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
+
+/**
+ * Spring equivalent of {@link JPAWebloggerModule}: one {@code @Bean} method
+ * per Guice binding, wiring the same JPA-backed business tier that Guice
+ * assembled.
+ *
+ * <p>{@code JPAWebloggerImpl} depends on all the manager interfaces, and five
+ * of those managers depend back on {@link Weblogger} itself (to reach sibling
+ * managers through the facade). Guice's proxy-based injector papered over
+ * that cycle transparently; Spring's constructor injection needs an explicit
+ * out: every {@code Weblogger} parameter below is marked {@code @Lazy}, which
+ * makes Spring hand the constructor a lazy-resolving proxy instead of trying
+ * to fully construct the {@code Weblogger} bean during those managers'
+ * construction. Omitting {@code @Lazy} on any of them reproduces the cycle
+ * and fails fast with {@code BeanCurrentlyInCreationException}.
+ *
+ * <p>The whole configuration is {@code @Lazy} so that simply loading this
+ * class (as {@link org.apache.roller.weblogger.business.SpringWebloggerProvider}
+ * does in its constructor) does not eagerly instantiate anything; construction
+ * only happens once {@code getBean(Weblogger.class)} is called from
+ * {@code bootstrap()}.
+ */
+@Configuration
+@Lazy
+public class WebloggerBeanConfig {
+
+    /**
+     * The database provider is prepared once by {@link WebloggerStartup#prepare()}
+     * before any Weblogger bootstrap runs; reuse that singleton rather than
+     * constructing a second one the way Guice's JIT binding did. Same
+     * configuration, one instance instead of two.
+     */
+    @Bean
+    public DatabaseProvider databaseProvider() {
+        return WebloggerStartup.getDatabaseProvider();
+    }
+
+    @Bean
+    public JPAPersistenceStrategy jpaPersistenceStrategy(DatabaseProvider databaseProvider) throws WebloggerException {
+        return new JPAPersistenceStrategy(databaseProvider);
+    }
+
+    @Bean
+    public PropertiesManager propertiesManager(JPAPersistenceStrategy strategy) {
+        return new JPAPropertiesManagerImpl(strategy);
+    }
+
+    @Bean
+    public ThreadManager threadManager(JPAPersistenceStrategy strategy) {
+        return new JPAThreadManagerImpl(strategy);
+    }
+
+    @Bean
+    public UserManager userManager(JPAPersistenceStrategy strategy) {
+        return new JPAUserManagerImpl(strategy);
+    }
+
+    @Bean
+    public WeblogManager weblogManager(@Lazy Weblogger weblogger, JPAPersistenceStrategy strategy) {
+        return new JPAWeblogManagerImpl(weblogger, strategy);
+    }
+
+    @Bean
+    public WeblogEntryManager weblogEntryManager(@Lazy Weblogger weblogger, JPAPersistenceStrategy strategy) {
+        return new JPAWeblogEntryManagerImpl(weblogger, strategy);
+    }
+
+    @Bean
+    public MediaFileManager mediaFileManager(@Lazy Weblogger weblogger, JPAPersistenceStrategy strategy) {
+        return new JPAMediaFileManagerImpl(weblogger, strategy);
+    }
+
+    @Bean
+    public FileContentManager fileContentManager() {
+        return new FileContentManagerImpl();
+    }
+
+    @Bean
+    public IndexManager indexManager(@Lazy Weblogger weblogger) {
+        return new LuceneIndexManager(weblogger);
+    }
+
+    @Bean
+    public PluginManager pluginManager() {
+        return new PluginManagerImpl();
+    }
+
+    @Bean
+    public ThemeManager themeManager(@Lazy Weblogger weblogger) {
+        return new ThemeManagerImpl(weblogger);
+    }
+
+    @Bean
+    public URLStrategy urlStrategy() {
+        return new MultiWeblogURLStrategy();
+    }
+
+    @Bean(destroyMethod = "shutdown")
+    public Weblogger weblogger(
+            JPAPersistenceStrategy strategy,
+            IndexManager indexManager,
+            MediaFileManager mediaFileManager,
+            FileContentManager fileContentManager,
+            PluginManager pluginManager,
+            PropertiesManager propertiesManager,
+            ThemeManager themeManager,
+            ThreadManager threadManager,
+            UserManager userManager,
+            WeblogManager weblogManager,
+            WeblogEntryManager weblogEntryManager,
+            URLStrategy urlStrategy) throws WebloggerException {
+        return new JPAWebloggerImpl(
+                strategy,
+                indexManager,
+                mediaFileManager,
+                fileContentManager,
+                pluginManager,
+                propertiesManager,
+                themeManager,
+                threadManager,
+                userManager,
+                weblogManager,
+                weblogEntryManager,
+                urlStrategy);
+    }
+}
