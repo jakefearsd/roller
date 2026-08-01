@@ -30,7 +30,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -95,7 +94,7 @@ public class WeblogConfigController extends BaseController {
 
         if (!hasErrors(model)) {
             try {
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 Weblog weblog = getActionWeblog(request);
 
                 if (bean.getAnalyticsCode() != null) {
@@ -118,13 +117,13 @@ public class WeblogConfigController extends BaseController {
                     weblog.setEnableMultiLang(true);
                 }
 
-                WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(weblog);
+                weblogger.getWeblogManager().saveWeblog(weblog);
 
                 if (bean.getApplyCommentDefaults()) {
                     wmgr.applyCommentDefaultsToEntries(weblog);
                 }
 
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
                 addMessage(model, "websiteSettings.savedChanges", request);
                 CacheManager.invalidate(weblog);
 
@@ -156,7 +155,7 @@ public class WeblogConfigController extends BaseController {
 
     private void loadFormData(HttpServletRequest request, Model model) {
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             model.addAttribute("weblogCategories", wmgr.getWeblogCategories(getActionWeblog(request)));
 
             UIPluginManager pmgr = RollerContext.getUIPluginManager();
@@ -165,7 +164,7 @@ public class WeblogConfigController extends BaseController {
                 model.addAttribute("editorsList", editorList);
             }
 
-            PluginManager ppmgr = WebloggerFactory.getWeblogger().getPluginManager();
+            PluginManager ppmgr = weblogger.getPluginManager();
             Map<String, WeblogEntryPlugin> pluginsMap = ppmgr.getWeblogEntryPlugins(getActionWeblog(request));
             model.addAttribute("pluginsList", new ArrayList<>(pluginsMap.values()));
 

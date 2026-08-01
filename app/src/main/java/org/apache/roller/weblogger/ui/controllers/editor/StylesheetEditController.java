@@ -26,7 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.pojos.*;
@@ -92,8 +91,8 @@ public class StylesheetEditController extends BaseController {
     @PostMapping("/stylesheetEdit!copyStylesheet.rol")
     public String copyStylesheet(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
-        WeblogManager weblogManager = WebloggerFactory.getWeblogger().getWeblogManager();
-        ThemeManager themeManager = WebloggerFactory.getWeblogger().getThemeManager();
+        WeblogManager weblogManager = weblogger.getWeblogManager();
+        ThemeManager themeManager = weblogger.getThemeManager();
 
         ThemeTemplate stylesheet = null;
         try {
@@ -127,7 +126,7 @@ public class StylesheetEditController extends BaseController {
                 }
 
                 weblogManager.saveTemplate(stylesheetTmpl);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
                 addMessage(model, "stylesheetEdit.create.success", request);
             }
         } catch (WebloggerException ex) {
@@ -144,7 +143,7 @@ public class StylesheetEditController extends BaseController {
                        @RequestParam(value = "contentsStandard", required = false) String contentsStandard) {
         populateCommonModel(request, model);
 
-        WeblogManager weblogManager = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager weblogManager = weblogger.getWeblogManager();
         WeblogTemplate template = loadTemplate(request);
 
         if (!hasErrors(model) && template != null) {
@@ -168,7 +167,7 @@ public class StylesheetEditController extends BaseController {
                 }
 
                 weblogManager.saveTemplate(template);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
                 CacheManager.invalidate(template);
                 addMessage(model, "stylesheetEdit.save.success", template.getName(), request);
 
@@ -197,8 +196,8 @@ public class StylesheetEditController extends BaseController {
         WeblogTemplate template = loadTemplate(request);
         if (template != null && !isCustomTheme(request) && !hasErrors(model)) {
             try {
-                WeblogManager weblogManager = WebloggerFactory.getWeblogger().getWeblogManager();
-                ThemeManager tmgr = WebloggerFactory.getWeblogger().getThemeManager();
+                WeblogManager weblogManager = weblogger.getWeblogManager();
+                ThemeManager tmgr = weblogger.getThemeManager();
                 Theme theme = tmgr.getTheme(getActionWeblog(request).getEditorTheme());
 
                 template.setLastModified(new Date());
@@ -210,7 +209,7 @@ public class StylesheetEditController extends BaseController {
                     weblogManager.saveTemplateRendition(existingTemplateCode);
                 }
                 weblogManager.saveTemplate(template);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
                 CacheManager.invalidate(template);
                 addMessage(model, "stylesheetEdit.revert.success", template.getName(), request);
 
@@ -230,11 +229,11 @@ public class StylesheetEditController extends BaseController {
         WeblogTemplate template = loadTemplate(request);
         if (template != null && !isCustomTheme(request) && !hasErrors(model)) {
             try {
-                WeblogManager weblogManager = WebloggerFactory.getWeblogger().getWeblogManager();
+                WeblogManager weblogManager = weblogger.getWeblogManager();
                 weblogManager.removeTemplate(template);
                 weblogManager.saveWeblog(getActionWeblog(request));
                 CacheManager.invalidate(template);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
                 addMessage(model, "stylesheetEdit.default.success", template.getName(), request);
                 template = null;
             } catch (Exception e) {
@@ -254,14 +253,14 @@ public class StylesheetEditController extends BaseController {
         try {
             ThemeTemplate stylesheet;
             if (!isCustomTheme(request)) {
-                ThemeManager themeManager = WebloggerFactory.getWeblogger().getThemeManager();
+                ThemeManager themeManager = weblogger.getThemeManager();
                 SharedTheme themeName = themeManager.getTheme(getActionWeblog(request).getEditorTheme());
                 stylesheet = themeName.getStylesheet();
             } else {
                 stylesheet = getActionWeblog(request).getTheme().getStylesheet();
             }
             if (stylesheet != null) {
-                return WebloggerFactory.getWeblogger().getWeblogManager()
+                return weblogger.getWeblogManager()
                         .getTemplateByLink(getActionWeblog(request), stylesheet.getLink());
             }
         } catch (WebloggerException ex) {
@@ -277,7 +276,7 @@ public class StylesheetEditController extends BaseController {
     private boolean isSharedThemeStylesheet(HttpServletRequest request) {
         try {
             if (!isCustomTheme(request)) {
-                ThemeManager themeManager = WebloggerFactory.getWeblogger().getThemeManager();
+                ThemeManager themeManager = weblogger.getThemeManager();
                 SharedTheme themeName = themeManager.getTheme(getActionWeblog(request).getEditorTheme());
                 return themeName.getStylesheet() != null;
             }

@@ -26,7 +26,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileComparator;
 import org.apache.roller.weblogger.pojos.MediaFileComparator.MediaFileComparatorType;
@@ -77,7 +76,7 @@ public class MediaFileImageChooserController extends MediaFileBase {
         populateCommonModel(request, model);
         model.addAttribute("overlayMode", true);
 
-        MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager manager = weblogger.getMediaFileManager();
         try {
             MediaFileDirectory directory;
             if (directoryId != null) {

@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.pojos.Theme;
@@ -101,7 +100,7 @@ public class ThemeEditController extends BaseController {
         if (WeblogTheme.CUSTOM.equals(themeType)) {
             if (importTheme) {
                 try {
-                    ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
+                    ThemeManager themeMgr = weblogger.getThemeManager();
                     if (!StringUtils.isEmpty(selectedThemeId)) {
                         SharedTheme t = themeMgr.getTheme(selectedThemeId);
                         boolean skipStylesheet = (sharedThemeCustomStylesheet
@@ -120,8 +119,8 @@ public class ThemeEditController extends BaseController {
             if (!hasErrors(model)) {
                 try {
                     weblog.setEditorTheme(WeblogTheme.CUSTOM);
-                    WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(weblog);
-                    WebloggerFactory.getWeblogger().flush();
+                    weblogger.getWeblogManager().saveWeblog(weblog);
+                    weblogger.flush();
                     CacheManager.invalidate(weblog);
                     addMessage(model, "themeEditor.setTheme.success", WeblogTheme.CUSTOM, request);
                     addMessage(model, "themeEditor.setCustomTheme.instructions", request);
@@ -134,7 +133,7 @@ public class ThemeEditController extends BaseController {
         } else if ("shared".equals(themeType)) {
             Theme newTheme = null;
             try {
-                ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
+                ThemeManager themeMgr = weblogger.getThemeManager();
                 newTheme = themeMgr.getTheme(selectedThemeId);
             } catch (Exception ex) {
                 log.warn(ex);
@@ -144,7 +143,7 @@ public class ThemeEditController extends BaseController {
             if (!hasErrors(model)) {
                 try {
                     String originalTheme = weblog.getEditorTheme();
-                    WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+                    WeblogManager mgr = weblogger.getWeblogManager();
 
                     if (!originalTheme.equals(selectedThemeId) && getActionWeblog(request).getTheme().getStylesheet() != null) {
                         WeblogTemplate stylesheet = mgr.getTemplateByAction(getActionWeblog(request), ComponentType.STYLESHEET);
@@ -154,8 +153,8 @@ public class ThemeEditController extends BaseController {
                     }
 
                     weblog.setEditorTheme(selectedThemeId);
-                    WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(weblog);
-                    WebloggerFactory.getWeblogger().flush();
+                    weblogger.getWeblogManager().saveWeblog(weblog);
+                    weblogger.flush();
                     CacheManager.invalidate(weblog);
 
                     if (!originalTheme.equals(selectedThemeId)) {
@@ -183,7 +182,7 @@ public class ThemeEditController extends BaseController {
     }
 
     private void loadThemeData(HttpServletRequest request, Model model) {
-        ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
+        ThemeManager themeMgr = weblogger.getThemeManager();
         model.addAttribute("themes", themeMgr.getEnabledThemesList());
         model.addAttribute("customTheme", WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme()));
         model.addAttribute("sharedThemeCustomStylesheet", isSharedThemeCustomStylesheet(request));
@@ -191,7 +190,7 @@ public class ThemeEditController extends BaseController {
         // firstCustomization check
         try {
             model.addAttribute("firstCustomization",
-                    WebloggerFactory.getWeblogger().getWeblogManager()
+                    weblogger.getWeblogManager()
                             .getTemplateByAction(getActionWeblog(request), ComponentType.WEBLOG) == null);
         } catch (WebloggerException ex) {
             log.error("Error looking up weblog template", ex);
@@ -202,7 +201,7 @@ public class ThemeEditController extends BaseController {
         try {
             if (!WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme())
                     && getActionWeblog(request).getTheme().getStylesheet() != null) {
-                ThemeTemplate override = WebloggerFactory.getWeblogger().getWeblogManager()
+                ThemeTemplate override = weblogger.getWeblogManager()
                         .getTemplateByLink(getActionWeblog(request),
                                 getActionWeblog(request).getTheme().getStylesheet().getLink());
                 if (override != null) {

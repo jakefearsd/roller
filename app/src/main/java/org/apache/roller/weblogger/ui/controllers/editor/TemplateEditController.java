@@ -28,7 +28,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
@@ -121,8 +120,8 @@ public class TemplateEditController extends BaseController {
                     template.setOutputContentType(null);
                 }
 
-                WebloggerFactory.getWeblogger().getWeblogManager().saveTemplate(template);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.getWeblogManager().saveTemplate(template);
+                weblogger.flush();
                 CacheManager.invalidate(template);
 
                 addMessage(model, "pageForm.save.success", template.getName(), request);
@@ -140,7 +139,7 @@ public class TemplateEditController extends BaseController {
                             HttpServletRequest request, Model model) {
         if (!template.getName().equals(bean.getName())) {
             try {
-                if (WebloggerFactory.getWeblogger().getWeblogManager()
+                if (weblogger.getWeblogManager()
                         .getTemplateByName(getActionWeblog(request), bean.getName()) != null) {
                     addError(model, "pagesForm.error.alreadyExists", bean.getName(), request);
                 }
@@ -151,7 +150,7 @@ public class TemplateEditController extends BaseController {
 
         if (!StringUtils.isEmpty(bean.getLink()) && !bean.getLink().equals(template.getLink())) {
             try {
-                if (WebloggerFactory.getWeblogger().getWeblogManager()
+                if (weblogger.getWeblogManager()
                         .getTemplateByLink(getActionWeblog(request), bean.getLink()) != null) {
                     addError(model, "pagesForm.error.alreadyExists", bean.getLink(), request);
                 }
@@ -166,7 +165,7 @@ public class TemplateEditController extends BaseController {
             return null;
         }
         try {
-            return WebloggerFactory.getWeblogger().getWeblogManager().getTemplate(id);
+            return weblogger.getWeblogManager().getTemplate(id);
         } catch (WebloggerException ex) {
             log.error("Error looking up template - " + id, ex);
         }

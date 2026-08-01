@@ -26,7 +26,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -79,7 +78,7 @@ public class MembersController extends BaseController {
         List<WeblogPermission> permsList = new ArrayList<>();
 
         try {
-            UserManager userMgr = WebloggerFactory.getWeblogger().getUserManager();
+            UserManager userMgr = weblogger.getUserManager();
             List<WeblogPermission> permsFromDB = userMgr.getWeblogPermissionsIncludingPending(getActionWeblog(request));
 
             for (WeblogPermission perm : permsFromDB) {
@@ -128,7 +127,7 @@ public class MembersController extends BaseController {
             }
 
             if (removed > 0 || changed > 0) {
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
             }
 
         } catch (Exception ex) {
@@ -149,7 +148,7 @@ public class MembersController extends BaseController {
 
     private List<WeblogPermission> getWeblogPermissions(HttpServletRequest request) {
         try {
-            return WebloggerFactory.getWeblogger().getUserManager()
+            return weblogger.getUserManager()
                     .getWeblogPermissionsIncludingPending(getActionWeblog(request));
         } catch (WebloggerException ex) {
             log.error("ERROR getting weblog permissions", ex);
