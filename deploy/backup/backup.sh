@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Roller production backup -- single shot: pg_dump the database, tar the
 # mediafiles/search-index/uploads volumes, then rotate anything older than
-# BACKUP_RETENTION_DAYS. Runs inside the `backup` service of
+# BACKUP_RETENTION_DAYS. Both artifacts are written atomically: pg_dump/tar
+# target "<final-name>.tmp" and a same-filesystem `mv` publishes it under
+# its final name only once the write is complete, so a backup killed
+# mid-write (OOM, container restart, disk full) leaves an orphaned .tmp
+# file rather than a truncated file sitting under the name a restore would
+# trust. Runs inside the `backup` service of
 # docker-compose.prod.yml (the postgres:16 image, so pg_dump/psql/tar are
 # already present); deploy/backup/loop.sh calls this once a day, or an
 # operator can run one cycle by hand:
@@ -57,16 +62,18 @@ mkdir -p "${BACKUP_DIR}"
 echo "[$(date -u +%FT%TZ)] Starting backup..."
 
 DUMP_FILE="${BACKUP_DIR}/rollerdb-${TIMESTAMP}.dump"
-pg_dump -Fc -d "${DB_NAME}" -f "${DUMP_FILE}"
+pg_dump -Fc -d "${DB_NAME}" -f "${DUMP_FILE}.tmp"
+mv "${DUMP_FILE}.tmp" "${DUMP_FILE}"
 echo "  database -> ${DUMP_FILE}"
 
 VOLUMES_FILE="${BACKUP_DIR}/volumes-${TIMESTAMP}.tar.gz"
-tar czf "${VOLUMES_FILE}" -C / data/mediafiles data/search-index data/uploads
+tar czf "${VOLUMES_FILE}.tmp" -C / data/mediafiles data/search-index data/uploads
+mv "${VOLUMES_FILE}.tmp" "${VOLUMES_FILE}"
 echo "  volumes  -> ${VOLUMES_FILE}"
 
 echo "Rotating backups older than ${RETENTION_DAYS} day(s)..."
 find "${BACKUP_DIR}" -maxdepth 1 -type f \
-    \( -name 'rollerdb-*.dump' -o -name 'volumes-*.tar.gz' \) \
+    \( -name 'rollerdb-*.dump' -o -name 'volumes-*.tar.gz' -o -name '*.tmp' \) \
     -mtime "+${RETENTION_DAYS}" -print -delete
 
 echo "[$(date -u +%FT%TZ)] Backup complete."

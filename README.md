@@ -97,10 +97,16 @@ Browse to http://localhost:8083/roller
 ```bash
 git clone https://github.com/apache/roller.git
 cd roller
-docker-compose up
+docker compose up -d   # starts PostgreSQL only
+./roller dev            # applies migrations, runs the app
 ```
 
 Browse to http://localhost:8083/roller
+
+For a real deployment — the app itself containerized behind TLS, with
+automated backups and one-command upgrades — see the production stack
+(`docker-compose.prod.yml`, `deploy/deploy.sh`) and its runbook,
+[`docker_deployment.md`](docker_deployment.md).
 
 ---
 

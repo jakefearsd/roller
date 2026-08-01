@@ -210,8 +210,20 @@ Key domain entities:
 - **Velocity Templates**: `app/src/main/webapp/WEB-INF/velocity/templates/`
 
 ### Development vs Production
-- **Development**: PostgreSQL via docker-compose, theme reload enabled, caching disabled
-- **Production**: PostgreSQL, optimized caching, theme compilation
+- **Development**: PostgreSQL via `docker-compose.yml` (postgres only; the
+  app runs via `./roller dev` / `spring-boot:run`, not in a container),
+  theme reload enabled, caching disabled.
+- **Production**: containerized end-to-end via `docker-compose.prod.yml` —
+  `app` (image built from `Dockerfile`, published to GHCR by CI on every
+  push to master), `postgres:16`, `caddy` (auto-TLS reverse proxy, the only
+  published ports), and `backup` (nightly `pg_dump` + volume snapshots,
+  atomic writes, rotation). One-command deploy/upgrade via
+  `deploy/deploy.sh` (pulls or builds the image, applies pending migrations
+  against `postgres` before starting `app`, waits for health, reconciles
+  the rest). Full fresh-VPS runbook: `docker_deployment.md`. As in dev, the
+  actuator health endpoint lives on management port 8090 and is never
+  published to the host — reachable only via `docker compose exec app curl
+  http://localhost:8090/actuator/health` or the container healthcheck.
 
 ## Plugin System
 Roller supports plugins for:
