@@ -32,7 +32,8 @@ limitations under the License.
              AsyncAppender the whole context fails to start - the application does
              not merely lose its log, it does not deploy.
              Order: explicit override, then Tomcat's base, then the working
-             directory (which is what the Jetty dev server wants). -->
+             directory (which is what the embedded-Tomcat spring-boot:run dev
+             server wants). -->
         <property name="logging.dir">${sys:roller.log.dir:-${sys:catalina.base:-.}/logs}</property>
         <property name="logging.pattern">%-5p %d{yyyy-MM-dd HH:mm:ss} [%t] %c{1} - %m%n</property>
     </properties>

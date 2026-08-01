@@ -16,11 +16,12 @@
 
 # Local development stack for Roller.
 #
-#   ./roller dev     start postgres, apply migrations, run the app on Jetty
+#   ./roller dev     start postgres, apply migrations, run the app via
+#                     spring-boot:run (embedded Tomcat)
 #   ./roller db      start postgres only
 #
 # Bringing up Roller itself in a container is closer to production but loses
-# Jetty's fast redeploy and hot theme reload:
+# spring-boot:run's fast redeploy and hot theme reload:
 #
 #   docker compose --profile full up
 
@@ -58,7 +59,8 @@ services:
     volumes:
       - roller-data:/var/lib/roller/data
     profiles:
-      # Not started by default; ./roller dev runs the app on Jetty instead.
+      # Not started by default; ./roller dev runs the app via spring-boot:run
+      # (embedded Tomcat) instead.
       - full
 
 volumes:

@@ -28,8 +28,12 @@ mvn -DskipTests=true install
 # app fails to bootstrap):
 java -jar app/target/roller.war --server.port=8083 \
     -Droller.custom.config=app/target/test-classes/roller-boot-dev.properties
-# Health check (works even before the business tier bootstraps):
-# curl http://localhost:8083/roller/actuator/health
+# Health check (works even before the business tier bootstraps). Actuator
+# lives on its own management port (management.server.port=8090), not under
+# the main app port -- DispatcherServlet is mapped to *.rol only, so there is
+# no "/" catch-all for /actuator/** to attach to on 8083. Management-only:
+# do not expose 8090 outside localhost/the deploy host in production.
+# curl http://localhost:8090/actuator/health
 
 # Database-only helpers
 ./roller db          # start PostgreSQL and migrate, without running the app

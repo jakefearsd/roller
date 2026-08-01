@@ -125,7 +125,8 @@ limitations under the License.
         <plugins>
 
             <!-- Reserve free ports so a developer's local PostgreSQL on 5432, or the
-                 dev Jetty on 8083, cannot collide with a test run. -->
+                 dev server (./roller dev, spring-boot:run) on 8083, cannot collide
+                 with a test run. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>

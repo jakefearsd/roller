@@ -29,8 +29,14 @@ fi
 
 mkdir -p "$(dirname "$PIDFILE")" "$(dirname "$LOG")"
 
+# management.server.port=0 (random free port): the ITs never poll actuator
+# (readiness below is roller-ui/login.rol on the main port), and application
+# .properties' default of 8090 would otherwise collide across concurrent IT
+# runs the same way a fixed app port would -- 0 sidesteps that with no need
+# to reserve/thread a dedicated port property through this module.
 java -Djava.awt.headless=true -Droller.custom.config="$PROPS" \
      -jar "$WAR" --server.port="$PORT" --server.servlet.context-path=/roller \
+     --management.server.port=0 \
      > "$LOG" 2>&1 &
 echo $! > "$PIDFILE"
 
