@@ -226,9 +226,7 @@ links to its New Entry, Entries, Comments, Theme and Settings pages. You
 can also create a new weblog, edit your user profile.
 
 If you are logged in as a Global Administrator, you will also see a
-Server Admin link in the actions side-bar. And if you have Roller’s
-Planet aggregator enabled, then you will also see a Planet Admin link
-there as well.
+Server Admin link in the actions side-bar.
 
 === Creating and editing a weblog entry
 
@@ -1072,7 +1070,7 @@ is to be displayed as the frontpage of this Roller site.
 like the frontpage weblog’s RSS and Atom feeds to be an aggregation of
 all weblogs on the Roller site.
 * *Absolute URL to this site*: to be used as basis for creating absolute
-URLs. Required for Roller’s Planet aggregator feature.
+URLs.
 * *Enable debug mode*: currently not used.
 
 image::user-guide-27-comments.png[]
@@ -1133,98 +1131,3 @@ defined. Note that even if individual overrides are disallowed bloggers
 can still place their own tracking code within their blog templates if
 you enable custom themes (in the "Theme Settings" section on this
 configuration page.)
-
-== Planet Roller administration
-
-Roller includes an aggregator known as Planet Roller, which makes it
-possible for you to aggregate together weblogs from a Roller server with
-weblogs that are hosted elsewhere. You can create multiple aggregation
-groups each with its own set of feeds, you can display aggregation
-groups on your weblog pages and Roller provides an RSS feed for each
-group you create.
-
-Roller’s aggregator is not enabled by default. If you want to use it,
-you’ll have to ask your site administrator to enable and configure it
-for you. Please refer to the Roller Installation Guide for more
-information on that topic.
-
-=== Configuring Planet Roller
-
-If you’ve got Planet enabled, when you login as a global admin you’ll
-see a Planet Administration link on the Roller Main Menu page. Click
-that link to view the *Planet Admin->Configuration* page, shown below.
-
-image::user-guide-32-planet-config.png[]
-
-To configure Planet Roller, you must:
-
-* Ensure that your site has an absolute URL in the *Global
-Admin->Configuration* page in the Site Settings section.
-
-* If you are behind a proxy, you must enter proxy settings in the
-*Planet Admin->Configuration* page.
-
-=== Adding external weblogs to Planet Roller
-
-Planet Roller allows you to create multiple aggregation groups each
-containing a different set of feeds, but there is also a special group
-known the _external_ group that is managed by Roller. The external group
-includes all weblogs on your Roller server plus any externally hosted
-weblogs you choose to add. The RSS feed for the external group is
-available at /planetrss, so on a default Roller install its URL will be:
-
-http://localhost:8080/roller/planetrss
-
-This section describes how to add and remove weblogs using the *Planet
-Admin->Subscriptions* page, shown below.
-
-image::user-guide-33-subscription.png[]
-
-*Adding an external weblog to Planet Roller*
-
-To add an externally hosted weblog to the Planet, use the *Planet
-Admin->Subscriptions* page. Enter its title, newsfeed URL and website
-URL and click the Save button.
-
-NOTE: Planet Roller only supports Atom and RSS newsfeeds that include
-entry level date information. If you enter a subscription that does not
-include dates, Planet Roller will accept it, but you may not see entries
-from the feed because Roller will assume that its entries are at least
-one day old.
-
-Removing an external weblog from Planet Roller
-
-You can select an existing subscription and edit it or delete it. The
-change will not be evident on the front page until the next scheduled
-Refresh Entries task runs.
-
-=== Adding custom groups to Planet Roller
-
-You can also add custom aggregation groups and Planet Roller will
-provide an RSS newsfeed for each group you add. For example, if you add
-groups with the handles _music_ and _politics_, then you’ll get two
-feeds at URLs like this:
-
-http://localhost:8080/roller/planetrss?group=music
-
-http://localhost:8080/roller/planetrss?group=politics
-
-To add new custom groups just use the *Planet Admin->Custom Groups*
-page, shown below.
-
-To create a custom group
-
-Go to the *Planet Admin->Custom Groups* page and enter the title and
-enter a title for the group, one that is appropriate for display in the
-group’s RSS feed. Enter a handle a one word name for the group, which
-you’ll use to refer to the group in your page templates. When you’re
-done click the Save button
-
-You’ll see your new group appear in the Existing Custom Aggregation
-Groups table. Click on the Subscriptions icons for your new group and
-you’ll be taken to the *Planet Admin->Subscriptions* page so you can add
-feed subscriptions to the group.
-
-Enter the title, newsfeed URL and website URL for the feed you’d like to
-add and click the Save button to add it to the feeds list. Repeat once
-for each subscription you’d like to add to the group.

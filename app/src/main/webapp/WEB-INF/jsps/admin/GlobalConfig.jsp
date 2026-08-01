@@ -34,7 +34,7 @@
             <c:if test="${pd.name == 'users.comments.plugins'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <c:forEach var="plugin" items="${pluginsList}">
                             <label class="form-check form-check-inline">
                                 <input type="checkbox" class="form-check-input" name="commentPlugins" value="${fn:escapeXml(plugin.id)}"
@@ -52,7 +52,7 @@
             <c:if test="${pd.name == 'site.frontpage.weblog.handle'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <select name="${fn:escapeXml(pd.name)}" class="form-select">
                             <c:forEach var="weblog" items="${weblogs}">
                                 <option value="${fn:escapeXml(weblog.handle)}"
@@ -68,7 +68,7 @@
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'string'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <input type="text" name="${fn:escapeXml(pd.name)}" size="35"
                                value="${fn:escapeXml(properties[pd.name].value)}"
                                class="form-control"/>
@@ -80,7 +80,7 @@
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'text'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <textarea name="${fn:escapeXml(pd.name)}" rows="${pd.rows}" cols="${pd.cols}"
                                   class="form-control">${fn:escapeXml(properties[pd.name].value)}</textarea>
                     </div>
@@ -91,7 +91,7 @@
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'boolean'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <input type="checkbox" name="${fn:escapeXml(pd.name)}" value="true"
                             <c:if test="${properties[pd.name].value == 'true'}">checked="checked"</c:if>
                                onchange="formChanged()" class="boolean"/>
@@ -106,7 +106,7 @@
                            for='globalConfig_${pd.nameWithUnderbars}'>
                         <spring:message code="${pd.key}"/>
                     </label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <input type="number" name='${fn:escapeXml(pd.name)}' size="35"
                                value='${fn:escapeXml(properties[pd.name].value)}'
                                id='globalConfig_${pd.nameWithUnderbars}'
@@ -122,7 +122,7 @@
                            for='globalConfig_${pd.nameWithUnderbars}'>
                         <spring:message code="${pd.key}"/>
                     </label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <input type="number" name='${fn:escapeXml(pd.name)}' size="5"
                                value='${fn:escapeXml(properties[pd.name].value)}'
                                id='globalConfig_${pd.nameWithUnderbars}'
@@ -135,7 +135,7 @@
             <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type != 'string' && pd.type != 'text' && pd.type != 'boolean' && pd.type != 'integer' && pd.type != 'float'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <input type="text" name="${fn:escapeXml(pd.name)}" size="35"
                                value="${fn:escapeXml(properties[pd.name].value)}"
                                class="form-control"/>

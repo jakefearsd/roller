@@ -27,7 +27,7 @@
     <div class="row mb-3">
         <spring:message code="userSettings.username" var="usernameLabel"/>
         <label class="col-sm-3 col-form-label">${usernameLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:input path="userName" cssClass="form-control" size="30" maxlength="30" readonly="true"
                         onchange="formChanged()" onkeyup="formChanged()"/>
         </div>
@@ -36,7 +36,7 @@
     <div class="row mb-3">
         <spring:message code="userSettings.screenname" var="screennameLabel"/>
         <label class="col-sm-3 col-form-label">${screennameLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:input path="screenName" cssClass="form-control" size="30" maxlength="30"
                         onchange="formChanged()" onkeyup="formChanged()"/>
         </div>
@@ -45,7 +45,7 @@
     <div class="row mb-3">
         <spring:message code="userSettings.fullname" var="fullnameLabel"/>
         <label class="col-sm-3 col-form-label">${fullnameLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:input path="fullName" cssClass="form-control" size="30" maxlength="30"
                         onchange="formChanged()" onkeyup="formChanged()"/>
         </div>
@@ -54,7 +54,7 @@
     <div class="row mb-3">
         <spring:message code="userSettings.email" var="emailLabel"/>
         <label class="col-sm-3 col-form-label">${emailLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:input path="emailAddress" cssClass="form-control" size="40" maxlength="40"
                         onchange="formChanged()" onkeyup="formChanged()"/>
         </div>
@@ -63,7 +63,7 @@
         <div class="row mb-3">
             <spring:message code="userSettings.password" var="passwordLabel"/>
             <label class="col-sm-3 col-form-label">${passwordLabel}</label>
-            <div class="col-sm-9 controls">
+            <div class="col-sm-9">
                 <form:password path="passwordText" cssClass="form-control" size="20" maxlength="20"
                                onchange="formChanged()" onkeyup="formChanged()"/>
             </div>
@@ -72,7 +72,7 @@
         <div class="row mb-3">
             <spring:message code="userSettings.passwordConfirm" var="passwordConfirmLabel"/>
             <label class="col-sm-3 col-form-label">${passwordConfirmLabel}</label>
-            <div class="col-sm-9 controls">
+            <div class="col-sm-9">
                 <form:password path="passwordConfirm" cssClass="form-control" size="20" maxlength="20"
                                onchange="formChanged()" onkeyup="formChanged()"/>
             </div>
@@ -82,7 +82,7 @@
     <div class="row mb-3">
         <spring:message code="userSettings.locale" var="localeLabel"/>
         <label class="col-sm-3 col-form-label">${localeLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:select path="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-select"/>
         </div>
     </div>
@@ -90,7 +90,7 @@
     <div class="row mb-3">
         <spring:message code="userSettings.timeZone" var="tzLabel"/>
         <label class="col-sm-3 col-form-label">${tzLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:select path="timeZone" items="${timeZonesList}" cssClass="form-select"/>
         </div>
     </div>

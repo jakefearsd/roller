@@ -95,7 +95,7 @@
                 <div class="row mb-3">
                     <spring:message code="frontpageConfig.frontpageBlogName" var="frontpageBlogLabel"/>
                     <label class="col-sm-3 col-form-label">${frontpageBlogLabel}</label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <select name="frontpageBlog" class="form-select">
                             <c:forEach items="${weblogs}" var="w">
                                 <option value="${fn:escapeXml(w.handle)}">${fn:escapeXml(w.name)}</option>
@@ -107,7 +107,7 @@
                 <div class="row mb-3">
                     <spring:message code="frontpageConfig.frontpageAggregated" var="aggregatedLabel"/>
                     <label class="col-sm-3 col-form-label">${aggregatedLabel}</label>
-                    <div class="col-sm-9 controls">
+                    <div class="col-sm-9">
                         <input type="checkbox" class="form-check-input" name="aggregated" value="true"/>
                     </div>
                 </div>

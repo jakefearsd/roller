@@ -30,7 +30,7 @@
     <div class="row mb-3">
         <spring:message code="generic.name" var="nameLabel"/>
         <label class="col-sm-3 col-form-label">${nameLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:input path="name" cssClass="form-control" size="30" maxlength="30"
                         data-msg-required="${nameRequired}" required="required"/>
         </div>
@@ -40,7 +40,7 @@
     <div class="row mb-3">
         <spring:message code="createWebsite.handle" var="handleLabel"/>
         <label class="col-sm-3 col-form-label">${handleLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:input path="handle" cssClass="form-control" size="30" maxlength="30"
                         onkeyup="handlePreview(this)" data-msg-required="${handleRequired}" required="required"/>
         </div>
@@ -48,7 +48,7 @@
 
     <div class="row mb-3">
         <label class="col-sm-3"></label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <spring:message code="createWebsite.weblogUrl" />:&nbsp;
             ${absoluteSiteURL}/<span id="handlePreview" style="color:red"><c:choose><c:when test="${bean.handle != null}">${fn:escapeXml(bean.handle)}</c:when><c:otherwise>handle</c:otherwise></c:choose></span>
             <br>
@@ -60,7 +60,7 @@
     <div class="row mb-3">
         <spring:message code="createWebsite.emailAddress" var="emailLabel"/>
         <label class="col-sm-3 col-form-label">${emailLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:input path="emailAddress" cssClass="form-control validate-email" size="40" maxlength="50"
                         data-msg="${emailInvalid}" data-msg-required="${emailRequired}" required="required"/>
         </div>
@@ -69,7 +69,7 @@
     <div class="row mb-3">
         <spring:message code="createWebsite.locale" var="localeLabel"/>
         <label class="col-sm-3 col-form-label">${localeLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:select path="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-select"/>
         </div>
     </div>
@@ -77,7 +77,7 @@
     <div class="row mb-3">
         <spring:message code="createWebsite.timezone" var="tzLabel"/>
         <label class="col-sm-3 col-form-label">${tzLabel}</label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:select path="timeZone" items="${timeZonesList}" cssClass="form-select"/>
         </div>
     </div>
@@ -86,7 +86,7 @@
         <label class="col-sm-3 col-form-label">
             <spring:message code="createWebsite.theme" />
         </label>
-        <div class="col-sm-9 controls">
+        <div class="col-sm-9">
             <form:select path="theme" items="${themes}" itemValue="id" itemLabel="name" cssClass="form-select"
                          onchange="previewImage(this[selectedIndex].value)"/>
             <p id="themedescription"></p>

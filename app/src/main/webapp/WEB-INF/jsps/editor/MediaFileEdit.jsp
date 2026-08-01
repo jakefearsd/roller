@@ -29,7 +29,7 @@
     <c:if test="${bean.isImage}">
         <div class="row mb-3">
             <label class="col-form-label col-sm-3">Thumbnail</label>
-            <div class="controls col-sm-9">
+            <div class="col-sm-9">
                 <a href='${bean.permalink}' target="_blank">
                     <img alt="thumbnail" src='${bean.thumbnailURL}'
                          title='<spring:message code="mediaFileEdit.clickToView"/>'/>
@@ -51,7 +51,7 @@
     <div class="row mb-3">
         <label class="col-form-label col-sm-3"><spring:message code="mediaFileEdit.fileInfo"/></label>
 
-        <div class="controls col-sm-9">
+        <div class="col-sm-9">
 
             <spring:message code="mediaFileEdit.fileTypeSize" arguments="${bean.contentType},${bean.length}"/>
 
@@ -65,7 +65,7 @@
     <div class="row mb-3">
         <label class="col-form-label col-sm-3">URL</label>
 
-        <div class="controls col-sm-9">
+        <div class="col-sm-9">
 
             <input type="text" id="clip_text" size="57"
                    value='${bean.permalink}' readonly />
