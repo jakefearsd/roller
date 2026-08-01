@@ -132,8 +132,7 @@ public class JPAPersistenceStrategy {
                 String key = (String) keys.nextElement();
                 if (       key.startsWith("jakarta.persistence.")
                         || key.startsWith("openjpa.")
-                        || key.startsWith("eclipselink.")
-                        || key.startsWith("hibernate.")) {
+                        || key.startsWith("eclipselink.")) {
                     String value = WebloggerConfig.getProperty(key);
                     logger.info(key + ": " + value);
                     emfProps.setProperty(key, value);

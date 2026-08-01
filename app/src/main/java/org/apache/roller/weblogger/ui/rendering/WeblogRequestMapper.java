@@ -53,8 +53,7 @@ public class WeblogRequestMapper implements RequestMapper {
     private static final String RESOURCE_SERVLET = "/roller-ui/rendering/resources";
     private static final String MEDIA_SERVLET = "/roller-ui/rendering/media-resources";
     private static final String SEARCH_SERVLET = "/roller-ui/rendering/search";
-    private static final String RSD_SERVLET = "/roller-ui/rendering/rsd";
-    
+
     private static final String COMMENT_SERVLET = "/roller-ui/rendering/comment";
     
     
@@ -368,14 +367,7 @@ public class WeblogRequestMapper implements RequestMapper {
                             forwardUrl.append(locale);
                         }
                         break;
-                        
-                    // requests handled by RSDServlet
-                    case "rsd":
-                        forwardUrl.append(RSD_SERVLET);
-                        forwardUrl.append('/');
-                        forwardUrl.append(handle);
-                        break;
-                        
+
                     // unsupported url
                     default:
                         return null;

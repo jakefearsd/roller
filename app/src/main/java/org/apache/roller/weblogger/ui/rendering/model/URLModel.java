@@ -268,11 +268,6 @@ public class URLModel implements Model {
     }
     
     
-    public String getRsd() {
-        return urlStrategy.getWeblogRsdURL(weblog, true);
-    }
-    
-    
     public FeedURLS getFeed() {
         return new FeedURLS();
     }

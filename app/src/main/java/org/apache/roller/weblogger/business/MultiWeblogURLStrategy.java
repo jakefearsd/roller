@@ -365,20 +365,6 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
     
     
     /**
-     * Get url to rsd file on a given weblog.
-     */
-    @Override
-    public String getWeblogRsdURL(Weblog weblog, boolean absolute) {
-        
-        if(weblog == null) {
-            return null;
-        }
-        
-        return getWeblogURL(weblog, null, absolute)+"rsd";
-    }
-    
-    
-    /**
      * Get url to JSON tags service url, optionally for a given weblog.
      */
     @Override

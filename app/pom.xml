@@ -34,7 +34,6 @@ limitations under the License.
 
     <properties>
         <jstl-api.version>3.0.2</jstl-api.version>
-        <angular.version>1.7.8</angular.version>
         <asm.version>9.9.1</asm.version>
         <bouncycastle.version>1.83</bouncycastle.version>
         <commons-validator.version>1.10.1</commons-validator.version>

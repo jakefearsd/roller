@@ -396,12 +396,6 @@ class URLModelTest {
                 "A leading slash is stripped so the path is not doubled.");
     }
 
-    @Test
-    void rsdUrlHangsOffTheWeblogRoot() {
-        assertEquals(ABSOLUTE_SITE + "/testblog/rsd", model.getRsd(),
-                "Blog editors discover the posting API through this URL.");
-    }
-
     // -------------------------------------------------------------- searching
 
     @Test

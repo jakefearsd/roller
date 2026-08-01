@@ -41,7 +41,6 @@ import org.apache.roller.weblogger.ui.rendering.servlets.MediaResourceServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.PageServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.PreviewResourceServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.PreviewServlet;
-import org.apache.roller.weblogger.ui.rendering.servlets.RSDServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.ResourceServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.SearchServlet;
 import org.junit.jupiter.api.Test;
@@ -111,8 +110,6 @@ class ServletRegistrationConfigTest {
                 "/roller-ui/rendering/search/*", 5);
         assertServlet(config.commentServletRegistration(), CommentServlet.class,
                 "/roller-ui/rendering/comment/*", 7);
-        assertServlet(config.rsdServletRegistration(), RSDServlet.class,
-                "/roller-ui/rendering/rsd/*", 7);
         assertServlet(config.commentAuthenticatorServletRegistration(), CommentAuthenticatorServlet.class,
                 "/CommentAuthenticatorServlet", 7);
         assertServlet(config.previewServletRegistration(), PreviewServlet.class,

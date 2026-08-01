@@ -213,8 +213,7 @@ Here’s the point-by-point breakdown.
 and the name of the page template that is currently being displayed.
 . *Auto-discovery links*
 The __#showAutodiscoveryLinks() __macro adds
-the HTML _<link>_ elements required for RSS and Atom feed auto-discovery
-as well as RSD for weblog clients.
+the HTML _<link>_ elements required for RSS and Atom feed auto-discovery.
 . *Include CSS styles* Here we use the include the theme’s *_css*
 template directly in the page, right inside a pair of _<style>_ tags.
 . *Display a page title* Here we use the weblog’s name again in an
@@ -806,10 +805,6 @@ Every possible type of Roller URL is supported:
 |$url.logout
 |String
 |URL of logout page.
-
-|$url.rsd
-|String
-|URL of Really Simple Discovery (RSD) service.
 
 |$url.page(String pageLink)
 |String
@@ -1811,7 +1806,7 @@ Arguments:
 
 Synopsis:
 
-Show the RSS, Atom and RSD auto-discovery links suitable for use within
+Show the RSS and Atom auto-discovery links suitable for use within
 an HTML <head> element.
 
 Generated HTML and CSS classes used

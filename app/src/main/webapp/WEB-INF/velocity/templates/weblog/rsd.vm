@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rsd version="1.0">
-  <service>
-    <engineName>Roller Weblogger</engineName>
-    <engineLink>http://roller.apache.org/</engineLink>
-    <homePageLink>${absBaseURL}/${website.handle}</homePageLink>
-    <apis/>
-  </service>
-</rsd>

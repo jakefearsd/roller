@@ -40,7 +40,6 @@ import org.apache.roller.weblogger.ui.rendering.servlets.MediaResourceServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.PageServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.PreviewResourceServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.PreviewServlet;
-import org.apache.roller.weblogger.ui.rendering.servlets.RSDServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.ResourceServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.SearchServlet;
 import org.springframework.beans.factory.ObjectProvider;
@@ -123,14 +122,6 @@ public class ServletRegistrationConfig {
     public ServletRegistrationBean<CommentServlet> commentServletRegistration() {
         ServletRegistrationBean<CommentServlet> registration =
                 new ServletRegistrationBean<>(new CommentServlet(), "/roller-ui/rendering/comment/*");
-        registration.setLoadOnStartup(7);
-        return registration;
-    }
-
-    @Bean
-    public ServletRegistrationBean<RSDServlet> rsdServletRegistration() {
-        ServletRegistrationBean<RSDServlet> registration =
-                new ServletRegistrationBean<>(new RSDServlet(), "/roller-ui/rendering/rsd/*");
         registration.setLoadOnStartup(7);
         return registration;
     }

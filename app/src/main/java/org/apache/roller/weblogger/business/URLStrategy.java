@@ -215,12 +215,6 @@ public interface URLStrategy {
     
     
     /**
-     * Get url to rsd file on a given weblog.
-     */
-    String getWeblogRsdURL(Weblog weblog, boolean absolute);
-    
-    
-    /**
      * Get url to JSON tags service url, optionally for a given weblog.
      */
     String getWeblogTagsJsonURL(Weblog weblog, boolean absolute, int pageNum);
