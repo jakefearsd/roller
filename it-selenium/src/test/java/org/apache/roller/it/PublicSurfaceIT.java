@@ -1,0 +1,71 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.it;
+
+import org.apache.roller.it.support.RollerIT;
+import org.junit.jupiter.api.Test;
+
+import static com.codeborne.selenide.Condition.text;
+import static com.codeborne.selenide.Selenide.$;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * The anonymous reader's view: weblog front page, permalink, search and feeds,
+ * with no login. BrowserHealthExtension (via RollerIT) fails these tests if the
+ * public theme's CSS/JS sub-resources 404 or the console shows errors — the
+ * exact class of breakage that motivated Stage 0.
+ *
+ * <p>Markers are content-specific per the Routes discipline: the seeded entry's
+ * title/body can only appear if the Velocity pipeline actually rendered.
+ */
+class PublicSurfaceIT extends RollerIT {
+
+    @Test
+    void frontPageShowsSeededEntry() {
+        openPath("/" + WEBLOG_HANDLE + "/");
+        $("h1.weblogName").shouldHave(text("IT Weblog"));
+        $("body").shouldHave(text("IT Seeded Entry"));
+    }
+
+    @Test
+    void permalinkShowsEntryBody() {
+        openPath("/" + WEBLOG_HANDLE + "/entry/it-seeded-entry");
+        $("body").shouldHave(text("IT Seeded Entry"));
+        $("body").shouldHave(text("Seeded entry body for public rendering checks."));
+    }
+
+    @Test
+    void searchPageRendersAnonymously() {
+        openPath("/" + WEBLOG_HANDLE + "/search?q=zzznope");
+        $("h1.weblogName").shouldHave(text("IT Weblog"));
+    }
+
+    @Test
+    void rssFeedServesTheSeededEntry() {
+        String body = getAnonymously(baseUrl() + "/" + WEBLOG_HANDLE + "/feed/entries/rss");
+        assertTrue(body.contains("<rss"), "must serve an RSS document:\n" + body);
+        assertTrue(body.contains("IT Seeded Entry"), "seeded entry must be in the feed");
+    }
+
+    @Test
+    void atomFeedServesTheSeededEntry() {
+        String body = getAnonymously(baseUrl() + "/" + WEBLOG_HANDLE + "/feed/entries/atom");
+        assertTrue(body.contains("<feed"), "must serve an Atom document:\n" + body);
+        assertTrue(body.contains("IT Seeded Entry"), "seeded entry must be in the feed");
+    }
+}

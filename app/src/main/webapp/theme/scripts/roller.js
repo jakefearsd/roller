@@ -212,25 +212,32 @@ function validateEmail(email) {
     var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(email);
 }
-$(document).ready(function () {
-    jQuery("form.validate-form").validate();
-    // Added method to check valid email address and add a custom error message
-    jQuery.validator.addMethod(
-        "regex",
-        function(value, element, regexp)  {
-            if (regexp && regexp.constructor != RegExp) {
-                regexp = new RegExp(regexp);
-            } else if (regexp.global) {
-                regexp.lastIndex = 0;
+// This file is also loaded on public weblog pages (see the comment form macro
+// in weblog.vm) purely for the cookie/validateComments helpers above, and those
+// pages never load jQuery or jquery-validate. Guard the jQuery-validate wiring
+// below -- which only targets the admin "validate-form"/"validate-email"
+// classes (see CreateWeblog.jsp) -- so it does not throw on pages without jQuery.
+if (typeof jQuery !== "undefined") {
+    $(document).ready(function () {
+        jQuery("form.validate-form").validate();
+        // Added method to check valid email address and add a custom error message
+        jQuery.validator.addMethod(
+            "regex",
+            function(value, element, regexp)  {
+                if (regexp && regexp.constructor != RegExp) {
+                    regexp = new RegExp(regexp);
+                } else if (regexp.global) {
+                    regexp.lastIndex = 0;
+                }
+                return this.optional(element) || regexp.test(value);
             }
-            return this.optional(element) || regexp.test(value);
-        }
-    );
-    // Applied email rules to field with class name validate-email
-    jQuery( ".validate-email" ).rules( "add", {
-        minlength: 3,
-        maxlength: 255,
-        email: true,
-        regex: /^\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b$/i
+        );
+        // Applied email rules to field with class name validate-email
+        jQuery( ".validate-email" ).rules( "add", {
+            minlength: 3,
+            maxlength: 255,
+            email: true,
+            regex: /^\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b$/i
+        });
     });
-});
+}

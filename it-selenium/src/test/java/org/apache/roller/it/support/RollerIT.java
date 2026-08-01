@@ -23,6 +23,12 @@ import com.codeborne.selenide.Selenide;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+
 import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Selenide.$;
@@ -147,5 +153,22 @@ public abstract class RollerIT {
         $(LOGOUT_LINK).should(exist);
 
         BrowserHealth.current().settle();
+    }
+
+    /** GET with no cookies, i.e. exactly what an anonymous reader sends. */
+    protected static String getAnonymously(String url) {
+        try {
+            HttpClient http = HttpClient.newHttpClient();
+            HttpResponse<String> response = http.send(
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .timeout(Duration.ofSeconds(20))
+                            .GET()
+                            .build(),
+                    HttpResponse.BodyHandlers.ofString());
+            return response.body();
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not GET " + url + " anonymously", e);
+        }
     }
 }

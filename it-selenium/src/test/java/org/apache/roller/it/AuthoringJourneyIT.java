@@ -211,22 +211,6 @@ class AuthoringJourneyIT extends RollerIT {
                         + "Fetched " + permalink + " and got:\n" + truncate(page));
     }
 
-    /** GET with no cookies, i.e. exactly what an anonymous reader sends. */
-    private String getAnonymously(String url) {
-        try {
-            HttpResponse<String> response = http.send(
-                    HttpRequest.newBuilder()
-                            .uri(URI.create(url))
-                            .timeout(Duration.ofSeconds(20))
-                            .GET()
-                            .build(),
-                    HttpResponse.BodyHandlers.ofString());
-            return response.body();
-        } catch (Exception e) {
-            throw new IllegalStateException("Could not GET " + url + " anonymously", e);
-        }
-    }
-
     /** Posts the delete form the way the entry list's modal does. */
     private void deleteEntry(String entryId) {
         openPath("/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE);

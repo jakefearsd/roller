@@ -83,3 +83,18 @@ VALUES ('it-cat-0000-0000-0000-000000000001',
         'General', 'Integration test category',
         'it-weblog-0000-0000-0000-00000000001', 0)
 ON CONFLICT (id) DO NOTHING;
+
+-- A published entry so anonymous-surface tests have real content to render.
+INSERT INTO weblogentry (id, anchor, creator, title, text, pubtime, updatetime,
+                         websiteid, categoryid, publishentry, link, plugins,
+                         allowcomments, commentdays, righttoleft, pinnedtomain,
+                         locale, status, summary, content_type, content_src,
+                         search_description)
+VALUES ('it-entry-0000-0000-0000-000000000001', 'it-seeded-entry', 'it_admin',
+        'IT Seeded Entry', '<p>Seeded entry body for public rendering checks.</p>',
+        now() - interval '1 hour', now() - interval '1 hour',
+        'it-weblog-0000-0000-0000-00000000001',
+        'it-cat-0000-0000-0000-000000000001',
+        true, NULL, NULL, true, 7, false, false,
+        'en_US', 'PUBLISHED', NULL, NULL, NULL, NULL)
+ON CONFLICT (id) DO NOTHING;
