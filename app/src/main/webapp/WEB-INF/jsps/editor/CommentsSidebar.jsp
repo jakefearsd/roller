@@ -41,7 +41,7 @@
     <%-- ========================================================= --%>
     <%-- filter by search string --%>
 
-    <div class="form-group">
+    <div class="mb-3">
         <label for="bean_searchString"><spring:message code="commentManagement.searchString"/></label>
         <input type="text" name="bean.searchString" id="bean_searchString"
                value="${fn:escapeXml(bean.searchString)}" size="15" class="form-control"/>
@@ -56,7 +56,7 @@
         });
     </script>
 
-    <div class="form-group">
+    <div class="mb-3">
         <label for="bean_startDateString">
             <spring:message code="commentManagement.startDate"/>
         </label>
@@ -64,8 +64,8 @@
             <input type="text" name="bean.startDateString" id="bean_startDateString"
                    value="${fn:escapeXml(bean.startDateString)}" readonly="readonly"
                    class="date-picker form-control"/>
-            <label for="bean_startDateString" class="input-group-addon btn">
-                <span class="glyphicon glyphicon-calendar"></span>
+            <label for="bean_startDateString" class="input-group-text">
+                <span class="bi bi-calendar"></span>
             </label>
         </div>
     </div>
@@ -76,7 +76,7 @@
         });
     </script>
 
-    <div class="form-group">
+    <div class="mb-3">
         <label for="bean_endDateString">
             <spring:message code="commentManagement.endDate"/>
         </label>
@@ -84,8 +84,8 @@
             <input type="text" name="bean.endDateString" id="bean_endDateString"
                    value="${fn:escapeXml(bean.endDateString)}" readonly="readonly"
                    class="date-picker form-control"/>
-            <label for="bean_endDateString" class="input-group-addon btn">
-                <span class="glyphicon glyphicon-calendar"></span>
+            <label for="bean_endDateString" class="input-group-text">
+                <span class="bi bi-calendar"></span>
             </label>
         </div>
     </div>
@@ -95,12 +95,12 @@
     <%-- ========================================================= --%>
     <%-- filter by status --%>
 
-    <div class="form-group">
+    <div class="mb-3">
         <label><spring:message code="commentManagement.pendingStatus"/></label>
         <c:forEach var="opt" items="${commentStatusOptions}">
-            <div class="radio">
-                <label>
-                    <input type="radio" name="bean.approvedString" value="${fn:escapeXml(opt.key)}"
+            <div class="form-check">
+                <label class="form-check-label">
+                    <input type="radio" class="form-check-input" name="bean.approvedString" value="${fn:escapeXml(opt.key)}"
                         <c:if test="${bean.approvedString == opt.key}">checked="checked"</c:if>
                     /> ${fn:escapeXml(opt.value)}
                 </label>
@@ -112,6 +112,6 @@
     <%-- filter button --%>
 
     <spring:message code="commentManagement.query" var="queryLabel"/>
-    <input type="submit" class="btn btn-default" value="${queryLabel}"/>
+    <input type="submit" class="btn btn-secondary" value="${queryLabel}"/>
 
 </form>

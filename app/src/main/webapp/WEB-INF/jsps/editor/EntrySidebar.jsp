@@ -53,7 +53,7 @@
                             <c:param name="weblog" value="${actionWeblog.handle}"/>
                             <c:param name="bean.id" value="${post.id}"/>
                         </c:url>
-                        <span class="glyphicon glyphicon-lock" aria-hidden="true"> </span> 
+                        <span class="bi bi-lock" aria-hidden="true"> </span>
                         <a href="${editUrl}"><str:truncateNicely lower="40">
                              ${post.title}</str:truncateNicely></a>
                     </span><br />
@@ -74,7 +74,7 @@
                             <c:param name="weblog" value="${actionWeblog.handle}"/>
                             <c:param name="bean.id" value="${post.id}"/>
                         </c:url>
-                        <span class="glyphicon glyphicon-edit" aria-hidden="true"> </span> 
+                        <span class="bi bi-pencil-square" aria-hidden="true"> </span>
                         <a href="${editUrl}"><str:truncateNicely lower="40">
                              ${post.title}</str:truncateNicely></a>
                     </span><br />
@@ -98,7 +98,7 @@
                                 <c:param name="weblog" value="${actionWeblog.handle}"/>
                                 <c:param name="bean.id" value="${post.id}"/>
                             </c:url>
-                            <span class="glyphicon glyphicon-book" aria-hidden="true"> </span> 
+                            <span class="bi bi-book" aria-hidden="true"> </span>
                             <a href="${editUrl}"><str:truncateNicely lower="40">
                                 ${post.title}</str:truncateNicely></a>
                         </span><br />
@@ -120,7 +120,7 @@
                                 <c:param name="weblog" value="${actionWeblog.handle}"/>
                                 <c:param name="bean.id" value="${post.id}"/>
                             </c:url>
-                            <span class="glyphicon glyphicon-time" aria-hidden="true"> </span>
+                            <span class="bi bi-clock" aria-hidden="true"> </span>
                             <a href="${editUrl}"><str:truncateNicely lower="40">
                                 ${post.title}</str:truncateNicely></a>
                         </span><br />

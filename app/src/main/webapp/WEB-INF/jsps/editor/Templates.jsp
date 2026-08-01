@@ -28,7 +28,7 @@
     <p><spring:message code="pagesForm.themesReminder" arguments="${actionWeblog.editorTheme}"/></p>
 </c:if>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/templates!remove.rol" method="post" class="form-horizontal">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/templates!remove.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
@@ -75,12 +75,12 @@
                             </c:url>
                             <a href="#" onclick=
                                     "confirmTemplateDelete('${p.id}', '${p.name}' )">
-                                <span class="glyphicon glyphicon-trash"></span>
+                                <span class="bi bi-trash"></span>
                             </a>
 
                         </c:when>
 <c:otherwise>
-                            <span class="glyphicon glyphicon-lock"></span>
+                            <span class="bi bi-lock"></span>
                         </c:otherwise>
 </c:choose></td>
 

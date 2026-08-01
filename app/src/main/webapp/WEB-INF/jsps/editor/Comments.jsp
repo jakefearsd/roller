@@ -116,20 +116,16 @@
                 <%-- Next / previous links --%>
 
             <nav>
-                <ul class="pager">
+                <div class="d-flex justify-content-between">
                     <c:if test="${pager.prevLink != null}">
-                        <li class="previous">
-                            <a href='${pager.prevLink}'>
-                                <span aria-hidden="true">&larr;</span>Newer</a>
-                        </li>
+                        <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
+                            <span aria-hidden="true">&larr;</span>Newer</a>
                     </c:if>
                     <c:if test="${pager.nextLink != null}">
-                        <li class="next">
-                            <a href='${pager.nextLink}'>Older
-                                <span aria-hidden="true">&rarr;</span></a>
-                        </li>
+                        <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto">Older
+                            <span aria-hidden="true">&rarr;</span></a>
                     </c:if>
-                </ul>
+                </div>
             </nav>
 
         </div> <%-- class="tablenav" --%>
@@ -362,20 +358,16 @@
         <%-- Next / previous links --%>
 
         <nav>
-            <ul class="pager">
+            <div class="d-flex justify-content-between">
                 <c:if test="${pager.prevLink != null}">
-                    <li class="previous">
-                        <a href='${pager.prevLink}'>
-                            <span aria-hidden="true">&larr;</span>Newer</a>
-                    </li>
+                    <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
+                        <span aria-hidden="true">&larr;</span>Newer</a>
                 </c:if>
                 <c:if test="${pager.nextLink != null}">
-                    <li class="next">
-                        <a href='${pager.nextLink}'>Older
-                            <span aria-hidden="true">&rarr;</span></a>
-                    </li>
+                    <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto">Older
+                        <span aria-hidden="true">&rarr;</span></a>
                 </c:if>
-            </ul>
+            </div>
         </nav>
 
         <%-- ========================================================= --%>

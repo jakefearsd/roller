@@ -28,7 +28,7 @@
 <c:otherwise>
     <p class="pagetip"><spring:message code="pageForm.tip"/></p>
 </c:otherwise>
-</c:choose><form id="template" action="${pageContext.request.contextPath}/roller-ui/authoring/templateEdit!save.rol" method="post" class="form-horizontal">
+</c:choose><form id="template" action="${pageContext.request.contextPath}/roller-ui/authoring/templateEdit!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.id" value="${bean.id}"/>
     <input type="hidden" name="bean.type" value="${bean.type}"/>
@@ -36,8 +36,8 @@
     <%-- ================================================================== --%>
     <%-- Name, link and description: disabled when page is a required page --%>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="generic.name"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
         <div class="col-sm-9">
             <c:choose>
                 <c:when test="${template.required}">
@@ -51,8 +51,8 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="pageForm.action"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="pageForm.action"/></label>
         <div class="col-sm-9">
             <input type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
         </div>
@@ -61,8 +61,8 @@
     <c:choose>
         <c:when test="${!template.required && template.custom}">
 
-            <div class="form-group">
-                <label class="col-sm-3 control-label"><spring:message code="pageForm.link"/></label>
+            <div class="row mb-3">
+                <label class="col-sm-3 col-form-label"><spring:message code="pageForm.link"/></label>
                 <div class="col-sm-9">
                     <%-- allow setting the path for a custom template --%>
                     <input type="text" name="bean.link" value="${bean.link}" size="50" class="form-control" onkeyup="updatePageURLDisplay()"/>
@@ -71,11 +71,11 @@
 
             <%-- show preview of the full URL that will result from that path --%>
 
-            <div id="no_link" class="alert-danger" style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
+            <div id="no_link" class="alert alert-danger" style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
                 <spring:message code="pageForm.noUrl"/>
             </div>
 
-            <div id="good_link" class="alert-success"
+            <div id="good_link" class="alert alert-success"
                  style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
                 <spring:message code="pageForm.resultingUrlWillBe"/>
                 ${actionWeblog.absoluteURL}page/
@@ -88,8 +88,8 @@
         </c:when>
     </c:choose>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="generic.description"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
             <c:choose>
                 <c:when test="${template.required}">
@@ -113,7 +113,7 @@
     <%-- ================================================================== --%>
     <%-- Save, Close and Resize text area buttons--%>
 
-    <button type="submit" class="btn btn-default"><spring:message code="generic.save"/></button>
+    <button type="submit" class="btn btn-secondary"><spring:message code="generic.save"/></button>
     <input type="button" value='<spring:message code="generic.done"/>' class="button btn"
            onclick="window.location='<c:url value="/roller-ui/authoring/templates.rol"><c:param name="weblog" value="${actionWeblog.handle}"/></c:url>'"/>
 
@@ -122,27 +122,27 @@
 
     <c:if test="${template.custom}">
 
-        <div class="panel-group" id="accordion" style="margin-top:2em">
+        <div id="accordion" style="margin-top:2em">
 
-        <div class="panel panel-default" id="panel-plugins">
+        <div class="card" id="panel-plugins">
 
-            <div class="panel-heading">
+            <div class="card-header">
 
-                <h4 class="panel-title">
-                    <a class="collapsed" data-toggle="collapse" data-target="#collapseAdvanced" href="#">
+                <h4 class="card-title">
+                    <a class="collapsed" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced" href="#">
                         <spring:message code="pageForm.advancedSettings"/>
                     </a>
                 </h4>
 
             </div>
 
-            <div id="collapseAdvanced" class="panel-collapse collapse">
-                <div class="panel-body">
+            <div id="collapseAdvanced" class="collapse">
+                <div class="card-body">
 
-                    <div class="form-group">
-                        <label class="col-sm-3 control-label"><spring:message code="pageForm.templateLanguage"/></label>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label"><spring:message code="pageForm.templateLanguage"/></label>
                         <div class="col-sm-9">
-                            <select name="bean.templateLanguage" class="form-control" size="1">
+                            <select name="bean.templateLanguage" class="form-select" size="1">
                                 <c:forEach items="${templateLanguages}" var="opt">
                                     <option value="${opt.key}" ${opt.key == bean.templateLanguage ? 'selected' : ''}>${opt.value}</option>
                                 </c:forEach>
@@ -150,26 +150,32 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <div class="col-sm-offset-3 col-sm-9">
-                            <label><input type="checkbox" name="bean.hidden" value="true" ${bean.hidden ? 'checked' : ''}/> <spring:message code="pageForm.hidden"/></label>
+                    <div class="row mb-3">
+                        <div class="offset-sm-3 col-sm-9">
+                            <div class="form-check">
+                                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.hidden" value="true" ${bean.hidden ? 'checked' : ''}/> <spring:message code="pageForm.hidden"/></label>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <div class="col-sm-offset-3 col-sm-9">
-                            <label><input type="checkbox" name="bean.navbar" value="true" ${bean.navbar ? 'checked' : ''}/> <spring:message code="pageForm.navbar"/></label>
+                    <div class="row mb-3">
+                        <div class="offset-sm-3 col-sm-9">
+                            <div class="form-check">
+                                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.navbar" value="true" ${bean.navbar ? 'checked' : ''}/> <spring:message code="pageForm.navbar"/></label>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <div class="col-sm-offset-3 col-sm-9">
-                            <label><input type="checkbox" name="bean.autoContentType" value="true" ${bean.autoContentType ? 'checked' : ''}/> <spring:message code="pageForm.useAutoContentType"/></label>
+                    <div class="row mb-3">
+                        <div class="offset-sm-3 col-sm-9">
+                            <div class="form-check">
+                                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.autoContentType" value="true" ${bean.autoContentType ? 'checked' : ''}/> <spring:message code="pageForm.useAutoContentType"/></label>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group" id="manual-content-type-control-group" style="display:none">
-                        <label class="col-sm-3 control-label"><spring:message code="pageForm.useManualContentType"/></label>
+                    <div class="row mb-3" id="manual-content-type-control-group" style="display:none">
+                        <label class="col-sm-3 col-form-label"><spring:message code="pageForm.useManualContentType"/></label>
                         <div class="col-sm-9">
                             <input type="text" name="bean.manualContentType" value="${bean.manualContentType}" class="form-control"/>
                         </div>

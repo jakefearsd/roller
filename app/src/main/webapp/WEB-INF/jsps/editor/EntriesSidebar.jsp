@@ -29,7 +29,7 @@
     <%-- filter by category --%>
 
     <label><spring:message code="weblogEntryQuery.label.category"/></label>
-    <select name="bean.categoryName" class="form-control" size="1">
+    <select name="bean.categoryName" class="form-select" size="1">
 <c:forEach items="${categories}" var="opt">
 <option value="${opt.name}" ${opt.name == bean.categoryName ? 'selected' : ''}>${opt.name}</option>
 </c:forEach>
@@ -50,35 +50,31 @@
     <%-- ========================================================= --%>
     <%-- filter by date --%>
 
-    <div class="control-group">
-        <label for="bean.startDateString" class="control-label">
+    <div class="mb-3">
+        <label for="bean.startDateString" class="form-label">
             <spring:message code="weblogEntryQuery.label.startDate"/>
         </label>
-        <div class="controls">
-            <div class="input-group">
+        <div class="input-group">
 
-                <input type="text" name="bean.startDateString" value="${bean.startDateString}" readonly class="date-picker form-control"/>
-                <label for="bean.startDateString" class="input-group-addon btn">
-                    <span class="glyphicon glyphicon-calendar"></span>
-                </label>
+            <input type="text" name="bean.startDateString" value="${bean.startDateString}" readonly class="date-picker form-control"/>
+            <label for="bean.startDateString" class="input-group-text">
+                <span class="bi bi-calendar"></span>
+            </label>
 
-            </div>
         </div>
     </div>
 
-    <div class="control-group">
-        <label for="bean.endDateString" class="control-label">
+    <div class="mb-3">
+        <label for="bean.endDateString" class="form-label">
             <spring:message code="weblogEntryQuery.label.endDate"/>
         </label>
-        <div class="controls">
-            <div class="input-group">
+        <div class="input-group">
 
-                <input type="text" name="bean.endDateString" value="${bean.endDateString}" readonly class="date-picker form-control"/>
-                <label for="bean.endDateString" class="input-group-addon btn">
-                    <span class="glyphicon glyphicon-calendar"></span>
-                </label>
+            <input type="text" name="bean.endDateString" value="${bean.endDateString}" readonly class="date-picker form-control"/>
+            <label for="bean.endDateString" class="input-group-text">
+                <span class="bi bi-calendar"></span>
+            </label>
 
-            </div>
         </div>
     </div>
 
@@ -88,14 +84,14 @@
     <%-- filter by status --%>
 
     <c:forEach items="${statusOptions}" var="opt">
-<label><input type="radio" name="bean.status" value="${opt.key}" ${opt.key == bean.status ? 'checked' : ''}/> ${opt.value}</label>
+<div class="form-check"><label class="form-check-label"><input type="radio" class="form-check-input" name="bean.status" value="${opt.key}" ${opt.key == bean.status ? 'checked' : ''}/> ${opt.value}</label></div>
 </c:forEach>
 
     <%-- ========================================================= --%>
     <%-- sort by --%>
 
     <c:forEach items="${sortByOptions}" var="opt">
-<label><input type="radio" name="bean.sortBy" value="${opt.key}" ${opt.key == bean.sortBy ? 'checked' : ''}/> ${opt.value}</label>
+<div class="form-check"><label class="form-check-label"><input type="radio" class="form-check-input" name="bean.sortBy" value="${opt.key}" ${opt.key == bean.sortBy ? 'checked' : ''}/> ${opt.value}</label></div>
 </c:forEach>
 
     

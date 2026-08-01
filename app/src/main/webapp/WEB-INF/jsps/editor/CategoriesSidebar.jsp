@@ -27,7 +27,7 @@
     <c:set var="categoryImage" value="${post.image}"/>
 
     <a href="#" onclick="showCategoryAddModal()">
-        <span class="glyphicon glyphicon-plus"></span>
+        <span class="bi bi-plus-lg"></span>
         <spring:message code="categoriesForm.addCategory"/>
     </a>
 </p>
@@ -48,7 +48,7 @@
 
         validateCategory();
 
-        $('#category-edit-modal').modal({show: true});
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).show();
     }
 
 </script>

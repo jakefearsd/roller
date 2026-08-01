@@ -29,20 +29,16 @@
 <%-- Next / previous links --%>
 
 <nav>
-    <ul class="pager">
+    <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
-            <li class="previous">
-                <a href='${pager.prevLink}'>
-                    <span aria-hidden="true">&larr;</span>Newer</a>
-            </li>
+            <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
+                <span aria-hidden="true">&larr;</span>Newer</a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <li class="next">
-                <a href='${pager.nextLink}'>Older
-                    <span aria-hidden="true">&rarr;</span></a>
-            </li>
+            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto">Older
+                <span aria-hidden="true">&rarr;</span></a>
         </c:if>
-    </ul>
+    </div>
 </nav>
 
 
@@ -99,7 +95,7 @@
             <c:param name="bean.id" value="${post.id}"/>
         </c:url>
         <a href="${editUrl}">
-            <span class="glyphicon glyphicon-edit" data-toggle="tooltip" data-placement="top"
+            <span class="bi bi-pencil-square" data-bs-toggle="tooltip" data-placement="top"
                   title="<spring:message code="generic.edit"/>">
             </span>
         </a>
@@ -139,8 +135,8 @@
         <c:set var="postTitle" value="${post.title}"/>
         <a href="#"
             onclick="showDeleteModal('${postId}', '${postTitle}' )">
-            <span class="glyphicon glyphicon-trash"
-                  data-toggle="tooltip" data-placement="top" title="<spring:message code="generic.delete"/>">
+            <span class="bi bi-trash"
+                  data-bs-toggle="tooltip" data-placement="top" title="<spring:message code="generic.delete"/>">
             </span>
         </a>
     </td>
@@ -155,20 +151,16 @@
 <%-- Next / previous links --%>
 
 <nav>
-    <ul class="pager">
+    <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
-            <li class="previous">
-                <a href='${pager.prevLink}'>
-                    <span aria-hidden="true">&larr;</span> Older</a>
-            </li>
+            <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
+                <span aria-hidden="true">&larr;</span> Older</a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <li class="next">
-                <a href='${pager.nextLink}'>Newer
-                    <span aria-hidden="true">&rarr;</span></a>
-            </li>
+            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto">Newer
+                <span aria-hidden="true">&rarr;</span></a>
         </c:if>
-    </ul>
+    </div>
 </nav>
 
 <c:if test="${empty pager.items}">
@@ -184,42 +176,42 @@
 
             <c:set var="deleteAction">entryRemoveViaList!remove</c:set>
             
-            <form action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post" class="form-horizontal">
+            <form action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
-            
+
                 <div class="modal-header">
                     <div class="modal-title">
                         <h3><spring:message code="weblogEntryRemove.removeWeblogEntry"/></h3>
                         <p><spring:message code="weblogEntryRemove.areYouSure"/></p>
                     </div>
                 </div>
-                
+
                 <div class="modal-body">
 
-                    <div class="form-group">
-                        <label class="col-sm-3 control-label">
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryTitle"/>
                         </label>
-                        <div class="col-sm-9 controls">
-                            <p class="form-control-static" style="padding-top:0px" id="postTitleLabel"></p>
+                        <div class="col-sm-9">
+                            <p class="form-control-plaintext" style="padding-top:0px" id="postTitleLabel"></p>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="col-sm-3 control-label">
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryId"/>
                         </label>
-                        <div class="col-sm-9 controls">
-                            <p class="form-control-static" style="padding-top:0px" id="postIdLabel"></p>
+                        <div class="col-sm-9">
+                            <p class="form-control-plaintext" style="padding-top:0px" id="postIdLabel"></p>
                         </div>
                     </div>
 
                 </div>
-                
+
                 <div class="modal-footer">
                     <button type="submit" class="btn"><spring:message code="generic.yes"/></button>
-                    <button type="button" class="btn btn-default btn-primary" data-dismiss="modal">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <spring:message code="generic.no"/>
                     </button>
                 </div>
@@ -238,6 +230,6 @@
         $('#postIdLabel').html(postId);
         $('#postTitleLabel').html(postTitle);
         $('#removeId').val(postId);
-        $('#delete-entry-modal').modal({show: true});
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-entry-modal')).show();
     }
 </script>

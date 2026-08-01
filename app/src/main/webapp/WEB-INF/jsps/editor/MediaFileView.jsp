@@ -106,7 +106,7 @@
             <c:if test="${not empty allDirectories}">
                 <%-- Folder to View combo-box --%>
                 <span><spring:message code="mediaFileView.viewFolder"/>:</span>
-                <select name="viewDirectoryId" id="viewDirectoryMenu" class="form-control" onchange="onView()">
+                <select name="viewDirectoryId" id="viewDirectoryMenu" class="form-select" onchange="onView()">
 <c:forEach items="${allDirectories}" var="opt">
 <option value="${opt.id}" ${opt.id == viewDirectoryId ? 'selected' : ''}>${opt.name}</option>
 </c:forEach>
@@ -114,7 +114,7 @@
             </c:if>
 
             <span><spring:message code="mediaFileView.sortBy"/>:</span>
-            <select name="sortBy" id="sortByMenu" class="form-control" onchange="document.mediaFileViewForm.submit();">
+            <select name="sortBy" id="sortByMenu" class="form-select" onchange="document.mediaFileViewForm.submit();">
 <c:forEach items="${sortOptions}" var="opt">
 <option value="${opt.key}" ${opt.key == sortBy ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
@@ -137,8 +137,8 @@
             }
         </script>
 
-        <div id="imageGrid" class="panel panel-default">
-            <div class="panel-body">
+        <div id="imageGrid" class="card">
+            <div class="card-body">
 
                 <ul>
 
@@ -278,7 +278,7 @@
                            value='<spring:message code="mediaFileView.moveSelected"/>' onclick="onMoveSelected()"/>
                 </c:if>
 
-                <select name="selectedDirectory" id="moveTargetMenu" class="form-control" style="display: inline; width: 15em">
+                <select name="selectedDirectory" id="moveTargetMenu" class="form-select" style="display: inline; width: 15em">
 <c:forEach items="${allDirectories}" var="opt">
 <option value="${opt.id}" ${opt.id == selectedDirectory ? 'selected' : ''}>${opt.name}</option>
 </c:forEach>
@@ -342,7 +342,7 @@
         </c:url>
         $('#edit-subtitle').html(mediaFileName);
         $('#mediaFileEditor').attr('src', '${mediaFileEditURL}' + '&mediaFileId=' + mediaFileId);
-        $('#mediafile_edit_lightbox').modal({show: true});
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).show();
     }
 
     function onEditSuccess() {
@@ -351,7 +351,7 @@
     }
 
     function onEditCancelled() {
-        $('#mediafile_edit_lightbox').modal('hide');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).hide();
         $("#mediaFileEditor").attr('src', 'about:blank');
     }
 

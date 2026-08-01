@@ -29,19 +29,19 @@
 
 <%-- summary --%>
 
-<div class="panel panel-default" id="panel-summary">
-    <div class="panel-heading">
+<div class="card" id="panel-summary">
+    <div class="card-header">
 
-        <h4 class="panel-title">
+        <h4 class="card-title">
             <a href="#" class="collapsed"
-               data-toggle="collapse" data-target="#collapseSummaryEditor">
+               data-bs-toggle="collapse" data-bs-target="#collapseSummaryEditor">
                 <spring:message code="weblogEdit.summary"/>
             </a>
         </h4>
 
     </div>
-    <div id="collapseSummaryEditor" class="panel-collapse collapse">
-        <div class="panel-body">
+    <div id="collapseSummaryEditor" class="collapse">
+        <div class="card-body">
 
             <textarea name="bean.summary" id="edit_summary" rows="10" tabindex="6" class="col-sm-12">${bean.summary}</textarea>
 
@@ -62,9 +62,7 @@
 
             <div class="modal-header">
                 <h4 class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
             <div class="modal-body">
@@ -78,7 +76,7 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
 
         </div>
@@ -133,7 +131,7 @@
         <c:param name="weblog" value="${actionWeblog.handle}"/>
         </c:url>
         $("#mediaFileEditor").attr('src', '${mediaFileImageChooser}');
-        $('#mediafile_edit_lightbox').modal({show: true});
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).show();
     }
 
     function onClose() {
@@ -141,7 +139,7 @@
     }
 
     function onSelectMediaFile(name, url, isImage) {
-        $("#mediafile_edit_lightbox").modal("hide");
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).hide();
         $("#mediaFileEditor").attr('src', 'about:blank');
         if (isImage === "true") {
             insertMediaFile('<a href="' + url + '"><img src="' + url + '?t=true" alt="' + name + '" /></a>');

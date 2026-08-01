@@ -21,58 +21,60 @@
     <spring:message code="websiteSettings.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig!save.rol" method="post" class="form-horizontal">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- ***** General settings ***** --%>
 
     <h3><spring:message code="websiteSettings.generalSettings"/></h3>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="websiteSettings.websiteTitle"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.websiteTitle"/></label>
         <div class="col-sm-9">
             <input type="text" name="bean.name" value="${bean.name}" size="30" maxlength="40" class="form-control"/>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="generic.tagline"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="generic.tagline"/></label>
         <div class="col-sm-9">
             <input type="text" name="bean.tagline" value="${bean.tagline}" size="30" maxlength="255" class="form-control"/>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="websiteSettings.icon"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.icon"/></label>
         <div class="col-sm-9">
             <input type="text" name="bean.icon" value="${bean.icon}" size="30" maxlength="40" class="form-control"/>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="websiteSettings.about"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.about"/></label>
         <div class="col-sm-9">
             <textarea name="bean.about" rows="3" cols="40" class="form-control">${bean.about}</textarea>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="websiteSettings.emailAddress"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.emailAddress"/></label>
         <div class="col-sm-9">
             <input type="text" name="bean.emailAddress" value="${bean.emailAddress}" size="30" maxlength="40" class="form-control"/>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="websiteSettings.entryDisplayCount"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.entryDisplayCount"/></label>
         <div class="col-sm-9">
             <input type="number" name="bean.entryDisplayCount" value="${bean.entryDisplayCount}" size="4" class="form-control"/>
         </div>
     </div>
 
-    <div class="form-group">
-        <div class="col-sm-offset-3 col-sm-9">
-            <label><input type="checkbox" name="bean.active" value="true" ${bean.active ? 'checked' : ''}/> <spring:message code="websiteSettings.active"/></label>
+    <div class="row mb-3">
+        <div class="offset-sm-3 col-sm-9">
+            <div class="form-check">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.active" value="true" ${bean.active ? 'checked' : ''}/> <spring:message code="websiteSettings.active"/></label>
+            </div>
         </div>
     </div>
 
@@ -80,10 +82,10 @@
 
     <h3><spring:message code="websiteSettings.languageSettings"/></h3>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="createWebsite.locale"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="createWebsite.locale"/></label>
         <div class="col-sm-9">
-            <select name="bean.locale" class="form-control">
+            <select name="bean.locale" class="form-select">
                 <c:forEach items="${localesList}" var="opt">
                     <option value="${opt}" ${opt == bean.locale ? 'selected' : ''}>${opt}</option>
                 </c:forEach>
@@ -91,10 +93,10 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="createWebsite.timezone"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="createWebsite.timezone"/></label>
         <div class="col-sm-9">
-            <select name="bean.timeZone" class="form-control">
+            <select name="bean.timeZone" class="form-select">
                 <c:forEach items="${timeZonesList}" var="opt">
                     <option value="${opt}" ${opt == bean.timeZone ? 'selected' : ''}>${opt}</option>
                 </c:forEach>
@@ -102,15 +104,19 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <div class="col-sm-offset-3 col-sm-9">
-            <label><input type="checkbox" name="bean.enableMultiLang" value="true" ${bean.enableMultiLang ? 'checked' : ''}/> <spring:message code="websiteSettings.enableMultiLang"/></label>
+    <div class="row mb-3">
+        <div class="offset-sm-3 col-sm-9">
+            <div class="form-check">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.enableMultiLang" value="true" ${bean.enableMultiLang ? 'checked' : ''}/> <spring:message code="websiteSettings.enableMultiLang"/></label>
+            </div>
         </div>
     </div>
 
-    <div class="form-group">
-        <div class="col-sm-offset-3 col-sm-9">
-            <label><input type="checkbox" name="bean.showAllLangs" value="true" ${bean.showAllLangs ? 'checked' : ''}/> <spring:message code="websiteSettings.showAllLangs"/></label>
+    <div class="row mb-3">
+        <div class="offset-sm-3 col-sm-9">
+            <div class="form-check">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.showAllLangs" value="true" ${bean.showAllLangs ? 'checked' : ''}/> <spring:message code="websiteSettings.showAllLangs"/></label>
+            </div>
         </div>
     </div>
 
@@ -118,26 +124,32 @@
 
     <h3><spring:message code="websiteSettings.commentSettings"/></h3>
 
-    <div class="form-group">
-        <div class="col-sm-offset-3 col-sm-9">
-            <label><input type="checkbox" name="bean.allowComments" value="true" ${bean.allowComments ? 'checked' : ''}/> <spring:message code="websiteSettings.allowComments"/></label>
+    <div class="row mb-3">
+        <div class="offset-sm-3 col-sm-9">
+            <div class="form-check">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.allowComments" value="true" ${bean.allowComments ? 'checked' : ''}/> <spring:message code="websiteSettings.allowComments"/></label>
+            </div>
         </div>
     </div>
 
     <c:choose>
 <c:when test="${rc:getBooleanProp('users.comments.emailnotify')}">
-        <div class="form-group">
-            <div class="col-sm-offset-3 col-sm-9">
-                <label><input type="checkbox" name="bean.emailComments" value="true" ${bean.emailComments ? 'checked' : ''}/> <spring:message code="websiteSettings.emailComments"/></label>
+        <div class="row mb-3">
+            <div class="offset-sm-3 col-sm-9">
+                <div class="form-check">
+                    <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.emailComments" value="true" ${bean.emailComments ? 'checked' : ''}/> <spring:message code="websiteSettings.emailComments"/></label>
+                </div>
             </div>
         </div>
     </c:when>
 </c:choose>
 
     <c:if test="${!rc:getBooleanProp('users.moderation.required')}">
-        <div class="form-group">
-            <div class="col-sm-offset-3 col-sm-9">
-                <label><input type="checkbox" name="bean.moderateComments" value="true" ${bean.moderateComments ? 'checked' : ''}/> <spring:message code="websiteSettings.moderateComments"/></label>
+        <div class="row mb-3">
+            <div class="offset-sm-3 col-sm-9">
+                <div class="form-check">
+                    <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.moderateComments" value="true" ${bean.moderateComments ? 'checked' : ''}/> <spring:message code="websiteSettings.moderateComments"/></label>
+                </div>
             </div>
         </div>
     </c:if>
@@ -146,10 +158,10 @@
 
     <h3><spring:message code="websiteSettings.defaultCommentSettings"/></h3>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="websiteSettings.applyCommentDefaults"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.applyCommentDefaults"/></label>
         <div class="col-sm-9">
-            <select name="bean.defaultCommentDays" class="form-control">
+            <select name="bean.defaultCommentDays" class="form-select">
                 <c:forEach items="${commentDaysList}" var="opt">
                     <option value="${opt.key}" ${opt.key == bean.defaultCommentDays ? 'selected' : ''}>${opt.value}</option>
                 </c:forEach>
@@ -157,15 +169,19 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <div class="col-sm-offset-3 col-sm-9">
-            <label><input type="checkbox" name="bean.defaultAllowComments" value="true" ${bean.defaultAllowComments ? 'checked' : ''}/> <spring:message code="websiteSettings.defaultAllowComments"/></label>
+    <div class="row mb-3">
+        <div class="offset-sm-3 col-sm-9">
+            <div class="form-check">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.defaultAllowComments" value="true" ${bean.defaultAllowComments ? 'checked' : ''}/> <spring:message code="websiteSettings.defaultAllowComments"/></label>
+            </div>
         </div>
     </div>
 
-    <div class="form-group">
-        <div class="col-sm-offset-3 col-sm-9">
-            <label><input type="checkbox" name="bean.applyCommentDefaults" value="true" ${bean.applyCommentDefaults ? 'checked' : ''}/> <spring:message code="websiteSettings.applyCommentDefaults"/></label>
+    <div class="row mb-3">
+        <div class="offset-sm-3 col-sm-9">
+            <div class="form-check">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.applyCommentDefaults" value="true" ${bean.applyCommentDefaults ? 'checked' : ''}/> <spring:message code="websiteSettings.applyCommentDefaults"/></label>
+            </div>
         </div>
     </div>
 
@@ -173,10 +189,10 @@
 
     <h3><spring:message code="websiteSettings.bloggerApi"/></h3>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="websiteSettings.bloggerApiCategory"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.bloggerApiCategory"/></label>
         <div class="col-sm-9">
-            <select name="bean.bloggerCategoryId" class="form-control">
+            <select name="bean.bloggerCategoryId" class="form-select">
                 <c:forEach items="${weblogCategories}" var="opt">
                     <option value="${opt.id}" ${opt.id == bean.bloggerCategoryId ? 'selected' : ''}>${opt.name}</option>
                 </c:forEach>
@@ -184,9 +200,11 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <div class="col-sm-offset-3 col-sm-9">
-            <label><input type="checkbox" name="bean.enableBloggerApi" value="true" ${bean.enableBloggerApi ? 'checked' : ''}/> <spring:message code="websiteSettings.enableBloggerApi"/></label>
+    <div class="row mb-3">
+        <div class="offset-sm-3 col-sm-9">
+            <div class="form-check">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.enableBloggerApi" value="true" ${bean.enableBloggerApi ? 'checked' : ''}/> <spring:message code="websiteSettings.enableBloggerApi"/></label>
+            </div>
         </div>
     </div>
 
@@ -198,7 +216,7 @@
 <c:when test="${not empty pluginsList}">
 
         <c:forEach items="${pluginsList}" var="opt">
-<label><input type="checkbox" name="bean.defaultPluginsArray" value="${opt.name}"/> ${opt.name}</label>
+<div class="form-check"><label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.defaultPluginsArray" value="${opt.name}"/> ${opt.name}</label></div>
 </c:forEach>
 
     </c:when>
@@ -212,8 +230,8 @@
     <c:if test="${rc:getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted}">
         <h3><spring:message code="configForm.webAnalytics"/></h3>
 
-        <div class="form-group">
-            <label class="col-sm-3 control-label"><spring:message code="websiteSettings.analyticsTrackingCode"/></label>
+        <div class="row mb-3">
+            <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsTrackingCode"/></label>
             <div class="col-sm-9">
                 <textarea name="bean.analyticsCode" rows="10" cols="70" class="form-control">${bean.analyticsCode}</textarea>
             </div>
@@ -228,7 +246,7 @@
 </form>
 
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogRemove.rol" method="post" class="form-horizontal">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogRemove.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <h3><spring:message code="websiteSettings.removeWebsiteHeading"/></h3>

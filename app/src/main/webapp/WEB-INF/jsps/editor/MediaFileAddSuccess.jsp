@@ -21,7 +21,7 @@
 <p class="subtitle"><spring:message code="mediaFileSuccess.subtitle"/></p>
 <p class="pagetip"><spring:message code="mediaFileSuccess.pageTip"/></p>
 
-<form id="entry" method="post" class="form-horizontal">
+<form id="entry" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.enclosureURL" value="${bean.enclosureURL}" id="enclosureURL"/>
 
@@ -33,8 +33,8 @@
 
         <c:forEach items="${newImages}" var="newImage">
 
-            <div class="panel panel-default">
-                <div class="panel-body">
+            <div class="card">
+                <div class="card-body">
 
                     <div class="row">
 
@@ -88,8 +88,8 @@
         <p><spring:message code="mediaFileSuccess.selectEnclosure"/></p>
 
         <c:forEach items="${newFiles}" var="newFile">
-            <div class="panel panel-default">
-                <div class="panel-body">
+            <div class="card">
+                <div class="card-body">
 
                     <div class="row">
 
@@ -126,8 +126,8 @@
             </div>
         </c:forEach>
 
-        <div class="panel panel-default">
-            <div class="panel-body">
+        <div class="card">
+            <div class="card-body">
                 <div class="row">
 
                     <div class="col-md-1">
@@ -159,7 +159,7 @@
 
         <button type="submit" id="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryAddWithMediaFile.rol"><spring:message code="mediaFileSuccess.createPost"/></button>
 
-        <button class="btn btn-default" onclick='window.load("${mediaFileAddURL}")'>
+        <button class="btn btn-secondary" onclick='window.load("${mediaFileAddURL}")'>
             <spring:message code="mediaFileSuccess.uploadMore"/>
         </button>
 

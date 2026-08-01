@@ -25,7 +25,7 @@
                 <h3><spring:message code="mediaFileSidebar.actions"/></h3>
 
                 <div style="clear:right">
-                    <span class="glyphicon glyphicon-picture"></span>
+                    <span class="bi bi-image"></span>
                     <c:url var="mediaFileAddURL" value="/roller-ui/authoring/mediaFileAdd.rol">
                         <c:param name="weblog" value="${actionWeblog.handle}"/>
                         <c:param name="directoryName" value="${directoryName}"/>
@@ -41,7 +41,7 @@
 
                     <div style="clear:right; margin-top: 1em">
 
-                        <span class="glyphicon glyphicon-folder-open"></span>
+                        <span class="bi bi-folder2-open"></span>
                         <spring:message code="mediaFileView.addDirectory"/> <br />
 
                         <label for="newDirectoryName">
@@ -67,14 +67,14 @@
                     <input type="text" name="bean.name" value="${bean.name}" id="beanName" size="20" maxlength="255" class="form-control"/>
 
                     <label><spring:message code="mediaFileView.type"/></label>
-                    <select name="bean.type" id="beanType" class="form-control">
+                    <select name="bean.type" id="beanType" class="form-select">
 <c:forEach items="${fileTypes}" var="opt">
 <option value="${opt.key}" ${opt.key == bean.type ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
 </select>
 
                     <label><spring:message code="mediaFileView.size"/></label>
-                    <select name="bean.sizeFilterType" id="sizeFilterTypeCombo" class="form-control">
+                    <select name="bean.sizeFilterType" id="sizeFilterTypeCombo" class="form-select">
 <c:forEach items="${sizeFilterTypes}" var="opt">
 <option value="${opt.key}" ${opt.key == bean.sizeFilterType ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
@@ -82,7 +82,7 @@
 
                     <input type="text" name="bean.size" value="${bean.size}" id="beanSize" size="3" maxlength="10" class="form-control"/>
 
-                    <select name="bean.sizeUnit" class="form-control">
+                    <select name="bean.sizeUnit" class="form-select">
 <c:forEach items="${sizeUnits}" var="opt">
 <option value="${opt.key}" ${opt.key == bean.sizeUnit ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>

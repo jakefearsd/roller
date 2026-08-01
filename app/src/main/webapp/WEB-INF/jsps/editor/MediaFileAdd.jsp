@@ -21,42 +21,42 @@
 <p class="subtitle"> <spring:message code="mediaFileAdd.title"/> </p>
 <p class="pagetip"> <spring:message code="mediaFileAdd.pageTip"/> </p>
 
-<form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol" method="POST" enctype="multipart/form-data" class="form-horizontal">
+<form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="directoryName" value="${directoryName}"/>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="generic.name"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
         <div class="col-sm-9">
             <input type="text" id="entry_bean_name" name="bean.name" value="${bean.name}" maxlength="255" class="form-control"/>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="generic.description"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
             <textarea name="bean.description" rows="3" class="form-control">${bean.description}</textarea>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="mediaFileAdd.copyright"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileAdd.copyright"/></label>
         <div class="col-sm-9">
             <textarea name="bean.copyrightText" rows="3" class="form-control">${bean.copyrightText}</textarea>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="mediaFileAdd.tags"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileAdd.tags"/></label>
         <div class="col-sm-9">
             <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" maxlength="255" class="form-control"/>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="mediaFileAdd.directory"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileAdd.directory"/></label>
         <div class="col-sm-9">
-            <select name="bean.directoryId" class="form-control">
+            <select name="bean.directoryId" class="form-select">
                 <c:forEach items="${allDirectories}" var="opt">
                     <option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
                 </c:forEach>
@@ -64,19 +64,21 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <div class="col-sm-offset-3 col-sm-9">
-            <label><input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''}/> <spring:message code="mediaFileAdd.includeGallery"/></label>
+    <div class="row mb-3">
+        <div class="offset-sm-3 col-sm-9">
+            <div class="form-check">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''}/> <spring:message code="mediaFileAdd.includeGallery"/></label>
+            </div>
         </div>
     </div>
 
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <h4 class="panel-title">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="card-title">
                 <spring:message code="mediaFileAdd.fileLocation"/>
             </h4>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             <input type="file" name="uploadedFiles" id="fileControl0" size="30"/>
             <input type="file" name="uploadedFiles" id="fileControl1" size="30"/>
             <input type="file" name="uploadedFiles" id="fileControl2" size="30"/>
@@ -85,7 +87,7 @@
         </div>
     </div>
 
-    <button type="submit" id="uploadButton" class="btn btn-default" formaction="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol"><spring:message code="mediaFileAdd.upload"/></button>
+    <button type="submit" id="uploadButton" class="btn btn-secondary" formaction="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol"><spring:message code="mediaFileAdd.upload"/></button>
     <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!cancel.rol"><spring:message code="generic.cancel"/></button>
 
 <sec:csrfInput/>

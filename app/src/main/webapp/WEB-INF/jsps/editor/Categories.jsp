@@ -58,7 +58,7 @@
                                 '${categoryName}',
                                 '${categoryDesc}',
                                 '${categoryImage}' )">
-                            <span class="glyphicon glyphicon-edit"></span>
+                            <span class="bi bi-pencil-square"></span>
                         </a>
 
                     </td>
@@ -73,7 +73,7 @@
                                     '${categoryId}',
                                     '${categoryName}',
                                     ${categoryInUse} )" >
-                                <span class="glyphicon glyphicon-trash"></span>
+                                <span class="bi bi-trash"></span>
                             </a>
 
                         </c:if>
@@ -108,26 +108,26 @@
             </div>
 
             <div class="modal-body">
-                <form id="categoryEditForm" action="${pageContext.request.contextPath}/roller-ui/authoring/categoryEdit.rol" method="post" class="form-horizontal">
+                <form id="categoryEditForm" action="${pageContext.request.contextPath}/roller-ui/authoring/categoryEdit.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                     <input type="hidden" name="bean.id" value="${bean.id}"/>
 
-                    <div class="form-group">
-                        <label class="col-sm-3 control-label"><spring:message code="generic.name"/></label>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
                         <div class="col-sm-9">
                             <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="col-sm-3 control-label"><spring:message code="generic.description"/></label>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
                         <div class="col-sm-9">
                             <input type="text" name="bean.description" value="${bean.description}" class="form-control"/>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="col-sm-3 control-label"><spring:message code="categoryForm.image"/></label>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label"><spring:message code="categoryForm.image"/></label>
                         <div class="col-sm-9">
                             <input type="text" name="bean.image" value="${bean.image}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
                         </div>
@@ -141,7 +141,7 @@
                 <button onclick="submitEditedCategory()" class="btn btn-primary">
                     <spring:message code="generic.save"/>
                 </button>
-                <button type="button" class="btn" data-dismiss="modal">
+                <button type="button" class="btn" data-bs-dismiss="modal">
                     <spring:message code="generic.cancel"/>
                 </button>
             </div>
@@ -163,7 +163,7 @@
         $('#categoryEditForm_bean_description').val(desc);
         $('#categoryEditForm_bean_image').val(image);
 
-        $('#category-edit-modal').modal({show: true});
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).show();
 
     }
 
@@ -225,7 +225,7 @@
             } else {
                 feedbackAreaEdit.css("color", "green");
                 feedbackAreaEdit.html('<spring:message code="generic.success"/>');
-                $('#category-edit-modal').modal("hide");
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).hide();
                 location.reload(true);
             }
 
@@ -254,10 +254,10 @@
                 </h3>
             </div>
 
-            <form action="${pageContext.request.contextPath}/roller-ui/authoring/categoryRemove!remove.rol" method="post" class="form-horizontal">
+            <form action="${pageContext.request.contextPath}/roller-ui/authoring/categoryRemove!remove.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="${removeId}"/>
-                
+
                 <div class="modal-body">
 
                     <div id="category-in-use" style="display:none">
@@ -266,7 +266,7 @@
                             <spring:message code="categoryDeleteOK.youMustMoveEntries"/>
                         </p>
                         <spring:message code="categoryDeleteOK.moveToWhere"/>
-                        <select name="targetCategoryId" class="form-control">
+                        <select name="targetCategoryId" class="form-select">
 <c:forEach items="${allCategories}" var="opt">
 <option value="${opt.id}" ${opt.id == targetCategoryId ? 'selected' : ''}>${opt.name}</option>
 </c:forEach>
@@ -276,13 +276,13 @@
                     <div id="category-empty" style="display:none">
                         <p><spring:message code="categoryDeleteOK.noEntriesInCat"/></p>
                     </div>
-                    
+
                     <p> <strong><spring:message code="categoryDeleteOK.areYouSure"/></strong> </p>
                 </div>
 
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>&nbsp;
-                    <button type="button" class="btn btn-default" data-dismiss="modal">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <spring:message code="generic.no"/>
                     </button>
                 </div>
@@ -308,7 +308,7 @@
             $('#category-emtpy').css('display', 'block');
         }
         populateCategorySelect(id);
-        $('#delete-category-modal').modal({show: true});
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-category-modal')).show();
     }
 
     function populateCategorySelect(removeId) {
