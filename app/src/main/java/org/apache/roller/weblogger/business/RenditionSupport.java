@@ -17,19 +17,26 @@
  */
 package org.apache.roller.weblogger.business;
 
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 
 import net.coobird.thumbnailator.Thumbnails;
 
@@ -158,12 +165,10 @@ public final class RenditionSupport {
             try {
                 resized = Thumbnails.of(original)
                         .width(width)
-                        .outputQuality(JPEG_QUALITY)
                         .asBufferedImage();
 
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ImageIO.write(resized, formatName, baos);
-                cmgr.saveFileContent(weblog, id + "_" + width, new ByteArrayInputStream(baos.toByteArray()));
+                byte[] encoded = encodeToBytes(resized, formatName, JPEG_QUALITY);
+                cmgr.saveFileContent(weblog, id + "_" + width, new ByteArrayInputStream(encoded));
             } catch (Exception e) {
                 log.warn("Failed to generate " + width + "w rendition for media file " + id, e);
                 continue;
@@ -172,6 +177,66 @@ public final class RenditionSupport {
             if (CwebpEncoder.isAvailable()) {
                 generateWebp(cmgr, weblog, id, width, resized, formatName);
             }
+        }
+    }
+
+    /**
+     * Encodes {@code image} as {@code formatName} bytes, honoring
+     * {@code quality} for lossy formats.
+     *
+     * <p>{@code Thumbnails.outputQuality(...)} has NO effect when the resize
+     * result is pulled out via {@code asBufferedImage()}: that call returns
+     * raw pixel data without ever invoking Thumbnailator's own encoder, so
+     * any {@code outputFormat}/{@code outputQuality} configured on the
+     * builder is silently discarded (verified empirically against
+     * thumbnailator 0.4.21 -- a JPEG written this way came out at the JDK's
+     * default compression regardless of the requested quality). Encoding
+     * therefore happens explicitly here, at the one place it actually
+     * occurs, via a low-level {@link ImageWriter} with a compression
+     * quality param.
+     */
+    static byte[] encodeToBytes(BufferedImage image, String formatName, float quality) throws IOException {
+        if (!"jpg".equals(formatName)) {
+            // PNG is lossless -- there is no quality knob to honor.
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(image, formatName, baos);
+            return baos.toByteArray();
+        }
+
+        Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+        if (!writers.hasNext()) {
+            // Every standard JDK ships a JPEG writer; this is defensive only.
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(image, formatName, baos);
+            return baos.toByteArray();
+        }
+
+        ImageWriter writer = writers.next();
+        try {
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(quality);
+
+            BufferedImage rgb = image;
+            if (image.getColorModel().hasAlpha()) {
+                // JPEG has no alpha channel. formatFor() keeps jpeg/png
+                // ladders separate so this path is never actually hit in
+                // practice, but stay defensive rather than let the writer
+                // throw on an ARGB source.
+                rgb = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2 = rgb.createGraphics();
+                g2.drawImage(image, 0, 0, null);
+                g2.dispose();
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
+                writer.setOutput(ios);
+                writer.write(null, new IIOImage(rgb, null, null), param);
+            }
+            return baos.toByteArray();
+        } finally {
+            writer.dispose();
         }
     }
 

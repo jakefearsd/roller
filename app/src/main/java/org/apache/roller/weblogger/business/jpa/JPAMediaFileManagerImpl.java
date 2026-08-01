@@ -755,12 +755,18 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                         continue;
                     }
                     RenditionSupport.generate(cmgr, mf, img);
+                    // Bump lastUpdated so MediaResourceServlet's Last-Modified/304
+                    // check (keyed off this field) doesn't keep serving a 304 for
+                    // stale renditions cached by a client from before the backfill.
+                    mf.setLastUpdated(new Timestamp(System.currentTimeMillis()));
+                    strategy.store(mf);
                     count++;
                 } catch (Exception e) {
                     log.warn("Failed to regenerate renditions for media file " + mf.getId(), e);
                 }
             }
         }
+        roller.flush();
         return count;
     }
 

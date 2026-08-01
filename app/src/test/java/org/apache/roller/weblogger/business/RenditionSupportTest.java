@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.imageio.ImageIO;
 
@@ -118,6 +119,86 @@ class RenditionSupportTest {
                 "960w must be skipped: it is not narrower than the 500w original");
         assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_1600"));
         assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_2400"));
+    }
+
+    /**
+     * Pins the boundary condition exactly: {@code width >= originalWidth}
+     * skips a rung, so an original whose width is EXACTLY equal to a ladder
+     * rung (960 here) must not produce that rung's rendition -- Roller never
+     * upscales, and "equal" is "not narrower".
+     */
+    @Test
+    void generateSkipsARungExactlyEqualToTheOriginalWidth() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+        FakeFileContentManager cmgr = new FakeFileContentManager();
+        MediaFile mediaFile = imageMediaFile("image/jpeg");
+        BufferedImage original = new BufferedImage(960, 540, BufferedImage.TYPE_INT_RGB);
+
+        RenditionSupport.generate(cmgr, mediaFile, original);
+
+        assertTrue(cmgr.saved.containsKey(mediaFile.getId() + "_480"),
+                "480w is narrower than the 960w original and must be generated");
+        assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_960"),
+                "a rung exactly equal to the original width must be skipped, not generated");
+        assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_1600"));
+        assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_2400"));
+    }
+
+    /**
+     * Reproduces the bug a review round caught: {@code Thumbnails.outputQuality(...)}
+     * is silently discarded when the resize result is pulled out via
+     * {@code asBufferedImage()} (no encoding happens at that call at all), so
+     * the JPEG ladder was actually being written at the JDK's default
+     * compression regardless of the configured quality. Encoding now happens
+     * explicitly in {@code RenditionSupport.encodeToBytes}, verified directly
+     * here: a lower quality setting must produce a materially smaller file
+     * for a detailed (non-flat) image, where the quality setting actually has
+     * something to compress away.
+     */
+    @Test
+    void jpegQualityActuallyChangesTheEncodedBytes() throws Exception {
+        BufferedImage noisy = noisyImage(256, 256);
+
+        byte[] highQuality = RenditionSupport.encodeToBytes(noisy, "jpg", 0.85f);
+        byte[] lowQuality = RenditionSupport.encodeToBytes(noisy, "jpg", 0.1f);
+
+        assertTrue(lowQuality.length < highQuality.length,
+                "0.1 quality (" + lowQuality.length + " bytes) must encode smaller than 0.85 quality ("
+                        + highQuality.length + " bytes) for a detailed image");
+
+        // and both must still decode back to a valid image of the right size
+        assertEquals(256, ImageIO.read(new ByteArrayInputStream(highQuality)).getWidth());
+        assertEquals(256, ImageIO.read(new ByteArrayInputStream(lowQuality)).getWidth());
+    }
+
+    @Test
+    void pngEncodingIgnoresTheQualityParameterSinceItIsLossless() throws Exception {
+        BufferedImage noisy = noisyImage(64, 64);
+
+        byte[] atOneQuality = RenditionSupport.encodeToBytes(noisy, "png", 1.0f);
+        byte[] atLowQuality = RenditionSupport.encodeToBytes(noisy, "png", 0.1f);
+
+        // PNG is lossless: both must decode to pixel-identical images regardless
+        // of the (irrelevant, ignored) quality argument.
+        BufferedImage decoded1 = ImageIO.read(new ByteArrayInputStream(atOneQuality));
+        BufferedImage decoded2 = ImageIO.read(new ByteArrayInputStream(atLowQuality));
+        assertEquals(noisy.getRGB(0, 0), decoded1.getRGB(0, 0));
+        assertEquals(decoded1.getRGB(0, 0), decoded2.getRGB(0, 0));
+    }
+
+    private static BufferedImage noisyImage(int width, int height) {
+        // A flat/solid color compresses to ~the same size at any JPEG quality;
+        // real image detail is what quality settings actually trade off, so
+        // the quality-difference test needs pseudo-random per-pixel noise, not
+        // a synthetic gradient or solid fill.
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Random random = new Random(42);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                image.setRGB(x, y, random.nextInt(0xFFFFFF));
+            }
+        }
+        return image;
     }
 
     @Test

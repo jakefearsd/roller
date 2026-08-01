@@ -1451,6 +1451,12 @@ public class MediaFileTest  {
         assertThrows(FileNotFoundException.class,
                 () -> fmgr.getFileContent(assertWeblog5, id + "_480"));
 
+        long lastUpdatedBeforeBackfill = mfMgr.getMediaFile(id).getLastUpdated().getTime();
+        // Guarantee a distinguishable millisecond boundary even on a very fast
+        // clock/filesystem so the "must have moved" assertion below can't pass
+        // by coincidence.
+        Thread.sleep(5);
+
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
         int processed = mfMgr.regenerateRenditions(testWeblog);
         TestUtils.endSession(true);
@@ -1459,6 +1465,12 @@ public class MediaFileTest  {
         assertTrue(fmgr.getFileContent(testWeblog, id + "_480").getLength() > 0,
                 "the backfill action must regenerate the missing rendition");
         assertTrue(fmgr.getFileContent(testWeblog, id + "_960").getLength() > 0);
+
+        long lastUpdatedAfterBackfill = mfMgr.getMediaFile(id).getLastUpdated().getTime();
+        assertTrue(lastUpdatedAfterBackfill > lastUpdatedBeforeBackfill,
+                "regenerateRenditions must bump lastUpdated so MediaResourceServlet's "
+                        + "Last-Modified/304 check doesn't keep serving a client's cached, "
+                        + "now-stale rendition after a backfill");
 
         TestUtils.endSession(true);
         TestUtils.teardownWeblog(testWeblog.getId());
