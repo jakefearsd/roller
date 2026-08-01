@@ -125,6 +125,7 @@ Apache Roller is a multi-user blog server built with:
 ### Core Package Structure
 ```
 org.apache.roller.weblogger.
+├── boot/               # Spring Boot entrypoint, Java-config (servlets, security, MVC)
 ├── business/           # Service layer and business logic
 │   ├── jpa/           # JPA persistence implementations
 │   ├── plugins/       # Plugin system for content processing
@@ -159,7 +160,9 @@ IndexManager getIndexManager()
 - `MediaFileManager` - File uploads and media
 
 ### Security Architecture
-- **Authentication**: Multiple providers (database, LDAP)
+- **Authentication**: Database only (`AuthMethod` — LDAP/OpenID/container-managed
+  were removed; an unsupported `authentication.method` value now fails loudly
+  at startup instead of silently behaving like `db`)
 - **Authorization**: Role-based with `GlobalPermission`, `WeblogPermission`, and `ObjectPermission`
 - **Custom Interceptor**: `RollerHandlerInterceptor` enforces access controls
 - **CSRF Protection**: Spring Security built-in CSRF (automatic on all POST forms)
@@ -190,9 +193,10 @@ Key domain entities:
 
 - **`app/`** - Main web application (executable WAR artifact)
 - **`bin/db/`** - Schema migrations and the migrate/install scripts
+- **`deploy/`** - Production deploy script and Caddy/backup config for
+  `docker-compose.prod.yml` (see `docker_deployment.md`)
 - **`it-selenium/`** - Browser integration tests (Selenium, run via `mvn verify -Pit`
   against the packaged executable WAR; see Coverage gates above)
-- **`assembly-release/`** - Release packaging and distribution
 
 ## Configuration Files
 
@@ -206,7 +210,7 @@ Key domain entities:
   (Java-config transcription of the retired `web.xml`)
 - **Security Config**: `app/src/main/java/.../boot/SecurityConfig.java`
   (Java-config transcription of the retired `WEB-INF/security.xml`)
-- **JPA Mappings**: `app/src/main/resources/META-INF/*.orm.xml`
+- **JPA Mappings**: `app/src/main/resources/org/apache/roller/weblogger/pojos/*.orm.xml`
 - **Velocity Templates**: `app/src/main/webapp/WEB-INF/velocity/templates/`
 
 ### Development vs Production
@@ -228,7 +232,8 @@ Key domain entities:
 ## Plugin System
 Roller supports plugins for:
 - **Entry Plugins**: Content processing and formatting
-- **Comment Plugins**: Comment filtering and spam protection
+- **Comment Plugins**: Comment text formatting (`WeblogEntryCommentPlugin`) —
+  no spam filtering exists; moderators mark spam manually (`ApprovalStatus.SPAM`)
 - **UI Plugins**: Editor components and custom functionality
 
 Plugins implement specific interfaces and are configured through the plugin manager system.

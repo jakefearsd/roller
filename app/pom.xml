@@ -244,10 +244,7 @@ limitations under the License.
             <version>4.0.2</version>
         </dependency>
 
-        <!-- Eclipselink JPA is the default JPA implementation used by
-             Roller, comment out this dependency and uncomment Hibernate's
-             to use that stack instead.
-
+        <!-- Eclipselink is the only JPA implementation Roller supports.
              Logging, other special configuration during JUnit tests can be
              placed in the src/test/resources/roller-custom.properties file.
          -->
@@ -271,42 +268,7 @@ limitations under the License.
             <version>${postgresql.version}</version>
         </dependency>
 
-        <!-- Alternative testing with Hibernate (used by default with JBoss)
-             Important: set hibernate.transaction.factory_class=org.hibernate.transaction.JDBCTransactionFactory
-             in your roller-custom.properties if using Hibernate with Tomcat
-
-             org.javassist:javassist:3.15.0 cannot replace differently named javassist:javassist:3.11.0
-
-             Note: Apache cannot distribute Hibernate due to it being LGPL, so these dependencies must be
-             commented out in trunk.  We have this dependency declaration to help with testing on JBoss
-             which uses Hibernate.
-        -->
-        <!--dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-entitymanager</artifactId>
-            <version>4.2.3.Final</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.javassist</groupId>
-                    <artifactId>javassist</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jdk14</artifactId>
-            <version>1.6.1</version>
-            <scope>runtime</scope>
-        </dependency-->
-
-        <!-- To test with OpenJPA instead of EclipseLink, will need to add OpenJPA
-             dependencies and static bytecode enhancement of the generated JPA classes
-             to this pom.xml.  Check the Roller source code repository for a copy of
-             this pom.xml prior to July 2013 for the necessary OpenJPA configuration -->
-
-
-        <!-- Apache deps include Velocity, Lucene, HttpClient and XML-RPC -->
+        <!-- Apache deps include Velocity and Lucene -->
 
         <dependency>
             <groupId>org.apache.velocity</groupId>

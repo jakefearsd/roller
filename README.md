@@ -1,8 +1,8 @@
 # Apache Roller
 
-[Apache Roller](http://roller.apache.org) is a Java-based, full-featured, multi-user and group-blog server suitable for blog sites of any size. First created in 2002 and maintained by the Apache Software Foundation, Roller powers everything from personal blogs to large-scale multi-tenant blogging platforms.
+[Apache Roller](http://roller.apache.org) is a Java-based, full-featured, multi-user and group-blog server suitable for blog sites of any size. First created in 2002 and maintained by the Apache Software Foundation, Roller powers everything from personal blogs to multi-tenant blogging platforms.
 
-**Current Version:** 6.2.0 | **License:** Apache 2.0 | **Java:** 21+
+**Current Version:** 6.2.0 | **License:** Apache 2.0 | **Java:** 25
 
 ---
 
@@ -10,25 +10,24 @@
 
 ### Multi-User Blogging
 - Host unlimited weblogs on a single installation, each with its own URL, theme, and settings
-- Role-based permissions per weblog — invite members as authors, editors, or administrators
-- Designate any weblog as the site-wide front page
-- User self-registration (configurable) with admin approval workflows
+- Role-based permissions per weblog — invite members with `edit_draft`, `post`, or `admin` access (`WeblogPermission`)
+- Designate any weblog as the site-wide front page (`WebloggerRuntimeConfig.isFrontPageWeblog`)
+- Admin-managed user accounts: create, edit, disable, and assign global roles (`UserAdmin.jsp`)
 
 ### Content Authoring
 - Rich text and source-code editing of blog entries with draft, pending, and published states
 - Schedule entries for future publication
 - Organize content with categories and tags
-- Upload and manage media files (images, podcasts, attachments) in folder hierarchies
-- Entry plugins for automatic formatting: line-break conversion, code block encoding, email obfuscation, and smiley replacement
+- Upload and manage media files (images, podcasts, attachments) in folder hierarchies (`MediaFileManager`)
+- Entry plugins for automatic formatting: line-break conversion, HTML-subset sanitization, and link markup (`ConvertLineBreaksPlugin`, `HTMLSubsetPlugin`, `LinkMarkupPlugin`, `AutoformatPlugin`)
 
 ### Comments and Community
-- Visitor comments with moderation and approval workflows
-- Spam protection via pluggable validators: banned-word lists, excessive-link detection, size limits, Akismet integration
-- Anti-bot authenticators including CAPTCHA-style math challenges
-- Trackback and pingback protocol support
+- Visitor comments with moderation and approval workflows (pending, approved, disapproved)
+- Manual spam marking — moderators can flag a comment `SPAM` from the comment-management UI; there is no automated spam filter (`ApprovalStatus.SPAM`, `GlobalCommentManagementController`)
+- Comment formatting plugins run on submitted comment text (`WeblogEntryCommentPlugin`)
 
 ### Themes and Templates
-- Five built-in themes: **basic**, **basicmobile**, **gaurav**, **fauxcoly**, and **frontpage**
+- Four built-in shared themes: **basic**, **gaurav**, **fauxcoly**, and **frontpage** (`app/src/main/webapp/themes/`)
 - Apache Velocity template engine with a rich set of page models for full layout control
 - In-app template editor for per-weblog customization
 - Separate templates for main page, single-entry permalink, day archive, search results, and sidebar
@@ -36,34 +35,25 @@
 ### Search
 - Full-text search powered by Apache Lucene with background indexing
 - Search across entries and comments with category and locale filtering
-- OpenSearch protocol support for browser search-bar integration
+- OpenSearch description document for browser search-bar integration (`URLModel.getOpenSearchSite`/`getOpenSearchWeblog`)
 
-### Feeds and APIs
-- RSS 2.0 and Atom 1.0 feeds for entries, comments, and search results
-- **Atom Publishing Protocol (AtomPub)** — full CRUD for entries and media from any compliant client
-- **XML-RPC** — Blogger API and MetaWeblog API for desktop blogging clients
-- **OAuth 1.0a** for authorized third-party access
-- **OpenSearch** description documents for search discovery
+### Feeds
+- RSS 2.0 and Atom 1.0 feeds for weblog entries, comments, and search results, hand-rendered by Velocity templates (`WEB-INF/velocity/templates/feeds/`)
 
 ### Security and Authentication
-- Pluggable authentication: database accounts, LDAP/Active Directory, OpenID, or container-managed
-- Spring Security with role-based access control at global, weblog, and object levels
+- Database-backed authentication only; the enum kept for LDAP/OpenID/container-managed values now fails loudly at startup instead of silently degrading (`AuthMethod`)
+- Spring Security 7 with role-based access control at global, weblog, and object levels
 - BCrypt password hashing with configurable strength
-- CSRF protection and WSSE for web-service security
-
-### Planet Feed Aggregator
-- Aggregate content from external RSS/Atom feeds into a unified view
-- Manage subscription groups to create topic-based or team-based aggregations
+- Spring Security's built-in CSRF protection on all POST forms
 
 ### Administration
 - Global configuration dashboard for site-wide settings
-- Bulk comment management across all weblogs
+- Bulk comment management across all weblogs, including marking comments as spam
 - User administration: create, edit, disable, and assign global roles
-- Ping target management for blog update notification services
 - Built-in installation wizard with automatic database schema creation and migration
 
 ### Internationalization
-- Full UI localization in 8 languages: English, German, Spanish, French, Japanese, Korean, Russian, and Simplified Chinese
+- UI message bundle in 8 languages: English (source of truth), German, Spanish, French, Japanese, Korean, Russian, and Simplified Chinese. Coverage varies by language; missing keys fall back to English at runtime (`MessageKeyTest`).
 
 ---
 
@@ -81,30 +71,40 @@ removed in favour of a single, tested schema.
 
 ## Quick Start
 
-### Option 1: Maven + Jetty (development)
+### Option 1: Dev server (Spring Boot, embedded Tomcat)
 
 ```bash
 git clone https://github.com/apache/roller.git
 cd roller
 mvn -DskipTests=true install
-./roller dev     # starts PostgreSQL, applies migrations, runs Jetty
+./roller dev     # starts PostgreSQL, applies migrations, runs spring-boot:run
 ```
 
 Browse to http://localhost:8083/roller
 
-### Option 2: Docker Compose + PostgreSQL
+### Option 2: Run the packaged executable WAR directly
+
+```bash
+mvn -DskipTests=true -pl app install
+java -jar app/target/roller.war --server.port=8083 \
+    -Droller.custom.config=app/target/test-classes/roller-boot-dev.properties
+```
+
+No Maven plugin or IDE involved — the WAR embeds Tomcat and runs standalone
+(requires a running, migrated PostgreSQL; `./roller db` starts one).
+
+### Option 3: Docker / production stack
 
 ```bash
 git clone https://github.com/apache/roller.git
 cd roller
-docker compose up -d   # starts PostgreSQL only
+docker compose up -d   # starts PostgreSQL only, for local dev
 ./roller dev            # applies migrations, runs the app
 ```
 
-Browse to http://localhost:8083/roller
-
-For a real deployment — the app itself containerized behind TLS, with
-automated backups and one-command upgrades — see the production stack
+Pre-built images are published to GHCR on every push to master. For a real
+deployment — the app itself containerized behind TLS, with automated backups
+and one-command upgrades — see the production stack
 (`docker-compose.prod.yml`, `deploy/deploy.sh`) and its runbook,
 [`docker_deployment.md`](docker_deployment.md).
 
@@ -112,13 +112,13 @@ automated backups and one-command upgrades — see the production stack
 
 ## Project Structure
 
-| Module             | Description |
-|--------------------|-------------|
-| `app/`             | Main web application (WAR) — Spring MVC controllers, JSP pages, Velocity templates, business logic |
+| Path               | Description |
+|---------------------|-------------|
+| `app/`             | Main web application (executable WAR) — Spring MVC controllers, JSP admin pages, Velocity blog-rendering templates, business logic |
 | `docs/`            | Install, User, and Template guides in AsciiDoc format |
 | `bin/db/`          | Schema migrations and the migrate/install scripts |
-| `it-selenium/`     | Selenium-based integration tests |
-| `assembly-release/`| Release packaging and distribution |
+| `deploy/`          | Production deploy script, Caddy/backup config for `docker-compose.prod.yml` |
+| `it-selenium/`     | Browser-driven integration tests, run against the packaged WAR via `mvn verify -Pit` |
 
 ---
 
@@ -129,20 +129,31 @@ Detailed guides are available in the [`docs/`](docs/) directory:
 - **[Install Guide](docs/roller-install-guide.adoc)** — Server setup, database configuration, and deployment
 - **[User Guide](docs/roller-user-guide.adoc)** — Blogging, media management, comments, and administration
 - **[Template Guide](docs/roller-template-guide.adoc)** — Theme creation, Velocity templates, and page models
+- **[Production Deployment Runbook](docker_deployment.md)** — Fresh-VPS Docker deployment, TLS, backups, upgrades
 
 ---
 
 ## Technology Stack
 
+- **Runtime:** Spring Boot 4.1 executable WAR on embedded Tomcat 11, targeting Java 25
 - **Web Framework:** Spring MVC
-- **Security:** Spring Security
-- **Persistence:** JPA (EclipseLink)
+- **Security:** Spring Security 7
+- **Persistence:** JPA (EclipseLink 5)
+- **Database:** PostgreSQL only
 - **Templating:** Apache Velocity (blog rendering), JSP/JSTL (admin UI)
 - **Search:** Apache Lucene
-- **Feeds:** ROME (RSS/Atom)
-- **DI:** Google Guice (business layer), Spring (web layer)
+- **DI:** Single Spring container (business beans in `WebloggerBeanConfig`, wired via the `Weblogger` facade)
 
 ---
+
+## Testing
+
+- ~2,200 JUnit tests run against a real PostgreSQL container (Testcontainers) —
+  no mocked persistence layer. `mvn test` (needs Docker).
+- JaCoCo coverage floors are enforced at `verify` and only ever move up; see
+  `CLAUDE.md` for the coverage-gate and diff-coverage commands.
+- Browser integration tests (`it-selenium/`) drive the packaged executable WAR
+  end to end; run them with `mvn verify -Pit`.
 
 ## Contributing
 

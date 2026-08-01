@@ -26,9 +26,6 @@ logs/
 # Not part of the app/pom.xml reactor build (mvn -pl app) and not needed at
 # runtime.
 it-selenium/src
-assembly-release
-testing
-binary-includes
 docker-compose.yml
 docker_deployment.md
 
