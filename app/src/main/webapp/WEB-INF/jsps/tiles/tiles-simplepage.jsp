@@ -41,8 +41,8 @@
 
             <h1 class="roller-page-title"><spring:message code="${pageTitle}" text="${pageTitle}"/></h1>
             <p><jsp:include page="${tile_messages}"/>
-            <div class="panel">
-                <div class="panel-body">
+            <div class="card">
+                <div class="card-body">
                     <jsp:include page="${tile_content}"/>
                 </div>
             </div>

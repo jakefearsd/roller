@@ -20,7 +20,7 @@
 <p class="subtitle"><spring:message code="inviteMember.subtitle"/></p>
 <p><spring:message code="inviteMember.prompt"/></p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/invite!save.rol" method="post" class="form-horizontal">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/invite!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <div class="formrow">
@@ -51,7 +51,7 @@
     </div>
 
     <br />
-    <button type="submit" id="inviteButton" class="btn btn-default"><spring:message code="inviteMember.button.save"/></button>
+    <button type="submit" id="inviteButton" class="btn btn-secondary"><spring:message code="inviteMember.button.save"/></button>
     <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/invite!cancel.rol"><spring:message code="generic.cancel"/></button>
 
 <sec:csrfInput/>

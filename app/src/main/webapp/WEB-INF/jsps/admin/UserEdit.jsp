@@ -49,7 +49,7 @@
     </c:otherwise>
 </c:choose>
 
-<form method="post" action="<c:url value='${saveAction}'/>" class="form-horizontal">
+<form method="post" action="<c:url value='${saveAction}'/>">
     <sec:csrfInput/>
     <c:if test="${actionName == 'modifyUser'}">
         <%-- bean for add does not have a bean id yet --%>
@@ -58,8 +58,8 @@
 
     <c:choose>
         <c:when test="${actionName == 'modifyUser'}">
-            <div class="form-group">
-                <label class="col-sm-3 control-label"><spring:message code="userSettings.username"/></label>
+            <div class="row mb-3">
+                <label class="col-sm-3 col-form-label"><spring:message code="userSettings.username"/></label>
                 <div class="col-sm-9 controls">
                     <input type="text" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
                            size="30" maxlength="30" onkeyup="formChanged()"
@@ -69,8 +69,8 @@
             </div>
         </c:when>
         <c:otherwise>
-            <div class="form-group">
-                <label class="col-sm-3 control-label"><spring:message code="userSettings.username"/></label>
+            <div class="row mb-3">
+                <label class="col-sm-3 col-form-label"><spring:message code="userSettings.username"/></label>
                 <div class="col-sm-9 controls">
                     <input type="text" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
                            size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
@@ -80,8 +80,8 @@
         </c:otherwise>
     </c:choose>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="userSettings.screenname"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.screenname"/></label>
         <div class="col-sm-9 controls">
             <input type="text" id="bean_userName" name="bean.screenName" value="${fn:escapeXml(bean.screenName)}"
                    size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
@@ -89,8 +89,8 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="userSettings.fullname"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.fullname"/></label>
         <div class="col-sm-9 controls">
             <input type="text" id="bean_fullName" name="bean.fullName" value="${fn:escapeXml(bean.fullName)}"
                    size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
@@ -98,8 +98,8 @@
         </div>
     </div>
 
-        <div class="form-group">
-            <label class="col-sm-3 control-label"><spring:message code="userSettings.password"/></label>
+        <div class="row mb-3">
+            <label class="col-sm-3 col-form-label"><spring:message code="userSettings.password"/></label>
             <div class="col-sm-9 controls">
                 <input type="password" name="bean.password" size="30" maxlength="30"
                        onkeyup="formChanged()" class="form-control"
@@ -108,8 +108,8 @@
         </div>
 
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="userSettings.email"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.email"/></label>
         <div class="col-sm-9 controls">
             <input type="text" id="bean_email" name="bean.emailAddress" value="${fn:escapeXml(bean.emailAddress)}"
                    size="30" maxlength="255" onkeyup="formChanged()" class="form-control"
@@ -117,10 +117,10 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="userSettings.locale"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.locale"/></label>
         <div class="col-sm-9 controls">
-            <select name="bean.locale" class="form-control"
+            <select name="bean.locale" class="form-select"
                     title="<spring:message code='userAdmin.tip.locale'/>">
                 <c:forEach var="loc" items="${localesList}">
                     <option value="${fn:escapeXml(loc)}"
@@ -131,10 +131,10 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="userSettings.timeZone"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.timeZone"/></label>
         <div class="col-sm-9 controls">
-            <select name="bean.timeZone" class="form-control"
+            <select name="bean.timeZone" class="form-select"
                     title="<spring:message code='userAdmin.tip.timeZone'/>">
                 <c:forEach var="tz" items="${timeZonesList}">
                     <option value="${fn:escapeXml(tz)}"
@@ -145,19 +145,19 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="userAdmin.enabled"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="userAdmin.enabled"/></label>
         <div class="col-sm-9 controls">
-            <input type="checkbox" name="bean.enabled" value="true"
+            <input type="checkbox" class="form-check-input" name="bean.enabled" value="true"
                 <c:if test="${bean.enabled}">checked="checked"</c:if>
                    title="<spring:message code='userAdmin.tip.enabled'/>"/>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="userAdmin.userAdmin"/></label>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="userAdmin.userAdmin"/></label>
         <div class="col-sm-9 controls">
-            <input type="checkbox" name="bean.administrator" value="true"
+            <input type="checkbox" class="form-check-input" name="bean.administrator" value="true"
                 <c:if test="${bean.administrator}">checked="checked"</c:if>
                    title="<spring:message code='userAdmin.tip.userAdmin'/>"/>
         </div>
@@ -214,7 +214,7 @@
     <br />
 
     <div class="control">
-        <button type="submit" class="btn btn-default" id="save_button">
+        <button type="submit" class="btn btn-secondary" id="save_button">
             <spring:message code="generic.save"/>
         </button>
         <a href="<c:url value='${cancelAction}'/>" class="btn">

@@ -22,37 +22,35 @@
 
 
 
-        <form method="post" id="loginForm" class="form-horizontal"
+        <form method="post" id="loginForm" class="form-signin"
               action="<c:url value='/roller_j_security_check'/>" onsubmit="saveUsername(this)">
 
-            <div class="form-group">
-                <legend><spring:message code="loginPage.prompt"/></legend>
-            </div>
+            <legend><spring:message code="loginPage.prompt"/></legend>
 
-            <div class="form-group">
-                <label for="j_username" > <spring:message code="loginPage.userName"/> </label>
+            <div class="mb-3">
+                <label for="j_username" class="form-label"> <spring:message code="loginPage.userName"/> </label>
                 <input type="text" class="form-control" name="j_username" id="j_username" placeholder="Username"/>
             </div>
 
-            <div class="form-group">
-                <label for="j_password" > <spring:message code="loginPage.password"/> </label>
+            <div class="mb-3">
+                <label for="j_password" class="form-label"> <spring:message code="loginPage.password"/> </label>
                 <input type="password" class="form-control" name="j_password" id="j_password" placeholder="Password"/>
             </div>
 
             <c:if test="${rememberMeEnabled}">
-                <div class="form-group">
-                    <input type="checkbox" name="_spring_security_remember_me" id="_spring_security_remember_me"/>
-                    <label for="_spring_security_remember_me" > <spring:message code="loginPage.rememberMe"/> </label>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" name="_spring_security_remember_me" id="_spring_security_remember_me"/>
+                    <label class="form-check-label" for="_spring_security_remember_me" > <spring:message code="loginPage.rememberMe"/> </label>
                 </div>
             </c:if>
 
             <sec:csrfInput/>
-            <div class="form-group">
+            <div class="mb-3">
                 <button class="btn btn-primary" type="submit" name="login" id="login">
                     <spring:message code='loginPage.login'/>
                 </button>
 
-                <button class="btn" type="reset" name="reset" id="reset"
+                <button class="btn btn-secondary" type="reset" name="reset" id="reset"
                         onclick="document.getElementById('j_username').focus()">
                     <spring:message code='loginPage.reset'/>
                 </button>

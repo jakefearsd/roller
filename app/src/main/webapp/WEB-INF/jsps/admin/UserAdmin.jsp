@@ -29,23 +29,23 @@
 <form method="post" action="<c:url value='/roller-ui/admin/userAdmin!edit.rol'/>" class="form-vertical">
     <sec:csrfInput/>
 
-    <div class="form-group">
-        <label for="userName"><spring:message code="inviteMember.userName"/></label>
+    <div class="mb-3">
+        <label for="userName" class="form-label"><spring:message code="inviteMember.userName"/></label>
         <input type="text" class="form-control" id="userName" name="bean.userName"
                value="${fn:escapeXml(bean.userName)}"
                onfocus="onUserNameFocus(null)"
                onkeyup="onUserNameChange(null)" />
     </div>
 
-    <div class="form-group">
-        <select class="form-control" id="userList" size="10" onchange="onUserSelected()">
+    <div class="mb-3">
+        <select class="form-select" id="userList" size="10" onchange="onUserSelected()">
             <c:forEach var="item" items="${bean.list}">
                 <option value="${fn:escapeXml(item)}">${fn:escapeXml(item)}</option>
             </c:forEach>
         </select>
     </div>
 
-    <button type="submit" class="btn btn-default" id="user-submit">
+    <button type="submit" class="btn btn-secondary" id="user-submit">
         <spring:message code="generic.edit" />
     </button>
 

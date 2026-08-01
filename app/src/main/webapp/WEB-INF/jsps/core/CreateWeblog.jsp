@@ -22,14 +22,14 @@
 <br/>
 
 <form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/createWeblog!save.rol"
-           method="post" cssClass="form-horizontal validate-form">
+           method="post" cssClass="validate-form">
 
     <sec:csrfInput/>
 
     <spring:message code="CreateWeblog.error.nameNull" var="nameRequired"/>
-    <div class="form-group">
+    <div class="row mb-3">
         <spring:message code="generic.name" var="nameLabel"/>
-        <label class="col-sm-3 control-label">${nameLabel}</label>
+        <label class="col-sm-3 col-form-label">${nameLabel}</label>
         <div class="col-sm-9 controls">
             <form:input path="name" cssClass="form-control" size="30" maxlength="30"
                         data-msg-required="${nameRequired}" required="required"/>
@@ -37,16 +37,16 @@
     </div>
 
     <spring:message code="CreateWeblog.error.handleNull" var="handleRequired"/>
-    <div class="form-group">
+    <div class="row mb-3">
         <spring:message code="createWebsite.handle" var="handleLabel"/>
-        <label class="col-sm-3 control-label">${handleLabel}</label>
+        <label class="col-sm-3 col-form-label">${handleLabel}</label>
         <div class="col-sm-9 controls">
             <form:input path="handle" cssClass="form-control" size="30" maxlength="30"
                         onkeyup="handlePreview(this)" data-msg-required="${handleRequired}" required="required"/>
         </div>
     </div>
 
-    <div class="form-group">
+    <div class="row mb-3">
         <label class="col-sm-3"></label>
         <div class="col-sm-9 controls">
             <spring:message code="createWebsite.weblogUrl" />:&nbsp;
@@ -57,45 +57,45 @@
 
     <spring:message code="CreateWeblog.error.emailAddressNull" var="emailRequired"/>
     <spring:message code="CreateWeblog.error.emailAddressInvalid" var="emailInvalid"/>
-    <div class="form-group">
+    <div class="row mb-3">
         <spring:message code="createWebsite.emailAddress" var="emailLabel"/>
-        <label class="col-sm-3 control-label">${emailLabel}</label>
+        <label class="col-sm-3 col-form-label">${emailLabel}</label>
         <div class="col-sm-9 controls">
             <form:input path="emailAddress" cssClass="form-control validate-email" size="40" maxlength="50"
                         data-msg="${emailInvalid}" data-msg-required="${emailRequired}" required="required"/>
         </div>
     </div>
 
-    <div class="form-group">
+    <div class="row mb-3">
         <spring:message code="createWebsite.locale" var="localeLabel"/>
-        <label class="col-sm-3 control-label">${localeLabel}</label>
+        <label class="col-sm-3 col-form-label">${localeLabel}</label>
         <div class="col-sm-9 controls">
-            <form:select path="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-control"/>
+            <form:select path="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-select"/>
         </div>
     </div>
 
-    <div class="form-group">
+    <div class="row mb-3">
         <spring:message code="createWebsite.timezone" var="tzLabel"/>
-        <label class="col-sm-3 control-label">${tzLabel}</label>
+        <label class="col-sm-3 col-form-label">${tzLabel}</label>
         <div class="col-sm-9 controls">
-            <form:select path="timeZone" items="${timeZonesList}" cssClass="form-control"/>
+            <form:select path="timeZone" items="${timeZonesList}" cssClass="form-select"/>
         </div>
     </div>
 
-    <div class="form-group" ng-app="themeSelectModule" ng-controller="themeController">
-        <label class="col-sm-3 control-label">
+    <div class="row mb-3" ng-app="themeSelectModule" ng-controller="themeController">
+        <label class="col-sm-3 col-form-label">
             <spring:message code="createWebsite.theme" />
         </label>
         <div class="col-sm-9 controls">
-            <form:select path="theme" items="${themes}" itemValue="id" itemLabel="name" cssClass="form-control"
+            <form:select path="theme" items="${themes}" itemValue="id" itemLabel="name" cssClass="form-select"
                          onchange="previewImage(this[selectedIndex].value)"/>
             <p id="themedescription"></p>
-            <p><img id="themeThumbnail" src="" class="img-responsive img-thumbnail" style="max-width: 30em" /></p>
+            <p><img id="themeThumbnail" src="" class="img-fluid img-thumbnail" style="max-width: 30em" /></p>
 
         </div>
     </div>
 
-    <button type="submit" class="btn btn-default"><spring:message code="createWebsite.button.save"/></button>
+    <button type="submit" class="btn btn-secondary"><spring:message code="createWebsite.button.save"/></button>
 
     <input class="btn" type="button" value="<spring:message code='generic.cancel'/>"
            onclick="window.location='<c:url value='/roller-ui/menu.rol'/>'"/>

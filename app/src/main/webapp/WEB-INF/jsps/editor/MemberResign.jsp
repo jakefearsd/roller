@@ -21,9 +21,9 @@
     <spring:message code="yourWebsites.confirmResignation" arguments="${actionWeblog.handle}"/>
 </p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/memberResign!resign.rol" method="post" class="form-horizontal">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/memberResign!resign.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-    <button type="submit" class="form-horizontal"><spring:message code="generic.yes"/></button>&nbsp;
-    <button type="submit" class="form-horizontal" formaction="${pageContext.request.contextPath}/roller-ui/authoring/menu.rol"><spring:message code="generic.no"/></button>
+    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>&nbsp;
+    <button type="submit" class="btn btn-secondary" formaction="${pageContext.request.contextPath}/roller-ui/authoring/menu.rol"><spring:message code="generic.no"/></button>
 <sec:csrfInput/>
 </form>

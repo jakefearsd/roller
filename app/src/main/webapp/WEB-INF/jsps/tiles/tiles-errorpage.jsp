@@ -36,20 +36,22 @@
         </div>
 
         <div id="wrapper" class="container-fluid">
-            <div id="leftcontent_wrap">
-                <div id="leftcontent">
+            <div class="row">
+                <div id="leftcontent_wrap" class="col-md-1">
+                    <div id="leftcontent">
+                    </div>
                 </div>
-            </div>
 
-            <div id="centercontent_wrap">
-                <div id="centercontent">
-                    <jsp:include page="${tile_messages}" />
-                    <jsp:include page="${tile_content}" />
+                <div id="centercontent_wrap" class="col-md-10">
+                    <div id="centercontent">
+                        <jsp:include page="${tile_messages}" />
+                        <jsp:include page="${tile_content}" />
+                    </div>
                 </div>
-            </div>
 
-            <div id="rightcontent_wrap">
-                <div id="rightcontent">
+                <div id="rightcontent_wrap" class="col-md-1">
+                    <div id="rightcontent">
+                    </div>
                 </div>
             </div>
         </div>

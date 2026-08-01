@@ -37,7 +37,7 @@
     </p>
     <p><spring:message code="installer.upgradeTables"/></p>
 
-    <form action="${pageContext.request.contextPath}/roller-ui/install/install!upgrade.rol" method="post" class="form-horizontal">
+    <form action="${pageContext.request.contextPath}/roller-ui/install/install!upgrade.rol" method="post">
         <sec:csrfInput/>
         <spring:message code="installer.yesUpgradeTables" var="upgradeTablesLabel"/>
         <button type="submit" class="btn btn-primary">${upgradeTablesLabel}</button>
@@ -58,7 +58,7 @@
         <c:forEach items="${messages}" var="msg">${fn:escapeXml(msg)}<br/></c:forEach>
     </pre>
 
-    <form action="${pageContext.request.contextPath}/roller-ui/install/install!bootstrap.rol" method="post" class="form-horizontal">
+    <form action="${pageContext.request.contextPath}/roller-ui/install/install!bootstrap.rol" method="post">
         <sec:csrfInput/>
         <spring:message code="installer.finishUpgrade" var="finishUpgradeLabel"/>
         <button type="submit" class="btn btn-primary">${finishUpgradeLabel}</button>

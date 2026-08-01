@@ -39,7 +39,7 @@ function save() {
 
 <p><spring:message code="memberPermissions.description"/></p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post" class="form-horizontal">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     
     <div style="text-align: right; padding-bottom: 6px;">
@@ -77,7 +77,7 @@ function save() {
                 <tr class="rollertable_even">
             </c:otherwise>
 </c:choose><td class="rollertable">
-                    <span class="glyphicon glyphicon-user"></span>
+                    <span class="bi bi-person"></span>
 	                ${perm.user.userName}
                 </td>               
                 <td class="rollertable">
