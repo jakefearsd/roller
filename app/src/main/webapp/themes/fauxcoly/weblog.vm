@@ -9,7 +9,6 @@
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href='$url.page("custom.css")' />
-    #showMetaDescription()
 </head>
 <body>
 

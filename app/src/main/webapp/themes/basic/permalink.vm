@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>$model.weblogEntry.title : $model.weblog.name</title>
+    <title>#showEntryTitle($model.weblogEntry) : $model.weblog.name</title>
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href="$model.weblog.stylesheet">
-    #showMetaDescription()
+    #showSeoHead()
 </head>
 <!-- permalink -->
 <body>

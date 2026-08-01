@@ -216,6 +216,24 @@ class UtilitiesModelTest {
     }
 
     @Test
+    void escapeJsonProducesValidJsonAndNeutralisesAScriptCloseTag() {
+        // #showSeoHead embeds user-controlled values inside the JSON-LD
+        // <script type="application/ld+json"> block. escapeJavaScript is not
+        // usable there: it escapes the apostrophe as \' which is invalid JSON.
+        assertEquals("he said \\\"hi\\\"", model().escapeJson("he said \"hi\""),
+                "Double quotes must be escaped or the JSON string literal ends early.");
+        assertEquals("it's", model().escapeJson("it's"),
+                "The apostrophe must NOT be escaped: \\' is invalid JSON and makes "
+                        + "every parser reject the whole JSON-LD block.");
+        assertEquals("<\\/script>", model().escapeJson("</script>"),
+                "The forward slash must be escaped so a value containing </script> "
+                        + "cannot terminate the surrounding inline script element.");
+        assertEquals("line1\\nline2", model().escapeJson("line1\nline2"),
+                "A raw newline is invalid inside a JSON string literal.");
+        assertNull(model().escapeJson(null), "escapeJson(null) must return null");
+    }
+
+    @Test
     void unescapingIsTheInverseOfEscaping() {
         String raw = "<b>Tom & \"Jerry\"</b> café";
         assertEquals(raw, model().unescapeHTML(model().escapeHTML(raw)),

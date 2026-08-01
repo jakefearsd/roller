@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Search Results for '$model.term' : $model.weblog.name</title>
     #showAutodiscoveryLinks($model.weblog)
+    #showSeoHead()
     <link rel="stylesheet" media="all" href="$model.weblog.stylesheet">
 </head>
 <body>

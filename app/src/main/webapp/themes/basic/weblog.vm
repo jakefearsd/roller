@@ -8,7 +8,7 @@
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href="$model.weblog.stylesheet">
-    #showMetaDescription()
+    #showSeoHead()
 </head>
 <!-- weblog -->
 <body>
