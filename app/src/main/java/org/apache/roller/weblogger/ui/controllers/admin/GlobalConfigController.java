@@ -28,7 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.plugins.comment.WeblogEntryCommentPlugin;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -207,9 +206,9 @@ public class GlobalConfigController extends BaseController {
 
         try {
             // save 'em and flush
-            PropertiesManager mgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+            PropertiesManager mgr = weblogger.getPropertiesManager();
             mgr.saveProperties(properties);
-            WebloggerFactory.getWeblogger().flush();
+            weblogger.flush();
 
             // notify user of our success
             addMessage(model, "generic.changes.saved", request);
@@ -225,7 +224,7 @@ public class GlobalConfigController extends BaseController {
     private Map<String, RuntimeConfigProperty> loadProperties(Model model) {
         Map<String, RuntimeConfigProperty> properties = Collections.emptyMap();
         try {
-            PropertiesManager mgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+            PropertiesManager mgr = weblogger.getPropertiesManager();
             properties = mgr.getProperties();
         } catch (WebloggerException ex) {
             log.error("Error getting runtime properties map", ex);
@@ -246,7 +245,7 @@ public class GlobalConfigController extends BaseController {
 
     private Collection<Weblog> loadWeblogs(Model model) {
         try {
-            WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+            WeblogManager mgr = weblogger.getWeblogManager();
             return mgr.getWeblogs(true, null, null, null, 0, -1);
         } catch (WebloggerException ex) {
             log.error("Error getting weblogs", ex);
@@ -255,7 +254,7 @@ public class GlobalConfigController extends BaseController {
     }
 
     private List<WeblogEntryCommentPlugin> loadPlugins() {
-        PluginManager pmgr = WebloggerFactory.getWeblogger().getPluginManager();
+        PluginManager pmgr = weblogger.getPluginManager();
         return pmgr.getCommentPlugins();
     }
 }

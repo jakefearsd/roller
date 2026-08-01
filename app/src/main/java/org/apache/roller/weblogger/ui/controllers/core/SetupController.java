@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
@@ -69,7 +68,7 @@ public class SetupController extends BaseController {
         populateCommonModel(request, model);
 
         try {
-            WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+            WeblogManager mgr = weblogger.getWeblogManager();
             Collection<Weblog> weblogs = mgr.getWeblogs(true, null, null, null, 0, -1);
             model.addAttribute("weblogs", weblogs);
         } catch (WebloggerException ex) {
@@ -78,8 +77,8 @@ public class SetupController extends BaseController {
         }
 
         try {
-            long userCount = WebloggerFactory.getWeblogger().getUserManager().getUserCount();
-            long blogCount = WebloggerFactory.getWeblogger().getWeblogManager().getWeblogCount();
+            long userCount = weblogger.getUserManager().getUserCount();
+            long blogCount = weblogger.getWeblogManager().getWeblogCount();
             model.addAttribute("userCount", userCount);
             model.addAttribute("blogCount", blogCount);
         } catch (WebloggerException ex) {
@@ -99,7 +98,7 @@ public class SetupController extends BaseController {
 
         populateCommonModel(request, model);
 
-        PropertiesManager mgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager mgr = weblogger.getPropertiesManager();
         try {
             RuntimeConfigProperty frontpageBlogProp = mgr.getProperty("site.frontpage.weblog.handle");
             frontpageBlogProp.setValue(frontpageBlog);
@@ -109,7 +108,7 @@ public class SetupController extends BaseController {
             aggregatedProp.setValue(aggregated != null ? aggregated.toString() : "false");
             mgr.saveProperty(aggregatedProp);
 
-            WebloggerFactory.getWeblogger().flush();
+            weblogger.flush();
 
             addFlashMessage(redirectAttributes, "frontpageConfig.values.saved", request);
 

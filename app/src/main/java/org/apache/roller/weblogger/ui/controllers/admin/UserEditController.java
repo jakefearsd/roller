@@ -31,7 +31,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.AuthMethod;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -122,7 +121,7 @@ public class UserEditController extends BaseController {
             }
 
             try {
-                UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+                UserManager mgr = weblogger.getUserManager();
                 // fields not copied over from above copyTo():
                 user.setUserName(bean.getUserName());
                 user.setDateCreated(new java.util.Date());
@@ -134,7 +133,7 @@ public class UserEditController extends BaseController {
                     mgr.grantRole("admin", user);
                 }
 
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
                 addMessage(model, "createUser.add.success", bean.getUserName(), request);
                 model.addAttribute("bean", new CreateUserBean());
@@ -231,7 +230,7 @@ public class UserEditController extends BaseController {
             }
 
             try {
-                UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+                UserManager mgr = weblogger.getUserManager();
                 mgr.saveUser(user);
 
                 // update Admin role as appropriate
@@ -253,7 +252,7 @@ public class UserEditController extends BaseController {
                 } else if (!hasAdmin && bean.isAdministrator()) {
                     mgr.grantRole("admin", user);
                 }
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
                 // successful edit: send user back to user admin page
                 model.addAttribute("bean", new CreateUserBean());
@@ -277,7 +276,7 @@ public class UserEditController extends BaseController {
 
     private User lookupUser(CreateUserBean bean) {
         try {
-            UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+            UserManager mgr = weblogger.getUserManager();
             if (!StringUtils.isEmpty(bean.getId())) {
                 return mgr.getUser(bean.getId());
             } else if (!StringUtils.isEmpty(bean.getUserName())) {
@@ -315,7 +314,7 @@ public class UserEditController extends BaseController {
 
     private List<WeblogPermission> getPermissions(User user) {
         try {
-            return WebloggerFactory.getWeblogger().getUserManager().getWeblogPermissions(user);
+            return weblogger.getUserManager().getWeblogPermissions(user);
         } catch (WebloggerException ex) {
             log.error("ERROR getting permissions for user " + user.getUserName(), ex);
         }
