@@ -22,7 +22,11 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntryTagComparator;
@@ -33,7 +37,9 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  * Pojo safety wrapper for WeblogEntry objects.
  */
 public final class WeblogEntryWrapper {
-    
+
+    private static final Log log = LogFactory.getLog(WeblogEntryWrapper.class);
+
     // keep a reference to the wrapped pojo
     private final WeblogEntry pojo;
     
@@ -298,7 +304,59 @@ public final class WeblogEntryWrapper {
 	public String getSearchDescription() {
         return HTMLSanitizer.conditionallySanitize(this.pojo.getSearchDescription());
 	}
-    
+
+    public String getFeaturedImageId() {
+        return this.pojo.getFeaturedImageId();
+    }
+
+    /**
+     * Resolves {@link #getFeaturedImageId()} to its {@link MediaFileWrapper},
+     * or null if no featured image is set, or if the id no longer resolves
+     * (the media file was deleted independently -- see the javadoc on
+     * {@link WeblogEntry#getFeaturedImageId()}).
+     */
+    public MediaFileWrapper getFeaturedImage() {
+        return resolveMediaFile(this.pojo.getFeaturedImageId());
+    }
+
+    public String getMetaTitle() {
+        return HTMLSanitizer.conditionallySanitize(this.pojo.getMetaTitle());
+    }
+
+    public String getOgImageId() {
+        return this.pojo.getOgImageId();
+    }
+
+    /**
+     * Resolves {@link #getOgImageId()} to its {@link MediaFileWrapper}, or
+     * null if no distinct Open Graph image is set (callers fall back to
+     * {@link #getFeaturedImage()}) or if the id no longer resolves.
+     */
+    public MediaFileWrapper getOgImage() {
+        return resolveMediaFile(this.pojo.getOgImageId());
+    }
+
+    public String getCanonicalUrl() {
+        return this.pojo.getCanonicalUrl();
+    }
+
+    public Boolean getNoindex() {
+        return this.pojo.getNoindex();
+    }
+
+    private MediaFileWrapper resolveMediaFile(String mediaFileId) {
+        if (mediaFileId == null) {
+            return null;
+        }
+        try {
+            MediaFile mediaFile = WebloggerFactory.getWeblogger().getMediaFileManager().getMediaFile(mediaFileId);
+            return MediaFileWrapper.wrap(mediaFile, urlStrategy);
+        } catch (Exception e) {
+            log.debug("Could not resolve media file " + mediaFileId, e);
+            return null;
+        }
+    }
+
     /**
      * this is a special method to access the original pojo.
      * we don't really want to do this, but it's necessary

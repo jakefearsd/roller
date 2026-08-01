@@ -91,6 +91,21 @@
             <basic name="creatorUserName">
                 <column name="creator" insertable="true" updatable="true" unique="false" />
             </basic>
+            <basic name="featuredImageId">
+                <column name="featured_image_id" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="metaTitle">
+                <column name="meta_title" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="ogImageId">
+                <column name="og_image_id" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="canonicalUrl">
+                <column name="canonical_url" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="noindex">
+                <column name="noindex" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
             <many-to-one name="category" target-entity="org.apache.roller.weblogger.pojos.WeblogCategory">
                 <join-column name="categoryid" insertable="true" updatable="true" nullable="false"/>
             </many-to-one>

@@ -17,10 +17,12 @@
  */
 package org.apache.roller.weblogger.pojos.wrapper;
 
+import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -351,6 +353,89 @@ class WeblogEntryWrapperTest {
             entry.setAllowComments(Boolean.FALSE);
             assertFalse(wrapper.getCommentsStillAllowed(),
                     "and it must track the entry rather than being decided once");
+        }
+    }
+
+    @Test
+    void seoScalarAccessorsReportTheWrappedEntrysOwnValues() {
+        entry.setFeaturedImageId("mf-featured-1");
+        entry.setMetaTitle("Custom <b>SEO</b> Title");
+        entry.setOgImageId("mf-og-1");
+        entry.setCanonicalUrl("http://example.com/canonical");
+        entry.setNoindex(Boolean.TRUE);
+
+        assertEquals("mf-featured-1", wrapper.getFeaturedImageId());
+        assertEquals("mf-og-1", wrapper.getOgImageId());
+        assertEquals("http://example.com/canonical", wrapper.getCanonicalUrl());
+        assertEquals(Boolean.TRUE, wrapper.getNoindex());
+    }
+
+    @Test
+    void metaTitleRunsThroughTheSanitiser() {
+        Boolean previous = HTMLSanitizer.xssEnabled;
+        try {
+            HTMLSanitizer.xssEnabled = Boolean.TRUE;
+            entry.setMetaTitle("Title <script>alert(1)</script>");
+
+            assertFalse(wrapper.getMetaTitle().contains("<script>"),
+                    "The SEO <title> override reaches <head> unescaped in T4's macro, so it "
+                            + "must be sanitised here like every other free-text accessor");
+        } finally {
+            HTMLSanitizer.xssEnabled = previous;
+        }
+    }
+
+    @Test
+    void featuredImageAndOgImageResolveThroughTheMediaFileManagerWrapped() throws Exception {
+        entry.setFeaturedImageId("mf-featured-1");
+        entry.setOgImageId("mf-og-1");
+
+        MediaFile featured = new MediaFile();
+        featured.setName("featured.jpg");
+        MediaFile og = new MediaFile();
+        og.setName("og.jpg");
+
+        MediaFileManager mediaFiles = mock(MediaFileManager.class);
+        when(mediaFiles.getMediaFile("mf-featured-1")).thenReturn(featured);
+        when(mediaFiles.getMediaFile("mf-og-1")).thenReturn(og);
+        Weblogger weblogger = mock(Weblogger.class);
+        when(weblogger.getMediaFileManager()).thenReturn(mediaFiles);
+
+        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
+            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+
+            assertEquals("featured.jpg", wrapper.getFeaturedImage().getName(),
+                    "getFeaturedImage() must resolve the id via the media file manager, wrapped");
+            assertEquals("og.jpg", wrapper.getOgImage().getName());
+        }
+    }
+
+    @Test
+    void featuredImageAndOgImageAreNullSafeWhenNoIdIsSet() {
+        assertNull(wrapper.getFeaturedImageId());
+        assertNull(wrapper.getFeaturedImage(),
+                "No featured image id means no image -- callers must not have to null-check "
+                        + "getFeaturedImageId() before calling getFeaturedImage()");
+        assertNull(wrapper.getOgImage());
+    }
+
+    @Test
+    void featuredImageResolvesToNullRatherThanThrowingWhenTheIdIsStale() throws Exception {
+        // The media file may have been deleted independently of the entry
+        // (see the javadoc on WeblogEntry#getFeaturedImageId()); the wrapper
+        // must degrade to "no image", not propagate the lookup failure.
+        entry.setFeaturedImageId("mf-deleted");
+
+        MediaFileManager mediaFiles = mock(MediaFileManager.class);
+        when(mediaFiles.getMediaFile("mf-deleted"))
+                .thenThrow(new org.apache.roller.weblogger.WebloggerException("not found"));
+        Weblogger weblogger = mock(Weblogger.class);
+        when(weblogger.getMediaFileManager()).thenReturn(mediaFiles);
+
+        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
+            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+
+            assertNull(wrapper.getFeaturedImage());
         }
     }
 

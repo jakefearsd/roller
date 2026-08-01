@@ -159,6 +159,10 @@
          <type>float</type>
          <default-value>20.00</default-value>
       </property-def>
+      <property-def  name="uploads.exif.stripGps"  key="configForm.stripGpsData">
+         <type>boolean</type>
+         <default-value>true</default-value>
+      </property-def>
 
    </display-group >
    

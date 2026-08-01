@@ -430,6 +430,14 @@ limitations under the License.
             <version>0.4.21</version>
         </dependency>
 
+        <!-- EXIF/GPS/lens metadata extraction from uploaded images (Stage 2 Wave 1).
+             Not Boot-BOM-managed, so the version is pinned explicitly here. -->
+        <dependency>
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+            <version>2.21.0</version>
+        </dependency>
+
         <!-- Spring deps. Versions are no longer pinned here: spring-boot-dependencies
              (imported above) governs every org.springframework* / org.springframework.security*
              artifact. spring-boot-starter-web/-security already pull spring-web,

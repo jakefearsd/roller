@@ -29,6 +29,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.exif.ExifIFD0Directory;
+import com.drew.metadata.exif.GpsDirectory;
+
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -1458,5 +1463,238 @@ public class MediaFileTest  {
         TestUtils.endSession(true);
         TestUtils.teardownWeblog(testWeblog.getId());
         TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    // ------------------------------------------------- EXIF / GPS / blurhash
+
+    /** Photo with a full EXIF block (camera/lens/exposure/aperture/iso/focal/taken) plus GPS. */
+    private static final String EXIF_IMAGE = "/hawk-exif.jpg";
+
+    /** 300x200, narrower than the 480 ladder rung, and carries no EXIF at all. */
+    private static final String SMALL_NO_EXIF_IMAGE = "/small-photo.jpg";
+
+    private void setStripGps(boolean strip) throws Exception {
+        Map<String, RuntimeConfigProperty> config = WebloggerFactory.getWeblogger()
+                .getPropertiesManager().getProperties();
+        config.get("uploads.exif.stripGps").setValue(Boolean.toString(strip));
+    }
+
+    private MediaFile uploadImage(Weblog weblog, MediaFileDirectory dir, String name, String resource)
+            throws Exception {
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName(name);
+        mediaFile.setDirectory(dir);
+        mediaFile.setWeblog(weblog);
+        mediaFile.setContentType("image/jpeg");
+        mediaFile.setInputStream(getClass().getResourceAsStream(resource));
+        mfMgr.createMediaFile(weblog, mediaFile, new RollerMessages());
+        return mediaFile;
+    }
+
+    @Test
+    public void testCreateMediaFileExtractsExifMetadataWithGpsStrippedByDefault() throws Exception {
+        User testUser = TestUtils.setupUser("exifTestUser1");
+        Weblog testWeblog = TestUtils.setupWeblog("exifTestWeblog1", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        // uploads.exif.stripGps defaults to true -- no override needed here.
+        MediaFile mediaFile = uploadImage(testWeblog, rootDirectory, "exif.jpg", EXIF_IMAGE);
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        MediaFile stored = mfMgr.getMediaFile(id);
+        assertEquals("Canon EOS R5", stored.getExifCamera());
+        assertEquals("RF100-500mm F4.5-7.1 L IS USM", stored.getExifLens());
+        assertNotNull(stored.getExifExposure());
+        assertTrue(stored.getExifExposure().contains("1000"),
+                "expected the 1/1000s exposure to show up in the description: " + stored.getExifExposure());
+        assertNotNull(stored.getExifAperture());
+        assertEquals(400, stored.getExifIso());
+        assertNotNull(stored.getExifFocalLength());
+        assertEquals(new Timestamp(
+                new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss").parse("2024:06:15 10:30:00").getTime()),
+                stored.getExifTaken());
+
+        // GPS was present in the source file but must be stripped by default.
+        assertNull(stored.getGpsLatitude());
+        assertNull(stored.getGpsLongitude());
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    @Test
+    public void testCreateMediaFileKeepsGpsWhenStrippingIsDisabled() throws Exception {
+        User testUser = TestUtils.setupUser("exifTestUser2");
+        Weblog testWeblog = TestUtils.setupWeblog("exifTestWeblog2", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        setStripGps(false);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        MediaFile mediaFile = uploadImage(testWeblog, rootDirectory, "exif-gps.jpg", EXIF_IMAGE);
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        try {
+            MediaFile stored = mfMgr.getMediaFile(id);
+            assertNotNull(stored.getGpsLatitude());
+            assertNotNull(stored.getGpsLongitude());
+            assertEquals(37.8199, stored.getGpsLatitude(), 0.001);
+            assertEquals(-122.4783, stored.getGpsLongitude(), 0.001);
+        } finally {
+            setStripGps(true);
+            TestUtils.endSession(true);
+            TestUtils.teardownWeblog(testWeblog.getId());
+            TestUtils.teardownUser(testUser.getUserName());
+        }
+    }
+
+    @Test
+    public void testCreateMediaFileWithNoExifYieldsNullExifFieldsButStillBlurhashes() throws Exception {
+        User testUser = TestUtils.setupUser("exifTestUser3");
+        Weblog testWeblog = TestUtils.setupWeblog("exifTestWeblog3", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        MediaFile mediaFile = uploadImage(testWeblog, rootDirectory, "plain.jpg", TEST_IMAGE);
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        MediaFile stored = mfMgr.getMediaFile(id);
+        assertNull(stored.getExifCamera());
+        assertNull(stored.getExifLens());
+        assertNull(stored.getExifExposure());
+        assertNull(stored.getExifAperture());
+        assertNull(stored.getExifIso());
+        assertNull(stored.getExifFocalLength());
+        assertNull(stored.getExifTaken());
+        assertNull(stored.getGpsLatitude());
+        assertNull(stored.getGpsLongitude());
+
+        // Absence of EXIF must never block blurhash encoding -- unrelated pipelines.
+        assertNotNull(stored.getBlurhash());
+        assertEquals(28, stored.getBlurhash().length());
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    @Test
+    public void testBlurhashIsEncodedFromThe480RenditionWhenAvailable() throws Exception {
+        User testUser = TestUtils.setupUser("blurhashTestUser1");
+        Weblog testWeblog = TestUtils.setupWeblog("blurhashTestWeblog1", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        // 500px wide -- the 480 rung is generated.
+        MediaFile mediaFile = uploadImage(testWeblog, rootDirectory, "wide-blur.jpg", TEST_IMAGE);
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        assertTrue(fmgr.getFileContent(testWeblog, id + "_480").getLength() > 0,
+                "sanity: the 480 rung must exist for this fixture");
+
+        MediaFile stored = mfMgr.getMediaFile(id);
+        assertNotNull(stored.getBlurhash());
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    @Test
+    public void testBlurhashFallsBackToTheAdminThumbnailWhenNarrowerThanTheLadder() throws Exception {
+        User testUser = TestUtils.setupUser("blurhashTestUser2");
+        Weblog testWeblog = TestUtils.setupWeblog("blurhashTestWeblog2", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        // 300px wide -- narrower than the 480 rung, so the ladder produces nothing.
+        MediaFile mediaFile = uploadImage(testWeblog, rootDirectory, "narrow.jpg", SMALL_NO_EXIF_IMAGE);
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        final Weblog assertWeblog = testWeblog;
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog, id + "_480"),
+                "sanity: this fixture must not produce a 480 rung");
+
+        MediaFile stored = mfMgr.getMediaFile(id);
+        assertNotNull(stored.getBlurhash(),
+                "blurhash must fall back to the _sm admin thumbnail when no ladder rung exists");
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    @Test
+    public void testRenditionsCarryNoExifOrGpsMetadataEvenWhenTheOriginalDid() throws Exception {
+        User testUser = TestUtils.setupUser("exifStripTestUser1");
+        Weblog testWeblog = TestUtils.setupWeblog("exifStripTestWeblog1", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        // Even with site-wide GPS stripping off, the rendition re-encode itself
+        // (thumbnailator -> ImageIO) must never carry EXIF/GPS through --
+        // that's a property of the re-encode, independent of the stored-field
+        // stripping tested above.
+        setStripGps(false);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        MediaFile mediaFile = uploadImage(testWeblog, rootDirectory, "exif-rendition.jpg", EXIF_IMAGE);
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        try {
+            FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+
+            // The original file on disk is untouched -- it must still carry its EXIF/GPS.
+            byte[] originalBytes = fmgr.getFileContent(testWeblog, id).getInputStream().readAllBytes();
+            Metadata originalMetadata = ImageMetadataReader.readMetadata(new ByteArrayInputStream(originalBytes));
+            assertFalse(originalMetadata.getDirectoriesOfType(GpsDirectory.class).isEmpty(),
+                    "the original upload file must be left untouched, GPS included");
+
+            // The 480 rendition, however, must be clean: no EXIF, no GPS.
+            byte[] renditionBytes = fmgr.getFileContent(testWeblog, id + "_480").getInputStream().readAllBytes();
+            Metadata renditionMetadata = ImageMetadataReader.readMetadata(new ByteArrayInputStream(renditionBytes));
+            assertTrue(renditionMetadata.getDirectoriesOfType(GpsDirectory.class).isEmpty(),
+                    "renditions must not carry GPS metadata forward");
+            assertTrue(renditionMetadata.getDirectoriesOfType(ExifIFD0Directory.class).isEmpty(),
+                    "renditions must not carry EXIF metadata forward");
+        } finally {
+            setStripGps(true);
+            TestUtils.endSession(true);
+            TestUtils.teardownWeblog(testWeblog.getId());
+            TestUtils.teardownUser(testUser.getUserName());
+        }
     }
 }

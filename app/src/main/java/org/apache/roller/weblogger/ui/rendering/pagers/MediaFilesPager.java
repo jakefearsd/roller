@@ -22,6 +22,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,17 +30,19 @@ import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 
 
 /**
  * Paging through a collection of media files.
  */
-public class MediaFilesPager extends AbstractPager<MediaFile> {
-    
+public class MediaFilesPager extends AbstractPager<MediaFileWrapper> {
+
     private static final Log log = LogFactory.getLog(MediaFilesPager.class);
     private int length = 0;
-    
-    // the collection for the pager
+
+    // the collection for the pager (unwrapped -- getLastUpdated() needs the
+    // raw timestamps and wrapping is cheap enough to do lazily in getItems())
     private List<MediaFile> mediaFiles;
     
     // most recent update time of current set of entries
@@ -60,14 +63,20 @@ public class MediaFilesPager extends AbstractPager<MediaFile> {
     
     
     @Override
-    public List<MediaFile> getItems() {
-        
+    public List<MediaFileWrapper> getItems() {
+        return rawItems().stream()
+                .map(mf -> MediaFileWrapper.wrap(mf, urlStrategy))
+                .collect(Collectors.toList());
+    }
+
+    private List<MediaFile> rawItems() {
+
         if (this.mediaFiles == null) {
             // calculate offset
             //int offset = getPage() * length;
-            
+
             List<MediaFile> results = new ArrayList<>();
-            
+
             try {
                 MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
                 results = mgr.fetchRecentPublicMediaFiles(length);
@@ -76,7 +85,7 @@ public class MediaFilesPager extends AbstractPager<MediaFile> {
             }
             this.mediaFiles = results;
         }
-        
+
         return this.mediaFiles;
     }
     
@@ -90,7 +99,7 @@ public class MediaFilesPager extends AbstractPager<MediaFile> {
     public Date getLastUpdated() {
         if (lastUpdated == null) {
             // feeds are sorted by pubtime, so first might not be last updated
-            List<MediaFile> items = getItems();
+            List<MediaFile> items = rawItems();
             if (items != null && !items.isEmpty()) {
                 Timestamp newest = items.get(0).getLastUpdated();
                 for (MediaFile file : items) {

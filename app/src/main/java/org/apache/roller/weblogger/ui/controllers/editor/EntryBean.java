@@ -71,6 +71,13 @@ public class EntryBean {
     private String enclosureURL = null;
     private String searchDescription = null;
     private int commentCount = 0;
+
+    // Wave 1 media & SEO foundation -- no editor UI yet, plumbing only
+    private String featuredImageId = null;
+    private String metaTitle = null;
+    private String ogImageId = null;
+    private String canonicalUrl = null;
+    private boolean noindex = false;
     
     
     public String getId() {
@@ -236,6 +243,46 @@ public class EntryBean {
     public void setSearchDescription(String searchDescription) {
         this.searchDescription = searchDescription;
     }
+
+    public String getFeaturedImageId() {
+        return featuredImageId;
+    }
+
+    public void setFeaturedImageId(String featuredImageId) {
+        this.featuredImageId = featuredImageId;
+    }
+
+    public String getMetaTitle() {
+        return metaTitle;
+    }
+
+    public void setMetaTitle(String metaTitle) {
+        this.metaTitle = metaTitle;
+    }
+
+    public String getOgImageId() {
+        return ogImageId;
+    }
+
+    public void setOgImageId(String ogImageId) {
+        this.ogImageId = ogImageId;
+    }
+
+    public String getCanonicalUrl() {
+        return canonicalUrl;
+    }
+
+    public void setCanonicalUrl(String canonicalUrl) {
+        this.canonicalUrl = canonicalUrl;
+    }
+
+    public boolean getNoindex() {
+        return noindex;
+    }
+
+    public void setNoindex(boolean noindex) {
+        this.noindex = noindex;
+    }
     
     // a convenient way to get the final pubtime of the entry
     public Timestamp getPubTime(Locale locale, TimeZone timezone) {
@@ -301,7 +348,12 @@ public class EntryBean {
         entry.setTagsAsString(getTagsAsString() != null
                 ? Utilities.replaceNonAlphanumeric(getTagsAsString(), ' ') : "");
         entry.setSearchDescription(getSearchDescription());
-        
+        entry.setFeaturedImageId(getFeaturedImageId());
+        entry.setMetaTitle(getMetaTitle());
+        entry.setOgImageId(getOgImageId());
+        entry.setCanonicalUrl(getCanonicalUrl());
+        entry.setNoindex(getNoindex());
+
         // figure out the category selected
         if (getCategoryId() != null) {
             WeblogCategory cat = null;
@@ -349,7 +401,12 @@ public class EntryBean {
         setCategoryId(entry.getCategory().getId());
         setTagsAsString(entry.getTagsAsString());
         setSearchDescription(entry.getSearchDescription());
-        
+        setFeaturedImageId(entry.getFeaturedImageId());
+        setMetaTitle(entry.getMetaTitle());
+        setOgImageId(entry.getOgImageId());
+        setCanonicalUrl(entry.getCanonicalUrl());
+        setNoindex(entry.getNoindex() != null && entry.getNoindex());
+
         // set comment count for all comments (including spam and unapproved)
         try {
             WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();

@@ -40,12 +40,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.BlurHash;
+import org.apache.roller.weblogger.business.ExifSupport;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.FileIOException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.FileContent;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
@@ -265,9 +268,80 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             // logged at WARN with the media file id and do not reach this catch.
             RenditionSupport.generate(cmgr, mediaFile, img);
 
+            // EXIF/GPS/blurhash: reads from the file already saved to disk
+            // (fc, re-opened) rather than the original upload stream, which
+            // saveFileContent() already consumed. Never lets a metadata
+            // failure affect the thumbnail/rendition work above.
+            extractExifAndBlurhash(cmgr, mediaFile, fc);
+
         } catch (Exception e) {
             log.debug("ERROR creating thumbnail", e);
         }
+    }
+
+    /**
+     * Reads EXIF/GPS metadata from the stored original ({@code fc}, re-opened
+     * -- {@link FileContent#getInputStream()} returns a fresh stream backed
+     * by the on-disk file each time it's called) and encodes a BlurHash
+     * placeholder from the smallest available rendition. Applies the
+     * {@code uploads.exif.stripGps} site setting by nulling the GPS fields
+     * before they are ever persisted -- the original file on disk is never
+     * touched either way. Metadata extraction and blurhash encoding never
+     * throw: each is independent, and a failure in one (unreadable EXIF,
+     * blurhash decode failure) does not prevent the other from being stored.
+     * Only the final {@code strategy.store()} can throw, same as the rest of
+     * this class -- callers already handle it the same way they handle every
+     * other step of thumbnail/rendition generation.
+     */
+    private void extractExifAndBlurhash(FileContentManager cmgr, MediaFile mediaFile, FileContent fc)
+            throws WebloggerException {
+        ExifSupport.ExifData exif = ExifSupport.ExifData.EMPTY;
+        try {
+            exif = ExifSupport.extract(fc.getInputStream());
+        } catch (Exception e) {
+            log.debug("Could not extract EXIF metadata for media file " + mediaFile.getId(), e);
+        }
+
+        mediaFile.setExifCamera(exif.camera);
+        mediaFile.setExifLens(exif.lens);
+        mediaFile.setExifExposure(exif.exposure);
+        mediaFile.setExifAperture(exif.aperture);
+        mediaFile.setExifIso(exif.iso);
+        mediaFile.setExifFocalLength(exif.focalLength);
+        mediaFile.setExifTaken(exif.taken);
+
+        boolean stripGps = WebloggerRuntimeConfig.getBooleanProperty("uploads.exif.stripGps");
+        mediaFile.setGpsLatitude(stripGps ? null : exif.gpsLatitude);
+        mediaFile.setGpsLongitude(stripGps ? null : exif.gpsLongitude);
+
+        try {
+            mediaFile.setBlurhash(computeBlurhash(cmgr, mediaFile));
+        } catch (Exception e) {
+            log.debug("Could not compute blurhash for media file " + mediaFile.getId(), e);
+        }
+
+        strategy.store(mediaFile);
+    }
+
+    /**
+     * Encodes a BlurHash from the smallest available rendition: the 480w
+     * rung of the responsive ladder, falling back to the admin thumbnail
+     * ({@code _sm}) when the original was narrower than 480 (so the ladder
+     * skipped it). Returns null if neither is available or decodable.
+     */
+    private String computeBlurhash(FileContentManager cmgr, MediaFile mediaFile) {
+        for (String candidateId : List.of(mediaFile.getId() + "_480", mediaFile.getId() + "_sm")) {
+            try {
+                FileContent candidate = cmgr.getFileContent(mediaFile.getWeblog(), candidateId);
+                BufferedImage image = ImageIO.read(candidate.getInputStream());
+                if (image != null) {
+                    return BlurHash.encode(image);
+                }
+            } catch (Exception e) {
+                log.debug("No usable rendition '" + candidateId + "' for blurhash encoding", e);
+            }
+        }
+        return null;
     }
 
     /**

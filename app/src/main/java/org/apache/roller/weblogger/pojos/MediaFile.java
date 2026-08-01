@@ -63,6 +63,17 @@ public class MediaFile implements Serializable {
     private String creatorUserName;
     private Weblog weblog;
 
+    private String blurhash;
+    private String exifCamera;
+    private String exifLens;
+    private String exifExposure;
+    private String exifAperture;
+    private Integer exifIso;
+    private String exifFocalLength;
+    private Timestamp exifTaken;
+    private Double gpsLatitude;
+    private Double gpsLongitude;
+
     private transient InputStream is;
 
     private transient MediaFileDirectory directory;
@@ -507,6 +518,109 @@ public class MediaFile implements Serializable {
         }
         thumbnailHeight = newHeight;
         thumbnailWidth = newWidth;
+    }
+
+    /**
+     * BlurHash placeholder string encoded from the smallest available
+     * rendition at upload time (480w rung, or the admin thumbnail if the
+     * original was narrower than that). Null if encoding failed or this is
+     * not an image file.
+     */
+    public String getBlurhash() {
+        return blurhash;
+    }
+
+    public void setBlurhash(String blurhash) {
+        this.blurhash = blurhash;
+    }
+
+    /** Combined camera make/model read from EXIF, e.g. "Canon EOS R5". Null if absent or unreadable. */
+    public String getExifCamera() {
+        return exifCamera;
+    }
+
+    public void setExifCamera(String exifCamera) {
+        this.exifCamera = exifCamera;
+    }
+
+    /** Lens model read from EXIF. Null if absent or unreadable. */
+    public String getExifLens() {
+        return exifLens;
+    }
+
+    public void setExifLens(String exifLens) {
+        this.exifLens = exifLens;
+    }
+
+    /** Human-readable exposure time (e.g. "1/1000 sec") read from EXIF. Null if absent or unreadable. */
+    public String getExifExposure() {
+        return exifExposure;
+    }
+
+    public void setExifExposure(String exifExposure) {
+        this.exifExposure = exifExposure;
+    }
+
+    /** Human-readable aperture (e.g. "f/5.6") read from EXIF. Null if absent or unreadable. */
+    public String getExifAperture() {
+        return exifAperture;
+    }
+
+    public void setExifAperture(String exifAperture) {
+        this.exifAperture = exifAperture;
+    }
+
+    /** ISO speed rating read from EXIF. Null if absent or unreadable. */
+    public Integer getExifIso() {
+        return exifIso;
+    }
+
+    public void setExifIso(Integer exifIso) {
+        this.exifIso = exifIso;
+    }
+
+    /** Human-readable focal length (e.g. "400 mm") read from EXIF. Null if absent or unreadable. */
+    public String getExifFocalLength() {
+        return exifFocalLength;
+    }
+
+    public void setExifFocalLength(String exifFocalLength) {
+        this.exifFocalLength = exifFocalLength;
+    }
+
+    /** Original-capture timestamp read from EXIF. Null if absent or unreadable. */
+    public Timestamp getExifTaken() {
+        return exifTaken;
+    }
+
+    public void setExifTaken(Timestamp exifTaken) {
+        this.exifTaken = exifTaken;
+    }
+
+    /**
+     * GPS latitude read from EXIF, decimal degrees. Null if the image carried
+     * no GPS block, or if {@code uploads.exif.stripGps} removed it at upload
+     * time for privacy.
+     */
+    public Double getGpsLatitude() {
+        return gpsLatitude;
+    }
+
+    public void setGpsLatitude(Double gpsLatitude) {
+        this.gpsLatitude = gpsLatitude;
+    }
+
+    /**
+     * GPS longitude read from EXIF, decimal degrees. Null if the image
+     * carried no GPS block, or if {@code uploads.exif.stripGps} removed it
+     * at upload time for privacy.
+     */
+    public Double getGpsLongitude() {
+        return gpsLongitude;
+    }
+
+    public void setGpsLongitude(Double gpsLongitude) {
+        this.gpsLongitude = gpsLongitude;
     }
 
     // ------------------------------------------------------- Good citizenship

@@ -87,8 +87,15 @@ public class WeblogEntry implements Serializable {
     private Boolean   pinnedToMain  = Boolean.FALSE;
     private PubStatus status        = PubStatus.DRAFT;
     private String    locale        = null;
-    private String    creatorUserName = null;      
+    private String    creatorUserName = null;
     private String    searchDescription = null;
+
+    // Wave 1 media & SEO foundation
+    private String    featuredImageId = null;
+    private String    metaTitle       = null;
+    private String    ogImageId       = null;
+    private String    canonicalUrl    = null;
+    private Boolean   noindex         = Boolean.FALSE;
 
     // set to true when switching between pending/draft/scheduled and published
     // either the aggregate table needs the entry's tags added (for published)
@@ -156,6 +163,11 @@ public class WeblogEntry implements Serializable {
         this.setText(other.getText());
         this.setSummary(other.getSummary());
         this.setSearchDescription(other.getSearchDescription());
+        this.setFeaturedImageId(other.getFeaturedImageId());
+        this.setMetaTitle(other.getMetaTitle());
+        this.setOgImageId(other.getOgImageId());
+        this.setCanonicalUrl(other.getCanonicalUrl());
+        this.setNoindex(other.getNoindex());
         this.setAnchor(other.getAnchor());
         this.setPubTime(other.getPubTime());
         this.setUpdateTime(other.getUpdateTime());
@@ -294,6 +306,62 @@ public class WeblogEntry implements Serializable {
      */
     public void setSearchDescription(String searchDescription) {
         this.searchDescription = searchDescription;
+    }
+
+    /**
+     * Id of the {@code MediaFile} to use as this entry's featured image, e.g.
+     * for theme hero slots and as the default {@code og:image}. Stored as a
+     * bare id rather than a foreign key -- media files are deleted
+     * independently of entries, and a stale reference should degrade to "no
+     * image" rather than block either delete.
+     */
+    public String getFeaturedImageId() {
+        return featuredImageId;
+    }
+
+    public void setFeaturedImageId(String featuredImageId) {
+        this.featuredImageId = featuredImageId;
+    }
+
+    /** SEO {@code <title>} override. Null falls back to the entry's normal title. */
+    public String getMetaTitle() {
+        return metaTitle;
+    }
+
+    public void setMetaTitle(String metaTitle) {
+        this.metaTitle = metaTitle;
+    }
+
+    /**
+     * Id of the {@code MediaFile} to use for {@code og:image} specifically,
+     * when it should differ from the featured image. Null falls back to the
+     * featured image. See {@link #getFeaturedImageId()} for why this is a
+     * bare id rather than a foreign key.
+     */
+    public String getOgImageId() {
+        return ogImageId;
+    }
+
+    public void setOgImageId(String ogImageId) {
+        this.ogImageId = ogImageId;
+    }
+
+    /** Canonical URL override. Null falls back to the entry's normal permalink. */
+    public String getCanonicalUrl() {
+        return canonicalUrl;
+    }
+
+    public void setCanonicalUrl(String canonicalUrl) {
+        this.canonicalUrl = canonicalUrl;
+    }
+
+    /** True to emit {@code <meta name="robots" content="noindex">} for this entry. */
+    public Boolean getNoindex() {
+        return noindex;
+    }
+
+    public void setNoindex(Boolean noindex) {
+        this.noindex = noindex;
     }
 
     /**

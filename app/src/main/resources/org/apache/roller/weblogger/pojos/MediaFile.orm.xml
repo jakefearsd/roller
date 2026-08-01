@@ -49,6 +49,36 @@
             <basic name="creatorUserName">
                 <column name="creator" insertable="true" updatable="true" unique="false" />
             </basic>
+            <basic name="blurhash">
+                <column name="blurhash" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="exifCamera">
+                <column name="exif_camera" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="exifLens">
+                <column name="exif_lens" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="exifExposure">
+                <column name="exif_exposure" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="exifAperture">
+                <column name="exif_aperture" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="exifIso">
+                <column name="exif_iso" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="exifFocalLength">
+                <column name="exif_focal_length" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="exifTaken">
+                <column name="exif_taken" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="gpsLatitude">
+                <column name="gps_latitude" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="gpsLongitude">
+                <column name="gps_longitude" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
             <many-to-one name="directory" target-entity="org.apache.roller.weblogger.pojos.MediaFileDirectory">
                 <join-column name="directoryid" insertable="true" updatable="true" nullable="false"/>
             </many-to-one>

@@ -25,7 +25,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
-import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryCommentWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
@@ -151,7 +151,7 @@ public class FeedModel implements Model {
      * Gets most recently uploaded media files limited by: weblog specified 
      * in request and the weblog.entryDisplayCount.
      */
-    public Pager<MediaFile> getMediaFilesPager() {
+    public Pager<MediaFileWrapper> getMediaFilesPager() {
         return new FeedFilesPager(feedRequest);
     }    
         
