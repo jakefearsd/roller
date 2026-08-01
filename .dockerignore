@@ -1,0 +1,33 @@
+# Build context for the production image (see Dockerfile). Keep this in
+# sync with what Dockerfile actually COPYs: everything else is excluded so
+# the build context stays small and reproducible.
+
+# VCS / agent / planning metadata -- never needed inside the image.
+.git
+.claude
+.superpowers
+.github
+
+# Docs -- large, irrelevant to the build.
+docs
+*.md
+
+# Build output (rebuilt fresh inside the image every time).
+target/
+app/target/
+app/logs/
+it-selenium/target/
+it-selenium/build/
+it-selenium/overlays/
+logs/
+*.log
+*.log.gz
+
+# Not part of the app/pom.xml reactor build (mvn -pl app) and not needed at
+# runtime.
+it-selenium/src
+assembly-release
+testing
+binary-includes
+docker-compose.yml
+docker_deployment.md
