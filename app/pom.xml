@@ -56,6 +56,16 @@ limitations under the License.
         <spring-boot.version>4.1.0</spring-boot.version>
         <velocity.version>2.4.1</velocity.version>
         <webjars.version>1.6</webjars.version>
+
+        <!-- jspc-maven-plugin (process-classes JSP validation, below) ships
+             Jasper 10.1.x by default. Pin its bundled Tomcat artifacts to the
+             same Tomcat/Jasper version the app actually runs on -
+             tomcat-embed-jasper's version as resolved from the Spring Boot BOM
+             (see `mvn dependency:tree -Dincludes=org.apache.tomcat.embed:tomcat-embed-jasper`)
+             - so build-time validation exercises the same JSP compiler as
+             production. -->
+        <jspc-plugin.version>5.0.0</jspc-plugin.version>
+        <jspc-plugin.tomcat.version>11.0.22</jspc-plugin.tomcat.version>
     </properties>
 
     <!-- The parent POM's dependencyManagement (junit-bom, testcontainers-bom) is
@@ -767,15 +777,15 @@ limitations under the License.
                  otherwise only surface when a page is first requested, and pages
                  behind authentication can sit broken indefinitely. -->
             <plugin>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-jspc-maven-plugin</artifactId>
-                <version>${jetty.plugin.version}</version>
+                <groupId>io.leonard.maven.plugins</groupId>
+                <artifactId>jspc-maven-plugin</artifactId>
+                <version>${jspc-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>jspc-validate</id>
                         <phase>process-classes</phase>
                         <goals>
-                            <goal>jspc</goal>
+                            <goal>compile</goal>
                         </goals>
                         <configuration>
                             <!-- Validation only: the WAR ships .jsp sources and lets
@@ -784,9 +794,62 @@ limitations under the License.
                             <generatedClasses>${project.build.directory}/jspc-validation</generatedClasses>
                             <webXmlFragment>${project.build.directory}/jspc-validation/web-fragment.xml</webXmlFragment>
                             <includes>**/*.jsp</includes>
+                            <mergeFragment>false</mergeFragment>
+                            <stopAtFirstError>true</stopAtFirstError>
                         </configuration>
                     </execution>
                 </executions>
+                <!-- The plugin bundles Jasper 10.1.x by default; override every
+                     Tomcat artifact it pulls in (not just tomcat-jasper) so the
+                     classpath is a consistent Tomcat 11 set matching the
+                     tomcat-embed-jasper version the app runs on in production. -->
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.tomcat</groupId>
+                        <artifactId>tomcat-jasper</artifactId>
+                        <version>${jspc-plugin.tomcat.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.tomcat</groupId>
+                        <artifactId>tomcat-jasper-el</artifactId>
+                        <version>${jspc-plugin.tomcat.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.tomcat</groupId>
+                        <artifactId>tomcat-servlet-api</artifactId>
+                        <version>${jspc-plugin.tomcat.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.tomcat</groupId>
+                        <artifactId>tomcat-jsp-api</artifactId>
+                        <version>${jspc-plugin.tomcat.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.tomcat</groupId>
+                        <artifactId>tomcat-el-api</artifactId>
+                        <version>${jspc-plugin.tomcat.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.tomcat</groupId>
+                        <artifactId>tomcat-api</artifactId>
+                        <version>${jspc-plugin.tomcat.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.tomcat</groupId>
+                        <artifactId>tomcat-util</artifactId>
+                        <version>${jspc-plugin.tomcat.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.tomcat</groupId>
+                        <artifactId>tomcat-util-scan</artifactId>
+                        <version>${jspc-plugin.tomcat.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.tomcat</groupId>
+                        <artifactId>tomcat-juli</artifactId>
+                        <version>${jspc-plugin.tomcat.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <!-- Mutation testing. JaCoCo says which lines ran; PIT says whether a

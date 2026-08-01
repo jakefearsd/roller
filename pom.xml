@@ -41,10 +41,6 @@ limitations under the License.
 
     <properties>
         <jacoco-plugin.version>0.8.15</jacoco-plugin.version>
-        <!-- Only the jetty-jspc-maven-plugin (app/pom.xml, JSP-compile-time
-             validation) still uses this; the jetty-maven-plugin dev server is
-             gone (Stage 1B Task 5 - dev runs on spring-boot:run). -->
-        <jetty.plugin.version>11.0.26</jetty.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <roller.version>6.2.0</roller.version>
