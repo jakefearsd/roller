@@ -21,14 +21,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.*;
 import org.apache.roller.weblogger.pojos.MediaFileFilter.MediaFileOrder;
 import org.apache.roller.weblogger.pojos.MediaFileFilter.SizeFilterType;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.sql.Timestamp;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -322,11 +320,6 @@ public class MediaFileTest  {
         TestUtils.teardownWeblog(testWeblog.getId());
         TestUtils.teardownUser(testUser.getUserName());
 
-        String uploadsDirName = WebloggerConfig.getProperty("uploads.dir");
-        File flag = new File(uploadsDirName + File.separator
-                + "migration-status.properties");
-        flag.delete();
-        
         TestUtils.endSession(true);
     }
 

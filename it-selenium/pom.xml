@@ -49,7 +49,11 @@ limitations under the License.
              junit-jupiter needs an explicit pin (app/pom.xml gets its JUnit
              version for free from Spring Boot's dependencyManagement import;
              this module doesn't). Kept in step with app's resolved
-             junit-jupiter version (JUnit 6). -->
+             junit-jupiter version (JUnit 6). When bumping app/pom.xml's
+             spring-boot.version, re-check what junit-jupiter version its BOM
+             now resolves to and update this pin to match:
+               mvn -ntp -pl app dependency:tree -Dincludes=org.junit.jupiter:junit-jupiter-api
+             (currently resolves to 6.0.3, matching the pin below). -->
         <junit-jupiter.version>6.0.3</junit-jupiter.version>
         <docker.plugin.version>0.48.1</docker.plugin.version>
         <build-helper.version>3.6.0</build-helper.version>
