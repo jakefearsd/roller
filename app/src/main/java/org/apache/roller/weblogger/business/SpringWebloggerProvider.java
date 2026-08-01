@@ -65,6 +65,13 @@ public class SpringWebloggerProvider implements WebloggerProvider {
      */
     @Override
     public void bootstrap() {
+        // Idempotent: a repeat bootstrap() call on the same instance (e.g. a
+        // second WebloggerFactory.bootstrap() in the same JVM) must not build
+        // a second self-owned context -- that would leak the first one, since
+        // nothing else holds a reference to close it.
+        if (this.context != null) {
+            return;
+        }
         this.context = (existingContext != null)
                 ? existingContext
                 : new AnnotationConfigApplicationContext(WebloggerBeanConfig.class);

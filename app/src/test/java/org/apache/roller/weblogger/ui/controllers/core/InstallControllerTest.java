@@ -35,6 +35,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
+import org.springframework.context.ApplicationContext;
 import org.springframework.ui.ExtendedModelMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,7 +73,10 @@ class InstallControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = ControllerTestFixture.withMessages(new InstallController());
+        // Not exercised: every path a test hits either short-circuits on
+        // WebloggerFactory.isBootstrapped() or fails in WebloggerFactory.bootstrap()
+        // (unprepared app) before the context is ever dereferenced.
+        controller = ControllerTestFixture.withMessages(new InstallController(mock(ApplicationContext.class)));
         model = new ExtendedModelMap();
         previousDbException = WebloggerStartup.getDatabaseProviderException();
         previousPrepared = WebloggerStartup.isPrepared();

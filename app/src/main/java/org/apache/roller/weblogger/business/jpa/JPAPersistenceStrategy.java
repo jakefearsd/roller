@@ -349,8 +349,15 @@ public class JPAPersistenceStrategy {
         return em.createNamedQuery(queryName);
     }
 
+    /**
+     * Shut down the EntityManagerFactory. Tolerates being called more than
+     * once: the {@code Weblogger} bean's {@code destroyMethod="shutdown"} and
+     * a caller invoking {@code Weblogger.shutdown()} directly can both reach
+     * here for the same instance, and EclipseLink's {@code EntityManagerFactory.close()}
+     * throws {@code IllegalStateException} on a second close.
+     */
     public void shutdown() {
-        if (emf != null) {
+        if (emf != null && emf.isOpen()) {
             emf.close();
         }
     }

@@ -51,4 +51,22 @@ class SpringWebloggerProviderTest {
         // to the same singleton graph (same manager instance both ways)
         assertSame(weblogger.getWeblogManager(), provider.getWeblogger().getWeblogManager());
     }
+
+    @Test
+    void repeatBootstrapIsIdempotent() throws Exception {
+        RollerDatabaseExtension.ensureSchema();
+        if (!WebloggerStartup.isPrepared()) {
+            WebloggerStartup.prepare();
+        }
+
+        SpringWebloggerProvider provider = new SpringWebloggerProvider();
+        provider.bootstrap();
+        Weblogger first = provider.getWeblogger();
+
+        // a second bootstrap() call must not build a second (leaked) context
+        provider.bootstrap();
+        Weblogger second = provider.getWeblogger();
+
+        assertSame(first, second);
+    }
 }
