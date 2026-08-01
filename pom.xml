@@ -53,13 +53,13 @@ limitations under the License.
         <postgresql.version>42.7.9</postgresql.version>
         <maven-surefire.version>3.5.2</maven-surefire.version>
 
-        <!-- JaCoCo coverage gate (jacoco:check on verify). The machinery is wired
-             but skipped by default; raise the minimums and flip jacoco.check.skip
-             to false per package as coverage lands. Targets are documented in
+        <!-- JaCoCo coverage gate (jacoco:check on verify). The ratchet is ACTIVE:
+             these floors are measured minus a 0.01 margin, and later stages only
+             ever raise them, never lower them. Targets are documented in
              CLAUDE.md. -->
-        <jacoco.line.minimum>0.00</jacoco.line.minimum>
-        <jacoco.branch.minimum>0.00</jacoco.branch.minimum>
-        <jacoco.check.skip>true</jacoco.check.skip>
+        <jacoco.line.minimum>0.72</jacoco.line.minimum>
+        <jacoco.branch.minimum>0.63</jacoco.branch.minimum>
+        <jacoco.check.skip>false</jacoco.check.skip>
     </properties>
 
     <modules>
@@ -141,9 +141,10 @@ limitations under the License.
                             <goal>prepare-agent</goal>
                         </goals>
                     </execution>
-                    <!-- Coverage floor. Skipped by default (jacoco.check.skip=true)
-                         so it can be ratcheted per package without blocking the
-                         build until the targets are real. -->
+                    <!-- Coverage floor, ratcheted from measured coverage. Later
+                         stages only ever raise jacoco.line.minimum /
+                         jacoco.branch.minimum / the PACKAGE rule below, never
+                         lower them. -->
                     <execution>
                         <id>check</id>
                         <phase>verify</phase>
@@ -165,6 +166,21 @@ limitations under the License.
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
                                             <minimum>${jacoco.branch.minimum}</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>org.apache.roller.weblogger.ui.rendering</include>
+                                        <include>org.apache.roller.weblogger.ui.rendering.servlets</include>
+                                        <include>org.apache.roller.weblogger.ui.rendering.velocity</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.36</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
