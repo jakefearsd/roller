@@ -57,7 +57,6 @@ limitations under the License.
         <Logger name="org.springframework" level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.openid4java"     level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.apache.tiles"    level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
-        <Logger name="com.rometools"       level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         <Logger name="org.webjars"         level="info"  additivity="false"> <AppenderRef ref="roller"/> </Logger>
         
         <!--

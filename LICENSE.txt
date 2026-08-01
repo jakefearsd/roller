@@ -293,12 +293,6 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -------------------------------------------------------------------------------
-This product bundles jQuery and jQuery plugins, which are available under a "MIT" license.
-For details, see
-roller-ui/scripts/jquery-2.1.1.min.js.
-roller-ui/jquery-ui-1.11.0/jquery-ui.min.js
-
--------------------------------------------------------------------------------
 
 This product bundles some snippets of code from the Blojsom and Pebble
 blog servers, which are both licensed under the terms of the BSD license 

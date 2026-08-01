@@ -42,6 +42,7 @@ limitations under the License.
         <commons-text.version>1.15.0</commons-text.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <eclipse-link.version>5.0.0</eclipse-link.version>
+        <jdom2.version>2.0.6.1</jdom2.version>
         <log4j2.version>2.25.4</log4j2.version>
         <lucene.version>9.12.3</lucene.version> <!-- lucene 10 requires JDK 21 -->
         <maven-war.version>3.4.0</maven-war.version>
@@ -50,7 +51,6 @@ limitations under the License.
         <!-- Overridden on the command line to scope a mutation run. -->
         <pit.targets>org.apache.roller.weblogger.util.*</pit.targets>
         <pit.tests>org.apache.roller.weblogger.util.*</pit.tests>
-        <rome.version>1.19.0</rome.version>
         <slf4j.version>2.0.17</slf4j.version>
         <spring-boot.version>4.1.0</spring-boot.version>
         <velocity.version>2.4.1</velocity.version>
@@ -528,19 +528,15 @@ limitations under the License.
             </exclusions>
         </dependency>
 
-        <!-- Other deps include ROME -->
-
+        <!-- Used directly by ThemeMetadataParser, RuntimeConfigDefsParser, and
+             MenuHelper to parse theme.xml / runtimeConfigDefs.xml / the admin
+             menu config. Previously rode in transitively via com.rometools:rome
+             (now removed); declared explicitly since nothing to do with feeds
+             actually depends on it. -->
         <dependency>
-            <groupId>com.rometools</groupId>
-            <artifactId>rome</artifactId>
-            <version>${rome.version}</version>
-            <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>org.jdom</groupId>
+            <artifactId>jdom2</artifactId>
+            <version>${jdom2.version}</version>
         </dependency>
 
         <dependency>
