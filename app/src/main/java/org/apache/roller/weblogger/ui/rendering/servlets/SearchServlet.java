@@ -207,7 +207,7 @@ public class SearchServlet extends HttpServlet {
             renderer = RendererManager.getRenderer(page);
         } catch (Exception e) {
             // nobody wants to render my content :(
-            log.error("Couldn't find renderer for rsd template", e);
+            log.error("Couldn't find renderer for search template", e);
             RenderingServletUtils.sendNotFound(response);
             return;
         }

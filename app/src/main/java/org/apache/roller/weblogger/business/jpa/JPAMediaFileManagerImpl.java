@@ -53,7 +53,6 @@ import org.apache.roller.weblogger.pojos.MediaFileTag;
 import org.apache.roller.weblogger.pojos.MediaFileType;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.RollerMessages;
-import org.apache.roller.weblogger.util.Utilities;
 
 public class JPAMediaFileManagerImpl implements MediaFileManager {
 

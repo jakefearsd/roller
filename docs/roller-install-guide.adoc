@@ -808,10 +808,11 @@ directory, then you’ll want to backup that whole directory.
 Migrating your old file uploads to the new Media Blogging system
 
 If upgrading from Roller 4.0 to 5.1 (5.0 already has this configuration
-done), when you first start Roller 5.1 it will migrate your old file
-uploads to the new Media Blogging system. If this is to work properly
-you *MUST* ensure that the three properties below are set correctly
-before you start Roller 5.0/5.1 for the first time.
+done), you must migrate your old file uploads to the new Media Blogging
+system yourself; Roller no longer does this automatically on startup.
+Ensure the two properties below are set correctly before you start
+Roller 5.0/5.1 for the first time, then copy the files from _uploads.dir_
+into _mediafiles.storage.dir_ by hand.
 
 ----
 # The directory in which Roller 5.x will upload files
@@ -821,10 +822,6 @@ mediafiles.storage.dir=$\{user.home}/roller_data/mediafiles
 # The directory in which Roller 4.0 uploaded files
 
 uploads.dir=$\{user.home}/roller_data/uploads
-
-# Set to true to enable migration
-
-uploads.migrate.auto=true
 ----
 
 The _mediafiles.storage.dir_ property should be set to the location

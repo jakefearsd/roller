@@ -18,8 +18,6 @@
 
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
