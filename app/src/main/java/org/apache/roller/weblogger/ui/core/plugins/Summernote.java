@@ -29,7 +29,14 @@ public class Summernote implements WeblogEntryEditor {
     
     @Override
     public String getId() {
-        return "editor-xinha.jsp";
+        // Was "editor-xinha.jsp", left over from the Xinha editor this class
+        // replaced. roller.properties sets plugins.defaultEditor to
+        // editor-summernote.jsp, so the lookup in UIPluginManagerImpl missed,
+        // logged "Default editor was not properly configured", and fell back to
+        // the first entry of a HashMap - meaning which editor an author got was
+        // effectively arbitrary, and often the plain textarea rather than the
+        // rich one.
+        return "editor-summernote.jsp";
     }
     
     @Override

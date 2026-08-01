@@ -167,17 +167,23 @@ class WeblogRequestTest {
     }
 
     @Test
-    void underscoreHandleIsRejectedEvenThoughStorageWouldAcceptIt() {
-        // Asymmetry worth knowing about: JPAWeblogManagerImpl.isAlphanumeric()
-        // explicitly permits '_', but StringUtils.isAlphanumeric() here does
-        // not. A weblog whose handle contains an underscore can therefore exist
-        // in the database yet be unreachable by URL. The UI's default
-        // username.allowedChars ("A-Za-z0-9") keeps that from happening in
-        // practice; deployments that widen that property would hit it.
-        assertThrows(InvalidRequestException.class, () -> parse("/my_blog"),
-                "The URL layer is stricter than the persistence layer about '_'; "
-                        + "if this now passes, the two layers were reconciled and "
-                        + "this test should record the new rule");
+    void underscoreHandleIsAcceptedBecauseStorageAcceptsIt() {
+        // The two layers used to disagree: JPAWeblogManagerImpl.isAlphanumeric()
+        // permits '_' (its javadoc says so outright) while this parser used
+        // StringUtils.isAlphanumeric(), which does not. A weblog whose handle
+        // contained an underscore could be created and stored, then answer 404
+        // at every public URL forever. The parser now matches storage.
+        assertDoesNotThrowParsing("/my_blog",
+                "a handle the persistence layer accepts must be reachable by URL");
+    }
+
+    @Test
+    void hyphenHandleIsStillRejected() {
+        // Widening to '_' was deliberate and narrow; '-' is not permitted by the
+        // persistence layer either, so it stays rejected.
+        assertThrows(InvalidRequestException.class, () -> parse("/my-blog"),
+                "'-' is not accepted by the persistence layer, so it must not be "
+                        + "accepted here either");
     }
 
     @Test

@@ -88,7 +88,7 @@ public class WeblogRequest extends ParsedRequest {
             }
             
             String[] pathElements = path.split("/", 2);
-            if(StringUtils.isAlphanumeric(pathElements[0])) {
+            if(isValidWeblogHandle(pathElements[0])) {
                 this.weblogHandle = pathElements[0];
             } else {
                 // no or invalid weblogHandle in path info
@@ -183,6 +183,30 @@ public class WeblogRequest extends ParsedRequest {
     }
     
     
+    /**
+     * Accepts the same handles the business tier does.
+     *
+     * <p>This used to be {@code StringUtils.isAlphanumeric}, while
+     * {@code JPAWeblogManagerImpl.isAlphanumeric} - whose javadoc reads "Returns
+     * true if alphanumeric or '_'" - permits an underscore. A weblog whose handle
+     * contained one could therefore be created and stored, yet every public URL
+     * for it answered 404 forever. Widening the parser to match storage can only
+     * make more weblogs reachable; it cannot break one that already worked.
+     */
+    private static boolean isValidWeblogHandle(String handle) {
+        if (StringUtils.isEmpty(handle)) {
+            return false;
+        }
+        for (int i = 0; i < handle.length(); i++) {
+            char c = handle.charAt(i);
+            if (!Character.isLetterOrDigit(c) && c != '_') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+
     public String getWeblogHandle() {
         return weblogHandle;
     }
