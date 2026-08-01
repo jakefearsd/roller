@@ -53,11 +53,6 @@ jobs:
       - name: Build Roller and run JUnit Tests
         run: mvn -V -ntp install
 
-      # The it-selenium module is commented out of the parent pom and its page
-      # objects still drive removed features (public registration), so it cannot
-      # pass as written. Restore this step -- along with the Xvfb setup it needs
-      # -- once those tests are updated and the module is back in the reactor.
-
       - name: Publish JUnit Report
         uses: test-summary/action@v2
         if: always()
@@ -73,3 +68,32 @@ jobs:
           path: ./app/target/roller.war
           retention-days: 90
           if-no-files-found: error
+
+  integration-test:
+    name: Browser ITs on Linux/JDK 21
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'zulu'
+
+      - name: Checkout Project
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+          show-progress: false
+
+      # Chrome ships on ubuntu-latest; RollerIT runs it headless.
+      - name: Run browser integration tests
+        run: mvn -V -ntp verify -Pit
+
+      - name: Publish IT Report
+        uses: test-summary/action@v2
+        if: always()
+        with:
+          paths: "it-selenium/target/failsafe-reports/TEST-*.xml"
