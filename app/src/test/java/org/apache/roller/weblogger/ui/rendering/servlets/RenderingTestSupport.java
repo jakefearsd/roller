@@ -154,6 +154,10 @@ final class RenderingTestSupport {
         return init(new CommentServlet());
     }
 
+    static MediaResourceServlet mediaResourceServlet() throws ServletException {
+        return init(new MediaResourceServlet());
+    }
+
     private static <T extends HttpServlet> T init(T servlet) throws ServletException {
         servlet.init(new MockServletConfig(RollerContext.getServletContext()));
         return servlet;

@@ -25,13 +25,18 @@ package org.apache.roller.weblogger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.testing.RollerDatabaseExtension;
+import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.MediaFileDirectory;
+import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -41,6 +46,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogHitCount;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.util.RollerMessages;
 
 /**
  * Utility class for unit test classes.
@@ -421,6 +427,54 @@ public final class TestUtils {
 
         // flush to db
         WebloggerFactory.getWeblogger().flush();
+    }
+
+    /**
+     * Convenience method for creating a persisted, content-backed image
+     * media file (jpeg content from the classpath test image /hawk.jpg) in
+     * the weblog's root media directory.
+     *
+     * Mirrors the creation shape used throughout MediaFileTest: enable
+     * uploads at runtime (createMediaFile refuses to store content
+     * otherwise), look up the weblog's root MediaFileDirectory, build the
+     * MediaFile with the classpath image as its input stream, create it,
+     * flush, then re-fetch by id so callers get back the persisted object.
+     */
+    public static MediaFile setupImageMediaFile(Weblog weblog, String name)
+            throws Exception {
+
+        // allow media uploads for this test
+        Map<String, RuntimeConfigProperty> config = WebloggerFactory
+                .getWeblogger().getPropertiesManager().getProperties();
+        config.get("uploads.enabled").setValue("true");
+
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+                .getMediaFileManager();
+
+        Weblog managedWeblog = getManagedWebsite(weblog);
+        MediaFileDirectory rootDirectory = mfMgr
+                .getDefaultMediaFileDirectory(managedWeblog);
+
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName(name);
+        mediaFile.setDirectory(rootDirectory);
+        mediaFile.setWeblog(managedWeblog);
+        mediaFile.setContentType("image/jpeg");
+        mediaFile.setInputStream(TestUtils.class.getResourceAsStream("/hawk.jpg"));
+
+        mfMgr.createMediaFile(managedWeblog, mediaFile, new RollerMessages());
+
+        // flush to db
+        WebloggerFactory.getWeblogger().flush();
+
+        // query for the new media file and return it
+        MediaFile persisted = mfMgr.getMediaFile(mediaFile.getId());
+
+        if (persisted == null) {
+            throw new WebloggerException("error setting up media file");
+        }
+
+        return persisted;
     }
 
     /**
