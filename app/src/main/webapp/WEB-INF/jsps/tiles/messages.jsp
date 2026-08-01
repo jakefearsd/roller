@@ -21,7 +21,7 @@
     $(document).ready(function () {
         // Remove the alert box after 10 seconds
         $(".alert").delay(10000).slideUp(200, function() {
-            $(this).alert('close');
+            $(this).remove();
         });
     });
 </script>
@@ -38,20 +38,16 @@
 
 <%-- Success Messages --%>
 <c:if test="${not empty messages}">
-    <div id="messages" class="alert alert-success">
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
+    <div id="messages" class="alert alert-success alert-dismissible fade show">
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         <c:forEach items="${messages}" var="msg"><div class="alert alert-info">${msg}</div></c:forEach>
     </div>
 </c:if>
 
 <%-- Error Messages --%>
 <c:if test="${not empty errors}">
-    <div id="errors" class="alert alert-danger">
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
+    <div id="errors" class="alert alert-danger alert-dismissible fade show">
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         <ul>
             <c:forEach items="${errors}" var="error">
                 <li><c:out value="${error}" escapeXml="false"/></li>

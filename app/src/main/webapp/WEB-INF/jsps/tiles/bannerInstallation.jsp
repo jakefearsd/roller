@@ -17,26 +17,25 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<nav class="navbar navbar-default navbar-static-top navbar-inverse">
+<nav class="navbar navbar-expand-md navbar-dark bg-dark">
     <div class="container-fluid">
+
+        <a class="navbar-brand" href="#"><spring:message code="installer.bannerTitleLeft"/></a>
+
+        <button type="button" class="navbar-toggler collapsed"
+                data-bs-toggle="collapse" data-bs-target="#navbar" aria-expanded="false" aria-controls="navbar"
+                aria-label="Toggle navigation">
+            <span class="visually-hidden">Toggle navigation</span>
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
         <div id="navbar" class="navbar-collapse collapse">
 
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle collapsed"
-                        data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-                <a class="navbar-brand" href="#"><spring:message code="installer.bannerTitleLeft"/></a>
-            </div>
-
-            <ul class="nav navbar-nav">
+            <ul class="navbar-nav">
             </ul>
 
-            <ul class="nav navbar-nav navbar-right">
-                <li><a href="<c:url value='/'/>"><spring:message code="installer.bannerTitleRight"/></a></li>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="<c:url value='/'/>"><spring:message code="installer.bannerTitleRight"/></a></li>
             </ul>
 
         </div>

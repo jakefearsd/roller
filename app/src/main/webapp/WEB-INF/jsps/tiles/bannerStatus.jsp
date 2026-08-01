@@ -26,42 +26,41 @@
     request.setAttribute("navMenu", navMenu);
 %>
 
-<nav class="navbar navbar-default navbar-static-top navbar-inverse">
+<nav class="navbar navbar-expand-md navbar-dark bg-dark">
     <div class="container-fluid">
+
+        <a class="navbar-brand" href="#">${rc:getProp('site.name')}</a>
+
+        <button type="button" class="navbar-toggler collapsed"
+                data-bs-toggle="collapse" data-bs-target="#navbar" aria-expanded="false" aria-controls="navbar"
+                aria-label="Toggle navigation">
+            <span class="visually-hidden">Toggle navigation</span>
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
         <div id="navbar" class="navbar-collapse collapse">
 
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle collapsed"
-                        data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-                <a class="navbar-brand" href="#">${rc:getProp('site.name')}</a>
-            </div>
-
-            <ul class="nav navbar-nav">
+            <ul class="navbar-nav">
 
                 <c:if test="${navMenu != null}">
                     <c:forEach items="${navMenu.tabs}" var="tab">
-                        <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                        <li class="nav-item dropdown">
+                            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">
-                                <spring:message code="${tab.key}"/> <span class="caret"></span>
+                                <spring:message code="${tab.key}"/>
                             </a>
                             <ul class="dropdown-menu">
                                 <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
                                     <li>
                                         <c:choose>
                                             <c:when test="${actionWeblog != null}">
-                                                <a href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol">
+                                                <a class="dropdown-item" href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol">
                                                     <c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
                                                     <spring:message code="${tabItem.key}"/>
                                                 </a>
                                             </c:when>
                                             <c:otherwise>
-                                                <a href="<c:url value='/roller-ui/admin/${tabItem.action}.rol'/>">
+                                                <a class="dropdown-item" href="<c:url value='/roller-ui/admin/${tabItem.action}.rol'/>">
                                                     <spring:message code="${tabItem.key}"/>
                                                 </a>
                                             </c:otherwise>
@@ -75,25 +74,25 @@
 
             </ul>
 
-            <ul class="nav navbar-nav navbar-right">
+            <ul class="navbar-nav ms-auto">
 
-                <li><a href="<c:url value='/'/>">${rc:getProp('site.shortName')}</a></li>
+                <li class="nav-item"><a class="nav-link" href="<c:url value='/'/>">${rc:getProp('site.shortName')}</a></li>
 
-                <li>
-                    <a href="<c:url value="/roller-ui/menu.rol"/>">
+                <li class="nav-item">
+                    <a class="nav-link" href="<c:url value="/roller-ui/menu.rol"/>">
                         <spring:message code="mainPage.mainMenu"/></a>
                 </li>
 
                 <c:choose>
                     <c:when test="${authenticatedUser != null}">
-                        <li>
-                            <a href="<c:url value="/roller-ui/logout.rol"/>">
+                        <li class="nav-item">
+                            <a class="nav-link" href="<c:url value="/roller-ui/logout.rol"/>">
                                 <spring:message code="navigationBar.logout"/></a>
                         </li>
                     </c:when>
                     <c:otherwise>
-                        <li>
-                            <a href="<c:url value="/roller-ui/login-redirect.rol"/>">
+                        <li class="nav-item">
+                            <a class="nav-link" href="<c:url value="/roller-ui/login-redirect.rol"/>">
                                 <spring:message code="navigationBar.login"/></a>
                         </li>
 
@@ -101,6 +100,6 @@
                 </c:choose>
 
             </ul>
-        </div><!--/.nav-collapse -->
+        </div><!--/.navbar-collapse -->
     </div>
 </nav>

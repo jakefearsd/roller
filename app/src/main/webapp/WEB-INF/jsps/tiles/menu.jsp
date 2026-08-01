@@ -21,21 +21,21 @@
 <c:if test="${tabMenu != null}">
 
     <%--
-    <nav class="navbar navbar-default">
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
         <div class="container-fluid">
             <div id="navbar" class="navbar-collapse collapse">
-                <ul class="nav navbar-nav">
+                <ul class="navbar-nav">
 
                     <c:forEach items="${tabMenu.tabs}" var="tab">
-                        <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" 
+                        <li class="nav-item dropdown">
+                            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button"
                                 aria-haspopup="true" aria-expanded="false">
-                                <spring:message code="${tab.key}"/> <span class="caret"></span>
+                                <spring:message code="${tab.key}"/>
                             </a>
                             <ul class="dropdown-menu">
                                 <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
                                     <li>
-                                        <a href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol"><c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
+                                        <a class="dropdown-item" href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol"><c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
                                             <spring:message code="${tabItem.key}"/>
                                         </a>
                                     </li>
@@ -43,7 +43,7 @@
                             </ul>
                         </li>
                     </c:forEach>
-                    
+
                 </ul>
             </div> <!--/.nav-collapse -->
         </div> <!--/.container-fluid -->

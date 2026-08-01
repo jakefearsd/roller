@@ -49,15 +49,6 @@ p {
     margin: 10px;
 }
 
-.fade {
-    opacity: 0;
-    -webkit-transition: opacity 1.25s linear;
-    -moz-transition: opacity 1.25s linear;
-    -ms-transition: opacity 1.25s linear;
-    -o-transition: opacity 1.25s linear;
-    transition: opacity 1.25s linear;
-}
-
 /* page tips - instructional text below page subtitle */
 
 p.pagetip {
@@ -68,10 +59,6 @@ p.pagetip {
 }
 
 /* bootstrap tweaks */
-
-.glyphicon-info-sign {
-    margin-right: 0.5em;
-}
 
 .controls>input[type=checkbox] {
     margin-bottom: 0.5em;
@@ -99,14 +86,25 @@ table.mm_table_actions td {
 
 /* edit entry page */
 
-.panel-heading a:after {
-    font-family:'Glyphicons Halflings';
-    content:"\e114";
+/* Collapse-toggle chevron: BS3's Glyphicons Halflings font is gone, so this is a
+   pure-CSS caret that flips with BS5's .collapsed class on the trigger link.
+   Both selectors are kept because content JSPs still using the BS3 .panel-heading
+   shell (until their own migration task) need the same indicator as the BS5
+   .card-header chrome. */
+.panel-heading a:after,
+.card-header a:after {
+    content: "";
+    display: inline-block;
     float: right;
-    color: grey;
+    margin-top: 6px;
+    border-top: 5px solid grey;
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+    transition: transform 0.2s ease-in-out;
 }
-.panel-heading a.collapsed:after {
-    content:"\e080";
+.panel-heading a.collapsed:after,
+.card-header a.collapsed:after {
+    transform: rotate(-90deg);
 }
 
 #panel-plugins {      /* Kludge for EntryEditor.jsp */
@@ -295,10 +293,6 @@ body {
 
 .mediaObjectInfo {
     font-size:11px;
-}
-
-span.glyphicon-file {
-    font-size: 6em;
 }
 
 .highlight {

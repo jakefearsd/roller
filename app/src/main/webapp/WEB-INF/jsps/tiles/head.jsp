@@ -16,9 +16,10 @@ mismatch 404s the asset on every page that includes this file.
 
 <script src="<c:url value='/webjars/jquery-validation/1.21.0/jquery.validate.min.js'/>"></script>
 
-<link href="<c:url value='/webjars/bootstrap/3.4.1/css/bootstrap.min.css'/>" rel="stylesheet" />
-<link href="<c:url value='/webjars/bootstrap/3.4.1/css/bootstrap-theme.min.css'/>" rel="stylesheet" />
-<script src="<c:url value='/webjars/bootstrap/3.4.1/js/bootstrap.min.js'/>"></script>
+<link href="<c:url value='/webjars/bootstrap/5.3.8/css/bootstrap.min.css'/>" rel="stylesheet" />
+<script src="<c:url value='/webjars/bootstrap/5.3.8/js/bootstrap.bundle.min.js'/>"></script>
+
+<link href="<c:url value='/webjars/bootstrap-icons/1.13.1/font/bootstrap-icons.min.css'/>" rel="stylesheet" />
 
 <script src="<c:url value='/webjars/clipboard.js/2.0.11/clipboard.min.js'/>"></script>
 

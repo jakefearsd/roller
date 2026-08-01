@@ -39,8 +39,8 @@
 
         <div class="col-md-3 roller-column-left">
 
-            <div class="panel panel-default">
-                <div class="panel-body" style="text-align: center">
+            <div class="card">
+                <div class="card-body" style="text-align: center">
 
                     <img src='<c:url value="/roller-ui/images/feather.svg" />'
                          alt="ASF feat" height="100" align="center"/>
@@ -54,8 +54,8 @@
             </div>
 
             <c:if test="${tile_sidebar != '/WEB-INF/jsps/tiles/empty.jsp'}">
-                <div class="panel panel-default">
-                    <div class="panel-body">
+                <div class="card">
+                    <div class="card-body">
                         <jsp:include page="${tile_sidebar}"/>
                     </div>
                 </div>
@@ -64,8 +64,8 @@
         </div>
 
         <div class="col-md-9 roller-column-right">
-            <div class="panel panel-default">
-                <div class="panel-body" style="min-height: 30em">
+            <div class="card">
+                <div class="card-body" style="min-height: 30em">
 
                     <jsp:include page="${tile_messages}"/>
 
