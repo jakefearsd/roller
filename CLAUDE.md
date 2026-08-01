@@ -45,8 +45,21 @@ mvn clean test && mvn jacoco:report -pl app
 Tests require Docker. A single PostgreSQL container is started once per JVM by
 `RollerTestBootstrap` (a JUnit `LauncherSessionListener`) and its schema is built
 by applying the real `bin/db/migrations` chain — there is no separate test
-schema. `RollerDatabaseExtension` truncates all data tables before each test, so
-tests do not need to unwind their own fixtures.
+schema. Tests create fixtures through `TestUtils.setupX(...)` and must remove them in
+`@AfterEach` (`teardownWeblog`/`teardownUser` + `endSession(true)`) — nothing
+truncates tables between tests. Render caches are per-JVM singletons; tests
+touching the rendering path call `CacheManager.clear()` in `@BeforeEach`
+(see `RenderingTestSupport`).
+
+### Coverage gates
+
+- JaCoCo `check` runs at `verify` with floors in the parent `pom.xml`
+  (`jacoco.line.minimum` / `jacoco.branch.minimum`, plus a PACKAGE rule for
+  `ui.rendering.*`). Floors only ever move up. Raise them after each stage.
+- Changed lines need ~90% coverage: `bin/check-diff-coverage.sh [base-ref]`
+  (default `HEAD~1`; needs `pip install diff_cover` and a fresh
+  `mvn -pl app jacoco:report`). CI enforces this on every push/PR.
+- Browser ITs run in CI (`mvn verify -Pit`) — see `it-selenium/`.
 
 ### Database
 

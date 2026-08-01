@@ -49,9 +49,26 @@ jobs:
           persist-credentials: false
           submodules: false
           show-progress: false
+          fetch-depth: 0
 
       - name: Build Roller and run JUnit Tests
         run: mvn -V -ntp install
+
+      - name: Diff coverage gate (90% on changed lines)
+        if: matrix.java == '21'
+        run: |
+          pip install diff_cover
+          mvn -ntp -pl app jacoco:report
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+              || ! git cat-file -e "$BASE" 2>/dev/null; then
+            BASE="HEAD~1"
+          fi
+          if ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "No base commit to diff against; skipping."
+            exit 0
+          fi
+          bin/check-diff-coverage.sh "$BASE"
 
       - name: Publish JUnit Report
         uses: test-summary/action@v2
