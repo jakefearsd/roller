@@ -45,6 +45,12 @@ limitations under the License.
         <!-- Versions match the sibling jspwiki/wikantik Selenide suite. -->
         <selenide.version>7.17.0</selenide.version>
         <selenium.version>4.46.0</selenium.version>
+        <!-- This module isn't a Spring Boot artifact and imports no BOM, so
+             junit-jupiter needs an explicit pin (app/pom.xml gets its JUnit
+             version for free from Spring Boot's dependencyManagement import;
+             this module doesn't). Kept in step with app's resolved
+             junit-jupiter version (JUnit 6). -->
+        <junit-jupiter.version>6.0.3</junit-jupiter.version>
         <docker.plugin.version>0.48.1</docker.plugin.version>
         <build-helper.version>3.6.0</build-helper.version>
         <exec.plugin.version>3.6.3</exec.plugin.version>
@@ -89,6 +95,7 @@ limitations under the License.
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <version>${junit-jupiter.version}</version>
             <scope>test</scope>
         </dependency>
 

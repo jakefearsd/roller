@@ -192,21 +192,11 @@ limitations under the License.
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter-engine</artifactId>
-                <version>5.14.3</version>
-                <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.junit</groupId>
-                <artifactId>junit-bom</artifactId>
-                <version>5.14.3</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
+            <!-- JUnit is no longer pinned here: app/pom.xml imports Spring
+                 Boot 4.1's BOM, which manages junit-jupiter 6.0.3 (JUnit 6)
+                 and junit-platform-launcher together. See app/pom.xml's
+                 dependencyManagement comment for why the previous re-import
+                 pattern existed and why it is gone. -->
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>

@@ -66,32 +66,15 @@ limitations under the License.
         <jspc-plugin.tomcat.version>11.0.22</jspc-plugin.tomcat.version>
     </properties>
 
-    <!-- The parent POM's dependencyManagement (junit-bom, testcontainers-bom) is
-         inherited, but a child POM's own dependencyManagement is flattened ahead
-         of the parent's when Maven builds the effective model, so without
-         re-declaring these two imports here FIRST, Spring Boot 4's BOM (which
-         manages JUnit 6) would win the version race for junit-jupiter and bump
-         us off the pinned 5.14.3 (JUnit 6 is a deliberately deferred upgrade;
-         see Global Constraints). Re-importing them here, ahead of the Boot BOM,
-         keeps the root pom's pins authoritative. -->
+    <!-- Spring Boot 4's BOM manages JUnit 6 (junit-jupiter 6.0.3,
+         junit-platform-launcher, ...), mockito 5.23.0, and testcontainers
+         2.0.5 as a known-good set. The root pom no longer re-pins
+         junit-jupiter-engine or imports junit-bom, so this import is the
+         sole source of truth for JUnit/mockito versions; the root pom
+         still imports testcontainers-bom itself (its version already
+         matches Boot's managed testcontainers, so there's no conflict). -->
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.junit</groupId>
-                <artifactId>junit-bom</artifactId>
-                <version>5.14.3</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers-bom</artifactId>
-                <version>${testcontainers.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -548,25 +531,25 @@ limitations under the License.
             <scope>test</scope>
         </dependency>
 
-        <!-- SecurityConfigTest (Stage 1B Task 4) deliberately does NOT use
-             @SpringBootTest/@AutoConfigureMockMvc; see that class's javadoc:
-             spring-test:7.0.8 (this BOM's managed version) compiles
-             SpringExtension against a junit-jupiter-api 6.0+-only method
-             (ExtensionContext.Store.computeIfAbsent(Object,Function,Class),
-             confirmed via javap), which throws NoSuchMethodError against this
-             project's pinned junit-bom 5.14.3 (Global Constraints defer that
-             bump deliberately) for every @ExtendWith(SpringExtension.class)
-             test, i.e. every @SpringBootTest. spring-boot-test/-test-autoconfigure/
-             -webmvc-test are therefore NOT added here: they would be unusable
-             dead weight under the current JUnit pin. Re-add them (and rewrite
-             SecurityConfigTest onto @SpringBootTest) once junit-bom moves to
-             the 6.x line. -->
+        <!-- SecurityConfigTest (Stage 1B Task 4) still does NOT use
+             @SpringBootTest/@AutoConfigureMockMvc, but the reason is now
+             historical: this project ran junit-bom 5.14.3, and spring-test's
+             SpringExtension compiled against a junit-jupiter-api 6.0+-only
+             method (ExtensionContext.Store.computeIfAbsent(Object,Function,Class)),
+             throwing NoSuchMethodError for every @ExtendWith(SpringExtension.class)
+             test. Stage 1D Task 6 moved the project onto JUnit 6
+             (junit-jupiter 6.0.3 via Spring Boot's BOM), so that
+             NoSuchMethodError no longer reproduces. spring-boot-test/
+             -test-autoconfigure/-webmvc-test are still not added here and
+             SecurityConfigTest is not rewritten onto @SpringBootTest: that
+             conversion is an optional follow-up (see the Stage 1D plan),
+             not required by the JUnit 6 bump itself. -->
 
         <!-- SecurityMockMvcRequestPostProcessors.user(...) and
              SecurityMockMvcConfigurers.springSecurity() (both needed by
              SecurityConfigTest): pure MockMvc configurer/post-processor
              utilities with no SpringExtension/JUnit-version coupling, so this
-             half of spring-security-test works fine under the current pin. -->
+             half of spring-security-test works regardless. -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
