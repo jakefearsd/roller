@@ -92,7 +92,15 @@ Apache Roller is a multi-user blog server built with:
 - **Persistence**: JPA with EclipseLink on PostgreSQL
 - **Templating**: Dual system - Velocity for blog rendering, JSP/JSTL for admin UI
 - **Search**: Apache Lucene for full-text search
-- **DI Container**: Google Guice (business layer), Spring (web layer)
+- **DI Container**: Single Spring container. Business beans are defined in
+  `WebloggerBeanConfig` (`@Configuration @Lazy`, in
+  `org.apache.roller.weblogger.business.jpa`) and are constructed lazily at
+  `WebloggerFactory.bootstrap()`, after `WebloggerStartup.prepare()`.
+  Controllers get the `Weblogger` facade via the `@Autowired @Lazy` field on
+  `BaseController`. Rendering servlets/models/pagers, background tasks/beans,
+  and `RollerHandlerInterceptor` intentionally still go through the
+  `WebloggerFactory` static shim, pending the Spring Boot conversion
+  (Stage 1B).
 
 ### Core Package Structure
 ```
