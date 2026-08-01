@@ -87,11 +87,7 @@ table.mm_table_actions td {
 /* edit entry page */
 
 /* Collapse-toggle chevron: BS3's Glyphicons Halflings font is gone, so this is a
-   pure-CSS caret that flips with BS5's .collapsed class on the trigger link.
-   Both selectors are kept because content JSPs still using the BS3 .panel-heading
-   shell (until their own migration task) need the same indicator as the BS5
-   .card-header chrome. */
-.panel-heading a:after,
+   pure-CSS caret that flips with BS5's .collapsed class on the trigger link. */
 .card-header a:after {
     content: "";
     display: inline-block;
@@ -102,7 +98,6 @@ table.mm_table_actions td {
     border-left: 5px solid transparent;
     transition: transform 0.2s ease-in-out;
 }
-.panel-heading a.collapsed:after,
 .card-header a.collapsed:after {
     transform: rotate(-90deg);
 }

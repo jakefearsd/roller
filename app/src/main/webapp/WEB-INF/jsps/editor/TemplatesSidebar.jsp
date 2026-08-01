@@ -20,7 +20,7 @@
 <h3><spring:message code="pagesForm.addNewPage"/></h3>
 <hr size="1" noshade="noshade"/>
 
-<form id="templateAdd" action="${pageContext.request.contextPath}/roller-ui/authoring/templates!add.rol" method="post" class="form-horizontal">
+<form id="templateAdd" action="${pageContext.request.contextPath}/roller-ui/authoring/templates!add.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <spring:message code="generic.name"/>
@@ -28,7 +28,7 @@
 
     <c:if test="${not empty availableActions}">
         <spring:message code="pagesForm.action"/>
-        <select name="newTmplAction" class="form-control">
+        <select name="newTmplAction" class="form-select">
 <c:forEach items="${availableActions}" var="opt">
 <option value="${opt.key}" ${opt.key == newTmplAction ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
