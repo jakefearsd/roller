@@ -24,12 +24,7 @@ import java.util.Map;
 import java.util.Properties;
 import jakarta.servlet.ServletContext;
 
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.userdetails.UserCache;
-import org.springframework.security.authentication.RememberMeAuthenticationProvider;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -55,18 +50,29 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  * {@code ContextLoaderListener}/{@code ServletContextListener}); that role
  * has moved to {@code org.apache.roller.weblogger.boot.RollerLifecycle}, a
  * Spring Boot {@code SmartLifecycle} bean. This class now only holds the
- * statics that lifecycle populates ({@link #getServletContext()},
- * {@link #getPasswordEncoder()}) plus the helper methods the lifecycle calls
- * ({@link #initializeSecurityFeatures(ServletContext)},
- * {@link #setupVelocity()}) and the ones controllers/filters still call
- * directly ({@link #getUIPluginManager()}, {@link #flushAuthenticationUserCache(String)}).
+ * statics that lifecycle/security config populate ({@link #getServletContext()},
+ * {@link #getPasswordEncoder()}) plus the helper methods they call
+ * ({@link #createPasswordEncoder()}, {@link #setupVelocity()}) and the ones
+ * controllers/filters still call directly ({@link #getUIPluginManager()},
+ * {@link #flushAuthenticationUserCache(String)}).
+ *
+ * <p>Until Stage 1B Task 4, {@code initializeSecurityFeatures(ServletContext)}
+ * built the password encoder and mutated Spring Security beans looked up by
+ * the internal names the {@code security.xml} namespace parser assigned them.
+ * That method is gone: {@code org.apache.roller.weblogger.boot.SecurityConfig}
+ * now builds those beans directly with {@code @Bean} methods (constructed
+ * during context refresh, before {@code RollerLifecycle.start()} ever runs),
+ * calling {@link #createPasswordEncoder()} itself and publishing the result
+ * here via {@link #setPasswordEncoder(PasswordEncoder)} so
+ * {@link org.apache.roller.weblogger.pojos.User}'s existing
+ * {@link #getPasswordEncoder()} call site keeps working unchanged.
  */
 public class RollerContext {
 
     private static final Log log = LogFactory.getLog(RollerContext.class);
 
     private static ServletContext servletContext = null;
-    private static DelegatingPasswordEncoder encoder;
+    private static PasswordEncoder encoder;
 
 
     private RollerContext() {
@@ -108,6 +114,18 @@ public class RollerContext {
     }
 
     /**
+     * Called once by {@code SecurityConfig}'s {@code passwordEncoder()} bean
+     * method, immediately after building the encoder with
+     * {@link #createPasswordEncoder()}, so this static accessor stays
+     * populated for {@link org.apache.roller.weblogger.pojos.User} the same
+     * way it always has been -- just published at Spring context-refresh
+     * time now instead of from {@code RollerLifecycle.start()}.
+     */
+    public static void setPasswordEncoder(PasswordEncoder passwordEncoder) {
+        encoder = passwordEncoder;
+    }
+
+    /**
      * Initialize the Velocity rendering engine.
      *
      * <p>Called by {@code RollerLifecycle.start()}, in the same spot in the
@@ -137,54 +155,21 @@ public class RollerContext {
     }
 
     /**
-     * Setup Spring Security security features.
+     * Builds the {@link DelegatingPasswordEncoder} Roller's configured
+     * password-encryption settings ({@code passwds.encryption.*}) describe.
      *
-     * <p>Called by {@code RollerLifecycle.start()}. Looks up beans by the
-     * internal names the {@code security.xml} namespace parser assigns them
-     * (e.g. {@code org.springframework.security.authenticationManager});
-     * that XML file is imported into the application context starting Task
-     * 3 of the Boot conversion, and Task 4 replaces this by-name lookup with
-     * proper {@code @Bean} wiring in {@code SecurityConfig}.
+     * <p>Called exactly once, by {@code SecurityConfig}'s
+     * {@code passwordEncoder()} {@code @Bean} method, which immediately
+     * hands the result to {@link #setPasswordEncoder(PasswordEncoder)}. Public
+     * (was {@code private}, folded into the old {@code initializeSecurityFeatures})
+     * so {@code SecurityConfig} -- which needs the encoder to build its
+     * {@code DaoAuthenticationProvider} during context refresh, before
+     * {@code RollerLifecycle.start()} ever runs -- can call it directly
+     * instead of going through a by-name Spring bean lookup that no longer
+     * exists now that {@code security.xml} is gone.
      */
-    public static void initializeSecurityFeatures(ServletContext context) {
-
-        ApplicationContext ctx =
-                WebApplicationContextUtils.getRequiredWebApplicationContext(context);
-
-        String rememberMe = WebloggerConfig.getProperty("rememberme.enabled");
-        boolean rememberMeEnabled = Boolean.valueOf(rememberMe);
-        log.info("Remember Me enabled: " + rememberMeEnabled);
-        context.setAttribute("rememberMeEnabled", rememberMe);
-
-        if (!rememberMeEnabled) {
-            ProviderManager provider =
-                (ProviderManager) ctx.getBean("org.springframework.security.authenticationManager");
-            for (AuthenticationProvider authProvider : provider.getProviders()) {
-                if (authProvider instanceof RememberMeAuthenticationProvider) {
-                    provider.getProviders().remove(authProvider);
-                }
-            }
-        }
-
-        encoder = createPasswordEncoder();
-
-        String daoBeanName = "org.springframework.security.authentication.dao.DaoAuthenticationProvider#0";
-
-        // for LDAP-only authentication, no daoBeanName (i.e., UserDetailsService) may be provided in security.xml.
-        if (ctx.containsBean(daoBeanName)) {
-            DaoAuthenticationProvider provider = (DaoAuthenticationProvider) ctx.getBean(daoBeanName);
-            provider.setPasswordEncoder(encoder);
-        }
-
-        if (WebloggerConfig.getBooleanProperty("securelogin.enabled")) {
-            LoginUrlAuthenticationEntryPoint entryPoint =
-                    (LoginUrlAuthenticationEntryPoint) ctx.getBean("_formLoginEntryPoint");
-            entryPoint.setForceHttps(true);
-        }
-    }
-
     @SuppressWarnings("deprecation")
-    private static DelegatingPasswordEncoder createPasswordEncoder() {
+    public static DelegatingPasswordEncoder createPasswordEncoder() {
 
         Map<String, PasswordEncoder> encoders = new HashMap<>();
 

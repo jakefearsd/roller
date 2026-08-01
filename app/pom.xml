@@ -582,6 +582,39 @@ limitations under the License.
             <scope>test</scope>
         </dependency>
 
+        <!-- SecurityConfigTest (Stage 1B Task 4) deliberately does NOT use
+             @SpringBootTest/@AutoConfigureMockMvc; see that class's javadoc:
+             spring-test:7.0.8 (this BOM's managed version) compiles
+             SpringExtension against a junit-jupiter-api 6.0+-only method
+             (ExtensionContext.Store.computeIfAbsent(Object,Function,Class),
+             confirmed via javap), which throws NoSuchMethodError against this
+             project's pinned junit-bom 5.14.3 (Global Constraints defer that
+             bump deliberately) for every @ExtendWith(SpringExtension.class)
+             test, i.e. every @SpringBootTest. spring-boot-test/-test-autoconfigure/
+             -webmvc-test are therefore NOT added here: they would be unusable
+             dead weight under the current JUnit pin. Re-add them (and rewrite
+             SecurityConfigTest onto @SpringBootTest) once junit-bom moves to
+             the 6.x line. -->
+
+        <!-- SecurityMockMvcRequestPostProcessors.user(...) and
+             SecurityMockMvcConfigurers.springSecurity() (both needed by
+             SecurityConfigTest): pure MockMvc configurer/post-processor
+             utilities with no SpringExtension/JUnit-version coupling, so this
+             half of spring-security-test works fine under the current pin. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- @ParameterizedTest/@ValueSource (SecurityConfigTest's authorization
+             matrix): not pulled in transitively by junit-jupiter-engine. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
