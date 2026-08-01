@@ -33,8 +33,6 @@ limitations under the License.
     <packaging>war</packaging>
 
     <properties>
-        <servlet.version>6.0.0</servlet.version>
-        <jsp-api.version>3.1.1</jsp-api.version>
         <jstl-api.version>3.0.2</jstl-api.version>
         <angular.version>1.7.8</angular.version>
         <asm.version>9.9.1</asm.version>
@@ -55,29 +53,133 @@ limitations under the License.
         <pit.tests>org.apache.roller.weblogger.util.*</pit.tests>
         <rome.version>1.19.0</rome.version>
         <slf4j.version>2.0.17</slf4j.version>
-        <spring.version>6.2.17</spring.version>
-        <spring.security.version>6.5.9</spring.security.version>
+        <spring-boot.version>4.1.0</spring-boot.version>
         <velocity.version>2.4.1</velocity.version>
         <webjars.version>1.6</webjars.version>
     </properties>
 
+    <!-- The parent POM's dependencyManagement (junit-bom, testcontainers-bom) is
+         inherited, but a child POM's own dependencyManagement is flattened ahead
+         of the parent's when Maven builds the effective model, so without
+         re-declaring these two imports here FIRST, Spring Boot 4's BOM (which
+         manages JUnit 6) would win the version race for junit-jupiter and bump
+         us off the pinned 5.14.3 (JUnit 6 is a deliberately deferred upgrade;
+         see Global Constraints). Re-importing them here, ahead of the Boot BOM,
+         keeps the root pom's pins authoritative. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>5.14.3</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+
+        <!-- Spring Boot -->
+
+        <!-- Logging is excluded from every starter below: Roller pins its own
+             log4j2/slf4j stack (see the slf4j/log4j2 deps further down) and
+             spring-boot-starter-log4j2 supplies the Boot-side log4j2 wiring
+             without dragging in Logback. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Provided, not compile: the executable WAR still needs Tomcat and
+             Jasper at container-launch time (spring-boot-maven-plugin packages
+             `provided`-scope deps into WEB-INF/lib-provided and puts them on the
+             launcher classpath), but they must not double up with an external
+             Tomcat's own copies when the WAR is deployed unpacked instead. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+            <scope>provided</scope>
+            <exclusions>
+                <!-- Pulls spring-boot-starter -> spring-boot-starter-logging
+                     (Logback + log4j-to-slf4j), which collides with the
+                     log4j-slf4j2-impl pin below: "log4j-slf4j2-impl cannot be
+                     present with log4j-to-slf4j". -->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-jasper</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Replaces the explicit spring-security-* version pins below with BOM
+             governance; spring-security-taglibs isn't pulled in by this starter
+             and stays declared explicitly further down. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
         <!-- Jakarta EE deps -->
 
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <version>${servlet.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>jakarta.servlet.jsp</groupId>
-            <artifactId>jakarta.servlet.jsp-api</artifactId>
-            <version>${jsp-api.version}</version>
-            <scope>provided</scope>
-        </dependency>
+        <!-- jakarta.servlet-api and jakarta.servlet.jsp-api are no longer declared
+             explicitly: spring-boot-starter-tomcat / tomcat-embed-jasper (both
+             above, scope provided) supply the 6.1 / 4.0 Jakarta EE 11 APIs that
+             Boot 4 / Tomcat 11 implement. -->
 
         <!-- The JSTL API. Tomcat ships no JSTL at all, and the Glassfish artifact
              below is only the implementation, so without this the WAR deploys to
@@ -363,12 +465,16 @@ limitations under the License.
             <version>${commons-lang3.version}</version>
         </dependency>
 
-        <!-- Spring deps (needed only for Spring Security) -->
+        <!-- Spring deps. Versions are no longer pinned here: spring-boot-dependencies
+             (imported above) governs every org.springframework* / org.springframework.security*
+             artifact. spring-boot-starter-web/-security already pull spring-web,
+             spring-context, spring-webmvc, and spring-security-config transitively;
+             they stay declared explicitly here because application code compiles
+             against them directly. -->
 
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
-            <version>${spring.version}</version>
             <exclusions>
                 <!-- in jcl-over-slf4j  -->
                 <exclusion>
@@ -381,35 +487,31 @@ limitations under the License.
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
-            <version>${spring.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
-            <version>${spring.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-config</artifactId>
-            <version>${spring.security.version}</version>
         </dependency>
 
 
         <!-- spring-security-openid removed in Spring Security 6.0;
              OpenID Connect (OIDC) via OAuth2 client is the replacement -->
 
+        <!-- Not pulled in by spring-boot-starter-security; stays explicit. -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-taglibs</artifactId>
-            <version>${spring.security.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-acl</artifactId>
-            <version>${spring.security.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.springframework</groupId>
@@ -477,7 +579,6 @@ limitations under the License.
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
-            <version>${spring.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -510,6 +611,26 @@ limitations under the License.
                 <configuration>
                     <attachClasses>true</attachClasses>
                 </configuration>
+            </plugin>
+
+            <!-- Rewrites the primary WAR into an executable one (Boot loader
+                 classes + WEB-INF/lib-provided) after maven-war-plugin builds it.
+                 `java -jar app/target/roller.war` runs it standalone; the same
+                 WAR can still be deployed unpacked to an external container. -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <!-- spring-boot-dependencies is imported as a dependency BOM only
+                     (the parent stays roller-project, not spring-boot-starter-parent),
+                     so it does not manage plugin versions; pin explicitly. -->
+                <version>${spring-boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
