@@ -19,12 +19,12 @@
 - Schedule entries for future publication
 - Organize content with categories and tags
 - Upload and manage media files (images, podcasts, attachments) in folder hierarchies (`MediaFileManager`)
-- Entry plugins for automatic formatting: line-break conversion, HTML-subset sanitization, and link markup (`ConvertLineBreaksPlugin`, `HTMLSubsetPlugin`, `LinkMarkupPlugin`, `AutoformatPlugin`)
+- Entry plugins for automatic formatting: line-break conversion (`ConvertLineBreaksPlugin`)
 
 ### Comments and Community
 - Visitor comments with moderation and approval workflows (pending, approved, disapproved)
 - Manual spam marking — moderators can flag a comment `SPAM` from the comment-management UI; there is no automated spam filter (`ApprovalStatus.SPAM`, `GlobalCommentManagementController`)
-- Comment formatting plugins run on submitted comment text (`WeblogEntryCommentPlugin`)
+- Comment formatting plugins run on submitted comment text: HTML-subset sanitization, link markup, and autoformatting (`HTMLSubsetPlugin`, `LinkMarkupPlugin`, `AutoformatPlugin`, all implementing `WeblogEntryCommentPlugin`)
 
 ### Themes and Templates
 - Four built-in shared themes: **basic**, **gaurav**, **fauxcoly**, and **frontpage** (`app/src/main/webapp/themes/`)
