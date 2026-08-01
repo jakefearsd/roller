@@ -36,11 +36,17 @@ import org.apache.roller.weblogger.pojos.WeblogEntry;
  * <p>Syntax rules:
  * <ul>
  *   <li>{@code [name attr="v"]body[/name]} -- body form; the body is
- *       expanded recursively first, so different shortcodes may nest.</li>
+ *       expanded recursively first, so shortcodes may nest. Same-name tags
+ *       pair inside-out like HTML elements; when opens and closers do not
+ *       balance, the outermost tag takes the last closer and the leftover
+ *       inner opens fall back to self-closing (a closer that had a matching
+ *       open never leaks into the output as raw text).</li>
  *   <li>{@code [name attr="v"]} or {@code [name attr="v" /]} -- self-closing
  *       (no matching {@code [/name]} means self-closing too).</li>
  *   <li>Attribute values may be double-quoted, single-quoted, or bare
- *       (no whitespace); names are matched case-insensitively.</li>
+ *       (no whitespace); a quoted value may contain {@code ]} and {@code [}.
+ *       Names are matched case-insensitively. Quote anything URL-shaped or
+ *       bracket-containing -- a bare value can contain neither.</li>
  *   <li>{@code [[name ...]]} escapes a REGISTERED shortcode: it renders as
  *       the literal text {@code [name ...]}.</li>
  *   <li>Anything that is not a registered shortcode -- unknown names,
@@ -75,12 +81,18 @@ public final class ShortcodeExpander {
     /**
      * An opening (or self-closing) shortcode tag: {@code [name attrs]},
      * {@code [name attrs /]}, or the escaped {@code [[name attrs]}] prefix
-     * (group 1 captures the doubled bracket). Attributes cannot contain
-     * {@code ]}, which is what keeps an unterminated {@code [name} from
-     * swallowing the rest of the text.
+     * (group 1 captures the doubled bracket). The attribute section is
+     * quote-aware: a {@code ]} inside a complete double- or single-quoted
+     * value stays part of the value ({@code caption="Paris [2023]"}) rather
+     * than ending the tag, while an unquoted (or unterminated-quote)
+     * {@code ]} still ends it -- which is what keeps an unterminated
+     * {@code [name} from swallowing the rest of the text. Group 4 catches
+     * the no-attribute self-close ({@code [name/]}); a trailing {@code /}
+     * after attributes lands inside group 3 and is handled by
+     * {@link #isSelfClosing}.
      */
-    private static final Pattern OPEN_TAG =
-            Pattern.compile("\\[(\\[?)([a-zA-Z][\\w-]*)((?:\\s[^\\]]*?)?)(/?)\\]");
+    private static final Pattern OPEN_TAG = Pattern.compile(
+            "\\[(\\[?)([a-zA-Z][\\w-]*)((?:\\s(?:[^\\]\"']|\"[^\"]*\"|'[^']*')*)?)(/?)\\]");
 
     private static final Pattern ATTRIBUTE = Pattern.compile(
             "([\\w-]+)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s\\]]+))");
@@ -151,21 +163,32 @@ public final class ShortcodeExpander {
             }
             int tagStart = matcher.start() + (doubledBracket ? 1 : 0);
 
-            // Body: text up to the first [/name], unless written self-closing.
+            boolean selfClosing = isSelfClosing(matcher.group(3), matcher.group(4));
+            String attributeText = matcher.group(3);
+            if (selfClosing) {
+                // strip the explicit self-close slash so it never reads as
+                // part of a bare attribute value
+                String stripped = attributeText.stripTrailing();
+                if (stripped.endsWith("/")) {
+                    attributeText = stripped.substring(0, stripped.length() - 1);
+                }
+            }
+
+            // Body: text up to the MATCHING [/name] (nested same-name opens
+            // are balanced), unless written self-closing.
             String body = null;
             int consumedEnd = matcher.end();
-            if (matcher.group(4).isEmpty()) {
-                String closer = "[/" + name + "]";
-                int closerAt = text.indexOf(closer, matcher.end());
+            if (!selfClosing) {
+                int closerAt = findMatchingCloser(text, name, matcher.end());
                 if (closerAt >= 0) {
                     body = expand(entry, text.substring(matcher.end(), closerAt), depth + 1);
-                    consumedEnd = closerAt + closer.length();
+                    consumedEnd = closerAt + name.length() + 3; // "[/" + name + "]"
                 }
             }
 
             String replacement = null;
             try {
-                replacement = handler.render(parseAttributes(matcher.group(3)), body, entry);
+                replacement = handler.render(parseAttributes(attributeText), body, entry);
             } catch (Exception e) {
                 log.warn("Shortcode [" + name + "] handler failed; leaving the "
                         + "shortcode text as the author wrote it", e);
@@ -184,6 +207,67 @@ public final class ShortcodeExpander {
         }
         out.append(text, last, text.length());
         return out.toString();
+    }
+
+    /**
+     * A tag is self-closing when it ends {@code /]}: with no attributes the
+     * slash is captured by OPEN_TAG's group 4, after attributes it is the
+     * last non-blank character of group 3.
+     */
+    private static boolean isSelfClosing(String attributeText, String slashGroup) {
+        return !slashGroup.isEmpty() || attributeText.stripTrailing().endsWith("/");
+    }
+
+    /**
+     * Finds the {@code [/name]} that closes an open tag whose body starts at
+     * {@code from}, balancing nested same-name opens so
+     * {@code [a]..[a]..[/a]..[/a]} pairs inside-out like HTML. Self-closing
+     * and escaped ({@code [[name ...]]}) inner opens do not consume a closer.
+     * Matching is case-insensitive, like tag names everywhere else.
+     *
+     * <p>When opens outnumber closers a strict pairing would leave THIS tag
+     * unclosed even though the author wrote a closer -- so as a fallback the
+     * tag takes the LAST closer, and the leftover inner opens (re-scanned
+     * when the body is recursively expanded, where their closers are absent)
+     * degrade to self-closing. Returns -1 only when no closer exists at all.
+     */
+    private static int findMatchingCloser(String text, String name, int from) {
+        String quoted = Pattern.quote(name);
+        Pattern sameName = Pattern.compile(
+                "\\[/" + quoted + "\\]|\\[" + quoted + "(?=[\\s/\\]])",
+                Pattern.CASE_INSENSITIVE);
+        Matcher token = sameName.matcher(text);
+
+        int depth = 1;
+        int lastCloser = -1;
+        int pos = from;
+        while (pos < text.length() && token.find(pos)) {
+            if (text.charAt(token.start() + 1) == '/') {
+                lastCloser = token.start();
+                depth--;
+                if (depth == 0) {
+                    return token.start();
+                }
+                pos = token.end();
+                continue;
+            }
+            // A same-name open inside the body: only a real, non-escaped,
+            // non-self-closing open tag consumes a closer of its own.
+            Matcher open = OPEN_TAG.matcher(text).region(token.start(), text.length());
+            if (!open.lookingAt()) {
+                pos = token.end();
+                continue;
+            }
+            boolean escapedOpen = token.start() > 0
+                    && text.charAt(token.start() - 1) == '['
+                    && open.end() < text.length()
+                    && text.charAt(open.end()) == ']';
+            if (!escapedOpen && !isSelfClosing(open.group(3), open.group(4))) {
+                depth++;
+            }
+            pos = open.end();
+        }
+        return lastCloser;
     }
 
     private static Map<String, String> parseAttributes(String attributeText) {

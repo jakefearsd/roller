@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -108,8 +109,76 @@ class ShortcodeExpanderTest {
 
     @Test
     void differentShortcodesNestInsideABody() {
-        assertEquals("OUTER INNER TEXT",
-                expander.expand(entry, "[upper]outer [upper word=inner] text[/upper]"));
+        assertEquals("BEFORE {A=1;} AFTER",
+                expander.expand(entry, "[upper]before [echo a=1] after[/upper]"));
+    }
+
+    // --------------------------------------------------- same-name nesting
+
+    @Nested
+    class SameNameNesting {
+
+        @Test
+        void sameNameShortcodesPairInsideOut() {
+            // Regression (review Important #1): the closer search used to grab
+            // the FIRST [/upper], corrupting the outer body and leaking the
+            // second closer as raw text into the page.
+            assertEquals("OUTER INNER TAIL",
+                    expander.expand(entry, "[upper]outer [upper]inner[/upper] tail[/upper]"));
+        }
+
+        @Test
+        void adjacentSameNamePairsDoNotLeakACloser() {
+            // The review's exact repro shape.
+            String out = expander.expand(entry,
+                    "[upper word=outer][upper word=inner][/upper][/upper]");
+            assertFalse(out.contains("[/upper]"),
+                    "a closer with a matching open must never leak into rendered "
+                            + "output: " + out);
+            assertFalse(out.contains("[upper"), out);
+        }
+
+        @Test
+        void anExplicitlySelfClosedInnerDoesNotConsumeTheOuterCloser() {
+            assertEquals("A B C",
+                    expander.expand(entry, "[upper]a [upper word=b /] c[/upper]"));
+        }
+
+        @Test
+        void anInnerOpenWithoutItsOwnCloserFallsBackToSelfClosing() {
+            // Opens outnumber closers: strict pairing would give the single
+            // closer to the inner open and leave the outer unclosed. The
+            // documented fallback gives the outer the LAST closer and the
+            // inner degrades to self-closing -- the intuitive reading.
+            assertEquals("A B C",
+                    expander.expand(entry, "[upper]a [upper word=b] c[/upper]"));
+        }
+
+        @Test
+        void anEscapedSameNameInsideABodyIsJustText() {
+            assertEquals("A [UPPER] B",
+                    expander.expand(entry, "[upper]a [[upper]] b[/upper]"));
+        }
+
+        @Test
+        void closerMatchingIsCaseInsensitiveLikeTagNames() {
+            assertEquals("BODY", expander.expand(entry, "[upper]body[/UPPER]"));
+        }
+
+        @Test
+        void sequentialPairsStillPairFirstWithFirst() {
+            assertEquals("ONE and TWO",
+                    expander.expand(entry, "[upper]one[/upper] and [upper]two[/upper]"));
+        }
+
+        @Test
+        void aMalformedInnerSameNameTagNeitherConsumesACloserNorDerailsTheOuter() {
+            // "[upper \"x b" starts like an open tag but never completes one
+            // (unterminated quote, no ]) -- it must count as plain body text,
+            // not as an open that eats the outer's closer.
+            assertEquals("A [UPPER \"X B",
+                    expander.expand(entry, "[upper]a [upper \"x b[/upper]"));
+        }
     }
 
     @Test
@@ -121,6 +190,49 @@ class ShortcodeExpanderTest {
     @Test
     void attributeNamesAreLowerCased() {
         assertEquals("{key=v;}", expander.expand(entry, "[echo KEY=v]"));
+    }
+
+    // ------------------------------------------- brackets in quoted values
+
+    @Nested
+    class QuotedAttributeValues {
+
+        @Test
+        void aClosingBracketInsideADoubleQuotedValueStaysInTheValue() {
+            // Regression (review Important #2): a ] inside a quoted value
+            // used to terminate the tag early and leak the truncated tail as
+            // raw text.
+            assertEquals("before {caption=a]b;} after",
+                    expander.expand(entry, "before [echo caption=\"a]b\"] after"));
+        }
+
+        @Test
+        void aClosingBracketInsideASingleQuotedValueStaysInTheValue() {
+            assertEquals("{caption=a]b;}",
+                    expander.expand(entry, "[echo caption='a]b']"));
+        }
+
+        @Test
+        void aWholeShortcodeInsideAQuotedValueIsJustAValue() {
+            // The registered name inside the value must be neither expanded
+            // nor allowed to derail the enclosing tag's parse.
+            assertEquals("{caption=use [upper word=x] here;}",
+                    expander.expand(entry, "[echo caption=\"use [upper word=x] here\"]"));
+        }
+
+        @Test
+        void anUnquotedValueStillEndsAtTheFirstClosingBracket() {
+            assertEquals("{a=x;}y]", expander.expand(entry, "[echo a=x]y]"));
+        }
+
+        @Test
+        void anUnterminatedQuoteLeavesTheTextUntouched() {
+            // An unterminated quote means we cannot know where the author
+            // intended the tag to end -- pass the whole thing through rather
+            // than guessing and truncating.
+            String text = "[echo caption=\"a]b] after";
+            assertEquals(text, expander.expand(entry, text));
+        }
     }
 
     // ------------------------------------------------- unknown / passthrough

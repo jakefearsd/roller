@@ -213,6 +213,20 @@ class ImageShortcodeTest {
     // ---------------------------------------------------------- via expander
 
     @Test
+    void aCaptionContainingBracketsSurvivesTheParser() {
+        // Review Important #2 repro: brackets inside a quoted caption are an
+        // ordinary thing to type and must neither truncate the caption nor
+        // leak raw shortcode syntax around the figure.
+        String rendered = withWeblogger(() -> ShortcodeExpander.defaultExpander()
+                .expand(entry, "[image id=mf-1 caption=\"Paris [2023]\"] after"));
+
+        assertTrue(rendered.contains("<figcaption>Paris [2023]</figcaption>"), rendered);
+        assertTrue(rendered.endsWith(" after"), rendered);
+        assertFalse(rendered.contains("caption="), rendered);
+        assertFalse(rendered.contains("[image"), rendered);
+    }
+
+    @Test
     void theDefaultExpanderShipsWithTheImageShortcodeRegistered() {
         String rendered = withWeblogger(() -> ShortcodeExpander.defaultExpander()
                 .expand(entry, "look [image id=mf-1 caption=\"A hawk\"] here"));
