@@ -102,6 +102,31 @@ public class JPAPersistenceStrategy {
 
             // Add all JPA, OpenJPA, HibernateJPA, etc. properties found
             Properties emfProps = new Properties();
+
+            // Default weaving off, set *before* the WebloggerConfig passthrough
+            // below so an operator who explicitly sets eclipselink.weaving in
+            // roller-custom.properties still wins (the loop overwrites this
+            // entry if that key is present). EclipseLink's
+            // createContainerEntityManagerFactoryImpl unconditionally calls
+            // PersistenceUnitInfo.addTransformer(transformer) to register a
+            // ClassTransformer for load-time weaving (verified by decompiling
+            // EclipseLink 5.0.0 — there is no RESOURCE_LOCAL exemption).
+            // RollerPersistenceUnitInfo.addTransformer() below is a no-op
+            // because there is no instrumentation agent to hand the
+            // transformer to under Boot's embedded Tomcat (no -javaagent, no
+            // load-time weaving hook) and static weaving as a build step is
+            // out of scope here. Declaring eclipselink.weaving=false makes
+            // that a deliberate, disclosed choice instead of a silent side
+            // effect of a no-op transformer: EclipseLink falls back to
+            // non-weaved change detection (calendar/deep-compare instead of
+            // AttributeChangeTracking) and unfetched-attribute access goes
+            // through plain getters instead of triggering indirection. No
+            // entity in the 19 mapping files has a LAZY to-one mapping (only
+            // LAZY one-to-many collections, which use IndirectList regardless
+            // of weaving), so no correctness change results — only a
+            // performance/change-tracking-strategy difference.
+            emfProps.setProperty("eclipselink.weaving", "false");
+
             Enumeration<Object> keys = WebloggerConfig.keys();
             while (keys.hasMoreElements()) {
                 String key = (String) keys.nextElement();
@@ -128,7 +153,8 @@ public class JPAPersistenceStrategy {
                 ClassLoader classLoader = currentClassLoader();
                 PersistenceXmlInfo persistenceXmlInfo = readPersistenceXmlInfo(classLoader);
                 PersistenceUnitInfo unitInfo = new RollerPersistenceUnitInfo(
-                        persistenceXmlInfo.mappingFileNames(), persistenceXmlInfo.rootUrl(), classLoader);
+                        persistenceXmlInfo.mappingFileNames(), persistenceXmlInfo.rootUrl(),
+                        persistenceXmlInfo.schemaVersion(), classLoader);
                 this.emf = new org.eclipse.persistence.jpa.PersistenceProvider()
                         .createContainerEntityManagerFactory(unitInfo, emfProps);
 
@@ -200,10 +226,26 @@ public class JPAPersistenceStrategy {
                 throw new WebloggerException("No <mapping-file> entries found in the \""
                         + PERSISTENCE_UNIT_NAME + "\" persistence-unit of " + PERSISTENCE_XML_RESOURCE);
             }
-            return new PersistenceXmlInfo(mappingFileNames, derivePersistenceUnitRootUrl(resource));
+            String schemaVersion = readSchemaVersion(doc);
+            return new PersistenceXmlInfo(mappingFileNames, derivePersistenceUnitRootUrl(resource), schemaVersion);
         } catch (ParserConfigurationException | SAXException | IOException e) {
             throw new WebloggerException("Could not parse " + PERSISTENCE_XML_RESOURCE, e);
         }
+    }
+
+    /**
+     * Reads the {@code version} attribute off the root {@code <persistence>}
+     * element (e.g. {@code "3.0"}), rather than hardcoding the value this
+     * strategy happens to expect today, so {@code getPersistenceXMLSchemaVersion()}
+     * stays truthful if persistence.xml is ever bumped to a newer schema
+     * version. Falls back to {@code "3.0"} only if the attribute is somehow
+     * missing or blank; the {@code version} attribute is mandatory per the
+     * Jakarta Persistence XSD, so in practice this fallback is unreachable
+     * for a persistence.xml that parses at all.
+     */
+    private static String readSchemaVersion(Document doc) {
+        String version = doc.getDocumentElement().getAttribute("version");
+        return (version == null || version.isBlank()) ? "3.0" : version;
     }
 
     /**
@@ -218,8 +260,15 @@ public class JPAPersistenceStrategy {
         if (!urlString.endsWith(PERSISTENCE_XML_RESOURCE)) {
             // Defensive fallback: some non-standard classloader returned a URL
             // that doesn't literally end in the resource path we asked for.
-            // The exact root doesn't matter (see class doc above), so just use
-            // the resource URL itself rather than fail startup over it.
+            // Returning the persistence.xml URL itself unmodified rather than
+            // failing startup is safe specifically because this value is
+            // never dereferenced as a real location — RollerPersistenceUnitInfo
+            // sets excludeUnlistedClasses() true, so EclipseLink never opens
+            // this URL to scan for annotated classes; buildPersistenceUnitName
+            // only ever calls toString() on it to build an internal cache key
+            // (see the class-level javadoc on readPersistenceXmlInfo). A
+            // "wrong" root here is at worst a slightly odd-looking internal
+            // name, never a runtime failure.
             return persistenceXmlUrl;
         }
         String rootUrlString = urlString.substring(0, urlString.length() - PERSISTENCE_XML_RESOURCE.length());
@@ -232,10 +281,11 @@ public class JPAPersistenceStrategy {
 
     /**
      * Holds what {@link #readPersistenceXmlInfo} parses out of the real
-     * {@code META-INF/persistence.xml}: the mapping-file list and the
-     * persistence-unit root URL derived from the same resource lookup.
+     * {@code META-INF/persistence.xml}: the mapping-file list, the
+     * persistence-unit root URL derived from the same resource lookup, and
+     * the schema version declared on the root {@code <persistence>} element.
      */
-    private record PersistenceXmlInfo(List<String> mappingFileNames, URL rootUrl) {
+    private record PersistenceXmlInfo(List<String> mappingFileNames, URL rootUrl, String schemaVersion) {
     }
 
     private static Element findPersistenceUnit(Document doc) throws WebloggerException {
@@ -265,11 +315,14 @@ public class JPAPersistenceStrategy {
 
         private final List<String> mappingFileNames;
         private final URL rootUrl;
+        private final String schemaVersion;
         private final ClassLoader classLoader;
 
-        RollerPersistenceUnitInfo(List<String> mappingFileNames, URL rootUrl, ClassLoader classLoader) {
+        RollerPersistenceUnitInfo(List<String> mappingFileNames, URL rootUrl, String schemaVersion,
+                ClassLoader classLoader) {
             this.mappingFileNames = mappingFileNames;
             this.rootUrl = rootUrl;
+            this.schemaVersion = schemaVersion;
             this.classLoader = classLoader;
         }
 
@@ -372,7 +425,7 @@ public class JPAPersistenceStrategy {
 
         @Override
         public String getPersistenceXMLSchemaVersion() {
-            return "3.0";
+            return schemaVersion;
         }
 
         @Override
@@ -382,17 +435,35 @@ public class JPAPersistenceStrategy {
 
         @Override
         public void addTransformer(ClassTransformer transformer) {
-            // No bytecode weaving of application classes: RESOURCE_LOCAL
-            // outside a Java EE container never invokes the transformer, and
-            // every entity is metadata-complete via its .orm.xml, so there is
-            // nothing for EclipseLink to weave here anyway.
+            // EclipseLink DOES call this: createContainerEntityManagerFactoryImpl
+            // invokes getNewTempClassLoader() and then unconditionally calls
+            // addTransformer(transformer) to register a ClassTransformer for
+            // load-time weaving (verified by decompiling EclipseLink 5.0.0 —
+            // there is no RESOURCE_LOCAL exemption in that path). This is a
+            // deliberate no-op: under Boot's embedded Tomcat there is no
+            // instrumentation agent to hand the transformer to (no
+            // -javaagent, no LTW hook), so nothing could apply it anyway.
+            // eclipselink.weaving=false is set explicitly on the emfProps
+            // passed to createContainerEntityManagerFactory (see the
+            // constructor) so this is a disclosed, intentional "weaving off"
+            // rather than a silent side effect of discarding the transformer
+            // here. See that property's comment for the correctness argument
+            // (no LAZY to-one mappings in any of the 19 orm.xml files).
         }
 
         @Override
         public ClassLoader getNewTempClassLoader() {
+            // Invoked by EclipseLink as part of the same weaving handshake as
+            // addTransformer() above (normally used to load classes into a
+            // throwaway loader for weaving inspection without polluting the
+            // real one). Since weaving is off and addTransformer() is a
+            // no-op, no class is ever actually transformed through this
+            // loader, so returning the live classloader instead of a fresh
+            // child one is harmless here.
             return classLoader;
         }
     }
+
     /**
      * Refresh changes to the current object.
      * 
