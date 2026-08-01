@@ -42,15 +42,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
 /**
- * Spring equivalent of {@link JPAWebloggerModule}: one {@code @Bean} method
- * per Guice binding, wiring the same JPA-backed business tier that Guice
- * assembled.
+ * Wires the JPA-backed business tier as Spring beans: one {@code @Bean}
+ * method per manager interface.
  *
  * <p>{@code JPAWebloggerImpl} depends on all the manager interfaces, and five
  * of those managers depend back on {@link Weblogger} itself (to reach sibling
- * managers through the facade). Guice's proxy-based injector papered over
- * that cycle transparently; Spring's constructor injection needs an explicit
- * out: every {@code Weblogger} parameter below is marked {@code @Lazy}, which
+ * managers through the facade). A proxy-based injector can paper over that
+ * cycle transparently; Spring's constructor injection needs an explicit out:
+ * every {@code Weblogger} parameter below is marked {@code @Lazy}, which
  * makes Spring hand the constructor a lazy-resolving proxy instead of trying
  * to fully construct the {@code Weblogger} bean during those managers'
  * construction. Omitting {@code @Lazy} on any of them reproduces the cycle
@@ -69,8 +68,8 @@ public class WebloggerBeanConfig {
     /**
      * The database provider is prepared once by {@link WebloggerStartup#prepare()}
      * before any Weblogger bootstrap runs; reuse that singleton rather than
-     * constructing a second one the way Guice's JIT binding did. Same
-     * configuration, one instance instead of two.
+     * constructing a second one. Same configuration, one instance instead of
+     * two.
      */
     @Bean
     public DatabaseProvider databaseProvider() {

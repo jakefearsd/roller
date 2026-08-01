@@ -34,7 +34,6 @@ import org.apache.roller.weblogger.business.themes.ThemeManager;
 /**
  * A JPA specific implementation of the Weblogger business layer.
  */
-@com.google.inject.Singleton
 public class JPAWebloggerImpl extends WebloggerImpl {
 
     // a persistence utility class
@@ -45,7 +44,6 @@ public class JPAWebloggerImpl extends WebloggerImpl {
      * Single constructor.
      * @throws org.apache.roller.weblogger.WebloggerException on any error
      */
-    @com.google.inject.Inject
     public JPAWebloggerImpl(
         JPAPersistenceStrategy strategy,
         IndexManager         indexManager,

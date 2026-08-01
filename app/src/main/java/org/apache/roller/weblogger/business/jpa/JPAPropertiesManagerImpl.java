@@ -42,7 +42,6 @@ import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
  * Created on May 29, 2006, 2:06 PM
  *
  */
-@com.google.inject.Singleton
 public class JPAPropertiesManagerImpl implements PropertiesManager {
     
     /** The logger instance for this class. */
@@ -55,7 +54,6 @@ public class JPAPropertiesManagerImpl implements PropertiesManager {
     /**
      * Creates a new instance of JPAPropertiesManagerImpl
      */
-    @com.google.inject.Inject
     public JPAPropertiesManagerImpl(JPAPersistenceStrategy strategy) {
         log.debug("Instantiating JPA Properties Manager");
         this.strategy = strategy;

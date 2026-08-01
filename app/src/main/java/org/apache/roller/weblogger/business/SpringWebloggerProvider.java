@@ -24,9 +24,8 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 /**
  * A Spring specific implementation of a WebloggerProvider.
  *
- * <p>Mirrors {@link GuiceWebloggerProvider}: bootstrapping builds (or, for the
- * two-arg constructor, reuses) a Spring {@link ApplicationContext} and hands
- * back its {@link Weblogger} bean.
+ * <p>Bootstrapping builds (or, for the two-arg constructor, reuses) a Spring
+ * {@link ApplicationContext} and hands back its {@link Weblogger} bean.
  */
 public class SpringWebloggerProvider implements WebloggerProvider {
 

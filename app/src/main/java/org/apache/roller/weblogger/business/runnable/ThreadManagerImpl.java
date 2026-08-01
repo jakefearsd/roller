@@ -42,7 +42,6 @@ import static org.apache.roller.util.RollerConstants.GRACEFUL_SHUTDOWN_WAIT_IN_S
 /**
  * Manage Roller's thread use.
  */
-@com.google.inject.Singleton
 public abstract class ThreadManagerImpl implements ThreadManager {
     
     private static final Log LOG = LogFactory.getLog(ThreadManagerImpl.class);

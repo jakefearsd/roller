@@ -41,7 +41,6 @@ import org.apache.roller.weblogger.business.DatabaseProvider;
 /**
  * Responsible for the lowest-level interaction with the JPA API.
  */
-@com.google.inject.Singleton
 public class JPAPersistenceStrategy {
     
     private static final Log logger = 
@@ -63,7 +62,6 @@ public class JPAPersistenceStrategy {
      * @param dbProvider database configuration information for manual configuration.
      * @throws org.apache.roller.weblogger.WebloggerException on any error
      */
-    @com.google.inject.Inject
     public JPAPersistenceStrategy(DatabaseProvider dbProvider) throws WebloggerException {
         String jpaConfigurationType = WebloggerConfig.getProperty("jpa.configurationType");
         if ("jndi".equals(jpaConfigurationType)) {

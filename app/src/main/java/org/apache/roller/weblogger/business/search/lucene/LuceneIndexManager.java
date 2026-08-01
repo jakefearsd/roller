@@ -67,7 +67,6 @@ import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
  * @author Mindaugas Idzelis (min@idzelis.com)
  * @author mraible (formatting and making indexDir configurable)
  */
-@com.google.inject.Singleton
 public class LuceneIndexManager implements IndexManager {
 
     private IndexReader reader;
@@ -94,7 +93,6 @@ public class LuceneIndexManager implements IndexManager {
      * 
      * @param roller - the weblogger instance
      */
-    @com.google.inject.Inject
     public LuceneIndexManager(Weblogger roller) {
         this.roller = roller;
 

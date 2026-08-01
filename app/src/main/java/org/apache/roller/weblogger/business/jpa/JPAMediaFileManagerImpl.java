@@ -62,7 +62,6 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.apache.roller.weblogger.util.Utilities;
 
-@com.google.inject.Singleton
 public class JPAMediaFileManagerImpl implements MediaFileManager {
 
     private final Weblogger roller;
@@ -73,7 +72,6 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
     /**
      * Creates a new instance of MediaFileManagerImpl
      */
-    @com.google.inject.Inject
     public JPAMediaFileManagerImpl(Weblogger roller,
             JPAPersistenceStrategy persistenceStrategy) {
         this.roller = roller;

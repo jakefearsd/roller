@@ -36,7 +36,6 @@ import java.util.Properties;
  * Here we put code that pertains to *all* implementations of the Weblogger
  * interface, regardless of their persistence strategy.
  */
-@com.google.inject.Singleton
 public abstract class WebloggerImpl implements Weblogger {
     
     private static final Log log = LogFactory.getLog(WebloggerImpl.class);

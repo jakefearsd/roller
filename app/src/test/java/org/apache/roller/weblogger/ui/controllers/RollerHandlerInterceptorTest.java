@@ -29,8 +29,8 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for {@link RollerHandlerInterceptor}.
  *
- * <p>Only tests that do not require the Guice-wired Weblogger business layer
- * are included here. The interceptor's security and user-resolution logic
+ * <p>Only tests that do not require the full Weblogger business layer are
+ * included here. The interceptor's security and user-resolution logic
  * depends heavily on {@code WebloggerFactory} which is initialized at
  * application startup and is impractical to mock in a lightweight unit test.
  */

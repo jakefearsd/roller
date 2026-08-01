@@ -62,7 +62,6 @@ import org.apache.roller.weblogger.pojos.WeblogTemplate;
  * JPAWeblogManagerImpl.java
  * Created on May 31, 2006, 4:08 PM
  */
-@com.google.inject.Singleton
 public class JPAWeblogManagerImpl implements WeblogManager {
     
     private static final Log log = LogFactory.getLog(JPAWeblogManagerImpl.class);
@@ -76,7 +75,6 @@ public class JPAWeblogManagerImpl implements WeblogManager {
     // cached mapping of weblogHandles -> weblogIds
     private final Map<String, String> weblogHandleToIdMap = Collections.synchronizedMap(new HashMap<>());
 
-    @com.google.inject.Inject
     public JPAWeblogManagerImpl(Weblogger roller, JPAPersistenceStrategy strat) {
         log.debug("Instantiating JPA Weblog Manager");
         this.roller = roller;

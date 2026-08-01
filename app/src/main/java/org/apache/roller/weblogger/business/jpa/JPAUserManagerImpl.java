@@ -43,7 +43,6 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 
 
-@com.google.inject.Singleton
 public class JPAUserManagerImpl implements UserManager {
     private static final Log log = LogFactory.getLog(JPAUserManagerImpl.class);
 
@@ -53,7 +52,6 @@ public class JPAUserManagerImpl implements UserManager {
     private final Map<String, String> userNameToIdMap = Collections.synchronizedMap(new HashMap<>());
     
 
-    @com.google.inject.Inject
     public JPAUserManagerImpl(JPAPersistenceStrategy strat) {
         log.debug("Instantiating JPA User Manager");
         this.strategy = strat;

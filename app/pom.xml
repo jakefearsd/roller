@@ -45,7 +45,6 @@ limitations under the License.
         <commons-text.version>1.15.0</commons-text.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <eclipse-link.version>5.0.0</eclipse-link.version>
-        <guice.version>7.0.0</guice.version>
         <log4j2.version>2.25.4</log4j2.version>
         <lucene.version>9.12.3</lucene.version> <!-- lucene 10 requires JDK 21 -->
         <maven-war.version>3.4.0</maven-war.version>
@@ -419,24 +418,7 @@ limitations under the License.
             </exclusions>
         </dependency>
 
-        <!-- Other deps include Guice and ROME -->
-
-        <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
-            <version>${guice.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>aopalliance</groupId>
-                    <artifactId>aopalliance</artifactId>
-                </exclusion>
-                <!-- this removes an empty jar guava depends on -->
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>listenablefuture</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+        <!-- Other deps include ROME -->
 
         <dependency>
             <groupId>com.rometools</groupId>
