@@ -181,6 +181,77 @@ class ShortcodeExpanderTest {
         }
     }
 
+    // ------------------------------------------------- closer look-alikes
+
+    /**
+     * Round-2 review finding: the closer scan must see tags, not raw
+     * substrings. A [/name]-shaped string in body prose or inside another
+     * tag's quoted attribute must never truncate the body and leak the real
+     * closer into the page.
+     */
+    @Nested
+    class CloserLookalikes {
+
+        @Test
+        void aProseMentionOfTheCloserStaysInsideTheBody() {
+            // The body extends to the LAST closer in the run, so the prose
+            // mention is kept as literal body text -- not a truncation point
+            // that leaks the real closer as raw output.
+            assertEquals("READ THE DOCS, E.G. [/UPPER] AS AN EXAMPLE, THEN CLOSE",
+                    expander.expand(entry,
+                            "[upper]read the docs, e.g. [/upper] as an example, then close[/upper]"));
+        }
+
+        @Test
+        void aCloserLookalikeInsideAnotherTagsQuotedAttributeIsJustAValue() {
+            // The review's second repro: without tag-boundary awareness this
+            // truncated the echo tag mid-attribute and leaked broken
+            // caption=" fragments plus the real closer into the page.
+            assertEquals("X{CAPTION=[/UPPER];}Y",
+                    expander.expand(entry, "[upper]x[echo caption=\"[/upper]\"]y[/upper]"));
+        }
+
+        @Test
+        void aCloserLookalikeInsideAnUnknownTagsQuotedAttributeIsJustAValue() {
+            // Same rule for tags with no registered handler: a well-formed
+            // tag span is opaque to the closer scan, and the unknown tag
+            // itself still passes through untouched inside the body.
+            assertEquals("X[GALLERY CAPTION=\"[/UPPER]\"]Y",
+                    expander.expand(entry, "[upper]x[gallery caption=\"[/upper]\"]y[/upper]"));
+        }
+
+        @Test
+        void anEscapedCloserInsideABodyRendersAsTheLiteralCloser() {
+            // [[/name]] is the author's precise way to mention a closer in
+            // prose: never structural, always rendered as [/name].
+            assertEquals("DOCS SAY [/UPPER] HERE",
+                    expander.expand(entry, "[upper]docs say [[/upper]] here[/upper]"));
+        }
+
+        @Test
+        void anEscapedCloserOutsideAnyShortcodeAlsoUnescapes() {
+            assertEquals("write [/upper] to close",
+                    expander.expand(entry, "write [[/upper]] to close"));
+        }
+
+        @Test
+        void anEscapedCloserOfAnUnknownNameStaysUntouched() {
+            // Like [[unknown]]: it only un-escapes once the name is
+            // registered, so future-wave docs keep their exact bytes today.
+            String text = "docs say [[/gallery]] here";
+            assertSame(text, expander.expand(entry, text));
+        }
+
+        @Test
+        void sequentialPairsAfterAProseMentionStillPairCorrectly() {
+            // The greedy last-closer rule must stop at the next same-name
+            // open: the second pair keeps its own closer.
+            assertEquals("ONE [/UPPER] MORE and TWO",
+                    expander.expand(entry,
+                            "[upper]one [/upper] more[/upper] and [upper]two[/upper]"));
+        }
+    }
+
     @Test
     void attributesParseQuotedSingleQuotedAndBareValues() {
         assertEquals("{a=one two;b=three;c=4;}",
