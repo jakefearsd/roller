@@ -68,4 +68,33 @@ class PublicSurfaceIT extends RollerIT {
         assertTrue(body.contains("<feed"), "must serve an Atom document:\n" + body);
         assertTrue(body.contains("IT Seeded Entry"), "seeded entry must be in the feed");
     }
+
+    // --- SEO surface (SeoController via the dispatcher's extra url mappings) ---
+
+    @Test
+    void robotsTxtAllowsCrawlingAndAdvertisesTheSitemapIndex() {
+        String body = getAnonymously(baseUrl() + "/robots.txt");
+        assertTrue(body.contains("User-agent: *"),
+                "robots.txt must address all crawlers:\n" + body);
+        assertTrue(body.contains("Sitemap: ") && body.contains("/sitemap.xml"),
+                "robots.txt must advertise the sitemap index:\n" + body);
+    }
+
+    @Test
+    void sitemapIndexListsThePerWeblogSitemap() {
+        String body = getAnonymously(baseUrl() + "/sitemap.xml");
+        assertTrue(body.contains("<sitemapindex"),
+                "must serve a sitemap index document:\n" + body);
+        assertTrue(body.contains("/sitemap-" + WEBLOG_HANDLE + ".xml"),
+                "the seeded weblog's sitemap must be listed:\n" + body);
+    }
+
+    @Test
+    void perWeblogSitemapListsTheSeededPermalink() {
+        String body = getAnonymously(baseUrl() + "/sitemap-" + WEBLOG_HANDLE + ".xml");
+        assertTrue(body.contains("<urlset"),
+                "must serve a urlset document:\n" + body);
+        assertTrue(body.contains("/entry/it-seeded-entry"),
+                "the seeded entry's permalink must be listed:\n" + body);
+    }
 }
