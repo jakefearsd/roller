@@ -51,9 +51,12 @@ limitations under the License.
         <slf4j.version>2.0.17</slf4j.version>
         <testcontainers.version>2.0.5</testcontainers.version>
 
-        <!-- Shared by app (WAR + spring-boot:run dev server) and it-selenium
-             (cargo's Tomcat needs the driver too). Defined here so the two
-             cannot drift apart. -->
+        <!-- Used by app (WAR + spring-boot:run dev server). Defined at this
+             level (not app/pom.xml) so a future consumer cannot drift from it.
+             it-selenium (Stage 1B Task 6) no longer needs its own copy: the
+             browser IT suite runs the executable WAR as a subprocess, which
+             carries its own bundled driver, instead of cargo deploying to an
+             externally managed Tomcat with a hand-declared JNDI datasource. -->
         <postgresql.version>42.7.9</postgresql.version>
         <maven-surefire.version>3.5.2</maven-surefire.version>
 

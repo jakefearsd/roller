@@ -31,7 +31,8 @@ limitations under the License.
     <artifactId>roller-selenium-tests</artifactId>
     <name>Roller browser integration tests</name>
     <description>
-        Selenide integration tests. The WAR is deployed to Tomcat by cargo against a
+        Selenide integration tests. The executable Roller WAR (Spring Boot 4,
+        embedded Tomcat) is launched as a subprocess by start-app.sh against a
         dedicated PostgreSQL container whose schema is built by the real
         bin/db/migrations chain. Every test inherits browser-health checking, so a page
         that renders while its assets 404 fails rather than passing.
@@ -44,17 +45,12 @@ limitations under the License.
         <!-- Versions match the sibling jspwiki/wikantik Selenide suite. -->
         <selenide.version>7.17.0</selenide.version>
         <selenium.version>4.46.0</selenium.version>
-        <cargo.plugin.version>1.10.20</cargo.plugin.version>
         <docker.plugin.version>0.48.1</docker.plugin.version>
         <build-helper.version>3.6.0</build-helper.version>
         <exec.plugin.version>3.6.3</exec.plugin.version>
-        <maven-clean.version>3.5.0</maven-clean.version>
-        <maven-dependency.version>3.9.0</maven-dependency.version>
-        <it.exploded.webapp>${project.build.directory}/it-webapp</it.exploded.webapp>
-
-        <!-- Tomcat 10.1, not 9: Roller uses jakarta.servlet 6.0, which Tomcat 9
-             (Java EE 8, javax.*) cannot run. -->
-        <it.tomcat.version>10.1.57</it.tomcat.version>
+        <!-- app-stop only; see the plugin comment below for why it cannot share the
+             exec-maven-plugin declaration used for app-start and the pg-* steps. -->
+        <antrun.plugin.version>3.1.0</antrun.plugin.version>
 
         <it.db.name>roller_it</it.db.name>
         <it.db.user>roller</it.db.user>
@@ -63,6 +59,11 @@ limitations under the License.
         <it.postgres.image>postgres:16</it.postgres.image>
 
         <it.context.path>roller</it.context.path>
+
+        <!-- start-app.sh/stop-app.sh bookkeeping. -->
+        <it.app.war>${project.basedir}/../app/target/roller.war</it.app.war>
+        <it.app.pidfile>${project.build.directory}/it-work/app.pid</it.app.pidfile>
+        <it.app.log>${project.build.directory}/it-work/app.log</it.app.log>
     </properties>
 
     <dependencies>
@@ -91,8 +92,13 @@ limitations under the License.
             <scope>test</scope>
         </dependency>
 
-        <!-- Pulls the WAR into the reactor so cargo deploys the artifact this build
-             produced, not a stale one from the local repository. -->
+        <!-- Not consumed directly (start-app.sh reads app/target/roller.war off
+             the filesystem, not via Maven artifact resolution): declared purely
+             to force Maven reactor build order. Without a real inter-module
+             dependency, `mvn verify -Pit` from the repo root has no guarantee
+             app builds (and spring-boot:repackage rewrites roller.war into the
+             executable jar-in-war start-app.sh needs) before this module's
+             pre-integration-test phase runs. -->
         <dependency>
             <groupId>org.apache.roller</groupId>
             <artifactId>roller-webapp</artifactId>
@@ -103,6 +109,19 @@ limitations under the License.
     </dependencies>
 
     <build>
+        <!-- roller-it.properties (Roller's own -Droller.custom.config overlay, read by
+             start-app.sh) needs ${it.db.port}, ${it.db.name}, ${project.basedir}, and
+             ${project.build.directory} substituted; filtering is off by default for
+             testResources, so it must be turned on explicitly here. seed-it-data.sql
+             lives in the same directory and has no ${...} tokens of its own, so
+             filtering the whole directory is harmless. -->
+        <testResources>
+            <testResource>
+                <directory>${project.basedir}/src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+
         <plugins>
 
             <!-- Reserve free ports so a developer's local PostgreSQL on 5432, or the
@@ -122,37 +141,45 @@ limitations under the License.
                             <portNames>
                                 <portName>it.db.port</portName>
                                 <portName>it.http.port</portName>
-                                <portName>it.rmi.port</portName>
-                                <portName>it.ajp.port</portName>
                             </portNames>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
 
-            <!-- Delete the previous run's Tomcat configuration before deploying.
-                 Cargo reuses target/cargo/configurations/, and Tomcat leaves an
-                 exploded webapps/roller/ behind. Redeploying the WAR over a stale
-                 explosion leaves a directory that shadows the new archive but is
-                 missing jars, so the context fails to start with
-                 ClassNotFoundException for Roller's own classes, and because it depends
-                 on what the last run left behind, it fails intermittently.
-                 Declared before cargo so it runs first within the phase. -->
+            <!-- app-stop, via maven-antrun-plugin rather than exec-maven-plugin
+                 (which does the launching below): both this and docker-maven-plugin
+                 bind an execution to post-integration-test, and Maven runs same-phase
+                 executions in the order their owning <plugin> elements appear in this
+                 file, so app-stop must be declared before docker-maven-plugin to win
+                 that race; the app process (and its DB connections) must be gone
+                 before pg-stop tears down the container it is talking to. exec-maven-
+                 plugin cannot be reused for this: it already appears later in this file
+                 (bound to pre-integration-test, where its executions must instead run
+                 AFTER docker-maven-plugin's pg-start), and declaring the same plugin
+                 GAV twice does not give two independently-positioned instances: Maven
+                 merges duplicate <plugin> declarations into one, scheduled at the
+                 position of the *first* occurrence, which would then run every
+                 exec-maven-plugin execution (including the pre-integration-test ones
+                 declared in the second block) before docker-maven-plugin's pg-start.
+                 Confirmed via `mvn help:effective-pom`: the merge silently reorders
+                 pg-wait-ready ahead of pg-start. A different plugin artifact avoids the
+                 merge entirely. -->
             <plugin>
-                <artifactId>maven-clean-plugin</artifactId>
-                <version>${maven-clean.version}</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>${antrun.plugin.version}</version>
                 <executions>
                     <execution>
-                        <id>clean-cargo-configuration</id>
-                        <phase>pre-integration-test</phase>
-                        <goals><goal>clean</goal></goals>
+                        <id>app-stop</id>
+                        <phase>post-integration-test</phase>
+                        <goals><goal>run</goal></goals>
                         <configuration>
-                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
-                            <filesets>
-                                <fileset>
-                                    <directory>${project.build.directory}/cargo/configurations</directory>
-                                </fileset>
-                            </filesets>
+                            <target>
+                                <exec executable="${project.basedir}/src/test/script/stop-app.sh" failonerror="true">
+                                    <arg value="${it.app.pidfile}"/>
+                                </exec>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
@@ -210,6 +237,11 @@ limitations under the License.
                 </executions>
             </plugin>
 
+            <!-- pg-wait-ready / pg-apply-migrations / pg-seed-it-data / app-start: all
+                 pre-integration-test, all must run after docker-maven-plugin's pg-start,
+                 which is why this plugin is declared after it. See the app-stop
+                 (maven-antrun-plugin) comment above for why app-stop is not simply a
+                 fifth execution in this same block. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -275,119 +307,29 @@ limitations under the License.
                             </environmentVariables>
                         </configuration>
                     </execution>
-                </executions>
-            </plugin>
-
-            <!-- Unpack the WAR ourselves rather than letting Tomcat do it.
-                 Tomcat opens its HTTP connector while HostConfig is still
-                 exploding the archive on a background thread. A request that
-                 arrives inside that window sees WEB-INF/lib jars that do not
-                 exist yet, and Tomcat caches those misses: StandardRoot caches
-                 the missing resource and WebappClassLoader caches the failed
-                 class definition. The context never recovers, so cargo's ping
-                 fails for its full timeout even though the directory is complete
-                 seconds later. Whether it happens at all depends on when the
-                 first ping lands, which is what made it intermittent.
-
-                 Deploying an already-exploded directory removes the window. -->
-            <plugin>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>${maven-dependency.version}</version>
-                <executions>
+                    <!-- Launches the executable WAR (java -jar, embedded Tomcat) as a
+                         background process and blocks until roller-ui/login.rol answers
+                         or 180s elapse; the same readiness contract cargo's pingURL
+                         enforced, now against a subprocess instead of a container-managed
+                         Tomcat. Must run after pg-seed-it-data: Roller caches the seed
+                         data aggressively in-process at startup, so seeding after the app
+                         is already up would leave it looking at a stale view. See
+                         start-app.sh for the WAR-not-found fast-fail message that points
+                         at running the full reactor rather than this module alone. -->
                     <execution>
-                        <id>unpack-war-for-deployment</id>
+                        <id>app-start</id>
                         <phase>pre-integration-test</phase>
-                        <goals><goal>unpack</goal></goals>
+                        <goals><goal>exec</goal></goals>
                         <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.apache.roller</groupId>
-                                    <artifactId>roller-webapp</artifactId>
-                                    <version>${project.version}</version>
-                                    <type>war</type>
-                                    <outputDirectory>${it.exploded.webapp}</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                            <overWriteReleases>true</overWriteReleases>
-                            <overWriteSnapshots>true</overWriteSnapshots>
+                            <executable>${project.basedir}/src/test/script/start-app.sh</executable>
+                            <arguments>
+                                <argument>${it.app.war}</argument>
+                                <argument>${it.http.port}</argument>
+                                <argument>${project.build.testOutputDirectory}/roller-it.properties</argument>
+                                <argument>${it.app.pidfile}</argument>
+                                <argument>${it.app.log}</argument>
+                            </arguments>
                         </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.codehaus.cargo</groupId>
-                <artifactId>cargo-maven3-plugin</artifactId>
-                <version>${cargo.plugin.version}</version>
-                <configuration>
-                    <container>
-                        <containerId>tomcat10x</containerId>
-                        <artifactInstaller>
-                            <groupId>org.apache.tomcat</groupId>
-                            <artifactId>tomcat</artifactId>
-                            <version>${it.tomcat.version}</version>
-                        </artifactInstaller>
-                        <log>${project.build.directory}/cargo.log</log>
-                        <output>${project.build.directory}/tomcat.log</output>
-                    </container>
-                    <configuration>
-                        <properties>
-                            <cargo.servlet.port>${it.http.port}</cargo.servlet.port>
-                            <cargo.rmi.port>${it.rmi.port}</cargo.rmi.port>
-                            <cargo.tomcat.ajp.port>${it.ajp.port}</cargo.tomcat.ajp.port>
-                            <cargo.jvmargs>-Djava.awt.headless=true</cargo.jvmargs>
-                        </properties>
-                        <!-- Roller looks up jdbc/rollerdb from JNDI; cargo writes the
-                             Tomcat resource definition, so there is no hand-maintained
-                             context.xml to keep in sync. -->
-                        <datasources>
-                            <datasource>
-                                <jndiName>jdbc/rollerdb</jndiName>
-                                <driverClass>org.postgresql.Driver</driverClass>
-                                <url>jdbc:postgresql://localhost:${it.db.port}/${it.db.name}</url>
-                                <username>${it.db.user}</username>
-                                <password>${it.db.password}</password>
-                            </datasource>
-                        </datasources>
-                    </configuration>
-                    <deployables>
-                        <deployable>
-                            <groupId>org.apache.roller</groupId>
-                            <artifactId>roller-webapp</artifactId>
-                            <type>war</type>
-                            <!-- The exploded directory produced above, not the
-                                 archive. See the unpack plugin for why. -->
-                            <location>${it.exploded.webapp}</location>
-                            <properties>
-                                <context>${it.context.path}</context>
-                            </properties>
-                            <!-- Block until Roller itself answers, not merely until
-                                 Tomcat's port opens. Without this the first tests can
-                                 race the WAR deployment and get a context-not-found
-                                 404, which surfaces as a pile of confusing assertion
-                                 failures instead of one clear "the app never came up". -->
-                            <pingURL>http://127.0.0.1:${it.http.port}/${it.context.path}/roller-ui/login.rol</pingURL>
-                            <pingTimeout>180000</pingTimeout>
-                        </deployable>
-                    </deployables>
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.postgresql</groupId>
-                        <artifactId>postgresql</artifactId>
-                        <version>${postgresql.version}</version>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                        <id>cargo-start</id>
-                        <phase>pre-integration-test</phase>
-                        <goals><goal>start</goal></goals>
-                    </execution>
-                    <execution>
-                        <id>cargo-stop</id>
-                        <phase>post-integration-test</phase>
-                        <goals><goal>stop</goal></goals>
                     </execution>
                 </executions>
             </plugin>
