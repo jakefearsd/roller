@@ -43,6 +43,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.FileIOException;
 import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.FileContent;
@@ -259,6 +260,11 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             // Refresh associated parent for changes
             strategy.refresh(mediaFile.getDirectory());
 
+            // Responsive-image width ladder (independent of the admin thumbnail
+            // above). RenditionSupport never throws -- per-rendition failures are
+            // logged at WARN with the media file id and do not reach this catch.
+            RenditionSupport.generate(cmgr, mediaFile, img);
+
         } catch (Exception e) {
             log.debug("ERROR creating thumbnail", e);
         }
@@ -469,12 +475,30 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         // update weblog last modified date. date updated by saveWeblog()
         roller.getWeblogManager().saveWeblog(weblog);
 
+        deleteContentQuietly(cmgr, weblog, mediaFile.getId());
+    }
+
+    /**
+     * Deletes the original file, the admin thumbnail (`_sm`), and every
+     * responsive rendition sibling that may exist for a media file id. Each
+     * candidate is deleted independently -- a missing rendition (never
+     * generated because it was narrower than the original, or because
+     * cwebp was unavailable) must not prevent the others from being
+     * cleaned up.
+     */
+    private void deleteContentQuietly(FileContentManager cmgr, Weblog weblog, String mediaFileId) {
+        deleteFileQuietly(cmgr, weblog, mediaFileId);
+        deleteFileQuietly(cmgr, weblog, mediaFileId + "_sm");
+        for (String renditionId : RenditionSupport.renditionFileIds(mediaFileId)) {
+            deleteFileQuietly(cmgr, weblog, renditionId);
+        }
+    }
+
+    private void deleteFileQuietly(FileContentManager cmgr, Weblog weblog, String fileId) {
         try {
-            cmgr.deleteFile(weblog, mediaFile.getId());
-            // Now thumbnail
-            cmgr.deleteFile(weblog, mediaFile.getId() + "_sm");
+            cmgr.deleteFile(weblog, fileId);
         } catch (Exception e) {
-            log.debug("File to be deleted already unavailable in the file store");
+            log.debug("File to be deleted already unavailable in the file store: " + fileId);
         }
     }
 
@@ -621,13 +645,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                 .getFileContentManager();
         Set<MediaFile> files = dir.getMediaFiles();
         for (MediaFile mf : files) {
-            try {
-                cmgr.deleteFile(dir.getWeblog(), mf.getId());
-                // Now thumbnail
-                cmgr.deleteFile(dir.getWeblog(), mf.getId() + "_sm");
-            } catch (Exception e) {
-                log.debug("File to be deleted already unavailable in the file store");
-            }
+            deleteContentQuietly(cmgr, dir.getWeblog(), mf.getId());
             this.strategy.remove(mf);
         }
 
@@ -640,6 +658,36 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
 
         // Refresh associated parent
         roller.flush();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int regenerateRenditions(Weblog weblog) throws WebloggerException {
+        FileContentManager cmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        int count = 0;
+        for (MediaFileDirectory dir : getMediaFileDirectories(weblog)) {
+            for (MediaFile mf : dir.getMediaFiles()) {
+                if (!mf.isImageFile()) {
+                    continue;
+                }
+                try {
+                    FileContent fc = cmgr.getFileContent(weblog, mf.getId());
+                    BufferedImage img = ImageIO.read(fc.getInputStream());
+                    if (img == null) {
+                        log.warn("Skipping rendition regeneration for media file "
+                                + mf.getId() + ": not a readable image");
+                        continue;
+                    }
+                    RenditionSupport.generate(cmgr, mf, img);
+                    count++;
+                } catch (Exception e) {
+                    log.warn("Failed to regenerate renditions for media file " + mf.getId(), e);
+                }
+            }
+        }
+        return count;
     }
 
     @Override

@@ -1,0 +1,266 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.business;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.imageio.ImageIO;
+
+import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.MediaFileDirectory;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Unit tests for {@link RenditionSupport} against a fake {@link FileContentManager}
+ * -- no database, no real filesystem, no real {@code cwebp} process. The
+ * JPA-backed end-to-end path (upload through {@code MediaFileManager}, disk
+ * assertions) lives in {@link MediaFileTest}.
+ */
+class RenditionSupportTest {
+
+    @AfterEach
+    void resetCwebpDetection() {
+        CwebpEncoder.setAvailableForTesting(null);
+    }
+
+    @Test
+    void isRenditionFileNameMatchesTheExactConvention() {
+        String id = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+        assertTrue(RenditionSupport.isRenditionFileName(id + "_sm"));
+        assertTrue(RenditionSupport.isRenditionFileName(id + "_480"));
+        assertTrue(RenditionSupport.isRenditionFileName(id + "_960"));
+        assertTrue(RenditionSupport.isRenditionFileName(id + "_1600"));
+        assertTrue(RenditionSupport.isRenditionFileName(id + "_2400"));
+        assertTrue(RenditionSupport.isRenditionFileName(id + "_480.webp"));
+        assertTrue(RenditionSupport.isRenditionFileName(id + "_2400.webp"));
+    }
+
+    @Test
+    void isRenditionFileNameRejectsLegitimateUnderscoredUserFilenames() {
+        // Real uploads are stored under their id, not their original name, but
+        // originalPath-style lookups and any future convention change must
+        // never treat an ordinary underscored name as a rendition.
+        assertFalse(RenditionSupport.isRenditionFileName("my_vacation_photo.jpg"));
+        assertFalse(RenditionSupport.isRenditionFileName("report_480.pdf"));
+        assertFalse(RenditionSupport.isRenditionFileName("short-id_480"));
+        assertFalse(RenditionSupport.isRenditionFileName(null));
+    }
+
+    @Test
+    void isRenditionFileNameRejectsAnUnknownSuffix() {
+        String id = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+        // 500 is not a ladder width or the admin thumbnail suffix.
+        assertFalse(RenditionSupport.isRenditionFileName(id + "_500"));
+    }
+
+    @Test
+    void renditionFileIdsListsEveryLadderWidthWithAndWithoutWebp() {
+        List<String> ids = RenditionSupport.renditionFileIds("abc");
+
+        assertEquals(RenditionSupport.LADDER_WIDTHS.size() * 2, ids.size());
+        for (int width : RenditionSupport.LADDER_WIDTHS) {
+            assertTrue(ids.contains("abc_" + width));
+            assertTrue(ids.contains("abc_" + width + ".webp"));
+        }
+    }
+
+    @Test
+    void formatForPreservesJpegAndPngFamiliesAndRejectsOthers() {
+        assertEquals("jpg", RenditionSupport.formatFor("image/jpeg"));
+        assertEquals("jpg", RenditionSupport.formatFor("image/jpg"));
+        assertEquals("jpg", RenditionSupport.formatFor("IMAGE/JPEG"));
+        assertEquals("png", RenditionSupport.formatFor("image/png"));
+        assertNull(RenditionSupport.formatFor("image/gif"));
+        assertNull(RenditionSupport.formatFor("image/webp"));
+        assertNull(RenditionSupport.formatFor(null));
+    }
+
+    @Test
+    void generateSkipsLadderWidthsAtOrAboveTheOriginal() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+        FakeFileContentManager cmgr = new FakeFileContentManager();
+        MediaFile mediaFile = imageMediaFile("image/jpeg");
+        // 500 wide: only the 480 rung is narrower than the original.
+        BufferedImage original = new BufferedImage(500, 300, BufferedImage.TYPE_INT_RGB);
+
+        RenditionSupport.generate(cmgr, mediaFile, original);
+
+        assertTrue(cmgr.saved.containsKey(mediaFile.getId() + "_480"),
+                "480w rendition must be generated for a 500w original");
+        assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_960"),
+                "960w must be skipped: it is not narrower than the 500w original");
+        assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_1600"));
+        assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_2400"));
+    }
+
+    @Test
+    void generateProducesNoWebpSiblingsWhenCwebpIsUnavailable() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+        FakeFileContentManager cmgr = new FakeFileContentManager();
+        MediaFile mediaFile = imageMediaFile("image/jpeg");
+        BufferedImage original = new BufferedImage(1000, 600, BufferedImage.TYPE_INT_RGB);
+
+        RenditionSupport.generate(cmgr, mediaFile, original);
+
+        assertTrue(cmgr.saved.containsKey(mediaFile.getId() + "_480"));
+        assertTrue(cmgr.saved.containsKey(mediaFile.getId() + "_960"));
+        assertFalse(cmgr.saved.keySet().stream().anyMatch(k -> k.endsWith(".webp")),
+                "no .webp siblings should be produced when cwebp is unavailable: " + cmgr.saved.keySet());
+
+        // and the raster renditions decode back to real, correctly-narrowed images
+        BufferedImage decoded480 = ImageIO.read(new ByteArrayInputStream(cmgr.saved.get(mediaFile.getId() + "_480")));
+        assertEquals(480, decoded480.getWidth());
+    }
+
+    @Test
+    void generatePreservesThePngFormatFamily() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+        FakeFileContentManager cmgr = new FakeFileContentManager();
+        MediaFile mediaFile = imageMediaFile("image/png");
+        BufferedImage original = new BufferedImage(800, 800, BufferedImage.TYPE_INT_ARGB);
+
+        RenditionSupport.generate(cmgr, mediaFile, original);
+
+        byte[] rendition = cmgr.saved.get(mediaFile.getId() + "_480");
+        assertTrue(rendition != null && rendition.length > 0);
+        // PNG signature: 0x89 'P' 'N' 'G' ...
+        assertEquals((byte) 0x89, rendition[0]);
+        assertEquals('P', rendition[1]);
+        assertEquals('N', rendition[2]);
+        assertEquals('G', rendition[3]);
+    }
+
+    @Test
+    void generateSkipsUnsupportedFormatFamiliesEntirely() {
+        CwebpEncoder.setAvailableForTesting(false);
+        FakeFileContentManager cmgr = new FakeFileContentManager();
+        MediaFile mediaFile = imageMediaFile("image/gif");
+        BufferedImage original = new BufferedImage(1000, 600, BufferedImage.TYPE_INT_RGB);
+
+        RenditionSupport.generate(cmgr, mediaFile, original);
+
+        assertTrue(cmgr.saved.isEmpty(), "gif is not a ladder-covered format; nothing should be generated");
+    }
+
+    @Test
+    void aSaveFailureOnOneWidthDoesNotBlockTheOthers() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+        MediaFile mediaFile = imageMediaFile("image/jpeg");
+        FakeFileContentManager cmgr = new FakeFileContentManager();
+        cmgr.failOn(mediaFile.getId() + "_480");
+        BufferedImage original = new BufferedImage(1000, 600, BufferedImage.TYPE_INT_RGB);
+
+        // must not throw despite the simulated disk failure on the 480 rung
+        RenditionSupport.generate(cmgr, mediaFile, original);
+
+        assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_480"));
+        assertTrue(cmgr.saved.containsKey(mediaFile.getId() + "_960"),
+                "a failure on one rung must not prevent the others from being generated");
+    }
+
+    @Test
+    void generateNeverThrowsEvenWithAGarbageContentType() {
+        FakeFileContentManager cmgr = new FakeFileContentManager();
+        MediaFile mediaFile = imageMediaFile("not-an-image-type");
+        BufferedImage original = new BufferedImage(1000, 600, BufferedImage.TYPE_INT_RGB);
+
+        RenditionSupport.generate(cmgr, mediaFile, original);
+
+        assertTrue(cmgr.saved.isEmpty());
+    }
+
+    private static MediaFile imageMediaFile(String contentType) {
+        Weblog weblog = new Weblog();
+        weblog.setHandle("renditiontestblog");
+        MediaFileDirectory dir = new MediaFileDirectory();
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setWeblog(weblog);
+        mediaFile.setDirectory(dir);
+        mediaFile.setContentType(contentType);
+        return mediaFile;
+    }
+
+    /**
+     * In-memory stand-in for {@link FileContentManager} that records every
+     * save by fileId, so tests can assert on exactly what RenditionSupport
+     * attempted to write without touching a real filesystem or database.
+     */
+    private static final class FakeFileContentManager implements FileContentManager {
+
+        final Map<String, byte[]> saved = new HashMap<>();
+        private String failingFileId;
+
+        void failOn(String fileId) {
+            this.failingFileId = fileId;
+        }
+
+        @Override
+        public org.apache.roller.weblogger.pojos.FileContent getFileContent(Weblog weblog, String fileId) {
+            throw new UnsupportedOperationException("not needed by RenditionSupport.generate()");
+        }
+
+        @Override
+        public void saveFileContent(Weblog weblog, String fileId, InputStream is) throws FileIOException {
+            if (fileId.equals(failingFileId)) {
+                throw new FileIOException("simulated disk failure for " + fileId);
+            }
+            try {
+                saved.put(fileId, is.readAllBytes());
+            } catch (java.io.IOException e) {
+                throw new FileIOException("read failure", e);
+            }
+        }
+
+        @Override
+        public void deleteFile(Weblog weblog, String fileId) {
+            saved.remove(fileId);
+        }
+
+        @Override
+        public void deleteAllFiles(Weblog weblog) {
+            saved.clear();
+        }
+
+        @Override
+        public boolean overQuota(Weblog weblog) {
+            return false;
+        }
+
+        @Override
+        public boolean canSave(Weblog weblog, String fileName, String contentType, long size,
+                org.apache.roller.weblogger.util.RollerMessages messages) {
+            return true;
+        }
+
+        @Override
+        public void release() {
+        }
+    }
+}

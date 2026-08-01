@@ -184,10 +184,20 @@ public interface MediaFileManager {
 
     /**
      * Remove tag with given name from given MediaFile
-     * 
+     *
      * @param name
      *            Name of tag to be removed
      */
     void removeMediaFileTag(String name, MediaFile entry)
             throws WebloggerException;
+
+    /**
+     * Regenerate the responsive-image rendition ladder for every image file
+     * in the given weblog. Used for backfill after the rendition pipeline
+     * was introduced (or after a ladder/format change) so existing uploads
+     * catch up. Per-file failures are logged and do not abort the walk.
+     *
+     * @return the number of image files processed
+     */
+    int regenerateRenditions(Weblog weblog) throws WebloggerException;
 }

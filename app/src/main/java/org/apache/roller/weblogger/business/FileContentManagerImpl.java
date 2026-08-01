@@ -243,6 +243,10 @@ public class FileContentManagerImpl implements FileContentManager {
      * Get the size in bytes of given directory.
      *
      * Optionally works recursively counting subdirectories if they exist.
+     * Responsive-image rendition siblings ({@code <id>_480}, {@code
+     * <id>_480.webp}, etc. -- see {@link RenditionSupport}) are excluded so
+     * that generating them never counts against a user's upload quota; only
+     * files the user actually uploaded count.
      */
     private long getDirSize(File dir, boolean recurse) {
 
@@ -254,6 +258,9 @@ public class FileContentManagerImpl implements FileContentManager {
             if (files != null) {
                 for (File file : files) {
                     if (!file.isDirectory()) {
+                        if (RenditionSupport.isRenditionFileName(file.getName())) {
+                            continue;
+                        }
                         dirSize += file.length();
                     } else if (recurse) {
                         // count a subdirectory

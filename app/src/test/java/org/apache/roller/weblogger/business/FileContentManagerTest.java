@@ -19,6 +19,7 @@ package org.apache.roller.weblogger.business;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.pojos.FileContent;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Map;
 
@@ -178,6 +180,77 @@ public class FileContentManagerTest  {
         msgs = new RollerMessages();
         fmgr.canSave(testWeblog, "test.gif", "text/plain", 10, msgs);
         assertFalse(canSave);
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    /**
+     * Responsive-image renditions (`<id>_480`, `<id>_480.webp`, ...) must not
+     * count against a weblog's upload quota -- only what the user actually
+     * uploaded should. Exercises the precise filename match directly against
+     * FileContentManager rather than going through the whole image pipeline,
+     * and proves the contrast case too: an ordinary uploaded file whose name
+     * happens to contain underscores must still count.
+     */
+    @Test
+    public void testRenditionsExcludedFromQuotaButUnderscoredUserFilesStillCount() throws Exception {
+
+        // FileContentManagerImpl.deleteAllFiles() is an unimplemented no-op
+        // (dead code -- nothing calls it) and weblog teardown does not clean
+        // up on-disk uploads, so a fixed handle would accumulate real files
+        // across repeated local `mvn test` runs against the same
+        // target/test-classes tree and eventually trip the quota check for
+        // reasons unrelated to this test. A per-run handle keeps this test's
+        // directory pristine every time; the files it writes are also
+        // deleted explicitly below for good hygiene.
+        String handle = "FCMTest_handle3_" + UUIDGenerator.generateUUID().substring(0, 8);
+        testUser = TestUtils.setupUser("FCMTest_userName3");
+        testWeblog = TestUtils.setupWeblog(handle, testUser);
+        TestUtils.endSession(true);
+
+        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
+        config.get("uploads.enabled").setValue("true");
+        config.get("uploads.types.allowed").setValue("");
+        config.get("uploads.types.forbid").setValue("");
+        // ~20KB quota: small enough that a single 40KB "rendition" would trip
+        // it if (incorrectly) counted, but well above the 1KB "original".
+        config.get("uploads.dir.maxsize").setValue("0.02");
+        pmgr.saveProperties(config);
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+
+        String id = UUIDGenerator.generateUUID();
+        String underscoredUserFile = "user_photo_with_underscores.jpg";
+        byte[] small = new byte[1000];
+        byte[] big = new byte[40000];
+
+        try {
+            fmgr.saveFileContent(testWeblog, id, new ByteArrayInputStream(small));
+            fmgr.saveFileContent(testWeblog, id + "_480", new ByteArrayInputStream(big));
+            fmgr.saveFileContent(testWeblog, id + "_480.webp", new ByteArrayInputStream(big));
+            fmgr.saveFileContent(testWeblog, id + "_sm", new ByteArrayInputStream(big));
+
+            assertFalse(fmgr.overQuota(testWeblog),
+                    "generated renditions must be excluded from the upload quota");
+
+            // Contrast: a legitimate uploaded file with underscores in its name
+            // (not the rendition convention: not a 36-char id prefix) must still
+            // count toward quota.
+            fmgr.saveFileContent(testWeblog, underscoredUserFile, new ByteArrayInputStream(big));
+
+            assertTrue(fmgr.overQuota(testWeblog),
+                    "a legitimately underscored user filename must still count toward quota");
+        } finally {
+            fmgr.deleteFile(testWeblog, id);
+            fmgr.deleteFile(testWeblog, id + "_480");
+            fmgr.deleteFile(testWeblog, id + "_480.webp");
+            fmgr.deleteFile(testWeblog, id + "_sm");
+            fmgr.deleteFile(testWeblog, underscoredUserFile);
+        }
 
         TestUtils.endSession(true);
         TestUtils.teardownWeblog(testWeblog.getId());

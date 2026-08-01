@@ -32,8 +32,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.FileContent;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
@@ -116,8 +119,9 @@ public class MediaResourceServlet extends HttpServlet {
         }
 
         // set the content type based on whatever is in our web.xml mime defs
+        String servedContentType = null;
         if (resourceRequest.isThumbnail()) {
-            response.setContentType("image/png");
+            servedContentType = "image/png";
             try {
                 resourceStream = mediaFile.getThumbnailInputStream();
             } catch (Exception e) {
@@ -129,12 +133,43 @@ public class MediaResourceServlet extends HttpServlet {
                     log.warn("ERROR loading thumbnail for " + mediaFile.getId());
                 }
             }
+        } else if (RenditionSupport.ladderWidths().contains(resourceRequest.getWidth())) {
+            // ?w= is validated against the ladder set only; any other value
+            // (including a syntactically valid width Roller never generates)
+            // falls straight through to the original below.
+            int width = resourceRequest.getWidth();
+            FileContentManager cmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+
+            if (acceptsWebp(request)) {
+                try {
+                    FileContent webp = cmgr.getFileContent(weblog, mediaFile.getId() + "_" + width + ".webp");
+                    resourceStream = webp.getInputStream();
+                    servedContentType = "image/webp";
+                } catch (Exception e) {
+                    // no webp sibling (cwebp unavailable at generation time, or
+                    // this width was never generated) -- fall through
+                    log.debug("No webp rendition for " + mediaFile.getId() + " at width " + width);
+                }
+            }
+
+            if (resourceStream == null) {
+                try {
+                    FileContent rendition = cmgr.getFileContent(weblog, mediaFile.getId() + "_" + width);
+                    resourceStream = rendition.getInputStream();
+                    servedContentType = mediaFile.getContentType();
+                } catch (Exception e) {
+                    // rendition was never generated (narrower than the original,
+                    // or generation failed) -- 404-safe fallback to the original
+                    log.debug("No " + width + "w rendition for " + mediaFile.getId() + "; serving original");
+                }
+            }
         }
 
         if (resourceStream == null) {
-            response.setContentType(mediaFile.getContentType());
+            servedContentType = mediaFile.getContentType();
             resourceStream = mediaFile.getInputStream();
         }
+        response.setContentType(servedContentType);
 
         OutputStream out;
         try {
@@ -160,6 +195,16 @@ public class MediaResourceServlet extends HttpServlet {
             resourceStream.close();
         }
 
+    }
+
+    /**
+     * True if the request's {@code Accept} header indicates the client will
+     * take {@code image/webp} (Chrome/Firefox/Edge send this on every image
+     * request; browsers that don't understand WebP simply omit it).
+     */
+    private static boolean acceptsWebp(HttpServletRequest request) {
+        String accept = request.getHeader("Accept");
+        return accept != null && accept.contains("image/webp");
     }
 
 }

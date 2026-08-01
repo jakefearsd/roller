@@ -25,10 +25,16 @@ import org.apache.roller.weblogger.pojos.*;
 import org.apache.roller.weblogger.pojos.MediaFileFilter.MediaFileOrder;
 import org.apache.roller.weblogger.pojos.MediaFileFilter.SizeFilterType;
 import org.apache.roller.weblogger.util.RollerMessages;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.sql.Timestamp;
 import java.util.*;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -1095,5 +1101,362 @@ public class MediaFileTest  {
         TestUtils.teardownWeblog(testWeblog.getId());
         TestUtils.teardownUser(testUser.getUserName());
         TestUtils.endSession(true);
+    }
+
+    // ----------------------------------------------------- Rendition pipeline
+
+    @AfterEach
+    public void resetCwebpDetection() {
+        // A couple of tests below force the cwebp seam; make sure no test
+        // leaks a forced result into whatever runs next in this JVM.
+        CwebpEncoder.setAvailableForTesting(null);
+    }
+
+    /**
+     * hawk.jpg is only 500px wide, so it can only ever prove the narrowest
+     * (480) rung. A synthetic image lets these tests exercise multiple ladder
+     * rungs and prove the ones at or above the source width are skipped.
+     */
+    private static byte[] generateImageBytes(int width, int height, String formatName) throws Exception {
+        BufferedImage img = new BufferedImage(width, height,
+                "png".equals(formatName) ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(img, formatName, baos);
+        return baos.toByteArray();
+    }
+
+    /**
+     * Ladder generation hooks the same seam as the existing `_sm` admin
+     * thumbnail (persistNewMediaFile -> updateThumbnail), with cwebp forced
+     * off so the assertions are deterministic regardless of whether this
+     * machine happens to have cwebp installed.
+     */
+    @Test
+    public void testCreateMediaFileGeneratesResponsiveRenditions() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+
+        User testUser = TestUtils.setupUser("renditionTestUser1");
+        Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog1", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        // 1000x700: wide enough to clear the 480 and 960 rungs, narrower than 1600/2400.
+        byte[] jpegBytes = generateImageBytes(1000, 700, "jpg");
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName("wide.jpg");
+        mediaFile.setDirectory(rootDirectory);
+        mediaFile.setWeblog(testWeblog);
+        mediaFile.setContentType("image/jpeg");
+        mediaFile.setLength(jpegBytes.length);
+        mediaFile.setInputStream(new ByteArrayInputStream(jpegBytes));
+        mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+
+        // Rungs narrower than the 1000px original must exist...
+        FileContent rendition480 = fmgr.getFileContent(testWeblog, id + "_480");
+        assertTrue(rendition480.getLength() > 0);
+        FileContent rendition960 = fmgr.getFileContent(testWeblog, id + "_960");
+        assertTrue(rendition960.getLength() > 0);
+        assertTrue(rendition960.getLength() > rendition480.getLength(),
+                "a 960w rendition must be a larger file than the 480w rendition of the same image");
+
+        // ...and rungs at or above it must not.
+        final Weblog assertWeblog1 = testWeblog;
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog1, id + "_1600"));
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog1, id + "_2400"));
+
+        // No webp siblings: cwebp was forced off.
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog1, id + "_480.webp"));
+
+        // The existing admin thumbnail must still be produced too.
+        FileContent thumbnail = fmgr.getFileContent(testWeblog, id + "_sm");
+        assertTrue(thumbnail.getLength() > 0);
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    @Test
+    public void testCreateMediaFilePreservesPngFormatFamilyInRenditions() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+
+        User testUser = TestUtils.setupUser("renditionTestUser2");
+        Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog2", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        byte[] pngBytes = generateImageBytes(900, 600, "png");
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName("wide.png");
+        mediaFile.setDirectory(rootDirectory);
+        mediaFile.setWeblog(testWeblog);
+        mediaFile.setContentType("image/png");
+        mediaFile.setLength(pngBytes.length);
+        mediaFile.setInputStream(new ByteArrayInputStream(pngBytes));
+        mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContent rendition480 = fmgr.getFileContent(testWeblog, id + "_480");
+        byte[] renditionBytes = rendition480.getInputStream().readAllBytes();
+        // PNG signature -- proves the png original produced a png rendition, not jpeg.
+        assertEquals((byte) 0x89, renditionBytes[0]);
+        assertEquals('P', renditionBytes[1]);
+        assertEquals('N', renditionBytes[2]);
+        assertEquals('G', renditionBytes[3]);
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    /**
+     * Runs only on a machine/container that actually has cwebp installed
+     * (skipped, not failed, otherwise) -- real detection is used here rather
+     * than the forced seam, so this is the one test that proves the real
+     * binary integration works end to end.
+     */
+    @Test
+    public void testCreateMediaFileGeneratesWebpSiblingsWhenCwebpIsAvailable() throws Exception {
+        CwebpEncoder.setAvailableForTesting(null);
+        Assumptions.assumeTrue(CwebpEncoder.isAvailable(),
+                "cwebp is not installed on this machine -- skipping the webp-sibling check");
+
+        User testUser = TestUtils.setupUser("renditionTestUser3");
+        Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog3", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        byte[] jpegBytes = generateImageBytes(1000, 700, "jpg");
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName("wide.jpg");
+        mediaFile.setDirectory(rootDirectory);
+        mediaFile.setWeblog(testWeblog);
+        mediaFile.setContentType("image/jpeg");
+        mediaFile.setLength(jpegBytes.length);
+        mediaFile.setInputStream(new ByteArrayInputStream(jpegBytes));
+        mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContent webp480 = fmgr.getFileContent(testWeblog, id + "_480.webp");
+        assertTrue(webp480.getLength() > 0);
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    @Test
+    public void testUpdateMediaFileRegeneratesRenditions() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+
+        User testUser = TestUtils.setupUser("renditionTestUser4");
+        Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog4", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        // Start narrow: only hawk.jpg (500w), no 960 rung yet.
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName("upgrade.jpg");
+        mediaFile.setDirectory(rootDirectory);
+        mediaFile.setWeblog(testWeblog);
+        mediaFile.setContentType("image/jpeg");
+        mediaFile.setInputStream(getClass().getResourceAsStream(TEST_IMAGE));
+        mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        final Weblog assertWeblog2 = testWeblog;
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog2, id + "_960"),
+                "the 500w original must not have produced a 960 rung yet");
+
+        // Replace the content with a wider image via the update-with-stream seam.
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        MediaFile mediaFile1 = mfMgr.getMediaFile(id);
+        mediaFile1.setWeblog(testWeblog);
+        byte[] widerJpeg = generateImageBytes(1200, 800, "jpg");
+        mediaFile1.setLength(widerJpeg.length);
+        mfMgr.updateMediaFile(testWeblog, mediaFile1, new ByteArrayInputStream(widerJpeg));
+        TestUtils.endSession(true);
+
+        FileContent rendition960 = fmgr.getFileContent(testWeblog, id + "_960");
+        assertTrue(rendition960.getLength() > 0,
+                "updateMediaFile(...,is) must regenerate the ladder from the new content");
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    @Test
+    public void testDeleteMediaFileRemovesRenditions() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+
+        User testUser = TestUtils.setupUser("renditionTestUser5");
+        Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog5", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        byte[] jpegBytes = generateImageBytes(1000, 700, "jpg");
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName("todelete.jpg");
+        mediaFile.setDirectory(rootDirectory);
+        mediaFile.setWeblog(testWeblog);
+        mediaFile.setContentType("image/jpeg");
+        mediaFile.setLength(jpegBytes.length);
+        mediaFile.setInputStream(new ByteArrayInputStream(jpegBytes));
+        mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        // sanity: the rendition exists before delete
+        assertTrue(fmgr.getFileContent(testWeblog, id + "_480").getLength() > 0);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        MediaFile toDelete = mfMgr.getMediaFile(id);
+        mfMgr.removeMediaFile(testWeblog, toDelete);
+        TestUtils.endSession(true);
+
+        final Weblog assertWeblog3 = testWeblog;
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog3, id + "_480"),
+                "removeMediaFile must clean up the 480 rendition");
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog3, id + "_960"),
+                "removeMediaFile must clean up the 960 rendition");
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog3, id + "_sm"),
+                "removeMediaFile must still clean up the admin thumbnail");
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog3, id),
+                "removeMediaFile must still clean up the original");
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    @Test
+    public void testRemoveMediaFileDirectoryRemovesRenditions() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+
+        User testUser = TestUtils.setupUser("renditionTestUser6");
+        Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog6", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        byte[] jpegBytes = generateImageBytes(1000, 700, "jpg");
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName("indir.jpg");
+        mediaFile.setDirectory(rootDirectory);
+        mediaFile.setWeblog(testWeblog);
+        mediaFile.setContentType("image/jpeg");
+        mediaFile.setLength(jpegBytes.length);
+        mediaFile.setInputStream(new ByteArrayInputStream(jpegBytes));
+        mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        assertTrue(fmgr.getFileContent(testWeblog, id + "_480").getLength() > 0);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+        mfMgr.removeMediaFileDirectory(rootDirectory);
+        TestUtils.endSession(true);
+
+        final Weblog assertWeblog4 = testWeblog;
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog4, id + "_480"),
+                "removeMediaFileDirectory must clean up renditions of the files it contained");
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    @Test
+    public void testRegenerateRenditionsBackfillsMissingRenditions() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+
+        User testUser = TestUtils.setupUser("renditionTestUser7");
+        Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog7", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        byte[] jpegBytes = generateImageBytes(1000, 700, "jpg");
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName("backfill.jpg");
+        mediaFile.setDirectory(rootDirectory);
+        mediaFile.setWeblog(testWeblog);
+        mediaFile.setContentType("image/jpeg");
+        mediaFile.setLength(jpegBytes.length);
+        mediaFile.setInputStream(new ByteArrayInputStream(jpegBytes));
+        mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        // Simulate "legacy" data uploaded before the pipeline existed: strip
+        // the renditions that were just generated, leaving only the original.
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        fmgr.deleteFile(testWeblog, id + "_480");
+        fmgr.deleteFile(testWeblog, id + "_960");
+        final Weblog assertWeblog5 = testWeblog;
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog5, id + "_480"));
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        int processed = mfMgr.regenerateRenditions(testWeblog);
+        TestUtils.endSession(true);
+
+        assertEquals(1, processed);
+        assertTrue(fmgr.getFileContent(testWeblog, id + "_480").getLength() > 0,
+                "the backfill action must regenerate the missing rendition");
+        assertTrue(fmgr.getFileContent(testWeblog, id + "_960").getLength() > 0);
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
     }
 }

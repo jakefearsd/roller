@@ -36,7 +36,11 @@ public class WeblogMediaResourceRequest extends WeblogRequest {
     private String resourceId = null;
 
     private boolean thumbnail = false;
-    
+
+    // requested responsive rendition width (?w=), or -1 if absent/invalid;
+    // validated against the ladder set by the caller, not here
+    private int width = -1;
+
     
     public WeblogMediaResourceRequest() {}
     
@@ -76,7 +80,17 @@ public class WeblogMediaResourceRequest extends WeblogRequest {
         if (request.getParameter("t") != null && "true".equals(request.getParameter("t"))) {
             thumbnail = true;
         }
-        
+
+        String widthParam = request.getParameter("w");
+        if (widthParam != null) {
+            try {
+                width = Integer.parseInt(widthParam.trim());
+            } catch (NumberFormatException e) {
+                // not a number -- leave width unset, servlet falls back to the original
+                width = -1;
+            }
+        }
+
         if(log.isDebugEnabled()) {
             log.debug("resourceId = "+this.resourceId);
         }
@@ -109,5 +123,19 @@ public class WeblogMediaResourceRequest extends WeblogRequest {
      */
     public void setThumbnail(boolean thumbnail) {
         this.thumbnail = thumbnail;
+    }
+
+    /**
+     * @return the requested responsive rendition width from {@code ?w=}, or
+     *         -1 if the parameter was absent or not a valid integer. The
+     *         caller is responsible for validating this against the actual
+     *         ladder width set.
+     */
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
     }
 }

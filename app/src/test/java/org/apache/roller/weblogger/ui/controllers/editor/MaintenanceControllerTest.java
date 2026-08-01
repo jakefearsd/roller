@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link MaintenanceController}.
@@ -126,5 +127,31 @@ class MaintenanceControllerTest extends EditorControllerTestSupport {
         assertTrue(errors(model).contains("Error flushing page cache"),
                 "Expected a reset error, got: " + errors(model));
         verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void regeneratingRenditionsConfirmsWithTheCount() throws Exception {
+        when(weblogger.getMediaFileManager().regenerateRenditions(weblog)).thenReturn(3);
+        registerMessage("maintenance.message.renditionsRegenerated", "Regenerated {0} image(s)");
+
+        String view = controller.regenerateRenditions(request, model);
+
+        assertEquals(".Maintenance", view);
+        verify(weblogger.getMediaFileManager()).regenerateRenditions(weblog);
+        assertTrue(messages(model).contains("Regenerated 3 image(s)"),
+                "Expected the regenerated count in the confirmation, got: " + messages(model));
+    }
+
+    @Test
+    void aFailedRenditionRegenerationIsReported() throws Exception {
+        doThrow(new WebloggerException("disk full"))
+                .when(weblogger.getMediaFileManager()).regenerateRenditions(any());
+
+        String view = controller.regenerateRenditions(request, model);
+
+        assertEquals(".Maintenance", view);
+        assertTrue(errors(model).contains("maintenance.message.renditionsRegenerated.failure"),
+                "Expected a rendition-regeneration failure, got: " + errors(model));
+        assertTrue(messages(model).isEmpty(), "A failed regeneration must not also report success");
     }
 }

@@ -101,6 +101,23 @@ public class MaintenanceController extends BaseController {
         return ".Maintenance";
     }
 
+    @PostMapping("/maintenance!regenerateRenditions.rol")
+    public String regenerateRenditions(HttpServletRequest request, Model model) {
+        populateCommonModel(request, model);
+
+        Weblog weblog = getActionWeblog(request);
+        try {
+            int count = weblogger.getMediaFileManager().regenerateRenditions(weblog);
+            addMessage(model, "maintenance.message.renditionsRegenerated",
+                    String.valueOf(count), request);
+        } catch (Exception ex) {
+            log.error("Error regenerating renditions - " + weblog.getHandle(), ex);
+            addError(model, "maintenance.message.renditionsRegenerated.failure", request);
+        }
+
+        return ".Maintenance";
+    }
+
     @PostMapping("/maintenance!reset.rol")
     public String reset(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
