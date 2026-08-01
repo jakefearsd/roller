@@ -30,7 +30,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -84,7 +83,7 @@ public class EntriesController extends BaseController {
         boolean hasMore = false;
         try {
             String status = bean.getStatus();
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
             wesc.setWeblog(getActionWeblog(request));
             wesc.setStartDate(bean.getStartDate());
@@ -143,7 +142,7 @@ public class EntriesController extends BaseController {
         if (bean.getSortBy() != null) {
             params.put("bean.sortBy", bean.getSortBy().toString());
         }
-        return WebloggerFactory.getWeblogger().getUrlStrategy().getActionURL("entries", "/roller-ui/authoring",
+        return weblogger.getUrlStrategy().getActionURL("entries", "/roller-ui/authoring",
                 getActionWeblog(request).getHandle(), params, false);
     }
 
@@ -153,7 +152,7 @@ public class EntriesController extends BaseController {
         tmpCat.setName("Any");
         cats.add(tmpCat);
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             cats.addAll(wmgr.getWeblogCategories(getActionWeblog(request)));
         } catch (WebloggerException ex) {
             log.error("Error getting category list", ex);

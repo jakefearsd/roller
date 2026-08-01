@@ -28,7 +28,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -82,17 +81,17 @@ public class CategoryRemoveController extends BaseController {
         WeblogCategory category = lookupCategory(removeId);
         if (category != null) {
             try {
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
 
                 if (targetCategoryId != null) {
                     WeblogCategory target = wmgr.getWeblogCategory(targetCategoryId);
                     wmgr.moveWeblogCategoryContents(category, target);
-                    WebloggerFactory.getWeblogger().flush();
+                    weblogger.flush();
                 }
 
                 CacheManager.invalidate(category);
                 wmgr.removeWeblogCategory(category);
-                WebloggerFactory.getWeblogger().flush();
+                weblogger.flush();
 
                 addFlashMessage(redirectAttributes, "categoryForm.removed", category.getName(), request);
 
@@ -117,7 +116,7 @@ public class CategoryRemoveController extends BaseController {
             return null;
         }
         try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             return wmgr.getWeblogCategory(id);
         } catch (WebloggerException ex) {
             log.error("Error looking up category", ex);

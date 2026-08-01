@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.MediaFileDirectoryComparator;
@@ -54,11 +53,11 @@ public abstract class MediaFileBase extends BaseController {
     protected void doDeleteMediaFile(String mediaFileId, HttpServletRequest request, Model model) {
         try {
             log.debug("Processing delete of file id - " + mediaFileId);
-            MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager manager = weblogger.getMediaFileManager();
             MediaFile mediaFile = manager.getMediaFile(mediaFileId);
             manager.removeMediaFile(getActionWeblog(request), mediaFile);
-            WebloggerFactory.getWeblogger().flush();
-            WebloggerFactory.getWeblogger().release();
+            weblogger.flush();
+            weblogger.release();
             addMessage(model, "mediaFile.delete.success", request);
         } catch (WebloggerException e) {
             log.error("Error deleting media file", e);
@@ -72,11 +71,11 @@ public abstract class MediaFileBase extends BaseController {
     protected void doIncludeMediaFileInGallery(String mediaFileId, HttpServletRequest request, Model model) {
         try {
             log.debug("Processing include-in-gallery of file id - " + mediaFileId);
-            MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager manager = weblogger.getMediaFileManager();
             MediaFile mediaFile = manager.getMediaFile(mediaFileId);
             mediaFile.setSharedForGallery(true);
             manager.updateMediaFile(getActionWeblog(request), mediaFile);
-            WebloggerFactory.getWeblogger().flush();
+            weblogger.flush();
             addMessage(model, "mediaFile.includeInGallery.success", request);
         } catch (WebloggerException e) {
             log.error("Error including media file in gallery", e);
@@ -89,7 +88,7 @@ public abstract class MediaFileBase extends BaseController {
      */
     protected void doDeleteSelected(String[] selectedMediaFiles, HttpServletRequest request, Model model) {
         try {
-            MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager manager = weblogger.getMediaFileManager();
 
             if (selectedMediaFiles != null && selectedMediaFiles.length > 0) {
                 log.debug("Processing delete of " + selectedMediaFiles.length + " media files.");
@@ -102,9 +101,9 @@ public abstract class MediaFileBase extends BaseController {
                 }
             }
 
-            WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(getActionWeblog(request));
-            WebloggerFactory.getWeblogger().flush();
-            WebloggerFactory.getWeblogger().release();
+            weblogger.getWeblogManager().saveWeblog(getActionWeblog(request));
+            weblogger.flush();
+            weblogger.release();
             addMessage(model, "mediaFile.delete.success", request);
 
         } catch (WebloggerException e) {
@@ -120,7 +119,7 @@ public abstract class MediaFileBase extends BaseController {
                                   HttpServletRequest request, Model model) {
         try {
             int movedFiles = 0;
-            MediaFileManager manager = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager manager = weblogger.getMediaFileManager();
 
             if (selectedMediaFiles != null && selectedMediaFiles.length > 0) {
                 log.debug("Processing move of " + selectedMediaFiles.length + " media files.");
@@ -135,8 +134,8 @@ public abstract class MediaFileBase extends BaseController {
                 }
             }
 
-            WebloggerFactory.getWeblogger().flush();
-            WebloggerFactory.getWeblogger().release();
+            weblogger.flush();
+            weblogger.release();
             if (movedFiles > 0) {
                 addMessage(model, "mediaFile.move.success", request);
             }
@@ -152,7 +151,7 @@ public abstract class MediaFileBase extends BaseController {
      */
     protected List<MediaFileDirectory> refreshAllDirectories(HttpServletRequest request) {
         try {
-            MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+            MediaFileManager mgr = weblogger.getMediaFileManager();
             List<MediaFileDirectory> directories = mgr.getMediaFileDirectories(getActionWeblog(request));
             List<MediaFileDirectory> sortedDirList = new ArrayList<>(directories);
             sortedDirList.sort(new MediaFileDirectoryComparator(DirectoryComparatorType.NAME));
