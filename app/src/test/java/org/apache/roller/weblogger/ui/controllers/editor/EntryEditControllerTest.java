@@ -615,7 +615,106 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
     }
 
+    // --- SEO panel ---
+
+    @Test
+    void savingCarriesTheSeoFieldsOntoTheEntry() throws Exception {
+        // The SEO card's inputs bind straight onto the bean; a field dropped in
+        // copyTo would silently discard what the author typed.
+        bean.setMetaTitle("A meta title");
+        bean.setSearchDescription("A meta description");
+        bean.setFeaturedImageId("mf-featured");
+        bean.setOgImageId("mf-og");
+        bean.setCanonicalUrl("https://example.com/the-original");
+        bean.setNoindex(true);
+
+        controller.entryAddSaveDraft(request, model, bean);
+
+        WeblogEntry saved = captureSavedEntry();
+        assertEquals("A meta title", saved.getMetaTitle());
+        assertEquals("A meta description", saved.getSearchDescription());
+        assertEquals("mf-featured", saved.getFeaturedImageId());
+        assertEquals("mf-og", saved.getOgImageId());
+        assertEquals("https://example.com/the-original", saved.getCanonicalUrl());
+        assertEquals(Boolean.TRUE, saved.getNoindex());
+    }
+
+    @Test
+    void openingAnExistingEntryLoadsTheSeoFieldsIntoTheForm() throws Exception {
+        WeblogEntry existing = existingEntry(PubStatus.PUBLISHED);
+        existing.setMetaTitle("Stored meta title");
+        existing.setSearchDescription("Stored description");
+        existing.setFeaturedImageId("mf-featured");
+        existing.setOgImageId("mf-og");
+        existing.setCanonicalUrl("https://example.com/stored");
+        existing.setNoindex(Boolean.TRUE);
+
+        controller.entryEditExecute(request, model, bean);
+
+        assertEquals("Stored meta title", bean.getMetaTitle());
+        assertEquals("Stored description", bean.getSearchDescription());
+        assertEquals("mf-featured", bean.getFeaturedImageId());
+        assertEquals("mf-og", bean.getOgImageId());
+        assertEquals("https://example.com/stored", bean.getCanonicalUrl());
+        assertTrue(bean.getNoindex());
+    }
+
+    @Test
+    void theEditorShowsThumbnailsForTheStoredSeoImages() throws Exception {
+        WeblogEntry existing = existingEntry(PubStatus.PUBLISHED);
+        existing.setFeaturedImageId("mf-featured");
+        existing.setOgImageId("mf-og");
+        givenMediaFile("mf-featured");
+        givenMediaFile("mf-og");
+
+        controller.entryEditExecute(request, model, bean);
+
+        assertEquals("http://media/mf-featured?t=true",
+                model.getAttribute("featuredImageThumbnailUrl"));
+        assertEquals("http://media/mf-og?t=true", model.getAttribute("ogImageThumbnailUrl"));
+    }
+
+    @Test
+    void aDanglingImageIdRendersNoPreviewRatherThanBreakingTheEditor() throws Exception {
+        // The picked image can be deleted from the media library afterwards;
+        // the editor must still open, just without a preview.
+        WeblogEntry existing = existingEntry(PubStatus.PUBLISHED);
+        existing.setFeaturedImageId("mf-deleted");
+        existing.setOgImageId("mf-broken");
+        when(weblogger.getMediaFileManager().getMediaFile("mf-deleted")).thenReturn(null);
+        when(weblogger.getMediaFileManager().getMediaFile("mf-broken"))
+                .thenThrow(new WebloggerException("database down"));
+
+        String view = controller.entryEditExecute(request, model, bean);
+
+        assertEquals(".EntryEdit", view);
+        assertNull(model.getAttribute("featuredImageThumbnailUrl"));
+        assertNull(model.getAttribute("ogImageThumbnailUrl"));
+    }
+
+    @Test
+    void anEntryWithoutSeoImagesAsksTheMediaTierForNothing() throws Exception {
+        existingEntry(PubStatus.PUBLISHED);
+
+        controller.entryEditExecute(request, model, bean);
+
+        verify(weblogger.getMediaFileManager(), never()).getMediaFile(any());
+        assertNull(model.getAttribute("featuredImageThumbnailUrl"));
+        assertNull(model.getAttribute("ogImageThumbnailUrl"));
+    }
+
     // --- helpers ---
+
+    /** Stub a media file whose thumbnail resolves to {@code http://media/<id>?t=true}. */
+    private void givenMediaFile(String id) throws WebloggerException {
+        org.apache.roller.weblogger.pojos.MediaFile mediaFile =
+                new org.apache.roller.weblogger.pojos.MediaFile();
+        mediaFile.setId(id);
+        mediaFile.setWeblog(weblog);
+        when(weblogger.getMediaFileManager().getMediaFile(id)).thenReturn(mediaFile);
+        when(weblogger.getUrlStrategy().getMediaFileThumbnailURL(weblog, id, true))
+                .thenReturn("http://media/" + id + "?t=true");
+    }
 
     private WeblogEntry existingEntry(PubStatus status) throws WebloggerException {
         WeblogEntry entry = new WeblogEntry();

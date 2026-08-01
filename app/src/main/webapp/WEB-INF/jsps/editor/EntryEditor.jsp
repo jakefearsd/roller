@@ -126,8 +126,13 @@
 
     <%-- Common functions --%>
 
-    function onClickMediaFileInsert() {
-        <c:url var="mediaFileImageChooser" value="/overlay/mediaFileImageChooser.rol">
+    <%-- Opens the media chooser. With no argument the chosen file is inserted
+         into the Summernote editor (the historic behavior); with a picker
+         target ('featuredImage' / 'ogImage') the choice is routed to
+         onImagePicked in EntryEdit.jsp instead. --%>
+    function onClickMediaFileInsert(pickerTarget) {
+        window.mediaPickerTarget = pickerTarget || null;
+        <c:url var="mediaFileImageChooser" value="/roller-ui/authoring/overlay/mediaFileImageChooser.rol">
         <c:param name="weblog" value="${actionWeblog.handle}"/>
         </c:url>
         $("#mediaFileEditor").attr('src', '${mediaFileImageChooser}');
@@ -138,9 +143,19 @@
         $("#mediaFileEditor").attr('src', 'about:blank');
     }
 
-    function onSelectMediaFile(name, url, isImage) {
+    <%-- Callback from MediaFileImageChooser.jsp inside the iframe. The id is a
+         later addition; callers that only pass (name, url, isImage) still work. --%>
+    function onSelectMediaFile(name, url, isImage, id) {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).hide();
         $("#mediaFileEditor").attr('src', 'about:blank');
+        if (window.mediaPickerTarget) {
+            var target = window.mediaPickerTarget;
+            window.mediaPickerTarget = null;
+            if (typeof onImagePicked === 'function') {
+                onImagePicked(target, name, url, isImage, id);
+            }
+            return;
+        }
         if (isImage === "true") {
             insertMediaFile('<a href="' + url + '"><img src="' + url + '?t=true" alt="' + name + '" /></a>');
         } else {

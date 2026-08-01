@@ -39,6 +39,7 @@ import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
+import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -99,7 +100,7 @@ public class EntryEditController extends BaseController {
         }
 
         model.addAttribute("entry", entry);
-        addEntryModelAttributes(request, model, entry);
+        addEntryModelAttributes(request, model, entry, bean);
         return ".EntryEdit";
     }
 
@@ -132,7 +133,7 @@ public class EntryEditController extends BaseController {
 
         String result = doSave(request, model, bean, entry, "entryAdd");
         model.addAttribute("entry", entry);
-        addEntryModelAttributes(request, model, entry);
+        addEntryModelAttributes(request, model, entry, bean);
         return result;
     }
 
@@ -152,7 +153,7 @@ public class EntryEditController extends BaseController {
 
         bean.copyFrom(entry, request.getLocale());
         model.addAttribute("entry", entry);
-        addEntryModelAttributes(request, model, entry);
+        addEntryModelAttributes(request, model, entry, bean);
         return ".EntryEdit";
     }
 
@@ -171,7 +172,7 @@ public class EntryEditController extends BaseController {
         addStatusMessage(entry.getStatus(), model, entry, request);
         bean.copyFrom(entry, request.getLocale());
         model.addAttribute("entry", entry);
-        addEntryModelAttributes(request, model, entry);
+        addEntryModelAttributes(request, model, entry, bean);
         return ".EntryEdit";
     }
 
@@ -208,7 +209,7 @@ public class EntryEditController extends BaseController {
 
         String result = doSave(request, model, bean, entry, "entryEdit");
         model.addAttribute("entry", entry);
-        addEntryModelAttributes(request, model, entry);
+        addEntryModelAttributes(request, model, entry, bean);
         return result;
     }
 
@@ -343,7 +344,8 @@ public class EntryEditController extends BaseController {
         return null;
     }
 
-    private void addEntryModelAttributes(HttpServletRequest request, Model model, WeblogEntry entry) {
+    private void addEntryModelAttributes(HttpServletRequest request, Model model, WeblogEntry entry,
+                                         EntryBean bean) {
         model.addAttribute("categories", getCategories(request));
         model.addAttribute("entryPlugins", getEntryPlugins(request));
         model.addAttribute("userAnAuthor", getActionWeblog(request).hasUserPermission(
@@ -381,6 +383,32 @@ public class EntryEditController extends BaseController {
                 getRecentEntries(request, PubStatus.DRAFT, WeblogEntrySearchCriteria.SortBy.UPDATE_TIME));
         model.addAttribute("recentPendingEntries",
                 getRecentEntries(request, PubStatus.PENDING, WeblogEntrySearchCriteria.SortBy.UPDATE_TIME));
+
+        // Thumbnail previews for the SEO panel's featured/social image pickers.
+        // Read off the bean rather than the entry so a save that failed
+        // validation still shows the image the author picked in the form.
+        addImagePreviewAttribute(model, "featuredImageThumbnailUrl", bean.getFeaturedImageId());
+        addImagePreviewAttribute(model, "ogImageThumbnailUrl", bean.getOgImageId());
+    }
+
+    /**
+     * Adds the thumbnail URL for a referenced media file, if it still exists.
+     * A dangling id (image deleted after being picked) simply renders no
+     * preview rather than a broken editor page.
+     */
+    private void addImagePreviewAttribute(Model model, String attributeName, String mediaFileId) {
+        if (StringUtils.isEmpty(mediaFileId)) {
+            return;
+        }
+        try {
+            MediaFile mediaFile = weblogger.getMediaFileManager().getMediaFile(mediaFileId);
+            if (mediaFile != null) {
+                model.addAttribute(attributeName, weblogger.getUrlStrategy()
+                        .getMediaFileThumbnailURL(mediaFile.getWeblog(), mediaFile.getId(), true));
+            }
+        } catch (WebloggerException ex) {
+            log.error("Error looking up media file - " + mediaFileId, ex);
+        }
     }
 
     private Map<Integer, String> getCommentDaysList(HttpServletRequest request) {

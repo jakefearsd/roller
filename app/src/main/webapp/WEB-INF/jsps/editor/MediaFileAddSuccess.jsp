@@ -23,7 +23,11 @@
 
 <form id="entry" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-    <input type="hidden" name="bean.enclosureURL" value="${bean.enclosureURL}" id="enclosureURL"/>
+    <%-- Starts empty and is filled by setEnclosure(); it must not read off the
+         model "bean" here, which is a MediaFileBean with no enclosureURL
+         property -- strict EL turns that into a 500 for the whole page. The
+         form posts to entryAddWithMediaFile.rol, whose "bean" is an EntryBean. --%>
+    <input type="hidden" name="bean.enclosureURL" value="" id="enclosureURL"/>
 
     <c:if test="${fn:length(newImages) > 0}">
         <h4><spring:message code="mediaFileSuccess.selectImagesTitle"/></h4>

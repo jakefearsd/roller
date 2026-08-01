@@ -295,13 +295,6 @@
                     </c:if>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.searchDescription"/></label>
-                        <div class="col-sm-9">
-                            <input type="text" name="bean.searchDescription" value="${bean.searchDescription}" maxlength="255" class="form-control"/>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
                         <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.enclosureURL"/></label>
                         <div class="col-sm-9">
                             <input type="text" name="bean.enclosureURL" value="${bean.enclosureURL}" maxlength="255" class="form-control"/>
@@ -321,6 +314,101 @@
 
             </div>
 
+        </div>
+
+            <%-- SEO and social sharing --%>
+
+        <div class="card" id="panel-seo">
+            <div class="card-header">
+
+                <h4 class="card-title">
+                    <a class="collapsed" data-bs-toggle="collapse" data-bs-target="#collapseSeo" href="#">
+                        <spring:message code="weblogEdit.seoSettings"/> </a>
+                </h4>
+
+            </div>
+            <div id="collapseSeo" class="collapse">
+                <div class="card-body">
+
+                    <%-- meta title (falls back to the entry title on the public page) --%>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label" for="seo_metaTitle"><spring:message code="weblogEdit.metaTitle"/></label>
+                        <div class="col-sm-9">
+                            <input type="text" id="seo_metaTitle" name="bean.metaTitle" value="${bean.metaTitle}" maxlength="255" class="form-control"/>
+                        </div>
+                    </div>
+
+                    <%-- meta description (the entry's searchDescription column) --%>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label" for="seo_metaDescription"><spring:message code="weblogEdit.metaDescription"/></label>
+                        <div class="col-sm-9">
+                            <input type="text" id="seo_metaDescription" name="bean.searchDescription" value="${bean.searchDescription}" maxlength="255" class="form-control"/>
+                        </div>
+                    </div>
+
+                    <%-- lightweight search-snippet preview, fed by JS from the title/description fields --%>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.snippetPreview"/></label>
+                        <div class="col-sm-9">
+                            <div id="seo_snippet_preview" class="border rounded p-2 bg-body">
+                                <div id="seo_snippet_title" style="color:#1a0dab; font-size:1.15em;"></div>
+                                <div id="seo_snippet_url" style="color:#006621; font-size:0.85em;"><c:if test="${actionName == 'entryEdit'}">${entry.permalink}</c:if></div>
+                                <div id="seo_snippet_description" style="color:#545454; font-size:0.9em;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <%-- featured image --%>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.featuredImage"/></label>
+                        <div class="col-sm-9">
+                            <input type="hidden" id="seo_featuredImageId" name="bean.featuredImageId" value="${bean.featuredImageId}"/>
+                            <div class="mb-2">
+                                <img id="seo_featuredImage_preview" src="${featuredImageThumbnailUrl}" alt=""
+                                     style="max-height:120px;${empty featuredImageThumbnailUrl ? 'display:none;' : ''}"/>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="openImagePicker('featuredImage')"><spring:message code="weblogEdit.chooseImage"/></button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="seo_featuredImage_clear"
+                                    style="${empty bean.featuredImageId ? 'display:none;' : ''}"
+                                    onclick="clearPickedImage('featuredImage')"><spring:message code="weblogEdit.clearImage"/></button>
+                        </div>
+                    </div>
+
+                    <%-- social share (Open Graph) image; when unset the featured image is used --%>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.ogImage"/></label>
+                        <div class="col-sm-9">
+                            <input type="hidden" id="seo_ogImageId" name="bean.ogImageId" value="${bean.ogImageId}"/>
+                            <div class="mb-2">
+                                <img id="seo_ogImage_preview" src="${ogImageThumbnailUrl}" alt=""
+                                     style="max-height:120px;${empty ogImageThumbnailUrl ? 'display:none;' : ''}"/>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="openImagePicker('ogImage')"><spring:message code="weblogEdit.chooseImage"/></button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="seo_ogImage_clear"
+                                    style="${empty bean.ogImageId ? 'display:none;' : ''}"
+                                    onclick="clearPickedImage('ogImage')"><spring:message code="weblogEdit.clearImage"/></button>
+                        </div>
+                    </div>
+
+                    <%-- canonical URL override --%>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label" for="seo_canonicalUrl"><spring:message code="weblogEdit.canonicalUrl"/></label>
+                        <div class="col-sm-9">
+                            <input type="text" id="seo_canonicalUrl" name="bean.canonicalUrl" value="${bean.canonicalUrl}" maxlength="255" class="form-control"/>
+                        </div>
+                    </div>
+
+                    <%-- noindex --%>
+                    <div class="row mb-3">
+                        <div class="offset-sm-3 col-sm-9">
+                            <div class="form-check">
+                                <label class="form-check-label"><input type="checkbox" class="form-check-input" id="seo_noindex" name="bean.noindex" value="true" ${bean.noindex ? 'checked' : ''}/> <spring:message code="weblogEdit.noindex"/></label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         </div>
 
     </div>
@@ -492,6 +580,45 @@
         $('#postTitleLabel').html(postTitle);
         $('#removeId').val(postId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-entry-modal')).show();
+    }
+
+    <%-- SEO panel: search-snippet preview fed from the title/description fields --%>
+
+    function updateSeoSnippet() {
+        var title = $('#seo_metaTitle').val() || $("input[name='bean.title']").val() || '';
+        var description = $('#seo_metaDescription').val() || '';
+        $('#seo_snippet_title').text(title);
+        $('#seo_snippet_description').text(description);
+    }
+
+    $(document).ready(function () {
+        updateSeoSnippet();
+        $("#seo_metaTitle, #seo_metaDescription, input[name='bean.title']").on('input', updateSeoSnippet);
+    });
+
+    <%-- Featured/social image pickers: same media chooser as the editor's
+         "insert media file" link, routed to a hidden id input + thumbnail
+         preview instead of the Summernote insertion. Shared by both targets:
+         'featuredImage' and 'ogImage'. --%>
+
+    function openImagePicker(target) {
+        onClickMediaFileInsert(target);
+    }
+
+    <%-- Called by onSelectMediaFile (EntryEditor.jsp) when a picker target is active. --%>
+    function onImagePicked(target, name, url, isImage, id) {
+        if (isImage !== "true" || !id) {
+            return;
+        }
+        $('#seo_' + target + 'Id').val(id);
+        $('#seo_' + target + '_preview').attr('src', url + '?t=true').show();
+        $('#seo_' + target + '_clear').show();
+    }
+
+    function clearPickedImage(target) {
+        $('#seo_' + target + 'Id').val('');
+        $('#seo_' + target + '_preview').removeAttr('src').hide();
+        $('#seo_' + target + '_clear').hide();
     }
 
 </script>

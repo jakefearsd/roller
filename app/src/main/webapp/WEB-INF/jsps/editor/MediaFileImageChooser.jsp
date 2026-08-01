@@ -32,7 +32,9 @@
 
 <%-- Subtitle and folder path --%>
 
-<c:if test="${childFiles || allDirectories}">
+<%-- OGNL would treat a non-empty list as true; JSTL EL throws trying to
+     coerce a List to Boolean, which 500s the whole chooser overlay. --%>
+<c:if test="${not empty childFiles or not empty allDirectories}">
 
     <form id="mediaFileChooserForm" name="mediaFileChooserForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileImageChooser.rol" method="post" class="form-vertical">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
@@ -77,7 +79,8 @@
                                 <div class="mediaObject"
                                      onclick="onSelectMediaFile('${mediaFile.name}',
                                              '${mediaFileURL}',
-                                             '${mediaFile.isImageFile()}')">
+                                             '${mediaFile.isImageFile()}',
+                                             '${mediaFile.id}')">
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
@@ -117,8 +120,8 @@
 
 <script>
 
-    function onSelectMediaFile(name, url, isImage) {
-        window.parent.onSelectMediaFile(name, url, isImage);
+    function onSelectMediaFile(name, url, isImage, id) {
+        window.parent.onSelectMediaFile(name, url, isImage, id);
     }
 
     function highlight(el, flag) {

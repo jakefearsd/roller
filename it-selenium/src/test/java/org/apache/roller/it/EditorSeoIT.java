@@ -1,0 +1,181 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.it;
+
+import com.codeborne.selenide.Condition;
+import org.apache.roller.it.support.RollerIT;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.WebElement;
+
+import java.io.File;
+import java.net.URISyntaxException;
+import java.net.URL;
+
+import static com.codeborne.selenide.Condition.exist;
+import static com.codeborne.selenide.Condition.visible;
+import static com.codeborne.selenide.Selenide.$;
+import static com.codeborne.selenide.Selenide.executeJavaScript;
+import static com.codeborne.selenide.Selenide.switchTo;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Closes the SEO loop end to end: what an author types into the editor's SEO
+ * card must come out of the public permalink's {@code <head>}.
+ *
+ * <p>{@code SeoHeadRenderingTest} proves the {@code #showSeoHead} macro emits
+ * the tags when the entity carries the fields; the unit controller tests prove
+ * the fields survive the bean round-trip. Neither proves the editor UI can set
+ * them in the first place — the accordion card, the media-chooser picker
+ * callback and the hidden inputs are all JSP + JavaScript that only a browser
+ * exercises. This test drives exactly that path: upload an image, write an
+ * entry, fill every SEO field, pick the featured image through the chooser
+ * modal, publish, and read the head tags back as an anonymous visitor.
+ */
+class EditorSeoIT extends RollerIT {
+
+    private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
+    private static final String MEDIA_ADD = "/roller-ui/authoring/mediaFileAdd.rol?weblog=" + WEBLOG_HANDLE;
+    private static final String GLOBAL_CONFIG = "/roller-ui/admin/globalConfig.rol";
+
+    /** The editor is Summernote, which hides the textarea behind a contenteditable div. */
+    private static final String EDITOR_BODY = ".note-editable";
+
+    /** Rendered on the edit page only once the entry is actually published. */
+    private static final String PERMALINK = "#entry_bean_permalink";
+
+    @BeforeEach
+    void logIn() {
+        loginAsAdmin();
+    }
+
+    @Test
+    void seoFieldsSetInTheEditorReachThePublicHead() {
+        String suffix = Long.toString(System.nanoTime(), 36);
+        String title = "IT Seo " + suffix;
+        String metaTitle = "IT Seo Meta Title " + suffix;
+        String metaDescription = "A hand-written snippet description " + suffix;
+        String canonicalUrl = "https://canonical.example.com/original-" + suffix;
+
+        enableUploads();
+        uploadImage();
+
+        // --- write the entry and fill the SEO card --------------------------
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("input[name='bean.title']").setValue(title);
+        $(EDITOR_BODY).should(visible);
+        executeJavaScript(
+                "$('#edit_content').summernote('code', arguments[0]);"
+                        + "$('#edit_content').val(arguments[0]);",
+                "Body of the SEO journey entry " + suffix + ".");
+
+        // The SEO card starts collapsed; open it the way an author would.
+        $("a[data-bs-target='#collapseSeo']").click();
+        $("#seo_metaTitle").should(visible).setValue(metaTitle);
+        $("#seo_metaDescription").setValue(metaDescription);
+        $("#seo_canonicalUrl").setValue(canonicalUrl);
+        $("#seo_noindex").click();
+
+        // The snippet preview must follow what was just typed.
+        $("#seo_snippet_title").shouldHave(Condition.exactText(metaTitle));
+        $("#seo_snippet_description").shouldHave(Condition.exactText(metaDescription));
+
+        // --- pick the featured image through the media chooser --------------
+        $("button[onclick=\"openImagePicker('featuredImage')\"]").click();
+        $("#mediafile_edit_lightbox").shouldBe(visible);
+        switchTo().frame("mediaFileEditor");
+        $(".mediaObject").should(exist).click();
+        switchTo().defaultContent();
+
+        // The callback must have filled the hidden id and shown the preview.
+        $("#seo_featuredImageId").shouldHave(Condition.attributeMatching("value", ".+"));
+        $("#seo_featuredImage_preview").shouldBe(visible);
+        String previewSrc = $("#seo_featuredImage_preview").getAttribute("src");
+        assertNotNull(previewSrc);
+        assertTrue(previewSrc.contains("t=true"),
+                "the picker preview must use the thumbnail rendition, got: " + previewSrc);
+
+        // --- publish and read the head back as an anonymous visitor ---------
+        $("button[formaction$='entryAdd!publish.rol']").click();
+        $(PERMALINK).should(exist);
+        String permalink = $(PERMALINK).getAttribute("href");
+        assertNotNull(permalink);
+
+        String page = getAnonymously(permalink);
+        assertHeadContains(page, permalink, "property=\"og:title\" content=\"" + metaTitle + "\"");
+        assertHeadContains(page, permalink, "name=\"description\" content=\"" + metaDescription + "\"");
+        assertHeadContains(page, permalink,
+                "property=\"og:description\" content=\"" + metaDescription + "\"");
+        assertHeadContains(page, permalink, "rel=\"canonical\" href=\"" + canonicalUrl + "\"");
+        assertHeadContains(page, permalink, "name=\"robots\" content=\"noindex\"");
+        // No dedicated og:image was picked, so the featured image must back it,
+        // served from the weblog's media-resource URL space.
+        assertHeadContains(page, permalink, "property=\"og:image\"");
+        assertHeadContains(page, permalink, "/mediaresource/");
+    }
+
+    /**
+     * File uploads are globally disabled by default; the picker is useless
+     * without something to pick. Flipping the runtime property through the
+     * admin screen also keeps this journey on real UI end to end.
+     */
+    private void enableUploads() {
+        openPath(GLOBAL_CONFIG);
+        WebElement checkbox = $("input[name='uploads.enabled']").should(exist).toWebElement();
+        if (!checkbox.isSelected()) {
+            checkbox.click();
+        }
+        $("#saveButton").click();
+        // The save re-renders the config page with a success banner.
+        $("#messages").should(exist);
+    }
+
+    /** Uploads the bundled test image through the media-file add form. */
+    private void uploadImage() {
+        openPath(MEDIA_ADD);
+        $("#fileControl0").should(exist).uploadFile(testImage());
+        $("#uploadButton").click();
+        // Only the success page offers to create a post from the upload; an
+        // error would render the upload form again with an error banner.
+        $("button[formaction$='entryAddWithMediaFile.rol']").should(exist);
+    }
+
+    private File testImage() {
+        URL resource = getClass().getResource("/hawk.jpg");
+        assertNotNull(resource, "hawk.jpg must be on the it-selenium test classpath");
+        try {
+            return new File(resource.toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("Cannot resolve test image", e);
+        }
+    }
+
+    private static void assertHeadContains(String page, String permalink, String fragment) {
+        assertTrue(page.contains(fragment),
+                "expected the public page at " + permalink + " to contain [" + fragment
+                        + "] but it did not. Head was:\n" + headOf(page));
+    }
+
+    private static String headOf(String page) {
+        int end = page.indexOf("</head>");
+        return end == -1 ? page.substring(0, Math.min(page.length(), 2000))
+                : page.substring(0, end);
+    }
+}
