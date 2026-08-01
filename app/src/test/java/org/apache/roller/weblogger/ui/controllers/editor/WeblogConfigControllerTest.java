@@ -258,30 +258,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void anUnparseableBannedWordsListIsReportedRatherThanStored() throws Exception {
-        // The banned-words list is compiled into regexes used on every incoming
-        // comment; a broken pattern would throw on each one.
-        bean.setBannedwordslist("(unclosed");
-
-        controller.save(request, model, bean);
-
-        assertTrue(errors(model).contains("websiteSettings.error.processingBannedwordslist"),
-                "Expected a banned-words error, got: " + errors(model));
-        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
-    }
-
-    @Test
-    void aValidBannedWordsListReportsHowManyRulesWereAccepted() throws Exception {
-        registerMessage("websiteSettings.acceptedBannedwordslist", "accepted {0}");
-        bean.setBannedwordslist("spam\nviagra");
-
-        controller.save(request, model, bean);
-
-        assertTrue(messages(model).contains("accepted 2, 0"),
-                "The owner needs to see how their list was parsed: " + messages(model));
-    }
-
-    @Test
     void aFailedSaveIsReportedRatherThanConfirmed() throws Exception {
         org.mockito.Mockito.doThrow(new WebloggerException("database down"))
                 .when(weblogger.getWeblogManager()).saveWeblog(any());

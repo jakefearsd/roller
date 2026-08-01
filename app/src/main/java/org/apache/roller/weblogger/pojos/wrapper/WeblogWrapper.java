@@ -116,11 +116,6 @@ public final class WeblogWrapper {
         return this.pojo.getEditorPage();
     }
 
-    public String getBannedwordslist() {
-        return this.pojo.getBannedwordslist();
-    }
-    
-    
     public Boolean getAllowComments() {
         return this.pojo.getAllowComments();
     }

@@ -20,7 +20,6 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.Iterator;
 
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletConfig;
@@ -45,7 +44,6 @@ import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.rendering.plugins.comments.CommentAuthenticator;
-import org.apache.roller.weblogger.ui.rendering.plugins.comments.CommentValidationManager;
 import org.apache.roller.weblogger.ui.rendering.plugins.comments.DefaultCommentAuthenticator;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogCommentRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogEntryCommentForm;
@@ -55,20 +53,17 @@ import org.apache.roller.weblogger.util.MailUtil;
 import org.apache.roller.weblogger.util.I18nMessages;
 import org.apache.roller.weblogger.util.Reflection;
 import org.apache.roller.weblogger.util.RollerMessages;
-import org.apache.roller.weblogger.util.RollerMessages.RollerMessage;
 import org.apache.roller.weblogger.util.URLUtilities;
 import org.apache.roller.weblogger.util.Utilities;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 
 /**
  * The CommentServlet handles all incoming weblog entry comment posts.
- * 
+ *
  * We validate each incoming comment based on various comment settings and if
- * all checks are passed then the comment is saved.
- * 
- * Incoming comments are tested against the MT Bannedwordslist. If they are found to
- * be spam, then they are marked as spam and hidden from view.
- * 
+ * all checks are passed then the comment is saved, either as approved or,
+ * if the weblog requires moderation, as pending approval.
+ *
  * If email notification is turned on, each new comment will result in an email
  * sent to the blog owner and all who have commented on the same post.
  */
@@ -79,7 +74,6 @@ public class CommentServlet extends HttpServlet {
     private static final Log log = LogFactory.getLog(CommentServlet.class);
 
     private transient CommentAuthenticator authenticator = null;
-    private transient CommentValidationManager commentValidationManager = null;
     private transient GenericThrottle commentThrottle = null;
 
     /**
@@ -103,9 +97,6 @@ public class CommentServlet extends HttpServlet {
                 this.authenticator = new DefaultCommentAuthenticator();
             }
         }
-
-        // instantiate a comment validation manager for comment spam checking
-        commentValidationManager = new CommentValidationManager();
 
         // are we doing throttling?
         if (WebloggerConfig.getBooleanProperty("comment.throttle.enabled")) {
@@ -311,94 +302,51 @@ public class CommentServlet extends HttpServlet {
             return;
         }
 
-        int validationScore = commentValidationManager.validateComment(comment,
-                messages);
-        log.debug("Comment Validation score: " + validationScore);
-
         if (!preview) {
 
-            if (validationScore == RollerConstants.PERCENT_100
-                    && weblog.getCommentModerationRequired()) {
-                // Valid comments go into moderation if required
+            if (weblog.getCommentModerationRequired()) {
+                // Comments go into moderation if required
                 comment.setStatus(ApprovalStatus.PENDING);
                 message = messageUtils
                         .getString("commentServlet.submittedToModerator");
-            } else if (validationScore == RollerConstants.PERCENT_100) {
+            } else {
                 // else they're approved
                 comment.setStatus(ApprovalStatus.APPROVED);
                 message = messageUtils
                         .getString("commentServlet.commentAccepted");
-            } else {
-                // Invalid comments are marked as spam
-                log.debug("Comment marked as spam");
-                comment.setStatus(ApprovalStatus.SPAM);
-                error = messageUtils
-                        .getString("commentServlet.commentMarkedAsSpam");
-
-                // add specific error messages if they exist
-                if (messages.getErrorCount() > 0) {
-                    Iterator<RollerMessage> errors = messages.getErrors();
-                    RollerMessage errorKey;
-
-                    StringBuilder buf = new StringBuilder();
-                    buf.append("<ul>");
-                    while (errors.hasNext()) {
-                        errorKey = errors.next();
-
-                        buf.append("<li>");
-                        if (errorKey.getArgs() != null) {
-                            buf.append(messageUtils.getString(
-                                    errorKey.getKey(), errorKey.getArgs()));
-                        } else {
-                            buf.append(messageUtils.getString(errorKey.getKey()));
-                        }
-                        buf.append("</li>");
-                    }
-                    buf.append("</ul>");
-
-                    error += buf.toString();
-                }
-
             }
 
             try {
-                if (!ApprovalStatus.SPAM.equals(comment.getStatus())
-                        || !WebloggerRuntimeConfig
-                                .getBooleanProperty("comments.ignoreSpam.enabled")) {
+                WeblogEntryManager mgr = WebloggerFactory.getWeblogger()
+                        .getWeblogEntryManager();
+                mgr.saveComment(comment);
+                WebloggerFactory.getWeblogger().flush();
 
-                    WeblogEntryManager mgr = WebloggerFactory.getWeblogger()
-                            .getWeblogEntryManager();
-                    mgr.saveComment(comment);
-                    WebloggerFactory.getWeblogger().flush();
+                // Send email notifications to subscribers
+                MailUtil.sendEmailNotification(comment, messages,
+                        messageUtils, true);
 
-                    // Send email notifications only to subscribers if comment
-                    // is 100% valid
-                    boolean notifySubscribers = (validationScore == RollerConstants.PERCENT_100);
-                    MailUtil.sendEmailNotification(comment, messages,
-                            messageUtils, notifySubscribers);
+                // only re-index/invalidate the cache if comment isn't
+                // moderated
+                if (!weblog.getCommentModerationRequired()) {
+                    IndexManager manager = WebloggerFactory.getWeblogger()
+                            .getIndexManager();
 
-                    // only re-index/invalidate the cache if comment isn't
-                    // moderated
-                    if (!weblog.getCommentModerationRequired()) {
-                        IndexManager manager = WebloggerFactory.getWeblogger()
-                                .getIndexManager();
+                    // remove entry before (re)adding it, or in case it
+                    // isn't Published
+                    manager.removeEntryIndexOperation(entry);
 
-                        // remove entry before (re)adding it, or in case it
-                        // isn't Published
-                        manager.removeEntryIndexOperation(entry);
-
-                        // if published, index the entry
-                        if (entry.isPublished()) {
-                            manager.addEntryIndexOperation(entry);
-                        }
-
-                        // Clear all caches associated with comment
-                        CacheManager.invalidate(comment);
+                    // if published, index the entry
+                    if (entry.isPublished()) {
+                        manager.addEntryIndexOperation(entry);
                     }
 
-                    // comment was successful, clear the comment form
-                    cf = new WeblogEntryCommentForm();
+                    // Clear all caches associated with comment
+                    CacheManager.invalidate(comment);
                 }
+
+                // comment was successful, clear the comment form
+                cf = new WeblogEntryCommentForm();
 
             } catch (WebloggerException re) {
                 log.error("Error saving comment", re);

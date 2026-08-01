@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -40,7 +39,6 @@ import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.ui.core.plugins.UIPluginManager;
 import org.apache.roller.weblogger.ui.core.plugins.WeblogEntryEditor;
-import org.apache.roller.weblogger.util.Bannedwordslist;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -140,16 +138,6 @@ public class WeblogConfigController extends BaseController {
         int maxEntries = WebloggerRuntimeConfig.getIntProperty("site.pages.maxEntries");
         if (bean.getEntryDisplayCount() > maxEntries) {
             addError(model, "websiteSettings.error.entryDisplayCount", request);
-        }
-
-        List<Pattern> regexRules = new ArrayList<>();
-        List<String> stringRules = new ArrayList<>();
-        try {
-            Bannedwordslist.populateSpamRules(bean.getBannedwordslist(), stringRules, regexRules, null);
-            addMessage(model, "websiteSettings.acceptedBannedwordslist",
-                    "" + stringRules.size() + ", " + regexRules.size(), request);
-        } catch (Exception e) {
-            addError(model, "websiteSettings.error.processingBannedwordslist", e.getMessage(), request);
         }
     }
 

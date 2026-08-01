@@ -44,9 +44,6 @@
 			<basic name="editorPage">
 				<column name="editorpage" insertable="true" updatable="true" unique="false"/>
 			</basic>
-			<basic name="bannedwordslist">
-				<column name="bannedwordslist" insertable="true" updatable="true" unique="false"/>
-			</basic>
             <basic name="analyticsCode">
                 <column name="analyticscode" insertable="true" updatable="true" unique="false"/>
             </basic>

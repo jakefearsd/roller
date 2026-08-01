@@ -190,7 +190,6 @@ class WeblogLogicTest {
         source.setEnableBloggerApi(Boolean.FALSE);
         source.setBloggerCategory(bloggerCategory);
         source.setEditorPage("editor.jsp");
-        source.setBannedwordslist("badword");
         source.setAllowComments(Boolean.FALSE);
         source.setEmailComments(Boolean.TRUE);
         source.setEmailAddress("owner@example.com");
@@ -214,7 +213,6 @@ class WeblogLogicTest {
         assertEquals(Boolean.FALSE, weblog.getEnableBloggerApi());
         assertSame(bloggerCategory, weblog.getBloggerCategory());
         assertEquals("editor.jsp", weblog.getEditorPage());
-        assertEquals("badword", weblog.getBannedwordslist());
         assertEquals(Boolean.FALSE, weblog.getAllowComments());
         assertEquals(Boolean.TRUE, weblog.getEmailComments());
         assertEquals("owner@example.com", weblog.getEmailAddress());

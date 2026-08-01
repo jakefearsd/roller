@@ -102,7 +102,6 @@ class JPAPersistenceStrategyTest {
             weblog.setHandle("jpapersistencestrategytest");
             weblog.setEmailAddress("jpapersistencestrategytest@dev.null");
             weblog.setEditorPage("editor-text.jsp");
-            weblog.setBannedwordslist("");
             weblog.setEditorTheme("basic");
             weblog.setLocale("en_US");
             weblog.setTimeZone("America/Los_Angeles");

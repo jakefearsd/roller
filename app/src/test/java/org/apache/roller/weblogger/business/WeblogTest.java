@@ -100,7 +100,6 @@ public class WeblogTest  {
             testWeblog.setHandle("testweblog");
             testWeblog.setEmailAddress("testweblog@dev.null");
             testWeblog.setEditorPage("editor-text.jsp");
-            testWeblog.setBannedwordslist("");
             testWeblog.setEditorTheme("basic");
             testWeblog.setLocale("en_US");
             testWeblog.setTimeZone("America/Los_Angeles");

@@ -33,7 +33,6 @@ public class WeblogConfigBean {
     private String tagline = null;
     private boolean enableBloggerApi = false;
     private String editorPage = null;
-    private String bannedwordslist = null;
     private boolean allowComments = false;
     private boolean defaultAllowComments = false;
     private String defaultCommentDays = "0";
@@ -96,14 +95,6 @@ public class WeblogConfigBean {
     
     public void setEditorPage( String editorPage ) {
         this.editorPage = editorPage;
-    }
-    
-    public String getBannedwordslist() {
-        return this.bannedwordslist;
-    }
-    
-    public void setBannedwordslist( String bannedwordslist ) {
-        this.bannedwordslist = bannedwordslist;
     }
     
     public boolean getAllowComments() {
@@ -264,7 +255,6 @@ public class WeblogConfigBean {
         this.tagline = dataHolder.getTagline();
         this.enableBloggerApi = dataHolder.getEnableBloggerApi();
         this.editorPage = dataHolder.getEditorPage();
-        this.bannedwordslist = dataHolder.getBannedwordslist();
         this.allowComments = dataHolder.getAllowComments();
         this.defaultAllowComments = dataHolder.getDefaultAllowComments();
         this.defaultCommentDays = ""+dataHolder.getDefaultCommentDays();
@@ -296,7 +286,6 @@ public class WeblogConfigBean {
         dataHolder.setTagline(this.tagline);
         dataHolder.setEnableBloggerApi(this.enableBloggerApi);
         dataHolder.setEditorPage(this.editorPage);
-        dataHolder.setBannedwordslist(this.bannedwordslist);
         dataHolder.setAllowComments(this.allowComments);
         dataHolder.setDefaultAllowComments(this.defaultAllowComments);
         dataHolder.setModerateComments(this.moderateComments);

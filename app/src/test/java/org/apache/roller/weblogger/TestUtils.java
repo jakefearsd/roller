@@ -160,7 +160,6 @@ public final class TestUtils {
         testWeblog.setHandle(handle);
         testWeblog.setEmailAddress("testweblog@dev.null");
         testWeblog.setEditorPage("editor-text.jsp");
-        testWeblog.setBannedwordslist("");
         testWeblog.setEditorTheme("basic");
         testWeblog.setLocale("en_US");
         testWeblog.setTimeZone("America/Los_Angeles");

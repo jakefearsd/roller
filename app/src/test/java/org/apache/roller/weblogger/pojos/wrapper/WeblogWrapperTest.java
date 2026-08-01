@@ -72,7 +72,6 @@ class WeblogWrapperTest {
         weblog.setEmailComments(Boolean.TRUE);
         weblog.setAllowComments(Boolean.FALSE);
         weblog.setDefaultAllowComments(Boolean.FALSE);
-        weblog.setBannedwordslist("badword");
         weblog.setEditorPage("editor.jsp");
 
         urls = mock(URLStrategy.class);
@@ -95,7 +94,6 @@ class WeblogWrapperTest {
         assertEquals(9, wrapper.getDefaultCommentDays());
         assertEquals("ConvertLineBreaks", wrapper.getDefaultPlugins());
         assertEquals("editor.jsp", wrapper.getEditorPage());
-        assertEquals("badword", wrapper.getBannedwordslist());
         assertEquals(new Date(1_700_000_000_000L), wrapper.getDateCreated());
         assertEquals("analytics-snippet", wrapper.getAnalyticsCode(),
                 "Text with nothing to sanitise must reach the page unchanged");

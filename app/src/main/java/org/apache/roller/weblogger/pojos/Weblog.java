@@ -62,7 +62,6 @@ public class Weblog implements Serializable {
     private String  tagline          = null;
     private Boolean enableBloggerApi = Boolean.TRUE;
     private String  editorPage       = null;
-    private String  bannedwordslist  = null;
     private Boolean allowComments    = Boolean.TRUE;
     private Boolean emailComments    = Boolean.FALSE;
     private String  emailAddress     = null;
@@ -253,14 +252,6 @@ public class Weblog implements Serializable {
         this.editorPage = editorPage;
     }
     
-    public String getBannedwordslist() {
-        return this.bannedwordslist;
-    }
-    
-    public void setBannedwordslist(String bannedwordslist) {
-        this.bannedwordslist = bannedwordslist;
-    }
-    
     public Boolean getAllowComments() {
         return this.allowComments;
     }
@@ -382,7 +373,6 @@ public class Weblog implements Serializable {
         this.setEnableBloggerApi(other.getEnableBloggerApi());
         this.setBloggerCategory(other.getBloggerCategory());
         this.setEditorPage(other.getEditorPage());
-        this.setBannedwordslist(other.getBannedwordslist());
         this.setAllowComments(other.getAllowComments());
         this.setEmailComments(other.getEmailComments());
         this.setEmailAddress(other.getEmailAddress());

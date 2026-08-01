@@ -216,16 +216,7 @@
 <c:otherwise>
         <input type="hidden" name="defaultPlugins" value="${defaultPlugins}"/>
     </c:otherwise>
-</c:choose><%-- ***** Spam prevention settings ***** --%>
-
-    <h3><spring:message code="websiteSettings.spamPrevention"/></h3>
-
-    <div class="form-group">
-        <label class="col-sm-3 control-label"><spring:message code="websiteSettings.bannedWordsList"/></label>
-        <div class="col-sm-9">
-            <textarea name="bean.bannedwordslist" rows="7" cols="40" class="form-control">${bean.bannedwordslist}</textarea>
-        </div>
-    </div>
+</c:choose>
 
     <%-- ***** Web analytics settings ***** --%>
 
