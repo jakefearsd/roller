@@ -207,6 +207,50 @@
             var naturalWidth = Number('${bean.width}');
             var naturalHeight = Number('${bean.height}');
 
+            // This page is loaded into an iframe inside a Bootstrap modal, and
+            // MediaFileView.jsp sets that iframe's src BEFORE the modal has
+            // finished fading in. Whenever this document wins that race the
+            // cropper custom elements upgrade while the iframe still has no
+            // layout box at all: <cropper-selection> sizes its
+            // initial-coverage selection from <cropper-canvas>.offsetWidth,
+            // which is 0 then, and Cropper v2 never recomputes it (it observes
+            // no resize; $initSelection runs only from connectedCallback). The
+            // user is then shown a cropper with an invisible 0x0 selection and
+            // a Crop button that silently does nothing. Seed the selection
+            // ourselves the moment the canvas actually gains a size - and only
+            // while it is still empty, so we never fight a selection the user
+            // has already drawn.
+            function seedSelectionOnceLaidOut() {
+                var canvas = document.getElementById('cropCanvas');
+                var selection = document.getElementById('cropSelection');
+                if (!canvas || !selection || typeof selection.$change !== 'function') {
+                    return;
+                }
+                if (selection.width > 0 && selection.height > 0) {
+                    return;
+                }
+                var coverage = selection.initialCoverage;
+                if (!(coverage > 0) || coverage > 1) {
+                    coverage = 0.9;
+                }
+                var canvasWidth = canvas.offsetWidth;
+                var canvasHeight = canvas.offsetHeight;
+                var width = canvasWidth * coverage;
+                var height = canvasHeight * coverage;
+                if (!(width > 0) || !(height > 0)) {
+                    return;
+                }
+                selection.$change((canvasWidth - width) / 2, (canvasHeight - height) / 2,
+                        width, height);
+            }
+
+            if (window.ResizeObserver) {
+                new ResizeObserver(seedSelectionOnceLaidOut)
+                        .observe(document.getElementById('cropCanvas'));
+            } else {
+                seedSelectionOnceLaidOut();
+            }
+
             function cropRectInNaturalPixels() {
                 var canvas = document.getElementById('cropCanvas');
                 var image = document.getElementById('cropImage');
