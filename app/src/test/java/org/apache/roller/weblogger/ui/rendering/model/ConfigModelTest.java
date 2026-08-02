@@ -261,6 +261,35 @@ class ConfigModelTest {
                         + "explicitly allows it.");
     }
 
+    // ------------------------------------------------------------------ maps
+
+    @Test
+    void theMapTileUrlComesFromTheStaticConfigNotTheRuntimeTable() {
+        // No stubbing at all: this accessor deliberately bypasses the runtime
+        // properties table (a runtime property would need a configForm.* key
+        // that only lives in XML, which MessageKeyTest counts as an orphan),
+        // so it must still answer with the roller.properties default even
+        // when the table knows nothing.
+        assertEquals("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                model.getMapTileUrl(),
+                "$config.mapTileUrl reads travel.map.tileUrl out of "
+                        + "roller.properties; #showMapAssets hands it straight to "
+                        + "L.tileLayer.");
+    }
+
+    @Test
+    void theMapTileUrlCarriesNoSubdomainPlaceholder() {
+        // The a/b/c. tile aliases are deprecated by the current OSM policy and
+        // may be withdrawn without notice; HTTP/2 made domain sharding
+        // pointless. A default that reintroduced {s} would aim this
+        // deployment's traffic at hosts OSM no longer promises to serve.
+        assertFalse(model.getMapTileUrl().contains("{s}"),
+                "The default tile URL must not use the deprecated {s} subdomain "
+                        + "placeholder.");
+        assertTrue(model.getMapTileUrl().startsWith("https://"),
+                "Tiles must be fetched over https or a secure page blocks them.");
+    }
+
     // --------------------------------------------------------- build details
 
     @Test

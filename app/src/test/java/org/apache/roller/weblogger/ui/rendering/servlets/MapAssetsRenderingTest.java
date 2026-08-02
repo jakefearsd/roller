@@ -1,0 +1,342 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.ui.rendering.servlets;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
+import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Renders all <em>nine</em> {@code #showSeoHead} call sites across the five
+ * bundled themes and asserts that {@code #showMapAssets} ships the Leaflet
+ * assets <em>exactly once</em> per page: the webjar stylesheet, the webjar
+ * script URL the bootstrap injects, the three marker images pinned onto
+ * {@code L.Icon.Default}, the configured tile template, the OSM attribution
+ * the tile policy requires, and the {@code .travel-map} presence guard that
+ * keeps map-less pages from downloading any of it.
+ *
+ * <p>Missing one call site is a silent failure: the {@code [map]} div still
+ * renders and simply never becomes a map. gaurav and fauxcoly share one head
+ * fragment across their page types, so a front page each covers them (their
+ * permalinks are separately proved not to double-emit); basic and portfolio
+ * repeat the head in three top-level templates apiece; frontpage has its own
+ * {@code _header}.
+ *
+ * <p>This file also owns the CSP half of the change: Leaflet paints aborted
+ * and out-of-range tiles with a {@code data:} GIF placeholder, and per CSP3
+ * the {@code *} wildcard does not match {@code data:}, so every head that
+ * declares a policy needs {@code img-src * data:} or the browser console
+ * fills with violations on every pan and zoom.
+ */
+class MapAssetsRenderingTest {
+
+    private static final String HANDLE = "mapassetblog";
+
+    private static final String LEAFLET_CSS = "/webjars/leaflet/1.9.4/dist/leaflet.css";
+    private static final String LEAFLET_JS = "/webjars/leaflet/1.9.4/dist/leaflet.js";
+    private static final String MARKER_ICON =
+            "/webjars/leaflet/1.9.4/dist/images/marker-icon.png";
+    private static final String MARKER_ICON_2X =
+            "/webjars/leaflet/1.9.4/dist/images/marker-icon-2x.png";
+    private static final String MARKER_SHADOW =
+            "/webjars/leaflet/1.9.4/dist/images/marker-shadow.png";
+
+    /** The cheap lazy-init guard: no .travel-map on the page, no leaflet.js. */
+    private static final String MAP_GUARD = "document.querySelectorAll('.travel-map')";
+
+    private static final String TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+    /** Required by the OSM tile usage policy; Leaflet renders it into its own control. */
+    private static final String ATTRIBUTION =
+            "https://www.openstreetmap.org/copyright";
+
+    /** The CSP line every declaring theme head ships, verbatim, now with data:. */
+    private static final String CSP_META =
+            "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; "
+            + "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+            + "img-src * data:; base-uri 'self'; connect-src 'self'; form-action 'self'; "
+            + "frame-ancestors 'none'\">";
+
+    private User user;
+    private Weblog weblog;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        RenderingTestSupport.ensureRenderingRuntime();
+        RenderingTestSupport.clearRenderCaches();
+        user = TestUtils.setupUser("mapassetuser");
+        weblog = TestUtils.setupWeblog(HANDLE, user);
+        TestUtils.endSession(true);
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        TestUtils.teardownWeblog(weblog.getId());
+        TestUtils.teardownUser(user.getUserName());
+        TestUtils.endSession(true);
+    }
+
+    // ---------------------------------------------------------------- helpers
+
+    private String render(String pathInfo) throws Exception {
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", pathInfo);
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+        assertEquals(200, response.getStatus(), "page must render for " + pathInfo);
+        return response.getContentAsString();
+    }
+
+    private String search() throws Exception {
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/search", "/" + HANDLE);
+        request.setParameter("q", "anything");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.searchServlet(), request);
+        assertEquals(200, response.getStatus());
+        return response.getContentAsString();
+    }
+
+    private void switchTheme(String themeName) throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setEditorTheme(themeName);
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.endSession(true);
+    }
+
+    private void entryWithText(String anchor, String text) throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
+        managed.setText(text);
+        mgr.saveWeblogEntry(managed);
+        TestUtils.endSession(true);
+    }
+
+    private static void assertOnce(String body, String needle, String head, String what) {
+        assertEquals(1, StringUtils.countMatches(body, needle),
+                head + " must carry " + what + " exactly once:\n" + body);
+    }
+
+    private static void assertAssetsExactlyOnce(String body, String head) {
+        assertOnce(body, LEAFLET_CSS, head, "the Leaflet stylesheet");
+        assertOnce(body, LEAFLET_JS, head, "the Leaflet script URL");
+        assertOnce(body, MARKER_ICON_2X, head, "the retina marker icon");
+        assertOnce(body, MARKER_SHADOW, head, "the marker shadow");
+        assertOnce(body, MAP_GUARD, head, "the .travel-map lazy-init guard");
+        assertOnce(body, TILE_URL, head, "the configured tile template");
+        assertOnce(body, ATTRIBUTION, head, "the OSM attribution");
+        // marker-icon.png is a substring of marker-icon-2x.png, so count the
+        // quoted form to keep this an honest exactly-once assertion
+        assertOnce(body, MARKER_ICON + "'", head, "the marker icon");
+        assertTrue(body.contains("maxZoom: 19"),
+                head + " must raise Leaflet's default maxZoom of 18 to the z19 the "
+                        + "OSM standard layer actually renders:\n" + body);
+        // a Velocity error would leak the raw directive text into the page
+        assertFalse(body.contains("#showMapAssets"),
+                head + " leaked the macro directive:\n" + body);
+        assertFalse(body.contains("$config.mapTileUrl"),
+                head + " leaked the tile-URL reference; $config is not in scope:\n" + body);
+    }
+
+    // ------------------------------------------------------------- nine heads
+
+    @Test
+    void basicFrontPageShipsTheMapAssetsOnce() throws Exception {
+        assertAssetsExactlyOnce(render("/" + HANDLE), "basic weblog.vm");
+    }
+
+    @Test
+    void basicPermalinkShipsTheMapAssetsOnce() throws Exception {
+        entryWithText("map-asset-entry", "<p>nothing to see</p>");
+        assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/map-asset-entry"),
+                "basic permalink.vm");
+    }
+
+    @Test
+    void basicSearchResultsShipTheMapAssetsOnce() throws Exception {
+        assertAssetsExactlyOnce(search(), "basic searchresults.vm");
+    }
+
+    @Test
+    void portfolioFrontPageShipsTheMapAssetsOnce() throws Exception {
+        switchTheme("portfolio");
+        assertAssetsExactlyOnce(render("/" + HANDLE), "portfolio weblog.vm");
+    }
+
+    @Test
+    void portfolioPermalinkShipsTheMapAssetsOnce() throws Exception {
+        switchTheme("portfolio");
+        entryWithText("portfolio-map-entry", "<p>nothing to see</p>");
+        assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/portfolio-map-entry"),
+                "portfolio permalink.vm");
+    }
+
+    @Test
+    void portfolioSearchResultsShipTheMapAssetsOnce() throws Exception {
+        switchTheme("portfolio");
+        assertAssetsExactlyOnce(search(), "portfolio searchresults.vm");
+    }
+
+    @Test
+    void frontpageThemeShipsTheMapAssetsOnce() throws Exception {
+        switchTheme("frontpage");
+        assertAssetsExactlyOnce(render("/" + HANDLE), "frontpage _header.vm");
+    }
+
+    @Test
+    void gauravSharedHeadShipsTheMapAssetsOnce() throws Exception {
+        switchTheme("gaurav");
+        assertAssetsExactlyOnce(render("/" + HANDLE), "gaurav std_head.vm");
+    }
+
+    @Test
+    void fauxcolySharedHeadShipsTheMapAssetsOnce() throws Exception {
+        switchTheme("fauxcoly");
+        assertAssetsExactlyOnce(render("/" + HANDLE), "fauxcoly std_head.vm");
+    }
+
+    // ------------------------------------------- shared-head double emission
+
+    @Test
+    void gauravPermalinkDoesNotDoubleEmitTheAssets() throws Exception {
+        switchTheme("gaurav");
+        entryWithText("gaurav-map-entry", "<p>nothing to see</p>");
+        assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/gaurav-map-entry"),
+                "gaurav permalink");
+    }
+
+    @Test
+    void fauxcolyPermalinkDoesNotDoubleEmitTheAssets() throws Exception {
+        switchTheme("fauxcoly");
+        entryWithText("fauxcoly-map-entry", "<p>nothing to see</p>");
+        assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/fauxcoly-map-entry"),
+                "fauxcoly permalink");
+    }
+
+    // -------------------------------------------------------------- the guard
+
+    /**
+     * The tradeoff the macro documents: the stylesheet ships from the head
+     * even on map-less pages (one small cacheable request), but leaflet.js is
+     * 147 KB and must stay behind the guard -- nothing on this page carries a
+     * .travel-map, so the script element is never injected.
+     */
+    @Test
+    void aMapLessPageCarriesTheGuardButNoMap() throws Exception {
+        String body = render("/" + HANDLE);
+        assertTrue(body.contains(MAP_GUARD), body);
+        assertFalse(body.contains("<div class=\"travel-map\""),
+                "no map markup may appear without a [map] entry:\n" + body);
+    }
+
+    /**
+     * The other half of the contract: an entry that really does carry a
+     * {@code [map]} puts the div the guard looks for on the same page as the
+     * assets. This is the seam between T2's emitter and T3's initialiser --
+     * if either side renamed the class the map would go dark in silence.
+     */
+    @Test
+    void anEntryWithAMapPutsTheGuardedClassOnThePage() throws Exception {
+        entryWithText("real-map-entry",
+                "<p>[map zoom=\"12\"][pin lat=\"48.8584\" lng=\"2.2945\" "
+                        + "label=\"Eiffel Tower\"][/map]</p>");
+        String body = render("/" + HANDLE + "/entry/real-map-entry");
+        assertTrue(body.contains("<div class=\"travel-map\""),
+                "the [map] shortcode must survive the sanitizer:\n" + body);
+        assertTrue(body.contains("data-pins="),
+                "the pin payload must reach the reader:\n" + body);
+        assertAssetsExactlyOnce(body, "basic permalink with a map");
+    }
+
+    // ----------------------------------------------------------------- CSP
+
+    /**
+     * Leaflet's placeholder for aborted/out-of-range tiles is
+     * {@code data:image/gif;base64,R0lGODlh...}, and CSP3 says the
+     * {@code *} source expression does not match {@code data:}. Without the
+     * explicit scheme every pan and zoom logs a violation.
+     */
+    @Test
+    void everyDeclaringHeadAllowsDataUrisForImages() throws Exception {
+        assertTrue(render("/" + HANDLE).contains(CSP_META),
+                "basic weblog.vm must allow data: images");
+
+        switchTheme("frontpage");
+        assertTrue(render("/" + HANDLE).contains(CSP_META),
+                "frontpage _header.vm must allow data: images");
+
+        switchTheme("gaurav");
+        assertTrue(render("/" + HANDLE).contains(CSP_META),
+                "gaurav std_head.vm must allow data: images");
+
+        switchTheme("fauxcoly");
+        assertTrue(render("/" + HANDLE).contains(CSP_META),
+                "fauxcoly weblog.vm must allow data: images");
+
+        switchTheme("portfolio");
+        assertTrue(render("/" + HANDLE).contains(CSP_META),
+                "portfolio weblog.vm must allow data: images");
+        assertTrue(search().contains(CSP_META),
+                "portfolio searchresults.vm must allow data: images");
+        entryWithText("csp-map-entry", "<p>nothing to see</p>");
+        assertTrue(render("/" + HANDLE + "/entry/csp-map-entry").contains(CSP_META),
+                "portfolio permalink.vm must allow data: images");
+    }
+
+    /**
+     * Guards the guard above: the seven declaring files must not have drifted
+     * back to a bare {@code img-src *}, which would still contain the rest of
+     * the policy and pass a naive substring check elsewhere.
+     */
+    @Test
+    void noHeadStillShipsTheOldWildcardOnlyImageSource() throws Exception {
+        assertFalse(render("/" + HANDLE).contains("img-src *;"),
+                "img-src * alone no longer covers Leaflet's data: placeholder");
+    }
+
+    /**
+     * The macro must not depend on the runtime properties table: the tile URL
+     * is static config, so it renders identically whatever the admin has (or
+     * has not) saved.
+     */
+    @Test
+    void theTileTemplateSurvivesAnEmptyRuntimeConfig() throws Exception {
+        assertTrue(WebloggerRuntimeConfig.getProperty("travel.map.tileUrl") == null
+                        || WebloggerRuntimeConfig.getProperty("travel.map.tileUrl").isEmpty(),
+                "travel.map.tileUrl must NOT be a runtime property: a runtimeConfigDefs "
+                        + "entry needs a configForm.* message key that MessageKeyTest "
+                        + "counts as an orphan, and that ratchet is fully consumed.");
+        assertTrue(render("/" + HANDLE).contains(TILE_URL),
+                "the head must still carry the static default tile template");
+    }
+}

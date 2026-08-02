@@ -257,7 +257,10 @@ class TravelShortcodeRenderingTest {
         assertTrue(body.contains("[map auto=&quot;secret&quot;]")
                         || body.contains("[map auto=\"secret\"]"),
                 "the author must see their shortcode, not silence:\n" + body);
-        assertFalse(body.contains("travel-map"), body);
+        // the container, not the bare class name: #showMapAssets legitimately
+        // names .travel-map in the head's stylesheet and lazy-init guard on
+        // every page, map or no map
+        assertFalse(body.contains("<div class=\"travel-map\""), body);
         assertFalse(body.contains("48.13725"),
                 "a private photo's latitude is location metadata and must "
                         + "not leak:\n" + body);

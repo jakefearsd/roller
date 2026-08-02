@@ -29,6 +29,7 @@ These are the documented macros in order defined in this file:
     #showResponsiveImage($image $alt $sizes $imgClass)
     #showGalleryGridStyles()
     #showGalleryAssets()
+    #showMapAssets()
 
     #showWeblogEntriesPager($pager)
     #showNextPrevEntriesControl($pager)
@@ -529,6 +530,158 @@ if (document.querySelector('.jgrid')) {
   });
   lightbox.init();
 }
+</script>
+#end
+
+
+#**
+Emits the Leaflet assets for the [map] shortcode: the webjar stylesheet, a
+small <style> block giving .travel-map a height (a Leaflet container with no
+height renders nothing at all), and a bootstrap script that turns every
+<div class="travel-map"> the shortcode emitted into a real map.
+
+Call it from every theme head, next to #showGalleryAssets -- all nine
+#showSeoHead call sites across the five bundled themes. Missing one is a
+silent failure: the div still renders and simply never becomes a map.
+MapAssetsRenderingTest renders all nine and counts.
+
+Lazy, the same bargain #showGalleryAssets documents: the head is rendered
+before entry content, so the page cannot know server-side whether a map will
+appear. The 3.5 KiB stylesheet ships unconditionally; leaflet.js is 41 KiB
+gzipped and is injected only after a .travel-map is actually found. This is a
+classic script rather than the gallery's ES module because leaflet.js ships as
+UMD (it ends in `window.L = t`) -- a classic script is the shape it is built
+for. A classic inline script in <head> runs before <body> is parsed, so the
+presence check has to wait for DOMContentLoaded.
+
+The markup contract comes from MapShortcode: data-pins is an HTML-encoded
+one-line JSON array of {lat,lng,label}, data-center is "lat,lng", data-zoom a
+positive integer, data-route="true" when a polyline was asked for and there
+are at least two pins. Labels are the author's literal text and are set with
+textContent, never innerHTML.
+
+L.Icon.Default is pinned to absolute webjar URLs here rather than left to
+Leaflet's own path detection, which reads a computed background-image off a
+throwaway div and caches whatever it finds -- including the wrong answer --
+on a static field for the life of the page. Setting imagePath to the empty
+string alongside the absolute URLs both satisfies the "is it a string?" check
+that would otherwise trigger detection and keeps the prefix Leaflet
+concatenates harmless.
+
+Tile policy (operations.osmfoundation.org/policies/tiles/): the tile template
+comes from $config.mapTileUrl (roller.properties travel.map.tileUrl) so a
+deployer can point it elsewhere; there is no {s} subdomain placeholder,
+attribution is required and therefore never suppressed, maxZoom is raised
+from Leaflet's default 18 to the 19 the OSM standard layer renders, and tiles
+are fetched browser-direct -- never proxied through Roller, whose Java
+User-Agent the policy blocks. The template is interpolated straight into a
+single-quoted JS string, so a deployer overriding it must not put an apostrophe
+in it; it is deployer-owned static config, at the same trust level as
+analytics.default.tracking.code, and never author or reader input.
+
+CSP: every asset is same-origin, Leaflet has no eval/fetch and injects no
+stylesheet, so the themes' policy covers it unchanged except for one thing --
+Leaflet paints aborted and out-of-range tiles with a data: GIF placeholder
+and CSP3's * wildcard does not match data:, which is why all seven declaring
+heads carry `img-src * data:`. Do not add a restrictive Referrer-Policy (the
+OSM policy forbids it) or require-trusted-types-for 'script' (Leaflet assigns
+innerHTML in eleven places and would throw).
+
+The leaflet version in the five /webjars/ URLs below is guarded by
+WebjarReferenceTest against the org.webjars.npm:leaflet dependency in
+app/pom.xml -- update both together.
+*#
+#macro(showMapAssets)
+#set($mapTileUrl = $config.mapTileUrl)
+#if(!$mapTileUrl || $mapTileUrl.isEmpty())#set($mapTileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png")#end
+<link rel="stylesheet" href="$url.site/webjars/leaflet/1.9.4/dist/leaflet.css">
+<style>
+.travel-map { height: 380px; max-width: 100%; margin: 1em 0; }
+.travel-map .leaflet-popup-content { word-break: break-word; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var containers = document.querySelectorAll('.travel-map');
+  if (!containers.length) { return; }
+  var script = document.createElement('script');
+  script.src = '$url.site/webjars/leaflet/1.9.4/dist/leaflet.js';
+  script.onload = function () {
+    // BEFORE any marker is constructed, or Leaflet's path heuristic runs
+    // and caches its guess on the static field for the whole page.
+    L.Icon.Default.mergeOptions({
+      iconUrl: '$url.site/webjars/leaflet/1.9.4/dist/images/marker-icon.png',
+      iconRetinaUrl: '$url.site/webjars/leaflet/1.9.4/dist/images/marker-icon-2x.png',
+      shadowUrl: '$url.site/webjars/leaflet/1.9.4/dist/images/marker-shadow.png'
+    });
+    L.Icon.Default.imagePath = '';
+    Array.prototype.forEach.call(containers, initMap);
+  };
+  document.head.appendChild(script);
+
+  function readPins(el) {
+    // the browser has already decoded the attribute entities for us
+    if (!el.dataset.pins) { return []; }
+    try {
+      var parsed = JSON.parse(el.dataset.pins);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function readCenter(el) {
+    if (!el.dataset.center) { return null; }
+    var parts = el.dataset.center.split(',');
+    var lat = parseFloat(parts[0]);
+    var lng = parseFloat(parts[1]);
+    return isFinite(lat) && isFinite(lng) ? [lat, lng] : null;
+  }
+
+  function initMap(el) {
+    var pins = readPins(el);
+    var center = readCenter(el);
+    var zoom = parseInt(el.dataset.zoom, 10);
+    var authorZoom = zoom > 0 && zoom <= 19;
+    var points = [];
+    var i;
+    for (i = 0; i < pins.length; i++) {
+      var lat = Number(pins[i].lat);
+      var lng = Number(pins[i].lng);
+      if (isFinite(lat) && isFinite(lng)) {
+        points.push([lat, lng, pins[i].label]);
+      }
+    }
+    if (!points.length && !center) { return; }
+
+    // A view has to exist before layers are added; fitBounds refines it below.
+    var start = center || [points[0][0], points[0][1]];
+    var map = L.map(el).setView(start, authorZoom ? zoom : 13);
+    L.tileLayer('$mapTileUrl', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    var latlngs = [];
+    for (i = 0; i < points.length; i++) {
+      latlngs.push([points[i][0], points[i][1]]);
+      var marker = L.marker([points[i][0], points[i][1]]).addTo(map);
+      if (points[i][2]) {
+        // author text, never markup: a label is whatever they typed
+        var label = document.createElement('span');
+        label.textContent = points[i][2];
+        marker.bindPopup(label);
+      }
+    }
+    if (el.dataset.route === 'true' && latlngs.length > 1) {
+      L.polyline(latlngs).addTo(map);
+    }
+    // An explicit zoom= is the author overriding the fit; otherwise frame the
+    // pins, capped so a single pin does not slam to street level.
+    if (latlngs.length && !authorZoom) {
+      map.fitBounds(latlngs, { padding: [24, 24], maxZoom: 15 });
+    }
+  }
+});
 </script>
 #end
 
