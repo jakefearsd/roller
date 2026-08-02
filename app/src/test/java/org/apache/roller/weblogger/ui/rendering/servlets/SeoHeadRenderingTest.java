@@ -592,8 +592,19 @@ class SeoHeadRenderingTest {
         // guard: picking a travel type ADDS a block, it never edits or drops
         // the BlogPosting one, so the entry keeps its datePublished,
         // dateModified, author and headline.
+        //
+        // Every save restamps updateTime (JPAWeblogEntryManagerImpl:237) and
+        // that feeds dateModified, so the three saves below would legitimately
+        // change the bytes whenever they straddle a second boundary -- which is
+        // exactly what a slow CI runner does and a fast laptop does not. Pin the
+        // timestamp on each save so the entry's TYPE is the only variable this
+        // test is measuring.
+        Timestamp frozen = Timestamp.valueOf("2026-02-01 12:00:00");
         WeblogEntry entry = TestUtils.setupWeblogEntry("stable-entry", weblog, user);
-        updateEntry(entry, e -> e.setSearchDescription("Unchanged by the new field."));
+        updateEntry(entry, e -> {
+            e.setSearchDescription("Unchanged by the new field.");
+            e.setUpdateTime(frozen);
+        });
 
         String untypedBody = render("/" + HANDLE + "/entry/stable-entry");
         List<String> untyped = ldJsonSources(untypedBody);
@@ -604,12 +615,18 @@ class SeoHeadRenderingTest {
         assertTrue(untyped.get(0).contains("\"headline\": \"stable-entry\""),
                 "including its headline property: " + untyped.get(0));
 
-        updateEntry(entry, e -> e.setJsonLdType(JsonLdType.BLOG_POSTING));
+        updateEntry(entry, e -> {
+            e.setJsonLdType(JsonLdType.BLOG_POSTING);
+            e.setUpdateTime(frozen);
+        });
         RenderingTestSupport.clearRenderCaches();
         assertEquals(untyped, ldJsonSources(render("/" + HANDLE + "/entry/stable-entry")),
                 "an explicit BLOG_POSTING must render byte for byte like a null type");
 
-        updateEntry(entry, e -> e.setJsonLdType(JsonLdType.TOURIST_ATTRACTION));
+        updateEntry(entry, e -> {
+            e.setJsonLdType(JsonLdType.TOURIST_ATTRACTION);
+            e.setUpdateTime(frozen);
+        });
         RenderingTestSupport.clearRenderCaches();
         List<String> typed = ldJsonSources(render("/" + HANDLE + "/entry/stable-entry"));
         assertEquals(2, typed.size(), "a travel type adds a block, it does not swap one");
