@@ -6,6 +6,7 @@
     <title>Search Results for '$model.term' : $model.weblog.name</title>
     #showAutodiscoveryLinks($model.weblog)
     #showSeoHead()
+    #showGalleryGridStyles()
     <link rel="stylesheet" media="all" href="$model.weblog.stylesheet">
 </head>
 <body>

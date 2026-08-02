@@ -8,6 +8,7 @@
   <link href="$url.absoluteSite/favicon.svg" rel="shortcut icon" type="image/x-icon" />
   #showAutodiscoveryLinks($model.weblog)
   #showSeoHead()
+  #showGalleryGridStyles()
   <style>
   #includeTemplate($model.weblog "_css")
   </style>

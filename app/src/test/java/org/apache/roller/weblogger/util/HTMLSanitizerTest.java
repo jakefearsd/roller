@@ -232,6 +232,93 @@ public class HTMLSanitizerTest {
         }
     }
 
+    /**
+     * The [gallery] shortcode's justified-grid markup must round-trip: the
+     * grid packs rows with {@code flex-grow: var(--ar)}, so the CSS custom
+     * properties on the inline styles and the lightbox's data-* payload on
+     * the anchors are load-bearing, not decoration.
+     */
+    @Nested
+    class GalleryGridMarkup {
+
+        private static final String GRID = "<div class=\"jgrid\" style=\"--row-h:280px;\">\n"
+                + "<figure style=\"--ar:1.3405;\">\n"
+                + "<a href=\"http://e.com/m/1\" data-pswp-width=\"500\" data-pswp-height=\"373\""
+                + " data-caption=\"Hawk at dusk\" data-exif-camera=\"NIKON Z 6\""
+                + " data-exif-aperture=\"f/2.8\" data-exif-iso=\"400\""
+                + " data-blurhash=\"LEHV6nWB2yk8\">\n"
+                + "<img src=\"http://e.com/m/1\" srcset=\"http://e.com/m/1?w=480 480w, http://e.com/m/1 500w\""
+                + " sizes=\"375px\" width=\"500\" height=\"373\" alt=\"hawk.jpg\""
+                + " loading=\"lazy\" decoding=\"async\" data-blurhash=\"LEHV6nWB2yk8\""
+                + " style=\"background-color:#979695\">\n"
+                + "</a>\n"
+                + "<figcaption>Hawk at dusk</figcaption>\n"
+                + "</figure>\n"
+                + "</div>";
+
+        @Test
+        public void theArCustomPropertySurvivesOnTheFigureStyle() {
+            // THE decision test for the justified grid: if a CSS custom
+            // property were dropped by the declaration-by-declaration style
+            // re-parse, the shortcode would have to fall back to bucketed
+            // aspect-ratio classes instead of emitting style="--ar:...".
+            String out = HTMLSanitizer.sanitize("<figure style=\"--ar:1.3405;\">x</figure>");
+            assertTrue(out.contains("style=\"--ar:1.3405;\""),
+                    "the --ar custom property was mangled or dropped:\n" + out);
+        }
+
+        @Test
+        public void theRowHeightCustomPropertySurvivesOnTheGridContainer() {
+            String out = HTMLSanitizer.sanitize(GRID);
+            assertTrue(out.contains("<div class=\"jgrid\" style=\"--row-h:280px;\">"), out);
+        }
+
+        @Test
+        public void theLightboxAnchorKeepsItsHrefAndDataPayload() {
+            String out = HTMLSanitizer.sanitize(GRID);
+            assertTrue(out.contains("<a href=\"http://e.com/m/1\""), out);
+            assertTrue(out.contains("data-pswp-width=\"500\""), out);
+            assertTrue(out.contains("data-pswp-height=\"373\""), out);
+            assertTrue(out.contains("data-caption=\"Hawk at dusk\""), out);
+            assertTrue(out.contains("data-exif-camera=\"NIKON Z 6\""), out);
+            assertTrue(out.contains("data-exif-aperture=\"f/2.8\""), out);
+            assertTrue(out.contains("data-exif-iso=\"400\""), out);
+            assertTrue(out.contains("data-blurhash=\"LEHV6nWB2yk8\""), out);
+        }
+
+        @Test
+        public void theGridImageKeepsItsResponsiveAttributes() {
+            String out = HTMLSanitizer.sanitize(GRID);
+            assertTrue(out.contains("<img src=\"http://e.com/m/1\""), out);
+            assertTrue(out.contains("srcset=\"http://e.com/m/1?w=480 480w, http://e.com/m/1 500w\""), out);
+            assertTrue(out.contains("sizes=\"375px\""), out);
+            assertTrue(out.contains("loading=\"lazy\""), out);
+            assertTrue(out.contains("decoding=\"async\""), out);
+            assertTrue(out.contains("style=\"background-color:#979695;\""), out);
+        }
+
+        @Test
+        public void theWholeGridCountsAsClean() {
+            assertTrue(HTMLSanitizer.isSanitized(GRID),
+                    "the shortcode's own markup must count as clean, or every "
+                            + "entry using [gallery] is flagged invalid");
+            String out = HTMLSanitizer.sanitize(GRID);
+            assertTrue(out.contains("<figcaption>Hawk at dusk</figcaption>"), out);
+            assertTrue(out.contains("</figure>"), out);
+            assertTrue(out.contains("</div>"), out);
+        }
+
+        @Test
+        public void aRelativeAnchorHrefStillKillsTheWholeAnchor() {
+            // pins why the gallery must emit the absolute media permalink
+            String out = HTMLSanitizer.sanitize(
+                    "<figure style=\"--ar:1.5;\"><a href=\"/m/1\" data-pswp-width=\"500\">"
+                            + "<img src=\"http://e.com/m/1\"></a></figure>");
+            assertFalse(out.contains("<a "), out);
+            assertFalse(out.contains("data-pswp-width"), out);
+        }
+    }
+
     @Nested
     class Structure {
 
