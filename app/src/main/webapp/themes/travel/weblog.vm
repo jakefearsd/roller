@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
+    <title>$utils.escapeHTML($model.weblog.name)</title>
+    #showAutodiscoveryLinks($model.weblog)
+    #showAnalyticsTrackingCode($model.weblog)
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    #showSeoHead()
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+    #showMapAssets()
+</head>
+<!-- weblog -->
+<body class="tg">
+
+<header class="tg-header">
+    <p class="tg-name"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
+    #if($utils.isNotEmpty($model.weblog.tagline))
+    <p class="tg-tagline">$utils.escapeHTML($model.weblog.tagline)</p>
+    #end
+    <nav class="tg-nav">
+        #showWeblogCategoryLinksList()
+    </nav>
+</header>
+
+<main class="tg-main">
+    #set($pager = $model.getWeblogEntriesPager())
+    <div class="tg-cards">
+        #showWeblogEntriesPager($pager)
+    </div>
+    <nav class="tg-pager">
+        #showNextPrevEntriesControl($pager)
+    </nav>
+</main>
+
+<footer class="tg-footer">
+    <form class="tg-search" method="get" action="$url.search">
+        <input type="search" name="q" placeholder="Search guides" aria-label="Search">
+    </form>
+</footer>
+
+</body>
+</html>

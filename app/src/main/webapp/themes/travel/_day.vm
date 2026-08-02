@@ -1,0 +1,48 @@
+## $model here is a PageModel
+## $entry here is a WeblogEntryWrapper
+##
+## Travel Guide day fragment. On entry-list pages it emits guide cards --
+## hero image (when the entry has a featured image), title, date and the
+## entry's own search description as the excerpt. On the permalink page it
+## emits a wide reading column: hero, title, meta, then the content, where
+## [map], [faq] and [cta] blocks style themselves via the shared stylesheet.
+<!-- _day -->
+#if($model.permalink)
+    #foreach($entry in $entries)
+    <article class="tg-entry">
+        #if($entry.featuredImage)
+        <figure class="tg-hero">
+            #showResponsiveImage($entry.featuredImage $entry.title "100vw" "tg-hero-img")
+        </figure>
+        #end
+        <h1 class="tg-entry-title">$utils.escapeHTML($entry.title)</h1>
+        <p class="tg-entry-meta">
+            $utils.formatDate($entry.pubTime, "MMMM d, yyyy")
+            &middot; <a href="$url.category($entry.category.name)">$utils.escapeHTML($entry.category.name)</a>
+            #if($utils.isUserAuthorizedToAuthor($entry.website))
+            &middot; <a href="$url.editEntry($entry.anchor)">Edit</a>
+            #end
+        </p>
+        <div class="tg-entry-content">$entry.displayContent</div>
+    </article>
+    #end
+#else
+    #foreach($entry in $entries)
+    <article class="tg-card">
+        #if($entry.featuredImage)
+        <a class="tg-card-media" href="$url.entry($entry.anchor)">
+            #showResponsiveImage($entry.featuredImage $entry.title "(max-width: 700px) 100vw, 33vw" "tg-card-img")
+        </a>
+        #end
+        <div class="tg-card-body">
+            <h2 class="tg-card-title">
+                <a href="$url.entry($entry.anchor)">$utils.escapeHTML($entry.title)</a>
+            </h2>
+            <p class="tg-card-meta">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</p>
+            #if($utils.isNotEmpty($entry.searchDescription))
+            <p class="tg-card-excerpt">$utils.escapeHTML($entry.searchDescription)</p>
+            #end
+        </div>
+    </article>
+    #end
+#end
