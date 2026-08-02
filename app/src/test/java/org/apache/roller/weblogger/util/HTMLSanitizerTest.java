@@ -319,6 +319,151 @@ public class HTMLSanitizerTest {
         }
     }
 
+    /**
+     * The [map] shortcode's markup must round-trip: the pins ride a
+     * single-line JSON payload in {@code data-pins} (HTML-encoded quotes, so
+     * the sanitizer's own idempotent encoder leaves it byte-identical) and
+     * the theme-side initialiser reads it back from {@code dataset.pins}.
+     */
+    @Nested
+    class TravelMapMarkup {
+
+        private static final String PINS = "[{&quot;lat&quot;:48.8584,&quot;lng&quot;:2.2945,"
+                + "&quot;label&quot;:&quot;Eiffel Tower&quot;},"
+                + "{&quot;lat&quot;:48.8606,&quot;lng&quot;:2.3376}]";
+
+        private static final String MAP = "<div class=\"travel-map\" data-pins=\"" + PINS
+                + "\" data-center=\"48.8584,2.2945\" data-zoom=\"13\""
+                + " data-route=\"true\"></div>";
+
+        @Test
+        public void theWholeMapDivCountsAsClean() {
+            assertTrue(HTMLSanitizer.isSanitized(MAP),
+                    "the shortcode's own markup must count as clean, or every "
+                            + "entry using [map] is flagged invalid");
+        }
+
+        @Test
+        public void theDataPinsJsonPayloadSurvivesByteIdentical() {
+            String out = HTMLSanitizer.sanitize(MAP);
+            assertTrue(out.contains("data-pins=\"" + PINS + "\""),
+                    "the encoded JSON payload must survive the sanitizer's own "
+                            + "(idempotent) encode pass byte-identical:\n" + out);
+            assertTrue(out.contains("<div class=\"travel-map\""), out);
+            assertTrue(out.contains("data-center=\"48.8584,2.2945\""), out);
+            assertTrue(out.contains("data-zoom=\"13\""), out);
+            assertTrue(out.contains("data-route=\"true\""), out);
+            assertTrue(out.contains("</div>"), out);
+        }
+
+        @Test
+        public void aMultiLinePinsPayloadWouldDestroyTheWholeTag() {
+            // pins why the emitter must write the JSON on ONE line: a \n
+            // inside the attribute value stops the tag from matching the
+            // sanitizer's tag pattern at all, so the entire div is encoded
+            // away as literal text and no map ever reaches the reader.
+            String out = HTMLSanitizer.sanitize(
+                    "<div class=\"travel-map\" data-pins=\"[\n{&quot;lat&quot;:1.0}]\"></div>");
+            assertFalse(out.contains("<div class=\"travel-map\""), out);
+            assertTrue(out.contains("&lt;div"), out);
+        }
+
+        @Test
+        public void aScriptPayloadSmuggledThroughAPinLabelStaysInertText() {
+            // '"><script> in a label, JSON-escaped then HTML-encoded by the
+            // emitter: it must stay inside the attribute value as text.
+            String smuggled = "<div class=\"travel-map\" data-pins=\"[{&quot;lat&quot;:1.0,"
+                    + "&quot;label&quot;:&quot;\\&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;&quot;}]\"></div>";
+            String out = HTMLSanitizer.sanitize(smuggled);
+            assertFalse(out.contains("<script"), out);
+            assertTrue(HTMLSanitizer.isSanitized(smuggled), smuggled);
+        }
+    }
+
+    /**
+     * The [cta] shortcode's card markup must round-trip: the sanitizer
+     * validates anchor hrefs with UrlValidator and silently deletes the
+     * whole anchor on failure, which is exactly why the handler validates
+     * the URL itself and returns null instead of emitting a doomed anchor.
+     */
+    @Nested
+    class CtaCardMarkup {
+
+        private static final String HREF = "https://booking.example.com/cottage"
+                + "?a=1&utm_source=blog&utm_medium=blog&utm_campaign=summer-cottage";
+
+        private static final String CTA = "<a class=\"cta-card\" href=\"" + HREF
+                + "\" rel=\"nofollow sponsored noopener\" target=\"_blank\">"
+                + "<span class=\"cta-label\">Book this cottage</span>"
+                + "<span class=\"cta-note\">From €120/night</span></a>";
+
+        @Test
+        public void theWholeCardCountsAsClean() {
+            assertTrue(HTMLSanitizer.isSanitized(CTA),
+                    "the shortcode's own markup must count as clean, or every "
+                            + "entry using [cta] is flagged invalid");
+        }
+
+        @Test
+        public void keepsTheHrefWithItsUtmQueryAndTheRelTargetPair() {
+            String out = HTMLSanitizer.sanitize(CTA);
+            assertTrue(out.contains("href=\"" + HREF + "\""),
+                    "the UTM query string must survive untouched:\n" + out);
+            assertTrue(out.contains("rel=\"nofollow sponsored noopener\""), out);
+            assertTrue(out.contains("target=\"_blank\""), out);
+            assertTrue(out.contains("<span class=\"cta-label\">Book this cottage</span>"), out);
+            assertTrue(out.contains("<span class=\"cta-note\">From €120/night</span>"), out);
+        }
+
+        @Test
+        public void aRelativeHrefKillsTheWholeCardAnchor() {
+            // pins why CtaShortcode must validate the URL itself: emitting
+            // this anchor would have the sanitizer silently delete it.
+            String out = HTMLSanitizer.sanitize(
+                    "<a class=\"cta-card\" href=\"/book\" rel=\"nofollow\">"
+                            + "<span class=\"cta-label\">Book</span></a>");
+            assertFalse(out.contains("<a "), out);
+            assertFalse(out.contains("cta-card"), out);
+        }
+    }
+
+    /**
+     * The [faq] shortcode's definition-list markup must round-trip:
+     * dl/dt/dd are allow-listed (details/summary are NOT, which is why the
+     * shortcode emits a dl), and answers are entry HTML flowing through
+     * this sanitizer like any other body text.
+     */
+    @Nested
+    class FaqMarkup {
+
+        private static final String FAQ = "<dl class=\"faq\">\n"
+                + "<dt>When is the best month?</dt>\n"
+                + "<dd>June, with <a href=\"https://example.com/guide\">this guide</a>.</dd>\n"
+                + "</dl>";
+
+        @Test
+        public void keepsTheDlDtDdStructure() {
+            assertTrue(HTMLSanitizer.isSanitized(FAQ),
+                    "the shortcode's own markup must count as clean, or every "
+                            + "entry using [faq] is flagged invalid");
+            String out = HTMLSanitizer.sanitize(FAQ);
+            assertTrue(out.contains("<dl class=\"faq\">"), out);
+            assertTrue(out.contains("<dt>When is the best month?</dt>"), out);
+            assertTrue(out.contains("<dd>June, with <a href=\"https://example.com/guide\">"
+                    + "this guide</a>.</dd>"), out);
+            assertTrue(out.contains("</dl>"), out);
+        }
+
+        @Test
+        public void stillStripsScriptSmuggledInsideAnAnswer() {
+            String out = HTMLSanitizer.sanitize(
+                    "<dl class=\"faq\"><dt>q</dt>"
+                            + "<dd>\"><script>alert(1)</script></dd></dl>");
+            assertFalse(out.contains("<script"), out);
+            assertTrue(out.contains("<dd>"), out);
+        }
+    }
+
     @Nested
     class Structure {
 

@@ -108,9 +108,14 @@ public final class ShortcodeExpander {
     private static final Pattern ATTRIBUTE = Pattern.compile(
             "([\\w-]+)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s\\]]+))");
 
-    /** The default registry: every built-in shortcode, applied everywhere. */
+    /**
+     * The default registry: every built-in shortcode, applied everywhere.
+     * ([pin], [q], and [a] are deliberately NOT registered: they are child
+     * tags that MapPins/FaqBlocks parse out of the [map]/[faq] bodies.)
+     */
     private static final ShortcodeExpander DEFAULT =
-            new ShortcodeExpander(List.of(new ImageShortcode(), new GalleryShortcode()));
+            new ShortcodeExpander(List.of(new ImageShortcode(), new GalleryShortcode(),
+                    new MapShortcode(), new CtaShortcode(), new FaqShortcode()));
 
     private final Map<String, ShortcodeHandler> handlers;
 
