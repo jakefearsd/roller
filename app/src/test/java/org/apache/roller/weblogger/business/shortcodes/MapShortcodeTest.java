@@ -20,6 +20,8 @@ package org.apache.roller.weblogger.business.shortcodes;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.Weblogger;
@@ -31,6 +33,8 @@ import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -150,6 +154,47 @@ class MapShortcodeTest {
         assertFalse(html.contains("<script"), html);
         assertTrue(html.contains("\\&quot;&gt;&lt;script&gt;"),
                 "the label must be JSON-escaped then HTML-encoded:\n" + html);
+    }
+
+    @Test
+    void aLiteralEntityNameLabelCannotFabricateExtraPins() throws Exception {
+        // Neither escapeJson nor htmlEncodeApexesAndTags touches '&', so
+        // without ampersand escaping the author-typed 6-char literal text
+        // "&quot;" would survive both escape passes untouched -- and the
+        // BROWSER's attribute decoding would then turn it into a real quote
+        // inside the JSON layer, letting a label fabricate whole pins.
+        // The exact review PoC:
+        String evil = "&quot;},{&quot;lat&quot;:0,&quot;lng&quot;:0,"
+                + "&quot;label&quot;:&quot;evil";
+        String html = render(Map.of(),
+                "[pin lat=\"1\" lng=\"2\" label=\"" + evil + "\"]");
+
+        JsonNode pins = browserParsedPins(html);
+        assertEquals(1, pins.size(),
+                "the entity-text label fabricated a second pin: " + pins);
+        assertEquals(evil, pins.get(0).get("label").asText(),
+                "the label must round-trip as the author's literal text: " + pins);
+        assertEquals(1.0, pins.get(0).get("lat").asDouble(), pins.toString());
+    }
+
+    @Test
+    void anAmpersandLabelRoundTripsThroughBrowserDecodingAndJsonParse() throws Exception {
+        String html = render(Map.of(),
+                "[pin lat=\"1\" lng=\"2\" label=\"Fish & Chips\"]");
+
+        JsonNode pins = browserParsedPins(html);
+        assertEquals(1, pins.size(), pins.toString());
+        assertEquals("Fish & Chips", pins.get(0).get("label").asText(), pins.toString());
+    }
+
+    /**
+     * What T3's initialiser sees: the browser HTML-decodes the attribute
+     * value into {@code dataset.pins}, then {@code JSON.parse} reads it.
+     */
+    private static JsonNode browserParsedPins(String html) throws Exception {
+        String attribute = StringUtils.substringBetween(html, "data-pins=\"", "\"");
+        String json = StringEscapeUtils.unescapeHtml4(attribute);
+        return new ObjectMapper().readTree(json);
     }
 
     @Test

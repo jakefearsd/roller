@@ -233,7 +233,23 @@ public class MapShortcode implements ShortcodeHandler {
         }
     }
 
+    /**
+     * HTML-encodes the JSON payload for the {@code data-pins} attribute:
+     * {@code &} FIRST, then quotes/apexes/tags. The ampersand pass is
+     * load-bearing -- {@code htmlEncodeApexesAndTags} leaves ampersands
+     * alone, so without it an author-typed literal {@code &quot;} (six
+     * plain characters) in a label would survive both the JSON and the
+     * HTML escape passes untouched and the browser's attribute decoding
+     * would turn it into a REAL quote inside the JSON that
+     * {@code JSON.parse(dataset.pins)} reads, letting a label fabricate
+     * whole pins. Escaping {@code &} to {@code &amp;} first means browser
+     * decoding restores exactly the author's literal text, and the
+     * encoder's own {@code &quot;}/{@code &lt;} output (produced after
+     * this pass) is never double-encoded. The sanitizer's re-encode also
+     * leaves {@code &} alone, so the payload still survives byte-identical
+     * (pinned by HTMLSanitizerTest.TravelMapMarkup).
+     */
     private static String escape(String value) {
-        return HTMLSanitizer.htmlEncodeApexesAndTags(value);
+        return HTMLSanitizer.htmlEncodeApexesAndTags(value.replace("&", "&amp;"));
     }
 }

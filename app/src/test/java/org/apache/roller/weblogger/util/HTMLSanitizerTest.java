@@ -378,6 +378,20 @@ public class HTMLSanitizerTest {
             assertFalse(out.contains("<script"), out);
             assertTrue(HTMLSanitizer.isSanitized(smuggled), smuggled);
         }
+
+        @Test
+        public void anAmpersandEscapedLabelPayloadSurvivesByteIdentical() {
+            // the emitter escapes '&' -> '&amp;' before its quote/tag pass
+            // (an author's literal "&quot;" must not decode into a real
+            // quote inside the JSON layer); the sanitizer's encoder leaves
+            // ampersands alone, so the doubled escape survives untouched.
+            String payload = "data-pins=\"[{&quot;lat&quot;:1.0,"
+                    + "&quot;label&quot;:&quot;Fish &amp; Chips &amp;quot; and all&quot;}]\"";
+            String map = "<div class=\"travel-map\" " + payload + "></div>";
+            String out = HTMLSanitizer.sanitize(map);
+            assertTrue(out.contains(payload), out);
+            assertTrue(HTMLSanitizer.isSanitized(map), map);
+        }
     }
 
     /**
