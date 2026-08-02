@@ -200,4 +200,25 @@ public interface MediaFileManager {
      * @return the number of image files processed
      */
     int regenerateRenditions(Weblog weblog) throws WebloggerException;
+
+    /**
+     * Destructively crop an image media file: re-encode the stored original
+     * to just the requested rectangle and rebuild everything derived from
+     * its pixels -- stored width/height, the admin thumbnail, the whole
+     * responsive rendition ladder, and the blurhash. The rectangle is
+     * measured on the displayed (EXIF-orientation-corrected) image, exactly
+     * as a browser presents it to the person drawing the selection, and is
+     * clamped to the image bounds.
+     *
+     * <p>The stored EXIF metadata fields (camera, lens, exposure, ...) are
+     * deliberately left as they are: they still truthfully describe the
+     * photograph even though the re-encoded file itself no longer carries an
+     * EXIF block. A focal point, if set, is remapped into the cropped
+     * coordinate space.
+     *
+     * @throws WebloggerException when the file is not a croppable image,
+     *         the rectangle lies outside the image, or storage fails.
+     */
+    void cropMediaFile(Weblog weblog, MediaFile mediaFile,
+            int x, int y, int width, int height) throws WebloggerException;
 }

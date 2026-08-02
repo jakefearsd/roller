@@ -36,6 +36,30 @@
                 </a>
             </div>
         </div>
+
+        <%-- ============================================================== --%>
+        <%-- Focal point: click-to-set marker, saved with the main form     --%>
+
+        <div class="row mb-3">
+            <label class="col-form-label col-sm-3"><spring:message code="mediaFileEdit.focalPoint"/></label>
+            <div class="col-sm-9">
+                <div id="focalPicker" style="position:relative; display:inline-block; cursor:crosshair; line-height:0">
+                    <img id="focalImage" src='${bean.permalink}' alt="focal point target"
+                         style="max-width:240px; max-height:240px; display:block"/>
+                    <span id="focalMarker"
+                          style="position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px;
+                                 border:2px solid #fff; border-radius:50%;
+                                 background:rgba(220,53,69,0.85); box-shadow:0 0 3px #000;
+                                 pointer-events:none; display:none"></span>
+                </div>
+                <div class="form-text"><spring:message code="mediaFileEdit.focalPoint.tip"/></div>
+                <button type="button" id="clearFocalButton" class="btn btn-sm btn-outline-secondary mt-1">
+                    <spring:message code="mediaFileEdit.focalPoint.clear"/>
+                </button>
+                <input type="hidden" name="bean.focalX" id="focalX" value="${bean.focalX}"/>
+                <input type="hidden" name="bean.focalY" id="focalY" value="${bean.focalY}"/>
+            </div>
+        </div>
     </c:if>
 
     <%-- ================================================================== --%>
@@ -132,9 +156,144 @@
 <sec:csrfInput/>
 </form>
 
+<%-- ================================================================== --%>
+<%-- Crop: Cropper.js v2 custom elements over the original image;       --%>
+<%-- destructive server-side re-encode behind a confirm dialog          --%>
+
+<c:if test="${bean.croppable}">
+    <hr/>
+    <h5 id="cropSectionTitle"><spring:message code="mediaFileEdit.crop.title"/></h5>
+    <p class="pagetip"><spring:message code="mediaFileEdit.crop.tip"/></p>
+
+    <cropper-canvas id="cropCanvas" background style="width:100%; height:360px">
+        <cropper-image id="cropImage" src='${bean.permalink}' alt="crop target"></cropper-image>
+        <cropper-shade hidden></cropper-shade>
+        <cropper-handle action="select" plain></cropper-handle>
+        <cropper-selection id="cropSelection" initial-coverage="0.9" movable resizable>
+            <cropper-grid role="grid" covered></cropper-grid>
+            <cropper-crosshair centered></cropper-crosshair>
+            <cropper-handle action="move" theme-color="rgba(255, 255, 255, 0.35)"></cropper-handle>
+            <cropper-handle action="n-resize"></cropper-handle>
+            <cropper-handle action="e-resize"></cropper-handle>
+            <cropper-handle action="s-resize"></cropper-handle>
+            <cropper-handle action="w-resize"></cropper-handle>
+            <cropper-handle action="ne-resize"></cropper-handle>
+            <cropper-handle action="nw-resize"></cropper-handle>
+            <cropper-handle action="se-resize"></cropper-handle>
+            <cropper-handle action="sw-resize"></cropper-handle>
+        </cropper-selection>
+    </cropper-canvas>
+
+    <form id="cropForm" class="mt-2" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileEdit!crop.rol" method="POST">
+        <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+        <input type="hidden" name="mediaFileId" value="${mediaFileId}"/>
+        <input type="hidden" name="cropX" id="cropX" value="0"/>
+        <input type="hidden" name="cropY" id="cropY" value="0"/>
+        <input type="hidden" name="cropWidth" id="cropWidth" value="0"/>
+        <input type="hidden" name="cropHeight" id="cropHeight" value="0"/>
+        <button type="submit" id="cropButton" class="btn btn-danger">
+            <spring:message code="mediaFileEdit.crop.apply"/>
+        </button>
+        <sec:csrfInput/>
+    </form>
+
+    <c:url var="cropperJsURL" value="/webjars/cropperjs/2.1.0/dist/cropper.min.js"/>
+    <script src="${cropperJsURL}"></script>
+    <script>
+        (function () {
+            // The stored dimensions already describe the DISPLAYED
+            // (orientation-corrected) image, which is also what the browser
+            // renders, so selection math and server-side crop math agree.
+            var naturalWidth = Number('${bean.width}');
+            var naturalHeight = Number('${bean.height}');
+
+            function cropRectInNaturalPixels() {
+                var canvas = document.getElementById('cropCanvas');
+                var image = document.getElementById('cropImage');
+                var selection = document.getElementById('cropSelection');
+                var canvasRect = canvas.getBoundingClientRect();
+                var imageRect = image.getBoundingClientRect();
+                if (!(imageRect.width > 0) || !(imageRect.height > 0)) {
+                    return null;
+                }
+                if (!(naturalWidth > 0) || !(naturalHeight > 0)) {
+                    // pre-ladder upload without stored dimensions: fall back
+                    // to the decoded image itself
+                    var img = image.$image;
+                    naturalWidth = img ? img.naturalWidth : 0;
+                    naturalHeight = img ? img.naturalHeight : 0;
+                    if (!(naturalWidth > 0)) {
+                        return null;
+                    }
+                }
+                var scaleX = naturalWidth / imageRect.width;
+                var scaleY = naturalHeight / imageRect.height;
+                return {
+                    x: Math.round((selection.x + canvasRect.left - imageRect.left) * scaleX),
+                    y: Math.round((selection.y + canvasRect.top - imageRect.top) * scaleY),
+                    width: Math.round(selection.width * scaleX),
+                    height: Math.round(selection.height * scaleY)
+                };
+            }
+
+            document.getElementById('cropForm').addEventListener('submit', function (event) {
+                var rect = cropRectInNaturalPixels();
+                if (rect === null || !(rect.width > 0) || !(rect.height > 0)) {
+                    event.preventDefault();
+                    return;
+                }
+                if (!confirm('<spring:message code="mediaFileEdit.crop.confirm" javaScriptEscape="true"/>')) {
+                    event.preventDefault();
+                    return;
+                }
+                document.getElementById('cropX').value = rect.x;
+                document.getElementById('cropY').value = rect.y;
+                document.getElementById('cropWidth').value = rect.width;
+                document.getElementById('cropHeight').value = rect.height;
+            });
+        })();
+    </script>
+</c:if>
 
 <script>
     $(document).ready(function () {
         new ClipboardJS('.clipbutton');
+
+        // ------------------------------------------------- focal point
+        var picker = document.getElementById('focalPicker');
+        if (picker) {
+            var marker = document.getElementById('focalMarker');
+            var focalX = document.getElementById('focalX');
+            var focalY = document.getElementById('focalY');
+
+            function showMarker(fx, fy) {
+                marker.style.left = (fx * 100) + '%';
+                marker.style.top = (fy * 100) + '%';
+                marker.style.display = 'block';
+            }
+
+            if (focalX.value !== '' && focalY.value !== '') {
+                showMarker(parseFloat(focalX.value), parseFloat(focalY.value));
+            }
+
+            picker.addEventListener('click', function (event) {
+                var image = document.getElementById('focalImage');
+                var rect = image.getBoundingClientRect();
+                if (!(rect.width > 0) || !(rect.height > 0)) {
+                    return;
+                }
+                var fx = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+                var fy = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+                focalX.value = fx.toFixed(3);
+                focalY.value = fy.toFixed(3);
+                showMarker(fx, fy);
+            });
+
+            document.getElementById('clearFocalButton').addEventListener('click', function () {
+                focalX.value = '';
+                focalY.value = '';
+                marker.style.display = 'none';
+            });
+        }
     });
 </script>

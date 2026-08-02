@@ -268,6 +268,32 @@ public final class MediaFileWrapper {
     }
 
     /**
+     * The focal point as a ready-to-emit CSS {@code object-position} value,
+     * e.g. {@code "45.6% 30%"}, or null when no focal point is set. Formatted
+     * here rather than in Velocity so the percentages are stable, clamped and
+     * free of floating-point noise ({@code 0.456 * 100} is not {@code 45.6}
+     * in double arithmetic). Consumed by {@code #showResponsiveImage} --
+     * theme-side markup only, never the sanitized entry-content path.
+     */
+    public String getObjectPosition() {
+        Double fx = this.pojo.getFocalX();
+        Double fy = this.pojo.getFocalY();
+        if (fx == null || fy == null) {
+            return null;
+        }
+        return cssPercent(fx) + " " + cssPercent(fy);
+    }
+
+    /** Formats a 0..1 fraction as a CSS percentage with at most one decimal. */
+    private static String cssPercent(double fraction) {
+        double clamped = Math.min(1.0, Math.max(0.0, fraction));
+        return java.math.BigDecimal.valueOf(clamped * 100)
+                .setScale(1, java.math.RoundingMode.HALF_UP)
+                .stripTrailingZeros()
+                .toPlainString() + "%";
+    }
+
+    /**
      * This is a special method to access the original pojo. We don't really
      * want to do this, but it's necessary because some parts of the
      * rendering process still need the original pojo object.

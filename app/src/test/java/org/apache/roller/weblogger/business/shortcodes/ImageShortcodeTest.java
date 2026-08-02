@@ -128,6 +128,23 @@ class ImageShortcodeTest {
     }
 
     @Test
+    void neverEmitsTheFocalPointIntoEntryContent() {
+        // The focal point's object-position is a theme-side
+        // (#showResponsiveImage) affordance only: entry content is bound by
+        // the sanitizer contract, and the [image] expansion deliberately
+        // stays inside it. Even with the blurhash style present, the focal
+        // point must not join it.
+        photo.setFocalX(0.3);
+        photo.setFocalY(0.7);
+        photo.setBlurhash("LKO2?U%2Tw=w]~RBVZRi};RPxuwH");
+
+        String html = render(Map.of("id", "mf-1"), null);
+
+        assertTrue(html.contains("style=\"background-color:"), html);
+        assertFalse(html.contains("object-position"), html);
+    }
+
+    @Test
     void aFormatOutsideTheLadderGetsAPlainImg() {
         // The ladder only covers jpeg/png. For a gif every ?w= URL silently
         // serves the full-size original, so a srcset -- and especially a

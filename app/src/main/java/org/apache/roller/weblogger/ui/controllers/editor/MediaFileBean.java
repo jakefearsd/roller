@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.pojos.MediaFile;
 
 /**
@@ -40,6 +41,8 @@ public class MediaFileBean {
     private int height;
     private long length;
     private String originalPath;
+    private Double focalX;
+    private Double focalY;
 
     public String getName() {
         return name;
@@ -109,6 +112,21 @@ public class MediaFileBean {
         dataHolder.setTagsAsString(this.tagsAsString);
         dataHolder.setSharedForGallery(this.isSharedForGallery);
         dataHolder.setOriginalPath(this.originalPath);
+        // The focal point is both-or-neither: a lone coordinate cannot
+        // position anything, so it degrades to "no focal point" rather than
+        // persisting half a value.
+        if (this.focalX != null && this.focalY != null) {
+            dataHolder.setFocalX(clampFraction(this.focalX));
+            dataHolder.setFocalY(clampFraction(this.focalY));
+        } else {
+            dataHolder.setFocalX(null);
+            dataHolder.setFocalY(null);
+        }
+    }
+
+    /** Clamps a focal-point coordinate into its documented 0..1 range. */
+    private static double clampFraction(double value) {
+        return Math.min(1.0, Math.max(0.0, value));
     }
 
     /**
@@ -131,6 +149,8 @@ public class MediaFileBean {
         this.setLength(dataHolder.getLength());
         this.setContentType(dataHolder.getContentType());
         this.setOriginalPath(dataHolder.getOriginalPath());
+        this.setFocalX(dataHolder.getFocalX());
+        this.setFocalY(dataHolder.getFocalY());
     }
 
     /**
@@ -236,6 +256,33 @@ public class MediaFileBean {
      */
     public void setContentType(String contentType) {
         this.contentType = contentType;
+    }
+
+    /**
+     * True when the crop UI can be offered: the server-side re-encode path
+     * only exists for the format families the rendition ladder covers
+     * (JPEG and PNG), so anything else (gif, bmp, ...) gets no crop section.
+     */
+    public boolean isCroppable() {
+        return isImage && RenditionSupport.isLadderEligible(contentType);
+    }
+
+    /** Horizontal focal-point coordinate, 0..1 fraction of the width; null means unset. */
+    public Double getFocalX() {
+        return focalX;
+    }
+
+    public void setFocalX(Double focalX) {
+        this.focalX = focalX;
+    }
+
+    /** Vertical focal-point coordinate, 0..1 fraction of the height; null means unset. */
+    public Double getFocalY() {
+        return focalY;
+    }
+
+    public void setFocalY(Double focalY) {
+        this.focalY = focalY;
     }
 
     /**

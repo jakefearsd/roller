@@ -144,6 +144,58 @@ public class MediaFileEditController extends MediaFileBase {
         return ".MediaFileEdit";
     }
 
+    /**
+     * Destructively crops the image to the given rectangle (measured on the
+     * displayed, orientation-corrected image) and regenerates everything
+     * derived from its pixels. The confirmation happens client-side; by the
+     * time this action runs the decision has been made.
+     */
+    @PostMapping("/mediaFileEdit!crop.rol")
+    public String crop(HttpServletRequest request, Model model,
+                       @ModelAttribute("bean") MediaFileBean bean,
+                       @RequestParam("mediaFileId") String mediaFileId,
+                       @RequestParam("cropX") int cropX,
+                       @RequestParam("cropY") int cropY,
+                       @RequestParam("cropWidth") int cropWidth,
+                       @RequestParam("cropHeight") int cropHeight) {
+        populateCommonModel(request, model);
+        model.addAttribute("allDirectories", refreshAllDirectories(request));
+        model.addAttribute("mediaFileId", mediaFileId);
+
+        MediaFileManager manager = weblogger.getMediaFileManager();
+        try {
+            MediaFile mediaFile = manager.getMediaFile(mediaFileId);
+            // Ownership check BEFORE anything else: getMediaFile is a global
+            // by-id lookup, and a foreign id must not even leak the file's
+            // metadata into this weblog's edit form, let alone reach the
+            // manager. (The manager enforces the same boundary again.)
+            if (mediaFile == null || mediaFile.getDirectory() == null
+                    || !getActionWeblog(request).getId()
+                            .equals(mediaFile.getDirectory().getWeblog().getId())) {
+                log.warn("Refusing to crop media file " + mediaFileId
+                        + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                addError(model, "mediaFileEdit.crop.error", request);
+                return ".MediaFileEdit";
+            }
+            // populate the bean up front so the re-rendered form is complete
+            // even when the crop itself fails
+            bean.copyFrom(mediaFile);
+
+            manager.cropMediaFile(getActionWeblog(request), mediaFile,
+                    cropX, cropY, cropWidth, cropHeight);
+            weblogger.flush();
+
+            // re-read so the page shows the new dimensions and size
+            bean.copyFrom(mediaFile);
+            addMessage(model, "mediaFileEdit.crop.success", request);
+        } catch (Exception e) {
+            log.error("Error cropping media file " + mediaFileId, e);
+            addError(model, "mediaFileEdit.crop.error", request);
+        }
+
+        return ".MediaFileEdit";
+    }
+
     @ModelAttribute("bean")
     public MediaFileBean getBean() {
         return new MediaFileBean();
