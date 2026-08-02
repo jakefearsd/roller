@@ -173,6 +173,14 @@ class GalleryIT extends RollerIT {
         // definitely landed before the entry references the directory
         $("#mediafile_edit_lightbox").should(disappear);
         BrowserHealth.current().settle();
+
+        // ...and then prove the save actually landed. Waiting on the modal
+        // alone only proves the browser navigated: the re-submitted view form
+        // can still be in flight, and on a slow runner the entry below then
+        // renders a gallery whose tile has no caption yet, failing far away
+        // from the cause. The renamed tile appearing in the re-rendered view
+        // is the first observable evidence the write committed.
+        $("img[alt='" + name + "']").should(exist);
     }
 
     private File testImage() {
