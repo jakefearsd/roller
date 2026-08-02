@@ -58,12 +58,6 @@ p.pagetip {
     margin-bottom: 1em;
 }
 
-/* bootstrap tweaks */
-
-.controls>input[type=checkbox] {
-    margin-bottom: 0.5em;
-}
-
 /* main menu */
 
 .mm_subtable_label {
@@ -205,13 +199,6 @@ body {
     padding: 15px;
     margin: 0 auto;
 }
-.form-signin .form-signin-heading,
-.form-signin .checkbox {
-    margin-bottom: 10px;
-}
-.form-signin .checkbox {
-    font-weight: normal;
-}
 .form-signin .form-control {
     position: relative;
     height: auto;
@@ -223,11 +210,6 @@ body {
 }
 .form-signin .form-control:focus {
     z-index: 2;
-}
-.form-signin input[type="email"] {
-    margin-bottom: -1px;
-    border-bottom-right-radius: 0;
-    border-bottom-left-radius: 0;
 }
 .form-signin input[type="password"] {
     margin-bottom: 10px;

@@ -355,6 +355,41 @@ front-page theme respects this setting.
 as a p__odcast__ in your weblog’s RSS feed, then enter the URL of that
 file here.
 
+==== Weblog editor SEO and social sharing settings
+
+If you expand the _SEO & Social Sharing_ control, you’ll find optional
+settings that control how your entry appears in search engine results
+and in the preview cards that social media sites build when somebody
+shares a link to it. Roller emits sensible search and social metadata
+for every published entry automatically, so you only need these fields
+when you want to override the defaults. As you type a meta title or
+description, the _Search preview_ box shows roughly how the entry will
+look in a search result.
+
+* *Meta title* – an alternative title used for the entry page’s HTML
+title, search results and social share cards. Leave it blank to use the
+entry title. Use it when your entry title is clever but you want the
+search result to be descriptive.
+* *Meta description* – a short (one or two sentence) summary shown below
+the title in search results and share cards. If you leave it blank, no
+description tag is emitted for the entry.
+* *Featured image* – pick one of your uploaded images to represent the
+entry. Themes that support it will display the featured image with the
+entry (the bundled themes show it as a banner image on the entry’s
+permalink page and as a thumbnail in entry lists), and it is also used
+as the share-card image if you don’t pick a dedicated one.
+* *Social share image* – pick an image to be used _only_ for the social
+share card, if you want a different one than the featured
+image.
+* *Canonical URL* – if this entry’s definitive home is some other URL
+(for example, you cross-posted an article that originally appeared
+elsewhere), enter that URL here and search engines will credit the
+original. Leave it blank to use the entry’s own permalink, which is the
+right choice for almost every entry.
+* *Hide from search engines (noindex)* – check this to ask search
+engines not to index this entry. The entry is still publicly visible to
+anyone with the link; this only keeps it out of search results.
+
 === Finding and editing weblog entries
 
 All of your weblog entries are saved in a database. Once your entries
@@ -424,6 +459,21 @@ You can also decide whether or not you want your images to be included
 in the Gallery, which means that they will be made available in the
 Media File Feed for your blog.
 
+When you upload an image, Roller automatically prepares a set of
+smaller resized versions of it (plus WebP versions, when the server
+supports them). Pages built with the image shortcode or the bundled
+themes use these so that readers download an appropriately sized image
+rather than the full-resolution original. Roller also reads the photo’s
+EXIF metadata (camera, lens, exposure and so on) for themes that want
+to display it. By default, any GPS location coordinates found in the
+photo’s metadata are _not_ stored – so you can’t accidentally publish
+the location of your home along with a photo. A Global Administrator
+can change this default on the configuration page. Note that the
+original uploaded file itself is never modified: the resized versions
+Roller serves to browsers carry no metadata at all, but a reader who
+downloads the full-size original gets the file exactly as you uploaded
+it, including whatever metadata your camera wrote into it.
+
 After your file upload completes, Roller will show you the *Upload
 Complete* page (below) with the files that you uploaded and will offer
 to include them in a new weblog post for you. You can choose any or all
@@ -479,6 +529,45 @@ above and to the right of the Content field. Roller will insert the
 media file at the cursor location in the content field. If there’s a
 problem with the insertion location, hit Ctrl-Z to undo the action and
 try again.
+
+When the file you pick is an image, Roller inserts an _image shortcode_
+such as `[image id="…"]` rather than raw HTML. When the entry is
+displayed, the shortcode is replaced by a responsive image: browsers
+automatically receive an appropriately sized version of the image for
+their screen (and a smaller WebP version where supported), instead of
+always downloading the full-resolution original. Existing entries that
+contain plain `<img>` HTML keep working exactly as before.
+
+==== How to use the image shortcode
+
+You can also type an image shortcode by hand anywhere in your entry
+content or summary. The full form is:
+
+----
+[image id="the-media-file-id" alt="Text for screen readers" caption="A caption under the image"]
+----
+
+* *id* (required) – the id of an uploaded media file in this weblog.
+The easiest way to get it right is to insert the image via the "Add
+Media File" link and then edit the result.
+* *alt* (optional) – alternative text for the image. If you leave it
+out, the media file’s name is used.
+* *caption* (optional) – displayed as a caption below the image. If
+you’d like a caption containing HTML (for example a link), use the body
+form instead: `[image id="…"]Photo by <a href="…">someone</a>[/image]`.
+
+A few useful details:
+
+* An image shortcode naming an id that doesn’t exist (or a media file
+that isn’t an image) is left exactly as you typed it, so mistakes are
+visible rather than silently swallowed.
+* To write the literal text `[image …]` in an entry without it being
+replaced – say, to blog about this very feature – double the opening
+bracket: `[[image id="…"]]` renders as the literal text `[image
+id="…"]`, and `[[/image]]` renders as the literal closing tag
+`[/image]`.
+* Bracketed text that is not a recognized shortcode (for example
+`[sic]` or `[citation needed]`) is never touched.
 
 ==== How to post a podcast to your weblog
 
@@ -913,6 +1002,24 @@ may configure a blog server-level default tracking key that will hold
 for all blogs or alternatively just for blogs which haven’t overwritten
 this default key.
 
+=== Weblog maintenance operations
+
+The *Preferences -> Maintenance* page collects one-click maintenance
+operations for your weblog. You’ll rarely need them, but they are handy
+after upgrades or when something looks stale:
+
+* *Flush Cache* – clears your weblog’s page cache so that your next
+page view is rendered fresh.
+* *Rebuild Search Index* – schedules a rebuild of the search index for
+your weblog’s entries.
+* *Reset Hit Count* – resets your weblog’s hit counter to zero.
+* *Regenerate Image Renditions* – regenerates the resized responsive
+versions (and WebP versions, if the server supports them) of every
+image uploaded to your weblog. Use this once after upgrading to a
+Roller version with the responsive image pipeline, so that images
+uploaded before the upgrade get resized versions too; new uploads get
+them automatically.
+
 === Weblog members: managing a group blog
 
 To create a group blog, create a new weblog or log into an existing
@@ -1121,6 +1228,14 @@ users are NOT allowed to upload.
 * *Max File Size (MB)*: Maximum size of file that users are allowed to
 upload.
 * *Max Directory Size (MB)*: Total upload directory size per user.
+(The resized versions Roller generates for responsive image serving do
+not count against this quota – only the files users actually upload.)
+* *Strip GPS location data from uploaded photos?*: On by default. When
+on, GPS coordinates found in an uploaded photo’s EXIF metadata are not
+stored, so bloggers can’t accidentally reveal where a photo was taken.
+Turn it off only if your bloggers deliberately want to publish photo
+locations (for example, for travel blogging). Either way the original
+uploaded file is preserved unmodified.
 
 The We Analytics section allows you to provide a JavaScript snippet if
 you wish to activate Google Analytics or other tracking services. The

@@ -173,6 +173,30 @@ IndexManager getIndexManager()
 - **Template Types**: Main templates (`.vm`), stylesheets, and resources
 - **Hot Reload**: Theme changes reload automatically in development mode
 
+### Media Pipeline (Stage 2 Wave 1)
+- Uploads get a rendition ladder (480/960/1600/2400px, JPEG/PNG only, never
+  upscaled) via `RenditionSupport`, plus WebP siblings when `cwebp` is present
+  (feature-detected `CwebpEncoder`; the prod Docker image installs it, dev
+  works without). Served by `MediaResourceServlet` via `?w=<width>` +
+  `Accept: image/webp` negotiation; renditions are excluded from upload quotas.
+- Upload also extracts EXIF (`ExifSupport`) and a BlurHash placeholder onto
+  `MediaFile`; `uploads.exif.stripGps` (default on) nulls GPS coordinates
+  before persist — the original file on disk is never modified.
+- Backfill for pre-pipeline uploads: Maintenance page →
+  `MediaFileManager.regenerateRenditions(weblog)`.
+
+### SEO (Stage 2 Wave 1)
+- Per-entry SEO fields on `WeblogEntry` (metaTitle, searchDescription,
+  canonicalUrl, noindex, featuredImageId, ogImageId), edited in the entry
+  editor's "SEO & Social Sharing" card with featured/social image pickers.
+- `#showSeoHead` (in `WEB-INF/velocity/weblog.vm`, called from all six bundled
+  theme heads) emits meta description, canonical, robots noindex, Open Graph /
+  Twitter card, and JSON-LD; `#showResponsiveImage` is the theme-side
+  `<picture>`/srcset emitter.
+- `SeoController` serves `/robots.txt`, `/sitemap.xml` (index), and
+  `/sitemap-<handle>.xml` (mapped via `*.xml`; a middle-wildcard servlet
+  pattern is illegal).
+
 ### Database Schema
 Key domain entities:
 - `Weblog` - Blog instances with settings and metadata
@@ -237,3 +261,14 @@ Roller supports plugins for:
 - **UI Plugins**: Editor components and custom functionality
 
 Plugins implement specific interfaces and are configured through the plugin manager system.
+
+## Shortcodes
+`org.apache.roller.weblogger.business.shortcodes` — `ShortcodeExpander`
+expands `[name attr="v"]body[/name]` syntax **unconditionally** (independent of
+entry plugins) at both render seams (`WeblogEntry.render()` and
+`PluginManagerImpl.applyWeblogEntryPlugins`), immediately before
+sanitization. Built-in: `[image id=".." caption=".." alt=".."]` emits a
+responsive `<figure><picture>` (the Summernote media insert pastes it).
+`[[name ...]]` / `[[/name]]` escape a registered shortcode to literal text;
+unknown names and malformed input pass through byte-for-byte. New handlers
+implement `ShortcodeHandler` and register in `defaultExpander()`.
