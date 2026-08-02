@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.business;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -144,5 +145,25 @@ class WeblogEntryMarkdownRenderingTest {
         assertTrue(entry.getTransformedSummary().contains("<strong>bold</strong>"),
                 "getTransformedSummary must honour the flag too: "
                         + entry.getTransformedSummary());
+    }
+
+    @Test
+    void theFormatSurvivesASaveAndReload() throws Exception {
+        // The flag is worthless if it does not persist: the editor sets it,
+        // the entry is saved, and the next page load must still know the entry
+        // is markdown.
+        WeblogEntry entry = TestUtils.setupWeblogEntry(
+                "md-persist-" + Long.toString(System.nanoTime(), 36), weblog, user);
+        String id = entry.getId();
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntry managed = mgr.getWeblogEntry(id);
+        managed.setContentType("text/markdown");
+        mgr.saveWeblogEntry(managed);
+        TestUtils.endSession(true);
+
+        assertEquals("text/markdown",
+                WebloggerFactory.getWeblogger().getWeblogEntryManager()
+                        .getWeblogEntry(id).getContentType(),
+                "content_type must round-trip through the database");
     }
 }

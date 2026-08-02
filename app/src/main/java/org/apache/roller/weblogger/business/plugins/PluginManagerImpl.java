@@ -32,6 +32,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.plugins.comment.WeblogEntryCommentPlugin;
+import org.apache.roller.weblogger.business.MarkdownRenderer;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
@@ -110,6 +111,14 @@ public class PluginManagerImpl implements PluginManager {
         // unconditionally in every render path, before sanitization
         // (see docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md).
         ret = ShortcodeExpander.defaultExpander().expand(entry, ret);
+
+        // ...and markdown converts after them, for entries that opted in, so
+        // this path matches WeblogEntry.render() exactly. Leaving one of the
+        // two render seams markdown-blind is precisely the drift the shared
+        // shortcode parsers exist to prevent.
+        if (MarkdownRenderer.isMarkdown(entry.getContentType())) {
+            ret = MarkdownRenderer.render(ret);
+        }
 
         return HTMLSanitizer.conditionallySanitize(ret);
     }
