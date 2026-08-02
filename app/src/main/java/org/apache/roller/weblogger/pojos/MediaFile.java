@@ -74,6 +74,10 @@ public class MediaFile implements Serializable {
     private Double gpsLatitude;
     private Double gpsLongitude;
 
+    private Integer sortOrder;
+    private Double focalX;
+    private Double focalY;
+
     private transient InputStream is;
 
     private transient MediaFileDirectory directory;
@@ -621,6 +625,45 @@ public class MediaFile implements Serializable {
 
     public void setGpsLongitude(Double gpsLongitude) {
         this.gpsLongitude = gpsLongitude;
+    }
+
+    /**
+     * Curated position of this file within its directory's gallery, lowest
+     * first. Null means "never ordered": galleries emit the curated block
+     * first (sort_order, then name as the tie-break), then unordered files
+     * by name. The directory's one-to-many itself stays name-ordered; this
+     * ordering is applied in code by the gallery emitter.
+     */
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
+
+    /**
+     * Horizontal focal-point coordinate as a 0..1 fraction of the image
+     * width, for object-position style cropping. Null means center.
+     */
+    public Double getFocalX() {
+        return focalX;
+    }
+
+    public void setFocalX(Double focalX) {
+        this.focalX = focalX;
+    }
+
+    /**
+     * Vertical focal-point coordinate as a 0..1 fraction of the image
+     * height, for object-position style cropping. Null means center.
+     */
+    public Double getFocalY() {
+        return focalY;
+    }
+
+    public void setFocalY(Double focalY) {
+        this.focalY = focalY;
     }
 
     // ------------------------------------------------------- Good citizenship

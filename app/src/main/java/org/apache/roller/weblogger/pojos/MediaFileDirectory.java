@@ -33,6 +33,8 @@ public class MediaFileDirectory {
     String name;
     String description;
     Weblog weblog;
+    String coverMediaFileId;
+    boolean isPrivate = false;
     Set<MediaFile> mediaFiles = new HashSet<>();
 
     public MediaFileDirectory() {
@@ -106,8 +108,35 @@ public class MediaFileDirectory {
     }
 
     /**
+     * Id of the media file used as this directory's gallery cover image, or
+     * null for no explicit cover. Deliberately not a JPA relationship: media
+     * files are deleted independently, and a dangling cover reference should
+     * degrade to "no cover" rather than block the delete.
+     */
+    public String getCoverMediaFileId() {
+        return coverMediaFileId;
+    }
+
+    public void setCoverMediaFileId(String coverMediaFileId) {
+        this.coverMediaFileId = coverMediaFileId;
+    }
+
+    /**
+     * True when this directory is only reachable through a share link or by
+     * the blog's own members, never listed publicly. Defaults to false, so
+     * existing directories are unaffected.
+     */
+    public boolean isPrivate() {
+        return isPrivate;
+    }
+
+    public void setPrivate(boolean isPrivate) {
+        this.isPrivate = isPrivate;
+    }
+
+    /**
      * The collection of files in this directory
-     * 
+     *
      */
     public Set<MediaFile> getMediaFiles() {
         return mediaFiles;

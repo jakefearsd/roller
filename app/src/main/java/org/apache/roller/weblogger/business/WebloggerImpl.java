@@ -44,6 +44,7 @@ public abstract class WebloggerImpl implements Weblogger {
     private final IndexManager         indexManager;
     private final MediaFileManager     mediaFileManager;
     private final FileContentManager   fileContentManager;
+    private final ShareLinkManager     shareLinkManager;
     private final PluginManager        pluginManager;
     private final PropertiesManager    propertiesManager;
     private final ThemeManager         themeManager;
@@ -66,6 +67,7 @@ public abstract class WebloggerImpl implements Weblogger {
         IndexManager         indexManager,
         MediaFileManager     mediaFileManager,
         FileContentManager   fileContentManager,
+        ShareLinkManager     shareLinkManager,
         PluginManager        pluginManager,
         PropertiesManager    propertiesManager,
         ThemeManager         themeManager,
@@ -78,6 +80,7 @@ public abstract class WebloggerImpl implements Weblogger {
         this.indexManager        = indexManager;
         this.mediaFileManager    = mediaFileManager;
         this.fileContentManager  = fileContentManager;
+        this.shareLinkManager    = shareLinkManager;
         this.pluginManager       = pluginManager;
         this.propertiesManager   = propertiesManager;
         this.themeManager        = themeManager;
@@ -156,13 +159,24 @@ public abstract class WebloggerImpl implements Weblogger {
     }
     
     /**
-     * 
-     * 
+     *
+     *
      * @see org.apache.roller.weblogger.business.Weblogger#getFileContentManager()
      */
     @Override
     public FileContentManager getFileContentManager() {
         return fileContentManager;
+    }
+
+
+    /**
+     *
+     *
+     * @see org.apache.roller.weblogger.business.Weblogger#getShareLinkManager()
+     */
+    @Override
+    public ShareLinkManager getShareLinkManager() {
+        return shareLinkManager;
     }
     
     
@@ -226,6 +240,7 @@ public abstract class WebloggerImpl implements Weblogger {
         try {
             mediaFileManager.release();
             fileContentManager.release();
+            shareLinkManager.release();
             pluginManager.release();
             threadManager.release();
             userManager.release();

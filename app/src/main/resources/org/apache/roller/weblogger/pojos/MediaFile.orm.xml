@@ -79,6 +79,15 @@
             <basic name="gpsLongitude">
                 <column name="gps_longitude" insertable="true" updatable="true" unique="false" nullable="true"/>
             </basic>
+            <basic name="sortOrder">
+                <column name="sort_order" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="focalX">
+                <column name="focal_x" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="focalY">
+                <column name="focal_y" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
             <many-to-one name="directory" target-entity="org.apache.roller.weblogger.pojos.MediaFileDirectory">
                 <join-column name="directoryid" insertable="true" updatable="true" nullable="false"/>
             </many-to-one>

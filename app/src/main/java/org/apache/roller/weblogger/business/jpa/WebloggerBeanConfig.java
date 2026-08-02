@@ -24,6 +24,7 @@ import org.apache.roller.weblogger.business.FileContentManagerImpl;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.MultiWeblogURLStrategy;
 import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.business.ShareLinkManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -117,6 +118,11 @@ public class WebloggerBeanConfig {
     }
 
     @Bean
+    public ShareLinkManager shareLinkManager(JPAPersistenceStrategy strategy) {
+        return new JPAShareLinkManagerImpl(strategy);
+    }
+
+    @Bean
     public IndexManager indexManager(@Lazy Weblogger weblogger) {
         return new LuceneIndexManager(weblogger);
     }
@@ -142,6 +148,7 @@ public class WebloggerBeanConfig {
             IndexManager indexManager,
             MediaFileManager mediaFileManager,
             FileContentManager fileContentManager,
+            ShareLinkManager shareLinkManager,
             PluginManager pluginManager,
             PropertiesManager propertiesManager,
             ThemeManager themeManager,
@@ -155,6 +162,7 @@ public class WebloggerBeanConfig {
                 indexManager,
                 mediaFileManager,
                 fileContentManager,
+                shareLinkManager,
                 pluginManager,
                 propertiesManager,
                 themeManager,

@@ -210,7 +210,16 @@ class EqualsContractTest {
                 new Specimen("WeblogPermission (keyed on user + weblog + actions)",
                         weblogPermission("alice", "blog-a", "post"),
                         weblogPermission("alice", "blog-a", "post"),
-                        weblogPermission("alice", "blog-a", "admin")));
+                        weblogPermission("alice", "blog-a", "admin")),
+
+                new Specimen("ShareLink (keyed on token)",
+                        shareLink("token-a"), shareLink("token-a"), shareLink("token-b")));
+    }
+
+    private static ShareLink shareLink(String token) {
+        ShareLink link = new ShareLink();
+        link.setToken(token);
+        return link;
     }
 
     private static WeblogEntryComment comment(String name, Timestamp postTime, WeblogEntry entry) {

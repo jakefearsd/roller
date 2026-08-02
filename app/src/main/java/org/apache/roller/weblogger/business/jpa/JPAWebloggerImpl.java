@@ -21,6 +21,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.business.ShareLinkManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -49,6 +50,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
         IndexManager         indexManager,
         MediaFileManager     mediaFileManager,
         FileContentManager   fileContentManager,
+        ShareLinkManager     shareLinkManager,
         PluginManager        pluginManager,
         PropertiesManager    propertiesManager,
         ThemeManager         themeManager,
@@ -62,6 +64,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
             indexManager,
             mediaFileManager,
             fileContentManager,
+            shareLinkManager,
             pluginManager,
             propertiesManager,
             themeManager,

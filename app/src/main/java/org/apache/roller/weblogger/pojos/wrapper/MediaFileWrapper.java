@@ -240,6 +240,33 @@ public final class MediaFileWrapper {
         return this.pojo.getGpsLongitude();
     }
 
+    // ------------------------------------------------------- Gallery display
+
+    /**
+     * Curated position within the directory's gallery, lowest first; null
+     * for files that were never explicitly ordered (they sort after the
+     * curated block, by name).
+     */
+    public Integer getSortOrder() {
+        return this.pojo.getSortOrder();
+    }
+
+    /**
+     * Horizontal focal-point coordinate, a 0..1 fraction of the image width
+     * for {@code object-position} style cropping. Null means center.
+     */
+    public Double getFocalX() {
+        return this.pojo.getFocalX();
+    }
+
+    /**
+     * Vertical focal-point coordinate, a 0..1 fraction of the image height
+     * for {@code object-position} style cropping. Null means center.
+     */
+    public Double getFocalY() {
+        return this.pojo.getFocalY();
+    }
+
     /**
      * This is a special method to access the original pojo. We don't really
      * want to do this, but it's necessary because some parts of the

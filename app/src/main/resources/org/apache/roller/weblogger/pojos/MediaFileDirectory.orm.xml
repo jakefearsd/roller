@@ -22,6 +22,12 @@
             <basic name="description">
                 <column name="description" insertable="true" updatable="true" unique="false" nullable="true"/>
             </basic>
+            <basic name="coverMediaFileId">
+                <column name="cover_mediafile_id" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="private">
+                <column name="is_private" insertable="true" updatable="true" unique="false" nullable="false"/>
+            </basic>
             <many-to-one name="weblog" target-entity="org.apache.roller.weblogger.pojos.Weblog">
                 <join-column name="websiteid" insertable="true" updatable="true" nullable="false"/>
             </many-to-one>

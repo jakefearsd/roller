@@ -58,7 +58,8 @@ public class SchemaMigrationTest {
             "custom_template_rendition", "entryattribute", "newsfeed",
             "roller_audit_log", "roller_comment", "roller_hitcounts",
             "roller_mediafile", "roller_mediafiledir", "roller_mediafiletag",
-            "roller_permission", "roller_properties", "roller_tasklock",
+            "roller_permission", "roller_properties", "roller_share_link",
+            "roller_tasklock",
             "roller_user", "roller_weblogentrytag", "roller_weblogentrytagagg",
             "userrole", "weblog", "weblog_custom_template", "weblogcategory",
             "weblogentry");

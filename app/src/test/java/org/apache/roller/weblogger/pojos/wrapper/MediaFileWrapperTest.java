@@ -75,6 +75,9 @@ class MediaFileWrapperTest {
         pojo.setExifTaken(Timestamp.valueOf("2024-06-15 10:30:00"));
         pojo.setGpsLatitude(37.8199);
         pojo.setGpsLongitude(-122.4783);
+        pojo.setSortOrder(7);
+        pojo.setFocalX(0.31);
+        pojo.setFocalY(0.62);
 
         urls = mock(URLStrategy.class);
         wrapper = MediaFileWrapper.wrap(pojo, urls);
@@ -119,6 +122,24 @@ class MediaFileWrapperTest {
 
         assertNull(wrapper.getGpsLatitude());
         assertNull(wrapper.getGpsLongitude());
+    }
+
+    @Test
+    void galleryAccessorsReportTheWrappedPojosOwnValues() {
+        assertEquals(Integer.valueOf(7), wrapper.getSortOrder());
+        assertEquals(0.31, wrapper.getFocalX(), 0.0001);
+        assertEquals(0.62, wrapper.getFocalY(), 0.0001);
+    }
+
+    @Test
+    void galleryAccessorsAreNullWhenTheUnderlyingFieldsAreNull() {
+        pojo.setSortOrder(null);
+        pojo.setFocalX(null);
+        pojo.setFocalY(null);
+
+        assertNull(wrapper.getSortOrder(), "Uncurated files carry no sort order");
+        assertNull(wrapper.getFocalX(), "Null focal point means center");
+        assertNull(wrapper.getFocalY(), "Null focal point means center");
     }
 
     @Test

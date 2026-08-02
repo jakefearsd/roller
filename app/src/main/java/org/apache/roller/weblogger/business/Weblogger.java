@@ -92,6 +92,11 @@ public interface Weblogger {
     FileContentManager getFileContentManager();
 
     /**
+     * Get ShareLinkManager associated with this Weblogger instance.
+     */
+    ShareLinkManager getShareLinkManager();
+
+    /**
      * Get the URLStrategy used to build all urls in the system.
      */
     URLStrategy getUrlStrategy();
