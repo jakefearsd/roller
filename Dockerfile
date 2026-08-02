@@ -59,7 +59,13 @@ FROM eclipse-temurin:25-jre@sha256:681c543d6f36c50f45e9b5226930a46203dcfa351d367
 # curl is not in the base JRE image; installed for container healthchecks
 # against the management port (docker exec ... curl 8090/actuator/health --
 # used here and by docker-compose.prod.yml's app healthcheck in Task 2).
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+#
+# webp (Debian/Ubuntu's name for libwebp-tools) provides the cwebp binary
+# that CwebpEncoder shells out to for WebP renditions of uploaded images.
+# Roller feature-detects it at first use and falls back to a JPEG/PNG-only
+# rendition ladder when absent, so this is an enhancement, not a hard
+# dependency -- but production should always have it.
+RUN apt-get update && apt-get install -y --no-install-recommends curl webp \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system roller && useradd --system --gid roller --home-dir /app --shell /usr/sbin/nologin roller

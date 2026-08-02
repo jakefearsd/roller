@@ -22,6 +22,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.roller.weblogger.business.BlurHash;
 import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -115,6 +116,47 @@ public final class MediaFileWrapper {
      */
     public String getBlurhash() {
         return this.pojo.getBlurhash();
+    }
+
+    /**
+     * The BlurHash's average color as a CSS hex value ({@code #8ca3b7}),
+     * for a JavaScript-free {@code background-color} placeholder behind the
+     * loading image. Null whenever {@link #getBlurhash()} is null or corrupt.
+     */
+    public String getAverageColor() {
+        return BlurHash.averageColor(this.pojo.getBlurhash());
+    }
+
+    /**
+     * The ready-to-emit {@code srcset} attribute value for this image:
+     * every {@link RenditionSupport#LADDER_WIDTHS ladder} rung narrower than
+     * the original, then the original itself as the largest candidate --
+     * e.g. {@code ...?w=480 480w, ...?w=960 960w, ... 1200w}.
+     *
+     * <p>Null -- emit a plain {@code <img>} instead -- when the format is
+     * not {@linkplain #isRenditionEligible() rendition-eligible} (for
+     * gif/bmp every {@code ?w=} URL silently serves the full-size original,
+     * so offering a srcset or a webp {@code <source>} would lie to the
+     * browser) or when the stored width is unknown (pre-ladder uploads:
+     * we cannot know which rungs exist, and an honest src always renders).
+     * The single source of truth for this markup: the {@code [image]}
+     * shortcode and the {@code #showResponsiveImage} theme macro both emit
+     * exactly this value.
+     */
+    public String getSrcset() {
+        int originalWidth = getWidth();
+        if (originalWidth <= 0 || !isRenditionEligible()) {
+            return null;
+        }
+        StringBuilder srcset = new StringBuilder();
+        for (int width : RenditionSupport.LADDER_WIDTHS) {
+            if (width >= originalWidth) {
+                break;
+            }
+            srcset.append(url(width)).append(' ').append(width).append("w, ");
+        }
+        srcset.append(getPermalink()).append(' ').append(originalWidth).append('w');
+        return srcset.toString();
     }
 
     /**

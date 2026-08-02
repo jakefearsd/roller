@@ -263,3 +263,18 @@ div.dayTitle {
     width: 20%;
     float: right;
 }
+
+/* featured images (responsive rendition ladder) -------- */
+
+img.entry-hero {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0.5em 0;
+}
+img.entry-thumb {
+    display: block;
+    max-width: 240px;
+    height: auto;
+    margin: 0.5em 0;
+}

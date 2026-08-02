@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -81,6 +82,28 @@ class BlurHashTest {
         assertNotNull(red);
         assertNotNull(blue);
         assertTrue(!red.equals(blue));
+    }
+
+    // ------------------------------------------------------- averageColor
+
+    @Test
+    void averageColorRoundTripsThroughASolidColorEncode() {
+        // The DC component of a solid-color image is that color exactly, so
+        // decoding it back must reproduce the input (sRGB->linear->sRGB is
+        // lossless for a uniform image).
+        String hash = BlurHash.encode(solidColor(16, 16, 128, 64, 200));
+
+        assertEquals("#8040c8", BlurHash.averageColor(hash));
+    }
+
+    @Test
+    void averageColorIsNullSafeForMissingOrCorruptHashes() {
+        assertNull(BlurHash.averageColor(null),
+                "pre-pipeline uploads have no blurhash at all");
+        assertNull(BlurHash.averageColor("L7E"),
+                "too short to contain a DC component");
+        assertNull(BlurHash.averageColor("L7\"w7V$pfQ$p$;jvfQjvfQfQfQfQ"),
+                "a character outside the base83 alphabet must not throw");
     }
 
     private static BufferedImage solidColor(int width, int height, int r, int g, int b) {

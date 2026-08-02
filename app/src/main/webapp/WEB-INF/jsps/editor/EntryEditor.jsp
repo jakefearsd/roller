@@ -157,7 +157,17 @@
             return;
         }
         if (isImage === "true") {
-            insertMediaFile('<a href="' + url + '"><img src="' + url + '?t=true" alt="' + name + '" /></a>');
+            if (id) {
+                <%-- The [image] shortcode expands at render time into a
+                     responsive <figure><picture> with the full srcset ladder,
+                     so authors get the rendition pipeline automatically.
+                     Existing entries with the old raw <img> markup are left
+                     exactly as they are. --%>
+                insertMediaFile('[image id="' + id + '"]');
+            } else {
+                <%-- Historic fallback for callers that never pass the id. --%>
+                insertMediaFile('<a href="' + url + '"><img src="' + url + '?t=true" alt="' + name + '" /></a>');
+            }
         } else {
             insertMediaFile('<a href="' + url + '">' + name + '</a>');
         }

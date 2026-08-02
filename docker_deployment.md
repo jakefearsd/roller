@@ -42,7 +42,12 @@ public IP.
   those two features just won't send anything.
 - Nothing needs to be pre-installed on the host besides Docker: the app image
   bakes in its own JRE, themes, and migration SQL (see `Dockerfile`); Caddy
-  and Postgres run from their own images.
+  and Postgres run from their own images. The app image also bakes in
+  `cwebp` (the `webp` package, Debian's name for libwebp-tools), so WebP
+  renditions of uploaded images are generated in production automatically.
+  If you ever run the WAR outside this image, install libwebp-tools/webp
+  yourself — Roller feature-detects the binary at startup and quietly falls
+  back to a JPEG/PNG-only rendition ladder when it is missing.
 
 ## Get the code onto the host
 

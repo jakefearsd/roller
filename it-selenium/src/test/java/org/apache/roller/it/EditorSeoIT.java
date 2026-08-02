@@ -32,6 +32,7 @@ import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static com.codeborne.selenide.Selenide.switchTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -129,6 +130,55 @@ class EditorSeoIT extends RollerIT {
         // served from the weblog's media-resource URL space.
         assertHeadContains(page, permalink, "property=\"og:image\"");
         assertHeadContains(page, permalink, "/mediaresource/");
+    }
+
+    /**
+     * The other authoring image path: inserting an image into the entry BODY
+     * through the media chooser. The insert snippet no longer pastes a raw
+     * {@code <img ?t=true>} but the {@code [image id=..]} shortcode, and the
+     * published page must expand it into a responsive {@code <picture>} with
+     * the full srcset ladder -- authors get the rendition pipeline without
+     * knowing it exists.
+     */
+    @Test
+    void anImageInsertedThroughTheChooserPublishesAsAResponsivePicture() {
+        String suffix = Long.toString(System.nanoTime(), 36);
+        String title = "IT Responsive " + suffix;
+
+        enableUploads();
+        uploadImage();
+
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("input[name='bean.title']").setValue(title);
+        $(EDITOR_BODY).should(visible);
+
+        // insert via the chooser link above the editor, as an author would
+        $("a[onclick^='onClickMediaFileInsert']").click();
+        $("#mediafile_edit_lightbox").shouldBe(visible);
+        switchTo().frame("mediaFileEditor");
+        $(".mediaObject").should(exist).click();
+        switchTo().defaultContent();
+
+        // the editor now holds the shortcode, not raw img markup
+        $(EDITOR_BODY).shouldHave(Condition.text("[image id="));
+
+        $("button[formaction$='entryAdd!publish.rol']").click();
+        $(PERMALINK).should(exist);
+        String permalink = $(PERMALINK).getAttribute("href");
+        assertNotNull(permalink);
+
+        String page = getAnonymously(permalink);
+        assertTrue(page.contains("<picture>"),
+                "the published body must carry the expanded responsive picture. Page:\n" + page);
+        assertTrue(page.contains("<source type=\"image/webp\" srcset=\""),
+                "webp-capable browsers must get a source element. Page:\n" + page);
+        // hawk.jpg is 500px wide, so the 480 rung of the ladder must be offered
+        assertTrue(page.contains("?w=480 480w"),
+                "the srcset must climb the rendition ladder. Page:\n" + page);
+        assertTrue(page.contains("loading=\"lazy\""), page);
+        assertFalse(page.contains("[image id="),
+                "the shortcode text itself must never reach readers. Page:\n" + page);
     }
 
     /**

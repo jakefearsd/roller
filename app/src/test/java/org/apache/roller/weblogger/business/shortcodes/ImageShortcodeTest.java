@@ -128,6 +128,23 @@ class ImageShortcodeTest {
     }
 
     @Test
+    void aFormatOutsideTheLadderGetsAPlainImg() {
+        // The ladder only covers jpeg/png. For a gif every ?w= URL silently
+        // serves the full-size original, so a srcset -- and especially a
+        // <source type="image/webp"> -- would lie to the browser about what
+        // those URLs return.
+        photo.setContentType("image/gif");
+
+        String html = render(Map.of("id", "mf-1"), null);
+
+        assertTrue(html.contains("<img src=\"" + URL + "\""), html);
+        assertFalse(html.contains("srcset"), html);
+        assertFalse(html.contains("image/webp"), html);
+        assertTrue(html.contains(" width=\"1200\" height=\"800\""),
+                "known dimensions still prevent layout shift:\n" + html);
+    }
+
+    @Test
     void aPreLadderUploadWithoutWidthMetadataGetsAPlainImg() {
         photo.setWidth(0);
         photo.setHeight(0);
@@ -181,6 +198,18 @@ class ImageShortcodeTest {
         photo.setBlurhash("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
         assertTrue(render(Map.of("id", "mf-1"), null)
                 .contains(" data-blurhash=\"LEHV6nWB2yk8pyo0adR*.7kCMdnj\""));
+    }
+
+    @Test
+    void theBlurhashAverageColorBecomesAJsFreeBackgroundPlaceholder() {
+        assertFalse(render(Map.of("id", "mf-1"), null).contains("background-color"),
+                "no blurhash, no placeholder color");
+
+        photo.setBlurhash("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
+        String html = render(Map.of("id", "mf-1"), null);
+        // DC chars "HV6n" of the fixture hash decode to this average color.
+        assertTrue(html.contains(" style=\"background-color:#979695\""),
+                "the average color must back the reserved image box while it loads:\n" + html);
     }
 
     // ------------------------------------------------------- refusal to render

@@ -1,4 +1,8 @@
 <div class="entry">
+    ## featured thumb, floated beside the card text when the entry has one
+    #if ($entry.featuredImage)
+        <a href="$utils.escapeHTML($entry.permalink)">#showResponsiveImage($entry.featuredImage $utils.removeHTML($entry.title) "160px" "entry-thumb")</a>
+    #end
     <a class="entryTitle" href="$utils.escapeHTML($entry.permalink)">
         $utils.truncateNicely($utils.removeHTML($entry.title), 50, 50, "...")
     </a><br /> 

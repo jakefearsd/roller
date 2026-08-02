@@ -82,6 +82,11 @@ mvn -DskipTests=true install
 
 Browse to http://localhost:8083/roller
 
+Optional: install `cwebp` (package `webp` on Debian/Ubuntu, `libwebp-tools`
+on Fedora, `brew install webp` on macOS) to get WebP renditions of uploaded
+images locally. It is feature-detected — without it Roller serves a
+JPEG/PNG-only rendition ladder and everything else works the same.
+
 ### Option 2: Run the packaged executable WAR directly
 
 ```bash

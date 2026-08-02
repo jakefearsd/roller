@@ -78,10 +78,12 @@ public class ImageShortcode implements ShortcodeHandler {
         }
 
         // srcset: every ladder rung narrower than the original, then the
-        // original itself as the largest candidate. Files that predate the
-        // width metadata (width <= 0) get a plain <img>: we cannot know which
-        // rungs exist, and an honest src always renders.
-        String srcset = buildSrcset(media);
+        // original itself as the largest candidate. Null -- a plain <img> --
+        // for pre-ladder uploads without width metadata AND for formats the
+        // ladder does not cover (gif/bmp), where every ?w= URL silently
+        // serves the full-size original. Shared with #showResponsiveImage
+        // via the wrapper so both emitters stay aligned.
+        String srcset = media.getSrcset();
 
         StringBuilder html = new StringBuilder(256);
         html.append("<figure class=\"shortcode-image\">\n<picture>\n");
@@ -106,6 +108,13 @@ public class ImageShortcode implements ShortcodeHandler {
         html.append(" loading=\"lazy\" decoding=\"async\"");
         if (StringUtils.isNotBlank(media.getBlurhash())) {
             html.append(" data-blurhash=\"").append(escape(media.getBlurhash())).append('"');
+            // JS-free blur-up: the BlurHash average color as an inline
+            // background shows through until the real pixels arrive (the
+            // width/height attributes above reserve the box).
+            String averageColor = media.getAverageColor();
+            if (averageColor != null) {
+                html.append(" style=\"background-color:").append(averageColor).append('"');
+            }
         }
         html.append(">\n</picture>\n");
 
@@ -118,22 +127,6 @@ public class ImageShortcode implements ShortcodeHandler {
 
         html.append("</figure>");
         return html.toString();
-    }
-
-    private static String buildSrcset(MediaFileWrapper media) {
-        int originalWidth = media.getWidth();
-        if (originalWidth <= 0) {
-            return null;
-        }
-        StringBuilder srcset = new StringBuilder();
-        for (int width : RenditionSupport.LADDER_WIDTHS) {
-            if (width >= originalWidth) {
-                break;
-            }
-            srcset.append(media.url(width)).append(' ').append(width).append("w, ");
-        }
-        srcset.append(media.getPermalink()).append(' ').append(originalWidth).append('w');
-        return srcset.toString();
     }
 
     private static String escape(String value) {

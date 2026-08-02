@@ -26,6 +26,7 @@ These are the documented macros in order defined in this file:
     #showEntryTitle($entry)
     #showMetaDescription()          (superseded by #showSeoHead)
     #showAnalyticsTrackingCode($weblog)
+    #showResponsiveImage($image $alt $sizes $imgClass)
 
     #showWeblogEntriesPager($pager)
     #showNextPrevEntriesControl($pager)
@@ -297,6 +298,41 @@ code if defined will be used.
         $config.defaultAnalyticsTrackingCode
     #end
 #end
+
+#**
+Renders an uploaded image (a MediaFileWrapper, e.g. $entry.featuredImage)
+as a responsive <picture> whose srcset climbs the rendition ladder -- the
+theme-side twin of the [image] entry shortcode, emitting the same markup.
+
+$image    a MediaFileWrapper; the macro emits nothing when it is false/null
+$alt      alt text, HTML-escaped on the way out
+$sizes    the sizes attribute value, e.g. "100vw" for a full-column hero
+          or "240px" for a fixed-width card thumb
+$imgClass CSS class for the <img> (pass "" for none)
+
+srcset (and the webp <source>, negotiated via the Accept header on the same
+URLs) is only offered when the wrapper reports a srcset at all: for formats
+outside the rendition ladder (gif/bmp) and for pre-ladder uploads without
+width metadata the image degrades to a plain, honest <img src>. When the
+file has a BlurHash, its average color is emitted as an inline background
+so the reserved box shows a plausible color while the pixels load --
+a dependency-free, JS-free blur-up.
+*#
+#macro(showResponsiveImage $image $alt $sizes $imgClass)
+#if ($image)
+#set($responsiveSrcset = false)
+#set($responsiveSrcset = $image.srcset)
+#set($responsiveAvgColor = false)
+#set($responsiveAvgColor = $image.averageColor)
+<picture>
+#if ($responsiveSrcset)
+<source type="image/webp" srcset="$responsiveSrcset" sizes="$sizes">
+#end
+<img src="$image.permalink"#if ($responsiveSrcset) srcset="$responsiveSrcset" sizes="$sizes"#end#if ($image.width > 0 && $image.height > 0) width="$image.width" height="$image.height"#end alt="$utils.escapeHTML($alt)" loading="lazy" decoding="async"#if ($imgClass && $imgClass != "") class="$imgClass"#end#if ($utils.isNotEmpty($image.blurhash)) data-blurhash="$utils.escapeHTML($image.blurhash)"#end#if ($responsiveAvgColor) style="background-color:$responsiveAvgColor"#end>
+</picture>
+#end
+#end
+
 
 #**
 Shows weblog entries pager via default day template

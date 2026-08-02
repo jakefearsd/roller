@@ -11,6 +11,15 @@
       <div class="entryBox">
         <a name="$utils.encode($entry.anchor)" id="$utils.encode($entry.anchor)"></a>
         <p class="entryTitle">$entry.title</p>
+        ## featured image: full-width hero on the permalink page, a linked
+        ## thumb on entry-list pages; entries without one render as before
+        #if ($entry.featuredImage)
+            #if ($model.permalink)
+                <div class="entryFeatured">#showResponsiveImage($entry.featuredImage $entry.title "100vw" "entry-hero")</div>
+            #else
+                <div class="entryFeatured"><a href="$url.entry($entry.anchor)">#showResponsiveImage($entry.featuredImage $entry.title "240px" "entry-thumb")</a></div>
+            #end
+        #end
         <p class="entryContent">
             #if($model.permalink)
                 $entry.displayContent

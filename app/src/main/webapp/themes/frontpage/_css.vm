@@ -156,6 +156,17 @@ div.entryBoxPinned {
     font-family: Arial, Helvetica, sans-serif;
     text-decoration: none;
 }
+/* featured thumb on an entry card (responsive rendition ladder) */
+div.entry img.entry-thumb {
+    float: right;
+    max-width: 160px;
+    height: auto;
+    margin: 0 0 5px 10px;
+}
+/* contain the floated thumb inside its card */
+div.entry {
+    overflow: hidden;
+}
 
 span.hotBlogs, a.hotBlogs, a:active.hotBlogs, a:visited.hotBlogs, ul.hotBlogs {
    font-size: small;

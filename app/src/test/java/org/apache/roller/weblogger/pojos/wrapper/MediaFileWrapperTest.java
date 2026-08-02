@@ -202,6 +202,48 @@ class MediaFileWrapperTest {
     }
 
     @Test
+    void srcsetClimbsTheLadderBelowTheOriginalAndEndsOnTheOriginal() {
+        withMockedPermalink(() -> {
+            // 1200w original: 480 and 960 rungs exist; 1600/2400 were never
+            // generated (renditions are never upscaled) so they must not be
+            // offered; the original itself is the largest candidate.
+            assertEquals(PERMALINK + "?w=480 480w, " + PERMALINK + "?w=960 960w, "
+                            + PERMALINK + " 1200w",
+                    wrapper.getSrcset());
+        });
+    }
+
+    @Test
+    void srcsetIsNullForFormatsOutsideTheLadder() {
+        pojo.setContentType("image/gif");
+        withMockedPermalink(() ->
+                assertNull(wrapper.getSrcset(),
+                        "for gif every ?w= URL silently serves the full-size original, "
+                                + "so offering a srcset (or a webp <source>) would lie to "
+                                + "the browser -- gif/bmp get a plain <img>"));
+    }
+
+    @Test
+    void srcsetIsNullWithoutWidthMetadata() {
+        pojo.setWidth(0);
+        withMockedPermalink(() ->
+                assertNull(wrapper.getSrcset(),
+                        "pre-ladder uploads have no width: we cannot know which rungs "
+                                + "exist, and an honest plain src always renders"));
+    }
+
+    @Test
+    void averageColorDecodesTheBlurhashDcComponent() {
+        // Fixture hash "LKO2?U%2Tw=w]~RBVZRi};RPxuwH": DC chars "O2?U"
+        // = ((24*83 + 2)*83 + 73)*83 + 30 = 13742755 = 0xd1b2a3.
+        assertEquals("#d1b2a3", wrapper.getAverageColor());
+
+        pojo.setBlurhash(null);
+        assertNull(wrapper.getAverageColor(),
+                "no blurhash (pre-pipeline upload) means no placeholder color");
+    }
+
+    @Test
     void thePojoEscapeHatchReturnsTheVeryObjectThatWasWrapped() {
         assertSame(pojo, wrapper.getPojo(),
                 "Rendering internals unwrap through getPojo(); handing back a copy would "

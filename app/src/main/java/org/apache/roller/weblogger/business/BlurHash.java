@@ -51,6 +51,31 @@ public final class BlurHash {
         return encode(image, COMPONENTS_X, COMPONENTS_Y);
     }
 
+    /**
+     * Decodes just the average color (the "DC" component -- characters 2-5 of
+     * any BlurHash, a base83-packed 24-bit sRGB value) as a CSS hex color
+     * like {@code #8ca3b7}. This is the one piece of a BlurHash that can be
+     * used without JavaScript: an inline {@code background-color} on the
+     * {@code <img>} gives a dependency-free blur-up placeholder while the
+     * real image loads. Returns null for null, too-short, or corrupt input
+     * (an unknown base83 digit) -- a bad stored hash must never break a
+     * page render.
+     */
+    public static String averageColor(String blurhash) {
+        if (blurhash == null || blurhash.length() < 6) {
+            return null;
+        }
+        int dc = 0;
+        for (int i = 2; i < 6; i++) {
+            int digit = DIGIT_CHARACTERS.indexOf(blurhash.charAt(i));
+            if (digit < 0) {
+                return null;
+            }
+            dc = dc * 83 + digit;
+        }
+        return String.format("#%06x", dc & 0xFFFFFF);
+    }
+
     /** Package-visible for testing against other component counts. */
     static String encode(BufferedImage image, int componentsX, int componentsY) {
         int width = image.getWidth();
