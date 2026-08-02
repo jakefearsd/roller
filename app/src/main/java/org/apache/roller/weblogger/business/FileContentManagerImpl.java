@@ -21,10 +21,14 @@ package org.apache.roller.weblogger.business;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.math.BigDecimal;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -98,6 +102,16 @@ public class FileContentManagerImpl implements FileContentManager {
     /**
      * @see org.apache.roller.weblogger.business.FileContentManager#saveFileContent(Weblog,
      *      String, java.io.InputStream)
+     *
+     * <p>The write is atomic with respect to the destination file: the bytes
+     * are streamed to a temporary sibling in the same directory, forced to
+     * disk, and only then moved over the destination with
+     * {@code ATOMIC_MOVE}. A mid-write failure (disk full, broken stream)
+     * therefore never leaves a truncated file behind -- the previous content,
+     * if any, survives untouched. This matters most for the destructive
+     * media-crop path, which overwrites a previously-good original the user
+     * has no other copy of, but every caller (uploads, thumbnails, rendition
+     * ladder) gets the same all-or-nothing guarantee.
      */
     @Override
     public void saveFileContent(Weblog weblog, String fileId, InputStream is)
@@ -111,13 +125,48 @@ public class FileContentManagerImpl implements FileContentManager {
         // create File that we are about to save
         Path saveFile = Path.of(dirPath.getAbsolutePath(), fileId);
 
-        try (OutputStream os = Files.newOutputStream(saveFile)) {
-            is.transferTo(os);
-            log.debug("The file has been written to ["+saveFile+"]");
+        Path tempFile = null;
+        try {
+            // The temp file must live in the SAME directory as the target:
+            // Files.move is only atomic within a filesystem, and a rename
+            // within one directory is the strongest portable guarantee.
+            tempFile = Files.createTempFile(saveFile.getParent(), "roller-save-", ".tmp");
+            try (FileChannel channel = FileChannel.open(tempFile,
+                    StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                is.transferTo(Channels.newOutputStream(channel));
+                // flush to the device before the swap, so the rename can
+                // never expose a file whose bytes are still in flight
+                channel.force(true);
+            }
+            try {
+                Files.move(tempFile, saveFile,
+                        StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                // exotic filesystem: degrade to a plain replace rather than fail
+                Files.move(tempFile, saveFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+            log.debug("The file has been written to [" + saveFile + "]");
         } catch (IOException e) {
+            // the destination was never touched; only the temp needs cleanup
+            if (tempFile != null) {
+                deleteTempQuietly(tempFile);
+            }
             throw new FileIOException("ERROR uploading file", e);
         }
 
+    }
+
+    /**
+     * Best-effort cleanup of an aborted temp file. Deliberately swallows the
+     * cleanup failure: it must never mask the original write failure the
+     * caller is about to report.
+     */
+    static void deleteTempQuietly(Path tempFile) {
+        try {
+            Files.deleteIfExists(tempFile);
+        } catch (IOException cleanup) {
+            log.debug("Could not delete temp file " + tempFile, cleanup);
+        }
     }
 
     /**

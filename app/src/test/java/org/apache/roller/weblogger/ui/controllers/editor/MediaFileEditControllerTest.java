@@ -359,6 +359,38 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         assertEquals("photo.jpg", bean.getName());
     }
 
+    @Test
+    void croppingAFileFromAnotherWeblogIsRefusedBeforeAnyWorkOrLeak() throws Exception {
+        // getMediaFile is a global by-id lookup; a weblog-A editor supplying
+        // a weblog-B media id must be stopped at the ownership boundary --
+        // no crop, and no foreign metadata copied into weblog A's form.
+        org.apache.roller.weblogger.pojos.Weblog foreignWeblog =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        foreignWeblog.setId("weblog-2");
+        foreignWeblog.setHandle("someoneelse");
+        MediaFileDirectory foreignDir = directory("dir-foreign", "default");
+        foreignDir.setWeblog(foreignWeblog);
+        MediaFile foreignFile = new MediaFile();
+        foreignFile.setId("file-foreign");
+        foreignFile.setName("their-photo.jpg");
+        foreignFile.setContentType("image/jpeg");
+        foreignFile.setWeblog(foreignWeblog);
+        foreignFile.setDirectory(foreignDir);
+        when(weblogger.getMediaFileManager().getMediaFile("file-foreign"))
+                .thenReturn(foreignFile);
+
+        String view = controller.crop(request, model, bean, "file-foreign", 0, 0, 100, 100);
+
+        assertEquals(".MediaFileEdit", view);
+        assertTrue(errors(model).contains("mediaFileEdit.crop.error"),
+                "Expected the crop to be refused, got: " + errors(model));
+        verify(weblogger.getMediaFileManager(), never()).cropMediaFile(any(), any(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        org.junit.jupiter.api.Assertions.assertNull(bean.getName(),
+                "the foreign file's metadata must not leak into this weblog's form");
+    }
+
     // ----------------------------------------------------------- focal point
 
     @Test

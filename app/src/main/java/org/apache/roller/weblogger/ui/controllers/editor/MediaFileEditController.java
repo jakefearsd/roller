@@ -165,6 +165,18 @@ public class MediaFileEditController extends MediaFileBase {
         MediaFileManager manager = weblogger.getMediaFileManager();
         try {
             MediaFile mediaFile = manager.getMediaFile(mediaFileId);
+            // Ownership check BEFORE anything else: getMediaFile is a global
+            // by-id lookup, and a foreign id must not even leak the file's
+            // metadata into this weblog's edit form, let alone reach the
+            // manager. (The manager enforces the same boundary again.)
+            if (mediaFile == null || mediaFile.getDirectory() == null
+                    || !getActionWeblog(request).getId()
+                            .equals(mediaFile.getDirectory().getWeblog().getId())) {
+                log.warn("Refusing to crop media file " + mediaFileId
+                        + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                addError(model, "mediaFileEdit.crop.error", request);
+                return ".MediaFileEdit";
+            }
             // populate the bean up front so the re-rendered form is complete
             // even when the crop itself fails
             bean.copyFrom(mediaFile);

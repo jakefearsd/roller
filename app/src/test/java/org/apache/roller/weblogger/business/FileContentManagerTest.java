@@ -126,6 +126,89 @@ public class FileContentManagerTest  {
     }
 
     /**
+     * The write must be atomic with respect to the destination: overwriting
+     * an existing file with a stream that fails partway (disk full, broken
+     * pipe) must leave the previous bytes untouched, not a truncated stub.
+     * This is the guarantee the destructive media-crop path leans on -- it
+     * overwrites a previously-good original the user has no other copy of.
+     */
+    @Test
+    public void testAMidWriteFailureLeavesTheExistingFileUntouched() throws Exception {
+
+        testUser = TestUtils.setupUser("FCMTest_userName3");
+        testWeblog = TestUtils.setupWeblog("FCMTest_handle3", testUser);
+        TestUtils.endSession(true);
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+
+        byte[] original = "the original, known-good content".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        fmgr.saveFileContent(testWeblog, "atomic-file-id", new ByteArrayInputStream(original));
+
+        // a stream that yields some bytes and then breaks mid-transfer
+        InputStream failing = new InputStream() {
+            private int served = 0;
+
+            @Override
+            public int read() throws java.io.IOException {
+                if (served++ < 10) {
+                    return 'x';
+                }
+                throw new java.io.IOException("simulated disk/stream failure mid-write");
+            }
+        };
+
+        assertThrows(FileIOException.class,
+                () -> fmgr.saveFileContent(testWeblog, "atomic-file-id", failing),
+                "the failure must surface, not be swallowed");
+
+        byte[] after = fmgr.getFileContent(testWeblog, "atomic-file-id")
+                .getInputStream().readAllBytes();
+        assertArrayEquals(original, after,
+                "a failed overwrite must leave the previous content byte-identical");
+
+        // and the aborted temp file must not linger next to the original
+        java.io.File weblogDir = new java.io.File(
+                org.apache.roller.weblogger.config.WebloggerConfig.getProperty("mediafiles.storage.dir"),
+                testWeblog.getHandle());
+        String[] leftovers = weblogDir.list((dir, name) -> name.startsWith("roller-save-"));
+        assertNotNull(leftovers, "the weblog's uploads directory must exist");
+        assertEquals(0, leftovers.length,
+                "aborted writes must clean up their temp file: " + java.util.Arrays.toString(leftovers));
+
+        fmgr.deleteFile(testWeblog, "atomic-file-id");
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    /**
+     * The temp-file cleanup after an aborted write is best-effort by design:
+     * it must never throw, because that would mask the original write
+     * failure the caller is about to report.
+     */
+    @Test
+    public void testDeleteTempQuietlyNeverThrows() throws Exception {
+        // deleting a non-empty directory throws DirectoryNotEmptyException
+        // (an IOException) from Files.deleteIfExists -- the cheapest real
+        // trigger for the cleanup-failure branch
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("fcm-test-");
+        java.nio.file.Path child = java.nio.file.Files.createFile(dir.resolve("child"));
+        try {
+            FileContentManagerImpl.deleteTempQuietly(dir);
+            assertTrue(java.nio.file.Files.exists(dir),
+                    "the failed delete must be swallowed, not escalated");
+        } finally {
+            java.nio.file.Files.deleteIfExists(child);
+            java.nio.file.Files.deleteIfExists(dir);
+        }
+
+        // and the normal case really deletes
+        java.nio.file.Path temp = java.nio.file.Files.createTempFile("fcm-test-", ".tmp");
+        FileContentManagerImpl.deleteTempQuietly(temp);
+        assertFalse(java.nio.file.Files.exists(temp));
+    }
+
+    /**
      * Test FileContentManager.saveFile() checks.
      *
      * This should test all conditions where a save should fail.

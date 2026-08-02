@@ -36,11 +36,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * End-to-end tests for {@link MediaFileManager#cropMediaFile}: the crop must
@@ -307,5 +313,180 @@ public class MediaFileCropTest {
         MediaFile untouched = mfMgr.getMediaFile(mediaFile.getId());
         assertEquals(500, untouched.getWidth(), "a rejected crop must not change anything");
         assertEquals(373, untouched.getHeight());
+    }
+
+    /**
+     * The crop's `.webp` sibling cleanup must actually delete real files, not
+     * just be a loop over ids that never exist. cwebp is forced off in this
+     * class, so the webp files are planted by hand -- exactly the situation
+     * of a server whose cwebp disappeared after the original upload.
+     */
+    @Test
+    public void cropDeletesWebpSiblingsThatExistOnDisk() throws Exception {
+        MediaFile mediaFile = upload("crop-webp.jpg", "image/jpeg",
+                new ByteArrayInputStream(generatedJpeg(3000, 2000)));
+        String id = mediaFile.getId();
+
+        for (int width : RenditionSupport.LADDER_WIDTHS) {
+            fcMgr.saveFileContent(weblog, id + "_" + width + ".webp",
+                    new ByteArrayInputStream(new byte[] {'R', 'I', 'F', 'F'}));
+        }
+
+        weblog = TestUtils.getManagedWebsite(weblog);
+        MediaFile managed = mfMgr.getMediaFile(id);
+        mfMgr.cropMediaFile(weblog, managed, 0, 0, 800, 600);
+        TestUtils.endSession(true);
+
+        // With cwebp unavailable nothing regenerates them, so every planted
+        // .webp -- including the 480 rung's -- must be gone: a stale webp
+        // would be served preferentially to webp-capable browsers.
+        for (int width : RenditionSupport.LADDER_WIDTHS) {
+            final String webpId = id + "_" + width + ".webp";
+            assertThrows(FileNotFoundException.class,
+                    () -> fcMgr.getFileContent(weblog, webpId),
+                    "the stale " + width + " webp sibling must be deleted from disk");
+        }
+    }
+
+    /**
+     * Explicit cross-weblog authorization boundary (the same one f9e3e8143
+     * added to MediaResourceServlet): cropping must be refused because the
+     * file belongs to another weblog -- by the ownership check itself, not
+     * incidentally by the per-weblog storage directory failing the read.
+     */
+    @Test
+    public void cropRejectsAFileOwnedByAnotherWeblog() throws Exception {
+        MediaFile mediaFile = uploadResource("crop-foreign.jpg", "/hawk-exif.jpg");
+        String id = mediaFile.getId();
+
+        User otherUser = TestUtils.setupUser("cropTestUser2");
+        Weblog otherWeblog = TestUtils.setupWeblog("cropTestWeblog2", otherUser);
+        TestUtils.endSession(true);
+        try {
+            Weblog other = TestUtils.getManagedWebsite(otherWeblog);
+            MediaFile managed = mfMgr.getMediaFile(id);
+
+            WebloggerException rejection = assertThrows(WebloggerException.class,
+                    () -> mfMgr.cropMediaFile(other, managed, 0, 0, 100, 100));
+            assertTrue(rejection.getMessage().contains("does not belong"),
+                    "must be the explicit ownership rejection, not an incidental "
+                            + "storage-layout failure: " + rejection.getMessage());
+
+            MediaFile untouched = mfMgr.getMediaFile(id);
+            assertEquals(500, untouched.getWidth(), "the foreign file must be untouched");
+            assertEquals(373, untouched.getHeight());
+        } finally {
+            TestUtils.endSession(true);
+            TestUtils.teardownWeblog(otherWeblog.getId());
+            TestUtils.teardownUser(otherUser.getUserName());
+            TestUtils.endSession(true);
+        }
+    }
+
+    /**
+     * The destructive path's all-or-nothing promise, exercised end to end: a
+     * failure writing the re-encoded original (disk full, IO error) must
+     * leave the file on disk byte-identical, every rendition in place, and
+     * the database row describing the pre-crop image. The write failure is
+     * injected through the WebloggerFactory seam with a FileContentManager
+     * that fails exactly the original's save and delegates everything else
+     * to the real, disk-backed implementation.
+     */
+    @Test
+    public void aFailedOriginalWriteLeavesFileAndDatabaseUntouched() throws Throwable {
+        MediaFile mediaFile = uploadResource("crop-fail.jpg", "/hawk-exif.jpg");
+        String id = mediaFile.getId();
+
+        byte[] originalBefore = fileBytes(id);
+        byte[] renditionBefore = fileBytes(id + "_480");
+        byte[] thumbnailBefore = fileBytes(id + "_sm");
+        String blurhashBefore = mfMgr.getMediaFile(id).getBlurhash();
+
+        withFailingSaveFor(id, () -> {
+            weblog = TestUtils.getManagedWebsite(weblog);
+            MediaFile managed = mfMgr.getMediaFile(id);
+            assertThrows(WebloggerException.class,
+                    () -> mfMgr.cropMediaFile(weblog, managed, 5, 5, 488, 300),
+                    "the disk failure must surface as a WebloggerException");
+        });
+        TestUtils.endSession(true);
+
+        assertArrayEquals(originalBefore, fileBytes(id),
+                "a failed write must leave the original byte-identical");
+        assertArrayEquals(renditionBefore, fileBytes(id + "_480"),
+                "sibling deletion must not have run before the write succeeded");
+        assertArrayEquals(thumbnailBefore, fileBytes(id + "_sm"));
+
+        MediaFile untouched = mfMgr.getMediaFile(id);
+        assertEquals(500, untouched.getWidth(),
+                "the database row must still describe the pre-crop image");
+        assertEquals(373, untouched.getHeight());
+        assertEquals(blurhashBefore, untouched.getBlurhash());
+    }
+
+    /**
+     * The flip side of the all-or-nothing promise: once the original swap has
+     * succeeded the crop is committed, so a failure regenerating a derived
+     * artifact (here the {@code _sm} admin thumbnail) must degrade gracefully
+     * -- logged, not thrown -- and the database row must still be updated to
+     * describe the cropped file actually on disk.
+     */
+    @Test
+    public void aThumbnailFailureAfterTheSwapDoesNotAbortTheCrop() throws Throwable {
+        MediaFile mediaFile = uploadResource("crop-thumbfail.jpg", "/hawk-exif.jpg");
+        String id = mediaFile.getId();
+
+        withFailingSaveFor(id + "_sm", () -> {
+            weblog = TestUtils.getManagedWebsite(weblog);
+            MediaFile managed = mfMgr.getMediaFile(id);
+            // must NOT throw: the original was already swapped successfully
+            mfMgr.cropMediaFile(weblog, managed, 5, 5, 488, 300);
+        });
+        TestUtils.endSession(true);
+
+        MediaFile cropped = mfMgr.getMediaFile(id);
+        assertEquals(488, cropped.getWidth(),
+                "the entity must describe the cropped file even though the thumbnail failed");
+        assertEquals(300, cropped.getHeight());
+
+        BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(fileBytes(id)));
+        assertEquals(488, decoded.getWidth(), "the file on disk is the cropped one");
+    }
+
+    /**
+     * Installs, for the duration of {@code action}, a business tier identical
+     * to the real one except that {@code FileContentManager.saveFileContent}
+     * fails for exactly {@code failingFileId} -- the disk-full injection the
+     * atomicity tests need, threaded through the WebloggerFactory seam.
+     */
+    private void withFailingSaveFor(String failingFileId,
+            org.junit.jupiter.api.function.Executable action) throws Throwable {
+        Weblogger real = WebloggerFactory.getWeblogger();
+        FileContentManager failingCmgr = mock(FileContentManager.class,
+                org.mockito.AdditionalAnswers.delegatesTo(fcMgr));
+        doThrow(new FileIOException("simulated disk full"))
+                .when(failingCmgr).saveFileContent(any(Weblog.class), eq(failingFileId),
+                        any(java.io.InputStream.class));
+        Weblogger failingWeblogger = mock(Weblogger.class,
+                org.mockito.AdditionalAnswers.delegatesTo(real));
+        doReturn(failingCmgr).when(failingWeblogger).getFileContentManager();
+
+        WebloggerProvider previous = WebloggerFactory.currentProvider();
+        WebloggerFactory.installProvider(new WebloggerProvider() {
+            @Override
+            public void bootstrap() {
+                // already bootstrapped
+            }
+
+            @Override
+            public Weblogger getWeblogger() {
+                return failingWeblogger;
+            }
+        });
+        try {
+            action.execute();
+        } finally {
+            WebloggerFactory.installProvider(previous);
+        }
     }
 }

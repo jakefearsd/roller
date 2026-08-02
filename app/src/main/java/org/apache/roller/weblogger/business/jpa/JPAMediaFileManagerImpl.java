@@ -802,10 +802,35 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
 
     /**
      * {@inheritDoc}
+     *
+     * <p>Failure semantics: the re-encoded bytes replace the original through
+     * {@code FileContentManagerImpl.saveFileContent}'s atomic
+     * write-to-temp-then-rename, and nothing else -- no sibling deletion, no
+     * entity mutation -- happens until that swap has succeeded. A failure up
+     * to and including the write therefore leaves BOTH the file on disk and
+     * the database row exactly as they were. After the swap the crop is
+     * committed: derived-artifact regeneration is best-effort (a lost
+     * thumbnail or rendition degrades to the servlet's full-size fallback and
+     * can be rebuilt via regenerateRenditions), and the entity update runs
+     * regardless so the stored dimensions always describe the file on disk.
      */
     @Override
     public void cropMediaFile(Weblog weblog, MediaFile mediaFile,
             int x, int y, int width, int height) throws WebloggerException {
+
+        // Explicit ownership boundary, matching the check f9e3e8143 added to
+        // MediaResourceServlet: the weblog the caller was authorized against
+        // must be the weblog that owns this file. Today a foreign id would
+        // also trip over the per-weblog storage directory, but that is an
+        // incidental property of one storage layout, not an authorization
+        // check -- a flat id-keyed store would silently reopen the hole.
+        Weblog owner = mediaFile.getDirectory() == null
+                ? null : mediaFile.getDirectory().getWeblog();
+        if (weblog == null || owner == null || !weblog.getId().equals(owner.getId())) {
+            throw new WebloggerException("Media file " + mediaFile.getId()
+                    + " does not belong to weblog "
+                    + (weblog == null ? "(none)" : weblog.getHandle()));
+        }
 
         if (!mediaFile.isImageFile()
                 || !RenditionSupport.isLadderEligible(mediaFile.getContentType())) {
@@ -868,7 +893,16 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             // check doesn't keep serving cached pre-crop bytes.
             mediaFile.setLastUpdated(new Timestamp(System.currentTimeMillis()));
 
-            writeAdminThumbnail(cmgr, mediaFile, cropped);
+            // From here on the crop is committed on disk; derived artifacts
+            // are best-effort so a thumbnail/rendition failure can never
+            // leave the entity describing the OLD image while the file holds
+            // the new one. (RenditionSupport.generate never throws.)
+            try {
+                writeAdminThumbnail(cmgr, mediaFile, cropped);
+            } catch (Exception e) {
+                log.warn("Could not regenerate the admin thumbnail after cropping media file "
+                        + mediaFile.getId(), e);
+            }
             RenditionSupport.generate(cmgr, mediaFile, cropped);
 
             // Recompute the blurhash from the cropped renditions. The stored
