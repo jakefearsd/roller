@@ -103,6 +103,37 @@ public class WebjarReferenceTest {
                         + "update this test to follow them.");
     }
 
+    /**
+     * The scan above only reads templates, so a webjar path hard-coded in Java
+     * escapes it. {@code ShareController} has two: share pages render outside
+     * the theme pipeline and therefore carry their own copy of the lightbox
+     * block. A pom version bump that missed those constants used to fail
+     * silently -- the classpath probe in {@code galleryAssets()} would simply
+     * find nothing and drop the lightbox from every share page.
+     */
+    @Test
+    public void javaHeldWebjarPathsResolveToo() throws IOException {
+        Path controller = Paths.get("src/main/java/org/apache/roller/weblogger"
+                + "/ui/controllers/core/ShareController.java");
+        assertTrue(Files.exists(controller), "Expected to find " + controller.toAbsolutePath());
+
+        String content = Files.readString(controller, StandardCharsets.UTF_8);
+        Matcher matcher = WEBJAR_URL.matcher(content);
+        List<String> checked = new ArrayList<>();
+        while (matcher.find()) {
+            String reference = matcher.group(1);
+            // the constants end at the directory; probe a file the page needs
+            String probe = reference.endsWith("/") ? reference + "photoswipe.css" : reference;
+            assertTrue(getClass().getResource("/META-INF/resources/webjars/" + probe) != null,
+                    controller + " references /webjars/" + probe + " but no such resource is on "
+                            + "the classpath -- bump the constants with the pom version");
+            checked.add(probe);
+        }
+        assertFalse(checked.isEmpty(),
+                controller + " no longer hard-codes a webjar path; if the lightbox block moved "
+                        + "into a template, delete this test -- the template scan covers it.");
+    }
+
     private List<Path> templateFiles() throws IOException {
         try (Stream<Path> paths = Files.walk(WEBAPP)) {
             return paths.filter(Files::isRegularFile)

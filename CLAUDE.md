@@ -170,7 +170,8 @@ IndexManager getIndexManager()
 ### Theme System
 - **Shared Themes**: System-provided themes in `/themes/` directory
   (incl. `portfolio` — dark justified-grid photography theme driven by
-  featured images + focal points, Stage 2 Wave 2)
+  featured images + focal points, Stage 2 Wave 2; and `travel` — light
+  guide-card theme that frames the travel shortcodes, Stage 2 Wave 3)
 - **Custom Themes**: User-customized themes per blog
 - **Template Types**: Main templates (`.vm`), stylesheets, and resources
 - **Hot Reload**: Theme changes reload automatically in development mode
@@ -215,6 +216,26 @@ IndexManager getIndexManager()
   media path (except logged-in editors of the owning weblog), excluded from
   sitemaps, refused by the `[gallery]` shortcode — reachable only via the
   share link.
+
+### Travel (Stage 2 Wave 3)
+- Three shortcodes in `business/shortcodes`, registered in
+  `ShortcodeExpander.DEFAULT` like `[image]`/`[gallery]`: `[map]` with
+  `[pin lat lng label]` children (or `auto="<dir>"` mapping a directory's
+  GPS-bearing photos — same private-directory refusal as `[gallery]`),
+  `[faq]` with `[q]`/`[a]` pairs, and `[cta href label note]` (absolute
+  http(s) only, UTM-tagged).
+- `MapPins.parse` / `FaqBlocks.parse` are the single source of truth: the
+  shortcode renderers AND the JSON-LD head emission call them, so the map a
+  reader sees and the itinerary a crawler reads cannot drift.
+- Leaflet 1.9.4 (webjar, self-hosted) ships via `#showMapAssets`, the map
+  twin of `#showGalleryAssets`; OSM tiles, no API key. Leaflet paints
+  aborted tiles with a `data:` GIF, so every theme head's CSP carries
+  `img-src * data:` — the string is pinned byte-for-byte by
+  `MapAssetsRenderingTest`/`PortfolioThemeRenderingTest`/`TravelThemeRenderingTest`.
+- Per-entry structured-data type (`WeblogEntry.jsonLdType` + geo/event
+  columns, V008): `EntryJsonLd` emits TouristAttraction/TouristTrip/Event/
+  FAQPage as a SECOND `ld+json` block; the BlogPosting block is always
+  emitted unchanged, so entries keep author/date/headline.
 
 ### Database Schema
 Key domain entities:

@@ -673,8 +673,9 @@ publishing them, also tick the *Private directory* checkbox in the
 share card. A private directory is hidden from public pages entirely:
 its images stop being served at their normal public URLs, they are
 excluded from your sitemap, and a `[gallery]` shortcode naming the
-directory renders nothing. The only way in is the directory’s share
-link. One deliberate exception: you and your weblog’s other logged-in
+directory refuses to render – the page shows the shortcode text you
+typed, exactly as written, so the omission is visible to you rather than
+silent. The only way in is the directory’s share link. One deliberate exception: you and your weblog’s other logged-in
 editors can still see the images in the media library and the editing
 pages – privacy is aimed at the public, not at you.
 
@@ -698,6 +699,113 @@ referenced in the previous section, which will add its URL to the post
 content, and then copy that URL to the Enclosure URL field in the
 Advanced Settings section if you wish to add it to your blog’s RSS
 and/or Atom feeds.
+
+=== Maps, questions and booking buttons
+
+Three more shortcodes turn a plain entry into a guide: a map of the
+places you write about, a list of questions and answers, and a button
+linking somewhere you want readers to go.
+
+==== The map shortcode
+
+Write a map by listing its pins:
+
+....
+[map]
+[pin lat="64.1466" lng="-21.9426" label="Reykjavík"]
+[pin lat="63.4194" lng="-19.0206" label="Vík í Mýrdal"]
+[/map]
+....
+
+Each pin needs *lat* and *lng*; *label* is optional and appears when a
+reader clicks the marker. Add *route="true"* to the opening `[map]` tag
+to draw a line through the pins in the order you wrote them, which is
+what you want for a road trip. Two optional attributes on `[map]` tune
+the view: *zoom* sets the starting zoom level, and *center* (written
+`center="lat,lng"`) overrides the middle of the map, which Roller
+otherwise picks to fit all the pins.
+
+`[map]` with no pins at all falls back to the coordinates you can set on
+the entry itself (see _Describing an entry for search engines_ below), so
+a guide about one place needs only those two numbers.
+
+Maps are drawn with Leaflet and map tiles from OpenStreetMap. Both are
+served from your own site or from OpenStreetMap directly – there is no
+account to create and no API key to paste anywhere.
+
+==== Mapping the photos in a directory
+
+`[map auto="Iceland 2026"]` skips the pin list and maps the *photos* in
+that media directory instead, using the GPS coordinates stored in each
+photo, in the same order the `[gallery]` shortcode shows them.
+
+This only works when your Roller administrator has turned GPS retention
+*on*, and only for photos uploaded afterwards. Out of the box Roller
+throws away photo GPS coordinates at upload time, precisely so you cannot
+accidentally publish where you live; see _Uploading images_. When none of
+the directory’s photos carry coordinates – the normal case – the
+shortcode is left exactly as you typed it rather than drawing an empty
+map. A directory marked _private_ is never mapped: its coordinates are
+part of what privacy is protecting.
+
+==== The question-and-answer shortcode
+
+....
+[faq]
+[q]How long is the drive?[/q]
+[a]About four hours, longer if you stop at every waterfall.[/a]
+[q]Is a 4x4 necessary?[/q]
+[a]Not on the ring road. It is on the F-roads.[/a]
+[/faq]
+....
+
+Questions and answers must come in pairs; if one is missing its partner,
+the shortcode is left as written so you can see the mistake.
+
+Roller also publishes the questions as structured data when you set the
+entry’s type to _FAQ page_ (below). That markup is correct and machine
+readable, but be aware that since 2023 Google shows FAQ rich results only
+for government and health sites, so it will not add question boxes under
+a travel blog’s search listing.
+
+==== The booking-button shortcode
+
+....
+[cta href="https://example.com/book" label="Check availability" note="Sleeps four, two-night minimum"]
+....
+
+*href* and *label* are required; *note* adds a line of smaller text under
+the label. The link must be a full `http://` or `https://` address – a
+relative one is refused and the shortcode stays visible, because a link
+that quietly disappeared would be worse than one that obviously did not
+work.
+
+Roller adds campaign tags to the link (`utm_source`, `utm_medium` and
+`utm_campaign`, naming your weblog and the entry) so you can tell in your
+booking site’s or shop’s own statistics which post sent someone. Any
+query parameters you already put in the address are kept.
+
+=== Telling search engines what an entry is about
+
+Most entries are articles, and Roller describes them to search engines as
+such. Travel writing is often about something more specific, so the SEO
+panel of the entry editor has a *Structured data type* dropdown:
+
+* *Blog post* – the default, and what every existing entry stays.
+* *Tourist attraction* – a place. Fill in the latitude and longitude
+fields to say where it is; those same coordinates centre a bare `[map]`.
+* *Trip* – an itinerary. Roller builds the list of stops from the pins in
+the entry’s `[map]`, in order, so you write them once.
+* *Event* – something happening at a time and place. Fill in the start
+(required), the optional end, and the location name.
+* *FAQ page* – a page of questions, taken from the entry’s `[faq]`.
+
+Choosing a type *adds* a description of the place, trip, event or
+question list. It never replaces the article description, so your entry
+keeps its author, publication date and headline whatever type you pick.
+
+The latitude and longitude fields are available whatever type you choose,
+since a bare `[map]` uses them too.
 
 === Podcasting with Roller
 
@@ -989,6 +1097,15 @@ the portfolio cards keep the subject in frame when they crop your
 photos to fit the grid. Entries without a featured image appear as
 simple text cards, so a mixed writing-and-photography weblog still
 works.
+
+Its counterpart for writers is the *Travel Guide* theme: a light,
+high-contrast layout that lists entries as guide cards – featured image,
+title, date and the entry’s meta description as the excerpt – and opens
+each entry in a comfortable reading column led by the hero image. It is
+built around the travel shortcodes: a `[map]` becomes a framed itinerary
+panel, a `[faq]` becomes a question card, and a `[cta]` becomes a filled
+booking button, without you writing any layout markup. As with Portfolio,
+entries without a featured image degrade to clean text cards.
 
 For more information on customizing Roller themes refer to the Template
 Guide.
