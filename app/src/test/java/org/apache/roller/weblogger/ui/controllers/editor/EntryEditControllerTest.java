@@ -794,6 +794,36 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         }
 
         @Test
+        void revokingWithNoLinkReportsAnError() throws Exception {
+            existingEntry(PubStatus.PUBLISHED);
+            var redirectAttributes = newRedirectAttributes();
+
+            String view = controller.entryEditRevokeShareLink(
+                    request, redirectAttributes, "entry-1");
+
+            assertEquals("redirect:/roller-ui/authoring/entryEdit.rol?weblog="
+                    + WEBLOG_HANDLE + "&bean.id=entry-1", view);
+            verify(weblogger.getShareLinkManager(), never()).removeShareLink(any());
+            assertTrue(flashErrors(redirectAttributes).contains("shareLink.error"));
+        }
+
+        @Test
+        void anEntryFromAnotherWeblogCannotBeRevoked() throws Exception {
+            WeblogEntry foreign = existingEntry(PubStatus.PUBLISHED);
+            org.apache.roller.weblogger.pojos.Weblog other =
+                    new org.apache.roller.weblogger.pojos.Weblog();
+            other.setId("weblog-2");
+            other.setHandle("otherblog");
+            foreign.setWebsite(other);
+
+            String view = controller.entryEditRevokeShareLink(
+                    request, newRedirectAttributes(), "entry-1");
+
+            assertEquals("redirect:/roller-ui/menu.rol", view);
+            verify(weblogger.getShareLinkManager(), never()).removeShareLink(any());
+        }
+
+        @Test
         void theEditFormExposesTheShareUrl() throws Exception {
             org.apache.roller.weblogger.config.WebloggerRuntimeConfig
                     .setAbsoluteContextURL("http://localhost:8080/roller");
