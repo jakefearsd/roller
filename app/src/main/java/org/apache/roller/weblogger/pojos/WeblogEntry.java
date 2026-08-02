@@ -98,6 +98,14 @@ public class WeblogEntry implements Serializable {
     private String    canonicalUrl    = null;
     private Boolean   noindex         = Boolean.FALSE;
 
+    // Wave 3 travel structured data
+    private JsonLdType jsonLdType     = null;
+    private Double    geoLatitude     = null;
+    private Double    geoLongitude    = null;
+    private Timestamp eventStart      = null;
+    private Timestamp eventEnd        = null;
+    private String    eventLocation   = null;
+
     // set to true when switching between pending/draft/scheduled and published
     // either the aggregate table needs the entry's tags added (for published)
     // or subtracted (anything else)
@@ -363,6 +371,70 @@ public class WeblogEntry implements Serializable {
 
     public void setNoindex(Boolean noindex) {
         this.noindex = noindex;
+    }
+
+    /**
+     * The schema.org type this entry's head emits as JSON-LD. Null means the
+     * {@link JsonLdType#BLOG_POSTING} default -- just the BlogPosting block
+     * every permalink already gets.
+     */
+    public JsonLdType getJsonLdType() {
+        return jsonLdType;
+    }
+
+    public void setJsonLdType(JsonLdType jsonLdType) {
+        this.jsonLdType = jsonLdType;
+    }
+
+    /**
+     * Latitude for a {@link JsonLdType#TOURIST_ATTRACTION}'s GeoCoordinates;
+     * also the default centre for a bare {@code [map]}. Null when unset.
+     */
+    public Double getGeoLatitude() {
+        return geoLatitude;
+    }
+
+    public void setGeoLatitude(Double geoLatitude) {
+        this.geoLatitude = geoLatitude;
+    }
+
+    /** Longitude counterpart to {@link #getGeoLatitude()}. Null when unset. */
+    public Double getGeoLongitude() {
+        return geoLongitude;
+    }
+
+    public void setGeoLongitude(Double geoLongitude) {
+        this.geoLongitude = geoLongitude;
+    }
+
+    /** Start instant for a {@link JsonLdType#EVENT}'s startDate. Null when unset. */
+    public Timestamp getEventStart() {
+        return eventStart;
+    }
+
+    public void setEventStart(Timestamp eventStart) {
+        this.eventStart = eventStart;
+    }
+
+    /** End instant for a {@link JsonLdType#EVENT}'s endDate. Null when unset. */
+    public Timestamp getEventEnd() {
+        return eventEnd;
+    }
+
+    public void setEventEnd(Timestamp eventEnd) {
+        this.eventEnd = eventEnd;
+    }
+
+    /**
+     * Venue name for a {@link JsonLdType#EVENT}, emitted as a name-only
+     * {@code Place} location. Null when unset.
+     */
+    public String getEventLocation() {
+        return eventLocation;
+    }
+
+    public void setEventLocation(String eventLocation) {
+        this.eventLocation = eventLocation;
     }
 
     /**

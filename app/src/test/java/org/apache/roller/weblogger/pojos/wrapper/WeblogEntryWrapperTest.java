@@ -371,6 +371,47 @@ class WeblogEntryWrapperTest {
     }
 
     @Test
+    void travelScalarAccessorsReportTheWrappedEntrysOwnValues() {
+        entry.setJsonLdType(org.apache.roller.weblogger.pojos.JsonLdType.EVENT);
+        entry.setGeoLatitude(48.8584);
+        entry.setGeoLongitude(2.2945);
+        entry.setEventStart(Timestamp.valueOf("2026-06-01 18:00:00"));
+        entry.setEventEnd(Timestamp.valueOf("2026-06-01 23:00:00"));
+
+        assertEquals(org.apache.roller.weblogger.pojos.JsonLdType.EVENT, wrapper.getJsonLdType());
+        assertEquals(48.8584, wrapper.getGeoLatitude());
+        assertEquals(2.2945, wrapper.getGeoLongitude());
+        assertEquals(Timestamp.valueOf("2026-06-01 18:00:00"), wrapper.getEventStart());
+        assertEquals(Timestamp.valueOf("2026-06-01 23:00:00"), wrapper.getEventEnd());
+    }
+
+    @Test
+    void travelAccessorsAreNullSafeForEntriesThatPredateThem() {
+        assertNull(wrapper.getJsonLdType(),
+                "Null means the BLOG_POSTING default; the wrapper must not invent a value");
+        assertNull(wrapper.getGeoLatitude());
+        assertNull(wrapper.getGeoLongitude());
+        assertNull(wrapper.getEventStart());
+        assertNull(wrapper.getEventEnd());
+        assertNull(wrapper.getEventLocation());
+    }
+
+    @Test
+    void eventLocationRunsThroughTheSanitiser() {
+        Boolean previous = HTMLSanitizer.xssEnabled;
+        try {
+            HTMLSanitizer.xssEnabled = Boolean.TRUE;
+            entry.setEventLocation("Venue <script>alert(1)</script>");
+
+            assertFalse(wrapper.getEventLocation().contains("<script>"),
+                    "The event venue is author-entered free text, so it must be sanitised "
+                            + "like metaTitle and every other free-text accessor");
+        } finally {
+            HTMLSanitizer.xssEnabled = previous;
+        }
+    }
+
+    @Test
     void metaTitleRunsThroughTheSanitiser() {
         Boolean previous = HTMLSanitizer.xssEnabled;
         try {

@@ -26,6 +26,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
+import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -78,6 +79,17 @@ public class EntryBean {
     private String ogImageId = null;
     private String canonicalUrl = null;
     private boolean noindex = false;
+
+    // Wave 3 travel structured data -- no editor UI yet, plumbing only.
+    // jsonLdType holds a JsonLdType enum name, like status holds a PubStatus
+    // name; the timestamps are carried as-is, form conversion is the (future)
+    // editor UI's concern.
+    private String jsonLdType = null;
+    private Double geoLatitude = null;
+    private Double geoLongitude = null;
+    private Timestamp eventStart = null;
+    private Timestamp eventEnd = null;
+    private String eventLocation = null;
     
     
     public String getId() {
@@ -283,6 +295,54 @@ public class EntryBean {
     public void setNoindex(boolean noindex) {
         this.noindex = noindex;
     }
+
+    public String getJsonLdType() {
+        return jsonLdType;
+    }
+
+    public void setJsonLdType(String jsonLdType) {
+        this.jsonLdType = jsonLdType;
+    }
+
+    public Double getGeoLatitude() {
+        return geoLatitude;
+    }
+
+    public void setGeoLatitude(Double geoLatitude) {
+        this.geoLatitude = geoLatitude;
+    }
+
+    public Double getGeoLongitude() {
+        return geoLongitude;
+    }
+
+    public void setGeoLongitude(Double geoLongitude) {
+        this.geoLongitude = geoLongitude;
+    }
+
+    public Timestamp getEventStart() {
+        return eventStart;
+    }
+
+    public void setEventStart(Timestamp eventStart) {
+        this.eventStart = eventStart;
+    }
+
+    public Timestamp getEventEnd() {
+        return eventEnd;
+    }
+
+    public void setEventEnd(Timestamp eventEnd) {
+        this.eventEnd = eventEnd;
+    }
+
+    public String getEventLocation() {
+        return eventLocation;
+    }
+
+    public void setEventLocation(String eventLocation) {
+        this.eventLocation = eventLocation;
+    }
     
     // a convenient way to get the final pubtime of the entry
     public Timestamp getPubTime(Locale locale, TimeZone timezone) {
@@ -353,6 +413,14 @@ public class EntryBean {
         entry.setOgImageId(getOgImageId());
         entry.setCanonicalUrl(getCanonicalUrl());
         entry.setNoindex(getNoindex());
+        // fromString is lenient by design: null/blank (no dropdown yet) and
+        // unknown values both normalize to the BLOG_POSTING default.
+        entry.setJsonLdType(JsonLdType.fromString(getJsonLdType()));
+        entry.setGeoLatitude(getGeoLatitude());
+        entry.setGeoLongitude(getGeoLongitude());
+        entry.setEventStart(getEventStart());
+        entry.setEventEnd(getEventEnd());
+        entry.setEventLocation(getEventLocation());
 
         // figure out the category selected
         if (getCategoryId() != null) {
@@ -406,6 +474,14 @@ public class EntryBean {
         setOgImageId(entry.getOgImageId());
         setCanonicalUrl(entry.getCanonicalUrl());
         setNoindex(entry.getNoindex() != null && entry.getNoindex());
+        // Null (entries persisted before this field existed) stays null; the
+        // editor treats it as the BLOG_POSTING default.
+        setJsonLdType(entry.getJsonLdType() != null ? entry.getJsonLdType().name() : null);
+        setGeoLatitude(entry.getGeoLatitude());
+        setGeoLongitude(entry.getGeoLongitude());
+        setEventStart(entry.getEventStart());
+        setEventEnd(entry.getEventEnd());
+        setEventLocation(entry.getEventLocation());
 
         // set comment count for all comments (including spam and unapproved)
         try {

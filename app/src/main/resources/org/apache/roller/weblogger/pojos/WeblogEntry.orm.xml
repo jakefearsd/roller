@@ -106,6 +106,25 @@
             <basic name="noindex">
                 <column name="noindex" insertable="true" updatable="true" unique="false" nullable="true"/>
             </basic>
+            <basic name="jsonLdType">
+                <column name="jsonld_type" insertable="true" updatable="true" unique="false" nullable="true"/>
+                <enumerated>STRING</enumerated>
+            </basic>
+            <basic name="geoLatitude">
+                <column name="geo_latitude" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="geoLongitude">
+                <column name="geo_longitude" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="eventStart">
+                <column name="event_start" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="eventEnd">
+                <column name="event_end" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="eventLocation">
+                <column name="event_location" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
             <many-to-one name="category" target-entity="org.apache.roller.weblogger.pojos.WeblogCategory">
                 <join-column name="categoryid" insertable="true" updatable="true" nullable="false"/>
             </many-to-one>

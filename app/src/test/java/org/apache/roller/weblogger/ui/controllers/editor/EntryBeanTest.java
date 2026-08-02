@@ -25,6 +25,7 @@ import java.util.TimeZone;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
+import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -314,6 +315,12 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setOgImageId("mf-og-1");
         bean.setCanonicalUrl("http://example.com/canonical");
         bean.setNoindex(true);
+        bean.setJsonLdType(JsonLdType.EVENT.name());
+        bean.setGeoLatitude(48.8584);
+        bean.setGeoLongitude(2.2945);
+        bean.setEventStart(new Timestamp(1_800_000_000_000L));
+        bean.setEventEnd(new Timestamp(1_800_003_600_000L));
+        bean.setEventLocation("Champ de Mars");
 
         bean.copyTo(entry);
 
@@ -328,6 +335,56 @@ class EntryBeanTest extends EditorControllerTestSupport {
         assertEquals("mf-og-1", entry.getOgImageId());
         assertEquals("http://example.com/canonical", entry.getCanonicalUrl());
         assertEquals(Boolean.TRUE, entry.getNoindex());
+        assertEquals(JsonLdType.EVENT, entry.getJsonLdType());
+        assertEquals(48.8584, entry.getGeoLatitude());
+        assertEquals(2.2945, entry.getGeoLongitude());
+        assertEquals(new Timestamp(1_800_000_000_000L), entry.getEventStart());
+        assertEquals(new Timestamp(1_800_003_600_000L), entry.getEventEnd());
+        assertEquals("Champ de Mars", entry.getEventLocation());
+    }
+
+    @Test
+    void copyToNormalizesAMissingJsonLdTypeToTheBlogPostingDefault() throws Exception {
+        // The bean carries the type as a string (like status), but unlike
+        // status it is parsed leniently: an unset field and an unrecognized
+        // value both mean "just the BlogPosting default", never an exception
+        // out of the save path.
+        WeblogEntry entry = entryInCategory("cat-1");
+        bean.setStatus(PubStatus.DRAFT.name());
+        bean.setCategoryId("cat-1");
+        bean.setJsonLdType(null);
+
+        bean.copyTo(entry);
+        assertEquals(JsonLdType.BLOG_POSTING, entry.getJsonLdType());
+
+        bean.setJsonLdType("SomethingFromTheFuture");
+        bean.copyTo(entry);
+        assertEquals(JsonLdType.BLOG_POSTING, entry.getJsonLdType(),
+                "An unknown submitted type must degrade to the default, not throw");
+    }
+
+    @Test
+    void copyToClearsTravelFieldsTheAuthorBlankedOut() throws Exception {
+        // Mirrors the negative-case tests for the flags: a copyTo that only
+        // ever wrote non-null values would silently keep stale coordinates and
+        // event details on an entry whose author removed them.
+        WeblogEntry entry = entryInCategory("cat-1");
+        entry.setGeoLatitude(48.8584);
+        entry.setGeoLongitude(2.2945);
+        entry.setEventStart(new Timestamp(1_800_000_000_000L));
+        entry.setEventEnd(new Timestamp(1_800_003_600_000L));
+        entry.setEventLocation("Champ de Mars");
+
+        bean.setStatus(PubStatus.DRAFT.name());
+        bean.setCategoryId("cat-1");
+
+        bean.copyTo(entry);
+
+        assertNull(entry.getGeoLatitude());
+        assertNull(entry.getGeoLongitude());
+        assertNull(entry.getEventStart());
+        assertNull(entry.getEventEnd());
+        assertNull(entry.getEventLocation());
     }
 
     @Test
@@ -467,6 +524,12 @@ class EntryBeanTest extends EditorControllerTestSupport {
         entry.setOgImageId("mf-og-1");
         entry.setCanonicalUrl("http://example.com/canonical");
         entry.setNoindex(Boolean.TRUE);
+        entry.setJsonLdType(JsonLdType.TOURIST_ATTRACTION);
+        entry.setGeoLatitude(64.1466);
+        entry.setGeoLongitude(-21.9426);
+        entry.setEventStart(new Timestamp(1_800_000_000_000L));
+        entry.setEventEnd(new Timestamp(1_800_003_600_000L));
+        entry.setEventLocation("Harpa");
 
         bean.copyFrom(entry, Locale.US);
 
@@ -488,6 +551,30 @@ class EntryBeanTest extends EditorControllerTestSupport {
         assertEquals("mf-og-1", bean.getOgImageId());
         assertEquals("http://example.com/canonical", bean.getCanonicalUrl());
         assertTrue(bean.getNoindex());
+        assertEquals(JsonLdType.TOURIST_ATTRACTION.name(), bean.getJsonLdType());
+        assertEquals(64.1466, bean.getGeoLatitude());
+        assertEquals(-21.9426, bean.getGeoLongitude());
+        assertEquals(new Timestamp(1_800_000_000_000L), bean.getEventStart());
+        assertEquals(new Timestamp(1_800_003_600_000L), bean.getEventEnd());
+        assertEquals("Harpa", bean.getEventLocation());
+    }
+
+    @Test
+    void copyFromLeavesNeverSetTravelFieldsNull() throws Exception {
+        // Entries persisted before V008 have all six travel columns null; the
+        // editor must show them as blank, not throw and not fabricate values.
+        WeblogEntry entry = storedEntry();
+
+        bean.copyFrom(entry, Locale.US);
+
+        assertNull(bean.getJsonLdType(),
+                "A never-chosen type stays null; the editor treats null as the "
+                        + "BLOG_POSTING default");
+        assertNull(bean.getGeoLatitude());
+        assertNull(bean.getGeoLongitude());
+        assertNull(bean.getEventStart());
+        assertNull(bean.getEventEnd());
+        assertNull(bean.getEventLocation());
     }
 
     @Test

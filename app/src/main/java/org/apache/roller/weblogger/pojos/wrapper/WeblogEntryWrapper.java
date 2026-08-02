@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -342,6 +343,30 @@ public final class WeblogEntryWrapper {
 
     public Boolean getNoindex() {
         return this.pojo.getNoindex();
+    }
+
+    public JsonLdType getJsonLdType() {
+        return this.pojo.getJsonLdType();
+    }
+
+    public Double getGeoLatitude() {
+        return this.pojo.getGeoLatitude();
+    }
+
+    public Double getGeoLongitude() {
+        return this.pojo.getGeoLongitude();
+    }
+
+    public Timestamp getEventStart() {
+        return this.pojo.getEventStart();
+    }
+
+    public Timestamp getEventEnd() {
+        return this.pojo.getEventEnd();
+    }
+
+    public String getEventLocation() {
+        return HTMLSanitizer.conditionallySanitize(this.pojo.getEventLocation());
     }
 
     private MediaFileWrapper resolveMediaFile(String mediaFileId) {
