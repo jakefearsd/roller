@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -291,6 +292,93 @@ class RenditionSupportTest {
         RenditionSupport.generate(cmgr, mediaFile, original);
 
         assertTrue(cmgr.saved.isEmpty());
+    }
+
+    // ------------------------------------------------------------------ crop
+
+    @Test
+    void clampCropRectPassesAnInBoundsRectangleThroughUnchanged() {
+        java.awt.Rectangle rect = RenditionSupport.clampCropRect(1000, 600, 100, 50, 400, 300);
+
+        assertEquals(new java.awt.Rectangle(100, 50, 400, 300), rect);
+    }
+
+    @Test
+    void clampCropRectTrimsBrowserOvershootAtTheEdges() {
+        // Selection coordinates come from client-side layout math scaled to
+        // natural pixels; a few pixels of overshoot is normal, not an error.
+        java.awt.Rectangle rect = RenditionSupport.clampCropRect(1000, 600, -3, -2, 1010, 610);
+
+        assertEquals(new java.awt.Rectangle(0, 0, 1000, 600), rect);
+    }
+
+    @Test
+    void clampCropRectTrimsARectangleHangingOffTheFarCorner() {
+        java.awt.Rectangle rect = RenditionSupport.clampCropRect(1000, 600, 900, 500, 400, 300);
+
+        assertEquals(new java.awt.Rectangle(900, 500, 100, 100), rect);
+    }
+
+    @Test
+    void clampCropRectRejectsARectangleEntirelyOutsideTheImage() {
+        assertThrows(IllegalArgumentException.class,
+                () -> RenditionSupport.clampCropRect(1000, 600, 1000, 0, 100, 100),
+                "a rectangle starting at the right edge covers no pixels");
+        assertThrows(IllegalArgumentException.class,
+                () -> RenditionSupport.clampCropRect(1000, 600, -200, -200, 100, 100));
+    }
+
+    @Test
+    void clampCropRectRejectsDegenerateSizes() {
+        assertThrows(IllegalArgumentException.class,
+                () -> RenditionSupport.clampCropRect(1000, 600, 10, 10, 0, 100));
+        assertThrows(IllegalArgumentException.class,
+                () -> RenditionSupport.clampCropRect(1000, 600, 10, 10, 100, -5));
+        assertThrows(IllegalArgumentException.class,
+                () -> RenditionSupport.clampCropRect(0, 0, 0, 0, 10, 10),
+                "an image with no pixels cannot be cropped");
+    }
+
+    @Test
+    void cropCopiesExactlyTheRequestedPixels() {
+        BufferedImage source = cornerMarkedImage(); // 4x2, uniquely colored corners
+
+        BufferedImage cropped = RenditionSupport.crop(source,
+                new java.awt.Rectangle(3, 0, 1, 1));
+
+        assertEquals(1, cropped.getWidth());
+        assertEquals(1, cropped.getHeight());
+        assertEquals(0x00FF00, cropped.getRGB(0, 0) & 0xFFFFFF,
+                "the 1x1 crop at (3,0) must contain the top-right (green) pixel");
+    }
+
+    @Test
+    void cropReturnsAnIndependentImageNotASharedSubRaster() {
+        BufferedImage source = cornerMarkedImage();
+
+        BufferedImage cropped = RenditionSupport.crop(source,
+                new java.awt.Rectangle(0, 0, 2, 2));
+        source.setRGB(0, 0, 0xFFFFFF);
+
+        assertEquals(0xFF0000, cropped.getRGB(0, 0) & 0xFFFFFF,
+                "mutating the source after cropping must not change the crop");
+    }
+
+    @Test
+    void encodeRoutesJpegAndPngByContentTypeAndRejectsTheRest() throws Exception {
+        BufferedImage image = noisyImage(32, 32);
+
+        byte[] jpeg = RenditionSupport.encode(image, "image/jpeg");
+        assertEquals((byte) 0xFF, jpeg[0]);
+        assertEquals((byte) 0xD8, jpeg[1], "JPEG SOI marker expected");
+
+        byte[] png = RenditionSupport.encode(image, "image/png");
+        assertEquals((byte) 0x89, png[0]);
+        assertEquals('P', png[1]);
+
+        org.junit.jupiter.api.Assertions.assertThrows(java.io.IOException.class,
+                () -> RenditionSupport.encode(image, "image/gif"),
+                "formats outside the ladder have no re-encode path");
     }
 
     // ------------------------------------------------------------ orientation

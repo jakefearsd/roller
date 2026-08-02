@@ -303,6 +303,157 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
                 "copyTo must leave the directory to the explicit move path");
     }
 
+    // ------------------------------------------------------------------ crop
+
+    @Test
+    void croppingDelegatesToTheManagerAndConfirms() throws Exception {
+        mediaFile.setWidth(500);
+        mediaFile.setHeight(373);
+
+        String view = controller.crop(request, model, bean, "file-1", 10, 20, 300, 200);
+
+        assertEquals(".MediaFileEdit", view);
+        verify(weblogger.getMediaFileManager())
+                .cropMediaFile(weblog, mediaFile, 10, 20, 300, 200);
+        assertTrue(messages(model).contains("mediaFileEdit.crop.success"),
+                "Expected a crop confirmation, got: " + messages(model));
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+    }
+
+    @Test
+    void croppingRefreshesTheBeanSoTheFormShowsTheNewDimensions() throws Exception {
+        // the manager mutates the entity's dimensions as part of the crop
+        org.mockito.Mockito.doAnswer(invocation -> {
+            mediaFile.setWidth(300);
+            mediaFile.setHeight(200);
+            return null;
+        }).when(weblogger.getMediaFileManager())
+                .cropMediaFile(any(), any(), org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyInt());
+
+        controller.crop(request, model, bean, "file-1", 10, 20, 300, 200);
+
+        assertEquals(300, bean.getWidth(),
+                "the re-rendered form must show the post-crop dimensions");
+        assertEquals(200, bean.getHeight());
+    }
+
+    @Test
+    void aFailedCropIsReportedRatherThanConfirmed() throws Exception {
+        org.mockito.Mockito.doThrow(new WebloggerException("rectangle outside image"))
+                .when(weblogger.getMediaFileManager())
+                .cropMediaFile(any(), any(), org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyInt());
+
+        String view = controller.crop(request, model, bean, "file-1", 600, 400, 100, 100);
+
+        assertEquals(".MediaFileEdit", view);
+        assertTrue(errors(model).contains("mediaFileEdit.crop.error"),
+                "Expected a crop error, got: " + errors(model));
+        assertTrue(messages(model).isEmpty(), "A failed crop must not also report success");
+        // the form must still be populated for the re-render
+        assertEquals("photo.jpg", bean.getName());
+    }
+
+    // ----------------------------------------------------------- focal point
+
+    @Test
+    void focalPointRoundTripsThroughTheBean() throws Exception {
+        mediaFile.setFocalX(0.25);
+        mediaFile.setFocalY(0.75);
+
+        MediaFileBean copy = new MediaFileBean();
+        copy.copyFrom(mediaFile);
+        assertEquals(0.25, copy.getFocalX());
+        assertEquals(0.75, copy.getFocalY());
+
+        MediaFile target = new MediaFile();
+        copy.copyTo(target);
+        assertEquals(0.25, target.getFocalX());
+        assertEquals(0.75, target.getFocalY());
+    }
+
+    @Test
+    void savingThroughTheControllerPersistsTheFocalPoint() throws Exception {
+        bean.setId("file-1");
+        bean.setName("photo.jpg");
+        bean.setDirectoryId("dir-1");
+        bean.setFocalX(0.3);
+        bean.setFocalY(0.6);
+
+        String view = controller.save(request, model, bean, "file-1", null);
+
+        assertEquals(".MediaFileEditSuccess", view);
+        assertEquals(0.3, mediaFile.getFocalX());
+        assertEquals(0.6, mediaFile.getFocalY());
+        verify(weblogger.getMediaFileManager()).updateMediaFile(weblog, mediaFile);
+    }
+
+    @Test
+    void clearingTheFocalPointPersistsNulls() throws Exception {
+        mediaFile.setFocalX(0.3);
+        mediaFile.setFocalY(0.6);
+
+        bean.setId("file-1");
+        bean.setName("photo.jpg");
+        bean.setDirectoryId("dir-1");
+        // the cleared form submits no focal parameters at all
+
+        controller.save(request, model, bean, "file-1", null);
+
+        org.junit.jupiter.api.Assertions.assertNull(mediaFile.getFocalX());
+        org.junit.jupiter.api.Assertions.assertNull(mediaFile.getFocalY());
+    }
+
+    @Test
+    void aLoneFocalCoordinateDegradesToNoFocalPoint() throws Exception {
+        MediaFileBean lone = new MediaFileBean();
+        lone.setFocalX(0.4);
+
+        MediaFile target = new MediaFile();
+        lone.copyTo(target);
+
+        org.junit.jupiter.api.Assertions.assertNull(target.getFocalX(),
+                "half a focal point cannot position anything and must not persist");
+        org.junit.jupiter.api.Assertions.assertNull(target.getFocalY());
+    }
+
+    @Test
+    void focalCoordinatesAreClampedToTheirDocumentedRange() throws Exception {
+        MediaFileBean outOfRange = new MediaFileBean();
+        outOfRange.setFocalX(1.7);
+        outOfRange.setFocalY(-0.2);
+
+        MediaFile target = new MediaFile();
+        outOfRange.copyTo(target);
+
+        assertEquals(1.0, target.getFocalX());
+        assertEquals(0.0, target.getFocalY());
+    }
+
+    @Test
+    void croppabilityFollowsTheLadderFormats() {
+        MediaFileBean jpeg = new MediaFileBean();
+        jpeg.setIsImage(true);
+        jpeg.setContentType("image/jpeg");
+        assertTrue(jpeg.isCroppable());
+
+        MediaFileBean gif = new MediaFileBean();
+        gif.setIsImage(true);
+        gif.setContentType("image/gif");
+        org.junit.jupiter.api.Assertions.assertFalse(gif.isCroppable(),
+                "no crop UI for formats the server cannot re-encode");
+
+        MediaFileBean pdf = new MediaFileBean();
+        pdf.setIsImage(false);
+        pdf.setContentType("application/pdf");
+        org.junit.jupiter.api.Assertions.assertFalse(pdf.isCroppable());
+    }
+
     private MediaFileDirectory directory(String id, String name) {
         MediaFileDirectory dir = new MediaFileDirectory();
         dir.setId(id);

@@ -19,6 +19,7 @@ package org.apache.roller.weblogger.business.jpa;
 
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -251,23 +252,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             mediaFile.setHeight(img.getHeight());
             strategy.store(mediaFile);
 
-            int newWidth = mediaFile.getThumbnailWidth();
-            int newHeight = mediaFile.getThumbnailHeight();
-
-            // create thumbnail image
-            Image newImage = img.getScaledInstance(newWidth, newHeight,
-                    Image.SCALE_SMOOTH);
-            BufferedImage tmp = new BufferedImage(newWidth, newHeight,
-                    BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g2 = tmp.createGraphics();
-            g2.drawImage(newImage, 0, 0, newWidth, newHeight, null);
-            g2.dispose();
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(tmp, "png", baos);
-
-            cmgr.saveFileContent(mediaFile.getWeblog(), mediaFile.getId()
-                    + "_sm", new ByteArrayInputStream(baos.toByteArray()));
+            writeAdminThumbnail(cmgr, mediaFile, img);
 
             roller.flush();
             // Refresh associated parent for changes
@@ -287,6 +272,32 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         } catch (Exception e) {
             log.debug("ERROR creating thumbnail", e);
         }
+    }
+
+    /**
+     * Renders and stores the {@code <id>_sm} admin thumbnail from the
+     * already orientation-corrected image. The thumbnail box is derived from
+     * the media file's stored width/height, so callers must have set those
+     * from the same image first.
+     */
+    private void writeAdminThumbnail(FileContentManager cmgr, MediaFile mediaFile,
+            BufferedImage img) throws Exception {
+        int newWidth = mediaFile.getThumbnailWidth();
+        int newHeight = mediaFile.getThumbnailHeight();
+
+        Image newImage = img.getScaledInstance(newWidth, newHeight,
+                Image.SCALE_SMOOTH);
+        BufferedImage tmp = new BufferedImage(newWidth, newHeight,
+                BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = tmp.createGraphics();
+        g2.drawImage(newImage, 0, 0, newWidth, newHeight, null);
+        g2.dispose();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(tmp, "png", baos);
+
+        cmgr.saveFileContent(mediaFile.getWeblog(), mediaFile.getId()
+                + "_sm", new ByteArrayInputStream(baos.toByteArray()));
     }
 
     /**
@@ -787,6 +798,101 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         }
         roller.flush();
         return count;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void cropMediaFile(Weblog weblog, MediaFile mediaFile,
+            int x, int y, int width, int height) throws WebloggerException {
+
+        if (!mediaFile.isImageFile()
+                || !RenditionSupport.isLadderEligible(mediaFile.getContentType())) {
+            throw new WebloggerException("Media file " + mediaFile.getId()
+                    + " cannot be cropped: content type " + mediaFile.getContentType()
+                    + " has no server-side re-encode path");
+        }
+
+        FileContentManager cmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        try {
+            FileContent fc = cmgr.getFileContent(weblog, mediaFile.getId());
+            BufferedImage img = ImageIO.read(fc.getInputStream());
+            if (img == null) {
+                throw new WebloggerException("Media file " + mediaFile.getId()
+                        + " is not a readable image");
+            }
+
+            // The crop rectangle was drawn on the DISPLAYED image -- browsers
+            // rotate the original from its EXIF Orientation before the user
+            // ever sees it -- so orientation must be composed in BEFORE the
+            // rectangle is interpreted. The re-encoded result carries no EXIF
+            // block at all, which is correct: its pixels are already upright,
+            // so an orientation tag would rotate them a second time.
+            img = RenditionSupport.applyOrientation(img,
+                    ExifSupport.readOrientation(fc.getInputStream()));
+            int orientedWidth = img.getWidth();
+            int orientedHeight = img.getHeight();
+
+            Rectangle rect = RenditionSupport.clampCropRect(
+                    orientedWidth, orientedHeight, x, y, width, height);
+            BufferedImage cropped = RenditionSupport.crop(img, rect);
+            byte[] encoded = RenditionSupport.encode(cropped, mediaFile.getContentType());
+
+            cmgr.saveFileContent(weblog, mediaFile.getId(),
+                    new ByteArrayInputStream(encoded));
+
+            // Remove every derived sibling BEFORE regenerating: a crop can
+            // shrink the image below rungs it used to clear (e.g. 3000px
+            // cropped to 800px), and a leftover <id>_1600 would keep serving
+            // the UNCROPPED pixels at that ?w= URL forever.
+            deleteFileQuietly(cmgr, weblog, mediaFile.getId() + "_sm");
+            for (String renditionId : RenditionSupport.renditionFileIds(mediaFile.getId())) {
+                deleteFileQuietly(cmgr, weblog, renditionId);
+            }
+
+            // A focal point marks a spot on the photo, not on the frame:
+            // remap it through the crop so it keeps pointing at the same
+            // pixels (clamped to the edge when the crop excluded it).
+            if (mediaFile.getFocalX() != null && mediaFile.getFocalY() != null) {
+                double fx = (mediaFile.getFocalX() * orientedWidth - rect.x) / rect.width;
+                double fy = (mediaFile.getFocalY() * orientedHeight - rect.y) / rect.height;
+                mediaFile.setFocalX(Math.min(1.0, Math.max(0.0, fx)));
+                mediaFile.setFocalY(Math.min(1.0, Math.max(0.0, fy)));
+            }
+
+            mediaFile.setWidth(cropped.getWidth());
+            mediaFile.setHeight(cropped.getHeight());
+            mediaFile.setLength(encoded.length);
+            // Bump lastUpdated so MediaResourceServlet's Last-Modified/304
+            // check doesn't keep serving cached pre-crop bytes.
+            mediaFile.setLastUpdated(new Timestamp(System.currentTimeMillis()));
+
+            writeAdminThumbnail(cmgr, mediaFile, cropped);
+            RenditionSupport.generate(cmgr, mediaFile, cropped);
+
+            // Recompute the blurhash from the cropped renditions. The stored
+            // EXIF fields are deliberately NOT re-extracted: the re-encoded
+            // file carries no EXIF block, so re-extraction would null out
+            // camera metadata that still truthfully describes the photo.
+            try {
+                mediaFile.setBlurhash(computeBlurhash(cmgr, mediaFile));
+            } catch (Exception e) {
+                log.debug("Could not recompute blurhash after cropping media file "
+                        + mediaFile.getId(), e);
+            }
+
+            strategy.store(mediaFile);
+            roller.flush();
+            strategy.refresh(mediaFile.getDirectory());
+
+            // update weblog last modified date so render caches invalidate
+            roller.getWeblogManager().saveWeblog(weblog);
+        } catch (WebloggerException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new WebloggerException("Error cropping media file " + mediaFile.getId(), e);
+        }
     }
 
     @Override

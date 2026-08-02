@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.business;
 
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -239,6 +240,82 @@ public final class RenditionSupport {
                 break;
         }
         return t;
+    }
+
+    // ------------------------------------------------------------------ crop
+
+    /**
+     * Clamps a requested crop rectangle to the bounds of a
+     * {@code imageWidth} x {@code imageHeight} image: the returned rectangle
+     * is the intersection of the request with the image. The request comes
+     * from browser-side math (selection box coordinates scaled to natural
+     * pixels), so off-by-a-few overshoot at the edges is normal and must be
+     * tolerated rather than rejected.
+     *
+     * <p>The rectangle must be interpreted against the DISPLAYED
+     * (orientation-corrected) image -- browsers rotate the original from its
+     * EXIF before the user ever draws a selection on it -- so callers must
+     * pass the dimensions of the {@link #applyOrientation}-corrected raster,
+     * never the raw one.
+     *
+     * @throws IllegalArgumentException when the request does not intersect
+     *         the image at all (zero/negative size, or entirely outside) --
+     *         cropping to nothing is a caller bug, not an edge to round away.
+     */
+    public static Rectangle clampCropRect(int imageWidth, int imageHeight,
+            int x, int y, int width, int height) {
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            throw new IllegalArgumentException(
+                    "Image dimensions must be positive: " + imageWidth + "x" + imageHeight);
+        }
+        Rectangle clamped = new Rectangle(x, y, width, height)
+                .intersection(new Rectangle(0, 0, imageWidth, imageHeight));
+        if (clamped.width <= 0 || clamped.height <= 0) {
+            throw new IllegalArgumentException("Crop rectangle " + width + "x" + height
+                    + "+" + x + "+" + y + " lies outside the " + imageWidth + "x"
+                    + imageHeight + " image");
+        }
+        return clamped;
+    }
+
+    /**
+     * Returns a new image holding the pixels of {@code source} inside
+     * {@code rect} (already clamped via {@link #clampCropRect}). A defensive
+     * copy rather than {@code getSubimage()}: the result must not share a
+     * raster with the source, which the encoders downstream would otherwise
+     * have to know about.
+     */
+    public static BufferedImage crop(BufferedImage source, Rectangle rect) {
+        BufferedImage dest = new BufferedImage(rect.width, rect.height,
+                source.getColorModel().hasAlpha() ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = dest.createGraphics();
+        try {
+            g2.drawImage(source,
+                    0, 0, rect.width, rect.height,
+                    rect.x, rect.y, rect.x + rect.width, rect.y + rect.height,
+                    null);
+        } finally {
+            g2.dispose();
+        }
+        return dest;
+    }
+
+    /**
+     * Encodes {@code image} in the format family of {@code contentType} at
+     * the same quality the ladder renditions use ({@code JPEG_QUALITY} for
+     * JPEG; PNG is lossless). This is the encode path a cropped original
+     * goes through before being written back over the stored file.
+     *
+     * @throws IOException on encode failure or when {@code contentType} is
+     *         not a ladder-covered family (see {@link #isLadderEligible}) --
+     *         callers should have checked eligibility before offering a crop.
+     */
+    public static byte[] encode(BufferedImage image, String contentType) throws IOException {
+        String formatName = formatFor(contentType);
+        if (formatName == null) {
+            throw new IOException("Content type " + contentType + " is not a croppable image format");
+        }
+        return encodeToBytes(image, formatName, JPEG_QUALITY);
     }
 
     /**

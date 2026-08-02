@@ -265,6 +265,39 @@ class MediaFileWrapperTest {
     }
 
     @Test
+    void objectPositionFormatsTheFocalPointAsStableCssPercentages() {
+        assertEquals(0.31, wrapper.getFocalX());
+        assertEquals(0.62, wrapper.getFocalY());
+        assertEquals("31% 62%", wrapper.getObjectPosition());
+
+        // double arithmetic noise (0.456 * 100 != 45.6 exactly) must never
+        // leak into emitted CSS
+        pojo.setFocalX(0.456);
+        pojo.setFocalY(0.5);
+        assertEquals("45.6% 50%", wrapper.getObjectPosition());
+
+        pojo.setFocalX(0.0);
+        pojo.setFocalY(1.0);
+        assertEquals("0% 100%", wrapper.getObjectPosition());
+
+        // out-of-range stored values (bad data) are clamped, not emitted
+        pojo.setFocalX(1.5);
+        pojo.setFocalY(-0.5);
+        assertEquals("100% 0%", wrapper.getObjectPosition());
+    }
+
+    @Test
+    void objectPositionIsNullUnlessBothCoordinatesAreSet() {
+        pojo.setFocalX(null);
+        assertNull(wrapper.getObjectPosition(),
+                "half a focal point positions nothing; templates must fall back to defaults");
+
+        pojo.setFocalX(0.4);
+        pojo.setFocalY(null);
+        assertNull(wrapper.getObjectPosition());
+    }
+
+    @Test
     void thePojoEscapeHatchReturnsTheVeryObjectThatWasWrapped() {
         assertSame(pojo, wrapper.getPojo(),
                 "Rendering internals unwrap through getPojo(); handing back a copy would "

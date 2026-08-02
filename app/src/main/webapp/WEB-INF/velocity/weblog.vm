@@ -334,11 +334,17 @@ a dependency-free, JS-free blur-up.
 #set($responsiveSrcset = $image.srcset)
 #set($responsiveAvgColor = false)
 #set($responsiveAvgColor = $image.averageColor)
+## Focal point (when set) becomes an inline object-position so themes that
+## crop the image to fit (object-fit:cover heroes/cards) keep the subject in
+## frame. Theme-side markup only: this macro's output is never sanitized,
+## unlike entry content, where the [image] shortcode deliberately omits it.
+#set($responsiveObjectPosition = false)
+#set($responsiveObjectPosition = $image.objectPosition)
 <picture>
 #if ($responsiveSrcset)
 <source type="image/webp" srcset="$responsiveSrcset" sizes="$sizes">
 #end
-<img src="$image.permalink"#if ($responsiveSrcset) srcset="$responsiveSrcset" sizes="$sizes"#end#if ($image.width > 0 && $image.height > 0) width="$image.width" height="$image.height"#end alt="$utils.escapeHTML($alt)" loading="lazy" decoding="async"#if ($imgClass && $imgClass != "") class="$imgClass"#end#if ($utils.isNotEmpty($image.blurhash)) data-blurhash="$utils.escapeHTML($image.blurhash)"#end#if ($responsiveAvgColor) style="background-color:$responsiveAvgColor"#end>
+<img src="$image.permalink"#if ($responsiveSrcset) srcset="$responsiveSrcset" sizes="$sizes"#end#if ($image.width > 0 && $image.height > 0) width="$image.width" height="$image.height"#end alt="$utils.escapeHTML($alt)" loading="lazy" decoding="async"#if ($imgClass && $imgClass != "") class="$imgClass"#end#if ($utils.isNotEmpty($image.blurhash)) data-blurhash="$utils.escapeHTML($image.blurhash)"#end#if ($responsiveAvgColor && $responsiveObjectPosition) style="background-color:$responsiveAvgColor;object-position:$responsiveObjectPosition"#elseif ($responsiveAvgColor) style="background-color:$responsiveAvgColor"#elseif ($responsiveObjectPosition) style="object-position:$responsiveObjectPosition"#end>
 </picture>
 #end
 #end

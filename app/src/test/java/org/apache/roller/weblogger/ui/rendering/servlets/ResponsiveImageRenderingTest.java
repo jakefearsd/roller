@@ -215,6 +215,48 @@ class ResponsiveImageRenderingTest {
         assertFalse(body.contains("entry-thumb"), body);
     }
 
+    // ---------------------------------------------------------- focal point
+
+    @Test
+    void aFocalPointBecomesObjectPositionOnTheHero() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "focal-image");
+        String imageId = image.getId();
+        TestUtils.endSession(true);
+
+        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFile managed = mgr.getMediaFile(imageId);
+        managed.setFocalX(0.3);
+        managed.setFocalY(0.7);
+        mgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), managed);
+        TestUtils.endSession(true);
+
+        entryWithFeaturedImage("focal-entry", imageId);
+
+        String body = render("/" + HANDLE + "/entry/focal-entry");
+
+        // theme-side inline style is allowed (only entry content is
+        // sanitized), and it must merge with the blurhash average color
+        // rather than replace it
+        assertTrue(body.contains(";object-position:30% 70%\""),
+                "the focal point must be emitted as object-position:\n" + body);
+        assertTrue(body.contains(" style=\"background-color:#"),
+                "the average-color placeholder must survive alongside it:\n" + body);
+    }
+
+    @Test
+    void withoutAFocalPointNoObjectPositionIsEmitted() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "nofocal-image");
+        String imageId = image.getId();
+        TestUtils.endSession(true);
+        entryWithFeaturedImage("nofocal-entry", imageId);
+
+        String body = render("/" + HANDLE + "/entry/nofocal-entry");
+
+        assertFalse(body.contains("object-position"),
+                "files without focal points must render exactly as today:\n" + body);
+        assertTrue(body.contains(" style=\"background-color:#"), body);
+    }
+
     // ------------------------------------------------------ other themes
 
     @Test
