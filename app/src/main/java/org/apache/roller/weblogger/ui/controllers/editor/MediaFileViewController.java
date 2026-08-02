@@ -42,6 +42,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
@@ -68,7 +69,14 @@ public class MediaFileViewController extends MediaFileBase {
         return "mediaFileView.title";
     }
 
-    @GetMapping("/mediaFileView.rol")
+    // Both verbs, like entryAddWithMediaFile.rol: browsing is a GET, but the
+    // view page's own form (the sort-by onchange and the edit modal's
+    // onEditSuccess() both call document.mediaFileViewForm.submit(), and the
+    // form is method="post") posts back to this same URL. The Struts action
+    // this was transcribed from answered any verb; a GET-only mapping 405s
+    // every one of those submits.
+    @RequestMapping(value = "/mediaFileView.rol",
+            method = {RequestMethod.GET, RequestMethod.POST})
     public String execute(HttpServletRequest request, Model model,
                           @RequestParam(value = "directoryId", required = false) String directoryId,
                           @RequestParam(value = "directoryName", required = false) String directoryName,

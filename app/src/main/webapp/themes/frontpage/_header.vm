@@ -9,6 +9,7 @@
   #showAutodiscoveryLinks($model.weblog)
   #showSeoHead()
   #showGalleryGridStyles()
+  #showGalleryAssets()
   <style>
   #includeTemplate($model.weblog "_css")
   </style>

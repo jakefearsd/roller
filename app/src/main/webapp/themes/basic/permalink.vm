@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="$model.weblog.stylesheet">
     #showSeoHead()
     #showGalleryGridStyles()
+    #showGalleryAssets()
 </head>
 <!-- permalink -->
 <body>
