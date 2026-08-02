@@ -30,11 +30,11 @@ import org.apache.commons.logging.LogFactory;
  * <p>{@link #BLOG_POSTING} is the default: it means "just the BlogPosting
  * block every permalink already gets, nothing extra". A null
  * {@code weblogentry.jsonld_type} column means the same thing, so entries
- * that predate this field render exactly as before. A travel type REPLACES
- * the BlogPosting object with the typed one -- one
- * {@code application/ld+json} block per permalink, as before, describing
- * what the page actually is; the enum name is what is stored in the column.
- * {@code EntryJsonLd} is the emitter.
+ * that predate this field render exactly as before. The travel types each
+ * add a second {@code application/ld+json} block alongside the BlogPosting
+ * one -- which every permalink keeps, because a travel post is still a blog
+ * post and its dates, author and headline live there; the enum name is what
+ * is stored in the column. {@code EntryJsonLd} builds that second block.
  */
 public enum JsonLdType {
 

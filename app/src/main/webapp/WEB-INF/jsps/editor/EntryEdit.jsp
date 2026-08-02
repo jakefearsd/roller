@@ -408,10 +408,10 @@
                     </div>
 
                     <%-- structured data: the schema.org type this entry's head declares.
-                         The type-specific rows below are shown/hidden by
-                         updateSeoJsonLdRows(); they stay in the DOM when hidden, so
-                         switching type never silently drops coordinates or dates the
-                         author already entered. --%>
+                         The event rows below are shown/hidden by
+                         updateSeoJsonLdRows() and stay in the DOM when hidden, so
+                         switching type never silently drops dates the author
+                         already entered. --%>
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label" for="seo_jsonldType"><spring:message code="weblogEdit.jsonLdType"/></label>
                         <div class="col-sm-9">
@@ -427,8 +427,10 @@
                     </div>
 
                     <%-- coordinates: a TouristAttraction's geo, and the default centre
-                         for a bare [map] in either travel-place type --%>
-                    <div id="seo_row_geo" style="${bean.jsonLdType == 'TOURIST_ATTRACTION' or bean.jsonLdType == 'TOURIST_TRIP' ? '' : 'display:none;'}">
+                         for a bare [map]. Always shown, because the [map] use has
+                         nothing to do with the structured-data type -- an ordinary
+                         blog post may well want a map of where it happened. --%>
+                    <div id="seo_row_geo">
                         <div class="row mb-3">
                             <label class="col-sm-3 col-form-label" for="seo_geoLatitude"><spring:message code="weblogEdit.geoLatitude"/></label>
                             <div class="col-sm-9">
@@ -712,14 +714,14 @@
         $('#seo_snippet_description').text(description);
     }
 
-    <%-- SEO panel: only the rows the chosen structured-data type actually uses.
-         Hidden rows keep their inputs (and their values) in the form, so a type
-         switch is reversible and never wipes what the author typed. --%>
+    <%-- SEO panel: the event rows appear only for the Event type. They keep
+         their inputs (and their values) in the form while hidden, so a type
+         switch is reversible and never wipes what the author typed. The
+         coordinate rows are not conditional -- they also centre a bare [map],
+         which any entry may use. --%>
 
     function updateSeoJsonLdRows() {
-        var type = $('#seo_jsonldType').val();
-        $('#seo_row_geo').toggle(type === 'TOURIST_ATTRACTION' || type === 'TOURIST_TRIP');
-        $('#seo_row_event').toggle(type === 'EVENT');
+        $('#seo_row_event').toggle($('#seo_jsonldType').val() === 'EVENT');
     }
 
     $(document).ready(function () {

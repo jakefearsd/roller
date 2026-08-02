@@ -140,6 +140,26 @@ class SeoHeadRenderingTest {
         return node;
     }
 
+    /**
+     * The typed block of a permalink that has one, having first asserted that
+     * the BlogPosting block is still there and still first. A travel post is
+     * still a blog post: the typed object is emitted ALONGSIDE BlogPosting,
+     * never instead of it, or the entry silently loses its datePublished,
+     * dateModified, author and headline.
+     */
+    private static JsonNode typedLdJson(String body, String expectedType) {
+        List<JsonNode> nodes = ldJsonBlocks(body);
+        assertEquals(2, nodes.size(),
+                "a typed permalink emits BlogPosting AND the typed object; body:\n" + body);
+        assertEquals("BlogPosting", nodes.get(0).path("@type").asString(),
+                "BlogPosting must still come first: " + nodes);
+        JsonNode typed = nodes.get(1);
+        assertEquals(expectedType, typed.path("@type").asString(),
+                "wrong JSON-LD @type in: " + typed);
+        assertEquals("https://schema.org", typed.path("@context").asString());
+        return typed;
+    }
+
     // ----------------------------------------------------------------- basic
 
     @Test
@@ -435,7 +455,7 @@ class SeoHeadRenderingTest {
     // ------------------------------------------------- typed travel JSON-LD
 
     @Test
-    void aTouristAttractionEntryReplacesBlogPostingWithItsOwnType() throws Exception {
+    void aTouristAttractionEntryAddsItsTypeAlongsideBlogPosting() throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry("attraction-entry", weblog, user);
         updateEntry(entry, e -> {
             e.setJsonLdType(JsonLdType.TOURIST_ATTRACTION);
@@ -446,17 +466,20 @@ class SeoHeadRenderingTest {
 
         String body = render("/" + HANDLE + "/entry/attraction-entry");
 
-        // One object per URL: the typed block REPLACES BlogPosting rather than
-        // competing with it for the same page.
-        JsonNode node = singleLdJson(body, "TouristAttraction");
+        String canonical = BASE + "/entry/attraction-entry";
+        JsonNode node = typedLdJson(body, "TouristAttraction");
         assertEquals("attraction-entry", node.path("name").asString());
         assertEquals("The iron lady of Paris.", node.path("description").asString());
-        assertEquals(BASE + "/entry/attraction-entry", node.path("url").asString());
+        assertEquals(canonical, node.path("url").asString());
         assertEquals("GeoCoordinates", node.path("geo").path("@type").asString());
         assertEquals(48.8584, node.path("geo").path("latitude").asDouble());
         assertEquals(2.2945, node.path("geo").path("longitude").asDouble());
-        assertFalse(body.contains("BlogPosting"),
-                "the BlogPosting object must be gone, not merely joined:\n" + body);
+
+        // The two sibling objects are associated by claiming the same page.
+        assertEquals(canonical, node.path("mainEntityOfPage").asString());
+        assertEquals(canonical,
+                ldJsonBlocks(body).get(0).path("mainEntityOfPage").asString(),
+                "BlogPosting and the typed object must point at the same URL:\n" + body);
     }
 
     @Test
@@ -474,7 +497,7 @@ class SeoHeadRenderingTest {
 
         String body = render("/" + HANDLE + "/entry/trip-entry");
 
-        JsonNode itinerary = singleLdJson(body, "TouristTrip").path("itinerary");
+        JsonNode itinerary = typedLdJson(body, "TouristTrip").path("itinerary");
         assertEquals("ItemList", itinerary.path("@type").asString());
         JsonNode items = itinerary.path("itemListElement");
         assertEquals(2, items.size(), "one Place per pin: " + itinerary);
@@ -498,7 +521,7 @@ class SeoHeadRenderingTest {
 
         String body = render("/" + HANDLE + "/entry/event-entry");
 
-        JsonNode node = singleLdJson(body, "Event");
+        JsonNode node = typedLdJson(body, "Event");
         String start = node.path("startDate").asString();
         assertTrue(start.startsWith("2026-08-02T19:30:00"),
                 "startDate must be ISO-8601, got: " + start);
@@ -533,7 +556,7 @@ class SeoHeadRenderingTest {
 
         String body = render("/" + HANDLE + "/entry/faq-entry");
 
-        JsonNode questions = singleLdJson(body, "FAQPage").path("mainEntity");
+        JsonNode questions = typedLdJson(body, "FAQPage").path("mainEntity");
         assertEquals(2, questions.size(), "one Question per [q]/[a] pair: " + questions);
         assertEquals("When should I go?", questions.get(0).path("name").asString());
         assertEquals("Spring or autumn.",
@@ -555,35 +578,43 @@ class SeoHeadRenderingTest {
 
         // Parsing at all is the real assertion: an unescaped quote would make
         // the block unparseable and an unescaped "</script>" would end it early.
-        JsonNode node = singleLdJson(body, "TouristAttraction");
+        JsonNode node = typedLdJson(body, "TouristAttraction");
         assertEquals("Chez \"Nous\" </script>", node.path("name").asString(),
                 "the title must survive exactly one escape pass: " + node);
     }
 
     @Test
-    void aTypelessEntryAndABlogPostingEntryEmitByteIdenticalBlogPosting() throws Exception {
-        // The double-emit guard. EntryBean.copyTo normalizes a blank dropdown
-        // to BLOG_POSTING, so merely re-saving an entry written before this
-        // feature existed flips null to BLOG_POSTING in the column. If the two
-        // did not render identically, every re-saved entry's structured data
-        // would change under it.
+    void theBlogPostingBlockIsByteIdenticalWhateverTheEntrysType() throws Exception {
+        // Two guards in one. (a) The double-emit guard: EntryBean.copyTo
+        // normalizes a blank dropdown to BLOG_POSTING, so merely re-saving an
+        // entry written before this feature existed flips null to BLOG_POSTING
+        // in the column, and that must change nothing. (b) The no-regression
+        // guard: picking a travel type ADDS a block, it never edits or drops
+        // the BlogPosting one, so the entry keeps its datePublished,
+        // dateModified, author and headline.
         WeblogEntry entry = TestUtils.setupWeblogEntry("stable-entry", weblog, user);
         updateEntry(entry, e -> e.setSearchDescription("Unchanged by the new field."));
 
-        String beforeBody = render("/" + HANDLE + "/entry/stable-entry");
-        List<String> before = ldJsonSources(beforeBody);
+        String untypedBody = render("/" + HANDLE + "/entry/stable-entry");
+        List<String> untyped = ldJsonSources(untypedBody);
+        assertEquals(1, untyped.size(),
+                "an untyped permalink emits exactly one block:\n" + untypedBody);
+        assertTrue(untyped.get(0).contains("\"@type\": \"BlogPosting\","),
+                "and it must be the hand-written BlogPosting block: " + untyped.get(0));
+        assertTrue(untyped.get(0).contains("\"headline\": \"stable-entry\""),
+                "including its headline property: " + untyped.get(0));
 
         updateEntry(entry, e -> e.setJsonLdType(JsonLdType.BLOG_POSTING));
         RenderingTestSupport.clearRenderCaches();
-        List<String> after = ldJsonSources(render("/" + HANDLE + "/entry/stable-entry"));
-
-        assertEquals(1, before.size(), "a permalink emits exactly one block:\n" + beforeBody);
-        assertEquals(before, after,
+        assertEquals(untyped, ldJsonSources(render("/" + HANDLE + "/entry/stable-entry")),
                 "an explicit BLOG_POSTING must render byte for byte like a null type");
-        assertTrue(before.get(0).contains("\"@type\": \"BlogPosting\","),
-                "and it must still be the hand-written BlogPosting block: " + before.get(0));
-        assertTrue(before.get(0).contains("\"headline\": \"stable-entry\""),
-                "including its headline property: " + before.get(0));
+
+        updateEntry(entry, e -> e.setJsonLdType(JsonLdType.TOURIST_ATTRACTION));
+        RenderingTestSupport.clearRenderCaches();
+        List<String> typed = ldJsonSources(render("/" + HANDLE + "/entry/stable-entry"));
+        assertEquals(2, typed.size(), "a travel type adds a block, it does not swap one");
+        assertEquals(untyped.get(0), typed.get(0),
+                "and the BlogPosting block must survive it byte for byte");
     }
 
     @Test

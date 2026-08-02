@@ -41,14 +41,18 @@ import org.apache.roller.weblogger.util.Utilities;
  * picked a travel type in the editor's SEO card.
  *
  * <p><b>Where this runs.</b> {@code #showSeoHead} (weblog.vm) reaches this
- * through {@code $utils.travelJsonLd(...)}. A non-null return REPLACES the
- * {@code BlogPosting} block on that permalink; null means "no override" and the
- * macro emits the BlogPosting block exactly as it always has. Null and
- * {@link JsonLdType#BLOG_POSTING} are treated identically on purpose:
- * {@code EntryBean.copyTo} normalizes a blank selection to
- * {@code BLOG_POSTING}, so entries written before this field existed and
- * entries re-saved through the editor must both keep rendering byte for byte
- * as before.
+ * through {@code $utils.travelJsonLd(...)}. Every permalink emits its
+ * {@code BlogPosting} block unchanged, whatever the type: a travel post is
+ * still a blog post, and its {@code datePublished}/{@code dateModified}/
+ * {@code author}/{@code headline} are what feeds and search rely on. A non-null
+ * return here is emitted as a SECOND {@code application/ld+json} block after
+ * it -- consumers accept several per page, and the two are associated by both
+ * carrying the same canonical {@code url}/{@code mainEntityOfPage}. Null means
+ * "no second block". Null and {@link JsonLdType#BLOG_POSTING} are treated
+ * identically on purpose: {@code EntryBean.copyTo} normalizes a blank selection
+ * to {@code BLOG_POSTING}, so entries written before this field existed and
+ * entries re-saved through the editor must both keep rendering exactly as
+ * before.
  *
  * <p><b>Why the whole block is built in Java.</b> The fact base allowed either
  * a Velocity-side assembly from escaped fragments or a Java-side emission of
@@ -82,14 +86,13 @@ import org.apache.roller.weblogger.util.Utilities;
  *   <li>{@code Event} dates and venue come from the entry's event columns.</li>
  * </ul>
  *
- * <p><b>When a typed block is refused</b> (null return, BlogPosting stands):
- * an {@code Event} with no start date and an {@code FAQPage} with no parseable
- * {@code [faq]} pairs. Both are structurally invalid without that data, and
- * shipping invalid structured data is worse than shipping the valid
- * BlogPosting the page would otherwise have had. A {@code TouristAttraction}
- * with no coordinates and a {@code TouristTrip} with no pins are still valid
- * (only {@code name} is required), so those emit without the optional
- * property.
+ * <p><b>When the second block is refused</b> (null return, the BlogPosting
+ * block stands alone): an {@code Event} with no start date and an
+ * {@code FAQPage} with no parseable {@code [faq]} pairs. Both are structurally
+ * invalid without that data, and shipping invalid structured data is worse
+ * than shipping nothing extra. A {@code TouristAttraction} with no coordinates
+ * and a {@code TouristTrip} with no pins are still valid (only {@code name} is
+ * required), so those emit without the optional property.
  *
  * <p><b>Honest caveat.</b> Since August 2023 Google restricts FAQ rich results
  * to well-known authoritative government and health sites. The {@code FAQPage}
@@ -112,10 +115,10 @@ public final class EntryJsonLd {
     }
 
     /**
-     * The typed JSON-LD object for {@code entry} as a single JSON string, or
-     * null when the entry has no travel type (or lacks the data its type
-     * structurally requires) and the caller should emit its BlogPosting block
-     * instead.
+     * The typed JSON-LD object for {@code entry} as a single JSON string, to be
+     * emitted alongside the permalink's BlogPosting block -- or null when the
+     * entry has no travel type (or lacks the data its type structurally
+     * requires) and the BlogPosting block should stand alone.
      *
      * @param entry       the entry being rendered; null yields null
      * @param name        resolved display name, RAW (unescaped) text
@@ -137,7 +140,12 @@ public final class EntryJsonLd {
         put(node, "name", StringUtils.trimToNull(name));
         put(node, "description", StringUtils.trimToNull(description));
         put(node, "image", StringUtils.trimToNull(imageUrl));
+        // url AND mainEntityOfPage, both the canonical URL. The sibling
+        // BlogPosting block on the same page carries mainEntityOfPage too, and
+        // matching values are how a consumer associates the two objects
+        // without either having to nest the other.
         put(node, "url", StringUtils.trimToNull(url));
+        put(node, "mainEntityOfPage", StringUtils.trimToNull(url));
 
         switch (type) {
             case TOURIST_ATTRACTION -> put(node, "geo", geoOf(entry));
@@ -151,7 +159,7 @@ public final class EntryJsonLd {
                 List<Object> questions = questionsOf(entry);
                 if (questions.isEmpty()) {
                     log.debug("Entry " + entry.getId() + " is typed FAQ_PAGE but has no"
-                            + " parseable [faq] pairs; emitting BlogPosting instead");
+                            + " parseable [faq] pairs; emitting no second block");
                     return null;
                 }
                 node.put("mainEntity", questions);
@@ -217,8 +225,8 @@ public final class EntryJsonLd {
     /**
      * Adds {@code startDate}, optional {@code endDate} and an optional
      * name-only {@code Place} location. Returns false when there is no start
-     * date -- schema.org requires one, so the caller falls back to BlogPosting
-     * rather than emit an Event that cannot validate.
+     * date -- schema.org requires one, so the caller emits no second block at
+     * all rather than an Event that cannot validate.
      *
      * <p>The venue is emitted as {@code {"@type":"Place","name":..}} and
      * nothing more: the editor collects a venue name, not an address, and
@@ -228,7 +236,7 @@ public final class EntryJsonLd {
         Timestamp start = entry.getEventStart();
         if (start == null) {
             log.debug("Entry " + entry.getId() + " is typed EVENT but has no start date;"
-                    + " emitting BlogPosting instead");
+                    + " emitting no second block");
             return false;
         }
         node.put("startDate", DateUtil.formatIso8601(start));

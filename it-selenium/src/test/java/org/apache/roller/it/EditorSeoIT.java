@@ -136,11 +136,11 @@ class EditorSeoIT extends RollerIT {
     }
 
     /**
-     * The structured-data half of the same loop. The rows for coordinates and
-     * event details stay hidden until the dropdown asks for them, which is
-     * jQuery in the page bottom that no server-side test can exercise; and what
-     * comes out of the permalink must be the typed object, not the BlogPosting
-     * the same page would otherwise carry.
+     * The structured-data half of the same loop. The event rows stay hidden
+     * until the dropdown asks for them, which is jQuery in the page bottom that
+     * no server-side test can exercise; and what comes out of the permalink
+     * must be the typed object ALONGSIDE the BlogPosting one the page has
+     * always carried.
      */
     @Test
     void aTravelTypeChosenInTheSeoCardPublishesAsTypedJsonLd() {
@@ -160,13 +160,13 @@ class EditorSeoIT extends RollerIT {
         $("a[data-bs-target='#collapseSeo']").click();
         $("#seo_metaDescription").should(visible).setValue(metaDescription);
 
-        // A plain blog post asks for none of the extra rows.
+        // Coordinates are offered on any entry (they also centre a bare [map]);
+        // the event rows are not, until the type asks for them.
         $("#seo_jsonldType").shouldBe(visible);
-        $("#seo_row_geo").shouldNotBe(visible);
+        $("#seo_row_geo").shouldBe(visible);
         $("#seo_row_event").shouldNotBe(visible);
 
         $("#seo_jsonldType").selectOptionByValue("TOURIST_ATTRACTION");
-        $("#seo_row_geo").shouldBe(visible);
         $("#seo_row_event").shouldNotBe(visible);
         $("#seo_geoLatitude").setValue("48.8584");
         $("#seo_geoLongitude").setValue("2.2945");
@@ -182,9 +182,10 @@ class EditorSeoIT extends RollerIT {
         assertHeadContains(page, permalink, "\"latitude\":48.8584");
         assertHeadContains(page, permalink, "\"longitude\":2.2945");
         assertHeadContains(page, permalink, "\"description\":\"" + metaDescription + "\"");
-        assertFalse(page.contains("BlogPosting"),
-                "the typed object must replace the BlogPosting one, not join it. Head was:\n"
-                        + headOf(page));
+        // and the block the permalink has always had is still there
+        assertHeadContains(page, permalink, "\"@type\": \"BlogPosting\"");
+        assertTrue(headOf(page).split("application/ld\\+json", -1).length - 1 == 2,
+                "the head must carry both JSON-LD blocks. Head was:\n" + headOf(page));
     }
 
     /**

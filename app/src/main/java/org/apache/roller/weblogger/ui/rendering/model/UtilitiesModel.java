@@ -241,11 +241,11 @@ public class UtilitiesModel implements Model {
 
     /**
      * The typed travel JSON-LD object for a permalink whose author picked a
-     * schema.org type in the editor's SEO card, ready to drop straight into
-     * the {@code <script type="application/ld+json">} element -- or null when
-     * the entry has no type override (or lacks the data its type structurally
-     * requires), which is {@code #showSeoHead}'s signal to emit its usual
-     * BlogPosting block.
+     * schema.org type in the editor's SEO card, ready to drop straight into a
+     * SECOND {@code <script type="application/ld+json">} element after the
+     * BlogPosting one every permalink keeps -- or null when the entry has no
+     * type override (or lacks the data its type structurally requires), which
+     * is {@code #showSeoHead}'s signal to emit no second block at all.
      *
      * <p>The four values come from the macro's existing plumbing (the same
      * ones behind the Open Graph tags) and must be passed RAW:

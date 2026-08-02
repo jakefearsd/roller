@@ -243,16 +243,20 @@ containing "</script>" cannot terminate the inline JSON-LD block).
     #end
     ## JSON-LD: BlogPosting on permalinks, Blog on the weblog's other pages.
     ##
-    ## When the author picked a travel type in the SEO card, the typed object
-    ## REPLACES the BlogPosting one -- a permalink still carries exactly one
-    ## ld+json block, describing what the page actually is rather than two
-    ## objects claiming the same URL. $utils.travelJsonLd returns the finished,
-    ## fully escaped JSON (EntryJsonLd builds it: variable-length itinerary and
-    ## FAQ arrays are not something to comma-join by hand in a template), or
-    ## null for "no override" -- which covers BOTH a null jsonld_type and an
-    ## explicit BLOG_POSTING, because EntryBean.copyTo normalizes a blank
-    ## selection to BLOG_POSTING and a re-saved old entry must keep rendering
-    ## byte for byte as it did before the field existed.
+    ## The BlogPosting block is emitted for EVERY permalink, unchanged, whatever
+    ## the author picked in the SEO card -- a travel post is still a blog post,
+    ## and its datePublished/dateModified/author/headline are what feeds and
+    ## search rely on. When a travel type IS picked, a SECOND ld+json block
+    ## follows carrying the typed object; consumers accept several blocks per
+    ## page and associate them through the "url"/"mainEntityOfPage" both sides
+    ## point at the same canonical URL.
+    ##
+    ## $utils.travelJsonLd returns that second object as finished, fully escaped
+    ## JSON (EntryJsonLd builds it: variable-length itinerary and FAQ arrays are
+    ## not something to comma-join by hand in a template), or null for "no
+    ## second block" -- which covers BOTH a null jsonld_type and an explicit
+    ## BLOG_POSTING, because EntryBean.copyTo normalizes a blank selection to
+    ## BLOG_POSTING and a re-saved old entry must render exactly as before.
     ##
     ## The values are handed over RAW; EntryJsonLd escapes them once. The
     ## #set-to-"" dance is because these are Velocity's false-or-value idiom
@@ -274,11 +278,6 @@ containing "</script>" cannot terminate the inline JSON-LD block).
         #end
         #set($seoTypedJson = false)
         #set($seoTypedJson = $utils.travelJsonLd($seoEntry.pojo, $seoNamePlain, $seoDescriptionArg, $seoImageArg, $seoCanonicalArg))
-        #if ($seoTypedJson)
-    <script type="application/ld+json">
-    $seoTypedJson
-    </script>
-        #else
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -291,6 +290,10 @@ containing "</script>" cannot terminate the inline JSON-LD block).
         "mainEntityOfPage": "$utils.escapeJson($seoCanonical)",
         "headline": "$seoTitleJson"
     }
+    </script>
+        #if ($seoTypedJson)
+    <script type="application/ld+json">
+    $seoTypedJson
     </script>
         #end
     #elseif (!$model.searchResults)

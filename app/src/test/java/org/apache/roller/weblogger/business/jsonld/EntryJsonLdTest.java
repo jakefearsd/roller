@@ -77,8 +77,8 @@ class EntryJsonLdTest {
     void anExplicitBlogPostingTypeGetsNoTypedBlockEither() {
         // EntryBean.copyTo normalizes a blank selection to BLOG_POSTING, so
         // merely re-saving an old entry stores the enum where null used to be.
-        // If BLOG_POSTING emitted anything, every re-saved entry would carry
-        // two competing objects for one URL.
+        // If BLOG_POSTING emitted anything, every re-saved entry would suddenly
+        // sprout a second block duplicating the BlogPosting one.
         assertNull(EntryJsonLd.build(entry(JsonLdType.BLOG_POSTING),
                 NAME, DESCRIPTION, IMAGE, URL));
     }
@@ -100,6 +100,9 @@ class EntryJsonLdTest {
         assertEquals(DESCRIPTION, node.path("description").asString());
         assertEquals(IMAGE, node.path("image").asString());
         assertEquals(URL, node.path("url").asString());
+        assertEquals(URL, node.path("mainEntityOfPage").asString(),
+                "the sibling BlogPosting block claims the same page; matching"
+                        + " mainEntityOfPage is how a consumer associates the two");
     }
 
     @Test
@@ -112,6 +115,8 @@ class EntryJsonLdTest {
         assertFalse(node.has("description"), "a blank description must be absent: " + node);
         assertFalse(node.has("image"), "a blank image must be absent: " + node);
         assertFalse(node.has("url"), "a null url must be absent: " + node);
+        assertFalse(node.has("mainEntityOfPage"),
+                "and so must the page claim built from it: " + node);
     }
 
     @Test
@@ -268,10 +273,10 @@ class EntryJsonLdTest {
     }
 
     @Test
-    void anEventWithNoStartDateFallsBackToBlogPosting() {
+    void anEventWithNoStartDateEmitsNoSecondBlock() {
         // startDate is structurally required; an Event without one cannot
-        // validate, and invalid structured data is worse than the valid
-        // BlogPosting the permalink would otherwise have carried.
+        // validate, and invalid structured data is worse than none -- the
+        // permalink still has its BlogPosting block.
         WeblogEntry entry = entry(JsonLdType.EVENT);
         entry.setEventLocation("Champ de Mars");
 
@@ -317,7 +322,7 @@ class EntryJsonLdTest {
     }
 
     @Test
-    void aFaqPageWithNoParseablePairsFallsBackToBlogPosting() {
+    void aFaqPageWithNoParseablePairsEmitsNoSecondBlock() {
         // FaqBlocks is strict: a malformed block yields nothing, and a FAQPage
         // with an empty mainEntity is invalid.
         WeblogEntry noBlock = entry(JsonLdType.FAQ_PAGE);
