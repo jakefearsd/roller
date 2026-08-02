@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src *; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
+    <title>Search results : $utils.escapeHTML($model.weblog.name)</title>
+    #showAutodiscoveryLinks($model.weblog)
+    #showAnalyticsTrackingCode($model.weblog)
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    #showSeoHead()
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+</head>
+<!-- searchresults -->
+<body class="pf">
+
+<header class="pf-header">
+    <p class="pf-name"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
+</header>
+
+<main class="pf-main">
+    #set($pager = $model.getWeblogEntriesPager())
+    <div class="pf-search-head">
+        #showWeblogSearchAgainForm($model.weblog)
+        #if($model.hits > 0)
+        <nav class="pf-pager">
+            #showNextPrevSearchControl($pager)
+        </nav>
+        #end
+    </div>
+    <div class="pf-grid">
+        #showWeblogEntriesPager($pager)
+    </div>
+</main>
+
+</body>
+</html>

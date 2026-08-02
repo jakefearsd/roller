@@ -1,0 +1,55 @@
+## $model here is a PageModel
+## $entry here is a WeblogEntryWrapper
+##
+## Portfolio theme day fragment. On entry-list pages it emits bare grid
+## cards -- the enclosing template supplies the single .pf-grid flex
+## container, so multiple days flow together into one justified grid
+## (the #showWeblogEntriesPager macro parses this fragment once per day
+## with no wrapper of its own). On the permalink page it emits the
+## image-first entry layout: hero featured image, content, minimal meta.
+<!-- _day -->
+#if($model.permalink)
+    #foreach($entry in $entries)
+    <article class="pf-entry">
+        #if($entry.featuredImage)
+        <figure class="pf-hero">
+            #showResponsiveImage($entry.featuredImage $entry.title "100vw" "pf-hero-img")
+        </figure>
+        #end
+        <div class="pf-entry-body">
+            <h1 class="pf-entry-title">$utils.escapeHTML($entry.title)</h1>
+            <div class="pf-entry-content">$entry.displayContent</div>
+            <p class="pf-entry-meta">
+                $utils.formatDate($entry.pubTime, "MMMM d, yyyy")
+                &middot; <a href="$url.category($entry.category.name)">$utils.escapeHTML($entry.category.name)</a>
+                #if($utils.isUserAuthorizedToAuthor($entry.website))
+                &middot; <a href="$url.editEntry($entry.anchor)">Edit</a>
+                #end
+            </p>
+        </div>
+    </article>
+    #end
+#else
+    #foreach($entry in $entries)
+        #if($entry.featuredImage)
+            ## --ar (width / height) drives the justified packing: flex-grow
+            ## and flex-basis in the stylesheet, same convention as .jgrid.
+            #set($cardAspect = false)
+            #if($entry.featuredImage.width > 0 && $entry.featuredImage.height > 0)
+                #set($cardAspect = 1.0 * $entry.featuredImage.width / $entry.featuredImage.height)
+            #end
+    <figure class="pf-card"#if($cardAspect) style="--ar:$cardAspect"#end>
+        <a class="pf-card-link" href="$url.entry($entry.anchor)">
+            #showResponsiveImage($entry.featuredImage $entry.title "(max-width: 640px) 100vw, 40vw" "pf-card-img")
+            <span class="pf-card-title">$utils.escapeHTML($entry.title)</span>
+        </a>
+    </figure>
+        #else
+    <figure class="pf-card pf-card-text">
+        <a class="pf-card-link" href="$url.entry($entry.anchor)">
+            <span class="pf-card-title">$utils.escapeHTML($entry.title)</span>
+        </a>
+    </figure>
+        #end
+    #end
+#end

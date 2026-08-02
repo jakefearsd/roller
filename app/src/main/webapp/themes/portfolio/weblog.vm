@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src *; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
+    <title>$utils.escapeHTML($model.weblog.name)</title>
+    #showAutodiscoveryLinks($model.weblog)
+    #showAnalyticsTrackingCode($model.weblog)
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    #showSeoHead()
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+</head>
+<!-- weblog -->
+<body class="pf">
+
+<header class="pf-header">
+    <p class="pf-name"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
+    #if($utils.isNotEmpty($model.weblog.tagline))
+    <p class="pf-tagline">$model.weblog.tagline</p>
+    #end
+    <nav class="pf-nav">
+        #showWeblogCategoryLinksList()
+    </nav>
+</header>
+
+<main class="pf-main">
+    #set($pager = $model.getWeblogEntriesPager())
+    <div class="pf-grid">
+        #showWeblogEntriesPager($pager)
+    </div>
+    <nav class="pf-pager">
+        #showNextPrevEntriesControl($pager)
+    </nav>
+</main>
+
+<footer class="pf-footer">
+    <form class="pf-search" method="get" action="$url.search">
+        <input type="search" name="q" placeholder="Search" aria-label="Search">
+    </form>
+</footer>
+
+</body>
+</html>

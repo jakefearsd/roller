@@ -1,0 +1,401 @@
+/*-------------------------------------------------------------
+Portfolio theme -- dark, image-first photography portfolio.
+Whitespace and images; system font stack (the theme CSP has no
+font-src, so webfonts cannot load). The front-page grid packs
+justified rows with the same flex-grow/--ar convention as the
+gallery shortcode's .jgrid.
+--------------------------------------------------------------*/
+
+:root {
+    --pf-bg: #0e0e10;
+    --pf-surface: #161618;
+    --pf-fg: #e8e8e6;
+    --pf-muted: #8f8f96;
+    --pf-line: #26262a;
+    --pf-gap: 4px;
+    --pf-row-h: 320px;
+    --pf-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body.pf {
+    margin: 0;
+    background: var(--pf-bg);
+    color: var(--pf-fg);
+    font-family: var(--pf-font);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+body.pf a {
+    color: inherit;
+    text-decoration: none;
+}
+
+body.pf a:hover {
+    color: #ffffff;
+}
+
+/* header ------------------------------------------------ */
+
+.pf-header {
+    text-align: center;
+    padding: 3.5rem 1rem 2rem;
+}
+
+.pf-name {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+}
+
+.pf-tagline {
+    margin: 0.75rem 0 0;
+    color: var(--pf-muted);
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+}
+
+.pf-nav {
+    margin-top: 1.5rem;
+}
+
+.pf-nav ul.rCategory {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem 1.5rem;
+}
+
+.pf-nav ul.rCategory li {
+    display: inline;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pf-muted);
+}
+
+.pf-nav ul.rCategory li a {
+    color: inherit;
+}
+
+.pf-nav ul.rCategory li:hover,
+.pf-nav ul.rCategory li.selected {
+    color: var(--pf-fg);
+}
+
+/* justified front-page grid (same --ar convention as .jgrid) */
+
+.pf-main {
+    width: 100%;
+    padding: 0 var(--pf-gap);
+}
+
+.pf-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--pf-gap);
+}
+
+.pf-grid::after {
+    content: "";
+    flex-grow: 999999;
+}
+
+.pf-card {
+    margin: 0;
+    --ar: 1.5;
+    flex-grow: var(--ar);
+    flex-basis: calc(var(--ar) * var(--pf-row-h));
+    min-width: 160px;
+    position: relative;
+    overflow: hidden;
+    background: var(--pf-surface);
+}
+
+.pf-card-link {
+    display: block;
+    height: 100%;
+}
+
+.pf-card img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--ar);
+    object-fit: cover;
+}
+
+.pf-card-title {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 2.25rem 1rem 0.85rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0));
+    color: #ffffff;
+    font-size: 0.82rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.pf-card:hover .pf-card-title,
+.pf-card:focus-within .pf-card-title {
+    opacity: 1;
+}
+
+/* entries without a featured image become quiet text cards */
+
+.pf-card-text {
+    aspect-ratio: var(--ar);
+    border: 1px solid var(--pf-line);
+    background: var(--pf-bg);
+}
+
+.pf-card-text .pf-card-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 1rem;
+}
+
+.pf-card-text .pf-card-title {
+    position: static;
+    background: none;
+    opacity: 1;
+    padding: 0;
+    text-align: center;
+    color: var(--pf-muted);
+}
+
+.pf-card-text:hover .pf-card-title {
+    color: var(--pf-fg);
+}
+
+/* permalink: hero image first, then a narrow reading column */
+
+.pf-main-entry {
+    padding: 0;
+}
+
+.pf-hero {
+    margin: 0;
+}
+
+.pf-hero img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 88vh;
+    object-fit: contain;
+}
+
+.pf-entry-body {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 1rem;
+}
+
+.pf-entry-title {
+    margin: 0 0 1.25rem;
+    font-size: 1.35rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+}
+
+.pf-entry-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+.pf-entry-meta {
+    margin-top: 2rem;
+    color: var(--pf-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+}
+
+.pf-entry-meta a {
+    color: inherit;
+    border-bottom: 1px solid var(--pf-line);
+}
+
+/* pager ------------------------------------------------- */
+
+.pf-pager {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--pf-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.pf-pager a {
+    color: inherit;
+}
+
+.pf-pager a:hover {
+    color: var(--pf-fg);
+}
+
+/* footer + search --------------------------------------- */
+
+.pf-footer {
+    text-align: center;
+    padding: 1rem 1rem 3rem;
+}
+
+.pf-search input,
+#searchAgain input.text {
+    background: var(--pf-surface);
+    border: 1px solid var(--pf-line);
+    color: var(--pf-fg);
+    padding: 0.5rem 0.9rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    border-radius: 2px;
+    outline: none;
+}
+
+.pf-search input:focus,
+#searchAgain input.text:focus {
+    border-color: var(--pf-muted);
+}
+
+.pf-search-head {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 0 1.25rem 2rem;
+    color: var(--pf-muted);
+    font-size: 0.9rem;
+}
+
+#searchAgain select,
+#searchAgain input.button {
+    background: var(--pf-surface);
+    border: 1px solid var(--pf-line);
+    color: var(--pf-fg);
+    padding: 0.45rem 0.9rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    border-radius: 2px;
+}
+
+/* comments ---------------------------------------------- */
+
+.pf-comments {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 0 1.25rem 3rem;
+}
+
+.pf-comments .comments-head {
+    color: var(--pf-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin: 2rem 0 0.5rem;
+    border-top: 1px solid var(--pf-line);
+    padding-top: 2rem;
+}
+
+.pf-comments .comment {
+    border-bottom: 1px solid var(--pf-line);
+    padding: 1rem 0;
+    font-size: 0.95rem;
+}
+
+.pf-comments .comment-details {
+    color: var(--pf-muted);
+    font-size: 0.8rem;
+}
+
+.pf-comments .comments-form ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pf-comments .comments-form li {
+    margin: 0.75rem 0;
+}
+
+.pf-comments label.desc {
+    display: block;
+    color: var(--pf-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.pf-comments input.text,
+.pf-comments textarea.textarea {
+    width: 100%;
+    background: var(--pf-surface);
+    border: 1px solid var(--pf-line);
+    color: var(--pf-fg);
+    padding: 0.5rem 0.75rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    border-radius: 2px;
+    outline: none;
+}
+
+.pf-comments input.text:focus,
+.pf-comments textarea.textarea:focus {
+    border-color: var(--pf-muted);
+}
+
+.pf-comments input.button {
+    background: var(--pf-fg);
+    border: none;
+    color: var(--pf-bg);
+    padding: 0.55rem 1.4rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.pf-comments .info,
+.pf-comments .comments-syntax-indicator {
+    color: var(--pf-muted);
+    font-size: 0.8rem;
+}
+
+.pf-comments .error {
+    color: #e08a8a;
+}
+
+.pf-comments .status {
+    color: var(--pf-muted);
+}
+
+/* small screens ----------------------------------------- */
+
+@media (max-width: 640px) {
+    :root {
+        --pf-row-h: 200px;
+    }
+
+    .pf-header {
+        padding-top: 2.25rem;
+    }
+}
