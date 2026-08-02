@@ -46,6 +46,7 @@ import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.MarkdownRenderer;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -1110,6 +1111,22 @@ public class WeblogEntry implements Serializable {
         // unconditionally in every render path, before sanitization
         // (see docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md).
         ret = ShortcodeExpander.defaultExpander().expand(this, ret);
+        // Markdown last, for entries that opted in via content_type -- and
+        // deliberately AFTER shortcode expansion, which is the reverse of what
+        // it looks like it should be. Running markdown first would escape the
+        // quotes in [gallery dir="Iceland"] to &quot;, and the expander's
+        // attribute grammar does not match entity-quoted values, so every
+        // shortcode carrying an attribute would silently stop working.
+        // Expanding first is safe because commonmark passes raw HTML through
+        // verbatim in both block and inline positions (verified against
+        // commonmark 0.24.0 for figure/picture/srcset/data-* and the --ar
+        // custom property); the only cost is that markdown syntax inside a
+        // shortcode's own text -- a caption full of asterisks -- gets
+        // interpreted, which is cosmetic. Raw HTML is not sanitized here: the
+        // sanitizer below is the XSS boundary, for both formats.
+        if (MarkdownRenderer.isMarkdown(getContentType())) {
+            ret = MarkdownRenderer.render(ret);
+        }
         return HTMLSanitizer.conditionallySanitize(ret);
     }
     

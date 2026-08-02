@@ -471,6 +471,30 @@ limitations under the License.
             <version>2.21.0</version>
         </dependency>
 
+        <!-- Markdown for entries whose content_type is text/markdown (Stage 2
+             Wave 4). Not managed by the Boot BOM, so the version is pinned
+             here; the three extensions are separate artifacts on purpose. -->
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark</artifactId>
+            <version>0.24.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-gfm-tables</artifactId>
+            <version>0.24.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-gfm-strikethrough</artifactId>
+            <version>0.24.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-autolink</artifactId>
+            <version>0.24.0</version>
+        </dependency>
+
         <!-- Spring deps. Versions are no longer pinned here: spring-boot-dependencies
              (imported above) governs every org.springframework* / org.springframework.security*
              artifact. spring-boot-starter-web/-security already pull spring-web,
