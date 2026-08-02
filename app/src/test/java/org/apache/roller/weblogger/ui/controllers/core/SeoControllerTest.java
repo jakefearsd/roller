@@ -23,6 +23,8 @@ import java.util.List;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import jakarta.servlet.http.HttpServlet;
+
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
@@ -37,10 +39,15 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
+import org.apache.roller.weblogger.ui.core.filters.InitFilter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockFilterChain;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.web.filter.ForwardedHeaderFilter;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -109,6 +116,39 @@ class SeoControllerTest {
                 "robots.txt must allow everything (empty Disallow):\n" + body);
         assertTrue(body.contains("Sitemap: " + ABSOLUTE_CONTEXT + "/sitemap.xml"),
                 "robots.txt must point at the absolute sitemap index URL:\n" + body);
+    }
+
+    @Test
+    void sitemapLocsAreHttpsWhenTlsIsTerminatedUpstream() throws Exception {
+        try {
+            // The production topology: Caddy terminates TLS and proxies over
+            // plain http with X-Forwarded-Proto: https. Run the real filter
+            // chain -- ForwardedHeaderFilter (registered by
+            // server.forward-headers-strategy=framework) in front of
+            // InitFilter -- and let it capture the absolute context URL,
+            // exactly as the first proxied request in production would.
+            MockHttpServletRequest first = new MockHttpServletRequest("GET", "/roller/");
+            first.setServerName("photos.example.com");
+            first.setServerPort(80);
+            first.setContextPath("/roller");
+            first.addHeader("X-Forwarded-Proto", "https");
+            new ForwardedHeaderFilter().doFilter(first, new MockHttpServletResponse(),
+                    new MockFilterChain(new HttpServlet() { }, new InitFilter()));
+
+            ResponseEntity<String> response = controller.sitemapIndex();
+
+            assertEquals(200, response.getStatusCode().value());
+            String body = response.getBody();
+            assertNotNull(body);
+            assertTrue(body.contains("<loc>https://photos.example.com/roller/sitemap-"
+                            + weblog.getHandle() + ".xml</loc>"),
+                    "sitemap <loc>s must be https when TLS is terminated upstream:\n" + body);
+            assertFalse(body.contains("<loc>http://"),
+                    "no http:// loc may survive behind a TLS-terminating proxy:\n" + body);
+        } finally {
+            WebloggerRuntimeConfig.setAbsoluteContextURL(ABSOLUTE_CONTEXT);
+            WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+        }
     }
 
     // --- /sitemap.xml (index) ---

@@ -100,12 +100,16 @@ public class InitFilter implements Filter {
 
         String url;
 
-        String fullUrl;
-
-        if (!secure) {
-            fullUrl = requestURL;
-        } else {
-            fullUrl = "http://" + serverName + contextPath;
+        // Trust the container's own request URL, which is proxy-aware when
+        // server.forward-headers-strategy=framework is set (Spring's
+        // ForwardedHeaderFilter rewrites getScheme()/isSecure()/
+        // getRequestURL() from X-Forwarded-Proto before this filter runs --
+        // the production Caddy topology). The only correction needed is a
+        // request that reports secure while its URL still says http, e.g. a
+        // connector that sets the secure flag without rewriting the scheme.
+        String fullUrl = requestURL;
+        if (secure && fullUrl.startsWith("http://")) {
+            fullUrl = "https://" + fullUrl.substring("http://".length());
         }
 
         // if the uri is only "/" then we are basically done

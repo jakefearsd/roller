@@ -20,6 +20,7 @@ class MediaResourceServletRenderingTest {
 
     private User user;
     private Weblog weblog;
+    private Weblog otherWeblog;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -33,6 +34,10 @@ class MediaResourceServletRenderingTest {
     @AfterEach
     void tearDown() throws Exception {
         CwebpEncoder.setAvailableForTesting(null);
+        if (otherWeblog != null) {
+            TestUtils.teardownWeblog(otherWeblog.getId());
+            otherWeblog = null;
+        }
         TestUtils.teardownWeblog(weblog.getId());
         TestUtils.teardownUser(user.getUserName());
         TestUtils.endSession(true);
@@ -89,6 +94,61 @@ class MediaResourceServletRenderingTest {
                 "/roller-ui/rendering/media-resources", "/nosuchblog/whatever");
         assertEquals(404, RenderingTestSupport.execute(
                 RenderingTestSupport.mediaResourceServlet(), request).getStatus());
+    }
+
+    // ------------------------------------------------- cross-weblog isolation
+    //
+    // A media file must only be addressable through its own weblog's handle.
+    // A valid id fetched through a *different* (but existing) weblog's URL
+    // space must 404 exactly like an unknown id, on every serving path
+    // (original, ?t=true thumbnail, ?w= rendition).
+
+    @Test
+    void aMediaFileIsNotServedThroughAnotherWeblogsHandle() throws Exception {
+        otherWeblog = TestUtils.setupWeblog("mediaotherblog", user);
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "isolated.jpg");
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest crossWeblog = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediaotherblog/" + image.getId());
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.mediaResourceServlet(), crossWeblog);
+
+        assertEquals(404, response.getStatus(),
+                "a media file id must not be fetchable through another weblog's handle");
+        assertEquals(0, response.getContentAsByteArray().length,
+                "no media bytes may leak through the wrong weblog's URL space");
+    }
+
+    @Test
+    void aThumbnailIsNotServedThroughAnotherWeblogsHandle() throws Exception {
+        otherWeblog = TestUtils.setupWeblog("mediaotherblog", user);
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "isolatedthumb.jpg");
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest crossWeblog = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediaotherblog/" + image.getId());
+        crossWeblog.setParameter("t", "true");
+
+        assertEquals(404, RenderingTestSupport.execute(
+                RenderingTestSupport.mediaResourceServlet(), crossWeblog).getStatus(),
+                "the ?t=true thumbnail path must sit behind the same weblog check");
+    }
+
+    @Test
+    void aRenditionIsNotServedThroughAnotherWeblogsHandle() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+        otherWeblog = TestUtils.setupWeblog("mediaotherblog", user);
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "isolatedwidth.jpg");
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest crossWeblog = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediaotherblog/" + image.getId());
+        crossWeblog.setParameter("w", "480");
+
+        assertEquals(404, RenderingTestSupport.execute(
+                RenderingTestSupport.mediaResourceServlet(), crossWeblog).getStatus(),
+                "the ?w= rendition path must sit behind the same weblog check");
     }
 
     // ------------------------------------------------- ?w= responsive renditions

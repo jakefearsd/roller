@@ -109,6 +109,21 @@ public class MediaResourceServlet extends HttpServlet {
             return;
         }
 
+        // A media file is only addressable through its own weblog's URL
+        // space. The id lookup above is global, so without this check any
+        // media id would be fetchable through any weblog handle (and the
+        // ?t=/?w= variants below with it). Respond exactly as for an
+        // unknown id. The directory's weblog is the authority here -- it is
+        // also where the manager reads the bytes from.
+        Weblog owningWeblog = mediaFile.getDirectory() == null
+                ? null : mediaFile.getDirectory().getWeblog();
+        if (!weblog.equals(owningWeblog)) {
+            log.debug("media file " + resourceRequest.getResourceId()
+                    + " does not belong to weblog " + weblog.getHandle());
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
         // A ?w= URL serves different bytes and a different Content-Type
         // depending on the request's Accept header (webp sibling vs raster
         // rendition), so any shared cache must key on that header. Set before
