@@ -203,6 +203,60 @@ class MediaResourceServletRenderingTest {
                 "the ?w= rendition path must sit behind the private-directory check");
     }
 
+    @Test
+    void theOwningWeblogsEditorStillSeesPrivateDirectoryFiles() throws Exception {
+        // The media-library screens render thumbnails through this servlet;
+        // the author who just marked a directory private must keep seeing it.
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "priveditor.jpg", "privatedir");
+        markDirectoryPrivate(image);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        try {
+            authenticateAs(user.getUserName());
+            MockHttpServletResponse response = RenderingTestSupport
+                    .execute(RenderingTestSupport.mediaResourceServlet(), request);
+
+            assertEquals(200, response.getStatus(),
+                    "the owning weblog's editor must see private-directory files");
+            assertEquals("private, no-store", response.getHeader("Cache-Control"),
+                    "an editor's private-media response must never enter a shared cache");
+            assertTrue(response.getContentAsByteArray().length > 1000);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void anotherWeblogsEditorDoesNotSeePrivateDirectoryFiles() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "privstranger.jpg", "privatedir");
+        markDirectoryPrivate(image);
+        User stranger = TestUtils.setupUser("mediastranger");
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        try {
+            authenticateAs(stranger.getUserName());
+            assertEquals(404, RenderingTestSupport.execute(
+                    RenderingTestSupport.mediaResourceServlet(), request).getStatus(),
+                    "being logged in is not enough -- the editor exception is "
+                            + "scoped to the owning weblog's members");
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+            TestUtils.teardownUser(stranger.getUserName());
+            TestUtils.endSession(true);
+        }
+    }
+
+    /** Puts an authenticated principal into the security context, as the session filter would. */
+    private static void authenticateAs(String userName) {
+        org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .setAuthentication(
+                        new org.springframework.security.authentication.TestingAuthenticationToken(
+                                userName, "n/a", "editor"));
+    }
+
     /** Flips the file's directory to private and flushes, as the editor toggle does. */
     private static void markDirectoryPrivate(MediaFile image) throws Exception {
         MediaFile managed = org.apache.roller.weblogger.business.WebloggerFactory
