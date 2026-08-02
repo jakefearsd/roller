@@ -1709,4 +1709,152 @@ public class MediaFileTest  {
             TestUtils.teardownUser(testUser.getUserName());
         }
     }
+
+    /**
+     * A crafted upload whose EXIF Make/Model/LensModel are far longer than the
+     * VARCHAR(128)/VARCHAR(32) columns they are stored in must not break the
+     * upload. The failure this pins is NOT visible inside updateThumbnail:
+     * the over-long value is only rejected at the deferred flush (here,
+     * endSession), well outside every catch that makes metadata failures
+     * non-fatal, so the whole upload transaction failed with the file bytes
+     * already written to disk.
+     */
+    @Test
+    public void testCreateMediaFileClampsOverlongExifStringsInsteadOfFailingTheUpload() throws Exception {
+        User testUser = TestUtils.setupUser("exifClampTestUser1");
+        Weblog testWeblog = TestUtils.setupWeblog("exifClampTestWeblog1", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        MediaFile mediaFile = uploadImage(testWeblog, rootDirectory, "oversized.jpg", OVERSIZED_EXIF_IMAGE);
+        String id = mediaFile.getId();
+        // This is the assertion that matters: the flush must not blow up on
+        // "value too long for type character varying".
+        TestUtils.endSession(true);
+
+        MediaFile stored = mfMgr.getMediaFile(id);
+        assertNotNull(stored, "the upload must have survived its crafted EXIF block");
+        assertEquals(ExifSupport.MAX_CAMERA_LENGTH, stored.getExifCamera().length());
+        assertEquals(ExifSupport.MAX_LENS_LENGTH, stored.getExifLens().length());
+        assertTrue(stored.getExifExposure().length() <= ExifSupport.MAX_SETTING_LENGTH);
+        assertTrue(stored.getExifAperture().length() <= ExifSupport.MAX_SETTING_LENGTH);
+        assertTrue(stored.getExifFocalLength().length() <= ExifSupport.MAX_SETTING_LENGTH);
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    // ------------------------------------------------------ EXIF orientation
+
+    /** 1000x600 raster tagged EXIF Orientation=6, i.e. a 600x1000 upright portrait photo. */
+    private static final String PORTRAIT_EXIF_IMAGE = "/portrait-exif.jpg";
+
+    /** 600x400 image whose Make/Model/LensModel tags are hundreds of characters long. */
+    private static final String OVERSIZED_EXIF_IMAGE = "/oversized-exif.jpg";
+
+    /**
+     * The upload path must correct EXIF orientation before deriving anything
+     * from the raster: browsers rotate the original from its EXIF, but the
+     * renditions are re-encoded pixel data with no metadata at all, so an
+     * uncorrected ladder would show the same photo sideways or upright
+     * depending on which srcset candidate the browser picked.
+     */
+    @Test
+    public void testCreateMediaFileAppliesExifOrientationBeforeDerivingRenditions() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+
+        User testUser = TestUtils.setupUser("orientationTestUser1");
+        Weblog testWeblog = TestUtils.setupWeblog("orientationTestWeblog1", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        MediaFile mediaFile = uploadImage(testWeblog, rootDirectory, "portrait.jpg", PORTRAIT_EXIF_IMAGE);
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        MediaFile stored = mfMgr.getMediaFile(id);
+        assertEquals(600, stored.getWidth(),
+                "stored dimensions must describe the upright photo, not the landscape raster");
+        assertEquals(1000, stored.getHeight());
+
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        BufferedImage rendition = ImageIO.read(
+                fmgr.getFileContent(testWeblog, id + "_480").getInputStream());
+        assertEquals(480, rendition.getWidth());
+        assertEquals(800, rendition.getHeight(),
+                "the 480w rung must be portrait (800 tall), not the sideways 288");
+
+        final Weblog assertWeblog = testWeblog;
+        assertThrows(FileNotFoundException.class,
+                () -> fmgr.getFileContent(assertWeblog, id + "_960"),
+                "the upright image is only 600 wide, so the 960 rung must be skipped");
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
+
+    /**
+     * regenerateRenditions is the remediation path for photos uploaded before
+     * the orientation fix: it must rebuild the ladder upright AND re-derive
+     * the stored dimensions (a 90-degree orientation swaps them).
+     */
+    @Test
+    public void testRegenerateRenditionsRemediatesSidewaysRenditions() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+
+        User testUser = TestUtils.setupUser("orientationTestUser2");
+        Weblog testWeblog = TestUtils.setupWeblog("orientationTestWeblog2", testUser);
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        rootDirectory = mfMgr.getMediaFileDirectory(rootDirectory.getId());
+
+        MediaFile mediaFile = uploadImage(testWeblog, rootDirectory, "legacy-portrait.jpg",
+                PORTRAIT_EXIF_IMAGE);
+        String id = mediaFile.getId();
+        TestUtils.endSession(true);
+
+        // Rewrite the record into the pre-fix state: sideways renditions and
+        // raster (landscape) dimensions.
+        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        byte[] sideways = generateImageBytes(480, 288, "jpg");
+        fmgr.saveFileContent(testWeblog, id + "_480", new ByteArrayInputStream(sideways));
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        MediaFile legacy = mfMgr.getMediaFile(id);
+        legacy.setWidth(1000);
+        legacy.setHeight(600);
+        mfMgr.updateMediaFile(testWeblog, legacy);
+        TestUtils.endSession(true);
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        assertEquals(1, mfMgr.regenerateRenditions(testWeblog));
+        TestUtils.endSession(true);
+
+        BufferedImage rendition = ImageIO.read(
+                fmgr.getFileContent(testWeblog, id + "_480").getInputStream());
+        assertEquals(480, rendition.getWidth());
+        assertEquals(800, rendition.getHeight(),
+                "the backfill must replace the sideways rendition with an upright one");
+
+        MediaFile remediated = mfMgr.getMediaFile(id);
+        assertEquals(600, remediated.getWidth(),
+                "the backfill must also correct the stored dimensions");
+        assertEquals(1000, remediated.getHeight());
+
+        TestUtils.endSession(true);
+        TestUtils.teardownWeblog(testWeblog.getId());
+        TestUtils.teardownUser(testUser.getUserName());
+    }
 }

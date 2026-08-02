@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.Date;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -45,6 +46,31 @@ import com.drew.metadata.exif.GpsDirectory;
 public final class ExifSupport {
 
     private static final Log log = LogFactory.getFactory().getInstance(ExifSupport.class);
+
+    /**
+     * Column width of {@code roller_mediafile.exif_camera} (migration V006).
+     *
+     * <p>EXIF ASCII tags are attacker-controlled and unbounded -- a crafted
+     * JPEG can carry a 500-character Make -- while the columns these strings
+     * land in are not. Truncating here, at the one place these values are
+     * produced, keeps an over-long tag from failing the deferred flush of the
+     * whole upload transaction (which happens well outside the catch blocks
+     * that make every other metadata failure non-fatal, so the upload would
+     * fail with the file bytes already orphaned on disk).
+     */
+    public static final int MAX_CAMERA_LENGTH = 128;
+
+    /** Column width of {@code roller_mediafile.exif_lens} (V006). See {@link #MAX_CAMERA_LENGTH}. */
+    public static final int MAX_LENS_LENGTH = 128;
+
+    /**
+     * Column width of {@code exif_exposure}, {@code exif_aperture} and
+     * {@code exif_focal_length} (V006). See {@link #MAX_CAMERA_LENGTH}.
+     */
+    public static final int MAX_SETTING_LENGTH = 32;
+
+    /** EXIF Orientation value meaning "no rotation needed", and the default when the tag is absent. */
+    public static final int ORIENTATION_NORMAL = 1;
 
     private ExifSupport() {
     }
@@ -135,8 +161,12 @@ public final class ExifSupport {
                 }
             }
 
-            return new ExifData(camera, lens, exposure, aperture, iso, focalLength, taken,
-                    gpsLatitude, gpsLongitude);
+            // Clamp every string to the width of the column it will be stored
+            // in -- see MAX_CAMERA_LENGTH for why this cannot be left to the
+            // database.
+            return new ExifData(clamp(camera, MAX_CAMERA_LENGTH), clamp(lens, MAX_LENS_LENGTH),
+                    clamp(exposure, MAX_SETTING_LENGTH), clamp(aperture, MAX_SETTING_LENGTH), iso,
+                    clamp(focalLength, MAX_SETTING_LENGTH), taken, gpsLatitude, gpsLongitude);
         } catch (Exception e) {
             // Not every upload is a format metadata-extractor understands (or has EXIF
             // at all) -- that is the normal case, not a failure worth surfacing.
@@ -167,5 +197,41 @@ public final class ExifSupport {
 
     private static String nullIfBlank(String s) {
         return (s == null || s.isBlank()) ? null : s;
+    }
+
+    /** Truncates {@code s} to at most {@code maxLength} characters; null-safe. */
+    private static String clamp(String s, int maxLength) {
+        return StringUtils.truncate(s, maxLength);
+    }
+
+    /**
+     * Reads the EXIF Orientation tag (1-8) from {@code is}, returning
+     * {@link #ORIENTATION_NORMAL} when the tag is absent, out of range, or
+     * unreadable -- an unreadable tag must never cause a photo to be rotated
+     * on a guess.
+     *
+     * <p>Deliberately a second, separate parse of the file rather than another
+     * field on {@link ExifData}: orientation is needed at the very top of the
+     * pipeline (before the decoded raster is used for dimensions, thumbnail,
+     * renditions and blurhash), while {@link #extract} runs at the end, after
+     * the renditions the blurhash is encoded from exist. One extra metadata
+     * read is negligible next to four resizes.
+     */
+    public static int readOrientation(InputStream is) {
+        try {
+            Metadata metadata = ImageMetadataReader.readMetadata(is);
+            ExifIFD0Directory ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+            if (ifd0 != null && ifd0.containsTag(ExifDirectoryBase.TAG_ORIENTATION)) {
+                int orientation = ifd0.getInt(ExifDirectoryBase.TAG_ORIENTATION);
+                if (orientation >= 1 && orientation <= 8) {
+                    return orientation;
+                }
+                log.debug("Ignoring out-of-range EXIF orientation " + orientation);
+            }
+        } catch (Exception e) {
+            // Same normal case as extract(): plenty of uploads have no EXIF at all.
+            log.debug("No EXIF orientation read", e);
+        }
+        return ORIENTATION_NORMAL;
     }
 }

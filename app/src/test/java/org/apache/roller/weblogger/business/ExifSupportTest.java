@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link ExifSupport} against fixtures directly on the
@@ -101,5 +102,59 @@ class ExifSupportTest {
         ExifSupport.ExifData data = ExifSupport.extract(new ByteArrayInputStream(new byte[0]));
 
         assertEquals(ExifSupport.ExifData.EMPTY, data);
+    }
+
+    /**
+     * EXIF ASCII fields are attacker-controlled and unbounded, while the
+     * columns they land in are VARCHAR(128) (camera/lens) and VARCHAR(32)
+     * (exposure/aperture/focal length). Without a clamp here a crafted JPEG
+     * fails the deferred flush of the whole upload transaction -- outside
+     * every catch on the metadata path -- leaving the file bytes orphaned on
+     * disk. oversized-exif.jpg carries a 500-char Make, a 500-char Model and
+     * a 400-char LensModel.
+     */
+    @Test
+    void overlongExifStringsAreClampedToTheirColumnWidths() throws Exception {
+        ExifSupport.ExifData data;
+        try (InputStream is = getClass().getResourceAsStream("/oversized-exif.jpg")) {
+            data = ExifSupport.extract(is);
+        }
+
+        assertNotNull(data.camera);
+        assertEquals(ExifSupport.MAX_CAMERA_LENGTH, data.camera.length(),
+                "a 1001-char Make+Model must be truncated to the exif_camera column width");
+        assertTrue(data.camera.startsWith("MMM"), "the truncation must keep the leading text");
+        assertNotNull(data.lens);
+        assertEquals(ExifSupport.MAX_LENS_LENGTH, data.lens.length(),
+                "a 400-char LensModel must be truncated to the exif_lens column width");
+
+        // The remaining strings are short in this fixture but must still be
+        // within their (narrower) columns.
+        assertTrue(data.exposure.length() <= ExifSupport.MAX_SETTING_LENGTH);
+        assertTrue(data.aperture.length() <= ExifSupport.MAX_SETTING_LENGTH);
+        assertTrue(data.focalLength.length() <= ExifSupport.MAX_SETTING_LENGTH);
+    }
+
+    // ------------------------------------------------------------ orientation
+
+    @Test
+    void readOrientationReturnsTheTaggedValue() throws Exception {
+        try (InputStream is = getClass().getResourceAsStream("/portrait-exif.jpg")) {
+            assertEquals(6, ExifSupport.readOrientation(is),
+                    "portrait-exif.jpg is a landscape raster tagged Orientation=6");
+        }
+    }
+
+    @Test
+    void readOrientationDefaultsToNormalWhenThereIsNoExifBlock() throws Exception {
+        try (InputStream is = getClass().getResourceAsStream("/hawk.jpg")) {
+            assertEquals(1, ExifSupport.readOrientation(is));
+        }
+    }
+
+    @Test
+    void readOrientationNeverThrowsOnGarbage() {
+        assertEquals(1, ExifSupport.readOrientation(
+                new ByteArrayInputStream("not an image".getBytes())));
     }
 }

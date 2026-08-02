@@ -236,6 +236,16 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
 
             img = ImageIO.read(fc.getInputStream());
 
+            // EXIF Orientation: a portrait phone/camera shot is stored as a
+            // landscape raster plus a rotation tag, and ImageIO.read() hands
+            // back the raw raster. Correct it here, once, so EVERYTHING
+            // derived below -- stored dimensions, the _sm thumbnail, the
+            // ladder renditions, the blurhash -- is built from the upright
+            // image. (The original file on disk is never rewritten; browsers
+            // rotate it themselves from its EXIF.)
+            img = RenditionSupport.applyOrientation(img,
+                    ExifSupport.readOrientation(fc.getInputStream()));
+
             // determine and save width and height
             mediaFile.setWidth(img.getWidth());
             mediaFile.setHeight(img.getHeight());
@@ -754,7 +764,16 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                                 + mf.getId() + ": not a readable image");
                         continue;
                     }
+                    // Same orientation correction as the upload path, which is
+                    // what makes this action a remediation for photos uploaded
+                    // before it existed: their renditions are rebuilt upright,
+                    // and their stored dimensions re-derived from the corrected
+                    // image (90-degree orientations swap width and height).
+                    img = RenditionSupport.applyOrientation(img,
+                            ExifSupport.readOrientation(fc.getInputStream()));
                     RenditionSupport.generate(cmgr, mf, img);
+                    mf.setWidth(img.getWidth());
+                    mf.setHeight(img.getHeight());
                     // Bump lastUpdated so MediaResourceServlet's Last-Modified/304
                     // check (keyed off this field) doesn't keep serving a 304 for
                     // stale renditions cached by a client from before the backfill.

@@ -114,6 +114,8 @@ class MediaResourceServletRenderingTest {
         assertEquals("image/jpeg", w480Response.getContentType());
         assertTrue(w480Response.getContentAsByteArray().length < fullSize,
                 "the 480w rendition must be smaller than the 500w original (hawk.jpg)");
+        assertEquals("Accept", w480Response.getHeader("Vary"),
+                "a ?w= URL is content-negotiated on Accept, so shared caches must key on it");
     }
 
     @Test
@@ -218,5 +220,9 @@ class MediaResourceServletRenderingTest {
                 "Accept: image/webp must negotiate the .webp sibling when it exists");
         assertEquals("image/jpeg", plainResponse.getContentType(),
                 "no Accept: image/webp must serve the raster rendition");
+        // Same URL, two different bodies and content types: without Vary a
+        // shared cache would hand one client the other's variant.
+        assertEquals("Accept", webpResponse.getHeader("Vary"));
+        assertEquals("Accept", plainResponse.getHeader("Vary"));
     }
 }

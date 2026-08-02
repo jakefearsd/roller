@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,6 +22,7 @@ import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.ui.controllers.editor.EntryBean;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -255,6 +257,52 @@ class SeoHeadRenderingTest {
         assertEquals("Sneaky \"quoted\" title",
                 singleLdJson(body, "BlogPosting").path("headline").asString(),
                 "the JSON-LD headline must decode back to the original title");
+    }
+
+    /**
+     * Roller stores UI-authored entry titles HTML-escaped ({@code EntryBean.copyTo}
+     * runs them through escapeHtml4, with a symmetric unescape in copyFrom),
+     * which is why themes emit {@code $entry.title} raw. #showSeoHead must
+     * therefore unescape before its own emit-time escape, or "Fish & Chips"
+     * ships to share cards as "Fish &amp;amp; Chips" and lands in the JSON-LD
+     * headline as a literal entity.
+     *
+     * <p>The fixture deliberately goes through the bean rather than setting the
+     * title directly: the escape-on-save step is exactly what the other tests
+     * here (raw TestUtils titles) bypass, which is why they never caught this.
+     */
+    @Test
+    void aUiAuthoredTitleIsEscapedExactlyOnceInTheSeoHead() throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry("ampersand-entry", weblog, user);
+        saveTitleThroughTheEditorBean(entry, "Fish & \"Chips\"");
+
+        String body = render("/" + HANDLE + "/entry/ampersand-entry");
+
+        assertTrue(body.contains(
+                "<meta property=\"og:title\" content=\"Fish &amp; &quot;Chips&quot;\">"),
+                "og:title must be escaped exactly once -- and still attribute-safe:\n" + body);
+        assertFalse(body.contains("&amp;amp;"),
+                "a stored-escaped title must not be escaped a second time:\n" + body);
+        assertFalse(body.contains("Fish & \"Chips\""),
+                "the raw quotes must never reach the page:\n" + body);
+        assertEquals("Fish & \"Chips\"",
+                singleLdJson(body, "BlogPosting").path("headline").asString(),
+                "the JSON-LD headline must decode back to the author's title");
+    }
+
+    /**
+     * Saves {@code title} the way the editor does: through {@link EntryBean},
+     * whose copyTo HTML-escapes the title on the way into the database.
+     */
+    private void saveTitleThroughTheEditorBean(WeblogEntry entry, String title) throws Exception {
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
+        EntryBean bean = new EntryBean();
+        bean.copyFrom(managed, Locale.getDefault());
+        bean.setTitle(title);
+        bean.copyTo(managed);
+        mgr.saveWeblogEntry(managed);
+        TestUtils.endSession(true);
     }
 
     // ----------------------------------------------------------------- og:image

@@ -109,6 +109,16 @@ public class MediaResourceServlet extends HttpServlet {
             return;
         }
 
+        // A ?w= URL serves different bytes and a different Content-Type
+        // depending on the request's Accept header (webp sibling vs raster
+        // rendition), so any shared cache must key on that header. Set before
+        // the 304 branch below so revalidation responses carry it too.
+        boolean renditionRequest = RenditionSupport.ladderWidths()
+                .contains(resourceRequest.getWidth());
+        if (renditionRequest) {
+            response.setHeader("Vary", "Accept");
+        }
+
         // Respond with 304 Not Modified if it is not modified.
         if (ModDateHeaderUtil.respondIfNotModified(request, response,
                 resourceLastMod)) {
@@ -133,7 +143,7 @@ public class MediaResourceServlet extends HttpServlet {
                     log.warn("ERROR loading thumbnail for " + mediaFile.getId());
                 }
             }
-        } else if (RenditionSupport.ladderWidths().contains(resourceRequest.getWidth())) {
+        } else if (renditionRequest) {
             // ?w= is validated against the ladder set only; any other value
             // (including a syntactically valid width Roller never generates)
             // falls straight through to the original below.

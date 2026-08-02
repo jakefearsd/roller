@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -290,6 +291,94 @@ class RenditionSupportTest {
         RenditionSupport.generate(cmgr, mediaFile, original);
 
         assertTrue(cmgr.saved.isEmpty());
+    }
+
+    // ------------------------------------------------------------ orientation
+
+    /**
+     * A 4x2 image whose four corners are uniquely colored, so the position of
+     * the red pixel after a transform pins down exactly which of the eight
+     * EXIF orientations was applied.
+     */
+    private static BufferedImage cornerMarkedImage() {
+        BufferedImage image = new BufferedImage(4, 2, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < 2; y++) {
+            for (int x = 0; x < 4; x++) {
+                image.setRGB(x, y, 0x101010);
+            }
+        }
+        image.setRGB(0, 0, 0xFF0000); // top-left     red
+        image.setRGB(3, 0, 0x00FF00); // top-right    green
+        image.setRGB(0, 1, 0x0000FF); // bottom-left  blue
+        image.setRGB(3, 1, 0xFFFF00); // bottom-right yellow
+        return image;
+    }
+
+    private static void assertOriented(int orientation, int expectedWidth, int expectedHeight,
+            int expectedRedX, int expectedRedY) {
+        BufferedImage result = RenditionSupport.applyOrientation(cornerMarkedImage(), orientation);
+
+        assertEquals(expectedWidth, result.getWidth(), "width for orientation " + orientation);
+        assertEquals(expectedHeight, result.getHeight(), "height for orientation " + orientation);
+        assertEquals(0xFF0000, result.getRGB(expectedRedX, expectedRedY) & 0xFFFFFF,
+                "orientation " + orientation + " must move the top-left (red) pixel to ("
+                        + expectedRedX + "," + expectedRedY + ")");
+    }
+
+    /**
+     * All eight EXIF orientation values, documented by example: 1 is the
+     * identity, 2/4 mirror, 3 rotates 180, 5/7 transpose/transverse, and
+     * 6/8 are the 90-degree rotations that phone cameras actually emit for
+     * portrait shots (and the ones that swap width and height).
+     */
+    @Test
+    void applyOrientationHandlesAllEightExifOrientations() {
+        assertOriented(1, 4, 2, 0, 0); // identity
+        assertOriented(2, 4, 2, 3, 0); // mirror horizontal
+        assertOriented(3, 4, 2, 3, 1); // rotate 180
+        assertOriented(4, 4, 2, 0, 1); // mirror vertical
+        assertOriented(5, 2, 4, 0, 0); // transpose
+        assertOriented(6, 2, 4, 1, 0); // rotate 90 CW
+        assertOriented(7, 2, 4, 1, 3); // transverse
+        assertOriented(8, 2, 4, 0, 3); // rotate 270 CW (90 CCW)
+    }
+
+    @Test
+    void applyOrientationLeavesTheImageAloneForNormalOrGarbageValues() {
+        BufferedImage original = cornerMarkedImage();
+
+        // 1 is "normal"; 0 and 9 are out of the EXIF range and must not be
+        // guessed at -- an unreadable tag is not a reason to rotate a photo.
+        assertSame(original, RenditionSupport.applyOrientation(original, 1));
+        assertSame(original, RenditionSupport.applyOrientation(original, 0));
+        assertSame(original, RenditionSupport.applyOrientation(original, 9));
+        assertNull(RenditionSupport.applyOrientation(null, 6));
+    }
+
+    /**
+     * The whole point of the transform: renditions are generated from the
+     * decoded raster, which carries no EXIF, so the ladder must be built from
+     * the already-corrected image or a portrait photo ships sideways in
+     * srcset while the original URL displays upright.
+     */
+    @Test
+    void generateBuildsTheLadderFromTheOrientationCorrectedImage() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+        FakeFileContentManager cmgr = new FakeFileContentManager();
+        MediaFile mediaFile = imageMediaFile("image/jpeg");
+        // A landscape raster that is really a portrait photo (Orientation=6).
+        BufferedImage raster = new BufferedImage(1000, 600, BufferedImage.TYPE_INT_RGB);
+
+        RenditionSupport.generate(cmgr, mediaFile,
+                RenditionSupport.applyOrientation(raster, 6));
+
+        BufferedImage rendition = ImageIO.read(
+                new ByteArrayInputStream(cmgr.saved.get(mediaFile.getId() + "_480")));
+        assertEquals(480, rendition.getWidth());
+        assertEquals(800, rendition.getHeight(),
+                "the 480w rung of a 600x1000 upright image must be 800 tall, not 288");
+        assertFalse(cmgr.saved.containsKey(mediaFile.getId() + "_960"),
+                "after rotation the image is only 600 wide, so the 960 rung must be skipped");
     }
 
     private static MediaFile imageMediaFile(String contentType) {

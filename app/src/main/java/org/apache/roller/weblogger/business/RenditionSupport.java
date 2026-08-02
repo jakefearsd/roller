@@ -18,6 +18,8 @@
 package org.apache.roller.weblogger.business;
 
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -147,6 +149,96 @@ public final class RenditionSupport {
             return "png";
         }
         return null;
+    }
+
+    /**
+     * Returns {@code image} rotated/flipped into its upright display
+     * orientation for the given EXIF Orientation value (1-8, as returned by
+     * {@link ExifSupport#readOrientation}).
+     *
+     * <p>Callers must apply this BEFORE anything derived from the raster --
+     * stored width/height, the {@code _sm} thumbnail, the ladder renditions,
+     * the blurhash. {@code ImageIO.read()} hands back the raw sensor raster
+     * and the encoders here write pixel data with no metadata, so a portrait
+     * phone photo (a landscape raster plus Orientation=6) would otherwise
+     * produce sideways renditions while the original URL, which keeps its
+     * EXIF, still displays upright -- a browser picking between them from a
+     * srcset would show the same photo rotated or not depending on which
+     * candidate it chose.
+     *
+     * <p>Orientations 5-8 transpose the image, so the returned image has
+     * width and height swapped. Orientation 1 (and any value outside 1-8,
+     * i.e. an unreadable tag) returns {@code image} itself: never rotate on
+     * a guess. Null in, null out.
+     */
+    public static BufferedImage applyOrientation(BufferedImage image, int orientation) {
+        if (image == null || orientation <= ExifSupport.ORIENTATION_NORMAL || orientation > 8) {
+            return image;
+        }
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+        boolean transposed = orientation >= 5;
+        int destWidth = transposed ? height : width;
+        int destHeight = transposed ? width : height;
+
+        BufferedImage dest = new BufferedImage(destWidth, destHeight,
+                image.getColorModel().hasAlpha() ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = dest.createGraphics();
+        try {
+            // Nearest-neighbour: these are exact 90-degree rotations and
+            // mirrors, so no resampling should occur at all.
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                    RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+            g2.drawImage(image, orientationTransform(orientation, width, height), null);
+        } finally {
+            g2.dispose();
+        }
+        return dest;
+    }
+
+    /**
+     * The affine transform that maps the stored raster into display space for
+     * each EXIF Orientation value: 2/4 mirror, 3 rotates 180, 5/7 transpose
+     * and transverse, 6/8 rotate 90 degrees clockwise and counter-clockwise.
+     */
+    private static AffineTransform orientationTransform(int orientation, int width, int height) {
+        AffineTransform t = new AffineTransform();
+        switch (orientation) {
+            case 2: // mirror horizontal
+                t.scale(-1.0, 1.0);
+                t.translate(-width, 0);
+                break;
+            case 3: // rotate 180
+                t.translate(width, height);
+                t.rotate(Math.PI);
+                break;
+            case 4: // mirror vertical
+                t.scale(1.0, -1.0);
+                t.translate(0, -height);
+                break;
+            case 5: // transpose (mirror along the main diagonal)
+                t.rotate(-Math.PI / 2);
+                t.scale(-1.0, 1.0);
+                break;
+            case 6: // rotate 90 clockwise
+                t.translate(height, 0);
+                t.rotate(Math.PI / 2);
+                break;
+            case 7: // transverse (mirror along the anti-diagonal)
+                t.scale(-1.0, 1.0);
+                t.translate(-height, 0);
+                t.translate(0, width);
+                t.rotate(3 * Math.PI / 2);
+                break;
+            case 8: // rotate 90 counter-clockwise
+                t.translate(0, width);
+                t.rotate(3 * Math.PI / 2);
+                break;
+            default:
+                break;
+        }
+        return t;
     }
 
     /**

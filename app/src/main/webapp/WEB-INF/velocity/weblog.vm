@@ -168,18 +168,28 @@ containing "</script>" cannot terminate the inline JSON-LD block).
     #if ($seoCanonical)
     <link rel="canonical" href="$utils.escapeHTML($seoCanonical)">
     #end
-    ## Open Graph card. The title needs per-source escaping: entry titles and
-    ## meta titles are read raw off the pojo and escaped exactly once here
-    ## (see the description comment above), while the weblog name is already
-    ## HTML-escaped by WeblogWrapper.getName() -- escaping it again would
-    ## render "&amp;" literally in the card title.
+    ## Open Graph card. The title needs per-source escaping, because the three
+    ## sources are stored differently:
+    ##  - metaTitle is stored raw (a new field), so it is escaped exactly once
+    ##    here, like the description above;
+    ##  - the entry title is stored ALREADY HTML-escaped for UI-authored
+    ##    entries (EntryBean.copyTo escapeHtml4, symmetric unescape in
+    ##    copyFrom), which is why themes emit $entry.title raw -- so it must be
+    ##    unescaped back to text before this macro's own escape, or "Fish &
+    ##    Chips" ships as "Fish &amp;amp; Chips" on share cards and as a
+    ##    literal entity in the JSON-LD headline. Unescape-then-escape-once
+    ##    also keeps the attribute-escape guarantee for titles containing
+    ##    quotes;
+    ##  - the weblog name is already HTML-escaped by WeblogWrapper.getName(),
+    ##    so escaping it again would render "&amp;" literally in the card title.
     #if ($seoEntry)
         #if ($utils.isNotEmpty($seoEntry.pojo.metaTitle))
             #set($seoTitleAttr = $utils.escapeHTML($seoEntry.pojo.metaTitle))
             #set($seoTitleJson = $utils.escapeJson($seoEntry.pojo.metaTitle))
         #else
-            #set($seoTitleAttr = $utils.escapeHTML($seoEntry.pojo.title))
-            #set($seoTitleJson = $utils.escapeJson($seoEntry.pojo.title))
+            #set($seoPlainTitle = $utils.unescapeHTML($seoEntry.pojo.title))
+            #set($seoTitleAttr = $utils.escapeHTML($seoPlainTitle))
+            #set($seoTitleJson = $utils.escapeJson($seoPlainTitle))
         #end
     #else
         #set($seoTitleAttr = $model.weblog.name)
