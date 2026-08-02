@@ -21,6 +21,7 @@ package org.apache.roller.weblogger.ui.rendering.model;
 import java.util.Map;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 
 /**
@@ -122,6 +123,23 @@ public class ConfigModel implements Model {
 
     public boolean getAnalyticsOverrideAllowed() {
         return getBooleanProperty("analytics.code.override.allowed");
+    }
+
+    /**
+     * The raster tile template {@code #showMapAssets} hands to Leaflet for
+     * the {@code [map]} shortcode, e.g.
+     * {@code https://tile.openstreetmap.org/{z}/{x}/{y}.png}.
+     *
+     * <p>Unlike every other accessor here this reads the <em>static</em>
+     * config (roller.properties / the deployer's override file), not the
+     * runtime properties table: a runtime property would need a
+     * {@code configForm.*} message key that appears only in
+     * runtimeConfigDefs.xml, which MessageKeyTest's orphan ratchet counts as
+     * unused. Deployers who want their own tile server set
+     * {@code travel.map.tileUrl} in their config file.
+     */
+    public String getMapTileUrl() {
+        return WebloggerConfig.getProperty("travel.map.tileUrl");
     }
 
     private String getProperty(String name) {

@@ -10,6 +10,7 @@
     #showSeoHead()
     #showGalleryGridStyles()
     #showGalleryAssets()
+    #showMapAssets()
 </head>
 <!-- permalink -->
 <body>

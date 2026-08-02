@@ -338,6 +338,22 @@ limitations under the License.
             <version>5.4.3</version>
         </dependency>
 
+        <!-- Public-surface map for the [map] shortcode, referenced from
+             #showMapAssets in WEB-INF/velocity/weblog.vm (leaflet.css,
+             leaflet.js and the three marker PNGs, all under the npm
+             webjar's dist/ segment; the abandoned org.webjars:leaflet
+             artifact has no dist/). BSD-2-Clause, no transitive deps.
+             Update those URLs on a version bump; WebjarReferenceTest fails
+             on any drift between this version and the template references.
+             Stay on 1.x: 2.0.0-alpha drops the UMD build and removes every
+             lowercase factory function (L.map becomes new L.Map), which
+             would break the macro's script wholesale. -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>leaflet</artifactId>
+            <version>1.9.4</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-analysis-common</artifactId>

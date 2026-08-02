@@ -50,11 +50,18 @@ class PortfolioThemeRenderingTest {
     private static final String HANDLE = "portfoliorenderblog";
     private static final String BASE = "http://localhost:8080/roller/" + HANDLE;
 
-    /** The CSP line every theme head ships, verbatim. */
+    /**
+     * The CSP line every theme head ships, verbatim. {@code data:} joined
+     * {@code img-src} when Leaflet arrived: it paints aborted and
+     * out-of-range tiles with a base64 GIF placeholder, and per CSP3 the
+     * {@code *} wildcard does not match the {@code data:} scheme.
+     * {@code MapAssetsRenderingTest} holds the same constant for the other
+     * six declaring heads.
+     */
     private static final String CSP_META =
             "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; "
             + "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
-            + "img-src *; base-uri 'self'; connect-src 'self'; form-action 'self'; "
+            + "img-src * data:; base-uri 'self'; connect-src 'self'; form-action 'self'; "
             + "frame-ancestors 'none'\">";
 
     private User user;
