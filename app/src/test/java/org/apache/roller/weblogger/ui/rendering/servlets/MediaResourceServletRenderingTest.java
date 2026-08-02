@@ -151,6 +151,120 @@ class MediaResourceServletRenderingTest {
                 "the ?w= rendition path must sit behind the same weblog check");
     }
 
+    // ------------------------------------------------- private directories
+    //
+    // A file in a directory marked private (Wave 2 share links) must not be
+    // reachable through the public media path at all -- its bytes are served
+    // only through the tokened /share/<token>/media/<id> route. The base path
+    // must 404 exactly like an unknown id, on every serving variant.
+
+    @Test
+    void aFileInAPrivateDirectoryIsNotServedThroughTheBaseMediaPath() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "private.jpg", "privatedir");
+        markDirectoryPrivate(image);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.mediaResourceServlet(), request);
+
+        assertEquals(404, response.getStatus(),
+                "a private directory's files must 404 on the base media path");
+        assertEquals(0, response.getContentAsByteArray().length,
+                "no media bytes may leak from a private directory");
+    }
+
+    @Test
+    void aPrivateDirectoryThumbnailIsNotServedThroughTheBaseMediaPath() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "privthumb.jpg", "privatedir");
+        markDirectoryPrivate(image);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        request.setParameter("t", "true");
+
+        assertEquals(404, RenderingTestSupport.execute(
+                RenderingTestSupport.mediaResourceServlet(), request).getStatus(),
+                "the ?t=true thumbnail path must sit behind the private-directory check");
+    }
+
+    @Test
+    void aPrivateDirectoryRenditionIsNotServedThroughTheBaseMediaPath() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "privwidth.jpg", "privatedir");
+        markDirectoryPrivate(image);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        request.setParameter("w", "480");
+
+        assertEquals(404, RenderingTestSupport.execute(
+                RenderingTestSupport.mediaResourceServlet(), request).getStatus(),
+                "the ?w= rendition path must sit behind the private-directory check");
+    }
+
+    @Test
+    void theOwningWeblogsEditorStillSeesPrivateDirectoryFiles() throws Exception {
+        // The media-library screens render thumbnails through this servlet;
+        // the author who just marked a directory private must keep seeing it.
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "priveditor.jpg", "privatedir");
+        markDirectoryPrivate(image);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        try {
+            authenticateAs(user.getUserName());
+            MockHttpServletResponse response = RenderingTestSupport
+                    .execute(RenderingTestSupport.mediaResourceServlet(), request);
+
+            assertEquals(200, response.getStatus(),
+                    "the owning weblog's editor must see private-directory files");
+            assertEquals("private, no-store", response.getHeader("Cache-Control"),
+                    "an editor's private-media response must never enter a shared cache");
+            assertTrue(response.getContentAsByteArray().length > 1000);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void anotherWeblogsEditorDoesNotSeePrivateDirectoryFiles() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "privstranger.jpg", "privatedir");
+        markDirectoryPrivate(image);
+        User stranger = TestUtils.setupUser("mediastranger");
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        try {
+            authenticateAs(stranger.getUserName());
+            assertEquals(404, RenderingTestSupport.execute(
+                    RenderingTestSupport.mediaResourceServlet(), request).getStatus(),
+                    "being logged in is not enough -- the editor exception is "
+                            + "scoped to the owning weblog's members");
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+            TestUtils.teardownUser(stranger.getUserName());
+            TestUtils.endSession(true);
+        }
+    }
+
+    /** Puts an authenticated principal into the security context, as the session filter would. */
+    private static void authenticateAs(String userName) {
+        org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .setAuthentication(
+                        new org.springframework.security.authentication.TestingAuthenticationToken(
+                                userName, "n/a", "editor"));
+    }
+
+    /** Flips the file's directory to private and flushes, as the editor toggle does. */
+    private static void markDirectoryPrivate(MediaFile image) throws Exception {
+        MediaFile managed = org.apache.roller.weblogger.business.WebloggerFactory
+                .getWeblogger().getMediaFileManager().getMediaFile(image.getId());
+        managed.getDirectory().setPrivate(true);
+        TestUtils.endSession(true);
+    }
+
     // ------------------------------------------------- ?w= responsive renditions
 
     @Test

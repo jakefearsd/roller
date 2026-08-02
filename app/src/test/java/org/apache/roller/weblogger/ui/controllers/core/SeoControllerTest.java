@@ -243,6 +243,29 @@ class SeoControllerTest {
     }
 
     @Test
+    void weblogSitemapExcludesAFeaturedImageInAPrivateDirectory() throws Exception {
+        MediaFile hidden = TestUtils.setupImageMediaFile(weblog, "seo-private.jpg", "seoprivdir");
+        MediaFile managed = WebloggerFactory.getWeblogger().getMediaFileManager()
+                .getMediaFile(hidden.getId());
+        managed.getDirectory().setPrivate(true);
+        WeblogEntry entry = TestUtils.setupWeblogEntry("seoPrivateImageEntry", weblog, user);
+        entry = TestUtils.getManagedWeblogEntry(entry);
+        entry.setFeaturedImageId(hidden.getId());
+        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.endSession(true);
+
+        String body = controller.weblogSitemap(weblog.getHandle()).getBody();
+
+        assertNotNull(body);
+        parse(body);
+        assertTrue(body.contains("/entry/" + entry.getAnchor()),
+                "The entry itself must still be listed:\n" + body);
+        assertFalse(body.contains("image:loc"),
+                "A featured image living in a private directory must never be "
+                        + "advertised to crawlers:\n" + body);
+    }
+
+    @Test
     void weblogSitemapSkipsAFeaturedImageThatNoLongerExists() throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry("seoGoneImageEntry", weblog, user);
         entry = TestUtils.getManagedWeblogEntry(entry);

@@ -455,6 +455,67 @@
 
 <%-- ========================================================================================== --%>
 
+<%-- per-entry share link: create (optional password), copy URL, revoke.
+     Outside the main entry form -- these are separate POST actions with
+     their own CSRF inputs, and forms must not nest. Only a saved entry can
+     be shared, so the card renders for entryEdit only. --%>
+
+<c:if test="${actionName == 'entryEdit'}">
+    <div id="entryShareCard" class="card mt-3">
+        <div class="card-header"><spring:message code="shareLink.title"/></div>
+        <div class="card-body">
+            <c:choose>
+                <c:when test="${not empty entryShareLink}">
+                    <div class="input-group mb-2" style="max-width: 44em">
+                        <input type="text" readonly id="entryShareLinkUrl" class="form-control"
+                               value="${entryShareURL}"/>
+                        <button type="button" class="btn btn-secondary" id="copyEntryShareLinkButton"
+                                onclick="copyEntryShareLink()"><spring:message code="shareLink.copy"/></button>
+                    </div>
+                    <form method="post" style="display:inline"
+                          action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!revokeShareLink.rol">
+                        <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+                        <input type="hidden" name="entryId" value="${entry.id}"/>
+                        <button type="submit" id="revokeEntryShareLinkButton" class="btn btn-danger btn-sm"><spring:message
+                                code="shareLink.revoke"/></button>
+                        <sec:csrfInput/>
+                    </form>
+                </c:when>
+                <c:otherwise>
+                    <p class="pagetip"><spring:message code="shareLink.none"/></p>
+                    <form method="post"
+                          action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!createShareLink.rol">
+                        <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+                        <input type="hidden" name="entryId" value="${entry.id}"/>
+                        <div class="input-group" style="max-width: 44em">
+                            <input type="password" name="sharePassword" id="entryShareLinkPassword"
+                                   class="form-control" autocomplete="new-password"
+                                   placeholder="<spring:message code="shareLink.passwordOptional"/>"/>
+                            <button type="submit" id="createEntryShareLinkButton" class="btn btn-primary"><spring:message
+                                    code="shareLink.create"/></button>
+                        </div>
+                        <sec:csrfInput/>
+                    </form>
+                </c:otherwise>
+            </c:choose>
+        </div>
+    </div>
+    <script>
+        function copyEntryShareLink() {
+            var input = document.getElementById('entryShareLinkUrl');
+            input.select();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(input.value);
+            } else {
+                document.execCommand('copy');
+            }
+        }
+    </script>
+</c:if>
+
+
+<%-- ========================================================================================== --%>
+
 <%-- delete blogroll confirmation modal --%>
 
 <div id="delete-entry-modal" class="modal fade delete-entry-modal" tabindex="-1" role="dialog">

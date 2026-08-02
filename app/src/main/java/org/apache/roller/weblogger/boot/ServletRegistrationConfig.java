@@ -204,6 +204,21 @@ public class ServletRegistrationConfig {
      */
     static final String[] SEO_URL_PATTERNS = {"/sitemap.xml", "*.xml", "/robots.txt"};
 
+    /**
+     * Routes the tokened share links ({@code ShareController}) to the
+     * dispatcher. Unlike the SEO patterns above this is a legal servlet-spec
+     * <em>prefix</em> mapping, which has one Spring MVC consequence worth
+     * writing down: for a prefix-matched request the servlet path prefix is
+     * treated like an extension of the context path and stripped from the
+     * lookup path ({@code ServletRequestPathUtils.parse}, "the returned
+     * RequestPath will have both the contextPath and any servletPath prefix
+     * omitted"). Handler mappings in {@code ShareController} are therefore
+     * written relative to {@code /share} -- {@code /{token}}, not
+     * {@code /share/{token}}. The {@code share} path root is reserved in
+     * {@code rollerProtectedUrls} so no weblog handle can shadow it.
+     */
+    static final String[] SHARE_URL_PATTERNS = {"/share/*"};
+
     @Bean
     public DispatcherServletRegistrationBean dispatcherServletRegistration(
             DispatcherServlet dispatcherServlet,
@@ -214,6 +229,7 @@ public class ServletRegistrationConfig {
                     protected void configure(ServletRegistration.Dynamic servletRegistration) {
                         super.configure(servletRegistration);
                         servletRegistration.addMapping(SEO_URL_PATTERNS);
+                        servletRegistration.addMapping(SHARE_URL_PATTERNS);
                     }
                 };
         registration.setName("springMvc");

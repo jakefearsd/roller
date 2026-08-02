@@ -124,6 +124,25 @@ public class MediaResourceServlet extends HttpServlet {
             return;
         }
 
+        // A private directory's files are reachable only through their share
+        // link's /share/<token>/media/<id> route (ShareController). Serving
+        // them here would let anyone who learns a media id bypass the share
+        // gate, so for the public the base path answers exactly as for an
+        // unknown id. The one exception is the owning weblog's own editors:
+        // the media-library screens render their thumbnails through this
+        // path, and an author must be able to see the photos they just
+        // marked private. Those responses are marked private/no-store so no
+        // shared cache can replay an editor's copy to an anonymous reader.
+        if (mediaFile.getDirectory().isPrivate()) {
+            if (!requesterMayEditWeblog(weblog)) {
+                log.debug("media file " + resourceRequest.getResourceId()
+                        + " is in a private directory; not serving it on the base path");
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+            response.setHeader("Cache-Control", "private, no-store");
+        }
+
         // A ?w= URL serves different bytes and a different Content-Type
         // depending on the request's Accept header (webp sibling vs raster
         // rendition), so any shared cache must key on that header. Set before
@@ -230,6 +249,38 @@ public class MediaResourceServlet extends HttpServlet {
     private static boolean acceptsWebp(HttpServletRequest request) {
         String accept = request.getHeader("Accept");
         return accept != null && accept.contains("image/webp");
+    }
+
+    /**
+     * True when the current request carries an authenticated session whose
+     * user holds at least the weakest permission ({@code EDIT_DRAFT}) on the
+     * weblog -- i.e. one of the weblog's own editors. Anonymous requests and
+     * users of other weblogs are false; any lookup failure fails closed.
+     */
+    private static boolean requesterMayEditWeblog(Weblog weblog) {
+        try {
+            org.springframework.security.core.Authentication authentication =
+                    org.springframework.security.core.context.SecurityContextHolder
+                            .getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()
+                    || authentication instanceof
+                            org.springframework.security.authentication.AnonymousAuthenticationToken) {
+                return false;
+            }
+            org.apache.roller.weblogger.pojos.User user = WebloggerFactory.getWeblogger()
+                    .getUserManager().getUserByUserName(authentication.getName());
+            if (user == null) {
+                return false;
+            }
+            return WebloggerFactory.getWeblogger().getUserManager().checkPermission(
+                    new org.apache.roller.weblogger.pojos.WeblogPermission(weblog,
+                            java.util.List.of(
+                                    org.apache.roller.weblogger.pojos.WeblogPermission.EDIT_DRAFT)),
+                    user);
+        } catch (Exception e) {
+            log.debug("could not resolve an editor session for private media", e);
+            return false;
+        }
     }
 
 }

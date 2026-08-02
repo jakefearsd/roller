@@ -306,6 +306,18 @@ public final class Routes {
                     "Path template, not an openable URL; the concrete "
                             + "/sitemap-it_weblog.xml is fetched and content-asserted by "
                             + "PublicSurfaceIT."),
+            new SkippedRoute("/{token:[A-Za-z0-9_-]+}", Role.ANONYMOUS,
+                    "The share page (ShareController; served under /share/<token>, "
+                            + "the /share/* prefix is stripped from the mapping literal). "
+                            + "Tokens are per-link secrets minted at share time, so there "
+                            + "is no literal URL to sweep; ShareLinkIT creates a link "
+                            + "through the editor UI and content-asserts the password "
+                            + "gate and the rendered page."),
+            new SkippedRoute("/{token:[A-Za-z0-9_-]+}/media/{fileId}", Role.ANONYMOUS,
+                    "Token-scoped media for a directory share; same dynamic-token "
+                            + "reason as the share page above. ShareLinkIT asserts the "
+                            + "grid's share-scoped media URLs load and that the base "
+                            + "media path 404s for the private directory."),
 
             // --- need a seeded entity id ---
 
