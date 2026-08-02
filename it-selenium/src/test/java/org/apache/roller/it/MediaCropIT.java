@@ -70,6 +70,15 @@ class MediaCropIT extends RollerIT {
     /** "&lt;b&gt;Image&lt;/b&gt;: 450 X 336 pixels" as rendered text. */
     private static final Pattern DIMENSIONS = Pattern.compile("Image\\s*:\\s*(\\d+) X (\\d+) pixels");
 
+    /**
+     * CI runners (Azure) are materially slower than a dev box: the cropper's
+     * custom elements have to be parsed, upgraded and laid out, and the crop
+     * POST re-encodes and regenerates renditions server-side before the
+     * reload settles. 10s was tight even locally; give both phases real
+     * headroom rather than chase flakiness with a bigger number later.
+     */
+    private static final Duration CI_TOLERANT_TIMEOUT = Duration.ofSeconds(30);
+
     @BeforeEach
     void logIn() {
         loginAsAdmin();
@@ -98,10 +107,24 @@ class MediaCropIT extends RollerIT {
         // hawk.jpg is 500x373; remember what the editor says before the crop
         int[] before = displayedDimensions();
 
+        // Cropper.js v2 ships as custom elements (<cropper-image>,
+        // <cropper-selection>, ...): the browser has to parse and execute
+        // cropper.min.js and run each element's upgrade reaction before any
+        // of the cropper's own properties (like $change on a selection)
+        // exist. Wait for that distinctly from geometry so a script-loading
+        // regression fails with a clear signal instead of a geometry
+        // timeout that looks like a layout problem.
+        Selenide.Wait().withTimeout(CI_TOLERANT_TIMEOUT).until(d ->
+                Boolean.TRUE.equals(executeJavaScript(
+                        "return !!(window.customElements"
+                        + " && customElements.get('cropper-image')"
+                        + " && customElements.get('cropper-selection')"
+                        + " && customElements.get('cropper-canvas'));")));
+
         // Cropper only has a usable geometry once the image has loaded and
         // the initial-coverage selection has been laid out; clicking before
         // that would be prevented by the page's own guard.
-        Selenide.Wait().withTimeout(Duration.ofSeconds(10)).until(d ->
+        Selenide.Wait().withTimeout(CI_TOLERANT_TIMEOUT).until(d ->
                 Boolean.TRUE.equals(executeJavaScript(
                         "var i = document.getElementById('cropImage');"
                         + "var s = document.getElementById('cropSelection');"
@@ -126,10 +149,15 @@ class MediaCropIT extends RollerIT {
         $("#cropButton").click();
         Selenide.confirm();
 
-        // the form posts inside the iframe; re-enter it after the reload
-        switchTo().defaultContent();
-        switchTo().frame("mediaFileEditor");
-        $("#messages").should(exist);
+        // The form posts and reloads inside the iframe: the crop itself
+        // re-encodes the file and regenerates every rendition server-side,
+        // which is the slowest step in the journey on a cold CI runner.
+        // Re-entering the frame immediately can also race the reload itself
+        // -- the old document may already be tearing down (a stale element
+        // or "no such frame" from the driver) before the new one is ready --
+        // so retry the switch itself rather than switching once and trusting
+        // Selenide's element polling to paper over a torn-down frame.
+        reenterFrameAfterPost("mediaFileEditor", "#messages", CI_TOLERANT_TIMEOUT);
 
         int[] after = displayedDimensions();
         assertTrue(after[0] < before[0] && after[1] < before[1],
@@ -167,6 +195,30 @@ class MediaCropIT extends RollerIT {
         Matcher matcher = DIMENSIONS.matcher(text);
         assertTrue(matcher.find(), "expected image dimensions in the editor text, got:\n" + text);
         return new int[] {Integer.parseInt(matcher.group(1)), Integer.parseInt(matcher.group(2))};
+    }
+
+    /**
+     * Switches into {@code frameName} and waits for {@code readySelector} to
+     * exist, retrying the switch itself rather than switching once and
+     * relying on Selenide's element polling. A frame that is mid-reload -
+     * exactly the state right after an in-frame POST - can make even the
+     * switch itself throw ({@code NoSuchFrameException} while the old
+     * document is torn down, {@code StaleElementReferenceException} against
+     * a reference from before the reload), and those must be treated as
+     * "not ready yet", not as a hard failure.
+     */
+    private void reenterFrameAfterPost(String frameName, String readySelector, Duration timeout) {
+        Selenide.Wait().withTimeout(timeout).until(d -> {
+            try {
+                switchTo().defaultContent();
+                switchTo().frame(frameName);
+                return $(readySelector).exists();
+            } catch (org.openqa.selenium.NoSuchFrameException | org.openqa.selenium.StaleElementReferenceException
+                    | org.openqa.selenium.NoSuchElementException e) {
+                return false;
+            }
+        });
+        $(readySelector).should(exist);
     }
 
     /**
