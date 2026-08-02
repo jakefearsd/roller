@@ -301,6 +301,70 @@
 
 <%-- ================================================================================================ --%>
 
+<%-- share-link card for the current directory: create (optional password),
+     copy URL, revoke, and the private toggle. Sits outside the main media
+     form because these are separate POST actions with their own CSRF inputs. --%>
+
+<c:if test="${not empty currentDirectory && empty pager}">
+    <div id="directoryShareCard" class="card mt-3">
+        <div class="card-header"><spring:message code="shareLink.title"/></div>
+        <div class="card-body">
+
+            <c:choose>
+                <c:when test="${not empty directoryShareLink}">
+                    <div class="input-group mb-2" style="max-width: 44em">
+                        <input type="text" readonly id="shareLinkUrl" class="form-control"
+                               value="${directoryShareURL}"/>
+                        <button type="button" class="btn btn-secondary" id="copyShareLinkButton"
+                                onclick="copyShareLink()"><spring:message code="shareLink.copy"/></button>
+                    </div>
+                    <form method="post" style="display:inline"
+                          action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView!revokeShareLink.rol">
+                        <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+                        <input type="hidden" name="directoryId" value="${directoryId}"/>
+                        <button type="submit" id="revokeShareLinkButton" class="btn btn-danger btn-sm"><spring:message
+                                code="shareLink.revoke"/></button>
+                        <sec:csrfInput/>
+                    </form>
+                </c:when>
+                <c:otherwise>
+                    <p class="pagetip"><spring:message code="shareLink.none"/></p>
+                    <form method="post" class="mb-2"
+                          action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView!createShareLink.rol">
+                        <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+                        <input type="hidden" name="directoryId" value="${directoryId}"/>
+                        <div class="input-group" style="max-width: 44em">
+                            <input type="password" name="sharePassword" id="shareLinkPassword"
+                                   class="form-control" autocomplete="new-password"
+                                   placeholder="<spring:message code="shareLink.passwordOptional"/>"/>
+                            <button type="submit" id="createShareLinkButton" class="btn btn-primary"><spring:message
+                                    code="shareLink.create"/></button>
+                        </div>
+                        <sec:csrfInput/>
+                    </form>
+                </c:otherwise>
+            </c:choose>
+
+            <form method="post" class="mt-2"
+                  action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView!togglePrivate.rol">
+                <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+                <input type="hidden" name="directoryId" value="${directoryId}"/>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="directoryPrivateToggle"
+                           onchange="this.form.submit()" ${currentDirectory['private'] ? 'checked' : ''}/>
+                    <label class="form-check-label" for="directoryPrivateToggle"><spring:message
+                            code="shareLink.directoryPrivate"/></label>
+                </div>
+                <sec:csrfInput/>
+            </form>
+
+        </div>
+    </div>
+</c:if>
+
+
+<%-- ================================================================================================ --%>
+
 <%-- view image modal --%>
 
 <div id="mediafile_edit_lightbox" class="modal fade" tabindex="-1" role="dialog">
@@ -335,6 +399,16 @@
 
 <script>
     toggleState = 'Off';
+
+    function copyShareLink() {
+        var input = document.getElementById('shareLinkUrl');
+        input.select();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(input.value);
+        } else {
+            document.execCommand('copy');
+        }
+    }
 
     function onClickEdit(mediaFileId, mediaFileName) {
         <c:url var="mediaFileEditURL" value="/roller-ui/authoring/mediaFileEdit.rol">

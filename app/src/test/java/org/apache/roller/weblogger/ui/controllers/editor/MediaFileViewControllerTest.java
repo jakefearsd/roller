@@ -23,13 +23,18 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
+import org.apache.roller.weblogger.pojos.ShareLink;
+import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -446,6 +451,145 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
 
         assertEquals(1, errors(model).size(),
                 "Expected the search failure to be surfaced, got: " + errors(model));
+    }
+
+    // --- share links and directory privacy ---
+
+    @org.junit.jupiter.api.Nested
+    class ShareLinks {
+
+        @org.junit.jupiter.api.BeforeEach
+        void installPasswordEncoder() throws Exception {
+            // published by SecurityConfig at context refresh in production
+            if (RollerContext.getPasswordEncoder() == null) {
+                RollerContext.setPasswordEncoder(RollerContext.createPasswordEncoder());
+            }
+            when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-2"))
+                    .thenReturn(targetDirectory);
+        }
+
+        @Test
+        void creatingAShareLinkHashesThePasswordBeforeStorage() throws Exception {
+            controller.createShareLink(request, model, "dir-2", "gallery-pw", null);
+
+            var captor = org.mockito.ArgumentCaptor.forClass(ShareLink.class);
+            verify(weblogger.getShareLinkManager()).createShareLink(captor.capture());
+            ShareLink stored = captor.getValue();
+            assertEquals(ShareLink.TYPE_DIRECTORY, stored.getTargetType());
+            assertEquals("dir-2", stored.getTargetId());
+            assertEquals(43, stored.getToken().length(),
+                    "the token must come from TokenGenerator, not an entity id");
+            assertNotNull(stored.getPasswordHash());
+            // the test config runs passwds.encryption.enabled=false (noop),
+            // so assert the *shape*: the value went through the configured
+            // DelegatingPasswordEncoder (algorithm-id prefix) and verifies
+            // via matches(); production config delegates to bcrypt
+            assertTrue(stored.getPasswordHash().startsWith("{"),
+                    "the stored value must be DelegatingPasswordEncoder output, "
+                            + "not raw input: " + stored.getPasswordHash());
+            assertTrue(RollerContext.getPasswordEncoder()
+                            .matches("gallery-pw", stored.getPasswordHash()),
+                    "the stored hash must verify against the chosen password");
+            assertTrue(messages(model).contains("shareLink.created"));
+        }
+
+        @Test
+        void creatingAShareLinkWithoutAPasswordStoresNoHash() throws Exception {
+            controller.createShareLink(request, model, "dir-2", "  ", null);
+
+            var captor = org.mockito.ArgumentCaptor.forClass(ShareLink.class);
+            verify(weblogger.getShareLinkManager()).createShareLink(captor.capture());
+            assertNull(captor.getValue().getPasswordHash(),
+                    "a blank password means an ungated link, not a hash of blanks");
+        }
+
+        @Test
+        void reSharingReplacesTheOldLink() throws Exception {
+            ShareLink old = shareLink("old-token-dir2", "dir-2");
+            when(weblogger.getShareLinkManager()
+                    .getShareLinkForTarget(ShareLink.TYPE_DIRECTORY, "dir-2")).thenReturn(old);
+
+            controller.createShareLink(request, model, "dir-2", null, null);
+
+            verify(weblogger.getShareLinkManager()).removeShareLink(old);
+            verify(weblogger.getShareLinkManager()).createShareLink(any());
+        }
+
+        @Test
+        void aDirectoryFromAnotherWeblogCannotBeShared() throws Exception {
+            MediaFileDirectory foreign = directory("dir-x", "theirs");
+            org.apache.roller.weblogger.pojos.Weblog other =
+                    new org.apache.roller.weblogger.pojos.Weblog();
+            other.setId("weblog-2");
+            other.setHandle("otherblog");
+            foreign.setWeblog(other);
+            when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-x"))
+                    .thenReturn(foreign);
+
+            controller.createShareLink(request, model, "dir-x", null, null);
+
+            verify(weblogger.getShareLinkManager(), never()).createShareLink(any());
+            assertTrue(errors(model).contains("shareLink.error"),
+                    "a cross-weblog directoryId must be refused: " + errors(model));
+        }
+
+        @Test
+        void revokingRemovesTheLinkAndConfirms() throws Exception {
+            ShareLink link = shareLink("revoke-token-dir2", "dir-2");
+            when(weblogger.getShareLinkManager()
+                    .getShareLinkForTarget(ShareLink.TYPE_DIRECTORY, "dir-2")).thenReturn(link);
+
+            controller.revokeShareLink(request, model, "dir-2", null);
+
+            verify(weblogger.getShareLinkManager()).removeShareLink(link);
+            assertTrue(messages(model).contains("shareLink.revoked"));
+        }
+
+        @Test
+        void revokingWithNoLinkReportsAnError() throws Exception {
+            controller.revokeShareLink(request, model, "dir-2", null);
+
+            verify(weblogger.getShareLinkManager(), never()).removeShareLink(any());
+            assertTrue(errors(model).contains("shareLink.error"));
+        }
+
+        @Test
+        void togglingPrivacyFlipsTheFlagAndConfirms() throws Exception {
+            assertTrue(!targetDirectory.isPrivate());
+
+            controller.togglePrivate(request, model, "dir-2", null);
+            assertTrue(targetDirectory.isPrivate(),
+                    "the toggle must flip a public directory to private");
+            assertTrue(messages(model).contains("shareLink.updated"));
+
+            controller.togglePrivate(request, model, "dir-2", null);
+            assertTrue(!targetDirectory.isPrivate(),
+                    "a second toggle must flip it back");
+        }
+
+        @Test
+        void theShareUrlIsExposedToTheView() throws Exception {
+            WebloggerRuntimeConfig.setAbsoluteContextURL("http://localhost:8080/roller");
+            ShareLink link = shareLink("view-token-dir1", "dir-1");
+            when(weblogger.getShareLinkManager()
+                    .getShareLinkForTarget(ShareLink.TYPE_DIRECTORY, "dir-1")).thenReturn(link);
+
+            controller.execute(request, model, "dir-1", null, null);
+
+            assertEquals(link, model.getAttribute("directoryShareLink"));
+            assertEquals("http://localhost:8080/roller/share/view-token-dir1",
+                    model.getAttribute("directoryShareURL"),
+                    "the JSP copies this URL verbatim; it must be absolute");
+        }
+
+        private ShareLink shareLink(String token, String directoryId) {
+            ShareLink link = new ShareLink();
+            link.setWeblog(weblog);
+            link.setTargetType(ShareLink.TYPE_DIRECTORY);
+            link.setTargetId(directoryId);
+            link.setToken(token);
+            return link;
+        }
     }
 
     // --- helpers ---

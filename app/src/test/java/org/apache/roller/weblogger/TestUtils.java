@@ -441,6 +441,17 @@ public final class TestUtils {
      */
     public static MediaFile setupImageMediaFile(Weblog weblog, String name)
             throws Exception {
+        return setupImageMediaFile(weblog, name, null);
+    }
+
+    /**
+     * Variant of {@link #setupImageMediaFile(Weblog, String)} that stores the
+     * image in a named (non-default) directory, creating the directory when
+     * it does not exist yet. Used by the share-link and private-directory
+     * tests, which need files outside the default directory.
+     */
+    public static MediaFile setupImageMediaFile(Weblog weblog, String name,
+            String directoryName) throws Exception {
 
         // allow media uploads for this test
         Map<String, RuntimeConfigProperty> config = WebloggerFactory
@@ -451,8 +462,16 @@ public final class TestUtils {
                 .getMediaFileManager();
 
         Weblog managedWeblog = getManagedWebsite(weblog);
-        MediaFileDirectory rootDirectory = mfMgr
-                .getDefaultMediaFileDirectory(managedWeblog);
+        MediaFileDirectory rootDirectory;
+        if (directoryName == null) {
+            rootDirectory = mfMgr.getDefaultMediaFileDirectory(managedWeblog);
+        } else {
+            rootDirectory = mfMgr.getMediaFileDirectoryByName(managedWeblog, directoryName);
+            if (rootDirectory == null) {
+                rootDirectory = mfMgr.createMediaFileDirectory(managedWeblog, directoryName);
+                WebloggerFactory.getWeblogger().flush();
+            }
+        }
 
         MediaFile mediaFile = new MediaFile();
         mediaFile.setName(name);

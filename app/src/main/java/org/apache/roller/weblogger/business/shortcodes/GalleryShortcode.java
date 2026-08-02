@@ -17,9 +17,7 @@
  */
 package org.apache.roller.weblogger.business.shortcodes;
 
-import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
@@ -31,7 +29,6 @@ import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
-import org.apache.roller.weblogger.util.HTMLSanitizer;
 
 /**
  * The built-in {@code [gallery dir="Name" row="260" max="0"]} shortcode:
@@ -41,7 +38,7 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  *
  * <p>Each figure carries the image's aspect ratio as a CSS custom property
  * ({@code style="--ar:1.3405;"}) -- verified to survive the
- * {@link HTMLSanitizer} style re-parse by
+ * HTML sanitizer's style re-parse by
  * {@code HTMLSanitizerTest.GalleryGridMarkup} -- and wraps the {@code <img>}
  * in an anchor to the full-size original for the lightbox (Wave 2 T4):
  * {@code data-pswp-width}/{@code data-pswp-height} full-size dimensions,
@@ -63,12 +60,6 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
 public class GalleryShortcode implements ShortcodeHandler {
 
     private static final Log log = LogFactory.getLog(GalleryShortcode.class);
-
-    /** Desktop target row height (px) when no {@code row} attribute is given; mirrored in the grid CSS. */
-    static final int DEFAULT_ROW_HEIGHT = 260;
-
-    /** Mobile row height (px) from the grid CSS's 640px breakpoint, used only for the sizes hint. */
-    private static final int MOBILE_ROW_HEIGHT = 160;
 
     @Override
     public String getName() {
@@ -105,7 +96,7 @@ public class GalleryShortcode implements ShortcodeHandler {
             }
             images = directory.getMediaFiles().stream()
                     .filter(MediaFile::isImageFile)
-                    .sorted(GALLERY_ORDER)
+                    .sorted(GalleryMarkup.GALLERY_ORDER)
                     .map(mf -> MediaFileWrapper.wrap(mf,
                             WebloggerFactory.getWeblogger().getUrlStrategy()))
                     .toList();
@@ -126,102 +117,9 @@ public class GalleryShortcode implements ShortcodeHandler {
         }
 
         int rowHeight = parsePositiveInt(attributes.get("row"), 0);
-        StringBuilder html = new StringBuilder(512 * images.size());
-        html.append("<div class=\"jgrid\"");
-        if (rowHeight > 0 && rowHeight != DEFAULT_ROW_HEIGHT) {
-            html.append(" style=\"--row-h:").append(rowHeight).append("px;\"");
-        }
-        html.append(">\n");
-        for (MediaFileWrapper image : images) {
-            appendFigure(html, image, rowHeight > 0 ? rowHeight : DEFAULT_ROW_HEIGHT);
-        }
-        html.append("</div>");
-        return html.toString();
-    }
-
-    /**
-     * Curated block first ({@code sortOrder} ascending, name breaking ties),
-     * then the never-ordered rest by name -- see {@link MediaFile#getSortOrder()}.
-     */
-    private static final Comparator<MediaFile> GALLERY_ORDER = Comparator
-            .comparing(MediaFile::getSortOrder, Comparator.nullsLast(Comparator.naturalOrder()))
-            .thenComparing(MediaFile::getName, Comparator.nullsLast(Comparator.naturalOrder()));
-
-    private static void appendFigure(StringBuilder html, MediaFileWrapper image,
-            int rowHeight) {
-        boolean knownDimensions = image.getWidth() > 0 && image.getHeight() > 0;
-        double aspectRatio = knownDimensions
-                ? (double) image.getWidth() / image.getHeight() : 0;
-
-        html.append("<figure");
-        if (knownDimensions) {
-            // The grid packs rows with flex-grow: var(--ar); the trailing
-            // semicolon keeps the value byte-identical through the
-            // sanitizer's style re-parse (which appends one anyway).
-            html.append(" style=\"--ar:")
-                    .append(String.format(Locale.ROOT, "%.4f", aspectRatio))
-                    .append(";\"");
-        }
-        html.append(">\n");
-
-        // ---- lightbox anchor: absolute original + data payload (T4 reads these)
-        html.append("<a href=\"").append(image.getPermalink()).append('"');
-        if (knownDimensions) {
-            html.append(" data-pswp-width=\"").append(image.getWidth())
-                    .append("\" data-pswp-height=\"").append(image.getHeight()).append('"');
-        }
-        String caption = StringUtils.trimToNull(image.getDescription());
-        appendDataAttribute(html, "data-caption", escape(caption));
-        appendDataAttribute(html, "data-exif-camera", escape(image.getExifCamera()));
-        appendDataAttribute(html, "data-exif-lens", escape(image.getExifLens()));
-        appendDataAttribute(html, "data-exif-exposure", escape(image.getExifExposure()));
-        appendDataAttribute(html, "data-exif-aperture", escape(image.getExifAperture()));
-        appendDataAttribute(html, "data-exif-iso",
-                image.getExifIso() == null ? null : image.getExifIso().toString());
-        appendDataAttribute(html, "data-exif-focal", escape(image.getExifFocalLength()));
-        appendDataAttribute(html, "data-blurhash", escape(image.getBlurhash()));
-        html.append(">\n");
-
-        // ---- the grid image itself
-        html.append("<img src=\"").append(image.getPermalink()).append('"');
-        String srcset = image.getSrcset();
-        if (srcset != null) {
-            // sizes = the figure's flex-basis (--ar * row height): what the
-            // grid asks the row to give this image before stretch.
-            html.append(" srcset=\"").append(srcset)
-                    .append("\" sizes=\"(max-width: 640px) ")
-                    .append(Math.round(aspectRatio * MOBILE_ROW_HEIGHT))
-                    .append("px, ").append(Math.round(aspectRatio * rowHeight))
-                    .append("px\"");
-        }
-        if (knownDimensions) {
-            html.append(" width=\"").append(image.getWidth())
-                    .append("\" height=\"").append(image.getHeight()).append('"');
-        }
-        html.append(" alt=\"").append(escape(StringUtils.defaultString(image.getName())))
-                .append('"');
-        html.append(" loading=\"lazy\" decoding=\"async\"");
-        if (StringUtils.isNotBlank(image.getBlurhash())) {
-            html.append(" data-blurhash=\"").append(escape(image.getBlurhash())).append('"');
-            String averageColor = image.getAverageColor();
-            if (averageColor != null) {
-                // JS-free placeholder while the pixels arrive, exactly as the
-                // [image] shortcode does it.
-                html.append(" style=\"background-color:").append(averageColor).append('"');
-            }
-        }
-        html.append(">\n</a>\n");
-
-        if (caption != null) {
-            html.append("<figcaption>").append(escape(caption)).append("</figcaption>\n");
-        }
-        html.append("</figure>\n");
-    }
-
-    private static void appendDataAttribute(StringBuilder html, String name, String value) {
-        if (StringUtils.isNotBlank(value)) {
-            html.append(' ').append(name).append("=\"").append(value).append('"');
-        }
+        // Emission is shared with the share-page renderer (GalleryMarkup);
+        // the inline path always uses the public permalink URL space.
+        return GalleryMarkup.grid(images, rowHeight, GalleryMarkup.PERMALINKS);
     }
 
     private static int parsePositiveInt(String value, int fallback) {
@@ -234,9 +132,5 @@ public class GalleryShortcode implements ShortcodeHandler {
         } catch (NumberFormatException e) {
             return fallback;
         }
-    }
-
-    private static String escape(String value) {
-        return value == null ? null : HTMLSanitizer.htmlEncodeApexesAndTags(value);
     }
 }

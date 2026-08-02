@@ -151,6 +151,66 @@ class MediaResourceServletRenderingTest {
                 "the ?w= rendition path must sit behind the same weblog check");
     }
 
+    // ------------------------------------------------- private directories
+    //
+    // A file in a directory marked private (Wave 2 share links) must not be
+    // reachable through the public media path at all -- its bytes are served
+    // only through the tokened /share/<token>/media/<id> route. The base path
+    // must 404 exactly like an unknown id, on every serving variant.
+
+    @Test
+    void aFileInAPrivateDirectoryIsNotServedThroughTheBaseMediaPath() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "private.jpg", "privatedir");
+        markDirectoryPrivate(image);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.mediaResourceServlet(), request);
+
+        assertEquals(404, response.getStatus(),
+                "a private directory's files must 404 on the base media path");
+        assertEquals(0, response.getContentAsByteArray().length,
+                "no media bytes may leak from a private directory");
+    }
+
+    @Test
+    void aPrivateDirectoryThumbnailIsNotServedThroughTheBaseMediaPath() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "privthumb.jpg", "privatedir");
+        markDirectoryPrivate(image);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        request.setParameter("t", "true");
+
+        assertEquals(404, RenderingTestSupport.execute(
+                RenderingTestSupport.mediaResourceServlet(), request).getStatus(),
+                "the ?t=true thumbnail path must sit behind the private-directory check");
+    }
+
+    @Test
+    void aPrivateDirectoryRenditionIsNotServedThroughTheBaseMediaPath() throws Exception {
+        CwebpEncoder.setAvailableForTesting(false);
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "privwidth.jpg", "privatedir");
+        markDirectoryPrivate(image);
+
+        MockHttpServletRequest request = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/media-resources", "/mediablog/" + image.getId());
+        request.setParameter("w", "480");
+
+        assertEquals(404, RenderingTestSupport.execute(
+                RenderingTestSupport.mediaResourceServlet(), request).getStatus(),
+                "the ?w= rendition path must sit behind the private-directory check");
+    }
+
+    /** Flips the file's directory to private and flushes, as the editor toggle does. */
+    private static void markDirectoryPrivate(MediaFile image) throws Exception {
+        MediaFile managed = org.apache.roller.weblogger.business.WebloggerFactory
+                .getWeblogger().getMediaFileManager().getMediaFile(image.getId());
+        managed.getDirectory().setPrivate(true);
+        TestUtils.endSession(true);
+    }
+
     // ------------------------------------------------- ?w= responsive renditions
 
     @Test

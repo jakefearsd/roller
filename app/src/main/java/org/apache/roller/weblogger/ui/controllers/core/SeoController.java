@@ -206,6 +206,12 @@ public class SeoController extends BaseController {
         if (image == null) {
             return;
         }
+        // A private directory's files 404 on the public media path (they are
+        // served only through their share link), so advertising them to
+        // crawlers would leak the URL and then dead-link it.
+        if (image.getDirectory() != null && image.getDirectory().isPrivate()) {
+            return;
+        }
         // Largest rendition of the pipeline's ladder; MediaResourceServlet
         // serves the original when no such rendition exists for the file.
         String imageURL = urlStrategy.getMediaFileURL(weblog, image.getId(), true) + "?w=1600";

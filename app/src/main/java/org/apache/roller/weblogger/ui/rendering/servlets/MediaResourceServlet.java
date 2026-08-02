@@ -124,6 +124,17 @@ public class MediaResourceServlet extends HttpServlet {
             return;
         }
 
+        // A private directory's files are reachable only through their share
+        // link's /share/<token>/media/<id> route (ShareController). Serving
+        // them here would let anyone who learns a media id bypass the share
+        // gate, so the base path answers exactly as for an unknown id.
+        if (mediaFile.getDirectory().isPrivate()) {
+            log.debug("media file " + resourceRequest.getResourceId()
+                    + " is in a private directory; not serving it on the base path");
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
         // A ?w= URL serves different bytes and a different Content-Type
         // depending on the request's Accept header (webp sibling vs raster
         // rendition), so any shared cache must key on that header. Set before

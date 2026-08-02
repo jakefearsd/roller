@@ -33,7 +33,11 @@ import org.apache.roller.weblogger.pojos.MediaFileComparator;
 import org.apache.roller.weblogger.pojos.MediaFileComparator.MediaFileComparatorType;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.MediaFileFilter;
+import org.apache.roller.weblogger.pojos.ShareLink;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.controllers.pagers.MediaFilePager;
+import org.apache.roller.weblogger.ui.core.RollerContext;
+import org.apache.roller.weblogger.util.TokenGenerator;
 import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
@@ -201,6 +205,127 @@ public class MediaFileViewController extends MediaFileBase {
         return ".MediaFileView";
     }
 
+    /**
+     * Creates a share link for a directory, hashing the (optional) password
+     * here -- the manager tier stores whatever hash it is handed and never
+     * sees plaintext. Re-sharing replaces the old link: revoke-then-create is
+     * the way to rotate a leaked URL.
+     */
+    @PostMapping("/mediaFileView!createShareLink.rol")
+    public String createShareLink(HttpServletRequest request, Model model,
+                                  @RequestParam(value = "directoryId", required = false) String directoryId,
+                                  @RequestParam(value = "sharePassword", required = false) String sharePassword,
+                                  @RequestParam(value = "sortBy", required = false) String sortBy) {
+        populateCommonModel(request, model);
+        try {
+            MediaFileDirectory directory = ownedDirectory(directoryId, request);
+            if (directory == null) {
+                addError(model, "shareLink.error", request);
+            } else {
+                ShareLink existing = weblogger.getShareLinkManager()
+                        .getShareLinkForTarget(ShareLink.TYPE_DIRECTORY, directory.getId());
+                if (existing != null) {
+                    weblogger.getShareLinkManager().removeShareLink(existing);
+                }
+                ShareLink link = new ShareLink();
+                link.setWeblog(getActionWeblog(request));
+                link.setTargetType(ShareLink.TYPE_DIRECTORY);
+                link.setTargetId(directory.getId());
+                link.setToken(TokenGenerator.newToken());
+                if (StringUtils.isNotBlank(sharePassword)) {
+                    link.setPasswordHash(
+                            RollerContext.getPasswordEncoder().encode(sharePassword));
+                }
+                weblogger.getShareLinkManager().createShareLink(link);
+                weblogger.flush();
+                addMessage(model, "shareLink.created", request);
+            }
+        } catch (WebloggerException e) {
+            log.error("Error creating share link", e);
+            addError(model, "shareLink.error", request);
+        }
+        model.addAttribute("allDirectories", refreshAllDirectories(request));
+        loadDropdowns(request, model);
+        loadDirectory(request, model, directoryId, null, sortBy);
+        return ".MediaFileView";
+    }
+
+    /** Revokes a directory's share link; the directory and its files are untouched. */
+    @PostMapping("/mediaFileView!revokeShareLink.rol")
+    public String revokeShareLink(HttpServletRequest request, Model model,
+                                  @RequestParam(value = "directoryId", required = false) String directoryId,
+                                  @RequestParam(value = "sortBy", required = false) String sortBy) {
+        populateCommonModel(request, model);
+        try {
+            MediaFileDirectory directory = ownedDirectory(directoryId, request);
+            ShareLink link = directory == null ? null : weblogger.getShareLinkManager()
+                    .getShareLinkForTarget(ShareLink.TYPE_DIRECTORY, directory.getId());
+            if (link == null) {
+                addError(model, "shareLink.error", request);
+            } else {
+                weblogger.getShareLinkManager().removeShareLink(link);
+                weblogger.flush();
+                addMessage(model, "shareLink.revoked", request);
+            }
+        } catch (WebloggerException e) {
+            log.error("Error revoking share link", e);
+            addError(model, "shareLink.error", request);
+        }
+        model.addAttribute("allDirectories", refreshAllDirectories(request));
+        loadDropdowns(request, model);
+        loadDirectory(request, model, directoryId, null, sortBy);
+        return ".MediaFileView";
+    }
+
+    /**
+     * Flips a directory's private flag. Private directories vanish from every
+     * public surface (base media path, inline galleries, sitemap images) and
+     * are reachable only through their share link, so the page caches that
+     * may hold inline galleries of this directory are invalidated.
+     */
+    @PostMapping("/mediaFileView!togglePrivate.rol")
+    public String togglePrivate(HttpServletRequest request, Model model,
+                                @RequestParam(value = "directoryId", required = false) String directoryId,
+                                @RequestParam(value = "sortBy", required = false) String sortBy) {
+        populateCommonModel(request, model);
+        try {
+            MediaFileDirectory directory = ownedDirectory(directoryId, request);
+            if (directory == null) {
+                addError(model, "shareLink.error", request);
+            } else {
+                directory.setPrivate(!directory.isPrivate());
+                weblogger.flush();
+                CacheManager.invalidate(getActionWeblog(request));
+                addMessage(model, "shareLink.updated", request);
+            }
+        } catch (WebloggerException e) {
+            log.error("Error toggling directory privacy", e);
+            addError(model, "shareLink.error", request);
+        }
+        model.addAttribute("allDirectories", refreshAllDirectories(request));
+        loadDropdowns(request, model);
+        loadDirectory(request, model, directoryId, null, sortBy);
+        return ".MediaFileView";
+    }
+
+    /**
+     * The directory, but only when it belongs to the action weblog -- a
+     * directoryId is client input, and share/privacy actions must not reach
+     * across weblogs.
+     */
+    private MediaFileDirectory ownedDirectory(String directoryId, HttpServletRequest request)
+            throws WebloggerException {
+        if (StringUtils.isEmpty(directoryId)) {
+            return null;
+        }
+        MediaFileDirectory directory =
+                weblogger.getMediaFileManager().getMediaFileDirectory(directoryId);
+        if (directory == null || !directory.getWeblog().equals(getActionWeblog(request))) {
+            return null;
+        }
+        return directory;
+    }
+
     @PostMapping("/mediaFileView!moveSelected.rol")
     public String moveSelected(HttpServletRequest request, Model model,
                                @RequestParam(value = "directoryId", required = false) String directoryId,
@@ -292,6 +417,16 @@ public class MediaFileViewController extends MediaFileBase {
                 model.addAttribute("directoryId", directory.getId());
                 model.addAttribute("directoryName", directory.getName());
                 model.addAttribute("viewDirectoryId", directory.getId());
+
+                // share-link card state for this directory
+                ShareLink shareLink = weblogger.getShareLinkManager()
+                        .getShareLinkForTarget(ShareLink.TYPE_DIRECTORY, directory.getId());
+                if (shareLink != null) {
+                    model.addAttribute("directoryShareLink", shareLink);
+                    model.addAttribute("directoryShareURL",
+                            WebloggerRuntimeConfig.getAbsoluteContextURL()
+                                    + "/share/" + shareLink.getToken());
+                }
             }
             model.addAttribute("sortBy", sortBy);
 
