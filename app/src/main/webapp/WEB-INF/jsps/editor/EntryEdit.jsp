@@ -407,6 +407,66 @@
                         </div>
                     </div>
 
+                    <%-- structured data: the schema.org type this entry's head declares.
+                         The type-specific rows below are shown/hidden by
+                         updateSeoJsonLdRows(); they stay in the DOM when hidden, so
+                         switching type never silently drops coordinates or dates the
+                         author already entered. --%>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label" for="seo_jsonldType"><spring:message code="weblogEdit.jsonLdType"/></label>
+                        <div class="col-sm-9">
+                            <select id="seo_jsonldType" name="bean.jsonLdType" class="form-select">
+                                <option value="BLOG_POSTING" ${empty bean.jsonLdType or bean.jsonLdType == 'BLOG_POSTING' ? 'selected' : ''}><spring:message code="weblogEdit.jsonLdType.blogPosting"/></option>
+                                <option value="TOURIST_ATTRACTION" ${bean.jsonLdType == 'TOURIST_ATTRACTION' ? 'selected' : ''}><spring:message code="weblogEdit.jsonLdType.touristAttraction"/></option>
+                                <option value="TOURIST_TRIP" ${bean.jsonLdType == 'TOURIST_TRIP' ? 'selected' : ''}><spring:message code="weblogEdit.jsonLdType.touristTrip"/></option>
+                                <option value="EVENT" ${bean.jsonLdType == 'EVENT' ? 'selected' : ''}><spring:message code="weblogEdit.jsonLdType.event"/></option>
+                                <option value="FAQ_PAGE" ${bean.jsonLdType == 'FAQ_PAGE' ? 'selected' : ''}><spring:message code="weblogEdit.jsonLdType.faqPage"/></option>
+                            </select>
+                            <div class="form-text"><spring:message code="weblogEdit.jsonLdType.tip"/></div>
+                        </div>
+                    </div>
+
+                    <%-- coordinates: a TouristAttraction's geo, and the default centre
+                         for a bare [map] in either travel-place type --%>
+                    <div id="seo_row_geo" style="${bean.jsonLdType == 'TOURIST_ATTRACTION' or bean.jsonLdType == 'TOURIST_TRIP' ? '' : 'display:none;'}">
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label" for="seo_geoLatitude"><spring:message code="weblogEdit.geoLatitude"/></label>
+                            <div class="col-sm-9">
+                                <input type="number" step="any" min="-90" max="90" id="seo_geoLatitude" name="bean.geoLatitude" value="${bean.geoLatitude}" class="form-control"/>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label" for="seo_geoLongitude"><spring:message code="weblogEdit.geoLongitude"/></label>
+                            <div class="col-sm-9">
+                                <input type="number" step="any" min="-180" max="180" id="seo_geoLongitude" name="bean.geoLongitude" value="${bean.geoLongitude}" class="form-control"/>
+                                <div class="form-text"><spring:message code="weblogEdit.geoCoordinates.tip"/></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <%-- event schedule and venue --%>
+                    <div id="seo_row_event" style="${bean.jsonLdType == 'EVENT' ? '' : 'display:none;'}">
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label" for="seo_eventStart"><spring:message code="weblogEdit.eventStart"/></label>
+                            <div class="col-sm-9">
+                                <input type="datetime-local" id="seo_eventStart" name="bean.eventStartLocal" value="${bean.eventStartLocal}" class="form-control"/>
+                                <div class="form-text"><spring:message code="weblogEdit.eventStart.tip"/></div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label" for="seo_eventEnd"><spring:message code="weblogEdit.eventEnd"/></label>
+                            <div class="col-sm-9">
+                                <input type="datetime-local" id="seo_eventEnd" name="bean.eventEndLocal" value="${bean.eventEndLocal}" class="form-control"/>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label" for="seo_eventLocation"><spring:message code="weblogEdit.eventLocation"/></label>
+                            <div class="col-sm-9">
+                                <input type="text" id="seo_eventLocation" name="bean.eventLocation" value="${bean.eventLocation}" maxlength="255" class="form-control"/>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -652,9 +712,21 @@
         $('#seo_snippet_description').text(description);
     }
 
+    <%-- SEO panel: only the rows the chosen structured-data type actually uses.
+         Hidden rows keep their inputs (and their values) in the form, so a type
+         switch is reversible and never wipes what the author typed. --%>
+
+    function updateSeoJsonLdRows() {
+        var type = $('#seo_jsonldType').val();
+        $('#seo_row_geo').toggle(type === 'TOURIST_ATTRACTION' || type === 'TOURIST_TRIP');
+        $('#seo_row_event').toggle(type === 'EVENT');
+    }
+
     $(document).ready(function () {
         updateSeoSnippet();
         $("#seo_metaTitle, #seo_metaDescription, input[name='bean.title']").on('input', updateSeoSnippet);
+        updateSeoJsonLdRows();
+        $('#seo_jsonldType').on('change', updateSeoJsonLdRows);
     });
 
     <%-- Featured/social image pickers: same media chooser as the editor's

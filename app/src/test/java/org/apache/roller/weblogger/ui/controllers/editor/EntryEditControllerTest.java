@@ -17,7 +17,9 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
@@ -26,6 +28,7 @@ import java.util.TimeZone;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
+import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.ShareLink;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -374,6 +377,39 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         assertEquals("Stored title", bean.getTitle());
         assertEquals(PubStatus.PUBLISHED.name(), bean.getStatus());
         assertEquals(existing, model.getAttribute("entry"));
+    }
+
+    @Test
+    void theSeoCardsStructuredDataFieldsSurviveTheSaveAndReopen() throws Exception {
+        // The whole path the SEO card's new rows depend on: the submitted
+        // strings (type name, datetime-local values) reach the entity through
+        // copyTo, and reopening the editor puts them back into the same inputs.
+        bean.setJsonLdType(JsonLdType.EVENT.name());
+        bean.setGeoLatitude(48.8584);
+        bean.setGeoLongitude(2.2945);
+        bean.setEventStartLocal("2026-08-02T19:30");
+        bean.setEventEndLocal("2026-08-02T22:00");
+        bean.setEventLocation("Champ de Mars");
+
+        controller.entryAddSaveDraft(request, model, bean);
+
+        WeblogEntry saved = captureSavedEntry();
+        assertEquals(JsonLdType.EVENT, saved.getJsonLdType());
+        assertEquals(48.8584, saved.getGeoLatitude());
+        assertEquals(2.2945, saved.getGeoLongitude());
+        assertEquals(Timestamp.valueOf(LocalDateTime.of(2026, 8, 2, 19, 30)),
+                saved.getEventStart());
+        assertEquals(Timestamp.valueOf(LocalDateTime.of(2026, 8, 2, 22, 0)),
+                saved.getEventEnd());
+        assertEquals("Champ de Mars", saved.getEventLocation());
+
+        EntryBean reopened = new EntryBean();
+        reopened.copyFrom(saved, Locale.US);
+        assertEquals(JsonLdType.EVENT.name(), reopened.getJsonLdType(),
+                "the dropdown must come back on the entry's own type");
+        assertEquals("2026-08-02T19:30", reopened.getEventStartLocal(),
+                "the datetime-local input must be re-fillable with what it submitted");
+        assertEquals("Champ de Mars", reopened.getEventLocation());
     }
 
     @Test

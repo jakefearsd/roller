@@ -36,6 +36,9 @@ import org.apache.roller.weblogger.util.Utilities;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -80,10 +83,10 @@ public class EntryBean {
     private String canonicalUrl = null;
     private boolean noindex = false;
 
-    // Wave 3 travel structured data -- no editor UI yet, plumbing only.
+    // Wave 3 travel structured data, edited in the SEO card.
     // jsonLdType holds a JsonLdType enum name, like status holds a PubStatus
-    // name; the timestamps are carried as-is, form conversion is the (future)
-    // editor UI's concern.
+    // name; the timestamps are carried as-is and the form binds them through
+    // the eventStartLocal/eventEndLocal datetime-local accessors below.
     private String jsonLdType = null;
     private Double geoLatitude = null;
     private Double geoLongitude = null;
@@ -343,7 +346,73 @@ public class EntryBean {
     public void setEventLocation(String eventLocation) {
         this.eventLocation = eventLocation;
     }
-    
+
+    /**
+     * {@link #getEventStart()} as an {@code <input type="datetime-local">}
+     * value, or "" when unset. This -- not the Timestamp property -- is what
+     * the SEO card binds, because the two formats do not meet: a
+     * datetime-local field submits {@code 2026-08-02T19:30} while Spring's
+     * default String-to-Timestamp conversion goes through
+     * {@code Timestamp.valueOf}, which demands {@code 2026-08-02 19:30:00} and
+     * throws on the browser's format.
+     */
+    public String getEventStartLocal() {
+        return formatLocalInput(eventStart);
+    }
+
+    public void setEventStartLocal(String value) {
+        this.eventStart = parseLocalInput(value);
+    }
+
+    /** {@link #getEventEndLocal} counterpart of {@link #getEventStartLocal}. */
+    public String getEventEndLocal() {
+        return formatLocalInput(eventEnd);
+    }
+
+    public void setEventEndLocal(String value) {
+        this.eventEnd = parseLocalInput(value);
+    }
+
+    /**
+     * The datetime-local wire format, to the minute. Written out rather than
+     * reusing {@code ISO_LOCAL_DATE_TIME}, which always formats seconds and
+     * would hand the browser a value it re-submits differently; ROOT so a
+     * non-Gregorian default locale cannot shift the year.
+     */
+    private static final DateTimeFormatter DATETIME_LOCAL =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm", Locale.ROOT);
+
+    /**
+     * A Timestamp as {@code yyyy-MM-ddTHH:mm}, the shape a datetime-local
+     * input round-trips; "" for null so the field renders empty rather than
+     * with the word "null".
+     */
+    private static String formatLocalInput(Timestamp value) {
+        if (value == null) {
+            return "";
+        }
+        return value.toLocalDateTime().format(DATETIME_LOCAL);
+    }
+
+    /**
+     * A datetime-local value as a Timestamp in the server's default zone (the
+     * field is a wall-clock instant with no offset, and so is the column).
+     * Blank means "cleared". An unparseable value also clears rather than
+     * throwing: the input type keeps browsers honest, and a binding exception
+     * on a hand-crafted POST would lose the author's whole entry.
+     */
+    private static Timestamp parseLocalInput(String value) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Timestamp.valueOf(LocalDateTime.parse(value.trim()));
+        } catch (DateTimeParseException e) {
+            log.debug("Ignoring unparseable event date '" + value + "'");
+            return null;
+        }
+    }
+
     // a convenient way to get the final pubtime of the entry
     public Timestamp getPubTime(Locale locale, TimeZone timezone) {
         

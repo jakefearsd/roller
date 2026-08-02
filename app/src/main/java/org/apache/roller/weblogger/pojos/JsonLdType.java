@@ -30,19 +30,35 @@ import org.apache.commons.logging.LogFactory;
  * <p>{@link #BLOG_POSTING} is the default: it means "just the BlogPosting
  * block every permalink already gets, nothing extra". A null
  * {@code weblogentry.jsonld_type} column means the same thing, so entries
- * that predate this field render exactly as before. The travel types each
- * add a second {@code application/ld+json} block alongside the BlogPosting
- * one; the enum name is what is stored in the column.
+ * that predate this field render exactly as before. A travel type REPLACES
+ * the BlogPosting object with the typed one -- one
+ * {@code application/ld+json} block per permalink, as before, describing
+ * what the page actually is; the enum name is what is stored in the column.
+ * {@code EntryJsonLd} is the emitter.
  */
 public enum JsonLdType {
 
-    BLOG_POSTING,
-    TOURIST_ATTRACTION,
-    TOURIST_TRIP,
-    EVENT,
-    FAQ_PAGE;
+    BLOG_POSTING("BlogPosting"),
+    TOURIST_ATTRACTION("TouristAttraction"),
+    TOURIST_TRIP("TouristTrip"),
+    EVENT("Event"),
+    FAQ_PAGE("FAQPage");
 
     private static final Log log = LogFactory.getLog(JsonLdType.class);
+
+    private final String schemaType;
+
+    JsonLdType(String schemaType) {
+        this.schemaType = schemaType;
+    }
+
+    /**
+     * The schema.org type name emitted as {@code "@type"} -- CamelCase, and
+     * not derivable from the enum name ({@code FAQPage}, not {@code FaqPage}).
+     */
+    public String getSchemaType() {
+        return schemaType;
+    }
 
     /**
      * Parses a stored or submitted type name, case-insensitively.

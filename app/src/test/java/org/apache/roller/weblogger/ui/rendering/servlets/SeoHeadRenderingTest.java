@@ -3,6 +3,8 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -16,6 +18,7 @@ import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
@@ -99,6 +102,20 @@ class SeoHeadRenderingTest {
         managed.setEditorTheme(themeName);
         WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
+    }
+
+    /**
+     * The RAW source of every ld+json block, whitespace and all -- what the
+     * byte-stability guard compares, since a parsed tree would happily call two
+     * differently formatted blocks equal.
+     */
+    private static List<String> ldJsonSources(String body) {
+        List<String> sources = new ArrayList<>();
+        Matcher matcher = LD_JSON.matcher(body);
+        while (matcher.find()) {
+            sources.add(matcher.group(1));
+        }
+        return sources;
     }
 
     /** Extract every ld+json block and JSON-parse it; parse failure fails the test. */
@@ -413,6 +430,171 @@ class SeoHeadRenderingTest {
                 "the declared height must be the original's real height:\n" + body);
         assertEquals(imageUrl,
                 singleLdJson(body, "BlogPosting").path("image").asString());
+    }
+
+    // ------------------------------------------------- typed travel JSON-LD
+
+    @Test
+    void aTouristAttractionEntryReplacesBlogPostingWithItsOwnType() throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry("attraction-entry", weblog, user);
+        updateEntry(entry, e -> {
+            e.setJsonLdType(JsonLdType.TOURIST_ATTRACTION);
+            e.setSearchDescription("The iron lady of Paris.");
+            e.setGeoLatitude(48.8584);
+            e.setGeoLongitude(2.2945);
+        });
+
+        String body = render("/" + HANDLE + "/entry/attraction-entry");
+
+        // One object per URL: the typed block REPLACES BlogPosting rather than
+        // competing with it for the same page.
+        JsonNode node = singleLdJson(body, "TouristAttraction");
+        assertEquals("attraction-entry", node.path("name").asString());
+        assertEquals("The iron lady of Paris.", node.path("description").asString());
+        assertEquals(BASE + "/entry/attraction-entry", node.path("url").asString());
+        assertEquals("GeoCoordinates", node.path("geo").path("@type").asString());
+        assertEquals(48.8584, node.path("geo").path("latitude").asDouble());
+        assertEquals(2.2945, node.path("geo").path("longitude").asDouble());
+        assertFalse(body.contains("BlogPosting"),
+                "the BlogPosting object must be gone, not merely joined:\n" + body);
+    }
+
+    @Test
+    void aTouristTripEntryTurnsItsMapPinsIntoAnOrderedItinerary() throws Exception {
+        // The head renders BEFORE entry content, so the itinerary can only come
+        // from re-parsing the raw text -- through the very resolver the [map]
+        // shortcode uses, so the list and the map can never disagree.
+        WeblogEntry entry = TestUtils.setupWeblogEntry("trip-entry", weblog, user);
+        updateEntry(entry, e -> {
+            e.setJsonLdType(JsonLdType.TOURIST_TRIP);
+            e.setText("Three days in Paris.\n"
+                    + "[map][pin lat=\"48.8584\" lng=\"2.2945\" label=\"Eiffel Tower\"]"
+                    + "[pin lat=\"48.8606\" lng=\"2.3376\" label=\"Louvre\"][/map]");
+        });
+
+        String body = render("/" + HANDLE + "/entry/trip-entry");
+
+        JsonNode itinerary = singleLdJson(body, "TouristTrip").path("itinerary");
+        assertEquals("ItemList", itinerary.path("@type").asString());
+        JsonNode items = itinerary.path("itemListElement");
+        assertEquals(2, items.size(), "one Place per pin: " + itinerary);
+        assertEquals("Eiffel Tower", items.get(0).path("name").asString());
+        assertEquals("Louvre", items.get(1).path("name").asString(),
+                "the itinerary must follow entry-source order: " + itinerary);
+        assertEquals(48.8606, items.get(1).path("geo").path("latitude").asDouble());
+        assertTrue(body.contains("<div class=\"travel-map\""),
+                "the same pins must still reach the reader as a map:\n" + body);
+    }
+
+    @Test
+    void anEventEntryEmitsIso8601DatesAndItsVenue() throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry("event-entry", weblog, user);
+        updateEntry(entry, e -> {
+            e.setJsonLdType(JsonLdType.EVENT);
+            e.setEventStart(Timestamp.valueOf(LocalDateTime.of(2026, 8, 2, 19, 30)));
+            e.setEventEnd(Timestamp.valueOf(LocalDateTime.of(2026, 8, 2, 22, 0)));
+            e.setEventLocation("Champ de Mars");
+        });
+
+        String body = render("/" + HANDLE + "/entry/event-entry");
+
+        JsonNode node = singleLdJson(body, "Event");
+        String start = node.path("startDate").asString();
+        assertTrue(start.startsWith("2026-08-02T19:30:00"),
+                "startDate must be ISO-8601, got: " + start);
+        assertTrue(start.matches(".*([+-]\\d{2}:?\\d{2}|Z)$"),
+                "startDate must carry a zone designator, got: " + start);
+        assertTrue(node.path("endDate").asString().startsWith("2026-08-02T22:00:00"));
+        assertEquals("Place", node.path("location").path("@type").asString());
+        assertEquals("Champ de Mars", node.path("location").path("name").asString());
+    }
+
+    @Test
+    void anEventWithNoStartDateKeepsItsBlogPosting() throws Exception {
+        // An Event without startDate cannot validate; falling back beats
+        // shipping structured data no crawler will accept.
+        WeblogEntry entry = TestUtils.setupWeblogEntry("undated-event", weblog, user);
+        updateEntry(entry, e -> e.setJsonLdType(JsonLdType.EVENT));
+
+        String body = render("/" + HANDLE + "/entry/undated-event");
+
+        singleLdJson(body, "BlogPosting");
+    }
+
+    @Test
+    void anFaqEntryEmitsTheQuestionsItsBodyRenders() throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry("faq-entry", weblog, user);
+        updateEntry(entry, e -> {
+            e.setJsonLdType(JsonLdType.FAQ_PAGE);
+            e.setText("Planning notes.\n"
+                    + "[faq][q]When should I go?[/q][a]Spring or autumn.[/a]"
+                    + "[q]Is it free?[/q][a]No, tickets are 18 euros.[/a][/faq]");
+        });
+
+        String body = render("/" + HANDLE + "/entry/faq-entry");
+
+        JsonNode questions = singleLdJson(body, "FAQPage").path("mainEntity");
+        assertEquals(2, questions.size(), "one Question per [q]/[a] pair: " + questions);
+        assertEquals("When should I go?", questions.get(0).path("name").asString());
+        assertEquals("Spring or autumn.",
+                questions.get(0).path("acceptedAnswer").path("text").asString());
+        assertEquals("Is it free?", questions.get(1).path("name").asString());
+        assertTrue(body.contains("<dl class=\"faq\">"),
+                "the same pairs must still reach the reader as a definition list:\n" + body);
+    }
+
+    @Test
+    void aTypedEntryTitleWithAQuoteStaysInsideItsJsonString() throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry("quoted-attraction", weblog, user);
+        updateEntry(entry, e -> {
+            e.setJsonLdType(JsonLdType.TOURIST_ATTRACTION);
+            e.setMetaTitle("Chez \"Nous\" </script>");
+        });
+
+        String body = render("/" + HANDLE + "/entry/quoted-attraction");
+
+        // Parsing at all is the real assertion: an unescaped quote would make
+        // the block unparseable and an unescaped "</script>" would end it early.
+        JsonNode node = singleLdJson(body, "TouristAttraction");
+        assertEquals("Chez \"Nous\" </script>", node.path("name").asString(),
+                "the title must survive exactly one escape pass: " + node);
+    }
+
+    @Test
+    void aTypelessEntryAndABlogPostingEntryEmitByteIdenticalBlogPosting() throws Exception {
+        // The double-emit guard. EntryBean.copyTo normalizes a blank dropdown
+        // to BLOG_POSTING, so merely re-saving an entry written before this
+        // feature existed flips null to BLOG_POSTING in the column. If the two
+        // did not render identically, every re-saved entry's structured data
+        // would change under it.
+        WeblogEntry entry = TestUtils.setupWeblogEntry("stable-entry", weblog, user);
+        updateEntry(entry, e -> e.setSearchDescription("Unchanged by the new field."));
+
+        String beforeBody = render("/" + HANDLE + "/entry/stable-entry");
+        List<String> before = ldJsonSources(beforeBody);
+
+        updateEntry(entry, e -> e.setJsonLdType(JsonLdType.BLOG_POSTING));
+        RenderingTestSupport.clearRenderCaches();
+        List<String> after = ldJsonSources(render("/" + HANDLE + "/entry/stable-entry"));
+
+        assertEquals(1, before.size(), "a permalink emits exactly one block:\n" + beforeBody);
+        assertEquals(before, after,
+                "an explicit BLOG_POSTING must render byte for byte like a null type");
+        assertTrue(before.get(0).contains("\"@type\": \"BlogPosting\","),
+                "and it must still be the hand-written BlogPosting block: " + before.get(0));
+        assertTrue(before.get(0).contains("\"headline\": \"stable-entry\""),
+                "including its headline property: " + before.get(0));
+    }
+
+    @Test
+    void aTypedEntryChangesNothingOnTheWeblogsCollectionPages() throws Exception {
+        // The type describes ONE entry; the front page is still a Blog.
+        WeblogEntry entry = TestUtils.setupWeblogEntry("front-attraction", weblog, user);
+        updateEntry(entry, e -> e.setJsonLdType(JsonLdType.TOURIST_ATTRACTION));
+
+        String body = render("/" + HANDLE);
+
+        singleLdJson(body, "Blog");
     }
 
     // ---------------------------------------------------------- other themes

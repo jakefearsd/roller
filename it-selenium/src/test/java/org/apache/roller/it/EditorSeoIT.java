@@ -136,6 +136,58 @@ class EditorSeoIT extends RollerIT {
     }
 
     /**
+     * The structured-data half of the same loop. The rows for coordinates and
+     * event details stay hidden until the dropdown asks for them, which is
+     * jQuery in the page bottom that no server-side test can exercise; and what
+     * comes out of the permalink must be the typed object, not the BlogPosting
+     * the same page would otherwise carry.
+     */
+    @Test
+    void aTravelTypeChosenInTheSeoCardPublishesAsTypedJsonLd() {
+        String suffix = Long.toString(System.nanoTime(), 36);
+        String title = "IT Attraction " + suffix;
+        String metaDescription = "The iron lady of Paris " + suffix;
+
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("input[name='bean.title']").setValue(title);
+        $(EDITOR_BODY).should(visible);
+        executeJavaScript(
+                "$('#edit_content').summernote('code', arguments[0]);"
+                        + "$('#edit_content').val(arguments[0]);",
+                "Body of the structured-data entry " + suffix + ".");
+
+        $("a[data-bs-target='#collapseSeo']").click();
+        $("#seo_metaDescription").should(visible).setValue(metaDescription);
+
+        // A plain blog post asks for none of the extra rows.
+        $("#seo_jsonldType").shouldBe(visible);
+        $("#seo_row_geo").shouldNotBe(visible);
+        $("#seo_row_event").shouldNotBe(visible);
+
+        $("#seo_jsonldType").selectOptionByValue("TOURIST_ATTRACTION");
+        $("#seo_row_geo").shouldBe(visible);
+        $("#seo_row_event").shouldNotBe(visible);
+        $("#seo_geoLatitude").setValue("48.8584");
+        $("#seo_geoLongitude").setValue("2.2945");
+
+        $("button[formaction$='entryAdd!publish.rol']").click();
+        $(PERMALINK).should(exist);
+        String permalink = $(PERMALINK).getAttribute("href");
+        assertNotNull(permalink);
+
+        String page = getAnonymously(permalink);
+        assertHeadContains(page, permalink, "\"@type\":\"TouristAttraction\"");
+        assertHeadContains(page, permalink, "\"@type\":\"GeoCoordinates\"");
+        assertHeadContains(page, permalink, "\"latitude\":48.8584");
+        assertHeadContains(page, permalink, "\"longitude\":2.2945");
+        assertHeadContains(page, permalink, "\"description\":\"" + metaDescription + "\"");
+        assertFalse(page.contains("BlogPosting"),
+                "the typed object must replace the BlogPosting one, not join it. Head was:\n"
+                        + headOf(page));
+    }
+
+    /**
      * The other authoring image path: inserting an image into the entry BODY
      * through the media chooser. The insert snippet no longer pastes a raw
      * {@code <img ?t=true>} but the {@code [image id=..]} shortcode, and the

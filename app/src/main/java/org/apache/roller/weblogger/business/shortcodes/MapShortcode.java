@@ -17,6 +17,7 @@
  */
 package org.apache.roller.weblogger.business.shortcodes;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -82,22 +83,9 @@ public class MapShortcode implements ShortcodeHandler {
 
     @Override
     public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
-        List<MapPins.Pin> pins;
-        String auto = StringUtils.trimToNull(attributes.get("auto"));
-        if (auto != null) {
-            pins = autoPins(auto, entry);
-            if (pins == null) {
-                return null;
-            }
-        } else {
-            pins = MapPins.parse(body);
-            if (pins.isEmpty() && StringUtils.containsIgnoreCase(body, "[pin")) {
-                // the author clearly tried to write pins and every one is
-                // malformed: leave the shortcode visible rather than
-                // rendering a pinless map that hides the mistake
-                log.debug("[map] shortcode with only malformed pins; leaving it as written");
-                return null;
-            }
+        List<MapPins.Pin> pins = resolvePins(attributes, body, entry);
+        if (pins == null) {
+            return null;
         }
 
         String center = centerOf(entry);
@@ -128,6 +116,72 @@ public class MapShortcode implements ShortcodeHandler {
         }
         html.append("></div>");
         return html.toString();
+    }
+
+    /**
+     * The pins one {@code [map]} tag resolves to, in source order, or null
+     * when the tag must stay visible as the author wrote it (the expander's
+     * failure signal): an unusable {@code auto} directory, or a manual map
+     * whose every {@code [pin]} is malformed. An empty list means "no pins,
+     * but nothing went wrong" -- a bare {@code [map]} that will centre on the
+     * entry's coordinates.
+     *
+     * <p>Shared with the JSON-LD head emission via {@link #pinsInEntry} so a
+     * TouristTrip itinerary is always exactly the map readers see -- including
+     * the private-directory gate, which must not be bypassed just because the
+     * consumer is a {@code <script>} tag rather than a {@code <div>}.
+     */
+    public static List<MapPins.Pin> resolvePins(Map<String, String> attributes,
+            String body, WeblogEntry entry) {
+        String auto = StringUtils.trimToNull(attributes.get("auto"));
+        if (auto != null) {
+            return autoPins(auto, entry);
+        }
+        List<MapPins.Pin> pins = MapPins.parse(body);
+        if (pins.isEmpty() && StringUtils.containsIgnoreCase(body, "[pin")) {
+            // the author clearly tried to write pins and every one is
+            // malformed: leave the shortcode visible rather than
+            // rendering a pinless map that hides the mistake
+            log.debug("[map] shortcode with only malformed pins; leaving it as written");
+            return null;
+        }
+        return pins;
+    }
+
+    /**
+     * Every pin of every {@code [map]} in an entry's RAW text, concatenated in
+     * source order -- the TouristTrip itinerary, built by the same machinery
+     * that builds the page.
+     *
+     * <p>It walks the text with a real {@link ShortcodeExpander} carrying a
+     * single collecting handler rather than a fourth {@code [map]}-matching
+     * regex: tag grammar, quoted attributes, nesting and the
+     * {@code [[map ...]]} escape form then behave identically on both sides by
+     * construction. The collector returns null so nothing is rewritten; the
+     * expanded text is discarded and only the pins are kept.
+     */
+    public static List<MapPins.Pin> pinsInEntry(WeblogEntry entry) {
+        if (entry == null || entry.getText() == null) {
+            return List.of();
+        }
+        List<MapPins.Pin> collected = new ArrayList<>();
+        ShortcodeExpander collector = new ShortcodeExpander(List.of(new ShortcodeHandler() {
+            @Override
+            public String getName() {
+                return "map";
+            }
+
+            @Override
+            public String render(Map<String, String> attributes, String body, WeblogEntry e) {
+                List<MapPins.Pin> pins = resolvePins(attributes, body, e);
+                if (pins != null) {
+                    collected.addAll(pins);
+                }
+                return null;
+            }
+        }));
+        collector.expand(entry, entry.getText());
+        return List.copyOf(collected);
     }
 
     /**

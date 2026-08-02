@@ -27,6 +27,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.jsonld.EntryJsonLd;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
 import org.apache.roller.util.DateUtil;
@@ -235,6 +237,25 @@ public class UtilitiesModel implements Model {
      */
     public String escapeJson(String str) {
         return StringEscapeUtils.escapeJson(str);
+    }
+
+    /**
+     * The typed travel JSON-LD object for a permalink whose author picked a
+     * schema.org type in the editor's SEO card, ready to drop straight into
+     * the {@code <script type="application/ld+json">} element -- or null when
+     * the entry has no type override (or lacks the data its type structurally
+     * requires), which is {@code #showSeoHead}'s signal to emit its usual
+     * BlogPosting block.
+     *
+     * <p>The four values come from the macro's existing plumbing (the same
+     * ones behind the Open Graph tags) and must be passed RAW:
+     * {@link EntryJsonLd} is the single place they are escaped, so handing it
+     * {@code $seoTitleJson} instead of the plain title would double-escape.
+     * Blank means "absent".
+     */
+    public String travelJsonLd(WeblogEntry entry, String name, String description,
+            String imageUrl, String url) {
+        return EntryJsonLd.build(entry, name, description, imageUrl, url);
     }
 
     public String replace(String src, String target, String rWith) {

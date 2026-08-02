@@ -185,14 +185,17 @@ containing "</script>" cannot terminate the inline JSON-LD block).
     ##  - the weblog name is already HTML-escaped by WeblogWrapper.getName(),
     ##    so escaping it again would render "&amp;" literally in the card title.
     #if ($seoEntry)
+        ## $seoNamePlain is the RAW resolved title. It is escaped once per
+        ## context below, and handed unescaped to $utils.travelJsonLd, which
+        ## does its own escaping -- passing $seoTitleJson there would
+        ## double-escape.
         #if ($utils.isNotEmpty($seoEntry.pojo.metaTitle))
-            #set($seoTitleAttr = $utils.escapeHTML($seoEntry.pojo.metaTitle))
-            #set($seoTitleJson = $utils.escapeJson($seoEntry.pojo.metaTitle))
+            #set($seoNamePlain = $seoEntry.pojo.metaTitle)
         #else
-            #set($seoPlainTitle = $utils.unescapeHTML($seoEntry.pojo.title))
-            #set($seoTitleAttr = $utils.escapeHTML($seoPlainTitle))
-            #set($seoTitleJson = $utils.escapeJson($seoPlainTitle))
+            #set($seoNamePlain = $utils.unescapeHTML($seoEntry.pojo.title))
         #end
+        #set($seoTitleAttr = $utils.escapeHTML($seoNamePlain))
+        #set($seoTitleJson = $utils.escapeJson($seoNamePlain))
     #else
         #set($seoTitleAttr = $model.weblog.name)
         #set($seoTitleJson = $utils.escapeJson($model.weblog.pojo.name))
@@ -238,10 +241,44 @@ containing "</script>" cannot terminate the inline JSON-LD block).
     #else
     <meta name="twitter:card" content="summary">
     #end
-    ## JSON-LD: BlogPosting on permalinks, Blog on the weblog's other pages
+    ## JSON-LD: BlogPosting on permalinks, Blog on the weblog's other pages.
+    ##
+    ## When the author picked a travel type in the SEO card, the typed object
+    ## REPLACES the BlogPosting one -- a permalink still carries exactly one
+    ## ld+json block, describing what the page actually is rather than two
+    ## objects claiming the same URL. $utils.travelJsonLd returns the finished,
+    ## fully escaped JSON (EntryJsonLd builds it: variable-length itinerary and
+    ## FAQ arrays are not something to comma-join by hand in a template), or
+    ## null for "no override" -- which covers BOTH a null jsonld_type and an
+    ## explicit BLOG_POSTING, because EntryBean.copyTo normalizes a blank
+    ## selection to BLOG_POSTING and a re-saved old entry must keep rendering
+    ## byte for byte as it did before the field existed.
+    ##
+    ## The values are handed over RAW; EntryJsonLd escapes them once. The
+    ## #set-to-"" dance is because these are Velocity's false-or-value idiom
+    ## and a method argument must be a String either way.
     #if ($seoEntry)
         #set($seoAuthor = false)
         #set($seoAuthor = $seoEntry.creator)
+        #set($seoDescriptionArg = "")
+        #if ($seoDescription)
+            #set($seoDescriptionArg = $seoDescription)
+        #end
+        #set($seoImageArg = "")
+        #if ($seoImage)
+            #set($seoImageArg = $seoImageUrl)
+        #end
+        #set($seoCanonicalArg = "")
+        #if ($seoCanonical)
+            #set($seoCanonicalArg = $seoCanonical)
+        #end
+        #set($seoTypedJson = false)
+        #set($seoTypedJson = $utils.travelJsonLd($seoEntry.pojo, $seoNamePlain, $seoDescriptionArg, $seoImageArg, $seoCanonicalArg))
+        #if ($seoTypedJson)
+    <script type="application/ld+json">
+    $seoTypedJson
+    </script>
+        #else
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -255,6 +292,7 @@ containing "</script>" cannot terminate the inline JSON-LD block).
         "headline": "$seoTitleJson"
     }
     </script>
+        #end
     #elseif (!$model.searchResults)
     <script type="application/ld+json">
     {
