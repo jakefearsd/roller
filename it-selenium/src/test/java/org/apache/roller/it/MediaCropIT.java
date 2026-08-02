@@ -121,20 +121,36 @@ class MediaCropIT extends RollerIT {
                         + " && customElements.get('cropper-selection')"
                         + " && customElements.get('cropper-canvas'));")));
 
-        // Cropper only has a usable geometry once the image has loaded and
-        // the initial-coverage selection has been laid out; clicking before
-        // that would be prevented by the page's own guard.
-        Selenide.Wait().withTimeout(CI_TOLERANT_TIMEOUT).until(d ->
-                Boolean.TRUE.equals(executeJavaScript(
-                        "var i = document.getElementById('cropImage');"
-                        + "var s = document.getElementById('cropSelection');"
-                        + "return !!i && !!s && i.getBoundingClientRect().width > 0"
-                        + " && s.width > 0;")));
+        // The cropper only has a usable geometry once the lightbox iframe has
+        // a layout box of its own and the image behind the canvas has decoded.
+        Selenide.Wait().withTimeout(CI_TOLERANT_TIMEOUT)
+                .withMessage(() -> "the crop surface never got a geometry: " + cropperGeometry())
+                .until(d -> Boolean.TRUE.equals(executeJavaScript(
+                        "var c = document.getElementById('cropCanvas');"
+                        + "var i = document.getElementById('cropImage');"
+                        + "return !!c && !!i && c.getBoundingClientRect().width > 0"
+                        + " && i.getBoundingClientRect().width > 0;")));
+
+        // ...and a real default selection to start from, which is what a user
+        // would drag: see MediaFileEdit.jsp's seedSelectionOnceLaidOut and
+        // {@link #theCropperInitialisesEvenWhenTheEditorLoadsBeforeTheLightboxIsShown}.
+        Selenide.Wait().withTimeout(CI_TOLERANT_TIMEOUT)
+                .withMessage(() -> "the cropper never got a default selection: " + cropperGeometry())
+                .until(d -> Boolean.TRUE.equals(executeJavaScript(
+                        "var s = document.getElementById('cropSelection');"
+                        + "return !!s && s.width > 0 && s.height > 0;")));
 
         // Steer the selection to a modest trim (10px off each edge in natural
         // pixels) instead of the default coverage. The file is this test's own
         // uniquely named upload, so the exact trim only has to keep the
         // dimensions assertively smaller than the original.
+        //
+        // Driven through the component's own API rather than by simulating a
+        // pointer drag over the cropper's shadow DOM: the API call is exact
+        // and reproducible, and everything this test is really about - the
+        // page's selection-to-natural-pixel maths, the POST, the server-side
+        // re-encode and the published dimensions - runs identically either
+        // way. Dragging the handles by hand is covered by manual UX testing.
         executeJavaScript(
                 "var i = document.getElementById('cropImage');"
                 + "var c = document.getElementById('cropCanvas');"
@@ -144,6 +160,11 @@ class MediaCropIT extends RollerIT {
                 + "s.$change((ir.left - cr.left) + 10 * sx, (ir.top - cr.top) + 10 * sy,"
                 + "          (arguments[0] - 20) * sx, (arguments[1] - 20) * sy);",
                 before[0], before[1]);
+
+        assertTrue(Boolean.TRUE.equals(executeJavaScript(
+                        "var s = document.getElementById('cropSelection');"
+                        + "return s.width > 0 && s.height > 0;")),
+                "the steered selection must be a real rectangle: " + cropperGeometry());
 
         // --- apply the crop, accepting the destructive confirm --------------
         $("#cropButton").click();
@@ -187,6 +208,92 @@ class MediaCropIT extends RollerIT {
                         + after[0] + "x" + after[1] + ". Page:\n" + page);
         assertFalse(page.contains("width=\"" + before[0] + "\" height=\"" + before[1] + "\""),
                 "the pre-crop dimensions must be gone from the published page");
+    }
+
+    /**
+     * The lightbox points the editor iframe at its URL and only then fades the
+     * modal in, so the editor document can finish loading - and upgrade its
+     * cropper custom elements - while that iframe still has no layout box at
+     * all. Cropper.js v2 sizes its {@code initial-coverage} selection exactly
+     * once, at upgrade time, from {@code cropper-canvas.offsetWidth}, and never
+     * recomputes it: losing that race left the user looking at a permanently
+     * 0x0 selection and a Crop button that silently did nothing, because the
+     * page's own submit guard drops a zero-area rectangle.
+     *
+     * <p>Which side wins is pure scheduling luck - about 100ms of margin on a
+     * dev box, and CI lost it - so this test forces the losing order instead of
+     * hoping for it: load the editor with the modal still {@code display:none},
+     * and only reveal it afterwards.
+     */
+    @Test
+    void theCropperInitialisesEvenWhenTheEditorLoadsBeforeTheLightboxIsShown() {
+        String suffix = Long.toString(System.nanoTime(), 36);
+
+        enableUploads();
+        String imageName = uploadImage("crophidden-" + suffix + ".jpg");
+
+        openPath(MEDIA_VIEW);
+        String mediaFileId = mediaFileIdOf(imageName);
+
+        executeJavaScript(
+                "window.__editorLoaded = false;"
+                + "var frame = document.getElementById('mediaFileEditor');"
+                + "frame.onload = function () { window.__editorLoaded = true; };"
+                + "frame.src = arguments[0];",
+                baseUrl() + "/roller-ui/authoring/mediaFileEdit.rol?weblog=" + WEBLOG_HANDLE
+                        + "&mediaFileId=" + mediaFileId);
+        Selenide.Wait().withTimeout(CI_TOLERANT_TIMEOUT)
+                .withMessage(() -> "the hidden editor iframe never loaded")
+                .until(d -> Boolean.TRUE.equals(
+                        executeJavaScript("return window.__editorLoaded === true;")));
+
+        // Only now does the crop canvas get a size at all.
+        executeJavaScript("bootstrap.Modal.getOrCreateInstance("
+                + "document.getElementById('mediafile_edit_lightbox')).show();");
+        $("#mediafile_edit_lightbox").shouldBe(visible);
+
+        switchTo().frame("mediaFileEditor");
+        $("#cropCanvas").should(exist);
+        Selenide.Wait().withTimeout(CI_TOLERANT_TIMEOUT)
+                .withMessage(() -> "the cropper never recovered a default selection after the"
+                        + " lightbox appeared: " + cropperGeometry())
+                .until(d -> Boolean.TRUE.equals(executeJavaScript(
+                        "var s = document.getElementById('cropSelection');"
+                        + "return !!s && s.width > 0 && s.height > 0;")));
+        switchTo().defaultContent();
+    }
+
+    /** Reads the media file's id out of the gallery tile's {@code onClickEdit(...)} handler. */
+    private String mediaFileIdOf(String imageName) {
+        String onclick = $("div.mediaObject img[alt='" + imageName + "']")
+                .should(exist).parent().getAttribute("onclick");
+        assertNotNull(onclick, "the gallery tile must carry an onClickEdit handler");
+        Matcher matcher = Pattern.compile("onClickEdit\\(\\s*'([^']+)'").matcher(onclick);
+        assertTrue(matcher.find(), "cannot read a media file id out of: " + onclick);
+        return matcher.group(1);
+    }
+
+    /**
+     * A live snapshot of the crop surface, reported when a readiness wait times
+     * out. A bare "condition was false after 30s" says nothing about whether
+     * the canvas, the image or the selection is the one that never arrived,
+     * which is precisely what a CI-only failure needs to say for itself.
+     */
+    private String cropperGeometry() {
+        try {
+            return executeJavaScript(
+                    "var c = document.getElementById('cropCanvas');"
+                    + "var i = document.getElementById('cropImage');"
+                    + "var s = document.getElementById('cropSelection');"
+                    + "var ir = i ? i.getBoundingClientRect() : null;"
+                    + "return 'canvas=' + (c ? c.offsetWidth + 'x' + c.offsetHeight : 'missing')"
+                    + " + ' image=' + (ir ? Math.round(ir.width) + 'x' + Math.round(ir.height) : 'missing')"
+                    + " + ' selection=' + (s ? s.x + ',' + s.y + ' ' + s.width + 'x' + s.height : 'missing')"
+                    + " + ' upgraded=' + !!(window.customElements"
+                    + "     && customElements.get('cropper-selection'));");
+        } catch (RuntimeException e) {
+            return "(could not be read: " + e + ")";
+        }
     }
 
     /** Parses the editor's "Image: W X H pixels" file-info line. */
