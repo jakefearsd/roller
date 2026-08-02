@@ -101,6 +101,29 @@ class CommentsControllerTest extends EditorControllerTestSupport {
                 "Only the spam comment should be pre-checked as spam");
     }
 
+    @Test
+    void anEntryFilterFromAnotherWeblogIsIgnoredRatherThanEchoedBack() throws Exception {
+        // bean.entryId is client input and getWeblogEntry is a global by-id
+        // lookup; the resolved entry is put in the model as "queryEntry" and
+        // its title is rendered on the page.
+        WeblogEntry foreign = new WeblogEntry();
+        foreign.setId("entry-x");
+        foreign.setTitle("Their unpublished draft");
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        foreign.setWebsite(other);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-x")).thenReturn(foreign);
+
+        CommentsBean bean = new CommentsBean();
+        bean.setEntryId("entry-x");
+        controller.execute(request, model, bean);
+
+        assertNull(model.getAttribute("queryEntry"),
+                "a foreign entry's title must not be rendered on this weblog's comment screen");
+    }
+
     // --- query ---
 
     @Test

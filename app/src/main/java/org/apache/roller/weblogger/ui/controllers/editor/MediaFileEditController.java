@@ -67,9 +67,17 @@ public class MediaFileEditController extends MediaFileBase {
         populateCommonModel(request, model);
         model.addAttribute("allDirectories", refreshAllDirectories(request));
 
-        MediaFileManager manager = weblogger.getMediaFileManager();
         try {
-            MediaFile mediaFile = manager.getMediaFile(mediaFileId);
+            // getMediaFile is a global by-id lookup: without this check
+            // copyFrom would put another weblog's file name, description,
+            // copyright and tags straight into this weblog's edit form.
+            MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
+            if (mediaFile == null) {
+                log.warn("Refusing to open media file " + mediaFileId + ": not owned by weblog "
+                        + getActionWeblog(request).getHandle());
+                addError(model, "MediaFile.error.view", request);
+                return ".MediaFileEdit";
+            }
             bean.copyFrom(mediaFile);
             model.addAttribute("mediaFileId", mediaFileId);
         } catch (FileIOException ex) {
@@ -91,12 +99,17 @@ public class MediaFileEditController extends MediaFileBase {
         model.addAttribute("allDirectories", refreshAllDirectories(request));
         model.addAttribute("mediaFileId", mediaFileId);
 
-        // resolve directory for validation
+        // resolve directory for validation -- ownership-checked, because the
+        // posted directoryId is what the file would be moved into
         MediaFileDirectory directory = null;
         try {
-            MediaFileManager mgr = weblogger.getMediaFileManager();
             if (!StringUtils.isEmpty(bean.getDirectoryId())) {
-                directory = mgr.getMediaFileDirectory(bean.getDirectoryId());
+                directory = ownedDirectory(bean.getDirectoryId(), request);
+                if (directory == null) {
+                    log.warn("Refusing to save into directory " + bean.getDirectoryId()
+                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    addError(model, "MediaFile.error.view", request);
+                }
             }
         } catch (WebloggerException ex) {
             log.error("Error looking up media file directory", ex);
@@ -113,7 +126,13 @@ public class MediaFileEditController extends MediaFileBase {
         if (!hasErrors(model)) {
             MediaFileManager manager = weblogger.getMediaFileManager();
             try {
-                MediaFile mediaFile = manager.getMediaFile(mediaFileId);
+                MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
+                if (mediaFile == null) {
+                    log.warn("Refusing to save media file " + mediaFileId
+                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    addError(model, "MediaFile.error.view", request);
+                    return ".MediaFileEdit";
+                }
                 bean.copyTo(mediaFile);
 
                 if (uploadedFile != null && !uploadedFile.isEmpty()) {
@@ -164,14 +183,12 @@ public class MediaFileEditController extends MediaFileBase {
 
         MediaFileManager manager = weblogger.getMediaFileManager();
         try {
-            MediaFile mediaFile = manager.getMediaFile(mediaFileId);
             // Ownership check BEFORE anything else: getMediaFile is a global
             // by-id lookup, and a foreign id must not even leak the file's
             // metadata into this weblog's edit form, let alone reach the
             // manager. (The manager enforces the same boundary again.)
-            if (mediaFile == null || mediaFile.getDirectory() == null
-                    || !getActionWeblog(request).getId()
-                            .equals(mediaFile.getDirectory().getWeblog().getId())) {
+            MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
+            if (mediaFile == null) {
                 log.warn("Refusing to crop media file " + mediaFileId
                         + ": not owned by weblog " + getActionWeblog(request).getHandle());
                 addError(model, "mediaFileEdit.crop.error", request);

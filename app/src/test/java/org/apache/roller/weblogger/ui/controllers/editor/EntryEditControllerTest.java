@@ -285,6 +285,85 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void openingAnEntryFromAnotherWeblogBouncesToTheMenu() throws Exception {
+        // getWeblogEntry is a global by-id lookup. The editor's share card
+        // hangs the entry's full share URL -- a durable credential for an
+        // unpublished draft -- off whatever it resolves, so an unchecked id
+        // hands a foreign weblog's token to any editor who knows the id.
+        WeblogEntry foreign = existingEntry(PubStatus.DRAFT);
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        foreign.setWebsite(other);
+        ShareLink theirLink = new ShareLink();
+        theirLink.setTargetType(ShareLink.TYPE_ENTRY);
+        theirLink.setTargetId("entry-1");
+        theirLink.setToken("their-secret-token");
+        when(weblogger.getShareLinkManager()
+                .getShareLinkForTarget(ShareLink.TYPE_ENTRY, "entry-1")).thenReturn(theirLink);
+
+        String view = controller.entryEditExecute(request, model, bean);
+
+        assertEquals("redirect:/roller-ui/menu.rol", view,
+                "an entryId from another weblog must bounce, exactly like an unknown one");
+        assertNull(model.getAttribute("entryShareURL"));
+        assertNull(model.getAttribute("entry"));
+        assertFalse("Stored title".equals(bean.getTitle()),
+                "the foreign entry's content must not reach this weblog's form");
+    }
+
+    @Test
+    void theFirstSaveLandingPageAlsoRefusesAnEntryFromAnotherWeblog() throws Exception {
+        WeblogEntry foreign = existingEntry(PubStatus.DRAFT);
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        foreign.setWebsite(other);
+
+        assertEquals("redirect:/roller-ui/menu.rol",
+                controller.entryEditFirstSave(request, model, bean));
+        assertNull(model.getAttribute("entryShareURL"));
+    }
+
+    @Test
+    void savingAnEntryFromAnotherWeblogIsRefused() throws Exception {
+        WeblogEntry foreign = existingEntry(PubStatus.DRAFT);
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        foreign.setWebsite(other);
+
+        assertEquals("redirect:/roller-ui/menu.rol",
+                controller.entryEditSaveDraft(request, model, bean));
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    @Test
+    void aSeoImageFromAnotherWeblogGetsNoPreview() throws Exception {
+        // featuredImageId/ogImageId are form fields; the preview is built from
+        // a global getMediaFile lookup.
+        WeblogEntry existing = existingEntry(PubStatus.PUBLISHED);
+        existing.setFeaturedImageId("mf-foreign");
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        org.apache.roller.weblogger.pojos.MediaFile foreign =
+                new org.apache.roller.weblogger.pojos.MediaFile();
+        foreign.setId("mf-foreign");
+        foreign.setWeblog(other);
+        when(weblogger.getMediaFileManager().getMediaFile("mf-foreign")).thenReturn(foreign);
+
+        controller.entryEditExecute(request, model, bean);
+
+        assertNull(model.getAttribute("featuredImageThumbnailUrl"),
+                "a foreign media file must not produce a preview URL");
+    }
+
+    @Test
     void openingAnExistingEntryLoadsItIntoTheForm() throws Exception {
         WeblogEntry existing = existingEntry(PubStatus.PUBLISHED);
         existing.setTitle("Stored title");

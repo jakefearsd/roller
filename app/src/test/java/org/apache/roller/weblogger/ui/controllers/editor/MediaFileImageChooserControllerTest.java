@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -171,6 +172,29 @@ class MediaFileImageChooserControllerTest extends EditorControllerTestSupport {
                 "The overlay view must always be returned, success or failure");
         assertTrue(errors(model).contains("MediaFile.error.view"),
                 "Expected a view error, got: " + errors(model));
+    }
+
+    @Test
+    void aDirectoryFromAnotherWeblogIsNotBrowsable() throws Exception {
+        // The picker lists every file in the chosen directory; directoryId is
+        // client input and getMediaFileDirectory is a global by-id lookup.
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        MediaFileDirectory foreign = directory("dir-x", "theirs");
+        foreign.setWeblog(other);
+        foreign.getMediaFiles().add(mediaFile("file-x", "their-photo.jpg"));
+        when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-x")).thenReturn(foreign);
+
+        String view = controller.execute(request, model, "dir-x", null);
+
+        assertEquals(".MediaFileImageChooser", view);
+        assertNull(model.getAttribute("currentDirectory"));
+        assertNull(model.getAttribute("childFiles"),
+                "a foreign directory's file listing must not be rendered");
+        assertTrue(errors(model).contains("MediaFile.error.view"),
+                "Expected the browse to be refused, got: " + errors(model));
     }
 
     // --- helpers ---

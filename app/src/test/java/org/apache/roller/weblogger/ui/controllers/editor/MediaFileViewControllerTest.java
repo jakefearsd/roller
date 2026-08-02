@@ -620,7 +620,136 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
         }
     }
 
+    // --- cross-weblog ids ---
+    //
+    // Every id on this screen arrives from the client and every lookup behind
+    // it (getMediaFile / getMediaFileDirectory) is a global by-id lookup, so
+    // the weblog boundary has to be re-established in the controller. An
+    // editor on weblog A holding a weblog B id must get nothing: no model
+    // population (which now carries a share *token*), and no mutation.
+
+    @Test
+    void aDirectoryFromAnotherWeblogIsNotLoadedIntoTheView() throws Exception {
+        // The share card puts the directory's full share URL -- a durable
+        // credential -- into the model, alongside its whole file listing.
+        MediaFileDirectory foreign = foreignDirectory("dir-x", "theirs");
+        foreign.getMediaFiles().add(mediaFile("file-x", "their-photo.jpg"));
+        when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-x")).thenReturn(foreign);
+        ShareLink theirLink = new ShareLink();
+        theirLink.setTargetType(ShareLink.TYPE_DIRECTORY);
+        theirLink.setTargetId("dir-x");
+        theirLink.setToken("their-secret-token");
+        when(weblogger.getShareLinkManager()
+                .getShareLinkForTarget(ShareLink.TYPE_DIRECTORY, "dir-x")).thenReturn(theirLink);
+
+        controller.execute(request, model, "dir-x", null, null);
+
+        assertNull(model.getAttribute("currentDirectory"),
+                "a foreign directory must not become the browsed directory");
+        assertNull(model.getAttribute("childFiles"),
+                "a foreign directory's file listing must not be rendered");
+        assertNull(model.getAttribute("directoryShareLink"));
+        assertNull(model.getAttribute("directoryShareURL"),
+                "the share token is a credential; a foreign id must never reach it");
+        assertTrue(errors(model).contains("MediaFile.error.view"),
+                "the refusal must be visible rather than silent: " + errors(model));
+    }
+
+    @Test
+    void aFolderFromAnotherWeblogCannotBeDeleted() throws Exception {
+        MediaFileDirectory foreign = foreignDirectory("dir-x", "theirs");
+        when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-x")).thenReturn(foreign);
+
+        controller.deleteFolder(request, model, "dir-x", null, null);
+
+        verify(weblogger.getMediaFileManager(), never()).removeMediaFileDirectory(any());
+        assertTrue(errors(model).contains("mediaFile.deleteFolder.error"),
+                "Expected the folder delete to be refused, got: " + errors(model));
+        assertTrue(messages(model).isEmpty(),
+                "a refused delete must not also report success: " + messages(model));
+    }
+
+    @Test
+    void aFileFromAnotherWeblogCannotBeDeleted() throws Exception {
+        when(weblogger.getMediaFileManager().getMediaFile("file-x"))
+                .thenReturn(foreignMediaFile("file-x", "their-photo.jpg"));
+
+        controller.delete(request, model, "dir-1", "file-x", null);
+
+        verify(weblogger.getMediaFileManager(), never()).removeMediaFile(any(), any());
+        assertTrue(errors(model).contains("mediaFile.delete.error"),
+                "Expected the delete to be refused, got: " + errors(model));
+    }
+
+    @Test
+    void bulkDeleteSkipsFilesFromAnotherWeblog() throws Exception {
+        MediaFile mine = mediaFile("file-1", "mine.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(mine);
+        when(weblogger.getMediaFileManager().getMediaFile("file-x"))
+                .thenReturn(foreignMediaFile("file-x", "theirs.jpg"));
+
+        controller.deleteSelected(request, model, "dir-1", new String[]{"file-1", "file-x"}, null);
+
+        verify(weblogger.getMediaFileManager()).removeMediaFile(weblog, mine);
+        verify(weblogger.getMediaFileManager(), org.mockito.Mockito.times(1))
+                .removeMediaFile(any(), any());
+    }
+
+    @Test
+    void aFileFromAnotherWeblogCannotBeSharedToTheGallery() throws Exception {
+        MediaFile foreign = foreignMediaFile("file-x", "theirs.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-x")).thenReturn(foreign);
+
+        controller.includeInGallery(request, model, "dir-1", "file-x", null);
+
+        org.junit.jupiter.api.Assertions.assertNotEquals(Boolean.TRUE,
+                foreign.getSharedForGallery(),
+                "a foreign file must not be published into this site's gallery");
+        verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
+        assertTrue(errors(model).contains("mediaFile.includeInGallery.error"),
+                "Expected the share to be refused, got: " + errors(model));
+    }
+
+    @Test
+    void filesCannotBeMovedIntoAnotherWeblogsFolder() throws Exception {
+        MediaFile mine = mediaFile("file-1", "mine.jpg");
+        mine.setDirectory(defaultDirectory);
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(mine);
+        when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-x"))
+                .thenReturn(foreignDirectory("dir-x", "theirs"));
+
+        controller.moveSelected(request, model, "dir-1", new String[]{"file-1"}, "dir-x", null);
+
+        verify(weblogger.getMediaFileManager(), never()).moveMediaFile(any(), any());
+        assertTrue(errors(model).contains("mediaFile.move.errors"),
+                "Expected the move to be refused, got: " + errors(model));
+    }
+
     // --- helpers ---
+
+    private org.apache.roller.weblogger.pojos.Weblog otherWeblog() {
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        return other;
+    }
+
+    private MediaFileDirectory foreignDirectory(String id, String name) {
+        MediaFileDirectory dir = directory(id, name);
+        dir.setWeblog(otherWeblog());
+        return dir;
+    }
+
+    private MediaFile foreignMediaFile(String id, String name) {
+        org.apache.roller.weblogger.pojos.Weblog other = otherWeblog();
+        MediaFileDirectory theirDirectory = directory("dir-foreign", "default");
+        theirDirectory.setWeblog(other);
+        MediaFile file = mediaFile(id, name);
+        file.setWeblog(other);
+        file.setDirectory(theirDirectory);
+        return file;
+    }
 
     private MediaFileDirectory directory(String id, String name) {
         MediaFileDirectory dir = new MediaFileDirectory();

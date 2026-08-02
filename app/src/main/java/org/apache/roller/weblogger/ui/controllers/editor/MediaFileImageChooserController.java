@@ -80,7 +80,15 @@ public class MediaFileImageChooserController extends MediaFileBase {
         try {
             MediaFileDirectory directory;
             if (directoryId != null) {
-                directory = manager.getMediaFileDirectory(directoryId);
+                // getMediaFileDirectory is a global by-id lookup and this page
+                // renders the whole directory listing.
+                directory = ownedDirectory(directoryId, request);
+                if (directory == null) {
+                    log.warn("Refusing to browse directory " + directoryId
+                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    addError(model, "MediaFile.error.view", request);
+                    return ".MediaFileImageChooser";
+                }
             } else if (directoryName != null) {
                 directory = manager.getMediaFileDirectoryByName(getActionWeblog(request), directoryName);
                 directoryId = directory.getId();

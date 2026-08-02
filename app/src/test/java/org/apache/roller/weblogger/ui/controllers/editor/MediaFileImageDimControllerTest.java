@@ -72,6 +72,33 @@ class MediaFileImageDimControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void aFileFromAnotherWeblogLeavesTheModelWithoutABean() throws Exception {
+        // The overlay's bean carries the file's name and thumbnail URL, so a
+        // global by-id lookup with no ownership check is a metadata leak.
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        MediaFileDirectory theirDirectory = new MediaFileDirectory();
+        theirDirectory.setId("dir-foreign");
+        theirDirectory.setName("default");
+        theirDirectory.setWeblog(other);
+
+        MediaFile foreign = new MediaFile();
+        foreign.setId("file-foreign");
+        foreign.setName("their-photo.jpg");
+        foreign.setWeblog(other);
+        foreign.setDirectory(theirDirectory);
+        when(weblogger.getMediaFileManager().getMediaFile("file-foreign")).thenReturn(foreign);
+
+        String view = controller.execute(request, model, "file-foreign");
+
+        assertEquals(".MediaFileImageDimension", view);
+        assertNull(model.getAttribute("bean"),
+                "a foreign file's metadata must not reach the dimension overlay");
+    }
+
+    @Test
     void aFailedLookupLeavesTheModelWithoutABeanRatherThanBlowingUp() throws Exception {
         when(weblogger.getMediaFileManager().getMediaFile("missing"))
                 .thenThrow(new WebloggerException("no such file"));

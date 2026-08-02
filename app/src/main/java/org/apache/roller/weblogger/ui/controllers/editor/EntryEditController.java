@@ -151,7 +151,7 @@ public class EntryEditController extends BaseController {
         model.addAttribute("actionName", "entryEdit");
         model.addAttribute("pageTitle", getText("weblogEdit.title.editEntry", request));
 
-        WeblogEntry entry = lookupEntry(bean.getId());
+        WeblogEntry entry = lookupEntry(bean.getId(), request);
         if (entry == null) {
             return "redirect:/roller-ui/menu.rol";
         }
@@ -169,7 +169,7 @@ public class EntryEditController extends BaseController {
         model.addAttribute("actionName", "entryEdit");
         model.addAttribute("pageTitle", getText("weblogEdit.title.editEntry", request));
 
-        WeblogEntry entry = lookupEntry(bean.getId());
+        WeblogEntry entry = lookupEntry(bean.getId(), request);
         if (entry == null) {
             return "redirect:/roller-ui/menu.rol";
         }
@@ -204,8 +204,8 @@ public class EntryEditController extends BaseController {
                                            RedirectAttributes redirectAttributes,
                                            @RequestParam(value = "entryId", required = false) String entryId,
                                            @RequestParam(value = "sharePassword", required = false) String sharePassword) {
-        WeblogEntry entry = lookupEntry(entryId);
-        if (entry == null || !entry.getWebsite().equals(getActionWeblog(request))) {
+        WeblogEntry entry = lookupEntry(entryId, request);
+        if (entry == null) {
             return "redirect:/roller-ui/menu.rol";
         }
         try {
@@ -237,8 +237,8 @@ public class EntryEditController extends BaseController {
     public String entryEditRevokeShareLink(HttpServletRequest request,
                                            RedirectAttributes redirectAttributes,
                                            @RequestParam(value = "entryId", required = false) String entryId) {
-        WeblogEntry entry = lookupEntry(entryId);
-        if (entry == null || !entry.getWebsite().equals(getActionWeblog(request))) {
+        WeblogEntry entry = lookupEntry(entryId, request);
+        if (entry == null) {
             return "redirect:/roller-ui/menu.rol";
         }
         try {
@@ -268,7 +268,7 @@ public class EntryEditController extends BaseController {
         model.addAttribute("actionName", "entryEdit");
         model.addAttribute("pageTitle", getText("weblogEdit.title.editEntry", request));
 
-        WeblogEntry entry = lookupEntry(bean.getId());
+        WeblogEntry entry = lookupEntry(bean.getId(), request);
         if (entry == null) {
             return "redirect:/roller-ui/menu.rol";
         }
@@ -406,13 +406,29 @@ public class EntryEditController extends BaseController {
         }
     }
 
-    private WeblogEntry lookupEntry(String id) {
+    /**
+     * The entry with this id, but only when it belongs to the action weblog.
+     *
+     * <p>{@code getWeblogEntry} is a global by-id lookup and the id always
+     * arrives as client input, while the permission interceptor only
+     * establishes that the caller may edit the <em>action</em> weblog. Every
+     * caller -- read and write alike -- goes through here, because the editor
+     * page hangs the entry's share URL (a durable credential for an
+     * unpublished draft) off whatever this resolves. An unknown id and a
+     * foreign one are deliberately indistinguishable to the caller.
+     */
+    private WeblogEntry lookupEntry(String id, HttpServletRequest request) {
         if (id == null) {
             return null;
         }
         try {
             WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
-            return wmgr.getWeblogEntry(id);
+            WeblogEntry entry = wmgr.getWeblogEntry(id);
+            if (entry == null || entry.getWebsite() == null
+                    || !entry.getWebsite().equals(getActionWeblog(request))) {
+                return null;
+            }
+            return entry;
         } catch (WebloggerException ex) {
             log.error("Error looking up entry by id - " + id, ex);
         }
@@ -476,22 +492,26 @@ public class EntryEditController extends BaseController {
         // Thumbnail previews for the SEO panel's featured/social image pickers.
         // Read off the bean rather than the entry so a save that failed
         // validation still shows the image the author picked in the form.
-        addImagePreviewAttribute(model, "featuredImageThumbnailUrl", bean.getFeaturedImageId());
-        addImagePreviewAttribute(model, "ogImageThumbnailUrl", bean.getOgImageId());
+        addImagePreviewAttribute(request, model, "featuredImageThumbnailUrl", bean.getFeaturedImageId());
+        addImagePreviewAttribute(request, model, "ogImageThumbnailUrl", bean.getOgImageId());
     }
 
     /**
-     * Adds the thumbnail URL for a referenced media file, if it still exists.
-     * A dangling id (image deleted after being picked) simply renders no
-     * preview rather than a broken editor page.
+     * Adds the thumbnail URL for a referenced media file, if it still exists
+     * and belongs to this weblog. A dangling id (image deleted after being
+     * picked) simply renders no preview rather than a broken editor page, and
+     * an id belonging to another weblog is treated exactly the same way --
+     * {@code getMediaFile} is a global by-id lookup and these ids come off the
+     * submitted form.
      */
-    private void addImagePreviewAttribute(Model model, String attributeName, String mediaFileId) {
+    private void addImagePreviewAttribute(HttpServletRequest request, Model model,
+                                          String attributeName, String mediaFileId) {
         if (StringUtils.isEmpty(mediaFileId)) {
             return;
         }
         try {
             MediaFile mediaFile = weblogger.getMediaFileManager().getMediaFile(mediaFileId);
-            if (mediaFile != null) {
+            if (mediaFile != null && getActionWeblog(request).equals(mediaFile.getWeblog())) {
                 model.addAttribute(attributeName, weblogger.getUrlStrategy()
                         .getMediaFileThumbnailURL(mediaFile.getWeblog(), mediaFile.getId(), true));
             }

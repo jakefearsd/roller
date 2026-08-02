@@ -72,7 +72,7 @@ public class EntryRemoveController extends BaseController {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "entryRemove");
 
-        WeblogEntry entry = lookupEntry(removeId);
+        WeblogEntry entry = lookupEntry(removeId, request);
         if (entry != null) {
             try {
                 IndexManager manager = weblogger.getIndexManager();
@@ -125,7 +125,7 @@ public class EntryRemoveController extends BaseController {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "entryRemoveViaList");
 
-        WeblogEntry entry = lookupEntry(removeId);
+        WeblogEntry entry = lookupEntry(removeId, request);
         if (entry != null) {
             try {
                 IndexManager manager = weblogger.getIndexManager();
@@ -169,13 +169,25 @@ public class EntryRemoveController extends BaseController {
                 + getActionWeblog(request).getHandle();
     }
 
-    private WeblogEntry lookupEntry(String id) {
+    /**
+     * The entry with this id, but only when it belongs to the action weblog.
+     * {@code getWeblogEntry} is a global by-id lookup and {@code removeId} is
+     * client input, so without this an editor on one weblog could delete
+     * another weblog's posts. A foreign id is indistinguishable from an
+     * unknown one to the caller.
+     */
+    private WeblogEntry lookupEntry(String id, HttpServletRequest request) {
         if (id == null) {
             return null;
         }
         try {
             WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
-            return wmgr.getWeblogEntry(id);
+            WeblogEntry entry = wmgr.getWeblogEntry(id);
+            if (entry == null || entry.getWebsite() == null
+                    || !entry.getWebsite().equals(getActionWeblog(request))) {
+                return null;
+            }
+            return entry;
         } catch (WebloggerException ex) {
             log.error("Error looking up entry by id - " + id, ex);
         }

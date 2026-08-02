@@ -183,7 +183,15 @@ public class MediaFileAddController extends MediaFileBase {
             MediaFileDirectory directory;
 
             if (!StringUtils.isEmpty(bean.getDirectoryId())) {
-                directory = mgr.getMediaFileDirectory(bean.getDirectoryId());
+                // The posted directoryId is where the bytes would land, and
+                // getMediaFileDirectory answers for every weblog on the site.
+                directory = ownedDirectory(bean.getDirectoryId(), request);
+                if (directory == null) {
+                    log.warn("Refusing to upload into directory " + bean.getDirectoryId()
+                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    addError(model, "MediaFile.error.view", request);
+                    return null;
+                }
             } else {
                 String directoryName = request.getParameter("directoryName");
                 if (StringUtils.isNotEmpty(directoryName)) {

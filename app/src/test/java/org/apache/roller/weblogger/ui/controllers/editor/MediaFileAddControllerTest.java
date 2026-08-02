@@ -319,6 +319,31 @@ class MediaFileAddControllerTest extends EditorControllerTestSupport {
                 controller.cancel(request));
     }
 
+    @Test
+    void uploadingIntoAnotherWeblogsDirectoryIsRefused() throws Exception {
+        // bean.directoryId is a hidden form field; getMediaFileDirectory is a
+        // global by-id lookup, so without an ownership check an editor on
+        // weblog A can write files into weblog B's folder.
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        MediaFileDirectory foreign = new MediaFileDirectory();
+        foreign.setId("dir-x");
+        foreign.setName("theirs");
+        foreign.setWeblog(other);
+        when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-x")).thenReturn(foreign);
+        bean.setDirectoryId("dir-x");
+
+        String view = controller.save(request, model, bean,
+                new MultipartFile[]{upload("photo.jpg", "image/jpeg", "binary")});
+
+        assertEquals(".MediaFileAdd", view);
+        verify(weblogger.getMediaFileManager(), never()).createMediaFile(any(), any(), any());
+        assertTrue(errors(model).contains("MediaFile.error.view"),
+                "Expected the upload to be refused, got: " + errors(model));
+    }
+
     // --- helpers ---
 
     private MediaFile captureCreatedFile() throws WebloggerException {

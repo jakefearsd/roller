@@ -169,6 +169,32 @@ class EntryAddWithMediaFileControllerTest extends EditorControllerTestSupport {
                         + "the bean's existing text since the failure happens before setText is reached");
     }
 
+    @Test
+    void aSelectedFileFromAnotherWeblogContributesNothingToTheSnippet() throws Exception {
+        // The generated snippet embeds the file's name and permalink, so a
+        // global by-id lookup with no ownership check leaks both into weblog
+        // A's draft.
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        org.apache.roller.weblogger.pojos.MediaFileDirectory theirDirectory =
+                new org.apache.roller.weblogger.pojos.MediaFileDirectory();
+        theirDirectory.setId("dir-foreign");
+        theirDirectory.setName("default");
+        theirDirectory.setWeblog(other);
+        MediaFile foreign = fileOf("file-x", "their-photo.jpg", "image/jpeg", 100);
+        foreign.setWeblog(other);
+        foreign.setDirectory(theirDirectory);
+        when(weblogger.getMediaFileManager().getMediaFile("file-x")).thenReturn(foreign);
+
+        String view = controller.execute(request, model, bean, null, "file-x");
+
+        assertEquals(FORWARD, view);
+        assertEquals("", bean.getText(),
+                "a foreign file's name and permalink must not reach this weblog's entry");
+    }
+
     // --- helpers ---
 
     private MediaFile imageFile(String id, String name, int width, int height) {

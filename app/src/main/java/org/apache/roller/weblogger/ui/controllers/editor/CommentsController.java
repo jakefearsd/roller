@@ -262,7 +262,13 @@ public class CommentsController extends BaseController {
         try {
             WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             if (!StringUtils.isEmpty(bean.getEntryId())) {
-                queryEntry = wmgr.getWeblogEntry(bean.getEntryId());
+                // getWeblogEntry is a global by-id lookup and bean.entryId is
+                // client input; queryEntry's title is rendered on this page.
+                WeblogEntry candidate = wmgr.getWeblogEntry(bean.getEntryId());
+                if (candidate != null
+                        && getActionWeblog(request).equals(candidate.getWebsite())) {
+                    queryEntry = candidate;
+                }
             }
 
             CommentSearchCriteria csc = getCommentSearchCriteria(request, bean);

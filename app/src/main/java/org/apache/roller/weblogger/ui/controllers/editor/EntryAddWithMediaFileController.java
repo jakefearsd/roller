@@ -76,7 +76,14 @@ public class EntryAddWithMediaFileController extends MediaFileBase {
             StringBuilder sb = new StringBuilder();
             if (selectedImages != null) {
                 for (String image : selectedImages) {
-                    MediaFile mediaFile = manager.getMediaFile(image);
+                    // getMediaFile is a global by-id lookup; the snippet built
+                    // below embeds the file's name and permalink in the draft.
+                    MediaFile mediaFile = ownedMediaFile(image, request);
+                    if (mediaFile == null) {
+                        log.warn("Refusing to link media file " + image
+                                + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                        continue;
+                    }
                     String link;
                     if (mediaFile.isImageFile()) {
                         link = "<p>" + mediaFile.getName() + "</p>";

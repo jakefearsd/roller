@@ -178,8 +178,8 @@ public class MediaFileViewController extends MediaFileBase {
 
         try {
             MediaFileManager manager = weblogger.getMediaFileManager();
-            if (directoryId != null) {
-                MediaFileDirectory mediaFileDir = manager.getMediaFileDirectory(directoryId);
+            MediaFileDirectory mediaFileDir = ownedDirectory(directoryId, request);
+            if (mediaFileDir != null) {
                 manager.removeMediaFileDirectory(mediaFileDir);
                 weblogger.getWeblogManager().saveWeblog(getActionWeblog(request));
                 weblogger.flush();
@@ -189,9 +189,17 @@ public class MediaFileViewController extends MediaFileBase {
 
                 mediaFileDir = manager.getDefaultMediaFileDirectory(getActionWeblog(request));
                 directoryId = mediaFileDir.getId();
+            } else if (StringUtils.isNotEmpty(directoryId)) {
+                // A folder delete is recursive; a global by-id lookup here let
+                // an editor on one weblog wipe another weblog's folder.
+                log.warn("Refusing to delete directory " + directoryId + ": not owned by weblog "
+                        + getActionWeblog(request).getHandle());
+                addError(model, "mediaFile.deleteFolder.error", request);
+                directoryId = null;
             }
         } catch (WebloggerException ex) {
             log.error("Error deleting folder", ex);
+            addError(model, "mediaFile.deleteFolder.error", request);
         }
 
         model.addAttribute("allDirectories", refreshAllDirectories(request));
@@ -316,24 +324,6 @@ public class MediaFileViewController extends MediaFileBase {
         return ".MediaFileView";
     }
 
-    /**
-     * The directory, but only when it belongs to the action weblog -- a
-     * directoryId is client input, and share/privacy actions must not reach
-     * across weblogs.
-     */
-    private MediaFileDirectory ownedDirectory(String directoryId, HttpServletRequest request)
-            throws WebloggerException {
-        if (StringUtils.isEmpty(directoryId)) {
-            return null;
-        }
-        MediaFileDirectory directory =
-                weblogger.getMediaFileManager().getMediaFileDirectory(directoryId);
-        if (directory == null || !directory.getWeblog().equals(getActionWeblog(request))) {
-            return null;
-        }
-        return directory;
-    }
-
     @PostMapping("/mediaFileView!moveSelected.rol")
     public String moveSelected(HttpServletRequest request, Model model,
                                @RequestParam(value = "directoryId", required = false) String directoryId,
@@ -401,7 +391,13 @@ public class MediaFileViewController extends MediaFileBase {
         try {
             MediaFileDirectory directory;
             if (StringUtils.isNotEmpty(directoryId)) {
-                directory = manager.getMediaFileDirectory(directoryId);
+                // Read paths need the same ownership check the write paths
+                // have: this method puts the directory's file listing AND its
+                // share URL -- the token itself -- into the model.
+                directory = ownedDirectory(directoryId, request);
+                if (directory == null) {
+                    addError(model, "MediaFile.error.view", request);
+                }
             } else if (StringUtils.isNotEmpty(directoryName)) {
                 directory = manager.getMediaFileDirectoryByName(getActionWeblog(request), directoryName);
             } else {

@@ -23,6 +23,7 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -31,12 +32,22 @@ import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.MediaFileDirectoryComparator;
 import org.apache.roller.weblogger.pojos.MediaFileDirectoryComparator.DirectoryComparatorType;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.ui.Model;
 
 /**
  * Base class for all controllers related to media files.
+ *
+ * <p>Every media id and directory id on these screens arrives as client input,
+ * and both {@code MediaFileManager.getMediaFile} and
+ * {@code getMediaFileDirectory} are <em>global</em> by-id lookups: they answer
+ * for any weblog on the site. The permission interceptor only establishes that
+ * the caller may edit the <em>action</em> weblog, so re-establishing the weblog
+ * boundary for the resolved object is this tier's job. {@link #ownedMediaFile}
+ * and {@link #ownedDirectory} are the single place that happens; nothing in
+ * these controllers should call the global lookups directly.
  */
 public abstract class MediaFileBase extends BaseController {
 
@@ -48,14 +59,70 @@ public abstract class MediaFileBase extends BaseController {
     }
 
     /**
+     * The directory with this id, but only when it belongs to the action
+     * weblog; {@code null} for a blank id, an unknown id, or a foreign one.
+     * Callers must treat all three the same way -- telling them apart would
+     * confirm the existence of another weblog's folder.
+     */
+    protected MediaFileDirectory ownedDirectory(String directoryId, HttpServletRequest request)
+            throws WebloggerException {
+        if (StringUtils.isEmpty(directoryId)) {
+            return null;
+        }
+        MediaFileDirectory directory =
+                weblogger.getMediaFileManager().getMediaFileDirectory(directoryId);
+        if (directory == null || !belongsToActionWeblog(directory.getWeblog(), request)) {
+            return null;
+        }
+        return directory;
+    }
+
+    /**
+     * The media file with this id, but only when it belongs to the action
+     * weblog; {@code null} otherwise, on the same terms as
+     * {@link #ownedDirectory}.
+     *
+     * <p>Ownership is read off the containing directory when there is one --
+     * that is the relationship the on-disk layout and the privacy rules both
+     * follow -- and falls back to the file's own weblog column for a file that
+     * is not yet filed anywhere.
+     */
+    protected MediaFile ownedMediaFile(String mediaFileId, HttpServletRequest request)
+            throws WebloggerException {
+        if (StringUtils.isEmpty(mediaFileId)) {
+            return null;
+        }
+        MediaFile mediaFile = weblogger.getMediaFileManager().getMediaFile(mediaFileId);
+        if (mediaFile == null) {
+            return null;
+        }
+        Weblog owner = mediaFile.getDirectory() != null
+                && mediaFile.getDirectory().getWeblog() != null
+                ? mediaFile.getDirectory().getWeblog()
+                : mediaFile.getWeblog();
+        return belongsToActionWeblog(owner, request) ? mediaFile : null;
+    }
+
+    private boolean belongsToActionWeblog(Weblog owner, HttpServletRequest request) {
+        Weblog actionWeblog = getActionWeblog(request);
+        if (owner == null || owner.getId() == null || actionWeblog == null) {
+            return false;
+        }
+        return owner.getId().equals(actionWeblog.getId());
+    }
+
+    /**
      * Deletes media file.
      */
     protected void doDeleteMediaFile(String mediaFileId, HttpServletRequest request, Model model) {
         try {
             log.debug("Processing delete of file id - " + mediaFileId);
-            MediaFileManager manager = weblogger.getMediaFileManager();
-            MediaFile mediaFile = manager.getMediaFile(mediaFileId);
-            manager.removeMediaFile(getActionWeblog(request), mediaFile);
+            MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
+            if (mediaFile == null) {
+                addError(model, "mediaFile.delete.error", mediaFileId, request);
+                return;
+            }
+            weblogger.getMediaFileManager().removeMediaFile(getActionWeblog(request), mediaFile);
             weblogger.flush();
             weblogger.release();
             addMessage(model, "mediaFile.delete.success", request);
@@ -71,10 +138,13 @@ public abstract class MediaFileBase extends BaseController {
     protected void doIncludeMediaFileInGallery(String mediaFileId, HttpServletRequest request, Model model) {
         try {
             log.debug("Processing include-in-gallery of file id - " + mediaFileId);
-            MediaFileManager manager = weblogger.getMediaFileManager();
-            MediaFile mediaFile = manager.getMediaFile(mediaFileId);
+            MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
+            if (mediaFile == null) {
+                addError(model, "mediaFile.includeInGallery.error", mediaFileId, request);
+                return;
+            }
             mediaFile.setSharedForGallery(true);
-            manager.updateMediaFile(getActionWeblog(request), mediaFile);
+            weblogger.getMediaFileManager().updateMediaFile(getActionWeblog(request), mediaFile);
             weblogger.flush();
             addMessage(model, "mediaFile.includeInGallery.success", request);
         } catch (WebloggerException e) {
@@ -94,7 +164,7 @@ public abstract class MediaFileBase extends BaseController {
                 log.debug("Processing delete of " + selectedMediaFiles.length + " media files.");
                 for (String fileId : selectedMediaFiles) {
                     log.debug("Deleting media file - " + fileId);
-                    MediaFile mediaFile = manager.getMediaFile(fileId);
+                    MediaFile mediaFile = ownedMediaFile(fileId, request);
                     if (mediaFile != null) {
                         manager.removeMediaFile(getActionWeblog(request), mediaFile);
                     }
@@ -123,10 +193,16 @@ public abstract class MediaFileBase extends BaseController {
 
             if (selectedMediaFiles != null && selectedMediaFiles.length > 0) {
                 log.debug("Processing move of " + selectedMediaFiles.length + " media files.");
-                MediaFileDirectory targetDirectory = manager.getMediaFileDirectory(selectedDirectory);
+                MediaFileDirectory targetDirectory = ownedDirectory(selectedDirectory, request);
+                if (targetDirectory == null) {
+                    log.warn("Refusing to move media files into directory " + selectedDirectory
+                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    addError(model, "mediaFile.move.errors", request);
+                    return;
+                }
                 for (String fileId : selectedMediaFiles) {
                     log.debug("Moving media file - " + fileId + " to directory - " + selectedDirectory);
-                    MediaFile mediaFile = manager.getMediaFile(fileId);
+                    MediaFile mediaFile = ownedMediaFile(fileId, request);
                     if (mediaFile != null && !mediaFile.getDirectory().getId().equals(targetDirectory.getId())) {
                         manager.moveMediaFile(mediaFile, targetDirectory);
                         movedFiles++;

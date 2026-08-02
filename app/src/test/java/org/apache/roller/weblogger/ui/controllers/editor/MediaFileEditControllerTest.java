@@ -486,6 +486,86 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         org.junit.jupiter.api.Assertions.assertFalse(pdf.isCroppable());
     }
 
+    // ------------------------------------------------- cross-weblog ids
+
+    @Test
+    void openingTheEditorForAFileFromAnotherWeblogLeaksNoMetadata() throws Exception {
+        // getMediaFile is a global by-id lookup, and bean.copyFrom would put
+        // the foreign file's name, description, copyright and tags straight
+        // into weblog A's edit form.
+        when(weblogger.getMediaFileManager().getMediaFile("file-foreign"))
+                .thenReturn(foreignMediaFile());
+
+        String view = controller.execute(request, model, bean, "file-foreign");
+
+        assertEquals(".MediaFileEdit", view);
+        org.junit.jupiter.api.Assertions.assertNull(bean.getName(),
+                "the foreign file's metadata must not reach this weblog's form");
+        org.junit.jupiter.api.Assertions.assertNull(model.getAttribute("mediaFileId"));
+        assertTrue(errors(model).contains("MediaFile.error.view"),
+                "Expected the load to be refused, got: " + errors(model));
+    }
+
+    @Test
+    void savingAFileFromAnotherWeblogIsRefusedBeforeAnyWrite() throws Exception {
+        MediaFile foreign = foreignMediaFile();
+        when(weblogger.getMediaFileManager().getMediaFile("file-foreign")).thenReturn(foreign);
+
+        bean.setId("file-foreign");
+        bean.setName("renamed.jpg");
+        bean.setDirectoryId("dir-1");
+
+        String view = controller.save(request, model, bean, "file-foreign", null);
+
+        assertEquals(".MediaFileEdit", view);
+        assertEquals("their-photo.jpg", foreign.getName(),
+                "a foreign file must not be rewritten from this weblog's form");
+        verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
+        assertTrue(errors(model).contains("MediaFile.error.view"),
+                "Expected the save to be refused, got: " + errors(model));
+    }
+
+    @Test
+    void savingIntoAnotherWeblogsFolderIsRefused() throws Exception {
+        MediaFileDirectory foreignDir = directory("dir-foreign", "theirs");
+        foreignDir.setWeblog(otherWeblog());
+        when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-foreign"))
+                .thenReturn(foreignDir);
+
+        bean.setId("file-1");
+        bean.setName("photo.jpg");
+        bean.setDirectoryId("dir-foreign");
+
+        String view = controller.save(request, model, bean, "file-1", null);
+
+        assertEquals(".MediaFileEdit", view);
+        verify(weblogger.getMediaFileManager(), never()).moveMediaFile(any(), any());
+        verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
+        assertTrue(errors(model).contains("MediaFile.error.view"),
+                "Expected the save to be refused, got: " + errors(model));
+    }
+
+    private org.apache.roller.weblogger.pojos.Weblog otherWeblog() {
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("someoneelse");
+        return other;
+    }
+
+    private MediaFile foreignMediaFile() {
+        org.apache.roller.weblogger.pojos.Weblog other = otherWeblog();
+        MediaFileDirectory foreignDir = directory("dir-foreign", "default");
+        foreignDir.setWeblog(other);
+        MediaFile foreign = new MediaFile();
+        foreign.setId("file-foreign");
+        foreign.setName("their-photo.jpg");
+        foreign.setContentType("image/jpeg");
+        foreign.setWeblog(other);
+        foreign.setDirectory(foreignDir);
+        return foreign;
+    }
+
     private MediaFileDirectory directory(String id, String name) {
         MediaFileDirectory dir = new MediaFileDirectory();
         dir.setId(id);

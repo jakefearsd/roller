@@ -85,6 +85,25 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void anEntryFromAnotherWeblogCannotBeRemoved() throws Exception {
+        // removeId is client input and getWeblogEntry is a global by-id
+        // lookup: without an ownership check an editor on weblog A can delete
+        // weblog B's posts.
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        entry.setWebsite(other);
+
+        assertEquals("redirect:/roller-ui/menu.rol",
+                controller.remove(request, model, "entry-1", redirectAttributes),
+                "a foreign entryId must bounce, exactly like an unknown one");
+        assertEquals("redirect:/roller-ui/menu.rol",
+                controller.entryRemoveViaListRemove(request, model, "entry-1", newRedirectAttributes()));
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+    }
+
+    @Test
     void removingViaTheEntryListReturnsToTheList() throws Exception {
         String view = controller.entryRemoveViaListRemove(request, model, "entry-1", redirectAttributes);
 

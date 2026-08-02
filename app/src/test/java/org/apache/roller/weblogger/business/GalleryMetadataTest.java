@@ -28,6 +28,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -138,5 +141,60 @@ public class GalleryMetadataTest {
         assertFalse(fetched.isPrivate());
         assertEquals(cover.getId(), fetched.getCoverMediaFileId(),
                 "Cover survives independent privacy toggles");
+    }
+
+    /**
+     * The site-wide media feed renders each file's name, description, tags,
+     * uploader and permalink, so a file that reaches it has leaked its
+     * metadata even though the bytes themselves stay behind the private-
+     * directory gate. The two flags can disagree in either order -- the
+     * gallery flag is settable on a file that is already in a private folder,
+     * and a folder can be privatised long after its files were shared -- so
+     * the directory flag has to win at query time rather than at flag-set
+     * time.
+     */
+    @Test
+    public void testPrivateDirectoryFilesAreExcludedFromThePublicFileFeed() throws Exception {
+
+        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+
+        MediaFile openFile = TestUtils.setupImageMediaFile(testWeblog, "feed-open.jpg", "feedopen");
+        MediaFile hiddenFile = TestUtils.setupImageMediaFile(testWeblog, "feed-hidden.jpg", "feedhidden");
+        TestUtils.endSession(true);
+
+        shareForGallery(mgr, openFile.getId());
+        shareForGallery(mgr, hiddenFile.getId());
+        TestUtils.endSession(true);
+
+        // both directories are still public, so both files are in the feed
+        List<String> ids = feedIds(mgr);
+        assertTrue(ids.contains(openFile.getId()));
+        assertTrue(ids.contains(hiddenFile.getId()),
+                "precondition: sharing puts a file in the feed while its folder is public");
+
+        MediaFileDirectory hiddenDir = mgr.getMediaFileDirectoryByName(
+                TestUtils.getManagedWebsite(testWeblog), "feedhidden");
+        hiddenDir.setPrivate(true);
+        TestUtils.endSession(true);
+
+        ids = feedIds(mgr);
+        assertTrue(ids.contains(openFile.getId()),
+                "a shared file in a public folder must stay in the feed");
+        assertFalse(ids.contains(hiddenFile.getId()),
+                "a private folder's file must not leak its metadata into the public media feed");
+    }
+
+    private void shareForGallery(MediaFileManager mgr, String mediaFileId) throws Exception {
+        MediaFile fetched = mgr.getMediaFile(mediaFileId);
+        fetched.setSharedForGallery(Boolean.TRUE);
+        mgr.updateMediaFile(TestUtils.getManagedWebsite(testWeblog), fetched);
+    }
+
+    private List<String> feedIds(MediaFileManager mgr) throws Exception {
+        List<String> ids = new ArrayList<>();
+        for (MediaFile file : mgr.fetchRecentPublicMediaFiles(100)) {
+            ids.add(file.getId());
+        }
+        return ids;
     }
 }

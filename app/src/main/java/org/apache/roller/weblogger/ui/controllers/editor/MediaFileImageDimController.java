@@ -22,7 +22,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -50,8 +49,14 @@ public class MediaFileImageDimController extends MediaFileBase {
         populateCommonModel(request, model);
 
         try {
-            MediaFileManager mgr = weblogger.getMediaFileManager();
-            MediaFile mediaFile = mgr.getMediaFile(mediaFileId);
+            // getMediaFile is a global by-id lookup and the bean carries the
+            // file's name and thumbnail URL into the overlay.
+            MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
+            if (mediaFile == null) {
+                log.warn("Refusing to show dimensions for media file " + mediaFileId
+                        + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                return ".MediaFileImageDimension";
+            }
             MediaFileBean bean = new MediaFileBean();
             bean.copyFrom(mediaFile);
             model.addAttribute("bean", bean);
