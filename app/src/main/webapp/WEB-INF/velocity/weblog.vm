@@ -27,6 +27,7 @@ These are the documented macros in order defined in this file:
     #showMetaDescription()          (superseded by #showSeoHead)
     #showAnalyticsTrackingCode($weblog)
     #showResponsiveImage($image $alt $sizes $imgClass)
+    #showGalleryGridStyles()
 
     #showWeblogEntriesPager($pager)
     #showNextPrevEntriesControl($pager)
@@ -347,6 +348,45 @@ a dependency-free, JS-free blur-up.
 <img src="$image.permalink"#if ($responsiveSrcset) srcset="$responsiveSrcset" sizes="$sizes"#end#if ($image.width > 0 && $image.height > 0) width="$image.width" height="$image.height"#end alt="$utils.escapeHTML($alt)" loading="lazy" decoding="async"#if ($imgClass && $imgClass != "") class="$imgClass"#end#if ($utils.isNotEmpty($image.blurhash)) data-blurhash="$utils.escapeHTML($image.blurhash)"#end#if ($responsiveAvgColor && $responsiveObjectPosition) style="background-color:$responsiveAvgColor;object-position:$responsiveObjectPosition"#elseif ($responsiveAvgColor) style="background-color:$responsiveAvgColor"#elseif ($responsiveObjectPosition) style="object-position:$responsiveObjectPosition"#end>
 </picture>
 #end
+#end
+
+
+#**
+Emits the stylesheet for the [gallery] shortcode's justified grid as an
+inline <style> block (allowed by the themes' style-src 'unsafe-inline';
+entry content itself may not carry <style>, which is why this lives in the
+theme head and the shortcode only emits classes and CSS custom properties).
+
+Call it from every theme head, next to #showSeoHead. The shortcode emits
+<div class="jgrid"> containing one <figure style="--ar:w/h"> per image
+(anchor-wrapped for the lightbox); rows pack justified via flex-grow, the
+row height comes from --row-h (overridable per gallery through the
+shortcode's row attribute), and aspect-ratio reserves each box before the
+image loads, so there is no layout shift. NOTE: these rules deliberately
+live here, not in themes/base.css -- no theme head links base.css (only the
+legacy popup-comments template does), so rules there would never load.
+*#
+#macro(showGalleryGridStyles)
+<style>
+.jgrid { display: flex; flex-wrap: wrap; gap: .5rem; --row-h: 260px; }
+.jgrid figure {
+  margin: 0;
+  --ar: 1.5;                                 /* fallback for pre-ladder uploads without dimensions */
+  flex-grow: var(--ar);                      /* --ar = width / height, set inline per figure */
+  flex-basis: calc(var(--ar) * var(--row-h));
+  min-width: 120px;                          /* stops a panorama dominating a row */
+}
+.jgrid figure a { display: block; }
+.jgrid figure img {
+  display: block; width: 100%; height: auto;
+  aspect-ratio: var(--ar);                   /* reserves the box, zero CLS */
+  object-fit: cover;
+}
+.jgrid figcaption { font-size: .85em; padding: .15rem 0; }
+/* keep the last row at natural height instead of stretching it */
+.jgrid::after { content: ""; flex-grow: 999999; }
+@media (max-width: 640px) { .jgrid { --row-h: 160px; } }
+</style>
 #end
 
 

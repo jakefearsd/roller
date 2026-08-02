@@ -110,7 +110,7 @@ public final class ShortcodeExpander {
 
     /** The default registry: every built-in shortcode, applied everywhere. */
     private static final ShortcodeExpander DEFAULT =
-            new ShortcodeExpander(List.of(new ImageShortcode()));
+            new ShortcodeExpander(List.of(new ImageShortcode(), new GalleryShortcode()));
 
     private final Map<String, ShortcodeHandler> handlers;
 

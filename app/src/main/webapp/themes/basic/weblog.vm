@@ -9,6 +9,7 @@
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href="$model.weblog.stylesheet">
     #showSeoHead()
+    #showGalleryGridStyles()
 </head>
 <!-- weblog -->
 <body>
