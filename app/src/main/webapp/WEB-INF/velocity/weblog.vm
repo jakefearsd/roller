@@ -28,6 +28,7 @@ These are the documented macros in order defined in this file:
     #showAnalyticsTrackingCode($weblog)
     #showResponsiveImage($image $alt $sizes $imgClass)
     #showGalleryGridStyles()
+    #showGalleryAssets()
 
     #showWeblogEntriesPager($pager)
     #showNextPrevEntriesControl($pager)
@@ -387,6 +388,107 @@ legacy popup-comments template does), so rules there would never load.
 .jgrid::after { content: ""; flex-grow: 999999; }
 @media (max-width: 640px) { .jgrid { --row-h: 160px; } }
 </style>
+#end
+
+
+#**
+Emits the PhotoSwipe 5 lightbox assets for the [gallery] justified grid:
+the webjar stylesheet, a small <style> block for the caption and EXIF
+chrome, and a module script that binds PhotoSwipeLightbox to every .jgrid
+container. The grid anchors carry the whole payload -- href to the
+full-size original, data-pswp-width/height, data-caption, data-exif-* and
+data-blurhash, all null-skipped -- see GalleryShortcode.
+
+Call it from every theme head, next to #showGalleryGridStyles. The link
+and this bootstrap script are emitted unconditionally: the head renders
+before entry content, so the page cannot know server-side whether a
+gallery will appear without pre-expanding the shortcode. The accepted cost
+on gallery-less pages is one small cacheable stylesheet request plus a
+single querySelector; the expensive part stays lazy, because the script
+import()s the PhotoSwipe ES modules only after finding a .jgrid in the
+document.
+
+CSP notes: every asset is same-origin, so the module imports clear
+script-src 'self' and this inline bootstrap rides 'unsafe-inline';
+PhotoSwipe's chrome is inline SVG, not an icon font, so the themes'
+font-less CSP (default-src 'none', no font-src) cannot blank it.
+The photoswipe version in the three /webjars/ URLs below is guarded by
+WebjarReferenceTest against the org.webjars.npm:photoswipe dependency in
+app/pom.xml -- update both together.
+*#
+#macro(showGalleryAssets)
+<link rel="stylesheet" href="$url.site/webjars/photoswipe/5.4.3/dist/photoswipe.css">
+<style>
+.pswp__custom-caption {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  max-width: calc(100% - 32px); padding: 3px 10px; border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55); color: white;
+  font-size: 0.9em; text-align: center;
+}
+.pswp__exif {
+  position: absolute; right: 12px; top: 56px; max-width: 60%;
+  padding: 3px 10px; border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55); color: white;
+  font-size: 0.8em; text-align: right;
+}
+</style>
+<script type="module">
+if (document.querySelector('.jgrid')) {
+  const { default: PhotoSwipeLightbox } =
+      await import('$url.site/webjars/photoswipe/5.4.3/dist/photoswipe-lightbox.esm.min.js');
+  const lightbox = new PhotoSwipeLightbox({
+    gallery: '.jgrid',
+    children: 'a',
+    pswpModule: () => import('$url.site/webjars/photoswipe/5.4.3/dist/photoswipe.esm.min.js')
+  });
+  // Low-res placeholder while the original downloads: prefer the grid
+  // thumbnail already on screen, else the server-side ?t=true rendition.
+  // The grid img also paints the blurhash average colour as its background,
+  // so the zoom-in never starts from a white flash.
+  lightbox.addFilter('itemData', (itemData) => {
+    const anchor = itemData.element;
+    if (anchor && !itemData.msrc) {
+      const img = anchor.querySelector('img');
+      itemData.msrc = (img && (img.currentSrc || img.src)) || (itemData.src + '?t=true');
+    }
+    return itemData;
+  });
+  lightbox.on('uiRegister', () => {
+    const pswp = lightbox.pswp;
+    pswp.ui.registerElement({
+      name: 'custom-caption', order: 9, isButton: false, appendTo: 'root',
+      onInit: (el) => {
+        pswp.on('change', () => {
+          const anchor = pswp.currSlide.data.element;
+          const figure = anchor ? anchor.closest('figure') : null;
+          const caption = figure ? figure.querySelector('figcaption') : null;
+          el.textContent = caption ? caption.textContent : '';
+          el.hidden = !caption;
+        });
+      }
+    });
+    pswp.ui.registerElement({
+      name: 'exif', order: 10, isButton: false, appendTo: 'root',
+      onInit: (el) => {
+        pswp.on('change', () => {
+          const anchor = pswp.currSlide.data.element;
+          const data = anchor ? anchor.dataset : {};
+          const gear = [data.exifCamera, data.exifLens]
+              .filter(Boolean).join(', ');
+          const settings = [
+            data.exifFocal, data.exifAperture, data.exifExposure,
+            data.exifIso ? 'ISO ' + data.exifIso : ''
+          ].filter(Boolean).join(' · ');
+          const text = [gear, settings].filter(Boolean).join(' — ');
+          el.textContent = text;
+          el.hidden = !text;
+        });
+      }
+    });
+  });
+  lightbox.init();
+}
+</script>
 #end
 
 

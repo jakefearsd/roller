@@ -182,9 +182,10 @@ public class RouteCoverageTest {
      * package, as full servlet paths (class-level prefix + method path).
      *
      * <p>Includes {@code @RequestMapping(method = GET)} as well as
-     * {@code @GetMapping}: two handlers -- entryAddWithMediaFile.rol and
-     * install!bootstrap.rol -- are declared that way because they accept both
-     * verbs, and a GET route is a GET route however it was spelled.
+     * {@code @GetMapping}: a few handlers -- entryAddWithMediaFile.rol,
+     * install!bootstrap.rol and mediaFileView.rol -- are declared that way
+     * because they accept both verbs, and a GET route is a GET route however
+     * it was spelled.
      */
     private Set<String> declaredGetRoutes() {
         var scanner = new ClassPathScanningCandidateComponentProvider(false);

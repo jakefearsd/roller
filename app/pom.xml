@@ -328,6 +328,16 @@ limitations under the License.
             <version>1.21.0</version>
         </dependency>
 
+        <!-- Public-surface lightbox, referenced from #showGalleryAssets in
+             WEB-INF/velocity/weblog.vm (three /webjars/photoswipe/ URLs).
+             Update those on a version bump; WebjarReferenceTest fails on
+             any drift between this version and the template references. -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>photoswipe</artifactId>
+            <version>5.4.3</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-analysis-common</artifactId>

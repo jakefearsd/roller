@@ -76,6 +76,34 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
 
     // --- browsing ---
 
+    /**
+     * The view page's own form posts back to the browse URL: the sort-by
+     * menu's onchange handler and the edit modal's {@code onEditSuccess()}
+     * callback both call {@code document.mediaFileViewForm.submit()}, and the
+     * form is declared {@code method="post"}. Struts answered any verb; a
+     * GET-only Spring mapping turns every one of those submits into a 405 --
+     * GalleryIT's caption journey caught it live. The route must therefore
+     * declare both verbs, the same dual-verb {@code @RequestMapping} shape as
+     * entryAddWithMediaFile.rol (which RouteCoverageTest already understands).
+     */
+    @Test
+    void theViewFormCanPostBackToTheBrowseUrl() throws Exception {
+        java.lang.reflect.Method execute = MediaFileViewController.class.getMethod(
+                "execute", jakarta.servlet.http.HttpServletRequest.class, Model.class,
+                String.class, String.class, String.class);
+        org.springframework.web.bind.annotation.RequestMapping mapping =
+                execute.getAnnotation(org.springframework.web.bind.annotation.RequestMapping.class);
+        assertTrue(mapping != null,
+                "execute must be mapped with @RequestMapping so it can declare both verbs");
+        assertEquals(List.of("/mediaFileView.rol"), List.of(mapping.value()));
+        Set<org.springframework.web.bind.annotation.RequestMethod> verbs =
+                new LinkedHashSet<>(List.of(mapping.method()));
+        assertTrue(verbs.contains(org.springframework.web.bind.annotation.RequestMethod.GET),
+                "browsing is a GET; got " + verbs);
+        assertTrue(verbs.contains(org.springframework.web.bind.annotation.RequestMethod.POST),
+                "the view form posts back to this URL; got " + verbs);
+    }
+
     @Test
     void browsingWithNoDirectoryChosenShowsTheDefaultOne() {
         String view = controller.execute(request, model, null, null, null);
