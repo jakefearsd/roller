@@ -169,6 +169,8 @@ IndexManager getIndexManager()
 
 ### Theme System
 - **Shared Themes**: System-provided themes in `/themes/` directory
+  (incl. `portfolio` — dark justified-grid photography theme driven by
+  featured images + focal points, Stage 2 Wave 2)
 - **Custom Themes**: User-customized themes per blog
 - **Template Types**: Main templates (`.vm`), stylesheets, and resources
 - **Hot Reload**: Theme changes reload automatically in development mode
@@ -184,18 +186,35 @@ IndexManager getIndexManager()
   before persist — the original file on disk is never modified.
 - Backfill for pre-pipeline uploads: Maintenance page →
   `MediaFileManager.regenerateRenditions(weblog)`.
+- Crop (Stage 2 Wave 2): `MediaFileManager.cropMediaFile` destructively
+  re-encodes the original (orientation composed first, atomic temp+move
+  write), deletes and regenerates the whole rendition ladder + thumbnail +
+  blurhash; stored EXIF fields are kept. Focal point (`MediaFile.focalX/Y`,
+  set on MediaFileEdit) emits `object-position` via `#showResponsiveImage`
+  only — never into entry content.
 
 ### SEO (Stage 2 Wave 1)
 - Per-entry SEO fields on `WeblogEntry` (metaTitle, searchDescription,
   canonicalUrl, noindex, featuredImageId, ogImageId), edited in the entry
   editor's "SEO & Social Sharing" card with featured/social image pickers.
-- `#showSeoHead` (in `WEB-INF/velocity/weblog.vm`, called from all six bundled
-  theme heads) emits meta description, canonical, robots noindex, Open Graph /
+- `#showSeoHead` (in `WEB-INF/velocity/weblog.vm`, called from every bundled
+  theme head) emits meta description, canonical, robots noindex, Open Graph /
   Twitter card, and JSON-LD; `#showResponsiveImage` is the theme-side
   `<picture>`/srcset emitter.
 - `SeoController` serves `/robots.txt`, `/sitemap.xml` (index), and
   `/sitemap-<handle>.xml` (mapped via `*.xml`; a middle-wildcard servlet
   pattern is illegal).
+
+### Share Links (Stage 2 Wave 2)
+- `ShareController` serves `/share/<token>` — a tokened public view of one
+  entry (drafts included) or one media directory, optional password with
+  session unlock, never cached. Directory media is served share-scoped at
+  `/share/<token>/media/<id>`. Editor UI: cards on MediaFileView (per
+  directory, plus the `is_private` toggle) and EntryEdit.
+- Private directories (`MediaFileDirectory.isPrivate()`): 404 on the base
+  media path (except logged-in editors of the owning weblog), excluded from
+  sitemaps, refused by the `[gallery]` shortcode — reachable only via the
+  share link.
 
 ### Database Schema
 Key domain entities:
@@ -268,7 +287,12 @@ expands `[name attr="v"]body[/name]` syntax **unconditionally** (independent of
 entry plugins) at both render seams (`WeblogEntry.render()` and
 `PluginManagerImpl.applyWeblogEntryPlugins`), immediately before
 sanitization. Built-in: `[image id=".." caption=".." alt=".."]` emits a
-responsive `<figure><picture>` (the Summernote media insert pastes it).
+responsive `<figure><picture>` (the Summernote media insert pastes it);
+`[gallery dir=".." row=".." max=".."]` renders a media directory as a
+justified grid (`GalleryMarkup`, flex-grow `--ar` CSS from the
+`#showGalleryGridStyles` macro) with a PhotoSwipe lightbox
+(`#showGalleryAssets`; EXIF overlay, captions), refusing private
+directories.
 `[[name ...]]` / `[[/name]]` escape a registered shortcode to literal text;
 unknown names and malformed input pass through byte-for-byte. New handlers
 implement `ShortcodeHandler` and register in `defaultExpander()`.

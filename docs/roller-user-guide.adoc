@@ -496,6 +496,37 @@ image size information will be updated.
 
 image::user-guide-15-edit-media.png[]
 
+==== How to crop an image
+
+For JPEG and PNG images, the Media File Edit page also offers a crop
+tool. Drag the selection rectangle over the image to frame the part you
+want to keep, then click the crop button and confirm.
+
+*Cropping is destructive*: it permanently replaces the uploaded original
+with the cropped version, and there is no undo. If you might want the
+full image back later, keep a copy outside Roller before you crop. After
+a crop, Roller regenerates everything derived from the image – the
+thumbnail and all of the resized (and WebP) versions – so every page
+that shows the image picks up the new framing automatically, at the same
+URLs as before. The camera metadata (camera, lens, exposure) shown on
+the edit page is kept, since it still describes the photo.
+
+==== How to set a focal point
+
+Themes sometimes display an image cropped to a shape that doesn’t match
+the photo – for example a card or a banner. By default the crop is
+centered, which can behead a portrait or push the subject out of frame.
+To fix that, click the most important spot of the photo in the focal
+point control on the Media File Edit page and save. Themes that display
+the image as a cover crop will keep that spot in view at every size. Use
+the clear button to go back to a centered crop.
+
+Unlike the crop tool, a focal point changes nothing about the image
+file itself – it only tells themes where the subject is, and you can
+move or clear it at any time. If you crop an image that has a focal
+point, the focal point moves with the crop so it keeps pointing at the
+same spot.
+
 ==== How to use Media File Directories
 
 You can use directories to organize your Media Files. You can move files
@@ -568,6 +599,88 @@ id="…"]`, and `[[/image]]` renders as the literal closing tag
 `[/image]`.
 * Bracketed text that is not a recognized shortcode (for example
 `[sic]` or `[citation needed]`) is never touched.
+
+==== How to display a photo gallery
+
+The gallery shortcode turns a whole media file directory into a photo
+gallery. Type it anywhere in your entry content or summary:
+
+----
+[gallery dir="Iceland 2026"]
+----
+
+Every image in that directory is laid out as a justified grid – rows of
+photos with their natural proportions, packed edge to edge the way photo
+sites usually present albums. Clicking a photo opens it full-screen in a
+lightbox where readers can page through the gallery with the arrow keys
+or by swiping, and see each photo’s caption and camera details
+(camera, lens and exposure, taken from the photo’s metadata). To add
+photos to the gallery, just upload them into the directory – the entry
+doesn’t need to be edited again.
+
+The attributes:
+
+* *dir* (required) – the name of one of your weblog’s media file
+directories. If the name doesn’t match a directory, or the directory
+contains no images, the shortcode is left exactly as you typed it, so
+mistakes are visible rather than silently swallowed. A directory marked
+_private_ (see the next section) is also left unrendered – private
+photos never leak into a public entry by accident.
+* *row* (optional) – the target row height of the grid in pixels. The
+default is 260; use a smaller number for a denser contact-sheet look or
+a larger one for fewer, bigger photos per row.
+* *max* (optional) – show at most this many images. Handy for a teaser
+gallery ("first twelve photos, follow the link for the rest").
+
+Images appear in alphabetical order by file name, so you can control
+the sequence by naming files with a prefix such as `01-`, `02-` and so
+on. As with the image shortcode, double the opening bracket to write
+the literal text without it being replaced: `[[gallery dir="…"]]`
+renders as the literal text `[gallery dir="…"]`.
+
+==== How to share unpublished entries and private photos
+
+A _share link_ is a secret URL that shows one entry or one media file
+directory to anyone who has the link, without needing a Roller account.
+Two situations where that’s useful:
+
+* Sharing a draft entry for review before you publish it.
+* Sharing a directory of photos with clients, family or friends
+without putting the photos on your public weblog at all.
+
+*To share an entry*, open it in the entry editor and find the *Share
+link* card below the editing form. Click the create button – optionally
+typing a password first – and copy the resulting URL. The link shows
+the entry’s title and full rendered content, even while the entry is
+still an unpublished draft.
+
+*To share a directory of photos*, go to the *Media Files* page,
+navigate into the directory, and use the *Share link* card there in the
+same way. The link shows the directory as a justified photo grid with
+the same full-screen lightbox as the gallery shortcode.
+
+If you set a password, visitors are asked for it before anything is
+shown; after entering it once they can browse freely for the rest of
+their browser session. A link with no password opens directly. There is
+only one share link per entry or directory at a time – creating a new
+one replaces the old, so the old URL (and its password) stops working.
+Clicking *Revoke* kills the link immediately for everyone.
+
+*Private directories.* Sharing a directory does not by itself hide it:
+its images can still be used in entries and galleries, and anything
+published there remains publicly reachable. To share photos _without_
+publishing them, also tick the *Private directory* checkbox in the
+share card. A private directory is hidden from public pages entirely:
+its images stop being served at their normal public URLs, they are
+excluded from your sitemap, and a `[gallery]` shortcode naming the
+directory renders nothing. The only way in is the directory’s share
+link. One deliberate exception: you and your weblog’s other logged-in
+editors can still see the images in the media library and the editing
+pages – privacy is aimed at the public, not at you.
+
+Treat a share link like a password: anyone who has the URL can open it
+(and forward it), so add a password for anything sensitive, and revoke
+the link when it is no longer needed.
 
 ==== How to post a podcast to your weblog
 
@@ -864,6 +977,18 @@ The Roller Support project is one place where you can obtain additional
 themes (_http://roller.dev.java.net_, _not_ an Apache site).
 
 image::user-guide-design-theme.png[]
+
+One bundled theme deserves a special mention for photographers: the
+*Portfolio* theme. It presents your weblog as a dark, full-width
+justified grid of photos – one card per entry, built from each entry’s
+featured image (set in the entry editor’s _SEO & Social Sharing_ card),
+with the entry title appearing on hover. Clicking a card opens the
+entry with the featured image as a full-bleed hero above the text. If
+you have set focal points on your images (see the Media Files chapter),
+the portfolio cards keep the subject in frame when they crop your
+photos to fit the grid. Entries without a featured image appear as
+simple text cards, so a mixed writing-and-photography weblog still
+works.
 
 For more information on customizing Roller themes refer to the Template
 Guide.

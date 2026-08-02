@@ -132,6 +132,7 @@
          onImagePicked in EntryEdit.jsp instead. --%>
     function onClickMediaFileInsert(pickerTarget) {
         window.mediaPickerTarget = pickerTarget || null;
+        window.mediaLightboxCloseRequested = false;
         <c:url var="mediaFileImageChooser" value="/roller-ui/authoring/overlay/mediaFileImageChooser.rol">
         <c:param name="weblog" value="${actionWeblog.handle}"/>
         </c:url>
@@ -143,10 +144,26 @@
         $("#mediaFileEditor").attr('src', 'about:blank');
     }
 
+    <%-- Bootstrap silently ignores hide() while the fade-in transition is
+         still running, so selecting a file quickly after opening the chooser
+         would leave the modal stuck open. Ask for the close, and if the modal
+         is still transitioning, the shown.bs.modal listener below re-issues
+         it once the fade-in has finished. --%>
+    function closeMediaFileLightbox() {
+        window.mediaLightboxCloseRequested = true;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).hide();
+    }
+
+    document.getElementById('mediafile_edit_lightbox').addEventListener('shown.bs.modal', function () {
+        if (window.mediaLightboxCloseRequested) {
+            bootstrap.Modal.getOrCreateInstance(this).hide();
+        }
+    });
+
     <%-- Callback from MediaFileImageChooser.jsp inside the iframe. The id is a
          later addition; callers that only pass (name, url, isImage) still work. --%>
     function onSelectMediaFile(name, url, isImage, id) {
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).hide();
+        closeMediaFileLightbox();
         $("#mediaFileEditor").attr('src', 'about:blank');
         if (window.mediaPickerTarget) {
             var target = window.mediaPickerTarget;

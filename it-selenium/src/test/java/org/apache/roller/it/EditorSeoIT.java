@@ -24,8 +24,11 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebElement;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
@@ -75,7 +78,7 @@ class EditorSeoIT extends RollerIT {
         String canonicalUrl = "https://canonical.example.com/original-" + suffix;
 
         enableUploads();
-        uploadImage();
+        String imageName = uploadImage("seo-" + suffix + ".jpg");
 
         // --- write the entry and fill the SEO card --------------------------
         openPath(ENTRY_ADD);
@@ -102,7 +105,7 @@ class EditorSeoIT extends RollerIT {
         $("button[onclick=\"openImagePicker('featuredImage')\"]").click();
         $("#mediafile_edit_lightbox").shouldBe(visible);
         switchTo().frame("mediaFileEditor");
-        $(".mediaObject").should(exist).click();
+        chooserTile(imageName).should(exist).click();
         switchTo().defaultContent();
 
         // The callback must have filled the hidden id and shown the preview.
@@ -146,7 +149,7 @@ class EditorSeoIT extends RollerIT {
         String title = "IT Responsive " + suffix;
 
         enableUploads();
-        uploadImage();
+        String imageName = uploadImage("responsive-" + suffix + ".jpg");
 
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
@@ -157,7 +160,7 @@ class EditorSeoIT extends RollerIT {
         $("a[onclick^='onClickMediaFileInsert']").click();
         $("#mediafile_edit_lightbox").shouldBe(visible);
         switchTo().frame("mediaFileEditor");
-        $(".mediaObject").should(exist).click();
+        chooserTile(imageName).should(exist).click();
         switchTo().defaultContent();
 
         // the editor now holds the shortcode, not raw img markup
@@ -197,14 +200,41 @@ class EditorSeoIT extends RollerIT {
         $("#messages").should(exist);
     }
 
-    /** Uploads the bundled test image through the media-file add form. */
-    private void uploadImage() {
+    /**
+     * Uploads the bundled test image through the media-file add form under a
+     * run-unique name, and returns that name. The it_weblog media library is
+     * shared by every IT in the run (MediaCropIT even crops a file in place),
+     * so a test must only ever pick the tile it uploaded itself — a bare
+     * "first .mediaObject" click can grab another suite's file.
+     */
+    private String uploadImage(String uniqueName) {
+        File image = uniquelyNamedCopy(testImage(), uniqueName);
         openPath(MEDIA_ADD);
-        $("#fileControl0").should(exist).uploadFile(testImage());
+        $("#fileControl0").should(exist).uploadFile(image);
         $("#uploadButton").click();
         // Only the success page offers to create a post from the upload; an
         // error would render the upload form again with an error banner.
         $("button[formaction$='entryAddWithMediaFile.rol']").should(exist);
+        return uniqueName;
+    }
+
+    /** The chooser tile for exactly the named media file. */
+    private static com.codeborne.selenide.SelenideElement chooserTile(String imageName) {
+        return $("div.mediaObject img[alt='" + imageName + "']");
+    }
+
+    /** Media file names come from the uploaded file's name, so copy the fixture. */
+    private static File uniquelyNamedCopy(File original, String uniqueName) {
+        try {
+            Path dir = Files.createTempDirectory("roller-it-upload");
+            dir.toFile().deleteOnExit();
+            Path copy = dir.resolve(uniqueName);
+            Files.copy(original.toPath(), copy);
+            copy.toFile().deleteOnExit();
+            return copy.toFile();
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot stage a uniquely named upload", e);
+        }
     }
 
     private File testImage() {

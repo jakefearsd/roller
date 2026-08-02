@@ -112,6 +112,12 @@ public class FileContentManagerImpl implements FileContentManager {
      * media-crop path, which overwrites a previously-good original the user
      * has no other copy of, but every caller (uploads, thumbnails, rendition
      * ladder) gets the same all-or-nothing guarantee.
+     *
+     * <p>Side effect of the temp-file route: {@code Files.createTempFile}
+     * creates the file with owner-only ({@code 0600}) permissions and the
+     * rename preserves them, so every saved file ends up {@code 0600} rather
+     * than umask-governed — harmless in the supported deploy topology, where
+     * the app user owns the uploads tree and backup/restore runs as root.
      */
     @Override
     public void saveFileContent(Weblog weblog, String fileId, InputStream is)

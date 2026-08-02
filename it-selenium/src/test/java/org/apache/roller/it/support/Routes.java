@@ -342,10 +342,10 @@ public final class Routes {
             new SkippedRoute("/roller-ui/authoring/overlay/mediaFileImageChooser.rol", Role.EDITOR,
                     "Takes no required parameter, but the whole of "
                             + "MediaFileImageChooser.jsp sits inside "
-                            + "<c:if test=\"${childFiles || allDirectories}\">. With no media "
-                            + "files seeded there is nothing to assert on, and that EL test "
-                            + "coerces two Lists to boolean, which is worth its own "
-                            + "investigation once a fixture exists."),
+                            + "<c:if test=\"${not empty childFiles or not empty "
+                            + "allDirectories}\">, so with no media files seeded there is "
+                            + "nothing to assert on. Exercised with a real fixture by "
+                            + "EditorSeoIT's featured-image picker journey."),
             new SkippedRoute("/roller-ui/authoring/templateEdit.rol", Role.EDITOR,
                     "Needs bean.id of a WeblogTemplate; without one it falls back to "
                             + "the .Templates view with an error. No custom templates are seeded."),

@@ -18,8 +18,11 @@
 package org.apache.roller.it;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -77,11 +80,11 @@ class MediaCropIT extends RollerIT {
         String suffix = Long.toString(System.nanoTime(), 36);
 
         enableUploads();
-        uploadImage();
+        String imageName = uploadImage("crop-" + suffix + ".jpg");
 
         // --- open the freshly uploaded file in the edit lightbox ------------
         openPath(MEDIA_VIEW);
-        $(".mediaObject").should(exist).click();
+        $("div.mediaObject img[alt='" + imageName + "']").should(exist).click();
         $("#mediafile_edit_lightbox").shouldBe(visible);
         switchTo().frame("mediaFileEditor");
 
@@ -106,10 +109,9 @@ class MediaCropIT extends RollerIT {
                         + " && s.width > 0;")));
 
         // Steer the selection to a modest trim (10px off each edge in natural
-        // pixels) instead of the default coverage. Deliberate: the it_weblog
-        // media library is shared by every IT in the run, and other journeys
-        // pick the first tile and assert the 480w srcset rung exists -- so
-        // the cropped file must stay wider than 480 natural pixels.
+        // pixels) instead of the default coverage. The file is this test's own
+        // uniquely named upload, so the exact trim only has to keep the
+        // dimensions assertively smaller than the original.
         executeJavaScript(
                 "var i = document.getElementById('cropImage');"
                 + "var c = document.getElementById('cropCanvas');"
@@ -182,12 +184,35 @@ class MediaCropIT extends RollerIT {
         $("#messages").should(exist);
     }
 
-    /** Uploads the bundled test image through the media-file add form. */
-    private void uploadImage() {
+    /**
+     * Uploads the bundled test image under a run-unique name and returns that
+     * name. The crop destroys the file's original pixels, and the it_weblog
+     * media library is shared by every IT in the run — cropping a bare
+     * "hawk.jpg" could shrink the file another suite is about to pick from
+     * the chooser (EditorSeoIT asserts the 480w srcset rung, which a 480px
+     * crop of the 500px fixture no longer produces).
+     */
+    private String uploadImage(String uniqueName) {
+        File image = uniquelyNamedCopy(testImage(), uniqueName);
         openPath(MEDIA_ADD);
-        $("#fileControl0").should(exist).uploadFile(testImage());
+        $("#fileControl0").should(exist).uploadFile(image);
         $("#uploadButton").click();
         $("button[formaction$='entryAddWithMediaFile.rol']").should(exist);
+        return uniqueName;
+    }
+
+    /** Media file names come from the uploaded file's name, so copy the fixture. */
+    private static File uniquelyNamedCopy(File original, String uniqueName) {
+        try {
+            Path dir = Files.createTempDirectory("roller-it-upload");
+            dir.toFile().deleteOnExit();
+            Path copy = dir.resolve(uniqueName);
+            Files.copy(original.toPath(), copy);
+            copy.toFile().deleteOnExit();
+            return copy.toFile();
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot stage a uniquely named upload", e);
+        }
     }
 
     private File testImage() {
