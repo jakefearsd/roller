@@ -67,6 +67,12 @@ public class GalleryShortcode implements ShortcodeHandler {
     }
 
     @Override
+    public ShortcodeCard getCard() {
+        return ShortcodeCard.snippet("gallery", "shortcode.gallery.label",
+                "[gallery dir=\"default\" row=\"320\"]");
+    }
+
+    @Override
     public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
         String directoryName = attributes.get("dir");
         if (StringUtils.isBlank(directoryName)) {

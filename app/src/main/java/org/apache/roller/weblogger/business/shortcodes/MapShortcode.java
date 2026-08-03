@@ -82,6 +82,20 @@ public class MapShortcode implements ShortcodeHandler {
     }
 
     @Override
+    public ShortcodeCard getCard() {
+        return CARD;
+    }
+
+    /**
+     * Shared with the pin collector below, which registers a second handler
+     * under the same name and would otherwise have to invent a card of its own.
+     */
+    private static final ShortcodeCard CARD = ShortcodeCard.snippet(
+            "map", "shortcode.map.label",
+            "[map zoom=\"12\"]\n[pin lat=\"48.8584\" lng=\"2.2945\" label=\"Eiffel Tower\"]\n"
+                    + "[pin lat=\"48.8606\" lng=\"2.3376\" label=\"Louvre\"]\n[/map]");
+
+    @Override
     public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
         List<MapPins.Pin> pins = resolvePins(attributes, body, entry);
         if (pins == null) {
@@ -169,6 +183,11 @@ public class MapShortcode implements ShortcodeHandler {
             @Override
             public String getName() {
                 return "map";
+            }
+
+            @Override
+            public ShortcodeCard getCard() {
+                return CARD;
             }
 
             @Override

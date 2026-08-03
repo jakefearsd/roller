@@ -71,6 +71,7 @@
         <spring:message code="weblogEntryQuery.category"/>
     </th>
     <th class="rollertable" width="3%"> </th>
+    <th class="rollertable" width="3%"> </th>
 </tr>
 
 <c:forEach items="${pager.items}" var="post">
@@ -128,6 +129,23 @@
     
     <td>
         ${post.category.name}
+    </td>
+
+    <td>
+        <%-- A POST, not a link: duplicating writes a new draft, so it needs
+             the CSRF token and must not be reachable by a prefetch or a
+             crawler following hrefs. --%>
+        <form action="${pageContext.request.contextPath}/roller-ui/authoring/entries!duplicate.rol"
+              method="post" class="d-inline">
+            <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+            <input type="hidden" name="duplicateId" value="${post.id}"/>
+            <sec:csrfInput/>
+            <button type="submit" class="btn btn-link p-0 align-baseline border-0">
+                <span class="bi bi-files"
+                      title="<spring:message code="generic.duplicate"/>">
+                </span>
+            </button>
+        </form>
     </td>
 
     <td>

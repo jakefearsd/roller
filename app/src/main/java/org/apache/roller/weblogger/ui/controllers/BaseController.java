@@ -24,12 +24,16 @@ import java.util.Locale;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
@@ -47,6 +51,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * for authentication, authorization, message resolution, and model population.
  */
 public abstract class BaseController implements UISecurityEnforced, UIActionPreparable {
+
+    private static final Log baseLog = LogFactory.getLog(BaseController.class);
 
     @Autowired
     protected MessageSource messageSource;
@@ -217,6 +223,39 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
         }
         list.add(text);
         redirectAttributes.addFlashAttribute(attrName, list);
+    }
+
+    // --- Entry lookup ---
+
+    /**
+     * The entry with this id, but only when it belongs to the action weblog.
+     *
+     * <p>{@code getWeblogEntry} is a global by-id lookup and the id always
+     * arrives as client input, while the permission interceptor only
+     * establishes that the caller may edit the <em>action</em> weblog. Every
+     * caller that resolves an entry id -- read and write alike -- goes through
+     * here: the editor page hangs an entry's share URL (a durable credential
+     * for an unpublished draft) off whatever this resolves, and the list
+     * actions delete and rewrite whatever it returns.
+     *
+     * <p>An unknown id and a foreign one are deliberately indistinguishable to
+     * the caller, so a probe cannot map one weblog's entry ids from another.
+     */
+    protected WeblogEntry lookupEntry(String id, HttpServletRequest request) {
+        if (id == null) {
+            return null;
+        }
+        try {
+            WeblogEntry entry = weblogger.getWeblogEntryManager().getWeblogEntry(id);
+            if (entry == null || entry.getWebsite() == null
+                    || !entry.getWebsite().equals(getActionWeblog(request))) {
+                return null;
+            }
+            return entry;
+        } catch (WebloggerException ex) {
+            baseLog.error("Error looking up entry by id - " + id, ex);
+        }
+        return null;
     }
 
     // --- Comment management helpers ---

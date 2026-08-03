@@ -38,6 +38,13 @@ public interface ShortcodeHandler {
     String getName();
 
     /**
+     * How the entry editor offers this shortcode to an author. Required, so
+     * that registering a handler and teaching the editor about it are one act
+     * rather than two -- see {@link ShortcodeCard}.
+     */
+    ShortcodeCard getCard();
+
+    /**
      * Renders the shortcode into the HTML that replaces it.
      *
      * @param attributes the shortcode's attributes, keys lower-cased, in

@@ -42,7 +42,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * A list view of entries in a weblog.
@@ -117,6 +120,46 @@ public class EntriesController extends BaseController {
         model.addAttribute("statusOptions", getStatusOptions(request));
 
         return ".Entries";
+    }
+
+    /**
+     * Copies an entry and opens the copy in the editor.
+     *
+     * <p>The copy is a draft with a fresh id and no anchor of its own (see
+     * {@link WeblogEntry#copyAsDraft}), so nothing about the original changes
+     * and nothing new appears on the blog. The redirect goes to the editor
+     * rather than back to the list, because an author duplicates a post in
+     * order to edit it, and a draft named "Copy of ..." sitting in the list is
+     * not a finished outcome.
+     */
+    @PostMapping("/entries!duplicate.rol")
+    public String duplicate(HttpServletRequest request,
+                            @RequestParam(value = "duplicateId", required = false) String duplicateId,
+                            RedirectAttributes redirectAttributes) {
+        String handle = getActionWeblog(request).getHandle();
+        String backToList = "redirect:/roller-ui/authoring/entries.rol?weblog=" + handle;
+
+        WeblogEntry original = lookupEntry(duplicateId, request);
+        if (original == null) {
+            addFlashError(redirectAttributes, "weblogEntry.notFound", request);
+            return backToList;
+        }
+
+        try {
+            WeblogEntry copy = original.copyAsDraft(getText("weblogEdit.duplicateTitle",
+                    new Object[] {original.getTitle()}, request));
+            weblogger.getWeblogEntryManager().saveWeblogEntry(copy);
+            weblogger.flush();
+
+            addFlashMessage(redirectAttributes, "weblogEdit.entryDuplicated",
+                    copy.getTitle(), request);
+            return "redirect:/roller-ui/authoring/entryEdit.rol?weblog=" + handle
+                    + "&bean.id=" + copy.getId();
+        } catch (Exception e) {
+            log.error("Error duplicating entry " + duplicateId, e);
+            addFlashError(redirectAttributes, "generic.error.check.logs", request);
+            return backToList;
+        }
     }
 
     private String buildBaseUrl(HttpServletRequest request, EntriesBean bean) {

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
@@ -28,12 +29,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -191,6 +197,90 @@ class EntriesControllerTest extends EditorControllerTestSupport {
     }
 
     // --- helpers ---
+
+    // ------------------------------------------------------------ duplication
+
+    /**
+     * The ownership check is the whole security story for this endpoint: the
+     * id is client input and the interceptor only establishes that the caller
+     * may edit the <em>action</em> weblog, so without it an editor on one blog
+     * could copy another blog's unpublished drafts into their own.
+     */
+    @Test
+    void anEntryBelongingToAnotherWeblogIsNotDuplicated() throws Exception {
+        WeblogEntry foreign = entryNamed("entry-1");
+        Weblog otherWeblog = new Weblog();
+        otherWeblog.setId("weblog-2");
+        otherWeblog.setHandle("someoneelse");
+        foreign.setWebsite(otherWeblog);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(foreign);
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        String view = controller.duplicate(request, "entry-1", redirect);
+
+        assertEquals("redirect:/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE, view);
+        assertEquals(List.of("weblogEntry.notFound"), flashErrors(redirect));
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    @Test
+    void anUnknownEntryIdIsRefusedTheSameWayAsAForeignOne() throws Exception {
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("no-such-entry")).thenReturn(null);
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        String view = controller.duplicate(request, "no-such-entry", redirect);
+
+        assertEquals("redirect:/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE, view);
+        assertEquals(List.of("weblogEntry.notFound"), flashErrors(redirect));
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    @Test
+    void duplicatingSavesADraftCopyAndOpensItInTheEditor() throws Exception {
+        registerMessage("weblogEdit.duplicateTitle", "Copy of {0}");
+        WeblogEntry original = ownedEntry("entry-1", "Walking the Cinque Terre");
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        String view = controller.duplicate(request, "entry-1", redirect);
+
+        ArgumentCaptor<WeblogEntry> saved = ArgumentCaptor.forClass(WeblogEntry.class);
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(saved.capture());
+        WeblogEntry copy = saved.getValue();
+
+        assertEquals("Copy of Walking the Cinque Terre", copy.getTitle());
+        assertEquals(WeblogEntry.PubStatus.DRAFT, copy.getStatus());
+        assertNotEquals(original.getId(), copy.getId());
+        assertEquals("redirect:/roller-ui/authoring/entryEdit.rol?weblog=" + WEBLOG_HANDLE
+                + "&bean.id=" + copy.getId(), view);
+    }
+
+    /**
+     * A save that blows up must not strand the author on a blank page or, worse,
+     * redirect them to an editor for an entry that was never written.
+     */
+    @Test
+    void aFailedSaveReturnsToTheListWithAnError() throws Exception {
+        registerMessage("weblogEdit.duplicateTitle", "Copy of {0}");
+        ownedEntry("entry-1", "Walking the Cinque Terre");
+        doThrow(new WebloggerException("database down"))
+                .when(weblogger.getWeblogEntryManager()).saveWeblogEntry(any());
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        String view = controller.duplicate(request, "entry-1", redirect);
+
+        assertEquals("redirect:/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE, view);
+        assertEquals(List.of("generic.error.check.logs"), flashErrors(redirect));
+    }
+
+    /** An entry of the action weblog, stubbed into the manager's by-id lookup. */
+    private WeblogEntry ownedEntry(String id, String title) throws Exception {
+        WeblogEntry entry = entryNamed(id);
+        entry.setTitle(title);
+        entry.setWebsite(weblog);
+        entry.setStatus(WeblogEntry.PubStatus.PUBLISHED);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry(id)).thenReturn(entry);
+        return entry;
+    }
 
     private WeblogEntry entryNamed(String id) {
         WeblogEntry entry = new WeblogEntry();

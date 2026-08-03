@@ -24,6 +24,28 @@
 <%-- content --%>
 <textarea name="bean.text" id="edit_content" rows="18" tabindex="5" class="col-sm-12">${bean.text}</textarea>
 
+<%-- The insert menu is generated from the shortcode registry (model attribute
+     shortcodeCards), so adding a sixth shortcode means writing its handler and
+     nothing here. Snippets ride in a data attribute rather than inline
+     JavaScript: JSTL escapes them for the attribute, and the browser hands
+     back the exact text through dataset. --%>
+<div class="dropdown d-inline-block" id="shortcodeInsertMenu">
+    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+            id="shortcodeInsertButton" data-bs-toggle="dropdown" aria-expanded="false">
+        <spring:message code="weblogEdit.insertShortcode"/>
+    </button>
+    <ul class="dropdown-menu" aria-labelledby="shortcodeInsertButton">
+        <c:forEach items="${shortcodeCards}" var="card">
+            <li>
+                <a class="dropdown-item shortcode-card" href="#"
+                   data-shortcode="<c:out value='${card.name}'/>"
+                   data-snippet="<c:out value='${card.snippet}'/>"
+                   data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></a>
+            </li>
+        </c:forEach>
+    </ul>
+</div>
+
 <a href="#" onClick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a><br/>
 <img src="<c:url value='/roller-ui/images/spacer.png'/>" alt="spacer" style="min-height: 2em"/>
 
@@ -117,6 +139,19 @@
             $("#entry").on('submit', function () {
                 $(window).off("beforeunload", confirmLeaving);
             });
+        });
+
+        <%-- Every card goes through insertMediaFile, the editor's one insert
+             seam, so the WYSIWYG-for-Markdown surface that may replace EasyMDE
+             inherits the whole menu by reimplementing a single function. --%>
+        $(".shortcode-card").on('click', function (event) {
+            event.preventDefault();
+            if (this.dataset.chooser === 'true') {
+                onClickMediaFileInsert();
+            } else {
+                insertMediaFile(this.dataset.snippet);
+                rollerEditor.codemirror.focus();
+            }
         });
     });
 

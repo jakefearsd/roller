@@ -53,6 +53,17 @@ public class FaqShortcode implements ShortcodeHandler {
         return "faq";
     }
 
+    /**
+     * Two pairs, not one: the grammar only makes sense once an author can see
+     * that [q]/[a] repeat.
+     */
+    @Override
+    public ShortcodeCard getCard() {
+        return ShortcodeCard.snippet("faq", "shortcode.faq.label",
+                "[faq]\n[q]How do I get there?[/q]\n[a]Answer.[/a]\n"
+                        + "[q]When should I visit?[/q]\n[a]Answer.[/a]\n[/faq]");
+    }
+
     @Override
     public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
         if (StringUtils.isBlank(body)) {

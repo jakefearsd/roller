@@ -187,7 +187,43 @@ public class WeblogEntry implements Serializable {
         this.setPinnedToMain(other.getPinnedToMain());
         this.setLocale(other.getLocale());
     }
-    
+
+    /**
+     * An unsaved draft copy of this entry, carrying its content, categorisation,
+     * SEO block and tags but none of its identity or publication history.
+     *
+     * <p>Specifically NOT copied:
+     * <ul>
+     *   <li>the id -- a fresh one, or the save would overwrite the original;</li>
+     *   <li>the anchor -- left null so {@code saveWeblogEntry} derives a unique
+     *       one from the new title, which is the only place that checks the
+     *       weblog for collisions;</li>
+     *   <li>the publication time and status -- a copy starts as a DRAFT that
+     *       has never been published, so it cannot appear on the blog before
+     *       its author has looked at it;</li>
+     *   <li>comments and the share link, which belong to the published post
+     *       and not to its text.</li>
+     * </ul>
+     *
+     * <p>Tags are re-added by name rather than shared, so the copy owns its own
+     * tag rows and the aggregate counts stay right when either entry changes.
+     *
+     * @param newTitle title for the copy, which the caller localises; the
+     *                 anchor is derived from it at save time
+     */
+    public WeblogEntry copyAsDraft(String newTitle) throws WebloggerException {
+        WeblogEntry copy = new WeblogEntry();
+        copy.setData(this);
+        copy.setId(UUIDGenerator.generateUUID());
+        copy.setTitle(newTitle);
+        copy.setAnchor(null);
+        copy.setStatus(PubStatus.DRAFT);
+        copy.setPubTime(null);
+        copy.setUpdateTime(new Timestamp(System.currentTimeMillis()));
+        copy.setTagsAsString(getTagsAsString());
+        return copy;
+    }
+
     //------------------------------------------------------- Good citizenship
 
     @Override

@@ -54,6 +54,15 @@ public class ImageShortcode implements ShortcodeHandler {
         return "image";
     }
 
+    /**
+     * The chooser, not a snippet: an [image] is addressed by media-file id,
+     * which is a UUID no author is going to type.
+     */
+    @Override
+    public ShortcodeCard getCard() {
+        return ShortcodeCard.mediaChooser("image", "shortcode.image.label");
+    }
+
     @Override
     public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
         String id = attributes.get("id");

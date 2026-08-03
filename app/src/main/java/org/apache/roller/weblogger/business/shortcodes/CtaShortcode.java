@@ -74,6 +74,13 @@ public class CtaShortcode implements ShortcodeHandler {
     }
 
     @Override
+    public ShortcodeCard getCard() {
+        return ShortcodeCard.snippet("cta", "shortcode.cta.label",
+                "[cta href=\"https://example.com/book\" label=\"Book this stay\" "
+                        + "note=\"Free cancellation for 48 hours\"]");
+    }
+
+    @Override
     public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
         String href = StringUtils.trimToNull(attributes.get("href"));
         String label = StringUtils.trimToNull(attributes.get("label"));

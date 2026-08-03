@@ -38,6 +38,7 @@ import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.search.IndexManager;
+import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -454,35 +455,6 @@ public class EntryEditController extends BaseController {
         }
     }
 
-    /**
-     * The entry with this id, but only when it belongs to the action weblog.
-     *
-     * <p>{@code getWeblogEntry} is a global by-id lookup and the id always
-     * arrives as client input, while the permission interceptor only
-     * establishes that the caller may edit the <em>action</em> weblog. Every
-     * caller -- read and write alike -- goes through here, because the editor
-     * page hangs the entry's share URL (a durable credential for an
-     * unpublished draft) off whatever this resolves. An unknown id and a
-     * foreign one are deliberately indistinguishable to the caller.
-     */
-    private WeblogEntry lookupEntry(String id, HttpServletRequest request) {
-        if (id == null) {
-            return null;
-        }
-        try {
-            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
-            WeblogEntry entry = wmgr.getWeblogEntry(id);
-            if (entry == null || entry.getWebsite() == null
-                    || !entry.getWebsite().equals(getActionWeblog(request))) {
-                return null;
-            }
-            return entry;
-        } catch (WebloggerException ex) {
-            log.error("Error looking up entry by id - " + id, ex);
-        }
-        return null;
-    }
-
     private void addEntryModelAttributes(HttpServletRequest request, Model model, WeblogEntry entry,
                                          EntryBean bean) {
         model.addAttribute("categories", getCategories(request));
@@ -491,6 +463,11 @@ public class EntryEditController extends BaseController {
                 getAuthenticatedUser(request), WeblogPermission.POST));
         model.addAttribute("jsonAutocompleteUrl", weblogger.getUrlStrategy()
                 .getWeblogTagsJsonURL(getActionWeblog(request), false, 0));
+
+        // The editor's insert menu, generated from the shortcode registry
+        // itself so it can never advertise a shortcode that does not render,
+        // or omit one that does.
+        model.addAttribute("shortcodeCards", ShortcodeExpander.defaultExpander().cards());
 
         if (entry.getId() != null) {
             model.addAttribute("previewURL", weblogger.getUrlStrategy()

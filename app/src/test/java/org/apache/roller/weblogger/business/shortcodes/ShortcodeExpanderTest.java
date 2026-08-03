@@ -48,6 +48,11 @@ class ShortcodeExpanderTest {
             }
 
             @Override
+            public ShortcodeCard getCard() {
+                return ShortcodeCard.snippet("upper", "test.label", "[upper]");
+            }
+
+            @Override
             public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
                 String source = body != null ? body : attributes.getOrDefault("word", "");
                 return source.toUpperCase();
@@ -61,6 +66,11 @@ class ShortcodeExpanderTest {
             @Override
             public String getName() {
                 return "echo";
+            }
+
+            @Override
+            public ShortcodeCard getCard() {
+                return ShortcodeCard.snippet("echo", "test.label", "[echo]");
             }
 
             @Override
@@ -413,6 +423,11 @@ class ShortcodeExpanderTest {
                     }
 
                     @Override
+                    public ShortcodeCard getCard() {
+                        return ShortcodeCard.snippet("boom", "test.label", "[boom]");
+                    }
+
+                    @Override
                     public String render(Map<String, String> attributes, String body,
                             WeblogEntry entry) {
                         throw new IllegalStateException("boom");
@@ -422,6 +437,11 @@ class ShortcodeExpanderTest {
                     @Override
                     public String getName() {
                         return "shy";
+                    }
+
+                    @Override
+                    public ShortcodeCard getCard() {
+                        return ShortcodeCard.snippet("shy", "test.label", "[shy]");
                     }
 
                     @Override

@@ -133,6 +133,16 @@ public final class ShortcodeExpander {
     }
 
     /**
+     * What the entry editor should offer for the registered shortcodes, in
+     * registration order. The editor's insert menu is built from this, so the
+     * shortcodes an author can insert are by construction the ones that
+     * actually render.
+     */
+    public List<ShortcodeCard> cards() {
+        return handlers.values().stream().map(ShortcodeHandler::getCard).toList();
+    }
+
+    /**
      * Expands every registered shortcode in {@code text}. Null-safe; returns
      * {@code text} itself when there is nothing to do. A handler that throws
      * or returns null leaves its shortcode in the output exactly as written.
