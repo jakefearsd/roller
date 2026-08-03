@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.pojos;
 
 import java.io.Serializable;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -61,6 +62,31 @@ public class ShareLink implements Serializable {
 
     public ShareLink() {
     }
+
+    /**
+     * An expiry {@code days} from now, or null for a link that never expires.
+     *
+     * <p>Blank, zero and negative all mean "no expiry" rather than "already
+     * expired": the field is optional in the UI, and the reading that makes an
+     * empty box silently produce a dead link is the wrong one. Anything that
+     * is not a number is treated the same way -- refusing to create the link
+     * over a typo in an optional field would be worse than ignoring it.
+     */
+    public static Timestamp expiryFromDays(String days) {
+        if (days == null || days.isBlank()) {
+            return null;
+        }
+        try {
+            long parsed = Long.parseLong(days.trim());
+            if (parsed <= 0) {
+                return null;
+            }
+            return Timestamp.from(Instant.now().plus(Duration.ofDays(parsed)));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
 
     /**
      * Database surrogate key.

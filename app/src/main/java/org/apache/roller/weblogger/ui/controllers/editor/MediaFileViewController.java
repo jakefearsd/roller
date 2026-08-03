@@ -231,6 +231,8 @@ public class MediaFileViewController extends MediaFileBase {
     public String createShareLink(HttpServletRequest request, Model model,
                                   @RequestParam(value = "directoryId", required = false) String directoryId,
                                   @RequestParam(value = "sharePassword", required = false) String sharePassword,
+                                  @RequestParam(value = "shareExpiryDays", required = false)
+                                  String shareExpiryDays,
                                   @RequestParam(value = "sortBy", required = false) String sortBy) {
         populateCommonModel(request, model);
         try {
@@ -252,6 +254,7 @@ public class MediaFileViewController extends MediaFileBase {
                     link.setPasswordHash(
                             RollerContext.getPasswordEncoder().encode(sharePassword));
                 }
+                link.setExpires(ShareLink.expiryFromDays(shareExpiryDays));
                 weblogger.getShareLinkManager().createShareLink(link);
                 weblogger.flush();
                 addMessage(model, "shareLink.created", request);

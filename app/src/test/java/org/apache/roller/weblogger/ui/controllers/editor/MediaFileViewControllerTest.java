@@ -498,7 +498,7 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
 
         @Test
         void creatingAShareLinkHashesThePasswordBeforeStorage() throws Exception {
-            controller.createShareLink(request, model, "dir-2", "gallery-pw", null);
+            controller.createShareLink(request, model, "dir-2", "gallery-pw", null, null);
 
             var captor = org.mockito.ArgumentCaptor.forClass(ShareLink.class);
             verify(weblogger.getShareLinkManager()).createShareLink(captor.capture());
@@ -523,7 +523,7 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
 
         @Test
         void creatingAShareLinkWithoutAPasswordStoresNoHash() throws Exception {
-            controller.createShareLink(request, model, "dir-2", "  ", null);
+            controller.createShareLink(request, model, "dir-2", "  ", null, null);
 
             var captor = org.mockito.ArgumentCaptor.forClass(ShareLink.class);
             verify(weblogger.getShareLinkManager()).createShareLink(captor.capture());
@@ -537,7 +537,7 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
             when(weblogger.getShareLinkManager()
                     .getShareLinkForTarget(ShareLink.TYPE_DIRECTORY, "dir-2")).thenReturn(old);
 
-            controller.createShareLink(request, model, "dir-2", null, null);
+            controller.createShareLink(request, model, "dir-2", null, null, null);
 
             verify(weblogger.getShareLinkManager()).removeShareLink(old);
             verify(weblogger.getShareLinkManager()).createShareLink(any());
@@ -554,7 +554,7 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
             when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-x"))
                     .thenReturn(foreign);
 
-            controller.createShareLink(request, model, "dir-x", null, null);
+            controller.createShareLink(request, model, "dir-x", null, null, null);
 
             verify(weblogger.getShareLinkManager(), never()).createShareLink(any());
             assertTrue(errors(model).contains("shareLink.error"),

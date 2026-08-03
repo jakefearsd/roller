@@ -337,6 +337,9 @@
                             <input type="password" name="sharePassword" id="shareLinkPassword"
                                    class="form-control" autocomplete="new-password"
                                    placeholder="<spring:message code="shareLink.passwordOptional"/>"/>
+                            <input type="number" name="shareExpiryDays" id="shareLinkExpiryDays"
+                                   class="form-control" min="1" max="3650" style="max-width: 10em"
+                                   placeholder="<spring:message code="shareLink.expiryOptional"/>"/>
                             <button type="submit" id="createShareLinkButton" class="btn btn-primary"><spring:message
                                     code="shareLink.create"/></button>
                         </div>

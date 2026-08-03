@@ -247,4 +247,34 @@ public class ShareLinkTest {
         mgr.removeShareLink(mgr.getShareLinkByToken(newer.getToken()));
         TestUtils.endSession(true);
     }
+
+    /**
+     * The expiry field finally has a UI, and this is the parsing behind it.
+     *
+     * <p>Every "no expiry" case has to mean a permanent link rather than an
+     * already-dead one: the box is optional, and a share link that silently
+     * expires the moment it is created would be indistinguishable from the
+     * feature being broken.
+     */
+    @Test
+    public void anEmptyOrNonsensicalExpiryMeansTheLinkNeverExpires() {
+        assertNull(ShareLink.expiryFromDays(null));
+        assertNull(ShareLink.expiryFromDays(""));
+        assertNull(ShareLink.expiryFromDays("   "));
+        assertNull(ShareLink.expiryFromDays("0"), "zero days must not mean already expired");
+        assertNull(ShareLink.expiryFromDays("-5"), "a negative must not mean already expired");
+        assertNull(ShareLink.expiryFromDays("soon"), "a typo must not refuse the link");
+    }
+
+    @Test
+    public void aPositiveExpiryIsThatManyDaysFromNow() {
+        long before = System.currentTimeMillis();
+        Timestamp expiry = ShareLink.expiryFromDays(" 7 ");
+        assertNotNull(expiry);
+
+        long sevenDays = 7L * 24 * 60 * 60 * 1000;
+        long delta = expiry.getTime() - (before + sevenDays);
+        assertTrue(Math.abs(delta) < 60_000,
+                "expected roughly seven days out, was off by " + delta + "ms");
+    }
 }

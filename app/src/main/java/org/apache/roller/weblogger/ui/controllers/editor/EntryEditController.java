@@ -385,7 +385,8 @@ public class EntryEditController extends BaseController {
     public String entryEditCreateShareLink(HttpServletRequest request,
                                            RedirectAttributes redirectAttributes,
                                            @RequestParam(value = "entryId", required = false) String entryId,
-                                           @RequestParam(value = "sharePassword", required = false) String sharePassword) {
+                                           @RequestParam(value = "sharePassword", required = false) String sharePassword,
+                                           @RequestParam(value = "shareExpiryDays", required = false) String shareExpiryDays) {
         WeblogEntry entry = lookupEntry(entryId, request);
         if (entry == null) {
             return "redirect:/roller-ui/menu.rol";
@@ -404,6 +405,7 @@ public class EntryEditController extends BaseController {
             if (StringUtils.isNotBlank(sharePassword)) {
                 link.setPasswordHash(RollerContext.getPasswordEncoder().encode(sharePassword));
             }
+            link.setExpires(ShareLink.expiryFromDays(shareExpiryDays));
             weblogger.getShareLinkManager().createShareLink(link);
             weblogger.flush();
             addFlashMessage(redirectAttributes, "shareLink.created", request);

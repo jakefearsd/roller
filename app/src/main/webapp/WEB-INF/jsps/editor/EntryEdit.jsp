@@ -533,6 +533,12 @@
                         <input type="hidden" name="entryId" value="${entry.id}"/>
                         <button type="submit" id="revokeEntryShareLinkButton" class="btn btn-danger btn-sm"><spring:message
                                 code="shareLink.revoke"/></button>
+                        <c:if test="${not empty entryShareLink.expires}">
+                            <span class="pagetip ms-2" id="entryShareLinkExpires">
+                                <spring:message code="shareLink.expiresOn"
+                                                arguments="${entryShareLink.expires}"/>
+                            </span>
+                        </c:if>
                         <sec:csrfInput/>
                     </form>
                 </c:when>
@@ -546,6 +552,9 @@
                             <input type="password" name="sharePassword" id="entryShareLinkPassword"
                                    class="form-control" autocomplete="new-password"
                                    placeholder="<spring:message code="shareLink.passwordOptional"/>"/>
+                            <input type="number" name="shareExpiryDays" id="entryShareLinkExpiryDays"
+                                   class="form-control" min="1" max="3650" style="max-width: 10em"
+                                   placeholder="<spring:message code="shareLink.expiryOptional"/>"/>
                             <button type="submit" id="createEntryShareLinkButton" class="btn btn-primary"><spring:message
                                     code="shareLink.create"/></button>
                         </div>

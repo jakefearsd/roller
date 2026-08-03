@@ -847,13 +847,47 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
             }
         }
 
+        /**
+         * The expiry column has existed since share links shipped, with
+         * nothing in the UI able to set it -- so every link ever created was
+         * permanent. For a client gallery that is the wrong default to be
+         * stuck with.
+         */
+        @Test
+        void anExpiryTypedByTheAuthorIsStoredOnTheLink() throws Exception {
+            existingEntry(PubStatus.PUBLISHED);
+
+            controller.entryEditCreateShareLink(
+                    request, newRedirectAttributes(), "entry-1", null, "7");
+
+            ArgumentCaptor<ShareLink> captor = ArgumentCaptor.forClass(ShareLink.class);
+            verify(weblogger.getShareLinkManager()).createShareLink(captor.capture());
+            assertNotNull(captor.getValue().getExpires(),
+                    "the link must carry the expiry the author asked for");
+            assertTrue(captor.getValue().getExpires().after(new java.util.Date()),
+                    "a freshly created link must not already be expired");
+        }
+
+        @Test
+        void noExpiryTypedMeansTheLinkNeverExpires() throws Exception {
+            existingEntry(PubStatus.PUBLISHED);
+
+            controller.entryEditCreateShareLink(
+                    request, newRedirectAttributes(), "entry-1", null, "");
+
+            ArgumentCaptor<ShareLink> captor = ArgumentCaptor.forClass(ShareLink.class);
+            verify(weblogger.getShareLinkManager()).createShareLink(captor.capture());
+            assertNull(captor.getValue().getExpires(),
+                    "an empty box must leave the link permanent, not expire it immediately");
+        }
+
         @Test
         void creatingAShareLinkStoresAHashedPasswordAndRedirectsBack() throws Exception {
             existingEntry(PubStatus.PUBLISHED);
             var redirectAttributes = newRedirectAttributes();
 
             String view = controller.entryEditCreateShareLink(
-                    request, redirectAttributes, "entry-1", "entry-pw");
+                    request, redirectAttributes, "entry-1", "entry-pw", null);
 
             assertEquals("redirect:/roller-ui/authoring/entryEdit.rol?weblog="
                     + WEBLOG_HANDLE + "&bean.id=entry-1", view);
@@ -882,7 +916,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
             foreign.setWebsite(other);
 
             String view = controller.entryEditCreateShareLink(
-                    request, newRedirectAttributes(), "entry-1", null);
+                    request, newRedirectAttributes(), "entry-1", null, null);
 
             assertEquals("redirect:/roller-ui/menu.rol", view,
                     "an entryId from another weblog must bounce, exactly like "
