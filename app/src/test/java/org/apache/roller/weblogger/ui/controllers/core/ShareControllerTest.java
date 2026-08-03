@@ -498,4 +498,55 @@ class ShareControllerTest {
         }
         throw new IllegalStateException("No field '" + name + "' on " + target.getClass());
     }
+
+    /**
+     * A share link is a public URL whose only protection is its password, so
+     * the POST that checks it is a guessing oracle unless something stops it.
+     * The threshold ships at 10 wrong attempts per minute.
+     */
+    @Test
+    void repeatedWrongPasswordsAreRefused() throws Exception {
+        ShareLink link = passwordProtectedEntryLink("shareThrottleEntry", "right-pw");
+        MockHttpSession session = new MockHttpSession();
+
+        // Well past the configured threshold, all from one address.
+        int refusals = 0;
+        for (int attempt = 0; attempt < 30; attempt++) {
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            controller.unlock(link.getToken(), "wrong-" + attempt,
+                    guessingRequest(session), response);
+            if (response.getStatus() == 429) {
+                refusals++;
+            }
+        }
+
+        assertTrue(refusals > 0,
+                "an unthrottled password form lets anyone with the link guess at "
+                        + "network speed; none of 30 wrong attempts was refused");
+    }
+
+    /**
+     * The throttle counts wrong passwords only. Someone who knows the password
+     * must not be locked out of their own gallery by reloading it, and a NAT
+     * gateway must not let one clumsy visitor lock out everyone behind it.
+     */
+    @Test
+    void correctPasswordsAreNeverThrottled() throws Exception {
+        ShareLink link = passwordProtectedEntryLink("shareThrottleOkEntry", "right-pw");
+
+        for (int attempt = 0; attempt < 30; attempt++) {
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            ModelAndView post = controller.unlock(link.getToken(), "right-pw",
+                    guessingRequest(new MockHttpSession()), response);
+            assertEquals("redirect:/share/" + link.getToken(), post.getViewName(),
+                    "a correct password was refused on attempt " + attempt);
+        }
+    }
+
+    /** A request from a fixed address, so the throttle sees one client. */
+    private MockHttpServletRequest guessingRequest(MockHttpSession session) {
+        MockHttpServletRequest request = request(session);
+        request.setRemoteAddr("198.51.100.7");
+        return request;
+    }
 }

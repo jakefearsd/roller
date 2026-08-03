@@ -206,4 +206,45 @@ public class ShareLinkTest {
         assertNull(mgr.getShareLinkByToken(link.getToken()),
                 "Share links must die with their weblog");
     }
+
+    /**
+     * Two links for one target, created back to back, must resolve to the same
+     * one on every read.
+     *
+     * <p>{@code getShareLinkForTarget} returns the first row of a query ordered
+     * by creation time, so a tie leaves the database to pick -- and the loser
+     * is a token that still works while the editor shows the other one, which
+     * means an author who revokes "the" share link has not revoked access at
+     * all. Creating both inside the same millisecond is exactly what a test (or
+     * a double-click) does, so this is the case worth pinning.
+     */
+    @Test
+    public void theNewestLinkForATargetIsChosenDeterministically() throws Exception {
+        ShareLinkManager mgr = WebloggerFactory.getWeblogger().getShareLinkManager();
+
+        ShareLink older = buildLink(ShareLink.TYPE_ENTRY, "contested-target");
+        mgr.createShareLink(older);
+        ShareLink newer = buildLink(ShareLink.TYPE_ENTRY, "contested-target");
+        mgr.createShareLink(newer);
+        TestUtils.endSession(true);
+
+        String firstAnswer = mgr.getShareLinkForTarget(
+                ShareLink.TYPE_ENTRY, "contested-target").getToken();
+        TestUtils.endSession(true);
+
+        // Asked again in a new session, so the answer comes from the database
+        // rather than from an entity still in the persistence context.
+        String secondAnswer = mgr.getShareLinkForTarget(
+                ShareLink.TYPE_ENTRY, "contested-target").getToken();
+        assertEquals(firstAnswer, secondAnswer,
+                "the same target resolved to two different share links");
+
+        // And it is genuinely the newer one, not merely a stable choice.
+        assertEquals(newer.getToken(), firstAnswer,
+                "the most recently created link must win");
+
+        mgr.removeShareLink(mgr.getShareLinkByToken(older.getToken()));
+        mgr.removeShareLink(mgr.getShareLinkByToken(newer.getToken()));
+        TestUtils.endSession(true);
+    }
 }

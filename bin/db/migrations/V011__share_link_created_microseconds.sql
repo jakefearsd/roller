@@ -1,0 +1,37 @@
+-- Licensed to the Apache Software Foundation (ASF) under one or more
+-- contributor license agreements.  The ASF licenses this file to You
+-- under the Apache License, Version 2.0 (the "License"); you may not
+-- use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+--
+-- Migration: share-link creation timestamps to microsecond precision
+--
+-- roller_share_link.created was timestamp(3), and the queries that read it
+-- order by it alone. Two links created for the same target inside one
+-- millisecond therefore tie, and which one comes back is left to the
+-- database. That is not cosmetic: getShareLinkForTarget takes the first row,
+-- so a tie decides which token the editor shows an author as "the" share link
+-- for an entry -- and the other one keeps working, unlisted and unrevokable
+-- through the UI.
+--
+-- Widening to microseconds makes a tie effectively impossible, and the
+-- matching queries also gained an id tiebreak so that even a tie resolves the
+-- same way twice. Same fix, and same reasoning, as weblogentry_revision.created
+-- in V010.
+--
+-- Widening a timestamp's precision preserves existing values, and re-running
+-- ALTER ... TYPE with the type it already has is a no-op, so this is safe to
+-- apply repeatedly.
+--
+-- Prerequisites: V007__share_links_and_gallery_metadata.
+
+ALTER TABLE roller_share_link
+    ALTER COLUMN created TYPE timestamp(6) with time zone;

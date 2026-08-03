@@ -19,7 +19,7 @@
 <header class="pf-header">
     <p class="pf-name"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
     #if($utils.isNotEmpty($model.weblog.tagline))
-    <p class="pf-tagline">$model.weblog.tagline</p>
+    <p class="pf-tagline">$utils.escapeHTML($model.weblog.tagline)</p>
     #end
     <nav class="pf-nav">
         #showWeblogCategoryLinksList()

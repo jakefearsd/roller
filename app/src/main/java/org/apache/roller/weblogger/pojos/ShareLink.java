@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.pojos;
 
 import java.io.Serializable;
 import java.sql.Timestamp;
+import java.time.Instant;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.roller.util.UUIDGenerator;
@@ -49,7 +50,13 @@ public class ShareLink implements Serializable {
     private String targetId;
     private String token;
     private String passwordHash;
-    private Timestamp created = new Timestamp(System.currentTimeMillis());
+    /**
+     * From {@link Instant#now()} rather than {@code currentTimeMillis()}: the
+     * column keeps microseconds (V011) and the queries order by this, so a
+     * millisecond tie between two links for one target would leave the
+     * database to decide which one an author is shown as theirs.
+     */
+    private Timestamp created = Timestamp.from(Instant.now());
     private Timestamp expires;
 
     public ShareLink() {

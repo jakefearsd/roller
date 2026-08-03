@@ -51,8 +51,8 @@ limitations under the License.
              these floors are measured minus a 0.01 margin, and later stages only
              ever raise them, never lower them. Targets are documented in
              CLAUDE.md. -->
-        <jacoco.line.minimum>0.8200</jacoco.line.minimum>
-        <jacoco.branch.minimum>0.7270</jacoco.branch.minimum>
+        <jacoco.line.minimum>0.8220</jacoco.line.minimum>
+        <jacoco.branch.minimum>0.7290</jacoco.branch.minimum>
         <jacoco.check.skip>false</jacoco.check.skip>
     </properties>
 
@@ -169,7 +169,13 @@ limitations under the License.
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.48</minimum>
+                                            <!-- Raised from 0.48 once the velocity package gained
+                                                 its first direct tests. It had sat at exactly
+                                                 0.4900 against this floor, so any macro change
+                                                 that added an untested branch broke the build for
+                                                 reasons unrelated to the change. The binding
+                                                 package is now velocity at 0.5823. -->
+                                            <minimum>0.55</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

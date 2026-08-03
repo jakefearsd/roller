@@ -9,11 +9,15 @@
         <named-query name="ShareLink.getByToken">
             <query>SELECT s FROM ShareLink s WHERE s.token = ?1</query>
         </named-query>
+        <!-- Newest first, with an id tiebreak so two links created in the
+             same instant resolve the same way on every read. Without it the
+             database is free to answer differently each time, and
+             getShareLinkForTarget below takes the first row. -->
         <named-query name="ShareLink.getByWeblog">
-            <query>SELECT s FROM ShareLink s WHERE s.weblog = ?1 ORDER BY s.created DESC</query>
+            <query>SELECT s FROM ShareLink s WHERE s.weblog = ?1 ORDER BY s.created DESC, s.id DESC</query>
         </named-query>
         <named-query name="ShareLink.getByTarget">
-            <query>SELECT s FROM ShareLink s WHERE s.targetType = ?1 AND s.targetId = ?2 ORDER BY s.created DESC</query>
+            <query>SELECT s FROM ShareLink s WHERE s.targetType = ?1 AND s.targetId = ?2 ORDER BY s.created DESC, s.id DESC</query>
         </named-query>
         <named-query name="ShareLink.removeByWeblog">
             <query>DELETE FROM ShareLink s WHERE s.weblog = ?1</query>

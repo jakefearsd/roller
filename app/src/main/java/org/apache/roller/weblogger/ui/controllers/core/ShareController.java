@@ -45,7 +45,9 @@ import org.apache.roller.weblogger.pojos.ShareLink;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
+import org.apache.roller.weblogger.util.GenericThrottle;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -107,6 +109,25 @@ public class ShareController extends BaseController {
 
     /** The password form's input name. */
     static final String PASSWORD_PARAMETER = "sharePassword";
+
+    /**
+     * Throttle for wrong password attempts, keyed by client address.
+     *
+     * <p>A share link is a public URL whose only protection is its password,
+     * so without this the POST below is a guessing oracle that anyone holding
+     * the link can drive as fast as the network allows. Built lazily on first
+     * use rather than in a constructor, because {@code WebloggerConfig} is not
+     * necessarily loaded when Spring instantiates controllers.
+     *
+     * <p>Only WRONG passwords are counted. A visitor who knows the password
+     * can reload a gallery as often as they like, and a shared browser or a
+     * NAT gateway cannot lock out a legitimate reader by being busy.
+     */
+    /** Not in the servlet API's constant list, which stops at 505. */
+    private static final int TOO_MANY_REQUESTS = 429;
+
+    private volatile GenericThrottle passwordThrottle;
+    private volatile boolean passwordThrottleResolved;
 
     /**
      * The grid CSS for share-page galleries: the same rules as the
@@ -209,13 +230,75 @@ public class ShareController extends BaseController {
             return null;
         }
         if (link.getPasswordHash() != null) {
+            if (isGuessingTooFast(request)) {
+                // 429 rather than the form again: an attacker learns nothing
+                // from it, and a real visitor who has genuinely mistyped ten
+                // times in a minute is told to wait rather than silently
+                // having their next correct attempt ignored.
+                response.sendError(TOO_MANY_REQUESTS);
+                return null;
+            }
             if (password == null
                     || !RollerContext.getPasswordEncoder().matches(password, link.getPasswordHash())) {
+                countWrongPassword(request);
                 return passwordForm(token, true);
             }
             unlock(request.getSession(true), token);
         }
         return new ModelAndView("redirect:/share/" + token);
+    }
+
+    /** Whether this client has already used up its wrong-password budget. */
+    private boolean isGuessingTooFast(HttpServletRequest request) {
+        GenericThrottle throttle = passwordThrottle();
+        return throttle != null && throttle.isAbusive(request.getRemoteAddr());
+    }
+
+    /** Records one wrong password against this client's budget. */
+    private void countWrongPassword(HttpServletRequest request) {
+        GenericThrottle throttle = passwordThrottle();
+        if (throttle != null) {
+            throttle.processHit(request.getRemoteAddr());
+        }
+    }
+
+    /**
+     * The throttle, or null when disabled. Resolved once and cached; the
+     * double-checked flag is what keeps a disabled throttle from re-reading
+     * configuration on every request.
+     */
+    private GenericThrottle passwordThrottle() {
+        if (!passwordThrottleResolved) {
+            synchronized (this) {
+                if (!passwordThrottleResolved) {
+                    passwordThrottle = buildPasswordThrottle();
+                    passwordThrottleResolved = true;
+                }
+            }
+        }
+        return passwordThrottle;
+    }
+
+    private GenericThrottle buildPasswordThrottle() {
+        if (!WebloggerConfig.getBooleanProperty("share.password.throttle.enabled")) {
+            log.info("Share-link password throttling DISABLED");
+            return null;
+        }
+        int threshold = intProperty("share.password.throttle.threshold", 10);
+        int interval = intProperty("share.password.throttle.interval", 60);
+        int maxEntries = intProperty("share.password.throttle.maxentries", 250);
+        log.info("Share-link password throttling ENABLED: " + threshold
+                + " wrong attempts per " + interval + "s");
+        return new GenericThrottle(threshold, interval * RollerConstants.SEC_IN_MS, maxEntries);
+    }
+
+    private static int intProperty(String name, int fallback) {
+        try {
+            return Integer.parseInt(WebloggerConfig.getProperty(name));
+        } catch (NumberFormatException e) {
+            log.warn("bad input for config property " + name + "; using " + fallback, e);
+            return fallback;
+        }
     }
 
     // ----------------------------------------------------- token-scoped media
