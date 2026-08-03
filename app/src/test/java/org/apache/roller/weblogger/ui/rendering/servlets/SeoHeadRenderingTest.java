@@ -97,6 +97,33 @@ class SeoHeadRenderingTest {
         TestUtils.endSession(true);
     }
 
+    /**
+     * The same blocks with the {@code dateModified} value blanked out.
+     *
+     * <p>Not a convenience: {@code saveWeblogEntry} restamps {@code updateTime}
+     * on every save and a test cannot prevent it, so that one value differs
+     * between two renders taken either side of a second boundary. Blanking it
+     * keeps the byte-for-byte comparison meaningful for everything a test can
+     * actually hold still.
+     */
+    private static List<String> withoutModificationStamp(List<String> blocks) {
+        return blocks.stream()
+                .map(block -> block.replaceAll("\"dateModified\": \"[^\"]*\"",
+                        "\"dateModified\": \"\""))
+                .toList();
+    }
+
+    /**
+     * Waits until the wall clock's second has advanced, so the next save's
+     * {@code updateTime} formats differently from the last one's.
+     */
+    private static void crossASecondBoundary() throws InterruptedException {
+        long startedInSecond = System.currentTimeMillis() / 1000L;
+        do {
+            Thread.sleep(50);
+        } while (System.currentTimeMillis() / 1000L == startedInSecond);
+    }
+
     private void switchTheme(String themeName) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(themeName);
@@ -593,21 +620,19 @@ class SeoHeadRenderingTest {
         // the BlogPosting one, so the entry keeps its datePublished,
         // dateModified, author and headline.
         //
-        // Every save restamps updateTime (JPAWeblogEntryManagerImpl:237) and
-        // that feeds dateModified, so the three saves below would legitimately
-        // change the bytes whenever they straddle a second boundary -- which is
-        // exactly what a slow CI runner does and a fast laptop does not. Pin the
-        // timestamp on each save so the entry's TYPE is the only variable this
-        // test is measuring.
-        Timestamp frozen = Timestamp.valueOf("2026-02-01 12:00:00");
+        // Every save restamps updateTime, and that stamp feeds dateModified.
+        // A test cannot pin it: saveWeblogEntry sets it AFTER the caller's own
+        // setter, which is why the earlier attempt to freeze it here did
+        // nothing and this test passed on a laptop while failing in CI. The
+        // three saves below therefore legitimately change those bytes whenever
+        // they straddle a second boundary. Normalising the modification stamp
+        // away is what makes the entry's TYPE the only variable being
+        // measured; every other byte of the block still has to match exactly.
         WeblogEntry entry = TestUtils.setupWeblogEntry("stable-entry", weblog, user);
-        updateEntry(entry, e -> {
-            e.setSearchDescription("Unchanged by the new field.");
-            e.setUpdateTime(frozen);
-        });
+        updateEntry(entry, e -> e.setSearchDescription("Unchanged by the new field."));
 
         String untypedBody = render("/" + HANDLE + "/entry/stable-entry");
-        List<String> untyped = ldJsonSources(untypedBody);
+        List<String> untyped = withoutModificationStamp(ldJsonSources(untypedBody));
         assertEquals(1, untyped.size(),
                 "an untyped permalink emits exactly one block:\n" + untypedBody);
         assertTrue(untyped.get(0).contains("\"@type\": \"BlogPosting\","),
@@ -615,20 +640,22 @@ class SeoHeadRenderingTest {
         assertTrue(untyped.get(0).contains("\"headline\": \"stable-entry\""),
                 "including its headline property: " + untyped.get(0));
 
-        updateEntry(entry, e -> {
-            e.setJsonLdType(JsonLdType.BLOG_POSTING);
-            e.setUpdateTime(frozen);
-        });
+        // Deliberately cross a second boundary before each re-save. Without
+        // it the three renders usually share a dateModified and this test
+        // passes even with the normalisation removed, which is precisely how
+        // it came to pass locally and fail in CI.
+        crossASecondBoundary();
+        updateEntry(entry, e -> e.setJsonLdType(JsonLdType.BLOG_POSTING));
         RenderingTestSupport.clearRenderCaches();
-        assertEquals(untyped, ldJsonSources(render("/" + HANDLE + "/entry/stable-entry")),
+        assertEquals(untyped,
+                withoutModificationStamp(ldJsonSources(render("/" + HANDLE + "/entry/stable-entry"))),
                 "an explicit BLOG_POSTING must render byte for byte like a null type");
 
-        updateEntry(entry, e -> {
-            e.setJsonLdType(JsonLdType.TOURIST_ATTRACTION);
-            e.setUpdateTime(frozen);
-        });
+        crossASecondBoundary();
+        updateEntry(entry, e -> e.setJsonLdType(JsonLdType.TOURIST_ATTRACTION));
         RenderingTestSupport.clearRenderCaches();
-        List<String> typed = ldJsonSources(render("/" + HANDLE + "/entry/stable-entry"));
+        List<String> typed = withoutModificationStamp(
+                ldJsonSources(render("/" + HANDLE + "/entry/stable-entry")));
         assertEquals(2, typed.size(), "a travel type adds a block, it does not swap one");
         assertEquals(untyped.get(0), typed.get(0),
                 "and the BlogPosting block must survive it byte for byte");
