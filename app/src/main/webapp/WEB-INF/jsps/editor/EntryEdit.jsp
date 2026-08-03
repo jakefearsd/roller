@@ -26,13 +26,6 @@
     });
 </script>
 
-<style>
-    #tagAutoCompleteWrapper {
-        width: 40em; /* set width here or else widget will expand to fit its container */
-        padding-bottom: 2em;
-    }
-</style>
-
 <%-- Titling, processing actions different between entry add and edit --%>
 <c:choose>
 <c:when test="${actionName == 'entryEdit'}">
@@ -97,7 +90,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.tags"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" id="tagAutoComplete" maxlength="255" tabindex="2" class="form-control"/>
+            <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" id="entry_bean_tagsAsString" maxlength="255" tabindex="2" class="form-control"/>
         </div>
     </div>
 
@@ -740,54 +733,6 @@
         window.open('${previewURL}', 'roller-preview');
     }
 
-    $(function () {
-        function split(val) {
-            return val.split(/ \s*/);
-        }
-
-        function extractLast(term) {
-            return split(term).pop();
-        }
-
-        $("#tagAutoComplete")
-        // don't navigate away from the field on tab when selecting an item
-            .bind("keydown", function (event) {
-                if (event.keyCode === $.ui.keyCode.TAB && $(this).autocomplete("instance").menu.active) {
-                    event.preventDefault();
-                }
-            })
-            .autocomplete({
-                delay: 500,
-                source: function (request, response) {
-                    $.getJSON("${jsonAutocompleteUrl}", {
-                            format: 'json',
-                            prefix: extractLast(request.term)
-                        },
-                        function (data) {
-                            response($.map(data.tagcounts, function (dataValue) {
-                                return {
-                                    value: dataValue.tag
-                                };
-                            }))
-                        })
-                },
-                focus: function () {
-                    // prevent value inserted on focus
-                    return false;
-                },
-                select: function (event, ui) {
-                    var terms = split(this.value);
-                    // remove the current input
-                    terms.pop();
-                    // add the selected item
-                    terms.push(ui.item.value);
-                    // add placeholder to get the space at the end
-                    terms.push("");
-                    this.value = terms.join(" ");
-                    return false;
-                }
-            });
-    });
 
     function showDeleteModal(postId, postTitle) {
         $('#postIdLabel').html(postId);

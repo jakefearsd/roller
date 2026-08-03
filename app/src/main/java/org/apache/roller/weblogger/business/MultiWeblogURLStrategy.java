@@ -364,38 +364,6 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
     }
     
     
-    /**
-     * Get url to JSON tags service url, optionally for a given weblog.
-     */
-    @Override
-    public String getWeblogTagsJsonURL(Weblog weblog, boolean absolute, int pageNum) {
-        
-        StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
-        
-        if (absolute) {
-            url.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
-        } else {
-            url.append(WebloggerRuntimeConfig.getRelativeContextURL());
-        }
-        
-        // json tags service base
-        url.append("/roller-services/tagdata/");
-        
-        // is this for a specific weblog or site-wide?
-        if (weblog != null) {
-            url.append("weblog/");
-            url.append(weblog.getHandle());
-            url.append('/');
-        }
-        
-        if (pageNum > 0) {
-            url.append("?page=").append(pageNum);
-        }
-        
-        return url.toString();
-    }
-
-    
     @Override
     public String getWeblogSearchFeedURLTemplate(Weblog weblog) {
         if(weblog == null) {
@@ -429,16 +397,5 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         return url.append(URLUtilities.getQueryString(params)).toString();
     }
 
-
-    @Override
-    public String getOpenSearchSiteURL() {
-        return WebloggerRuntimeConfig.getAbsoluteContextURL() + "/roller-services/opensearch/";
-    }
-
-
-    @Override
-    public String getOpenSearchWeblogURL(String weblogHandle) {
-        return WebloggerRuntimeConfig.getAbsoluteContextURL() + "/roller-services/opensearch/" + weblogHandle;
-    }
 
 }

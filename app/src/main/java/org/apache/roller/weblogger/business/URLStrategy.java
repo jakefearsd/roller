@@ -83,18 +83,6 @@ public interface URLStrategy {
     
     
     /**
-     * URL for OpenSearch descriptor file for site.
-     */
-    String getOpenSearchSiteURL();
-    
-
-    /**
-     * URL for OpenSearch descriptor file for weblog.
-     */
-    String getOpenSearchWeblogURL(String weblogHandle);
-
-    
-    /**
      * Get OpenSearch compatible search URL template for weblog search feed.
      */
     String getWeblogSearchFeedURLTemplate(Weblog weblog);
@@ -214,10 +202,6 @@ public interface URLStrategy {
                                                     boolean absolute);
     
     
-    /**
-     * Get url to JSON tags service url, optionally for a given weblog.
-     */
-    String getWeblogTagsJsonURL(Weblog weblog, boolean absolute, int pageNum);
 
 
 }

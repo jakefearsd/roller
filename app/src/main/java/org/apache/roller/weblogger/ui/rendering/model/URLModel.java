@@ -245,14 +245,6 @@ public class URLModel implements Model {
         return urlStrategy.getWeblogSearchURL(weblog, locale, query, catName, pageNum, true);
     }        
     
-    public String getOpenSearchSite() {
-        return urlStrategy.getOpenSearchSiteURL();
-    }
-        
-    public String getOpenSearchWeblog() {
-        return urlStrategy.getOpenSearchWeblogURL(weblog.getHandle());
-    }
-        
     public String page(String pageLink) {
         return urlStrategy.getWeblogPageURL(weblog, locale, pageLink, null, null, null, null, -1, true);
     }

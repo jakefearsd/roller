@@ -594,8 +594,6 @@ public class EntryEditController extends BaseController {
         model.addAttribute("entryPlugins", getEntryPlugins(request));
         model.addAttribute("userAnAuthor", getActionWeblog(request).hasUserPermission(
                 getAuthenticatedUser(request), WeblogPermission.POST));
-        model.addAttribute("jsonAutocompleteUrl", weblogger.getUrlStrategy()
-                .getWeblogTagsJsonURL(getActionWeblog(request), false, 0));
 
         // The editor's insert menu, generated from the shortcode registry
         // itself so it can never advertise a shortcode that does not render,

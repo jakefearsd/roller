@@ -431,16 +431,6 @@ class URLModelTest {
         assertEquals(Map.of("q", "java"), queryParams(url), "The term must survive.");
     }
 
-    @Test
-    void openSearchDescriptorUrlsAreAbsolute() {
-        assertEquals(ABSOLUTE_SITE + "/roller-services/opensearch/",
-                model.getOpenSearchSite(),
-                "The site-wide OpenSearch descriptor is registered by absolute URL.");
-        assertEquals(ABSOLUTE_SITE + "/roller-services/opensearch/testblog",
-                model.getOpenSearchWeblog(),
-                "The per-blog descriptor is keyed by weblog handle.");
-    }
-
     // ------------------------------------------------------------------ feeds
 
     @Test
