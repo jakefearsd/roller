@@ -578,6 +578,97 @@
 
 <%-- ========================================================================================== --%>
 
+<%-- entry revisions: every content-changing save leaves one. Outside the main
+     entry form for the same reason the share card is: restore is its own POST
+     with its own CSRF token, and forms must not nest. --%>
+
+<c:if test="${actionName == 'entryEdit' && not empty entryRevisions}">
+    <div id="entryRevisionsCard" class="card mt-3">
+        <div class="card-header"><spring:message code="weblogEdit.revisions"/></div>
+        <div class="card-body">
+            <p class="pagetip"><spring:message code="weblogEdit.revisionsTip"/></p>
+            <table class="table table-sm" id="entryRevisionsTable">
+                <c:forEach items="${entryRevisions}" var="revision">
+                    <tr>
+                        <td>
+                            <spring:message code="weblogEntryQuery.date.toStringFormat"
+                                            arguments="${revision.created}"/>
+                        </td>
+                        <td><c:out value="${revision.creator}"/></td>
+                        <td>
+                            <button type="button" class="btn btn-link btn-sm revision-diff-button"
+                                    data-revision-id="${revision.id}">
+                                <spring:message code="weblogEdit.revisionCompare"/>
+                            </button>
+                        </td>
+                        <td>
+                            <form method="post" style="display:inline"
+                                  action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!restoreRevision.rol">
+                                <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+                                <input type="hidden" name="bean.id" value="${entry.id}"/>
+                                <input type="hidden" name="revisionId" value="${revision.id}"/>
+                                <sec:csrfInput/>
+                                <button type="submit" class="btn btn-outline-secondary btn-sm revision-restore-button">
+                                    <spring:message code="weblogEdit.revisionRestore"/>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </c:forEach>
+            </table>
+        </div>
+    </div>
+
+    <div id="revision-diff-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title"><spring:message code="weblogEdit.revisionCompare"/></h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="revisionDiffBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #revisionDiffBody pre { white-space: pre-wrap; }
+        #revisionDiffBody .diff-added { background-color: #e6ffed; display: block; }
+        #revisionDiffBody .diff-removed { background-color: #ffeef0; display: block; }
+        #revisionDiffBody .diff-same { color: #6c757d; display: block; }
+    </style>
+
+    <script>
+        <%-- The diff is computed on the SERVER against the entry as saved, so
+             it reflects what is actually stored rather than whatever is
+             currently unsaved in the editor. --%>
+        $(function () {
+            $(".revision-diff-button").on('click', function () {
+                var revisionId = this.dataset.revisionId;
+                $("#revisionDiffBody").text('<spring:message code="weblogEdit.previewLoading"/>');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('revision-diff-modal')).show();
+                $.ajax({
+                    type: 'POST',
+                    url: '<c:url value="/roller-ui/authoring/entryEdit!revisionDiff.rol"/>',
+                    data: {
+                        id: '${entry.id}',
+                        revisionId: revisionId,
+                        weblog: '${actionWeblog.handle}',
+                        '${_csrf.parameterName}': '${_csrf.token}'
+                    },
+                    success: function (html) { $("#revisionDiffBody").html(html); },
+                    error: function () {
+                        $("#revisionDiffBody").text('<spring:message code="weblogEdit.previewFailed"/>');
+                    }
+                });
+            });
+        });
+    </script>
+</c:if>
+
+
+<%-- ========================================================================================== --%>
+
 <%-- delete blogroll confirmation modal --%>
 
 <div id="delete-entry-modal" class="modal fade delete-entry-modal" tabindex="-1" role="dialog">

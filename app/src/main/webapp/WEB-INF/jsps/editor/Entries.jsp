@@ -54,9 +54,23 @@
     <spring:message code="weblogEntryQuery.scheduled"/>&nbsp;&nbsp;
 </p>
 
+<%-- One form around the whole table. The row checkboxes, the duplicate
+     button and the bulk action bar all post through it, which is why the
+     duplicate control is a submit button with its own formaction rather than
+     a form of its own: a form nested inside another is not valid HTML and
+     browsers drop the inner one. --%>
+<form id="entriesBulkForm" method="post"
+      action="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkPublish.rol">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+<sec:csrfInput/>
+
 <table class="rollertable table table-striped" width="100%">
 
 <tr>
+    <th class="rollertable" width="3%">
+        <input type="checkbox" id="selectAllEntries" class="form-check-input"
+               title="<spring:message code="weblogEntryQuery.selectAll"/>"/>
+    </th>
     <th class="rollertable" width="3%"> </th>
     <th class="rollertable" width="7%">
         <spring:message code="weblogEntryQuery.pubTime"/>
@@ -90,6 +104,11 @@
         <tr>
     </c:otherwise>
     </c:choose>
+    <td>
+        <input type="checkbox" class="form-check-input entry-select"
+               name="selectedEntries" value="${post.id}"/>
+    </td>
+
     <td>
         <c:url var="editUrl" value="/roller-ui/authoring/entryEdit.rol">
             <c:param name="weblog" value="${actionWeblog.handle}"/>
@@ -134,18 +153,16 @@
     <td>
         <%-- A POST, not a link: duplicating writes a new draft, so it needs
              the CSRF token and must not be reachable by a prefetch or a
-             crawler following hrefs. --%>
-        <form action="${pageContext.request.contextPath}/roller-ui/authoring/entries!duplicate.rol"
-              method="post" class="d-inline">
-            <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-            <input type="hidden" name="duplicateId" value="${post.id}"/>
-            <sec:csrfInput/>
-            <button type="submit" class="btn btn-link p-0 align-baseline border-0">
-                <span class="bi bi-files"
-                      title="<spring:message code="generic.duplicate"/>">
-                </span>
-            </button>
-        </form>
+             crawler following hrefs. The clicked submit button is the only one
+             whose name/value is sent, so duplicateId identifies this row
+             without a hidden field per row. --%>
+        <button type="submit" name="duplicateId" value="${post.id}"
+                class="btn btn-link p-0 align-baseline border-0"
+                formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!duplicate.rol">
+            <span class="bi bi-files"
+                  title="<spring:message code="generic.duplicate"/>">
+            </span>
+        </button>
     </td>
 
     <td>
@@ -163,6 +180,42 @@
 </c:forEach>
 
 </table>
+
+<%-- Bulk action bar. Each button carries its own formaction, so the server
+     endpoint is chosen by which button was pressed rather than by JavaScript
+     rewriting the form's action. Delete is the exception: it opens the
+     confirmation modal instead of submitting, because it is the only one of
+     the three that cannot be undone. --%>
+<c:if test="${not empty pager.items}">
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-3" id="entriesBulkActions">
+        <button type="submit" class="btn btn-primary"
+                formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkPublish.rol">
+            <c:choose>
+                <c:when test="${userAnAuthor}">
+                    <spring:message code="weblogEntryQuery.bulkPublish"/>
+                </c:when>
+                <c:otherwise>
+                    <spring:message code="weblogEntryQuery.bulkSubmit"/>
+                </c:otherwise>
+            </c:choose>
+        </button>
+
+        <div class="input-group" style="width: 22em">
+            <input type="text" name="bulkTag" id="bulkTag" class="form-control"
+                   placeholder="<spring:message code="weblogEntryQuery.bulkTagPlaceholder"/>"/>
+            <button type="submit" class="btn btn-outline-secondary"
+                    formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkTag.rol">
+                <spring:message code="weblogEntryQuery.bulkTagAdd"/>
+            </button>
+        </div>
+
+        <button type="button" class="btn btn-danger" id="bulkDeleteButton">
+            <spring:message code="weblogEntryQuery.bulkDelete"/>
+        </button>
+    </div>
+</c:if>
+
+</form>
 
 
 <%-- ============================================================= --%>
@@ -243,6 +296,37 @@
     
 </div>
 
+<%-- Confirmation for the bulk delete. A modal rather than window.confirm:
+     the native dialog blocks the page for automated tests and cannot say
+     how many entries are about to go. --%>
+<div id="bulk-delete-modal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <h3><spring:message code="weblogEntryQuery.bulkDeleteConfirm"/></h3>
+                    <p><spring:message code="weblogEntryQuery.bulkDeleteWarning"/></p>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p id="bulkDeleteCount" class="form-control-plaintext"></p>
+            </div>
+            <div class="modal-footer">
+                <%-- Submits the table's form, which is where the selection
+                     lives; this button is outside it, hence the form= --%>
+                <button type="submit" class="btn btn-danger" id="bulkDeleteConfirm"
+                        form="entriesBulkForm"
+                        formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkDelete.rol">
+                    <spring:message code="generic.yes"/>
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <spring:message code="generic.no"/>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     function showDeleteModal( postId, postTitle ) {
         $('#postIdLabel').html(postId);
@@ -250,4 +334,28 @@
         $('#removeId').val(postId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-entry-modal')).show();
     }
+
+    $(function () {
+        var selection = function () {
+            return $(".entry-select:checked");
+        };
+
+        $("#selectAllEntries").on('change', function () {
+            $(".entry-select").prop('checked', this.checked);
+        });
+
+        // A row unchecked by hand must not leave the header claiming all are
+        // selected, which is the state that gets someone to delete more than
+        // they meant to.
+        $(".entry-select").on('change', function () {
+            $("#selectAllEntries").prop('checked',
+                    selection().length === $(".entry-select").length);
+        });
+
+        $("#bulkDeleteButton").on('click', function () {
+            $("#bulkDeleteCount").text(
+                    selection().length + " " + "<spring:message code="weblogEntryQuery.selectedCount"/>");
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('bulk-delete-modal')).show();
+        });
+    });
 </script>

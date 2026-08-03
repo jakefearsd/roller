@@ -46,11 +46,14 @@ import org.apache.roller.weblogger.pojos.ShareLink;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntryRevision;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.core.RollerContext;
+import org.apache.roller.weblogger.util.HTMLSanitizer;
+import org.apache.roller.weblogger.util.TextDiff;
 import org.apache.roller.weblogger.util.TokenGenerator;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.util.MailUtil;
@@ -187,8 +190,8 @@ public class EntryEditController extends BaseController {
     @PostMapping("/entryEdit!preview.rol")
     @ResponseBody
     public ResponseEntity<String> entryEditPreview(HttpServletRequest request,
-                                                   @RequestParam(required = false) String id,
-                                                   @RequestParam(required = false) String text) {
+                                                   @RequestParam(value = "id", required = false) String id,
+                                                   @RequestParam(value = "text", required = false) String text) {
         WeblogEntry entry;
         if (id != null && !id.isBlank()) {
             entry = lookupEntry(id, request);
@@ -209,6 +212,136 @@ public class EntryEditController extends BaseController {
         return ResponseEntity.ok()
                 .contentType(MediaType.valueOf("text/html;charset=UTF-8"))
                 .body(entry.getTransformedText());
+    }
+
+    /**
+     * The diff between one revision and the entry as it stands now.
+     *
+     * <p>Returns a fragment for the editor's revision modal rather than a
+     * page. Both ids are client input, so both are checked: the entry through
+     * the usual ownership lookup, and the revision by confirming it actually
+     * belongs to that entry -- otherwise a revision id from another weblog
+     * would render that weblog's unpublished text here.
+     */
+    @PostMapping("/entryEdit!revisionDiff.rol")
+    @ResponseBody
+    public ResponseEntity<String> entryEditRevisionDiff(HttpServletRequest request,
+                                                        @RequestParam(value = "id", required = false) String id,
+                                                        @RequestParam(value = "revisionId",
+                                                                required = false)
+                                                        String revisionId) {
+        WeblogEntry entry = lookupEntry(id, request);
+        WeblogEntryRevision revision = lookupRevision(revisionId, entry);
+        if (revision == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        StringBuilder html = new StringBuilder("<div class=\"revision-diff\">");
+        appendDiff(html, getText("weblogEdit.title", request),
+                revision.getTitle(), entry.getTitle());
+        appendDiff(html, getText("weblogEdit.summary", request),
+                revision.getSummary(), entry.getSummary());
+        appendDiff(html, getText("weblogEdit.content", request),
+                revision.getText(), entry.getText());
+        html.append("</div>");
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.valueOf("text/html;charset=UTF-8"))
+                .body(html.toString());
+    }
+
+    /**
+     * Appends one labelled section of the diff, or nothing at all when that
+     * field did not change -- three "no changes" headings would bury the one
+     * section the author opened the modal to read.
+     */
+    private void appendDiff(StringBuilder html, String label, String before, String after) {
+        List<TextDiff.Line> lines = TextDiff.diff(before, after);
+        if (lines.isEmpty()) {
+            return;
+        }
+        html.append("<h5>").append(HTMLSanitizer.htmlEncodeTag(label)).append("</h5><pre>");
+        for (TextDiff.Line line : lines) {
+            String cssClass = switch (line.kind()) {
+                case ADDED -> "diff-added";
+                case REMOVED -> "diff-removed";
+                case SAME -> "diff-same";
+            };
+            String marker = switch (line.kind()) {
+                case ADDED -> "+ ";
+                case REMOVED -> "- ";
+                case SAME -> "  ";
+            };
+            // The revision holds the author's raw Markdown, which may contain
+            // any amount of HTML. It is being shown as source, so every
+            // character of it is escaped rather than rendered.
+            html.append("<span class=\"").append(cssClass).append("\">").append(marker)
+                    .append(HTMLSanitizer.htmlEncodeTag(line.text())).append("</span>\n");
+        }
+        html.append("</pre>");
+    }
+
+    /**
+     * Puts a revision's content back, through the ordinary save path so the
+     * state it replaces becomes a revision of its own. Restoring is therefore
+     * undoable by restoring again, and never loses work.
+     */
+    @PostMapping("/entryEdit!restoreRevision.rol")
+    public String entryEditRestoreRevision(HttpServletRequest request,
+                                           @RequestParam(value = "bean.id", required = false)
+                                           String id,
+                                           @RequestParam(value = "revisionId", required = false) String revisionId,
+                                           RedirectAttributes redirectAttributes) {
+        WeblogEntry entry = lookupEntry(id, request);
+        WeblogEntryRevision revision = lookupRevision(revisionId, entry);
+        if (revision == null) {
+            addFlashError(redirectAttributes, "weblogEntry.notFound", request);
+            return "redirect:/roller-ui/authoring/entries.rol?weblog="
+                    + getActionWeblog(request).getHandle();
+        }
+
+        try {
+            entry.setTitle(revision.getTitle());
+            entry.setText(revision.getText());
+            entry.setSummary(revision.getSummary());
+            weblogger.getWeblogEntryManager().saveWeblogEntry(entry);
+            weblogger.flush();
+
+            if (entry.isPublished()) {
+                weblogger.getIndexManager().addEntryReIndexOperation(entry);
+            }
+            CacheManager.invalidate(entry);
+
+            addFlashMessage(redirectAttributes, "weblogEdit.revisionRestored", request);
+        } catch (Exception e) {
+            log.error("Error restoring revision " + revisionId, e);
+            addFlashError(redirectAttributes, "generic.error.check.logs", request);
+        }
+        return redirectToEntryEdit(request, entry);
+    }
+
+    /**
+     * The revision with this id, but only when it belongs to {@code entry}
+     * (which the caller has already established they may edit). Null for an
+     * unknown id, a foreign one, or a null entry -- indistinguishable to the
+     * caller, exactly like {@code lookupEntry}.
+     */
+    private WeblogEntryRevision lookupRevision(String revisionId, WeblogEntry entry) {
+        if (entry == null || revisionId == null) {
+            return null;
+        }
+        try {
+            WeblogEntryRevision revision =
+                    weblogger.getWeblogEntryManager().getRevision(revisionId);
+            if (revision == null || revision.getWeblogEntry() == null
+                    || !entry.getId().equals(revision.getWeblogEntry().getId())) {
+                return null;
+            }
+            return revision;
+        } catch (WebloggerException e) {
+            log.error("Error looking up revision " + revisionId, e);
+            return null;
+        }
     }
 
     @GetMapping("/entryEdit!firstSave.rol")
@@ -468,6 +601,15 @@ public class EntryEditController extends BaseController {
         // itself so it can never advertise a shortcode that does not render,
         // or omit one that does.
         model.addAttribute("shortcodeCards", ShortcodeExpander.defaultExpander().cards());
+
+        if (entry.getId() != null) {
+            try {
+                model.addAttribute("entryRevisions",
+                        weblogger.getWeblogEntryManager().getRevisions(entry));
+            } catch (WebloggerException e) {
+                log.error("Error loading revisions for entry " + entry.getId(), e);
+            }
+        }
 
         if (entry.getId() != null) {
             model.addAttribute("previewURL", weblogger.getUrlStrategy()

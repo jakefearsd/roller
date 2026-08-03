@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,9 +34,11 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.ui.controllers.pagers.EntriesPager;
 import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.springframework.stereotype.Controller;
@@ -160,6 +163,148 @@ public class EntriesController extends BaseController {
             addFlashError(redirectAttributes, "generic.error.check.logs", request);
             return backToList;
         }
+    }
+
+    // ---------------------------------------------------------- bulk actions
+
+    /**
+     * Publishes every selected entry.
+     *
+     * <p>An author without POST permission can only submit for review, exactly
+     * as the editor's own publish button does -- a bulk action must not be a
+     * way around a permission the single-entry path enforces.
+     */
+    @PostMapping("/entries!bulkPublish.rol")
+    public String bulkPublish(HttpServletRequest request,
+                              @RequestParam(value = "selectedEntries", required = false)
+                              List<String> selectedEntries,
+                              RedirectAttributes redirectAttributes) {
+        boolean mayPublish = getActionWeblog(request)
+                .hasUserPermission(getAuthenticatedUser(request), WeblogPermission.POST);
+        PubStatus target = mayPublish ? PubStatus.PUBLISHED : PubStatus.PENDING;
+
+        return applyToSelection(request, selectedEntries, redirectAttributes,
+                mayPublish ? "weblogEntryQuery.bulkPublished" : "weblogEntryQuery.bulkSubmitted",
+                entry -> {
+                    if (target == PubStatus.PUBLISHED && !entry.isPublished()) {
+                        // The tag cloud counts published entries only, so a
+                        // draft becoming published must add all of its tags.
+                        entry.setRefreshAggregates(true);
+                    }
+                    entry.setStatus(target);
+                    entry.setUpdateTime(new Timestamp(System.currentTimeMillis()));
+                    if (entry.isPublished() && entry.getPubTime() == null) {
+                        entry.setPubTime(entry.getUpdateTime());
+                    }
+                    weblogger.getWeblogEntryManager().saveWeblogEntry(entry);
+
+                    if (entry.isPublished()) {
+                        weblogger.getIndexManager().addEntryReIndexOperation(entry);
+                    }
+                    CacheManager.invalidate(entry);
+                });
+    }
+
+    /** Adds one tag to every selected entry, leaving the tags they already carry. */
+    @PostMapping("/entries!bulkTag.rol")
+    public String bulkTag(HttpServletRequest request,
+                          @RequestParam(value = "selectedEntries", required = false)
+                          List<String> selectedEntries,
+                          @RequestParam(value = "bulkTag", required = false) String bulkTag,
+                          RedirectAttributes redirectAttributes) {
+        String tag = StringUtils.trimToNull(bulkTag);
+        if (tag == null) {
+            addFlashError(redirectAttributes, "weblogEntryQuery.bulkTagMissing", request);
+            return backToList(request);
+        }
+
+        return applyToSelection(request, selectedEntries, redirectAttributes,
+                "weblogEntryQuery.bulkTagged",
+                entry -> {
+                    entry.addTag(tag);
+                    weblogger.getWeblogEntryManager().saveWeblogEntry(entry);
+                    CacheManager.invalidate(entry);
+                });
+    }
+
+    /**
+     * Deletes every selected entry, each through the same path the single-entry
+     * delete uses -- a bulk JPQL delete would leave the search index holding
+     * documents for entries that no longer exist.
+     */
+    @PostMapping("/entries!bulkDelete.rol")
+    public String bulkDelete(HttpServletRequest request,
+                             @RequestParam(value = "selectedEntries", required = false)
+                             List<String> selectedEntries,
+                             RedirectAttributes redirectAttributes) {
+        return applyToSelection(request, selectedEntries, redirectAttributes,
+                "weblogEntryQuery.bulkDeleted", this::removeEntryWithIndex);
+    }
+
+    /** What one bulk action does to one entry, once it has been found and vetted. */
+    @FunctionalInterface
+    private interface EntryAction {
+        void apply(WeblogEntry entry) throws WebloggerException;
+    }
+
+    /**
+     * The shared body of every bulk action: resolve each selected id through
+     * the ownership check, apply the action, and report honestly.
+     *
+     * <p>Two decisions worth stating. First, each id goes through
+     * {@code lookupEntry} individually -- the ids are client input, and a
+     * single foreign id slipped into the form would otherwise let an editor on
+     * one weblog rewrite or delete another's posts. Second, an id that fails is
+     * counted and reported rather than aborting the batch: rolling the whole
+     * selection back because one entry was deleted in another tab would be a
+     * worse answer than doing the other nineteen and saying so.
+     */
+    private String applyToSelection(HttpServletRequest request, List<String> selectedEntries,
+                                    RedirectAttributes redirectAttributes, String successKey,
+                                    EntryAction action) {
+        if (selectedEntries == null || selectedEntries.isEmpty()) {
+            addFlashError(redirectAttributes, "weblogEntryQuery.bulkNothingSelected", request);
+            return backToList(request);
+        }
+
+        int applied = 0;
+        List<String> failed = new ArrayList<>();
+        for (String id : selectedEntries) {
+            WeblogEntry entry = lookupEntry(id, request);
+            if (entry == null) {
+                failed.add(id);
+                continue;
+            }
+            try {
+                action.apply(entry);
+                applied++;
+            } catch (Exception e) {
+                log.error("Bulk action failed for entry " + id, e);
+                failed.add(id);
+            }
+        }
+
+        try {
+            weblogger.flush();
+        } catch (WebloggerException e) {
+            log.error("Error flushing bulk action", e);
+            addFlashError(redirectAttributes, "generic.error.check.logs", request);
+            return backToList(request);
+        }
+
+        if (applied > 0) {
+            addFlashMessage(redirectAttributes, successKey, String.valueOf(applied), request);
+        }
+        if (!failed.isEmpty()) {
+            addFlashError(redirectAttributes, "weblogEntryQuery.bulkFailed",
+                    String.valueOf(failed.size()), request);
+        }
+        return backToList(request);
+    }
+
+    private String backToList(HttpServletRequest request) {
+        return "redirect:/roller-ui/authoring/entries.rol?weblog="
+                + getActionWeblog(request).getHandle();
     }
 
     private String buildBaseUrl(HttpServletRequest request, EntriesBean bean) {

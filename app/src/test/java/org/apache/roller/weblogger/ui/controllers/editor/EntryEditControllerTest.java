@@ -32,6 +32,8 @@ import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.ShareLink;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntryRevision;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.junit.jupiter.api.BeforeEach;
@@ -1046,5 +1048,96 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         var response = controller.entryEditPreview(request, "no-such-entry-id", "anything");
 
         assertEquals(404, response.getStatusCode().value());
+    }
+
+    // ------------------------------------------------------------- revisions
+
+    /**
+     * Restoring rewrites the entry's content, so the revision id is exactly as
+     * dangerous as an entry id. It arrives as client input and must be proven
+     * to belong to the entry the caller may edit -- otherwise another weblog's
+     * unpublished draft could be pushed into this one.
+     */
+    @Test
+    void aRevisionBelongingToAnotherEntryIsNotRestored() throws Exception {
+        WeblogEntry entry = existingEntry(PubStatus.PUBLISHED);
+        entry.setText("Current text");
+
+        WeblogEntry otherEntry = new WeblogEntry();
+        otherEntry.setId("entry-2");
+        WeblogEntryRevision foreign = new WeblogEntryRevision();
+        foreign.setId("revision-1");
+        foreign.setWeblogEntry(otherEntry);
+        foreign.setText("Someone else's draft");
+        when(weblogger.getWeblogEntryManager().getRevision("revision-1")).thenReturn(foreign);
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        controller.entryEditRestoreRevision(request, "entry-1", "revision-1", redirect);
+
+        assertEquals("Current text", entry.getText(), "another entry's revision was restored");
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+        assertEquals(java.util.List.of("weblogEntry.notFound"), flashErrors(redirect));
+    }
+
+    @Test
+    void restoringPutsTheRevisionsContentBackThroughTheNormalSave() throws Exception {
+        WeblogEntry entry = existingEntry(PubStatus.PUBLISHED);
+        entry.setText("Current text");
+        entry.setTitle("Current title");
+
+        WeblogEntryRevision revision = new WeblogEntryRevision();
+        revision.setId("revision-1");
+        revision.setWeblogEntry(entry);
+        revision.setTitle("Older title");
+        revision.setText("Older text");
+        revision.setSummary("Older summary");
+        when(weblogger.getWeblogEntryManager().getRevision("revision-1")).thenReturn(revision);
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        String view = controller.entryEditRestoreRevision(request, "entry-1", "revision-1", redirect);
+
+        assertEquals("Older title", entry.getTitle());
+        assertEquals("Older text", entry.getText());
+        assertEquals("Older summary", entry.getSummary());
+        // Through saveWeblogEntry, which is what makes the replaced version a
+        // revision of its own and the restore itself undoable.
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(entry);
+        assertEquals("redirect:/roller-ui/authoring/entryEdit.rol?weblog=" + WEBLOG_HANDLE
+                + "&bean.id=entry-1", view);
+    }
+
+    @Test
+    void aDiffForAnUnknownRevisionIsNotFound() throws Exception {
+        existingEntry(PubStatus.PUBLISHED);
+        when(weblogger.getWeblogEntryManager().getRevision("no-such-revision")).thenReturn(null);
+
+        var response = controller.entryEditRevisionDiff(request, "entry-1", "no-such-revision");
+
+        assertEquals(404, response.getStatusCode().value());
+    }
+
+    /**
+     * A revision holds the author's raw Markdown, which may contain any HTML at
+     * all. The diff shows it as source, so it must arrive escaped -- otherwise
+     * the modal would execute whatever an entry once contained.
+     */
+    @Test
+    void theDiffEscapesTheContentItDisplays() throws Exception {
+        WeblogEntry entry = existingEntry(PubStatus.PUBLISHED);
+        entry.setText("after");
+
+        WeblogEntryRevision revision = new WeblogEntryRevision();
+        revision.setId("revision-1");
+        revision.setWeblogEntry(entry);
+        revision.setText("<script>alert(1)</script>");
+        when(weblogger.getWeblogEntryManager().getRevision("revision-1")).thenReturn(revision);
+
+        var response = controller.entryEditRevisionDiff(request, "entry-1", "revision-1");
+
+        assertEquals(200, response.getStatusCode().value());
+        String body = response.getBody();
+        assertTrue(body != null && !body.contains("<script>"),
+                "the diff rendered raw markup from a revision: " + body);
+        assertTrue(body.contains("&lt;script&gt;"), "the removed line must appear, escaped");
     }
 }

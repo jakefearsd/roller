@@ -62,7 +62,7 @@ public class SchemaMigrationTest {
             "roller_tasklock",
             "roller_user", "roller_weblogentrytag", "roller_weblogentrytagagg",
             "userrole", "weblog", "weblog_custom_template", "weblogcategory",
-            "weblogentry");
+            "weblogentry", "weblogentry_revision");
 
     /**
      * Tables belonging to features removed in 6.2.0. The baseline must not

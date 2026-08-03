@@ -34,6 +34,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -270,6 +271,179 @@ class EntriesControllerTest extends EditorControllerTestSupport {
 
         assertEquals("redirect:/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE, view);
         assertEquals(List.of("generic.error.check.logs"), flashErrors(redirect));
+    }
+
+    // ----------------------------------------------------------- bulk actions
+
+    @Test
+    void bulkPublishFlipsOnlyTheSelectedEntries() throws Exception {
+        givenPostPermission();
+        WeblogEntry selected = ownedDraft("entry-1");
+        WeblogEntry notSelected = ownedDraft("entry-2");
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        controller.bulkPublish(request, List.of("entry-1"), redirect);
+
+        assertEquals(WeblogEntry.PubStatus.PUBLISHED, selected.getStatus());
+        assertEquals(WeblogEntry.PubStatus.DRAFT, notSelected.getStatus(),
+                "an entry that was not selected must not be touched");
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(selected);
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(notSelected);
+        assertTrue(flashErrors(redirect).isEmpty());
+    }
+
+    /**
+     * A newly published entry needs a pubTime or it sorts to the top of the
+     * blog as if it had never been dated.
+     */
+    @Test
+    void bulkPublishDatesAnEntryThatHasNeverBeenPublished() throws Exception {
+        givenPostPermission();
+        WeblogEntry entry = ownedDraft("entry-1");
+        assertNull(entry.getPubTime());
+
+        controller.bulkPublish(request, List.of("entry-1"), newRedirectAttributes());
+
+        assertNotNull(entry.getPubTime(), "a published entry must carry a publication time");
+        assertEquals(Boolean.TRUE, entry.getRefreshAggregates(),
+                "a draft becoming published must re-count its tags");
+    }
+
+    /**
+     * The bulk path must not become a way around a permission the single-entry
+     * publish button enforces.
+     */
+    @Test
+    void anAuthorWithoutPostPermissionCanOnlySubmitForReview() throws Exception {
+        WeblogEntry entry = ownedDraft("entry-1");
+
+        controller.bulkPublish(request, List.of("entry-1"), newRedirectAttributes());
+
+        assertEquals(WeblogEntry.PubStatus.PENDING, entry.getStatus());
+    }
+
+    @Test
+    void bulkDeleteRemovesEachEntryFromTheSearchIndex() throws Exception {
+        WeblogEntry first = ownedDraft("entry-1");
+        first.setStatus(WeblogEntry.PubStatus.PUBLISHED);
+        WeblogEntry second = ownedDraft("entry-2");
+        second.setStatus(WeblogEntry.PubStatus.PUBLISHED);
+
+        controller.bulkDelete(request, List.of("entry-1", "entry-2"), newRedirectAttributes());
+
+        // A bulk JPQL delete would skip exactly this, leaving the index holding
+        // documents that link to pages which now 404.
+        verify(weblogger.getIndexManager()).removeEntryIndexOperation(first);
+        verify(weblogger.getIndexManager()).removeEntryIndexOperation(second);
+        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(first);
+        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(second);
+    }
+
+    /**
+     * The security case: one foreign id in a selection of otherwise-valid ones.
+     * It must be refused without taking the rest of the batch down with it.
+     */
+    @Test
+    void aForeignEntryInTheSelectionIsRefusedWithoutAffectingTheOthers() throws Exception {
+        givenPostPermission();
+        WeblogEntry mine = ownedDraft("entry-1");
+        WeblogEntry foreign = entryNamed("entry-2");
+        Weblog otherWeblog = new Weblog();
+        otherWeblog.setId("weblog-2");
+        foreign.setAnchor("anchor-entry-2");
+        foreign.setWebsite(otherWeblog);
+        foreign.setStatus(WeblogEntry.PubStatus.DRAFT);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-2")).thenReturn(foreign);
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        controller.bulkPublish(request, List.of("entry-1", "entry-2"), redirect);
+
+        assertEquals(WeblogEntry.PubStatus.PUBLISHED, mine.getStatus());
+        assertEquals(WeblogEntry.PubStatus.DRAFT, foreign.getStatus(),
+                "another weblog's entry was published through the bulk endpoint");
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(foreign);
+        assertEquals(List.of("weblogEntryQuery.bulkFailed"), flashErrors(redirect));
+    }
+
+    /**
+     * One entry failing must not roll back the ones that worked -- and the
+     * author has to be told, or a silent partial success reads as a full one.
+     */
+    @Test
+    void oneFailureIsReportedAndTheRestStillApply() throws Exception {
+        givenPostPermission();
+        WeblogEntry good = ownedDraft("entry-1");
+        WeblogEntry bad = ownedDraft("entry-2");
+        doThrow(new WebloggerException("constraint violation"))
+                .when(weblogger.getWeblogEntryManager()).saveWeblogEntry(bad);
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        controller.bulkPublish(request, List.of("entry-1", "entry-2"), redirect);
+
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(good);
+        assertEquals(List.of("weblogEntryQuery.bulkFailed"), flashErrors(redirect));
+        assertEquals(List.of("weblogEntryQuery.bulkPublished"), flashMessages(redirect));
+    }
+
+    @Test
+    void bulkTagAddsTheTagToEverySelectedEntry() throws Exception {
+        WeblogEntry entry = ownedDraft("entry-1");
+
+        controller.bulkTag(request, List.of("entry-1"), "cycling", newRedirectAttributes());
+
+        assertTrue(entry.getTagsAsString().contains("cycling"));
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(entry);
+    }
+
+    @Test
+    void bulkTagWithNoTagTypedChangesNothing() throws Exception {
+        WeblogEntry entry = ownedDraft("entry-1");
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        controller.bulkTag(request, List.of("entry-1"), "   ", redirect);
+
+        assertTrue(entry.getTags().isEmpty());
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+        assertEquals(List.of("weblogEntryQuery.bulkTagMissing"), flashErrors(redirect));
+    }
+
+    @Test
+    void anEmptySelectionSaysSoInsteadOfClaimingSuccess() throws Exception {
+        RedirectAttributes redirect = newRedirectAttributes();
+        String view = controller.bulkDelete(request, null, redirect);
+
+        assertEquals("redirect:/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE, view);
+        assertEquals(List.of("weblogEntryQuery.bulkNothingSelected"), flashErrors(redirect));
+        assertTrue(flashMessages(redirect).isEmpty());
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+    }
+
+    /**
+     * Grant POST on the action weblog, which is what separates publishing from
+     * submitting for review. The check funnels through
+     * {@code UserManager.checkPermission}, so that is where the grant goes.
+     */
+    private void givenPostPermission() throws Exception {
+        when(weblogger.getUserManager().checkPermission(any(), any())).thenReturn(true);
+    }
+
+    /**
+     * A DRAFT entry of the action weblog, stubbed into the by-id lookup.
+     *
+     * <p>The anchor matters here even though nothing reads it:
+     * {@code WeblogEntry.equals} is anchor plus weblog, so two fixtures with
+     * null anchors on one weblog are the same argument as far as Mockito is
+     * concerned, and every {@code verify} would then pass or fail for the
+     * wrong reason.
+     */
+    private WeblogEntry ownedDraft(String id) throws Exception {
+        WeblogEntry entry = entryNamed(id);
+        entry.setTitle("Entry " + id);
+        entry.setAnchor("anchor-" + id);
+        entry.setWebsite(weblog);
+        entry.setStatus(WeblogEntry.PubStatus.DRAFT);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry(id)).thenReturn(entry);
+        return entry;
     }
 
     /** An entry of the action weblog, stubbed into the manager's by-id lookup. */

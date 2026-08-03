@@ -171,6 +171,14 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         //}
         this.strategy.flush();
 
+        // remove entry revisions before the entries they hang off. Deleting
+        // them per-entry would work too, but one statement is cheaper than one
+        // per entry, and the FK means getting the order wrong is not a
+        // subtle failure -- the weblog delete simply stops.
+        Query removeRevisions = strategy.getNamedUpdate("WeblogEntryRevision.removeByWeblog");
+        removeRevisions.setParameter(1, weblog);
+        removeRevisions.executeUpdate();
+
         // remove entries
         TypedQuery<WeblogEntry> refQuery = strategy.getNamedQuery("WeblogEntry.getByWebsite", WeblogEntry.class);
         refQuery.setParameter(1, weblog);

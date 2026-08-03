@@ -25,13 +25,9 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
-import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -75,24 +71,7 @@ public class EntryRemoveController extends BaseController {
         WeblogEntry entry = lookupEntry(removeId, request);
         if (entry != null) {
             try {
-                IndexManager manager = weblogger.getIndexManager();
-                try {
-                    WeblogEntry.PubStatus originalStatus = entry.getStatus();
-                    entry.setStatus(WeblogEntry.PubStatus.DRAFT);
-                    manager.addEntryReIndexOperation(entry);
-                    entry.setStatus(originalStatus);
-                } catch (WebloggerException ex) {
-                    log.warn("Trouble triggering entry indexing", ex);
-                }
-
-                if (entry.isPublished()) {
-                    manager.removeEntryIndexOperation(entry);
-                }
-
-                CacheManager.invalidate(entry);
-
-                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
-                wmgr.removeWeblogEntry(entry);
+                removeEntryWithIndex(entry);
                 weblogger.flush();
 
                 addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);
@@ -128,24 +107,7 @@ public class EntryRemoveController extends BaseController {
         WeblogEntry entry = lookupEntry(removeId, request);
         if (entry != null) {
             try {
-                IndexManager manager = weblogger.getIndexManager();
-                try {
-                    WeblogEntry.PubStatus originalStatus = entry.getStatus();
-                    entry.setStatus(WeblogEntry.PubStatus.DRAFT);
-                    manager.addEntryReIndexOperation(entry);
-                    entry.setStatus(originalStatus);
-                } catch (WebloggerException ex) {
-                    log.warn("Trouble triggering entry indexing", ex);
-                }
-
-                if (entry.isPublished()) {
-                    manager.removeEntryIndexOperation(entry);
-                }
-
-                CacheManager.invalidate(entry);
-
-                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
-                wmgr.removeWeblogEntry(entry);
+                removeEntryWithIndex(entry);
                 weblogger.flush();
 
                 addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);

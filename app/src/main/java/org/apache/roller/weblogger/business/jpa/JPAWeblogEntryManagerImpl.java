@@ -48,6 +48,8 @@ import org.apache.roller.weblogger.pojos.WeblogEntryTagAggregate;
 import org.apache.roller.weblogger.pojos.WeblogEntryTag;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntryAttribute;
+import org.apache.roller.weblogger.pojos.WeblogEntryRevision;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.StatCountCountComparator;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -235,8 +237,19 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         
         // Store value object (creates new or updates existing)
         entry.setUpdateTime(new Timestamp(new Date().getTime()));
-        
+
         this.strategy.store(entry);
+
+        // AFTER storing the entry, never before: the revision carries a
+        // foreign key to it, and an entry that is not yet in the persistence
+        // context resolves to a null entryid rather than to a row. What the
+        // revision RECORDS is still the pre-save content -- that was captured
+        // when the entry was loaded, not now.
+        recordRevision(entry);
+
+        // The entry's new content is now what a further save in this session
+        // would be replacing.
+        entry.snapshotLoadedContent();
         
         // update weblog last modified date.  date updated by saveWebsite()
         if(entry.isPublished()) {
@@ -248,9 +261,83 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     /**
      * @inheritDoc
      */
+    /**
+     * Records what this save is about to displace, and prunes to the
+     * configured retention.
+     *
+     * <p>Retention lives in {@code entry.revisions.retention}: -1 (the
+     * default) keeps everything, 0 records nothing, and a positive n keeps the
+     * n newest. Pruning happens in the same transaction as the save, so the
+     * table cannot drift above the cap between calls.
+     *
+     * <p>A failure here must not cost the author their save -- revisions are a
+     * convenience, the entry is the work -- so problems are logged rather than
+     * thrown.
+     */
+    private void recordRevision(WeblogEntry entry) {
+        try {
+            int retention = WebloggerRuntimeConfig.getIntProperty("entry.revisions.retention");
+            if (retention == 0) {
+                return;
+            }
+
+            WeblogEntryRevision revision = entry.contentBeingReplaced(entry.getCreatorUserName());
+            if (revision == null) {
+                return;
+            }
+            // Point at the instance that was just stored. The snapshot was
+            // built at load time and may hold a reference that has since been
+            // detached, which writes as a null foreign key.
+            revision.setWeblogEntry(entry);
+
+            // Read the existing rows BEFORE storing the new one: the store is
+            // still pending at this point, so a query would not count it and
+            // the table would settle one row above the cap. Keeping
+            // retention-1 of the old rows plus the new one is what makes the
+            // total come out at exactly retention.
+            List<WeblogEntryRevision> existing =
+                    retention > 0 ? getRevisions(entry) : List.<WeblogEntryRevision>of();
+
+            this.strategy.store(revision);
+
+            for (int i = retention - 1; i < existing.size(); i++) {
+                this.strategy.remove(existing.get(i));
+            }
+        } catch (Exception e) {
+            LOG.warn("Could not record a revision for entry " + entry.getId()
+                    + "; the save itself is unaffected", e);
+        }
+    }
+
+    @Override
+    public List<WeblogEntryRevision> getRevisions(WeblogEntry entry) throws WebloggerException {
+        if (entry == null || entry.getId() == null) {
+            return Collections.emptyList();
+        }
+        TypedQuery<WeblogEntryRevision> query = strategy.getNamedQuery(
+                "WeblogEntryRevision.getByEntry", WeblogEntryRevision.class);
+        query.setParameter(1, entry);
+        return query.getResultList();
+    }
+
+    @Override
+    public WeblogEntryRevision getRevision(String id) throws WebloggerException {
+        if (id == null) {
+            return null;
+        }
+        return (WeblogEntryRevision) strategy.load(WeblogEntryRevision.class, id);
+    }
+
     @Override
     public void removeWeblogEntry(WeblogEntry entry) throws WebloggerException {
         Weblog weblog = entry.getWebsite();
+
+        // Revisions FK the entry, so they go first. The database would cascade
+        // anyway, but doing it here keeps the persistence context in step --
+        // EclipseLink does not know about a cascade it did not issue.
+        Query removeRevisions = strategy.getNamedUpdate("WeblogEntryRevision.removeByEntry");
+        removeRevisions.setParameter(1, entry);
+        removeRevisions.executeUpdate();
         
         CommentSearchCriteria csc = new CommentSearchCriteria();
         csc.setEntry(entry);

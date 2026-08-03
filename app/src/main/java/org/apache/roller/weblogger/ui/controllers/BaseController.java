@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -38,6 +39,7 @@ import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
 import org.apache.roller.weblogger.ui.core.util.menu.MenuHelper;
+import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.ui.Model;
@@ -256,6 +258,40 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
             baseLog.error("Error looking up entry by id - " + id, ex);
         }
         return null;
+    }
+
+    /**
+     * Deletes an entry and everything that indexes or caches it.
+     *
+     * <p>The order matters and the steps are not optional. The search index
+     * holds documents keyed by entry id, so an entry removed from the database
+     * without {@code removeEntryIndexOperation} leaves a document that still
+     * matches searches and links to a page that 404s. The re-index of the
+     * entry as a DRAFT first is how the index learns to drop it while the
+     * entry still exists to be read. {@code CacheManager.invalidate} then
+     * clears the rendered pages that contained it.
+     *
+     * <p>Indexing failures are logged and swallowed rather than aborting the
+     * delete: an index that has fallen behind is repairable from the admin
+     * screen, whereas a half-deleted entry is not.
+     */
+    protected void removeEntryWithIndex(WeblogEntry entry) throws WebloggerException {
+        IndexManager indexManager = weblogger.getIndexManager();
+        try {
+            WeblogEntry.PubStatus originalStatus = entry.getStatus();
+            entry.setStatus(WeblogEntry.PubStatus.DRAFT);
+            indexManager.addEntryReIndexOperation(entry);
+            entry.setStatus(originalStatus);
+
+            if (entry.isPublished()) {
+                indexManager.removeEntryIndexOperation(entry);
+            }
+        } catch (WebloggerException ex) {
+            baseLog.warn("Trouble triggering entry indexing for " + entry.getId(), ex);
+        }
+
+        CacheManager.invalidate(entry);
+        weblogger.getWeblogEntryManager().removeWeblogEntry(entry);
     }
 
     // --- Comment management helpers ---

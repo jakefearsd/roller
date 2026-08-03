@@ -124,12 +124,12 @@ public class MessageKeyTest {
      * cannot see because they are addressed dynamically rather than via a
      * literal {@code <spring:message code="...">}:
      * <ul>
-     *   <li>32 {@code configForm.*} keys read off {@code key="..."} attributes in
+     *   <li>33 {@code configForm.*} keys read off {@code key="..."} attributes in
      *       {@code runtimeConfigDefs.xml} (GlobalConfig.jsp renders display
      *       groups/properties generically via {@code ${dg.key}} / property
-     *       metadata, not a literal code; one more than the Stage 1E baseline
-     *       of 31, for the Stage 2 Wave 1 {@code uploads.exif.stripGps}
-     *       property-def).</li>
+     *       metadata, not a literal code; two more than the Stage 1E baseline
+     *       of 31, for the Stage 2 Wave 1 {@code uploads.exif.stripGps} and the
+     *       Wave 4 {@code entry.revisions.retention} property-defs).</li>
      *   <li>16 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
      *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
      *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
@@ -163,11 +163,11 @@ public class MessageKeyTest {
 
     /**
      * Keys the text scan cannot see: {@code runtimeConfigDefs.xml} {@code key=}
-     * attributes (32) + {@code admin-menu.xml}/{@code editor-menu.xml}
+     * attributes (33) + {@code admin-menu.xml}/{@code editor-menu.xml}
      * {@code name=} attributes (16). See the javadoc on
      * {@link #reportsBundleKeysNoJspOrControllerUses()}.
      */
-    private static final int KNOWN_DYNAMIC_KEY_COUNT = 48;
+    private static final int KNOWN_DYNAMIC_KEY_COUNT = 49;
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();

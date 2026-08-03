@@ -17,7 +17,6 @@
  */
 package org.apache.roller.it;
 
-import com.codeborne.selenide.SelenideElement;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -104,10 +103,14 @@ class DuplicateEntryIT extends RollerIT {
         return id;
     }
 
-    /** Submits the duplicate form of the list row for this entry id. */
+    /**
+     * Presses the duplicate button of the list row for this entry id.
+     *
+     * <p>The button carries the id as its own name/value rather than a hidden
+     * field, because the whole table is one form (the bulk actions need it that
+     * way) and only the clicked submit button's value is sent.
+     */
     private void duplicateRowFor(String entryId) {
-        SelenideElement duplicateInput =
-                $("input[name='duplicateId'][value='" + entryId + "']").should(exist);
-        duplicateInput.parent().$("button[type='submit']").should(visible).click();
+        $("button[name='duplicateId'][value='" + entryId + "']").should(visible).click();
     }
 }

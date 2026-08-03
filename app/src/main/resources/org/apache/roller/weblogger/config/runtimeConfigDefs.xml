@@ -105,7 +105,14 @@
          <type>boolean</type>
          <default-value>true</default-value>
       </property-def>
-      
+      <!-- How many revisions to keep per entry. -1 keeps everything, which is
+           the shipped behaviour: nothing is pruned unless an installation asks
+           for it. 0 records no revisions at all. -->
+      <property-def  name="entry.revisions.retention"  key="configForm.entryRevisionsRetention">
+         <type>integer</type>
+         <default-value>-1</default-value>
+      </property-def>
+
    </display-group>
    
    

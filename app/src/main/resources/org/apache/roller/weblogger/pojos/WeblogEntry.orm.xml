@@ -32,6 +32,11 @@
         <named-query name="WeblogEntry.updateAllowComments&amp;CommentDaysByWebsite">
             <query>UPDATE WeblogEntry e SET e.allowComments = ?1, e.commentDays = ?2 WHERE e.website = ?3</query>
         </named-query>
+        <!-- Remembers the title/text/summary this entry was loaded with, so a
+             later save can tell whether the content actually changed and, when
+             it did, record what it displaced. Without this the entry has only
+             the caller's new values by the time it reaches saveWeblogEntry. -->
+        <post-load method-name="snapshotLoadedContent"/>
         <attributes>
             <id name="id">
                 <column name="id"/>

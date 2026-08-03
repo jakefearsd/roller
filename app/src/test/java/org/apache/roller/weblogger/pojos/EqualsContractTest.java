@@ -213,7 +213,21 @@ class EqualsContractTest {
                         weblogPermission("alice", "blog-a", "admin")),
 
                 new Specimen("ShareLink (keyed on token)",
-                        shareLink("token-a"), shareLink("token-a"), shareLink("token-b")));
+                        shareLink("token-a"), shareLink("token-a"), shareLink("token-b")),
+
+                new Specimen("WeblogEntryRevision (keyed on id)",
+                        revision("revision-a"), revision("revision-a"), revision("revision-b")));
+    }
+
+    /**
+     * Keyed on the surrogate id alone. A revision has no natural key: two
+     * saves can displace byte-identical content, and those are still two
+     * distinct revisions with distinct timestamps.
+     */
+    private static WeblogEntryRevision revision(String id) {
+        WeblogEntryRevision revision = new WeblogEntryRevision();
+        revision.setId(id);
+        return revision;
     }
 
     private static ShareLink shareLink(String token) {

@@ -30,6 +30,7 @@ import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
+import org.apache.roller.weblogger.pojos.WeblogEntryRevision;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogHitCount;
 
@@ -53,6 +54,24 @@ public interface WeblogEntryManager {
      * Get weblog entry by id.
      */
     WeblogEntry getWeblogEntry(String id) throws WebloggerException;
+
+    /**
+     * This entry's saved revisions, newest first.
+     *
+     * <p>Each holds the entry's content as it stood BEFORE one save, so the
+     * first element is what an author would get back by undoing their most
+     * recent save.
+     */
+    List<WeblogEntryRevision> getRevisions(WeblogEntry entry) throws WebloggerException;
+
+    /**
+     * One revision by id, or null when there is no such revision.
+     *
+     * <p>Callers must still check that the revision belongs to an entry the
+     * caller may edit: the id arrives as client input, exactly like an entry
+     * id does.
+     */
+    WeblogEntryRevision getRevision(String id) throws WebloggerException;
     
     /** 
      * Get weblog entry by anchor. 

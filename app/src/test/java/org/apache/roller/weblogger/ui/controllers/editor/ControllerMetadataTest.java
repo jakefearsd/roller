@@ -161,4 +161,83 @@ class ControllerMetadataTest {
                 new TemplateEditController(),
                 new WeblogConfigController());
     }
+
+    /**
+     * Every {@code @RequestParam}, {@code @PathVariable} and
+     * {@code @RequestHeader} must name the parameter it binds.
+     *
+     * <p>This is not style. The build does not pass {@code -parameters}, so a
+     * bare {@code @RequestParam String id} has no name to bind at runtime and
+     * Spring throws {@code IllegalArgumentException} the first time the
+     * endpoint is called. Nothing catches it earlier: the class compiles, unit
+     * tests that invoke the method directly pass, and the failure only appears
+     * when a real request arrives. That is exactly how the Markdown preview
+     * endpoint shipped broken.
+     */
+    @Test
+    void everyRequestBoundParameterIsNamedExplicitly() throws Exception {
+        List<String> unnamed = new java.util.ArrayList<>();
+
+        for (Class<?> controller : controllerClasses()) {
+            for (java.lang.reflect.Method method : controller.getDeclaredMethods()) {
+                for (java.lang.reflect.Parameter parameter : method.getParameters()) {
+                    String annotationName = boundName(parameter);
+                    if (annotationName != null && annotationName.isEmpty()) {
+                        unnamed.add(controller.getSimpleName() + "." + method.getName()
+                                + "(" + parameter.getType().getSimpleName() + ")");
+                    }
+                }
+            }
+        }
+
+        assertTrue(unnamed.isEmpty(),
+                "These request-bound parameters do not name what they bind, so they will "
+                        + "throw at runtime for want of the -parameters compiler flag:\n  "
+                        + String.join("\n  ", unnamed));
+    }
+
+    /**
+     * The declared name of whatever request-binding annotation this parameter
+     * carries, or null when it carries none. Both {@code value} and
+     * {@code name} are checked because the annotations treat them as aliases.
+     */
+    private static String boundName(java.lang.reflect.Parameter parameter) {
+        var requestParam = parameter.getAnnotation(
+                org.springframework.web.bind.annotation.RequestParam.class);
+        if (requestParam != null) {
+            return requestParam.value().isEmpty() ? requestParam.name() : requestParam.value();
+        }
+        var pathVariable = parameter.getAnnotation(
+                org.springframework.web.bind.annotation.PathVariable.class);
+        if (pathVariable != null) {
+            return pathVariable.value().isEmpty() ? pathVariable.name() : pathVariable.value();
+        }
+        var header = parameter.getAnnotation(
+                org.springframework.web.bind.annotation.RequestHeader.class);
+        if (header != null) {
+            return header.value().isEmpty() ? header.name() : header.value();
+        }
+        return null;
+    }
+
+    /** Every controller class in the application, found on the classpath. */
+    private static List<Class<?>> controllerClasses() throws Exception {
+        java.nio.file.Path root = java.nio.file.Paths.get("src/main/java/org/apache/roller/"
+                + "weblogger/ui/controllers");
+        assertTrue(java.nio.file.Files.isDirectory(root), "Expected " + root.toAbsolutePath());
+
+        List<Class<?>> classes = new java.util.ArrayList<>();
+        try (var paths = java.nio.file.Files.walk(root)) {
+            for (java.nio.file.Path file : paths.filter(java.nio.file.Files::isRegularFile)
+                    .filter(f -> f.toString().endsWith("Controller.java")).toList()) {
+                String relative = root.relativize(file).toString();
+                String className = "org.apache.roller.weblogger.ui.controllers."
+                        + relative.substring(0, relative.length() - ".java".length())
+                                .replace(java.io.File.separatorChar, '.');
+                classes.add(Class.forName(className));
+            }
+        }
+        assertFalse(classes.isEmpty(), "No controllers found to scan");
+        return classes;
+    }
 }

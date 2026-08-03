@@ -188,6 +188,44 @@ public class WeblogEntry implements Serializable {
         this.setLocale(other.getLocale());
     }
 
+    // ------------------------------------------------- revision bookkeeping
+
+    /**
+     * The content this entry was loaded from the database with, or null when it
+     * has never been loaded (a new entry). Transient and deliberately not
+     * mapped: it exists only so a save can tell what it is displacing.
+     */
+    private transient WeblogEntryRevision loadedContent;
+
+    /**
+     * JPA {@code post-load} callback: remember the content as read from the
+     * database. See WeblogEntry.orm.xml, which is where this is wired -- there
+     * is no annotation on this class because the mapping is metadata-complete.
+     */
+    public void snapshotLoadedContent() {
+        loadedContent = WeblogEntryRevision.of(this, null);
+    }
+
+    /**
+     * The content this entry held before the caller's pending changes, as an
+     * unsaved revision -- or null when there is nothing to record: a new entry
+     * that was never loaded, or a save that leaves title, text and summary
+     * exactly as they were.
+     *
+     * <p>That second case is why an author can re-save an entry to fix its
+     * publication date without depositing a revision identical to the one
+     * before it.
+     *
+     * @param creator username to attribute the displaced content to
+     */
+    public WeblogEntryRevision contentBeingReplaced(String creator) {
+        if (loadedContent == null || !loadedContent.differsFrom(this)) {
+            return null;
+        }
+        loadedContent.setCreator(creator);
+        return loadedContent;
+    }
+
     /**
      * An unsaved draft copy of this entry, carrying its content, categorisation,
      * SEO block and tags but none of its identity or publication history.
