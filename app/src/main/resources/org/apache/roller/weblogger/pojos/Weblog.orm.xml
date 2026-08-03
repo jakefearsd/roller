@@ -38,9 +38,6 @@
 			<basic name="tagline">
 				<column name="tagline" insertable="true" updatable="true" unique="false"/>
 			</basic>
-			<basic name="enableBloggerApi">
-				<column name="enablebloggerapi" insertable="true" updatable="true" unique="false"/>
-			</basic>
             <basic name="analyticsCode">
                 <column name="analyticscode" insertable="true" updatable="true" unique="false"/>
             </basic>

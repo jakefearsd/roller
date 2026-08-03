@@ -49,13 +49,13 @@ ON CONFLICT (id) DO NOTHING;
 -- One weblog: the ~20 /roller-ui/authoring/ routes all require a resolvable
 -- weblog= request parameter (see RollerHandlerInterceptor), so without this the
 -- reachability sweep could only reach the handful of global pages.
-INSERT INTO weblog (id, name, handle, tagline, creator, enablebloggerapi,
+INSERT INTO weblog (id, name, handle, tagline, creator,
                     allowcomments, emailcomments, emailaddress, editortheme,
                     locale, timezone, visible, isactive, datecreated,
                     defaultallowcomments, defaultcommentdays, commentmod,
                     displaycnt, enablemultilang, showalllangs)
 VALUES ('it-weblog-0000-0000-0000-00000000001',
-        'IT Weblog', 'it_weblog', 'Integration test weblog', 'it_admin', false,
+        'IT Weblog', 'it_weblog', 'Integration test weblog', 'it_admin',
         true, false, 'it-admin@example.invalid', 'basic',
         'en_US', 'UTC', true, true, NOW(),
         true, 7, false, 15, false, true)

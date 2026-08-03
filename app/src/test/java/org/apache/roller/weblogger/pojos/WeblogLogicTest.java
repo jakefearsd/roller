@@ -187,7 +187,6 @@ class WeblogLogicTest {
         source.setName("Source Blog");
         source.setTagline("A tagline");
         source.setCreatorUserName("bob");
-        source.setEnableBloggerApi(Boolean.FALSE);
         source.setBloggerCategory(bloggerCategory);
         source.setAllowComments(Boolean.FALSE);
         source.setEmailComments(Boolean.TRUE);
@@ -209,7 +208,6 @@ class WeblogLogicTest {
         assertEquals("Source Blog", weblog.getName());
         assertEquals("A tagline", weblog.getTagline());
         assertEquals("bob", weblog.getCreatorUserName());
-        assertEquals(Boolean.FALSE, weblog.getEnableBloggerApi());
         assertSame(bloggerCategory, weblog.getBloggerCategory());
         assertEquals(Boolean.FALSE, weblog.getAllowComments());
         assertEquals(Boolean.TRUE, weblog.getEmailComments());

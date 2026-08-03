@@ -113,7 +113,6 @@ class WeblogWrapperTest {
         assertEquals(Boolean.FALSE, wrapper.getDefaultAllowComments());
         assertEquals(Boolean.FALSE, wrapper.getModerateComments());
         assertEquals(Boolean.FALSE, wrapper.getEmailComments());
-        assertEquals(Boolean.FALSE, wrapper.getEnableBloggerApi());
         assertFalse(wrapper.isEnableMultiLang());
         assertFalse(wrapper.isShowAllLangs());
         assertEquals(Boolean.FALSE, wrapper.getEnabled(),
@@ -129,7 +128,6 @@ class WeblogWrapperTest {
         assertEquals(Boolean.TRUE, wrapper.getDefaultAllowComments());
         assertEquals(Boolean.TRUE, wrapper.getModerateComments());
         assertEquals(Boolean.TRUE, wrapper.getEmailComments());
-        assertEquals(Boolean.TRUE, wrapper.getEnableBloggerApi());
         assertTrue(wrapper.isEnableMultiLang());
         assertTrue(wrapper.isShowAllLangs());
         assertEquals(Boolean.TRUE, wrapper.getEnabled());
@@ -142,7 +140,6 @@ class WeblogWrapperTest {
         weblog.setDefaultAllowComments(value);
         weblog.setModerateComments(value);
         weblog.setEmailComments(value);
-        weblog.setEnableBloggerApi(value);
         weblog.setEnableMultiLang(value);
         weblog.setShowAllLangs(value);
     }

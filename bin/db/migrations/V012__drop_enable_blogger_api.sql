@@ -1,0 +1,31 @@
+-- Licensed to the Apache Software Foundation (ASF) under one or more
+-- contributor license agreements.  The ASF licenses this file to You
+-- under the Apache License, Version 2.0 (the "License"); you may not
+-- use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+--
+-- Migration: drop weblog.enablebloggerapi
+--
+-- This column gated the Blogger and MetaWeblog XML-RPC endpoints, which were
+-- removed from Roller before this fork's baseline. The column outlived them,
+-- and so did a checkbox on the Weblog Settings page: an author could tick
+-- "Enable Blogger API", save it, and have it persist and mean nothing. A
+-- setting that does nothing is worse than an absent one, because it invites
+-- someone to rely on it.
+--
+-- There is no replacement flag because there is no API to gate. If a
+-- publishing API is added later it should ship with its own switch, designed
+-- for whatever authentication it uses, rather than inheriting a boolean named
+-- after a protocol that has been dead since 2010.
+--
+-- Prerequisites: V002__baseline_schema.
+
+ALTER TABLE weblog DROP COLUMN IF EXISTS enablebloggerapi;

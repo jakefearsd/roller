@@ -60,7 +60,6 @@ public class Weblog implements Serializable {
     private String  handle           = null;
     private String  name             = null;
     private String  tagline          = null;
-    private Boolean enableBloggerApi = Boolean.TRUE;
     private Boolean allowComments    = Boolean.TRUE;
     private Boolean emailComments    = Boolean.FALSE;
     private String  emailAddress     = null;
@@ -229,14 +228,6 @@ public class Weblog implements Serializable {
         creator = creatorUserName;
     }
 
-    public Boolean getEnableBloggerApi() {
-        return this.enableBloggerApi;
-    }
-    
-    public void setEnableBloggerApi(Boolean enableBloggerApi) {
-        this.enableBloggerApi = enableBloggerApi;
-    }
-    
     public WeblogCategory getBloggerCategory() { return bloggerCategory; }
     
     public void setBloggerCategory(WeblogCategory bloggerCategory) {
@@ -361,7 +352,6 @@ public class Weblog implements Serializable {
         this.setHandle(other.getHandle());
         this.setTagline(other.getTagline());
         this.setCreatorUserName(other.getCreatorUserName());
-        this.setEnableBloggerApi(other.getEnableBloggerApi());
         this.setBloggerCategory(other.getBloggerCategory());
         this.setAllowComments(other.getAllowComments());
         this.setEmailComments(other.getEmailComments());

@@ -200,13 +200,6 @@
         </div>
     </div>
 
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <div class="form-check">
-                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.enableBloggerApi" value="true" ${bean.enableBloggerApi ? 'checked' : ''}/> <spring:message code="websiteSettings.enableBloggerApi"/></label>
-            </div>
-        </div>
-    </div>
 
     <%-- ***** Plugins "formatting" settings ***** --%>
 

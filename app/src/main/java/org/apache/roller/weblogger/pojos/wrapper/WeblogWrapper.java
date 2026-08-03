@@ -103,10 +103,6 @@ public final class WeblogWrapper {
     public UserWrapper getCreator() {
         return UserWrapper.wrap(this.pojo.getCreator());
     }
-    
-    public Boolean getEnableBloggerApi() {
-        return this.pojo.getEnableBloggerApi();
-    }
 
     public WeblogCategoryWrapper getBloggerCategory() {
         return WeblogCategoryWrapper.wrap(this.pojo.getBloggerCategory(), urlStrategy);
