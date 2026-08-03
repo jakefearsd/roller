@@ -172,6 +172,14 @@ public abstract class RollerIT {
      */
     protected void logout() {
         openPath("/roller-ui/logout.rol");
+
+        // Then go to the login page ourselves rather than waiting on the
+        // redirect chain logout kicks off. The session is already invalidated
+        // by the time logout.rol responds, so this is not papering over a
+        // race -- it removes one: on a loaded runner the redirect can still be
+        // in flight when the assertion below runs, and the failure ("no login
+        // form") looks nothing like its cause.
+        openPath(LOGIN_PATH);
         $("#j_username").should(exist);
         BrowserHealth.current().settle();
     }
