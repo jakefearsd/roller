@@ -1857,4 +1857,35 @@ public class MediaFileTest  {
         TestUtils.teardownWeblog(testWeblog.getId());
         TestUtils.teardownUser(testUser.getUserName());
     }
+
+    @Test
+    public void removingAWeblogTakesEveryDirectoryWithIt() throws Exception {
+        // Deleting a weblog used to reclaim only its default media directory.
+        // Everything else -- rows and files on disk -- stayed behind with no
+        // owner, which surfaced as test uploads piling up past the per-weblog
+        // quota until a fixture failed with error.upload.dirmax, and in
+        // production would be unreachable files nothing ever reclaims.
+        User user = TestUtils.setupUser("mediasweepuser");
+        Weblog weblog = TestUtils.setupWeblog("mediasweepblog", user);
+        TestUtils.endSession(true);
+
+        TestUtils.setupImageMediaFile(weblog, "in-default.jpg");
+        TestUtils.setupImageMediaFile(weblog, "in-album.jpg", "an-album");
+        TestUtils.endSession(true);
+
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        assertEquals(2, mfMgr.getMediaFileDirectories(managed).size(),
+                "fixture must have made both directories");
+
+        mfMgr.removeAllFiles(managed);
+        TestUtils.endSession(true);
+
+        assertTrue(mfMgr.getMediaFileDirectories(TestUtils.getManagedWebsite(weblog)).isEmpty(),
+                "removeAllFiles must reclaim every directory, not just the default");
+
+        TestUtils.teardownWeblog(weblog.getId());
+        TestUtils.teardownUser(user.getUserName());
+        TestUtils.endSession(true);
+    }
 }

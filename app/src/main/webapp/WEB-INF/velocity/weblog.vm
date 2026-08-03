@@ -414,11 +414,29 @@ legacy popup-comments template does), so rules there would never load.
 .jgrid { display: flex; flex-wrap: wrap; gap: .5rem; --row-h: 260px; }
 .jgrid figure {
   margin: 0;
-  --ar: 1.5;                                 /* fallback for pre-ladder uploads without dimensions */
-  flex-grow: var(--ar);                      /* --ar = width / height, set inline per figure */
+  --ar: 1.5;                                 /* pre-ladder uploads with no stored dimensions */
+  flex-grow: var(--ar);                      /* --ar = width / height */
   flex-basis: calc(var(--ar) * var(--row-h));
   min-width: 120px;                          /* stops a panorama dominating a row */
 }
+/* Gallery row-height ladder: the shortcode's row attribute snaps to one of
+   these, for the same sanitizer reason as the ratios below. (Deliberately not
+   naming the shortcode in bracket syntax here: rendering tests assert that no
+   unexpanded shortcode text reaches a reader, and a CSS comment counts.) */
+.jgrid.jgrid-h160{--row-h:160px}.jgrid.jgrid-h200{--row-h:200px}.jgrid.jgrid-h260{--row-h:260px}.jgrid.jgrid-h320{--row-h:320px}.jgrid.jgrid-h400{--row-h:400px}
+/* Per-figure aspect ratios. They arrive as ar-NNN classes rather than an
+   inline custom property because the sanitizer cannot carry one: OWASP's CSS
+   schema rejects "--ar" outright. Generated from GalleryMarkup's
+   MIN_AR_CLASS/MAX_AR_CLASS/AR_CLASS_STEP -- GalleryMarkupTest fails if the
+   two drift apart. */
+.jgrid figure.ar-40{--ar:0.4}.jgrid figure.ar-45{--ar:0.45}.jgrid figure.ar-50{--ar:0.5}.jgrid figure.ar-55{--ar:0.55}.jgrid figure.ar-60{--ar:0.6}.jgrid figure.ar-65{--ar:0.65}
+.jgrid figure.ar-70{--ar:0.7}.jgrid figure.ar-75{--ar:0.75}.jgrid figure.ar-80{--ar:0.8}.jgrid figure.ar-85{--ar:0.85}.jgrid figure.ar-90{--ar:0.9}.jgrid figure.ar-95{--ar:0.95}
+.jgrid figure.ar-100{--ar:1}.jgrid figure.ar-105{--ar:1.05}.jgrid figure.ar-110{--ar:1.1}.jgrid figure.ar-115{--ar:1.15}.jgrid figure.ar-120{--ar:1.2}.jgrid figure.ar-125{--ar:1.25}
+.jgrid figure.ar-130{--ar:1.3}.jgrid figure.ar-135{--ar:1.35}.jgrid figure.ar-140{--ar:1.4}.jgrid figure.ar-145{--ar:1.45}.jgrid figure.ar-150{--ar:1.5}.jgrid figure.ar-155{--ar:1.55}
+.jgrid figure.ar-160{--ar:1.6}.jgrid figure.ar-165{--ar:1.65}.jgrid figure.ar-170{--ar:1.7}.jgrid figure.ar-175{--ar:1.75}.jgrid figure.ar-180{--ar:1.8}.jgrid figure.ar-185{--ar:1.85}
+.jgrid figure.ar-190{--ar:1.9}.jgrid figure.ar-195{--ar:1.95}.jgrid figure.ar-200{--ar:2}.jgrid figure.ar-205{--ar:2.05}.jgrid figure.ar-210{--ar:2.1}.jgrid figure.ar-215{--ar:2.15}
+.jgrid figure.ar-220{--ar:2.2}.jgrid figure.ar-225{--ar:2.25}.jgrid figure.ar-230{--ar:2.3}.jgrid figure.ar-235{--ar:2.35}.jgrid figure.ar-240{--ar:2.4}.jgrid figure.ar-245{--ar:2.45}
+.jgrid figure.ar-250{--ar:2.5}.jgrid figure.ar-255{--ar:2.55}.jgrid figure.ar-260{--ar:2.6}
 .jgrid figure a { display: block; }
 .jgrid figure img {
   display: block; width: 100%; height: auto;

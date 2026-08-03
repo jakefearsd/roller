@@ -97,7 +97,7 @@ public final class WeblogWrapper {
     }
     
     public String getTagline() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getTagline());
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getTagline());
     }
 
     public UserWrapper getCreator() {
@@ -132,7 +132,12 @@ public final class WeblogWrapper {
     }
 
     public String getAnalyticsCode() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getAnalyticsCode());
+        // Deliberately NOT sanitized. This field exists to hold a tracking
+        // snippet -- a <script> tag -- pasted by a site administrator, and it
+        // is gated by the site-wide analytics.code.override.allowed property.
+        // Running it through the HTML policy silently deletes the script and
+        // the field appears to do nothing, which is how it behaved until now.
+        return this.pojo.getAnalyticsCode();
     }
 
     public Boolean getEmailComments() {
@@ -249,7 +254,7 @@ public final class WeblogWrapper {
     
     
     public String getAbout() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getAbout());
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getAbout());
     }
     
     

@@ -103,6 +103,20 @@ class GalleryRenderingTest {
         return response.getContentAsString();
     }
 
+    /**
+     * The rendered page with HTML entities decoded.
+     *
+     * <p>The sanitizer entity-encodes characters inside attribute values --
+     * {@code ?w=480} is serialized as {@code ?w&#61;480}, and a quote inside
+     * body text as {@code &#34;}. A browser decodes those before it parses a
+     * srcset or resolves a URL, so the page works; assertions written against
+     * the author's literal text would not. Decoding first keeps the assertion
+     * about meaning rather than about the serializer's choices.
+     */
+    private static String decoded(String body) {
+        return org.apache.commons.text.StringEscapeUtils.unescapeHtml4(body);
+    }
+
     private WeblogEntry entryWithText(String anchor, String text) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
         WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
@@ -153,9 +167,9 @@ class GalleryRenderingTest {
 
         // the grid and both figures survived the sanitizer round-trip
         assertTrue(body.contains("<div class=\"jgrid\">"), body);
-        assertTrue(body.contains("<figure style=\"--ar:1.3333;\">"),
+        assertTrue(body.contains("<figure class=\"ar-135\">"),
                 "800x600 must pack with its aspect ratio:\n" + body);
-        assertTrue(body.contains("<figure style=\"--ar:1.5000;\">"),
+        assertTrue(body.contains("<figure class=\"ar-150\">"),
                 "1200x800 must pack with its aspect ratio:\n" + body);
 
         // the lightbox anchors: absolute original + full-size dimensions
@@ -168,9 +182,13 @@ class GalleryRenderingTest {
                 body);
 
         // the grid images: ladder srcset, lazy, async, blur-up placeholder
-        assertTrue(body.contains("<img src=\"" + firstUrl + "\" srcset=\""
+        // The sanitizer entity-encodes "=" and pads the srcset commas, both of
+        // which are spec-legal and decoded by the browser before it picks a
+        // candidate. Assert the candidates, not the serializer's spacing.
+        String plain = decoded(body).replace(" , ", ", ");
+        assertTrue(plain.contains("<img src=\"" + firstUrl + "\" srcset=\""
                         + firstUrl + "?w=480 480w, " + firstUrl + " 800w\""),
-                body);
+                "the ladder srcset must survive the sanitizer:\n" + plain);
         assertTrue(body.contains("loading=\"lazy\""), body);
         assertTrue(body.contains("decoding=\"async\""), body);
         assertTrue(body.contains("data-blurhash=\""),
@@ -225,8 +243,7 @@ class GalleryRenderingTest {
 
         // the SPI's visible-failure signal: the shortcode text stays as
         // written (share-page rendering of private directories is T5's path)
-        assertTrue(body.contains("[gallery dir=&quot;secret&quot;]")
-                        || body.contains("[gallery dir=\"secret\"]"),
+        assertTrue(decoded(body).contains("[gallery dir=\"secret\"]"),
                 "the author must see their shortcode, not silence:\n" + body);
         assertFalse(body.contains("<div class=\"jgrid\""), body);
         assertFalse(body.contains(hidden.getId()),
@@ -239,8 +256,7 @@ class GalleryRenderingTest {
 
         String body = render("/" + HANDLE + "/entry/unknown-entry");
 
-        assertTrue(body.contains("[gallery dir=&quot;no-such-album&quot;]")
-                        || body.contains("[gallery dir=\"no-such-album\"]"),
+        assertTrue(decoded(body).contains("[gallery dir=\"no-such-album\"]"),
                 body);
         assertFalse(body.contains("<div class=\"jgrid\""), body);
     }

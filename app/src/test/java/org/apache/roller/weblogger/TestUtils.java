@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.SpringWebloggerProvider;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -453,10 +454,18 @@ public final class TestUtils {
     public static MediaFile setupImageMediaFile(Weblog weblog, String name,
             String directoryName) throws Exception {
 
-        // allow media uploads for this test
-        Map<String, RuntimeConfigProperty> config = WebloggerFactory
-                .getWeblogger().getPropertiesManager().getProperties();
+        // Allow media uploads for this test -- and persist the change rather
+        // than only mutating the in-memory map. WebloggerRuntimeConfig reads
+        // this property back through the properties manager on every call, so
+        // an unsaved flag survives only until the next session flush. That
+        // made the fixture order-dependent: it worked when an earlier test
+        // happened to have saved the property, and failed with "error setting
+        // up media file" when this test ran first.
+        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         config.get("uploads.enabled").setValue("true");
+        pmgr.saveProperties(config);
+        WebloggerFactory.getWeblogger().flush();
 
         MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
                 .getMediaFileManager();
@@ -480,7 +489,8 @@ public final class TestUtils {
         mediaFile.setContentType("image/jpeg");
         mediaFile.setInputStream(TestUtils.class.getResourceAsStream("/hawk.jpg"));
 
-        mfMgr.createMediaFile(managedWeblog, mediaFile, new RollerMessages());
+        RollerMessages messages = new RollerMessages();
+        mfMgr.createMediaFile(managedWeblog, mediaFile, messages);
 
         // flush to db
         WebloggerFactory.getWeblogger().flush();
@@ -489,7 +499,12 @@ public final class TestUtils {
         MediaFile persisted = mfMgr.getMediaFile(mediaFile.getId());
 
         if (persisted == null) {
-            throw new WebloggerException("error setting up media file");
+            // createMediaFile reports refusals through RollerMessages rather
+            // than throwing, so without this the fixture failed with a bare
+            // "error setting up media file" and no clue which rule refused.
+            StringBuilder why = new StringBuilder();
+            messages.getErrors().forEachRemaining(m -> why.append(m.getKey()).append(' '));
+            throw new WebloggerException("error setting up media file: " + why);
         }
 
         return persisted;

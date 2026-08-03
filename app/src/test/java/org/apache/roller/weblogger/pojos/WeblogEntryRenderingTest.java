@@ -146,7 +146,10 @@ class WeblogEntryRenderingTest {
 
         assertTrue(rendered.startsWith("look: <figure class=\"shortcode-image\">"),
                 "the [image] shortcode must expand without the entry opting in: " + rendered);
-        assertTrue(rendered.contains("http://example.com/f?w=480 480w"),
+        // The sanitizer entity-encodes "=" inside attribute values; a browser
+        // decodes it before parsing the srcset, so compare the decoded form.
+        String plain = org.apache.commons.text.StringEscapeUtils.unescapeHtml4(rendered);
+        assertTrue(plain.contains("http://example.com/f?w=480 480w"),
                 "srcset must climb the rendition ladder: " + rendered);
         assertTrue(rendered.contains("http://example.com/f 1200w"), rendered);
         assertFalse(rendered.contains("[image"), rendered);

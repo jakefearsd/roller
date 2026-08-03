@@ -170,13 +170,36 @@ class WeblogWrapperTest {
         Boolean previous = HTMLSanitizer.xssEnabled;
         try {
             HTMLSanitizer.xssEnabled = Boolean.TRUE;
-            // Bypass the pojo's own stripping setters to prove the wrapper
-            // cleans independently of them.
-            weblog.setAnalyticsCode("<script>alert(1)</script>");
+            weblog.setTagline("Hand-built guides <script>alert(1)</script>");
+            weblog.setAbout("About us <img src=x onerror=alert(1)>");
 
-            assertFalse(wrapper.getAnalyticsCode().contains("<script>"),
-                    "The analytics snippet is injected into every page of the blog; with "
-                            + "untrusted weblog admins configured it must be sanitised");
+            assertFalse(wrapper.getTagline().contains("<script"),
+                    "the tagline is emitted by theme headers, some of them unescaped");
+            assertFalse(wrapper.getAbout().contains("onerror"),
+                    "the about text is emitted into pages too");
+            assertTrue(wrapper.getTagline().contains("Hand-built guides"),
+                    "and the author's actual words must survive: " + wrapper.getTagline());
+        } finally {
+            HTMLSanitizer.xssEnabled = previous;
+        }
+    }
+
+    @Test
+    void theAnalyticsSnippetIsDeliberatelyNotSanitised() {
+        Boolean previous = HTMLSanitizer.xssEnabled;
+        try {
+            HTMLSanitizer.xssEnabled = Boolean.TRUE;
+            // This field exists to hold a tracking snippet -- a <script> tag --
+            // pasted by a site administrator, and it is gated by the site-wide
+            // analytics.code.override.allowed property. Sanitizing it deletes
+            // the script and the field silently does nothing, which is exactly
+            // how it behaved before and why a pasted Umami or Analytics tag
+            // never appeared on any page.
+            String snippet = "<script defer src=\"https://umami.example/script.js\"></script>";
+            weblog.setAnalyticsCode(snippet);
+
+            assertEquals(snippet, wrapper.getAnalyticsCode(),
+                    "the tracking snippet must reach the page intact");
         } finally {
             HTMLSanitizer.xssEnabled = previous;
         }

@@ -101,6 +101,20 @@ class TravelShortcodeRenderingTest {
         return response.getContentAsString();
     }
 
+    /**
+     * The rendered page with HTML entities decoded.
+     *
+     * <p>The sanitizer entity-encodes characters inside attribute values --
+     * {@code ?w=480} is serialized as {@code ?w&#61;480}, and a quote inside
+     * body text as {@code &#34;}. A browser decodes those before it parses a
+     * srcset or resolves a URL, so the page works; assertions written against
+     * the author's literal text would not. Decoding first keeps the assertion
+     * about meaning rather than about the serializer's choices.
+     */
+    private static String decoded(String body) {
+        return org.apache.commons.text.StringEscapeUtils.unescapeHtml4(body);
+    }
+
     private WeblogEntry entryWithText(String anchor, String text) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
         WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
@@ -163,20 +177,23 @@ class TravelShortcodeRenderingTest {
 
         String body = render("/" + HANDLE + "/entry/iceland-guide");
 
-        // the map div and its single-line JSON payload, byte-identical
-        // through the sanitizer's idempotent re-encode
-        assertTrue(body.contains("<div class=\"travel-map\" data-pins=\""
-                + "[{&quot;lat&quot;:64.1466,&quot;lng&quot;:-21.9426,"
-                + "&quot;label&quot;:&quot;Reykjavik&quot;},"
-                + "{&quot;lat&quot;:63.4053,&quot;lng&quot;:-19.0755,"
-                + "&quot;label&quot;:&quot;Vik&quot;}]\""), body);
+        // The map div and its single-line JSON payload. The sanitizer may
+        // re-encode the entity form (&quot; becomes &#34;), so compare the
+        // decoded payload -- which is what the map script's JSON.parse sees.
+        assertTrue(decoded(body).replace("&#34;", "\"").contains(
+                "<div class=\"travel-map\" data-pins=\""
+                + "[{\"lat\":64.1466,\"lng\":-21.9426,"
+                + "\"label\":\"Reykjavik\"},"
+                + "{\"lat\":63.4053,\"lng\":-19.0755,"
+                + "\"label\":\"Vik\"}]\""), body);
         assertTrue(body.contains("data-zoom=\"7\""), body);
         assertTrue(body.contains("data-route=\"true\""), body);
 
         // the CTA anchor: UTM-tagged href, rel/target, label and note spans
-        assertTrue(body.contains("href=\"https://booking.example.com/cabin?adults=2"
+        assertTrue(decoded(body).contains("href=\"https://booking.example.com/cabin?adults=2"
                 + "&utm_source=" + HANDLE + "&utm_medium=blog"
-                + "&utm_campaign=iceland-guide\""), body);
+                + "&utm_campaign=iceland-guide\""),
+                "the campaign-tagged href must decode back to what the handler built:\n" + body);
         assertTrue(body.contains("rel=\"nofollow sponsored noopener\""), body);
         assertTrue(body.contains("<span class=\"cta-label\">Book this cabin</span>"), body);
         assertTrue(body.contains("<span class=\"cta-note\">From EUR 120/night</span>"), body);
@@ -210,9 +227,10 @@ class TravelShortcodeRenderingTest {
 
         String body = render("/" + HANDLE + "/entry/auto-map-entry");
 
-        assertTrue(body.contains("<div class=\"travel-map\" data-pins=\""
-                        + "[{&quot;lat&quot;:64.0784,&quot;lng&quot;:-16.2306,"
-                        + "&quot;label&quot;:&quot;glacier.jpg&quot;}]\""),
+        assertTrue(decoded(body).replace("&#34;", "\"").contains(
+                        "<div class=\"travel-map\" data-pins=\""
+                        + "[{\"lat\":64.0784,\"lng\":-16.2306,"
+                        + "\"label\":\"glacier.jpg\"}]\""),
                 "the GPS-bearing photo must become a pin:\n" + body);
         assertFalse(body.contains("[map"), body);
     }
@@ -254,8 +272,7 @@ class TravelShortcodeRenderingTest {
 
         // the SPI's visible-failure signal: the shortcode text stays as
         // written and the private photos' coordinates never leave the server
-        assertTrue(body.contains("[map auto=&quot;secret&quot;]")
-                        || body.contains("[map auto=\"secret\"]"),
+        assertTrue(decoded(body).contains("[map auto=\"secret\"]"),
                 "the author must see their shortcode, not silence:\n" + body);
         // the container, not the bare class name: #showMapAssets legitimately
         // names .travel-map in the head's stylesheet and lazy-init guard on
@@ -276,9 +293,7 @@ class TravelShortcodeRenderingTest {
 
         // the handler refuses before the sanitizer can silently eat the
         // anchor: the author sees their shortcode instead of an unlinked label
-        assertTrue(body.contains("[cta href=&quot;/book&quot; label=&quot;Book now&quot;]")
-                        || body.contains("[cta href=\"/book\" label=\"Book now\"]"),
-                body);
+        assertTrue(decoded(body).contains("[cta href=\"/book\" label=\"Book now\"]"), body);
         assertFalse(body.contains("cta-card"), body);
     }
 }

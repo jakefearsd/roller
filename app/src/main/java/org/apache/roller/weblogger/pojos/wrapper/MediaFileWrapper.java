@@ -62,11 +62,11 @@ public final class MediaFileWrapper {
     }
 
     public String getName() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getName());
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getName());
     }
 
     public String getDescription() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getDescription());
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getDescription());
     }
 
     public String getContentType() {
@@ -204,19 +204,19 @@ public final class MediaFileWrapper {
     // ---------------------------------------------------------- EXIF display
 
     public String getExifCamera() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getExifCamera());
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getExifCamera());
     }
 
     public String getExifLens() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getExifLens());
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getExifLens());
     }
 
     public String getExifExposure() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getExifExposure());
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getExifExposure());
     }
 
     public String getExifAperture() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getExifAperture());
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getExifAperture());
     }
 
     public Integer getExifIso() {
@@ -224,7 +224,7 @@ public final class MediaFileWrapper {
     }
 
     public String getExifFocalLength() {
-        return HTMLSanitizer.conditionallySanitize(this.pojo.getExifFocalLength());
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getExifFocalLength());
     }
 
     public Timestamp getExifTaken() {

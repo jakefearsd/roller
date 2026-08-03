@@ -229,8 +229,15 @@ class EditorSeoIT extends RollerIT {
                 "the published body must carry the expanded responsive picture. Page:\n" + page);
         assertTrue(page.contains("<source type=\"image/webp\" srcset=\""),
                 "webp-capable browsers must get a source element. Page:\n" + page);
-        // hawk.jpg is 500px wide, so the 480 rung of the ladder must be offered
-        assertTrue(page.contains("?w=480 480w"),
+        // hawk.jpg is 500px wide, so the 480 rung of the ladder must be offered.
+        // The sanitizer entity-encodes "=" inside attribute values and pads the
+        // srcset commas; the browser decodes both before choosing a candidate,
+        // which is why the image on screen is correct and only a literal string
+        // match would fail. (BrowserHealth would have failed this test outright
+        // if any image had 404'd, so a passing run is also proof the encoded
+        // URLs resolve.)
+        String decodedPage = page.replace("&#61;", "=").replace(" , ", ", ");
+        assertTrue(decodedPage.contains("?w=480 480w"),
                 "the srcset must climb the rendition ladder. Page:\n" + page);
         assertTrue(page.contains("loading=\"lazy\""), page);
         assertFalse(page.contains("[image id="),

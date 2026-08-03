@@ -90,7 +90,7 @@ public class User implements Serializable {
     }
     
     public void setUserName( String userName ) {
-        this.userName =  HTMLSanitizer.conditionallySanitize(userName);
+        this.userName =  HTMLSanitizer.conditionallySanitizeText(userName);
     }
     
     /**
@@ -131,7 +131,7 @@ public class User implements Serializable {
     }
     
     public void setScreenName( String screenName ) {
-        this.screenName =  HTMLSanitizer.conditionallySanitize(screenName);
+        this.screenName =  HTMLSanitizer.conditionallySanitizeText(screenName);
     }
     
     /**
@@ -142,7 +142,7 @@ public class User implements Serializable {
     }
     
     public void setFullName( String fullName ) {
-        this.fullName =  HTMLSanitizer.conditionallySanitize(fullName);
+        this.fullName =  HTMLSanitizer.conditionallySanitizeText(fullName);
     }
 
     /**
@@ -153,7 +153,7 @@ public class User implements Serializable {
     }
     
     public void setEmailAddress( String emailAddress ) {
-        this.emailAddress =  HTMLSanitizer.conditionallySanitize(emailAddress);
+        this.emailAddress =  HTMLSanitizer.conditionallySanitizeText(emailAddress);
     }
     
     

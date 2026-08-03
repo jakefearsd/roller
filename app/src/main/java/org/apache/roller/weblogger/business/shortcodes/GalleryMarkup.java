@@ -103,13 +103,19 @@ public final class GalleryMarkup {
      */
     public static String grid(List<MediaFileWrapper> images, int rowHeight, ImageUrls urls) {
         StringBuilder html = new StringBuilder(512 * images.size());
-        html.append("<div class=\"jgrid\"");
-        if (rowHeight > 0 && rowHeight != DEFAULT_ROW_HEIGHT) {
-            html.append(" style=\"--row-h:").append(rowHeight).append("px;\"");
+        // Row height rides as a class for the same reason the aspect ratio
+        // does: the sanitizer drops inline custom properties. Author values
+        // snap to the ladder the stylesheet has rules for, and the snapped
+        // value -- not the requested one -- drives the sizes attribute below,
+        // so the hint the browser gets matches the layout it will get.
+        int snapped = snapRowHeight(rowHeight);
+        html.append("<div class=\"jgrid");
+        if (snapped != DEFAULT_ROW_HEIGHT) {
+            html.append(" jgrid-h").append(snapped);
         }
-        html.append(">\n");
+        html.append("\">\n");
         for (MediaFileWrapper image : images) {
-            appendFigure(html, image, rowHeight > 0 ? rowHeight : DEFAULT_ROW_HEIGHT, urls);
+            appendFigure(html, image, snapped, urls);
         }
         html.append("</div>");
         return html.toString();
@@ -123,12 +129,14 @@ public final class GalleryMarkup {
 
         html.append("<figure");
         if (knownDimensions) {
-            // The grid packs rows with flex-grow: var(--ar); the trailing
-            // semicolon keeps the value byte-identical through the
-            // sanitizer's style re-parse (which appends one anyway).
-            html.append(" style=\"--ar:")
-                    .append(String.format(Locale.ROOT, "%.4f", aspectRatio))
-                    .append(";\"");
+            // The grid packs rows from a --ar custom property, but the
+            // sanitizer cannot carry one: OWASP's CSS schema rejects custom
+            // properties outright, so an inline style="--ar:1.34" is dropped.
+            // The ratio therefore travels as a class, and the theme's own
+            // (unsanitized) style block turns it back into --ar. Quantizing to
+            // 0.05 keeps the rule table small; the packing difference is
+            // invisible.
+            html.append(" class=\"").append(aspectRatioClass(aspectRatio)).append('"');
         }
         html.append(">\n");
 
@@ -206,6 +214,51 @@ public final class GalleryMarkup {
         }
         srcset.append(urls.original(image)).append(' ').append(originalWidth).append('w');
         return srcset.toString();
+    }
+
+    /**
+     * Row heights the stylesheet has rules for. An author's {@code row="280"}
+     * snaps to the nearest of these rather than being honoured exactly --
+     * arbitrary pixel values cannot survive the sanitizer, and a handful of
+     * densities is what the attribute was actually for.
+     */
+    static final int[] ROW_HEIGHT_LADDER = {160, 200, 260, 320, 400};
+
+    /** Nearest ladder rung to {@code requested}, or the default when unset. */
+    static int snapRowHeight(int requested) {
+        if (requested <= 0) {
+            return DEFAULT_ROW_HEIGHT;
+        }
+        int best = ROW_HEIGHT_LADDER[0];
+        for (int rung : ROW_HEIGHT_LADDER) {
+            if (Math.abs(rung - requested) < Math.abs(best - requested)) {
+                best = rung;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * The narrowest and widest ratios the grid has a rule for. A panorama or a
+     * very tall portrait clamps to the end of the range rather than falling
+     * back to the default: clamped packing is still roughly right, whereas the
+     * default (1.5) would be wrong in the opposite direction.
+     */
+    static final int MIN_AR_CLASS = 40;
+    static final int MAX_AR_CLASS = 260;
+
+    /** Quantization step, in hundredths. Must match the macro's rule table. */
+    static final int AR_CLASS_STEP = 5;
+
+    /**
+     * {@code 1.3405 -> "ar-135"}: the ratio in hundredths, rounded to the
+     * nearest {@link #AR_CLASS_STEP} and clamped to the range the stylesheet
+     * covers.
+     */
+    static String aspectRatioClass(double aspectRatio) {
+        long hundredths = Math.round(aspectRatio * 100 / AR_CLASS_STEP) * (long) AR_CLASS_STEP;
+        long clamped = Math.max(MIN_AR_CLASS, Math.min(MAX_AR_CLASS, hundredths));
+        return "ar-" + clamped;
     }
 
     private static void appendDataAttribute(StringBuilder html, String name, String value) {

@@ -99,7 +99,7 @@ class PageServletRenderingTest {
         String body = response.getContentAsString();
         assertTrue(body.contains("<figure class=\"shortcode-image\">"),
                 "the [image] shortcode must expand on the live permalink:\n" + body);
-        assertTrue(body.contains(image.getId() + "?w=480 480w"),
+        assertTrue(decoded(body).contains(image.getId() + "?w=480 480w"),
                 "srcset must point the ladder rung at the media-resource URL:\n" + body);
         assertTrue(body.contains("<figcaption>A hawk</figcaption>"), body);
         assertFalse(body.contains("[image id="),
@@ -154,5 +154,19 @@ class PageServletRenderingTest {
                 .execute(RenderingTestSupport.pageServlet(), request);
 
         assertEquals(404, response.getStatus());
+    }
+
+    /**
+     * The rendered page with HTML entities decoded.
+     *
+     * <p>The sanitizer entity-encodes characters inside attribute values --
+     * {@code ?w=480} is serialized as {@code ?w&#61;480}. A browser decodes
+     * those before it parses a srcset or resolves a URL, so the page works;
+     * an assertion written against the author's literal text would not.
+     * Decoding first keeps the assertion about meaning rather than about the
+     * serializer's choices.
+     */
+    private static String decoded(String body) {
+        return org.apache.commons.text.StringEscapeUtils.unescapeHtml4(body);
     }
 }

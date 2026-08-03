@@ -471,9 +471,18 @@ limitations under the License.
             <version>2.21.0</version>
         </dependency>
 
-        <!-- Markdown for entries whose content_type is text/markdown (Stage 2
-             Wave 4). Not managed by the Boot BOM, so the version is pinned
-             here; the three extensions are separate artifacts on purpose. -->
+        <!-- The HTML sanitizer: parses and re-serializes rendered entry HTML
+             against an allow-list policy (Stage 2 Wave 4). Replaced a vendored
+             regex sanitizer; Apache-2.0, same family Wikantik uses. -->
+        <dependency>
+            <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
+            <artifactId>owasp-java-html-sanitizer</artifactId>
+            <version>20240325.1</version>
+        </dependency>
+
+        <!-- Markdown: every entry is Markdown (Stage 2 Wave 4). Not managed by
+             the Boot BOM, so the version is pinned here; the three extensions
+             are separate artifacts on purpose. -->
         <dependency>
             <groupId>org.commonmark</groupId>
             <artifactId>commonmark</artifactId>

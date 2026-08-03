@@ -118,7 +118,7 @@ class GalleryShortcodeTest {
         String html = render(Map.of("dir", "album"));
 
         assertTrue(html.startsWith("<div class=\"jgrid\">"), html);
-        assertTrue(html.contains("<figure style=\"--ar:1.5000;\">"), html);
+        assertTrue(html.contains("<figure class=\"ar-150\">"), html);
         assertTrue(html.contains("<a href=\"" + BASE + "mf-1\""), html);
         assertTrue(html.contains(" data-pswp-width=\"1200\" data-pswp-height=\"800\""),
                 "the lightbox needs the full-size dimensions on the anchor:\n" + html);
@@ -149,7 +149,7 @@ class GalleryShortcodeTest {
 
         assertTrue(html.contains("<img src=\"" + BASE + "mf-1\""), html);
         assertFalse(html.contains("srcset"), html);
-        assertTrue(html.contains("<figure style=\"--ar:1.5000;\">"),
+        assertTrue(html.contains("<figure class=\"ar-150\">"),
                 "known dimensions still pack the grid:\n" + html);
     }
 
@@ -212,12 +212,15 @@ class GalleryShortcodeTest {
     // -------------------------------------------------------------- attributes
 
     @Test
-    void theRowAttributeOverridesTheRowHeightCustomProperty() {
+    void theRowAttributeSelectsARowHeightClass() {
         image("mf-1", "hawk.jpg", 1200, 800);
 
         String html = render(Map.of("dir", "album", "row", "320"));
 
-        assertTrue(html.startsWith("<div class=\"jgrid\" style=\"--row-h:320px;\">"), html);
+        // The ratio and row height ride as classes, not inline custom
+        // properties: the sanitizer's CSS schema cannot carry a "--ar", so the
+        // theme's own stylesheet turns these classes back into one.
+        assertTrue(html.startsWith("<div class=\"jgrid jgrid-h320\">"), html);
         // the sizes hint follows the row height: 1.5 * 320
         assertTrue(html.contains(" sizes=\"(max-width: 640px) 240px, 480px\""), html);
     }

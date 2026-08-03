@@ -734,7 +734,14 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
 
     @Override
     public void removeAllFiles(Weblog website) throws WebloggerException {
-        removeMediaFileDirectory(getDefaultMediaFileDirectory(website));
+        // Every directory, not just the default one. Removing only the default
+        // left a deleted weblog's other directories -- and their files on disk
+        // -- behind forever, which showed up first as test media accumulating
+        // past the upload quota run after run, and would show up in production
+        // as orphaned files nothing can reach or reclaim.
+        for (MediaFileDirectory dir : new ArrayList<>(getMediaFileDirectories(website))) {
+            removeMediaFileDirectory(dir);
+        }
     }
 
     @Override
