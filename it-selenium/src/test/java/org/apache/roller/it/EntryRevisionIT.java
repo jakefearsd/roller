@@ -22,7 +22,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static com.codeborne.selenide.CollectionCondition.sizeGreaterThanOrEqual;
-import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
@@ -74,12 +73,12 @@ class EntryRevisionIT extends RollerIT {
         $("#revision-diff-modal").shouldBe(visible);
         $("#revisionDiffBody").shouldHave(text(firstBody));
         $("#revisionDiffBody").shouldHave(text(secondBody));
-        $("#revision-diff-modal .btn-close").click();
-        // Bootstrap fades the modal out, and until it is gone the backdrop
-        // still swallows clicks aimed at the page underneath.
-        $("#revision-diff-modal").should(disappear);
-
         // --- restore puts the original text back ------------------------------
+        // Reload rather than closing the modal and clicking underneath it.
+        // Dismissing a Bootstrap modal is an animation, and waiting for an
+        // animation is how a browser test earns an intermittent failure on a
+        // loaded runner; a fresh page has no modal to get out of the way.
+        openEditorFor(entryId);
         $(".revision-restore-button").click();
         $("#entry").should(exist);
         $(EDITOR_BODY).should(visible);
@@ -87,7 +86,6 @@ class EntryRevisionIT extends RollerIT {
         String restored = executeJavaScript("return rollerGetEntryText();");
         assertTrue(restored != null && restored.contains(firstBody),
                 "restore did not bring the original text back; the editor holds: " + restored);
-        assertNotNull(entryId);
     }
 
     /** Saves a draft through the editor and returns its id. */
@@ -103,6 +101,13 @@ class EntryRevisionIT extends RollerIT {
         String id = $("input[name='bean.id']").getValue();
         assertNotNull(id, "the editor must expose the saved entry's id");
         return id;
+    }
+
+    /** Opens the editor on a saved entry, with no modal in the way. */
+    private void openEditorFor(String entryId) {
+        openPath("/roller-ui/authoring/entryEdit.rol?weblog=" + WEBLOG_HANDLE
+                + "&bean.id=" + entryId);
+        $("#entry").should(exist);
     }
 
     /** Rewrites the body of the entry currently open in the editor and saves. */

@@ -390,6 +390,56 @@ right choice for almost every entry.
 engines not to index this entry. The entry is still publicly visible to
 anyone with the link; this only keeps it out of search results.
 
+=== Writing in Markdown
+
+Every weblog entry is written and stored in
+https://commonmark.org/[Markdown]. This is not a per-entry setting and
+there is no rich-text mode to switch to: Markdown is the format, so an
+entry always looks the same in the editor as it does in the database.
+
+The editor gives you the usual toolbar for the common marks — bold,
+italic, headings, lists, links, tables — and you can type the Markdown
+directly if you prefer. A short reminder of the syntax:
+
+[source]
+----
+## A heading
+
+A paragraph with **bold** and _italic_ text, and a
+[link](https://example.com).
+
+* a list item
+* another one
+
+> a quotation
+----
+
+HTML is allowed and passes through untouched, so you can drop in markup
+Markdown has no syntax for. It is filtered for safety before it reaches
+a reader, which means a `<script>` tag in an entry will not survive to
+the published page.
+
+==== Previewing as you write
+
+The *Preview* button in the editor toolbar shows the entry exactly as it
+will appear once published. The preview is rendered by Roller itself
+rather than by the browser, which is what lets it expand shortcodes:
+a `[gallery]` in the preview shows the real gallery, not the text you
+typed. That is worth trusting — a preview that disagreed with the
+published page about galleries and maps would be worse than none.
+
+==== Inserting galleries, maps and buttons
+
+The *Insert* menu above the editor lists everything Roller can build for
+you: an image, a photo gallery, a map with pins, a call-to-action button
+and a question-and-answer block. Choosing one drops a working example at
+the cursor for you to edit — the attribute names are already correct, so
+you are changing values rather than remembering syntax. Choosing *Image*
+opens the media chooser instead, because an image is identified by the
+file you pick.
+
+Each of these is covered in more detail later in this chapter.
+
 === Finding and editing weblog entries
 
 All of your weblog entries are saved in a database. Once your entries
@@ -402,6 +452,55 @@ You can also access your entries via the Edit Entries page, which allows
 you to search entries via keyword, category, tags, date and status.
 
 image::user-guide-9-entries.png[]
+
+==== Working on several entries at once
+
+Each row of the Edit Entries list has a checkbox, and the box in the
+header selects every entry on the page. With a selection made, the bar
+below the list can:
+
+* *Publish* the selected entries (or submit them for review, if you do
+not have permission to publish on this weblog),
+* *Add a tag* to all of them at once, leaving the tags they already
+have, or
+* *Delete* them, after a confirmation that tells you how many are about
+to go.
+
+If any of the selected entries cannot be changed — someone else deleted
+one in another window, say — the rest are still applied and Roller tells
+you how many were skipped rather than silently doing nothing.
+
+==== Duplicating an entry
+
+The copy icon on a row makes a duplicate of that entry and opens it in
+the editor. The copy carries the content, summary, category, tags and
+search-engine settings of the original, and it is always an unpublished
+draft with its own permalink, so nothing appears on your weblog until
+you publish it yourself. The original is untouched.
+
+This is the quickest way to start a post that follows the shape of one
+you have already written.
+
+==== Revisions: getting an earlier version back
+
+Every save that changes an entry's title, summary or content keeps a
+copy of what it replaced. Those copies are listed in the *Revisions*
+card at the bottom of the editor, newest first, with who saved and when.
+
+* *Compare* shows what changed between that version and the entry as it
+stands now, line by line.
+* *Restore* puts that version's title, summary and content back.
+
+Restoring is itself a save, so the version you just replaced becomes a
+revision in its turn — you can always undo an undo. Saving an entry
+without changing any of those three fields (fixing the publication date,
+say) does not add a revision.
+
+By default Roller keeps every revision and never deletes one. A site
+administrator can cap this with the *Entry revisions to keep* setting
+described under Roller administration; `-1` means keep everything and
+`0` turns revisions off.
+
 
 === Managing categories
 

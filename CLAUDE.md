@@ -110,6 +110,12 @@ Apache Roller is a multi-user blog server built with:
 - **Security**: Spring Security with role-based access control and built-in CSRF
 - **Persistence**: JPA with EclipseLink on PostgreSQL
 - **Templating**: Dual system - Velocity for blog rendering, JSP/JSTL for admin UI
+- **Entry content**: Markdown, always. There is no per-entry format flag and no
+  column that could hold one (V009 dropped `content_type`/`content_src`).
+  commonmark-java converts it in `WeblogEntry.render()` **after** shortcode
+  expansion and before sanitization — that order is load-bearing (markdown-first
+  escapes the quotes in `[gallery dir="x"]`). Raw HTML passes through commonmark
+  by design, so `HTMLSanitizer` (OWASP policy) is the only boundary.
 - **Search**: Apache Lucene for full-text search
 - **DI Container**: Single Spring container. Business beans are defined in
   `WebloggerBeanConfig` (`@Configuration @Lazy`, in
@@ -293,6 +299,35 @@ Key domain entities:
   published to the host — reachable only via `docker compose exec app curl
   http://localhost:8090/actuator/health` or the container healthcheck.
 
+## Entry editing
+- **Editor**: EasyMDE (Markdown + server-rendered preview). The page exposes
+  three functions that are the ONLY seam into the editor —
+  `insertMediaFile`, `rollerSetEntryText`, `rollerGetEntryText` — so replacing
+  the editor (e.g. with a WYSIWYG surface that edits Markdown) is one file.
+  Browser ITs drive `.CodeMirror` and go through those functions, never the
+  editor's own API.
+- **Preview** is rendered server-side (`entryEdit!preview.rol`) because only the
+  server can expand shortcodes; a browser-side Markdown library would disagree
+  with the published page.
+- **List actions**: `Entries.jsp` is ONE form around the table — bulk
+  checkboxes, per-row duplicate, and the action bar all post through it, so the
+  duplicate control is a submit button carrying `name="duplicateId"` rather than
+  a nested form. Every bulk action loops per id through `BaseController`'s
+  `lookupEntry`, and delete goes through `removeEntryWithIndex` so the Lucene
+  index cannot be orphaned.
+- **Revisions**: `weblogentry_revision` (V010) keeps the pre-save title/text/
+  summary of every content-changing save. The snapshot is taken by a JPA
+  `post-load` callback (`WeblogEntry.snapshotLoadedContent`) because
+  `saveWeblogEntry` only ever sees the caller's NEW values. Retention is the
+  runtime property `entry.revisions.retention`: **-1 (default) keeps
+  everything**, 0 records none, n>0 prunes to the n newest in the save's own
+  transaction.
+
+**Controllers: always name `@RequestParam`/`@PathVariable` explicitly.** The
+build does not pass `-parameters`, so a bare `@RequestParam String id` throws at
+runtime while unit tests (which call the method directly) keep passing.
+`ControllerMetadataTest` fails on any unnamed one.
+
 ## Plugin System
 Roller supports plugins for:
 - **Entry Plugins**: Content processing and formatting
@@ -316,4 +351,6 @@ justified grid (`GalleryMarkup`, flex-grow `--ar` CSS from the
 directories.
 `[[name ...]]` / `[[/name]]` escape a registered shortcode to literal text;
 unknown names and malformed input pass through byte-for-byte. New handlers
-implement `ShortcodeHandler` and register in `defaultExpander()`.
+implement `ShortcodeHandler` and register in `defaultExpander()`; the interface
+also requires a `ShortcodeCard` (label + snippet), which is what the editor's
+Insert menu is generated from, so a new shortcode cannot ship undiscoverable.
