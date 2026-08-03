@@ -63,7 +63,12 @@
     // There used to be a second, OpenID login form on this page, and
     // focusToUsernamePasswordForm() decided which of the two deserved focus.
     // With OpenID gone there is only one form, so focus is unconditional.
-    if (getCookie("username") != null) {
+    //
+    // getCookie/setCookie come from theme/scripts/roller.js. Remembering the
+    // username is a convenience, so it must never be the reason the login page
+    // throws: guard on the helpers being there rather than assuming a load
+    // order between an external script and this inline one.
+    if (typeof getCookie === "function" && getCookie("username") != null) {
         document.getElementById("j_username").value = getCookie("username");
         document.getElementById("j_password").focus();
     } else {
@@ -71,6 +76,11 @@
     }
 
     function saveUsername(theForm) {
+        if (typeof setCookie !== "function") {
+            // Same reasoning as above, and more pointed: this runs from the
+            // form's onsubmit, so throwing here would abort the sign-in.
+            return;
+        }
         var expires = new Date();
         expires.setTime(expires.getTime() + 24 * 30 * 60 * 60 * 1000); // sets it for approx 30 days.
         setCookie("username", theForm.j_username.value, expires);

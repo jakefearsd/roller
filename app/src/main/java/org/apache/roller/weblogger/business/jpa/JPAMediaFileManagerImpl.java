@@ -774,6 +774,8 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
      */
     @Override
     public int regenerateRenditions(Weblog weblog) throws WebloggerException {
+        // Rebuilds every image's rendition ladder, thumbnail, stored
+        // dimensions, EXIF fields and blurhash from the original on disk.
         FileContentManager cmgr = WebloggerFactory.getWeblogger().getFileContentManager();
         int count = 0;
         for (MediaFileDirectory dir : getMediaFileDirectories(weblog)) {
@@ -803,7 +805,15 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                     // check (keyed off this field) doesn't keep serving a 304 for
                     // stale renditions cached by a client from before the backfill.
                     mf.setLastUpdated(new Timestamp(System.currentTimeMillis()));
-                    strategy.store(mf);
+
+                    // EXIF and the blurhash placeholder too, not just the
+                    // rendition ladder. A photo uploaded before this pipeline
+                    // existed otherwise kept blank camera/lens/exposure fields
+                    // and no placeholder forever, because this action was the
+                    // only remediation offered and it rebuilt just the images.
+                    // Must run after generate(): the blurhash is encoded from
+                    // the smallest rendition. This also stores the entity.
+                    extractExifAndBlurhash(cmgr, mf, fc);
                     count++;
                 } catch (Exception e) {
                     log.warn("Failed to regenerate renditions for media file " + mf.getId(), e);

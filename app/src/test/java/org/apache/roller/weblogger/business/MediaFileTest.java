@@ -1451,6 +1451,17 @@ public class MediaFileTest  {
         assertThrows(FileNotFoundException.class,
                 () -> fmgr.getFileContent(assertWeblog5, id + "_480"));
 
+        // Also blank the metadata the upload pipeline fills in, so this really
+        // is a file from before that pipeline existed. Without this the
+        // blurhash assertion below passes on the value createMediaFile already
+        // stored, and would keep passing if the backfill stopped computing it.
+        MediaFile legacy = mfMgr.getMediaFile(id);
+        legacy.setBlurhash(null);
+        legacy.setExifCamera(null);
+        mfMgr.updateMediaFile(TestUtils.getManagedWebsite(testWeblog), legacy);
+        TestUtils.endSession(true);
+        assertNull(mfMgr.getMediaFile(id).getBlurhash(), "fixture setup: blurhash must start null");
+
         long lastUpdatedBeforeBackfill = mfMgr.getMediaFile(id).getLastUpdated().getTime();
         // Guarantee a distinguishable millisecond boundary even on a very fast
         // clock/filesystem so the "must have moved" assertion below can't pass
@@ -1471,6 +1482,13 @@ public class MediaFileTest  {
                 "regenerateRenditions must bump lastUpdated so MediaResourceServlet's "
                         + "Last-Modified/304 check doesn't keep serving a client's cached, "
                         + "now-stale rendition after a backfill");
+
+        // The blurhash too, not only the rendition ladder. A photo uploaded
+        // before this pipeline existed has no placeholder, and this action is
+        // the only remediation offered -- if it rebuilt just the images, those
+        // photos would pop in on every page load forever.
+        assertNotNull(mfMgr.getMediaFile(id).getBlurhash(),
+                "the backfill must compute a blurhash placeholder, not only renditions");
 
         TestUtils.endSession(true);
         TestUtils.teardownWeblog(testWeblog.getId());
