@@ -1012,4 +1012,39 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
                 "Expected exactly one status message, got: " + messages(model));
         return messages(model).get(0);
     }
+
+    // ------------------------------------------------------- live preview
+
+    @Test
+    void previewRunsUnsavedTextThroughTheRealPipeline() {
+        // The whole point of rendering the preview server-side: it must agree
+        // with the published page, which means the same markdown + shortcode +
+        // sanitize chain rather than a markdown library in the browser.
+        var response = controller.entryEditPreview(request, null,
+                "## Trip notes\n\nA **long** drive.");
+
+        assertEquals(200, response.getStatusCode().value());
+        String html = response.getBody();
+        assertTrue(html.contains("<h2>Trip notes</h2>"), html);
+        assertTrue(html.contains("<strong>long</strong>"), html);
+    }
+
+    @Test
+    void previewSanitizesWhatItRenders() {
+        // commonmark passes raw HTML through by design, and the preview pane
+        // lives inside the admin page -- so the sanitizer has to run here too.
+        var response = controller.entryEditPreview(request, null,
+                "before\n\n<script>alert(1)</script>\n");
+
+        assertFalse(response.getBody().contains("<script"), response.getBody());
+    }
+
+    @Test
+    void previewOfAForeignEntryIsNotFound() {
+        // Same ownership rule as every other entry action: the text comes from
+        // the request, but the entry must belong to the action weblog.
+        var response = controller.entryEditPreview(request, "no-such-entry-id", "anything");
+
+        assertEquals(404, response.getStatusCode().value());
+    }
 }

@@ -58,8 +58,13 @@ class EditorSeoIT extends RollerIT {
     private static final String MEDIA_ADD = "/roller-ui/authoring/mediaFileAdd.rol?weblog=" + WEBLOG_HANDLE;
     private static final String GLOBAL_CONFIG = "/roller-ui/admin/globalConfig.rol";
 
-    /** The editor is Summernote, which hides the textarea behind a contenteditable div. */
-    private static final String EDITOR_BODY = ".note-editable";
+    /**
+     * The editor's editable surface. Tests wait for this and then put text in
+     * through {@code rollerSetEntryText}, the page's own seam -- never through
+     * the editor's API directly, so replacing the editor is one change here
+     * rather than one in every journey.
+     */
+    private static final String EDITOR_BODY = ".CodeMirror";
 
     /** Rendered on the edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
@@ -86,8 +91,7 @@ class EditorSeoIT extends RollerIT {
         $("input[name='bean.title']").setValue(title);
         $(EDITOR_BODY).should(visible);
         executeJavaScript(
-                "$('#edit_content').summernote('code', arguments[0]);"
-                        + "$('#edit_content').val(arguments[0]);",
+                "rollerSetEntryText(arguments[0]);",
                 "Body of the SEO journey entry " + suffix + ".");
 
         // The SEO card starts collapsed; open it the way an author would.
@@ -153,8 +157,7 @@ class EditorSeoIT extends RollerIT {
         $("input[name='bean.title']").setValue(title);
         $(EDITOR_BODY).should(visible);
         executeJavaScript(
-                "$('#edit_content').summernote('code', arguments[0]);"
-                        + "$('#edit_content').val(arguments[0]);",
+                "rollerSetEntryText(arguments[0]);",
                 "Body of the structured-data entry " + suffix + ".");
 
         $("a[data-bs-target='#collapseSeo']").click();

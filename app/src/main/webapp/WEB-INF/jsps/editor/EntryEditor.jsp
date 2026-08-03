@@ -86,48 +86,82 @@
 
 <script>
 
-    $(document).ready(function () {
-        $('#edit_content').summernote({
-                toolbar: [
-                    // [groupName, [list of button]]
-                    ['style', ['bold', 'italic', 'underline', 'clear']],
-                    ['font', ['strikethrough', 'superscript', 'subscript']],
-                    ['fontsize', ['fontsize']],
-                    ['color', ['color']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['height', ['height']],
-                    ['misc', ['codeview']],
-                    ['insert', ['link']]
-                ],
-                height: 400
-            }
-        );
-        // Added event listener to confirm once the editor content is changed
-        $('#edit_content').on('summernote.change', function(we, contents, $editable) {
-            var confirmFunction = function(event) {
-                // Chrome requires returnValue to be set and original event is found as originalEvent
-                // see https://developer.mozilla.org/en-US/docs/Web/API/WindowEventHandlers/onbeforeunload#Example
-                if (event.originalEvent)
-                    event.originalEvent.returnValue = "Are you sure you want to leave?";
-                return "Are you sure you want to leave?";
-            }
-            $(window).on("beforeunload", confirmFunction);
+    <%-- The editor. Entries are stored as Markdown -- always, with no
+         alternative format to switch to -- so this is a Markdown editor with a
+         preview, not a rich-text editor. A WYSIWYG surface may replace it one
+         day, but it would edit Markdown rather than produce HTML. --%>
+    var rollerEditor = null;
 
-            // Remove it if it is form submit
-            $(this.form).on('submit', function() {
-                $(window).off("beforeunload", confirmFunction);
+    $(document).ready(function () {
+        rollerEditor = new EasyMDE({
+            element: document.getElementById('edit_content'),
+            autoDownloadFontAwesome: false,
+            spellChecker: false,
+            status: false,
+            minHeight: '400px',
+            toolbar: ['bold', 'italic', 'heading', '|',
+                      'quote', 'unordered-list', 'ordered-list', '|',
+                      'link', 'table', '|', 'preview', 'side-by-side', 'guide'],
+            previewRender: rollerRenderPreview
+        });
+
+        // Warn before leaving with unsaved edits, and stand down on submit.
+        rollerEditor.codemirror.on('change', function () {
+            var confirmLeaving = function (event) {
+                if (event.originalEvent) {
+                    event.originalEvent.returnValue = "Are you sure you want to leave?";
+                }
+                return "Are you sure you want to leave?";
+            };
+            $(window).on("beforeunload", confirmLeaving);
+            $("#entry").on('submit', function () {
+                $(window).off("beforeunload", confirmLeaving);
             });
         });
     });
 
+    <%-- The preview is rendered by the SERVER, not by a Markdown library in
+         the browser. Only the server can expand [gallery], [map] and the rest,
+         and a preview that disagreed with the published page about those would
+         be worse than no preview at all. --%>
+    function rollerRenderPreview(plainText, preview) {
+        $.ajax({
+            type: 'POST',
+            url: '<c:url value="/roller-ui/authoring/entryEdit!preview.rol"/>',
+            data: {
+                id: $("input[name='bean.id']").val(),
+                text: plainText,
+                weblog: $("input[name='weblog']").val(),
+                '${_csrf.parameterName}': '${_csrf.token}'
+            },
+            success: function (html) { preview.innerHTML = html; },
+            error: function () {
+                preview.textContent = '<spring:message code="weblogEdit.previewFailed"/>';
+            }
+        });
+        return '<spring:message code="weblogEdit.previewLoading"/>';
+    }
+
+    <%-- The one seam for putting text into the editor, used by the media
+         chooser (which inserts an [image id=..] shortcode) and by the browser
+         tests. Everything else talks to the editor through here, so swapping
+         the editor again does not mean hunting down its callers. --%>
     function insertMediaFile(toInsert) {
-        $('#edit_content').summernote("pasteHTML", toInsert);
+        rollerEditor.codemirror.replaceSelection(toInsert);
+    }
+
+    function rollerSetEntryText(text) {
+        rollerEditor.value(text);
+    }
+
+    function rollerGetEntryText() {
+        return rollerEditor.value();
     }
 
     <%-- Common functions --%>
 
     <%-- Opens the media chooser. With no argument the chosen file is inserted
-         into the Summernote editor (the historic behavior); with a picker
+         into the editor at the cursor; with a picker
          target ('featuredImage' / 'ogImage') the choice is routed to
          onImagePicked in EntryEdit.jsp instead. --%>
     function onClickMediaFileInsert(pickerTarget) {

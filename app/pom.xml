@@ -317,12 +317,6 @@ limitations under the License.
         </dependency>
 
         <dependency>
-            <groupId>org.webjars.bower</groupId>
-            <artifactId>summernote</artifactId>
-            <version>0.8.20</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>jquery-validation</artifactId>
             <version>1.21.0</version>
@@ -469,6 +463,15 @@ limitations under the License.
             <groupId>com.drewnoakes</groupId>
             <artifactId>metadata-extractor</artifactId>
             <version>2.21.0</version>
+        </dependency>
+
+        <!-- The Markdown editor. Every entry is Markdown, so this is the
+             editor, not one of two. Its dist bundle carries its own CodeMirror,
+             so there is no second webjar to keep in step. -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>easymde</artifactId>
+            <version>2.20.0</version>
         </dependency>
 
         <!-- The HTML sanitizer: parses and re-serializes rendered entry HTML

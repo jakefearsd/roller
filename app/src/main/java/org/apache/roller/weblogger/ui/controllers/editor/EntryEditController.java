@@ -42,6 +42,7 @@ import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.ShareLink;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -62,6 +63,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -160,6 +164,50 @@ public class EntryEditController extends BaseController {
         model.addAttribute("entry", entry);
         addEntryModelAttributes(request, model, entry, bean);
         return ".EntryEdit";
+    }
+
+    /**
+     * Renders unsaved editor text exactly as the published page will, and
+     * returns the HTML fragment the editor shows in its preview pane.
+     *
+     * <p>The point is that it runs the <em>real</em> pipeline -- shortcode
+     * expansion, then Markdown, then the sanitizer -- rather than a Markdown
+     * library in the browser. Only the server can expand {@code [gallery]} or
+     * {@code [map]}, and a preview that disagreed with the published page
+     * about those would mislead precisely where an author most needs to trust
+     * it.
+     *
+     * <p>The text comes from the request; the <em>entry</em> comes from
+     * {@code lookupEntry}, so the weblog-ownership check applies here as it
+     * does to every other entry action. A brand-new entry has no id yet and
+     * previews against a scratch entry owned by the action weblog, so its
+     * shortcodes resolve that weblog's media and nothing is persisted.
+     */
+    @PostMapping("/entryEdit!preview.rol")
+    @ResponseBody
+    public ResponseEntity<String> entryEditPreview(HttpServletRequest request,
+                                                   @RequestParam(required = false) String id,
+                                                   @RequestParam(required = false) String text) {
+        WeblogEntry entry;
+        if (id != null && !id.isBlank()) {
+            entry = lookupEntry(id, request);
+            if (entry == null) {
+                return ResponseEntity.notFound().build();
+            }
+        } else {
+            Weblog weblog = getActionWeblog(request);
+            if (weblog == null) {
+                return ResponseEntity.notFound().build();
+            }
+            entry = new WeblogEntry();
+            entry.setWebsite(weblog);
+            entry.setCreatorUserName(getAuthenticatedUser(request).getUserName());
+        }
+
+        entry.setText(text == null ? "" : text);
+        return ResponseEntity.ok()
+                .contentType(MediaType.valueOf("text/html;charset=UTF-8"))
+                .body(entry.getTransformedText());
     }
 
     @GetMapping("/entryEdit!firstSave.rol")

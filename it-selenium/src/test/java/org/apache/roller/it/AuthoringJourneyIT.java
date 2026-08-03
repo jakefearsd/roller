@@ -60,8 +60,13 @@ class AuthoringJourneyIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
 
-    /** The editor is Summernote (plugins.defaultEditor), which hides the textarea behind a contenteditable div. */
-    private static final String EDITOR_BODY = ".note-editable";
+    /**
+     * The editor's editable surface. Tests wait for this and then put text in
+     * through {@code rollerSetEntryText}, the page's own seam -- never through
+     * the editor's API directly, so replacing the editor is one change here
+     * rather than one in every journey.
+     */
+    private static final String EDITOR_BODY = ".CodeMirror";
 
     /** Rendered on the edit page only once the entry is actually published — see EntryEdit.jsp. */
     private static final String PERMALINK = "#entry_bean_permalink";
@@ -157,12 +162,13 @@ class AuthoringJourneyIT extends RollerIT {
     /**
      * Fills the entry form.
      *
-     * <p>The body goes in through Summernote's own API rather than by typing into
-     * the contenteditable div. Summernote only writes back to the underlying
-     * {@code bean.text} textarea on its change callback, so setting the div's text
-     * directly would post an empty body — the entry would save and the assertions
-     * on the public page would then fail for a reason that has nothing to do with
-     * Roller.
+     * <p>The body goes in through {@code rollerSetEntryText}, the page's own
+     * seam, rather than by typing into the editor's surface. The editor keeps
+     * its value in its own model and only writes back to the underlying
+     * {@code bean.text} textarea on submit, so driving the visible element
+     * directly would post an empty body -- the entry would save and the
+     * assertions on the public page would then fail for a reason that has
+     * nothing to do with Roller.
      */
     private void writeEntry(String title, String body) {
         $("#entry").should(exist);
@@ -170,8 +176,7 @@ class AuthoringJourneyIT extends RollerIT {
 
         $(EDITOR_BODY).should(visible);
         executeJavaScript(
-                "$('#edit_content').summernote('code', arguments[0]);"
-                        + "$('#edit_content').val(arguments[0]);",
+                "rollerSetEntryText(arguments[0]);",
                 body);
     }
 

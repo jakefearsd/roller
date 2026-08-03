@@ -69,8 +69,13 @@ class ShareLinkIT extends RollerIT {
     private static final String MEDIA_VIEW = "/roller-ui/authoring/mediaFileView.rol?weblog=" + WEBLOG_HANDLE;
     private static final String GLOBAL_CONFIG = "/roller-ui/admin/globalConfig.rol";
 
-    /** The editor is Summernote, which hides the textarea behind a contenteditable div. */
-    private static final String EDITOR_BODY = ".note-editable";
+    /**
+     * The editor's editable surface. Tests wait for this and then put text in
+     * through {@code rollerSetEntryText}, the page's own seam -- never through
+     * the editor's API directly, so replacing the editor is one change here
+     * rather than one in every journey.
+     */
+    private static final String EDITOR_BODY = ".CodeMirror";
 
     @BeforeEach
     void logIn() {
@@ -90,8 +95,7 @@ class ShareLinkIT extends RollerIT {
         $("input[name='bean.title']").setValue(title);
         $(EDITOR_BODY).should(visible);
         executeJavaScript(
-                "$('#edit_content').summernote('code', arguments[0]);"
-                        + "$('#edit_content').val(arguments[0]);", body);
+                "rollerSetEntryText(arguments[0]);", body);
         $("button[formaction$='entryAdd!publish.rol']").click();
         $("#entry_bean_permalink").should(exist);
 

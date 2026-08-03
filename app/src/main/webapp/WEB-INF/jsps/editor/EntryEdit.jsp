@@ -733,7 +733,7 @@
 
     <%-- Featured/social image pickers: same media chooser as the editor's
          "insert media file" link, routed to a hidden id input + thumbnail
-         preview instead of the Summernote insertion. Shared by both targets:
+         preview instead of inserting into the editor. Shared by both targets:
          'featuredImage' and 'ogImage'. --%>
 
     function openImagePicker(target) {
