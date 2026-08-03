@@ -27,8 +27,12 @@ import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 
 /**
- * Turns an entry's markdown into HTML, for entries that opted in by setting
- * {@code content_type} to {@link #MARKDOWN_CONTENT_TYPE}.
+ * Turns an entry's markdown into HTML.
+ *
+ * <p>Every entry is markdown. There is no per-entry format flag and no second
+ * format to fall back to: {@code WeblogEntry.render()} calls this
+ * unconditionally, and the column that once expressed an alternative was
+ * dropped in V009 so the invariant cannot drift back into a convention.
  *
  * <p>Three deliberate choices, each of which a future change could quietly
  * undo:
@@ -56,8 +60,6 @@ import org.commonmark.renderer.html.HtmlRenderer;
  */
 public final class MarkdownRenderer {
 
-    /** The {@code weblogentry.content_type} value that opts an entry in. */
-    public static final String MARKDOWN_CONTENT_TYPE = "text/markdown";
 
     private static final List<Extension> EXTENSIONS = List.of(
             TablesExtension.create(),
@@ -75,18 +77,6 @@ public final class MarkdownRenderer {
     private MarkdownRenderer() {
     }
 
-    /**
-     * True when this content type means "the text is markdown".
-     *
-     * <p>Anything else -- {@code null}, {@code text/html}, or a stray value
-     * left by a long-removed Roller feature -- means HTML, exactly as before
-     * this existed. The check is deliberately one-sided so an unrecognised
-     * value can never turn an existing entry into markdown and reflow it.
-     */
-    public static boolean isMarkdown(String contentType) {
-        return MARKDOWN_CONTENT_TYPE.equalsIgnoreCase(
-                contentType == null ? null : contentType.trim());
-    }
 
     /**
      * Render markdown to HTML. A null or blank input returns it unchanged

@@ -75,8 +75,6 @@ class WeblogEntryWrapperTest {
         entry.setTitle("Hello World");
         entry.setSummary("A summary");
         entry.setText("Some body text");
-        entry.setContentType("text/html");
-        entry.setContentSrc("http://example.com/elsewhere");
         entry.setLink("http://example.com/link");
         entry.setLocale("fr");
         entry.setPlugins("ConvertLineBreaks,SmileysPlugin");
@@ -103,8 +101,6 @@ class WeblogEntryWrapperTest {
         assertEquals("A summary", wrapper.getSummary());
         assertEquals("Some body text", wrapper.getText());
         assertEquals("A search description", wrapper.getSearchDescription());
-        assertEquals("text/html", wrapper.getContentType());
-        assertEquals("http://example.com/elsewhere", wrapper.getContentSrc());
         assertEquals("http://example.com/link", wrapper.getLink());
         assertEquals("fr", wrapper.getLocale());
         assertEquals("ConvertLineBreaks,SmileysPlugin", wrapper.getPlugins());
@@ -308,12 +304,15 @@ class WeblogEntryWrapperTest {
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
             factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
 
-            assertEquals("The whole post", wrapper.getTransformedText());
-            assertEquals("Just a taste", wrapper.getTransformedSummary(),
+            // Every entry is markdown, so even a bare line of prose comes back
+            // as a rendered paragraph -- there is no pass-through path left.
+            assertEquals("<p>The whole post</p>\n", wrapper.getTransformedText());
+            assertEquals("<p>Just a taste</p>\n", wrapper.getTransformedSummary(),
                     "The summary accessor must not quietly return the body");
-            assertEquals("The whole post", wrapper.getDisplayContent(),
+            assertEquals("<p>The whole post</p>\n", wrapper.getDisplayContent(),
                     "With no read-more link the permalink form is used");
-            assertTrue(wrapper.displayContent("http://example.com/entry").startsWith("Just a taste"),
+            assertTrue(wrapper.displayContent("http://example.com/entry")
+                            .startsWith("<p>Just a taste</p>"),
                     "and with one, the teaser form");
         }
     }

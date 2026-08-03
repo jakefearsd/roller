@@ -88,13 +88,12 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO weblogentry (id, anchor, creator, title, text, pubtime, updatetime,
                          websiteid, categoryid, publishentry, link, plugins,
                          allowcomments, commentdays, righttoleft, pinnedtomain,
-                         locale, status, summary, content_type, content_src,
-                         search_description)
+                         locale, status, summary, search_description)
 VALUES ('it-entry-0000-0000-0000-000000000001', 'it-seeded-entry', 'it_admin',
-        'IT Seeded Entry', '<p>Seeded entry body for public rendering checks.</p>',
+        'IT Seeded Entry', 'Seeded entry body for public rendering checks.',
         now() - interval '1 hour', now() - interval '1 hour',
         'it-weblog-0000-0000-0000-00000000001',
         'it-cat-0000-0000-0000-000000000001',
         true, NULL, NULL, true, 7, false, false,
-        'en_US', 'PUBLISHED', NULL, NULL, NULL, NULL)
+        'en_US', 'PUBLISHED', NULL, NULL)
 ON CONFLICT (id) DO NOTHING;

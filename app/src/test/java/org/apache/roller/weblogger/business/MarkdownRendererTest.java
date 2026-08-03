@@ -25,37 +25,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The markdown conversion itself. The interesting behaviour is not that
- * commonmark works -- it is the opt-in predicate, which decides whether an
- * existing entry keeps rendering exactly as it always has.
+ * The markdown conversion itself: the extension set that is on, the raw-HTML
+ * passthrough the shortcodes depend on, and the explicit note that commonmark
+ * is not the security boundary.
  */
 class MarkdownRendererTest {
 
-    // ------------------------------------------------- the opt-in predicate
-
-    @Test
-    void onlyTheExactContentTypeOptsIn() {
-        assertTrue(MarkdownRenderer.isMarkdown("text/markdown"));
-        assertTrue(MarkdownRenderer.isMarkdown("TEXT/MARKDOWN"), "case must not matter");
-        assertTrue(MarkdownRenderer.isMarkdown("  text/markdown  "), "stray whitespace must not matter");
-    }
-
-    @Test
-    void everythingElseMeansHtmlExactlyAsBefore() {
-        // The one-sided check is the whole safety story: an entry written
-        // years ago, or one carrying a stray value from a long-removed
-        // feature, must never be reflowed by a markdown parser.
-        assertFalse(MarkdownRenderer.isMarkdown(null), "null is the overwhelmingly common case");
-        assertFalse(MarkdownRenderer.isMarkdown(""));
-        assertFalse(MarkdownRenderer.isMarkdown("text/html"));
-        assertFalse(MarkdownRenderer.isMarkdown("text/plain"));
-        assertFalse(MarkdownRenderer.isMarkdown("application/xhtml+xml"));
-        assertFalse(MarkdownRenderer.isMarkdown("markdown"), "a near-miss is still a miss");
-        assertFalse(MarkdownRenderer.isMarkdown("text/markdown; charset=utf-8"),
-                "a parameterised type is not the value we write, so it stays HTML");
-    }
-
-    // ------------------------------------------------------- the conversion
 
     @Test
     void blankInputComesBackUnchanged() {

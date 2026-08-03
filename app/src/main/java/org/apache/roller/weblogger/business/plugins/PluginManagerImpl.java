@@ -112,13 +112,11 @@ public class PluginManagerImpl implements PluginManager {
         // (see docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md).
         ret = ShortcodeExpander.defaultExpander().expand(entry, ret);
 
-        // ...and markdown converts after them, for entries that opted in, so
-        // this path matches WeblogEntry.render() exactly. Leaving one of the
-        // two render seams markdown-blind is precisely the drift the shared
+        // ...and markdown converts after them, so this seam matches
+        // WeblogEntry.render() exactly. Every entry is markdown; leaving one of
+        // the two render seams behind is precisely the drift the shared
         // shortcode parsers exist to prevent.
-        if (MarkdownRenderer.isMarkdown(entry.getContentType())) {
-            ret = MarkdownRenderer.render(ret);
-        }
+        ret = MarkdownRenderer.render(ret);
 
         return HTMLSanitizer.conditionallySanitize(ret);
     }

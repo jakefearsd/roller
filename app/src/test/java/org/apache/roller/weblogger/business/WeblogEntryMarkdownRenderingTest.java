@@ -62,41 +62,38 @@ class WeblogEntryMarkdownRenderingTest {
         TestUtils.endSession(true);
     }
 
-    private WeblogEntry entry(String contentType, String text) throws Exception {
+    private WeblogEntry entry(String text) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(
                 "md-" + Long.toString(System.nanoTime(), 36), weblog, user);
         WeblogEntry managed = WebloggerFactory.getWeblogger()
                 .getWeblogEntryManager().getWeblogEntry(entry.getId());
-        managed.setContentType(contentType);
         managed.setText(text);
         return managed;
     }
 
-    // ------------------------------------------------------- the opt-in guard
+    // --------------------------------------------------------- the invariant
 
     @Test
-    void anEntryThatDidNotOptInIsUntouched() throws Exception {
-        // The overwhelmingly common case: content_type null. Markdown syntax
-        // in an HTML entry must stay literal -- an existing post full of
-        // asterisks and underscores cannot start sprouting <em> tags.
-        String source = "<p>A *starred* line and a # hash.</p>";
-        assertEquals(entry(null, source).getTransformedText(),
-                entry("text/html", source).getTransformedText(),
-                "null and text/html must take the same path");
-        String rendered = entry(null, source).getTransformedText();
-        assertTrue(rendered.contains("*starred*"),
-                "markdown emphasis must stay literal in an HTML entry: " + rendered);
-        assertFalse(rendered.contains("<em>"), rendered);
-        assertFalse(rendered.contains("<h1"), rendered);
+    void everyEntryIsMarkdown() throws Exception {
+        // No flag, no opt-in, no second format: markdown is what an entry is.
+        String rendered = entry("## Day one\n\nA **long** drive.\n").getTransformedText();
+
+        assertTrue(rendered.contains("<h2>Day one</h2>"), rendered);
+        assertTrue(rendered.contains("<strong>long</strong>"), rendered);
+        assertFalse(rendered.contains("## Day one"),
+                "no raw markdown may reach a reader: " + rendered);
     }
 
     @Test
-    void aStrayLegacyContentTypeAlsoMeansHtml() throws Exception {
-        // A value left by a long-removed feature must fail safe, not reflow
-        // somebody's decade-old post.
-        String source = "<p>Legacy *content* here.</p>";
-        assertEquals(entry(null, source).getTransformedText(),
-                entry("application/atom+xml", source).getTransformedText());
+    void htmlAnAuthorPastesStillSurvives() throws Exception {
+        // Markdown being mandatory does not mean HTML is impossible: raw HTML
+        // passes through the parser untouched, which is what lets an author
+        // paste an embed snippet and what lets the shortcodes emit markup.
+        String rendered = entry("Before\n\n<div class=\"embed\">kept</div>\n\nAfter")
+                .getTransformedText();
+
+        assertTrue(rendered.contains("<div class=\"embed\">kept</div>"), rendered);
+        assertFalse(rendered.contains("&lt;div"), rendered);
     }
 
     // ---------------------------------------------------------- the ordering
@@ -113,8 +110,7 @@ class WeblogEntryMarkdownRenderingTest {
         MediaFile image = TestUtils.setupImageMediaFile(weblog, "md-order-probe.jpg");
         String imageId = image.getId();
         TestUtils.endSession(true);
-        WeblogEntry entry = entry("text/markdown",
-                "> Notes:\n>\n> - first\n> - second\n\n[image id=\""
+        WeblogEntry entry = entry("> Notes:\n>\n> - first\n> - second\n\n[image id=\""
                         + imageId + "\"]\n");
         String rendered = entry.getTransformedText();
 
@@ -131,8 +127,7 @@ class WeblogEntryMarkdownRenderingTest {
     void markdownEntriesAreStillSanitized() throws Exception {
         // commonmark passes raw HTML through by design, so the sanitizer is
         // the boundary -- and it runs last, after markdown and shortcodes.
-        WeblogEntry entry = entry("text/markdown",
-                "Careful now\n\n<script>alert(1)</script>\n");
+        WeblogEntry entry = entry("Careful now\n\n<script>alert(1)</script>\n");
         String rendered = entry.getTransformedText();
         assertFalse(rendered.contains("<script"),
                 "the sanitizer must strip script from markdown output too: " + rendered);
@@ -140,30 +135,11 @@ class WeblogEntryMarkdownRenderingTest {
 
     @Test
     void theSummaryTakesTheSamePath() throws Exception {
-        WeblogEntry entry = entry("text/markdown", "unused");
+        WeblogEntry entry = entry("unused");
         entry.setSummary("A **bold** summary.");
         assertTrue(entry.getTransformedSummary().contains("<strong>bold</strong>"),
                 "getTransformedSummary must honour the flag too: "
                         + entry.getTransformedSummary());
     }
 
-    @Test
-    void theFormatSurvivesASaveAndReload() throws Exception {
-        // The flag is worthless if it does not persist: the editor sets it,
-        // the entry is saved, and the next page load must still know the entry
-        // is markdown.
-        WeblogEntry entry = TestUtils.setupWeblogEntry(
-                "md-persist-" + Long.toString(System.nanoTime(), 36), weblog, user);
-        String id = entry.getId();
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-        WeblogEntry managed = mgr.getWeblogEntry(id);
-        managed.setContentType("text/markdown");
-        mgr.saveWeblogEntry(managed);
-        TestUtils.endSession(true);
-
-        assertEquals("text/markdown",
-                WebloggerFactory.getWeblogger().getWeblogEntryManager()
-                        .getWeblogEntry(id).getContentType(),
-                "content_type must round-trip through the database");
-    }
 }

@@ -75,15 +75,6 @@ public class EntryBean {
     private String enclosureURL = null;
     private String searchDescription = null;
 
-    /**
-     * The entry's text format. Only {@code text/markdown} opts in; null --
-     * which is what every pre-existing entry and every newly created one has
-     * -- means HTML, exactly as before. Bound straight from the editor's
-     * format control, so the leniency lives in
-     * {@link org.apache.roller.weblogger.business.MarkdownRenderer#isMarkdown}
-     * rather than here.
-     */
-    private String contentType = null;
     private int commentCount = 0;
 
     // Wave 1 media & SEO foundation -- no editor UI yet, plumbing only
@@ -261,14 +252,6 @@ public class EntryBean {
         this.enclosureURL = enclosureUrl;
     }
     
-    public String getContentType() {
-        return contentType;
-    }
-
-    public void setContentType(String contentType) {
-        this.contentType = contentType;
-    }
-
     public String getSearchDescription() {
         return searchDescription;
     }
@@ -495,7 +478,6 @@ public class EntryBean {
         entry.setTagsAsString(getTagsAsString() != null
                 ? Utilities.replaceNonAlphanumeric(getTagsAsString(), ' ') : "");
         entry.setSearchDescription(getSearchDescription());
-        entry.setContentType(getContentType());
         entry.setFeaturedImageId(getFeaturedImageId());
         entry.setMetaTitle(getMetaTitle());
         entry.setOgImageId(getOgImageId());
@@ -557,7 +539,6 @@ public class EntryBean {
         setCategoryId(entry.getCategory().getId());
         setTagsAsString(entry.getTagsAsString());
         setSearchDescription(entry.getSearchDescription());
-        setContentType(entry.getContentType());
         setFeaturedImageId(entry.getFeaturedImageId());
         setMetaTitle(entry.getMetaTitle());
         setOgImageId(entry.getOgImageId());

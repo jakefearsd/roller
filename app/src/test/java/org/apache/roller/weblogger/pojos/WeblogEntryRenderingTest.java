@@ -107,14 +107,14 @@ class WeblogEntryRenderingTest {
         entry.setSummary("summary");
         entry.setPlugins("Shout");
 
-        assertEquals("HELLO", withWeblogger(entry::getTransformedText),
+        assertEquals("<p>HELLO</p>\n", withWeblogger(entry::getTransformedText),
                 "A plugin the entry names must be applied to its body");
-        assertEquals("SUMMARY", withWeblogger(entry::getTransformedSummary),
+        assertEquals("<p>SUMMARY</p>\n", withWeblogger(entry::getTransformedSummary),
                 "and to its summary");
     }
 
     @Test
-    void anEntryThatNamesNoPluginsIsRenderedUntouched() throws Exception {
+    void anEntryThatNamesNoPluginsGetsNoPluginApplied() throws Exception {
         // DELIBERATE contract change (Stage 2 Wave 1 T3, see
         // docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md):
         // "untouched" now means untouched by PLUGINS. Named entry plugins stay
@@ -126,9 +126,10 @@ class WeblogEntryRenderingTest {
         entry.setText("hello");
         entry.setPlugins(null);
 
-        assertEquals("hello", withWeblogger(entry::getTransformedText),
+        assertEquals("<p>hello</p>\n", withWeblogger(entry::getTransformedText),
                 "An entry that opted into no plugins must not have one applied anyway; "
-                        + "the plugin list is per-entry precisely so authors can choose");
+                        + "the plugin list is per-entry precisely so authors can choose. "
+                        + "The paragraph is markdown, which every entry now goes through.");
     }
 
     @Test
@@ -144,7 +145,7 @@ class WeblogEntryRenderingTest {
 
         String rendered = withWeblogger(entry::getTransformedText);
 
-        assertTrue(rendered.startsWith("look: <figure class=\"shortcode-image\">"),
+        assertTrue(rendered.contains("<figure class=\"shortcode-image\">") && rendered.contains("look:"),
                 "the [image] shortcode must expand without the entry opting in: " + rendered);
         // The sanitizer entity-encodes "=" inside attribute values; a browser
         // decodes it before parsing the srcset, so compare the decoded form.
@@ -200,9 +201,10 @@ class WeblogEntryRenderingTest {
         entry.setText("hello");
         entry.setPlugins("Broken");
 
-        assertEquals("hello", withWeblogger(entry::getTransformedText),
+        assertEquals("<p>hello</p>\n", withWeblogger(entry::getTransformedText),
                 "A failing plugin must leave the text as it found it rather than taking "
-                        + "out the whole page; plugins are third-party code");
+                        + "out the whole page; plugins are third-party code. The markdown "
+                        + "step still runs -- it is not a plugin and cannot be opted out of");
     }
 
     @Test
@@ -224,13 +226,13 @@ class WeblogEntryRenderingTest {
         entry.setText("The whole post");
         entry.setSummary("Just a taste");
 
-        assertEquals("The whole post", withWeblogger(entry::getDisplayContent),
+        assertEquals("<p>The whole post</p>\n", withWeblogger(entry::getDisplayContent),
                 "No read-more link means this is the permalink page, which shows the "
                         + "whole post rather than the teaser");
-        assertEquals("The whole post", withWeblogger(() -> entry.displayContent(null)));
-        assertEquals("The whole post", withWeblogger(() -> entry.displayContent("  ")),
+        assertEquals("<p>The whole post</p>\n", withWeblogger(() -> entry.displayContent(null)));
+        assertEquals("<p>The whole post</p>\n", withWeblogger(() -> entry.displayContent("  ")),
                 "A blank link is not a link");
-        assertEquals("The whole post", withWeblogger(() -> entry.displayContent("nil")),
+        assertEquals("<p>The whole post</p>\n", withWeblogger(() -> entry.displayContent("nil")),
                 "Velocity has no null literal, so themes pass the string 'nil' -- it must "
                         + "be understood as 'no link'");
     }
@@ -241,7 +243,7 @@ class WeblogEntryRenderingTest {
         entry.setText("");
         entry.setSummary("Just a taste");
 
-        assertEquals("Just a taste", withWeblogger(entry::getDisplayContent),
+        assertEquals("<p>Just a taste</p>\n", withWeblogger(entry::getDisplayContent),
                 "An entry with only a summary must still render something on its own page");
     }
 
@@ -253,7 +255,7 @@ class WeblogEntryRenderingTest {
 
         String rendered = withWeblogger(() -> entry.displayContent("http://example.com/entry"));
 
-        assertTrue(rendered.startsWith("Just a taste"),
+        assertTrue(rendered.startsWith("<p>Just a taste</p>"),
                 "A read-more link means this is a list page, which shows the teaser: "
                         + rendered);
         assertTrue(rendered.contains("http://example.com/entry"),
@@ -267,7 +269,7 @@ class WeblogEntryRenderingTest {
         entry.setText("The whole post");
         entry.setSummary(null);
 
-        assertEquals("The whole post",
+        assertEquals("<p>The whole post</p>\n",
                 withWeblogger(() -> entry.displayContent("http://example.com/entry")),
                 "An entry with no teaser has to show its body on the list page; showing "
                         + "nothing but a read-more link would give the reader no reason to "
@@ -282,7 +284,7 @@ class WeblogEntryRenderingTest {
 
         String rendered = withWeblogger(() -> entry.displayContent("http://example.com/entry"));
 
-        assertEquals("Just a taste", rendered,
+        assertEquals("<p>Just a taste</p>\n", rendered,
                 "There is nothing more to read, so offering a 'read more' link would take "
                         + "the reader to the same words again");
     }

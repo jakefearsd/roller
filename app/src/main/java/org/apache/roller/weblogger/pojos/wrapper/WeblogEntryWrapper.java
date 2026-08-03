@@ -106,16 +106,7 @@ public final class WeblogEntryWrapper {
     public String getText() {
         return HTMLSanitizer.conditionallySanitize(this.pojo.getText());
     }
-    
-    
-    public String getContentType() {
-        return this.pojo.getContentType();
-    }
-    
-    
-    public String getContentSrc() {
-        return this.pojo.getContentSrc();
-    }
+
     
     
     public String getAnchor() {

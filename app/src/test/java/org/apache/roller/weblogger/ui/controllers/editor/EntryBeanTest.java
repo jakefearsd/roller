@@ -629,41 +629,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         assertNull(bean.getEventLocation());
     }
 
-    @Test
-    void copyToAndCopyFromCarryTheTextFormat() throws Exception {
-        // The markdown opt-in rides on content_type, and the bean is the only
-        // path the editor has to it -- if either direction dropped the field,
-        // saving an entry would silently revert it to HTML.
-        WeblogEntry entry = entryInCategory("cat-1");
-        bean.setStatus(PubStatus.DRAFT.name());
-        bean.setCategoryId("cat-1");
-        bean.setContentType("text/markdown");
 
-        bean.copyTo(entry);
-        assertEquals("text/markdown", entry.getContentType());
-
-        WeblogEntry markdownEntry = storedEntry();
-        markdownEntry.setContentType("text/markdown");
-        EntryBean roundTripped = new EntryBean();
-        roundTripped.copyFrom(markdownEntry, Locale.US);
-        assertEquals("text/markdown", roundTripped.getContentType());
-    }
-
-    @Test
-    void anHtmlEntryKeepsANullFormatThroughTheBean() throws Exception {
-        // Every existing entry has a null content_type; the bean must not
-        // invent a value for it, or the "null means HTML" contract would be
-        // quietly replaced by "text/html means HTML" everywhere.
-        WeblogEntry entry = storedEntry();
-        bean.copyFrom(entry, Locale.US);
-        assertNull(bean.getContentType());
-
-        WeblogEntry saved = entryInCategory("cat-1");
-        bean.setStatus(PubStatus.DRAFT.name());
-        bean.setCategoryId("cat-1");
-        bean.copyTo(saved);
-        assertNull(saved.getContentType());
-    }
 
     @Test
     void copyFromTreatsANullNoindexAsFalseRatherThanThrowing() throws Exception {
