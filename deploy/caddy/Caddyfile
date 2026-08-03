@@ -10,5 +10,39 @@
 #     hostname is not a certificate-able name, so Caddy's automatic HTTPS
 #     never activates for it -- it just serves plain HTTP on port 80.
 {$ROLLER_DOMAIN} {
-	reverse_proxy app:8080
+	# Analytics, served from the BLOG's own origin.
+	#
+	# This is not a convenience. Every bundled theme head ships
+	# `script-src 'self'; connect-src 'self'` under `default-src 'none'`, so a
+	# tracker fetched from another hostname is blocked outright and its beacon
+	# never sends. Serving the script and the collect endpoint here makes both
+	# same-origin, which is what lets analytics ship without touching a policy
+	# that three rendering tests pin byte-for-byte.
+	#
+	# handle_path strips the /analytics prefix, so Umami still sees the paths
+	# it expects at its own root: /analytics/script.js -> /script.js and
+	# /analytics/api/send -> /api/send.
+	#
+	# Only those two paths matter here. The dashboard is NOT usable through
+	# this prefix -- Umami's BASE_PATH is a build-time setting the prebuilt
+	# image does not carry, so its UI assumes it lives at the root. That is
+	# what {$UMAMI_DOMAIN} below is for.
+	handle_path /analytics/* {
+		reverse_proxy umami:3000
+	}
+
+	handle {
+		reverse_proxy app:8080
+	}
+}
+
+# The Umami dashboard, on its own hostname.
+#
+# No theme CSP applies to it, so a separate origin costs nothing here, and it
+# keeps the analytics console off the blog's domain. Leave UMAMI_DOMAIN unset
+# and this defaults to a hostname that cannot resolve publicly (see
+# docker-compose.prod.yml), so Caddy serves a site nobody can reach rather
+# than exposing the console by accident.
+{$UMAMI_DOMAIN} {
+	reverse_proxy umami:3000
 }

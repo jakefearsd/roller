@@ -63,7 +63,7 @@ if [[ "${BUILD}" -eq 1 ]]; then
     "${COMPOSE[@]}" build app
 else
     echo "==> Pulling latest images..."
-    "${COMPOSE[@]}" pull app postgres caddy
+    "${COMPOSE[@]}" pull app postgres caddy umami
 fi
 
 echo "==> Starting postgres..."
@@ -85,6 +85,27 @@ if [[ "${healthy}" -ne 1 ]]; then
     exit 1
 fi
 echo "    postgres healthy."
+
+# The analytics service keeps its own database inside the same postgres
+# instance. Umami creates its own tables, but not the database itself, and
+# postgres only runs its initdb scripts on a first-ever start -- so on an
+# already-deployed stack there is nobody to create it. Do it here, and keep it
+# idempotent: `createdb` on an existing database is an error, so ask first.
+echo "==> Ensuring the analytics database exists..."
+"${COMPOSE[@]}" exec -T -e UMAMI_DB="${UMAMI_DB:-umami}" postgres bash -c '
+    set -euo pipefail
+    export PGHOST=localhost
+    export PGUSER="${POSTGRES_USER}"
+    export PGPASSWORD="${POSTGRES_PASSWORD}"
+    exists="$(psql -d "${POSTGRES_DB}" -tAc \
+        "SELECT 1 FROM pg_database WHERE datname = ${UMAMI_DB@Q}")"
+    if [[ -z "${exists}" ]]; then
+        createdb "${UMAMI_DB}"
+        echo "    created ${UMAMI_DB}."
+    else
+        echo "    ${UMAMI_DB} already exists."
+    fi
+'
 
 echo "==> Applying database migrations..."
 
@@ -134,7 +155,7 @@ if [[ "${healthy}" -ne 1 ]]; then
 fi
 echo "    app healthy."
 
-echo "==> Reconciling remaining services (caddy, backup)..."
+echo "==> Reconciling remaining services (caddy, umami, backup)..."
 "${COMPOSE[@]}" up -d
 
 if [[ "${PRUNE}" -eq 1 ]]; then

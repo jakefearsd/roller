@@ -140,4 +140,42 @@ class ThemeCspCoverageTest {
     private static String read(Path file) throws IOException {
         return Files.readString(file, StandardCharsets.UTF_8);
     }
+
+    /**
+     * Analytics depend on the policy allowing same-origin scripts and beacons.
+     *
+     * <p>The stack serves Umami's tracker and collect endpoint from the blog's
+     * own origin under {@code /analytics/*} precisely so that
+     * {@code script-src 'self'} and {@code connect-src 'self'} cover them
+     * (see deploy/caddy/Caddyfile). Tightening either directive would not
+     * break a test or log an error -- it would just stop the browser running
+     * the tracker, and the dashboard would sit empty while everything looked
+     * fine. So it is worth failing loudly here instead.
+     */
+    @Test
+    public void everyPolicyStillAllowsSameOriginScriptsAndBeacons() throws IOException {
+        List<String> tooStrict = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(THEMES)) {
+            for (Path template : files.filter(Files::isRegularFile)
+                    .filter(f -> f.toString().endsWith(".vm")).toList()) {
+                String source = read(template);
+                int at = source.indexOf(CSP);
+                if (at < 0) {
+                    continue;
+                }
+                String policy = source.substring(at, source.indexOf('>', at));
+                if (!policy.contains("script-src 'self'")) {
+                    tooStrict.add(template + " (script-src)");
+                }
+                if (!policy.contains("connect-src 'self'")) {
+                    tooStrict.add(template + " (connect-src)");
+                }
+            }
+        }
+
+        assertTrue(tooStrict.isEmpty(),
+                "These policies no longer allow the same-origin tracker the analytics "
+                        + "service depends on, which fails silently in the browser:\n  "
+                        + String.join("\n  ", tooStrict));
+    }
 }

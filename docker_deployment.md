@@ -20,10 +20,11 @@ public IP.
 6. [First run](#first-run)
 7. [TLS](#tls)
 8. [Health monitoring](#health-monitoring)
-9. [Backup and restore](#backup-and-restore)
-10. [Upgrades](#upgrades)
-11. [Firewall](#firewall)
-12. [Troubleshooting](#troubleshooting)
+9. [Analytics](#analytics)
+10. [Backup and restore](#backup-and-restore)
+11. [Upgrades](#upgrades)
+12. [Firewall](#firewall)
+13. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
@@ -138,6 +139,12 @@ reachable from the public internet to complete the ACME HTTP-01 challenge;
 if DNS isn't live yet, certificate issuance fails and Caddy retries with
 backoff until it is.
 
+If you want the analytics dashboard (see [Analytics](#analytics)), point a
+second name — `analytics.example.com`, say — at the same IP and set
+`UMAMI_DOMAIN` to it. Caddy obtains a certificate for it the same way. Leave
+it unset and the dashboard is simply unreachable; the blog still works and
+still collects nothing.
+
 If you don't have a domain (LAN deployment, quick local test of the
 production stack), set `ROLLER_DOMAIN=:80` in `.env` instead — Caddy then
 serves plain HTTP on port 80 only and never attempts ACME/TLS (a bare port
@@ -236,6 +243,71 @@ docker compose -f docker-compose.prod.yml logs -f caddy
 docker compose -f docker-compose.prod.yml logs -f postgres
 docker compose -f docker-compose.prod.yml logs -f backup
 ```
+
+## Analytics
+
+The stack ships [Umami](https://umami.is): self-hosted, cookie-free page
+analytics. It stores nothing on the reader's device, which is why no consent
+banner is needed and why it is worth having at all.
+
+### Why the tracker is served from your blog's own domain
+
+Every bundled theme sends a Content-Security-Policy of `default-src 'none'`
+with `script-src 'self'` and `connect-src 'self'`. A tracker loaded from
+another hostname is therefore blocked by the reader's browser, and its beacon
+never sends — you would see an empty dashboard and no error anywhere.
+
+So Caddy serves the two pieces the policy governs from the blog's own origin:
+
+| URL | What it is |
+| --- | --- |
+| `https://<your blog>/analytics/script.js` | the tracker |
+| `https://<your blog>/analytics/api/send` | where it reports |
+
+The dashboard is a separate hostname (`UMAMI_DOMAIN`), because Umami's UI
+assumes it lives at a domain root — its `BASE_PATH` is set when the image is
+built, and the prebuilt image does not carry one. No theme CSP applies to the
+dashboard, so this costs nothing.
+
+### Turning it on
+
+1. Set `UMAMI_APP_SECRET` (`openssl rand -hex 32`) and, if you want the
+   dashboard, `UMAMI_DOMAIN` in `.env`.
+2. Run `./deploy/deploy.sh`. It creates the `umami` database inside the
+   existing Postgres instance if it is missing, and the nightly backup starts
+   dumping it alongside the blog's own.
+3. Open the dashboard and sign in with `admin` / `umami`. **Change that
+   password immediately** — it is the documented default and the dashboard is
+   on the public internet.
+4. Add a website in Umami for each weblog and copy its website ID.
+
+### Pointing a weblog at it
+
+Analytics are per-weblog, using the field Roller already has. As a site
+administrator, first enable the override once
+(*Server Administration → Configuration → Allow analytics code override*),
+then for each weblog paste this into
+*Settings → Weblog Settings → Analytics tracking code*, substituting your own
+domain and the website ID from step 4:
+
+```html
+<script defer
+        src="https://your-blog.example.com/analytics/script.js"
+        data-website-id="00000000-0000-0000-0000-000000000000"
+        data-host-url="https://your-blog.example.com/analytics"></script>
+```
+
+`data-host-url` is not optional here. Without it the tracker reports to
+wherever its script was loaded from, which works — but stating it explicitly
+means a future change to the script's path cannot silently send your traffic
+somewhere that no longer exists.
+
+If you set `UMAMI_SCRIPT_NAME` to something other than `script.js`, use that
+filename in `src`. Renaming it is the cheapest defence against content
+blockers that match on the default path.
+
+Nothing is emitted for a weblog whose analytics field is empty, so this is
+opt-in per blog and off until you paste the snippet.
 
 ## Backup and restore
 

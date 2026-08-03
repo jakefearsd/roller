@@ -82,6 +82,22 @@ pg_dump -Fc -d "${DB_NAME}" -f "${DUMP_FILE}.tmp"
 mv "${DUMP_FILE}.tmp" "${DUMP_FILE}"
 echo "  database -> ${DUMP_FILE}"
 
+# The analytics database, if this stack runs one. Dumped separately rather
+# than with pg_dumpall so each restores on its own: losing analytics history
+# should never be a reason to hesitate over restoring the blog. Missing is not
+# an error -- a stack deployed before analytics existed simply has no such
+# database, and a backup run must not start failing because of it.
+UMAMI_DB_NAME="${UMAMI_DB:-umami}"
+if psql -d "${DB_NAME}" -tAc \
+        "SELECT 1 FROM pg_database WHERE datname = ${UMAMI_DB_NAME@Q}" | grep -q 1; then
+    UMAMI_DUMP_FILE="${BACKUP_DIR}/${UMAMI_DB_NAME}-${TIMESTAMP}.dump"
+    pg_dump -Fc -d "${UMAMI_DB_NAME}" -f "${UMAMI_DUMP_FILE}.tmp"
+    mv "${UMAMI_DUMP_FILE}.tmp" "${UMAMI_DUMP_FILE}"
+    echo "  analytics -> ${UMAMI_DUMP_FILE}"
+else
+    echo "  analytics -> none (no ${UMAMI_DB_NAME} database on this stack)"
+fi
+
 VOLUMES_FILE="${BACKUP_DIR}/volumes-${TIMESTAMP}.tar.gz"
 tar czf "${VOLUMES_FILE}.tmp" -C / data/mediafiles data/search-index data/uploads
 mv "${VOLUMES_FILE}.tmp" "${VOLUMES_FILE}"
@@ -89,7 +105,8 @@ echo "  volumes  -> ${VOLUMES_FILE}"
 
 echo "Rotating backups older than ${RETENTION_DAYS} day(s)..."
 find "${BACKUP_DIR}" -maxdepth 1 -type f \
-    \( -name 'rollerdb-*.dump' -o -name 'volumes-*.tar.gz' -o -name '*.tmp' \) \
+    \( -name 'rollerdb-*.dump' -o -name "${UMAMI_DB_NAME}-*.dump" \
+       -o -name 'volumes-*.tar.gz' -o -name '*.tmp' \) \
     -mtime "+${RETENTION_DAYS}" -print -delete
 
 echo "[$(date -u +%FT%TZ)] Backup complete."

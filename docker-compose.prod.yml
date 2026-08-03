@@ -94,11 +94,16 @@ services:
     image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     depends_on:
       - app
+      - umami
     ports:
       - "80:80"
       - "443:443"
     environment:
       ROLLER_DOMAIN: ${ROLLER_DOMAIN:?ROLLER_DOMAIN must be set in .env (a real domain, or :80 for LAN/testing)}
+      # Hostname for the Umami dashboard. Defaults to a name that cannot
+      # resolve publicly, so an operator who has not set one gets a site Caddy
+      # never serves rather than an analytics console on their blog's domain.
+      UMAMI_DOMAIN: ${UMAMI_DOMAIN:-analytics.invalid}
     volumes:
       - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
@@ -106,6 +111,37 @@ services:
     restart: unless-stopped
     networks:
       - internal
+
+  # Self-hosted, cookie-free analytics. Shares the postgres instance rather
+  # than running a second engine: one database to back up, one to tune, and
+  # analytics traffic is trivial next to the blog's. deploy/deploy.sh creates
+  # the database if it is missing.
+  #
+  # ORIGIN MATTERS. Every bundled theme ships a Content-Security-Policy with
+  # script-src 'self' and connect-src 'self', so a tracker loaded from another
+  # hostname would simply be blocked. Caddy therefore serves the tracker script
+  # and the collect endpoint from the BLOG's own origin under /analytics/*
+  # (see deploy/caddy/Caddyfile); only the dashboard, which no theme CSP
+  # governs, lives on its own hostname. That is what keeps the policy -- pinned
+  # byte-for-byte by three rendering tests -- untouched by this feature.
+  umami:
+    image: docker.umami.is/umami-software/umami:postgresql-latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-roller}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}@postgres:5432/${UMAMI_DB:-umami}
+      DATABASE_TYPE: postgresql
+      APP_SECRET: ${UMAMI_APP_SECRET:?UMAMI_APP_SECRET must be set in .env (openssl rand -hex 32)}
+      # Caddy terminates TLS and is the only thing that talks to this service,
+      # so the client's real address arrives in X-Forwarded-For.
+      CLIENT_IP_HEADER: X-Forwarded-For
+      DISABLE_TELEMETRY: "1"
+      TRACKER_SCRIPT_NAME: ${UMAMI_SCRIPT_NAME:-script.js}
+    restart: unless-stopped
+    networks:
+      - internal
+    # No host port: Caddy reaches it over the internal network.
 
   backup:
     # Reuses the postgres image for pg_dump/psql; the loop and single-shot
@@ -121,6 +157,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-roller}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       PGHOST: postgres
+      # Dumped alongside the blog database; see deploy/backup/backup.sh.
+      UMAMI_DB: ${UMAMI_DB:-umami}
       BACKUP_HOUR: ${BACKUP_HOUR:-3}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
     volumes:
