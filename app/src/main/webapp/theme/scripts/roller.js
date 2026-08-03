@@ -220,24 +220,19 @@ function validateEmail(email) {
 if (typeof jQuery !== "undefined") {
     $(document).ready(function () {
         jQuery("form.validate-form").validate();
-        // Added method to check valid email address and add a custom error message
-        jQuery.validator.addMethod(
-            "regex",
-            function(value, element, regexp)  {
-                if (regexp && regexp.constructor != RegExp) {
-                    regexp = new RegExp(regexp);
-                } else if (regexp.global) {
-                    regexp.lastIndex = 0;
-                }
-                return this.optional(element) || regexp.test(value);
-            }
-        );
-        // Applied email rules to field with class name validate-email
+        // Email fields get jquery-validate's own email rule and nothing more.
+        //
+        // There used to be an extra regex here requiring the top-level domain
+        // to be 2-4 characters. That silently rejected every address at a
+        // modern TLD -- .photography, .gallery, .travel, .studio, .email --
+        // and there was no way for the person typing to tell why, because the
+        // message just said the address was invalid. It also blocked the whole
+        // form: jquery-validate refuses to submit, so a weblog simply could
+        // not be created with such an address.
         jQuery( ".validate-email" ).rules( "add", {
             minlength: 3,
             maxlength: 255,
-            email: true,
-            regex: /^\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b$/i
+            email: true
         });
     });
 }

@@ -280,9 +280,8 @@ public class FileContentManagerTest  {
     @Test
     public void testRenditionsExcludedFromQuotaButUnderscoredUserFilesStillCount() throws Exception {
 
-        // FileContentManagerImpl.deleteAllFiles() is an unimplemented no-op
-        // (dead code -- nothing calls it) and weblog teardown does not clean
-        // up on-disk uploads, so a fixed handle would accumulate real files
+        // Weblog teardown does not clean up on-disk uploads, so a fixed
+        // handle would accumulate real files
         // across repeated local `mvn test` runs against the same
         // target/test-classes tree and eventually trip the quota check for
         // reasons unrelated to this test. A per-run handle keeps this test's

@@ -127,10 +127,18 @@ public abstract class RollerIT {
      * under test.
      */
     protected void loginAsAdmin() {
+        loginAs(ADMIN_USERNAME, ADMIN_PASSWORD);
+    }
+
+    /**
+     * Signs in as any user. Journeys that create users need this; everything
+     * else wants {@link #loginAsAdmin()}.
+     */
+    protected void loginAs(String username, String password) {
         openPath(LOGIN_PATH);
 
-        $("#j_username").setValue(ADMIN_USERNAME);
-        $("#j_password").setValue(ADMIN_PASSWORD);
+        $("#j_username").setValue(username);
+        $("#j_password").setValue(password);
         $("#login").click();
 
         // Wait for the login form to go away before navigating again.
@@ -152,6 +160,19 @@ public abstract class RollerIT {
         webdriver().shouldHave(urlContaining(MENU_PATH));
         $(LOGOUT_LINK).should(exist);
 
+        BrowserHealth.current().settle();
+    }
+
+    /**
+     * Signs out, so the next login starts from a clean session.
+     *
+     * <p>Waits for the login form rather than for the logout link to vanish:
+     * logout redirects, and asserting on the page we left is how a browser
+     * test ends up racing a navigation.
+     */
+    protected void logout() {
+        openPath("/roller-ui/logout.rol");
+        $("#j_username").should(exist);
         BrowserHealth.current().settle();
     }
 

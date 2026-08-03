@@ -31,5 +31,12 @@ terminate.setPath(contextPath != null && contextPath.length() > 0 ? contextPath 
 terminate.setMaxAge(0);
 response.addCookie(terminate);
 
-response.sendRedirect(request.getContextPath()+"/"); 
+// Back to the login page, not the site root.
+//
+// The root forwards to setup.rol when no frontpage weblog is configured, and
+// setup.rol requires the admin authority -- so logging out sent the browser
+// through a 403 on its way to being told to log in again. Sending it straight
+// to the login page is both what the user expects and independent of how the
+// site's front page happens to be configured.
+response.sendRedirect(request.getContextPath()+"/roller-ui/login.rol"); 
 %>

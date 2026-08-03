@@ -72,16 +72,6 @@ public interface FileContentManager {
     void deleteFile(Weblog weblog, String fileId)
             throws FileNotFoundException, FilePathException, FileIOException;
 
-    /**
-     * Delete all files associated with a given weblog.
-     *
-     * The only real use of this method is for when a weblog is being deleted.
-     *
-     * @param weblog The weblog to delete all files from.
-     * @throws FileIOException If there is an unexpected error during the delete.
-     */
-    void deleteAllFiles(Weblog weblog)
-            throws FileIOException;
 
     /** 
      * Is the given weblog over the file-upload quota limit?

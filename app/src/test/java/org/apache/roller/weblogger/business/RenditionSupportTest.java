@@ -517,11 +517,6 @@ class RenditionSupportTest {
         }
 
         @Override
-        public void deleteAllFiles(Weblog weblog) {
-            saved.clear();
-        }
-
-        @Override
         public boolean overQuota(Weblog weblog) {
             return false;
         }

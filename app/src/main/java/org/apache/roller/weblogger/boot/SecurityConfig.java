@@ -245,6 +245,15 @@ public class SecurityConfig {
                 .loginProcessingUrl("/roller_j_security_check")
                 .usernameParameter("j_username")
                 .passwordParameter("j_password")
+                // Where a successful login lands when there is no saved
+                // request to return to. Without this Spring Security falls
+                // back to "/", which forwards to the admin-only setup page
+                // when no frontpage weblog is configured -- so every non-admin
+                // user was sent to a 403 the moment they signed in
+                // successfully. login-redirect.jsp already exists for exactly
+                // this job: straight to the editor when the user has one
+                // weblog, otherwise the menu.
+                .defaultSuccessUrl("/roller-ui/login-redirect.rol")
                 .failureUrl("/roller-ui/login.rol?error=true"))
             // security.xml registered no <logout> element at all -- logout is
             // handled entirely at the application level (/logout.rol forwards

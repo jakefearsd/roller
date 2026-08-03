@@ -243,10 +243,28 @@ public final class BrowserHealth {
         report(Stream.concat(brokenResourceReport().stream(), consoleReport().stream()).toList());
     }
 
+    /**
+     * Paths this test expects the server to refuse.
+     *
+     * <p>A test that proves one user cannot touch another's content has to
+     * actually attempt it, and a correct refusal is a 4xx -- which is
+     * otherwise reported as a broken page. Declaring the path keeps the check
+     * meaningful everywhere else instead of forcing such a test to skip the
+     * health assertion wholesale.
+     */
+    private final List<String> expectedRefusals = new ArrayList<>();
+
+    /** Declares that requests ending in {@code pathSuffix} are meant to fail. */
+    public void expectRefusal(String pathSuffix) {
+        expectedRefusals.add(pathSuffix);
+    }
+
     private List<String> brokenResourceReport() {
         List<Resource> broken = responses.stream()
                 .filter(resource -> resource.status() >= FIRST_FAILING_STATUS)
                 .filter(resource -> !isIgnored(resource.url()))
+                .filter(resource -> expectedRefusals.stream()
+                        .noneMatch(suffix -> pathOf(resource.url()).endsWith(suffix)))
                 .toList();
         if (broken.isEmpty()) {
             return List.of();

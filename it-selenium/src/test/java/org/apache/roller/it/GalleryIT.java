@@ -36,6 +36,7 @@ import static com.codeborne.selenide.Condition.attribute;
 import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
+import static com.codeborne.selenide.Condition.value;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
@@ -76,6 +77,9 @@ class GalleryIT extends RollerIT {
 
     /** Rendered on the edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
+
+    /** The bundled fixture's own filename, before this test renames it. */
+    private static final String ORIGINAL_UPLOAD_NAME = "hawk.jpg";
 
     @BeforeEach
     void logIn() {
@@ -169,7 +173,15 @@ class GalleryIT extends RollerIT {
         executeJavaScript("onClickEdit(arguments[0], arguments[1]);", mediaFileId, name);
         $("#mediafile_edit_lightbox").shouldBe(visible);
         switchTo().frame("mediaFileEditor");
-        $("input[name='bean.name']").should(exist).setValue(name);
+
+        // Wait for the iframe to hold THIS file's form before typing into it.
+        // The modal is shown and the iframe's src set in the same handler, so
+        // the frame can still be blank (or showing the previous file) when the
+        // switch succeeds -- and a setValue into that is silently discarded,
+        // which surfaces later as a rename that simply did not happen.
+        $("input[name='bean.name']").shouldHave(value(ORIGINAL_UPLOAD_NAME));
+
+        $("input[name='bean.name']").setValue(name);
         $("textarea[name='bean.description']").setValue(caption);
         $("input[name='submit']").click();
         switchTo().defaultContent();

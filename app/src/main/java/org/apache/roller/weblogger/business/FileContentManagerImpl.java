@@ -192,14 +192,6 @@ public class FileContentManagerImpl implements FileContentManager {
     }
 
     /**
-     * @inheritDoc
-     */
-    @Override
-    public void deleteAllFiles(Weblog weblog) throws FileIOException {
-        // TODO: Implement
-    }
-
-    /**
      * @see org.apache.roller.weblogger.business.FileContentManager#overQuota(Weblog)
      */
     @Override

@@ -127,6 +127,13 @@ public class SeoController extends BaseController {
     }
 
     /** Sitemap for one weblog: home page plus published, indexable entries. */
+    /**
+     * The sitemap protocol's own limit: a sitemap may list at most 50,000
+     * URLs. A weblog with more needs a sitemap index of its own, which is a
+     * feature to add when some weblog here is within sight of it.
+     */
+    static final int MAX_SITEMAP_URLS = 50_000;
+
     @GetMapping("/sitemap-{handle}.xml")
     public ResponseEntity<String> weblogSitemap(@PathVariable("handle") String handle) {
         Weblog weblog;
@@ -148,6 +155,13 @@ public class SeoController extends BaseController {
             WeblogEntrySearchCriteria criteria = new WeblogEntrySearchCriteria();
             criteria.setWeblog(weblog);
             criteria.setStatus(PubStatus.PUBLISHED);
+            // Bounded, because this is an anonymous endpoint that loads every
+            // matching entry into memory and renders it. Unbounded it is a
+            // free amplification lever for anyone who can spell the URL, and
+            // the protocol caps a sitemap at 50,000 URLs anyway -- past that
+            // the file is invalid, so fetching more would be work done to
+            // produce something no crawler will accept.
+            criteria.setMaxResults(MAX_SITEMAP_URLS);
             entries = weblogger.getWeblogEntryManager().getWeblogEntries(criteria);
         } catch (WebloggerException e) {
             log.error("Error building the sitemap for weblog " + handle, e);
