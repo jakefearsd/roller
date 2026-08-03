@@ -549,4 +549,58 @@ class ShareControllerTest {
         request.setRemoteAddr("198.51.100.7");
         return request;
     }
+
+    /**
+     * The throttle is switchable, and a controller built with it off must let
+     * every attempt through -- otherwise an operator who turns it off in a
+     * trusted network still gets 429s and no way to see why.
+     */
+    @Test
+    void throttlingCanBeTurnedOff() throws Exception {
+        String previous = ControllerTestFixture.setConfigProperty(
+                "share.password.throttle.enabled", "false");
+        try {
+            // A fresh controller: the throttle is resolved once, on first use.
+            ShareController unthrottled = new ShareController();
+            inject(unthrottled, "weblogger", WebloggerFactory.getWeblogger());
+            ShareLink link = passwordProtectedEntryLink("shareThrottleOffEntry", "right-pw");
+
+            for (int attempt = 0; attempt < 30; attempt++) {
+                MockHttpServletResponse response = new MockHttpServletResponse();
+                unthrottled.unlock(link.getToken(), "wrong-" + attempt,
+                        guessingRequest(new MockHttpSession()), response);
+                assertEquals(200, response.getStatus(),
+                        "no attempt should be refused when throttling is off");
+            }
+        } finally {
+            ControllerTestFixture.restoreConfigProperty(
+                    "share.password.throttle.enabled", previous);
+        }
+    }
+
+    /**
+     * A mistyped number in the properties file must not take the share pages
+     * down. The throttle falls back to its default rather than letting a
+     * NumberFormatException escape on the first password attempt anyone makes.
+     */
+    @Test
+    void aMalformedThrottleSettingFallsBackInsteadOfFailing() throws Exception {
+        String previous = ControllerTestFixture.setConfigProperty(
+                "share.password.throttle.threshold", "ten");
+        try {
+            ShareController misconfigured = new ShareController();
+            inject(misconfigured, "weblogger", WebloggerFactory.getWeblogger());
+            ShareLink link = passwordProtectedEntryLink("shareThrottleBadEntry", "right-pw");
+
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            ModelAndView view = misconfigured.unlock(link.getToken(), "wrong-pw",
+                    guessingRequest(new MockHttpSession()), response);
+
+            assertEquals(ShareController.PASSWORD_FORM_VIEW, view.getViewName(),
+                    "a bad threshold must degrade to the default, not throw");
+        } finally {
+            ControllerTestFixture.restoreConfigProperty(
+                    "share.password.throttle.threshold", previous);
+        }
+    }
 }
