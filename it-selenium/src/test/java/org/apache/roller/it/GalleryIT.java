@@ -26,12 +26,14 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebElement;
 
 import java.io.File;
+import java.time.Duration;
 import java.net.URISyntaxException;
 import java.net.URL;
 
 import static com.codeborne.selenide.CollectionCondition.sizeGreaterThan;
 import static com.codeborne.selenide.Condition.appear;
 import static com.codeborne.selenide.Condition.attribute;
+import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
@@ -171,19 +173,18 @@ class GalleryIT extends RollerIT {
         $("textarea[name='bean.description']").setValue(caption);
         $("input[name='submit']").click();
         switchTo().defaultContent();
-        // the success page calls parent.onEditSuccess(), which closes the
-        // modal and re-submits the view form -- wait for it so the save has
-        // definitely landed before the entry references the directory
-        // Then prove the save actually landed, on a page we opened ourselves.
-        //
-        // The success page calls parent.onEditSuccess(), which hides the modal
-        // and re-submits the view form. Waiting on either of those is waiting
-        // on the UI moving: the modal's dismissal is an animation and the
-        // re-submit is a navigation that can still be in flight, and on a
-        // loaded runner the assertion below then runs against whichever page
-        // happens to be current. Loading the view fresh has neither problem,
-        // and the renamed tile appearing on it is the first observable
-        // evidence that the write committed.
+
+        // Wait for the modal to go before touching the top window. This one is
+        // not an animation to be skipped: the iframe POSTs the rename, and only
+        // its success page calls parent.onEditSuccess(), which is what hides
+        // the modal. So the modal disappearing IS the evidence that the write
+        // completed, and navigating before it would abandon the request. Given
+        // generously long, because it spans a form POST on a loaded runner.
+        $("#mediafile_edit_lightbox").should(disappear, Duration.ofSeconds(30));
+
+        // onEditSuccess also re-submits the view form. That navigation is
+        // still in flight and racing anything asserted against the current
+        // page, so load the view ourselves and assert on that instead.
         openPath(MEDIA_VIEW);
         BrowserHealth.current().settle();
         $("img[alt='" + name + "']").should(exist);
