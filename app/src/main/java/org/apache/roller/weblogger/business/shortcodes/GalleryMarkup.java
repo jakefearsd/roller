@@ -244,6 +244,82 @@ public final class GalleryMarkup {
      * back to the default: clamped packing is still roughly right, whereas the
      * default (1.5) would be wrong in the opposite direction.
      */
+    /**
+     * The justified-grid stylesheet, generated from the very constants that
+     * produce the classes it targets.
+     *
+     * <p>This exists because there were two hand-maintained copies of these
+     * rules -- the {@code showGalleryGridStyles} theme macro and an inlined
+     * copy in {@code ShareController}, share pages rendering outside any theme
+     * -- and they drifted. When the emitter moved from an inline custom
+     * property to {@code ar-NNN} classes (the sanitizer cannot carry
+     * {@code --ar}), only the macro was updated, so every share-page gallery
+     * silently fell back to a uniform 3:2 and cropped its portraits. Nothing
+     * failed; the pictures were just wrong.
+     *
+     * <p>Generating the table removes the possibility rather than testing for
+     * it: a class the emitter can produce and this stylesheet has no rule for
+     * cannot exist, because the same loop writes both.
+     */
+    public static String gridStyles() {
+        return GRID_STYLES;
+    }
+
+    /** Deterministic, so built once rather than on every page render. */
+    private static final String GRID_STYLES = buildGridStyles();
+
+    private static String buildGridStyles() {
+        StringBuilder css = new StringBuilder(2048);
+        css.append(".jgrid { display: flex; flex-wrap: wrap; gap: .5rem; --row-h: ")
+                .append(DEFAULT_ROW_HEIGHT).append("px; }\n");
+        css.append(".jgrid figure {\n")
+                .append("  margin: 0;\n")
+                // pre-ladder uploads have no stored dimensions
+                .append("  --ar: 1.5;\n")
+                // --ar is width / height
+                .append("  flex-grow: var(--ar);\n")
+                .append("  flex-basis: calc(var(--ar) * var(--row-h));\n")
+                // stops a panorama dominating a row
+                .append("  min-width: 120px;\n")
+                .append("}\n");
+
+        // Row-height ladder: the shortcode's row attribute snaps to a rung.
+        for (int rung : ROW_HEIGHT_LADDER) {
+            css.append(".jgrid.jgrid-h").append(rung).append("{--row-h:").append(rung).append("px}");
+        }
+        css.append('\n');
+
+        // Per-figure aspect ratios, as classes rather than an inline custom
+        // property because OWASP's CSS schema rejects "--ar" outright.
+        for (int hundredths = MIN_AR_CLASS; hundredths <= MAX_AR_CLASS;
+                hundredths += AR_CLASS_STEP) {
+            css.append(".jgrid figure.ar-").append(hundredths).append("{--ar:")
+                    .append(trimTrailingZeros(hundredths / 100.0)).append('}');
+        }
+        css.append('\n');
+
+        css.append(".jgrid figure a { display: block; }\n")
+                .append(".jgrid figure img {\n")
+                .append("  display: block; width: 100%; height: auto;\n")
+                // reserves the box, zero CLS
+                .append("  aspect-ratio: var(--ar);\n")
+                .append("  object-fit: cover;\n")
+                .append("}\n")
+                .append(".jgrid figcaption { font-size: .85em; padding: .15rem 0; }\n")
+                // keep the last row at natural height instead of stretching it
+                .append(".jgrid::after { content: \"\"; flex-grow: 999999; }\n")
+                .append("@media (max-width: 640px) { .jgrid { --row-h: ")
+                .append(ROW_HEIGHT_LADDER[0]).append("px; } }\n");
+        return css.toString();
+    }
+
+    /** {@code 1.50 -> "1.5"}, {@code 2.00 -> "2"} -- CSS wants neither trailing zero. */
+    private static String trimTrailingZeros(double value) {
+        String text = String.format(java.util.Locale.ROOT, "%.2f", value);
+        text = text.replaceAll("0+$", "");
+        return text.endsWith(".") ? text.substring(0, text.length() - 1) : text;
+    }
+
     static final int MIN_AR_CLASS = 40;
     static final int MAX_AR_CLASS = 260;
 

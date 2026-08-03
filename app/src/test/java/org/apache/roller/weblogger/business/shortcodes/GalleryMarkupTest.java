@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -57,20 +58,45 @@ class GalleryMarkupTest {
     }
 
     @Test
-    void theStylesheetHasARuleForEveryClassTheEmitterCanProduce() throws IOException {
-        // The coupling that would otherwise rot silently: a figure carrying a
-        // class the stylesheet has no rule for falls back to --ar: 1.5 and
-        // packs at the wrong width, with nothing failing anywhere.
-        Path macro = Paths.get("src/main/webapp/WEB-INF/velocity/weblog.vm");
-        assertTrue(Files.exists(macro), "expected the macro library at " + macro.toAbsolutePath());
-        String css = Files.readString(macro, StandardCharsets.UTF_8);
+    void theStylesheetHasARuleForEveryClassTheEmitterCanProduce() {
+        // Now a property of one generator rather than a coupling between two
+        // hand-written copies: the same loop writes the class and the rule.
+        // The old version of this test read weblog.vm and said nothing about
+        // ShareController's separate inlined copy, which is precisely where
+        // the rules went missing.
+        String css = GalleryMarkup.gridStyles();
 
         for (int h = GalleryMarkup.MIN_AR_CLASS; h <= GalleryMarkup.MAX_AR_CLASS;
                 h += GalleryMarkup.AR_CLASS_STEP) {
-            String rule = ".jgrid figure.ar-" + h + "{";
-            assertTrue(css.contains(rule),
-                    "no stylesheet rule for " + rule + " -- regenerate the ar-NNN table in "
-                            + "#showGalleryGridStyles from GalleryMarkup's constants");
+            assertTrue(css.contains(".jgrid figure.ar-" + h + "{"),
+                    "no stylesheet rule for ar-" + h);
         }
+        for (int rung : GalleryMarkup.ROW_HEIGHT_LADDER) {
+            assertTrue(css.contains(".jgrid.jgrid-h" + rung + "{--row-h:" + rung + "px}"),
+                    "no stylesheet rule for row height " + rung);
+        }
+    }
+
+    /**
+     * The two places that ship this stylesheet -- the theme macro and the
+     * share page -- must both take it from the generator rather than keeping
+     * their own copy. That is the failure this whole change is about.
+     */
+    @Test
+    void neitherConsumerKeepsItsOwnCopyOfTheRules() throws IOException {
+        String macro = Files.readString(
+                Paths.get("src/main/webapp/WEB-INF/velocity/weblog.vm"), StandardCharsets.UTF_8);
+        assertTrue(macro.contains("$utils.galleryGridStyles"),
+                "the theme macro must emit the generated stylesheet");
+        assertFalse(macro.contains(".jgrid figure.ar-"),
+                "the theme macro has grown its own ar-NNN table again");
+
+        String shareController = Files.readString(
+                Paths.get("src/main/java/org/apache/roller/weblogger/ui/controllers"
+                        + "/core/ShareController.java"), StandardCharsets.UTF_8);
+        assertTrue(shareController.contains("GalleryMarkup.gridStyles()"),
+                "share pages must emit the generated stylesheet");
+        assertFalse(shareController.contains(".jgrid figure {"),
+                "ShareController has grown its own copy of the grid rules again");
     }
 }

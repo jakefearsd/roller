@@ -129,30 +129,6 @@ public class ShareController extends BaseController {
     private volatile GenericThrottle passwordThrottle;
     private volatile boolean passwordThrottleResolved;
 
-    /**
-     * The grid CSS for share-page galleries: the same rules as the
-     * {@code #showGalleryGridStyles} theme macro in
-     * {@code WEB-INF/velocity/weblog.vm} (share pages render outside any
-     * theme, so the macro's output is inlined here; keep the two in sync).
-     */
-    private static final String GRID_CSS =
-            ".jgrid { display: flex; flex-wrap: wrap; gap: .5rem; --row-h: 260px; }\n"
-            + ".jgrid figure {\n"
-            + "  margin: 0;\n"
-            + "  --ar: 1.5;\n"
-            + "  flex-grow: var(--ar);\n"
-            + "  flex-basis: calc(var(--ar) * var(--row-h));\n"
-            + "  min-width: 120px;\n"
-            + "}\n"
-            + ".jgrid figure a { display: block; }\n"
-            + ".jgrid figure img {\n"
-            + "  display: block; width: 100%; height: auto;\n"
-            + "  aspect-ratio: var(--ar);\n"
-            + "  object-fit: cover;\n"
-            + "}\n"
-            + ".jgrid figcaption { font-size: .85em; padding: .15rem 0; }\n"
-            + ".jgrid::after { content: \"\"; flex-grow: 999999; }\n"
-            + "@media (max-width: 640px) { .jgrid { --row-h: 160px; } }\n";
 
     // ------------------------------------------------------------- security
     //
@@ -457,7 +433,7 @@ public class ShareController extends BaseController {
                 + "body { margin: 0 auto; max-width: 72rem; padding: 1rem; "
                 + "font-family: system-ui, sans-serif; }\n"
                 + "img { max-width: 100%; }\n"
-                + GRID_CSS
+                + GalleryMarkup.gridStyles()
                 + "</style>\n"
                 + galleryAssets()
                 + "</head>\n<body>\n"

@@ -33,6 +33,7 @@ import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RegexUtil;
+import org.apache.roller.weblogger.business.shortcodes.GalleryMarkup;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.pojos.wrapper.UserWrapper;
@@ -51,6 +52,19 @@ public class UtilitiesModel implements Model {
     private Weblog weblog = null;
     
     
+    /**
+     * The justified-grid stylesheet for galleries, so the theme macro emits
+     * exactly what the share pages do.
+     *
+     * <p>Generated in {@link GalleryMarkup#gridStyles()} from the same
+     * constants that produce the {@code ar-NNN} classes, which is what stops
+     * the rules and the markup drifting -- they used to be maintained by hand
+     * in two places and did drift.
+     */
+    public String getGalleryGridStyles() {
+        return GalleryMarkup.gridStyles();
+    }
+
     /** Template context name to be used for model */
     @Override
     public String getModelName() {

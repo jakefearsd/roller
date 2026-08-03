@@ -603,4 +603,30 @@ class ShareControllerTest {
                     "share.password.throttle.threshold", previous);
         }
     }
+
+    /**
+     * The share page must ship the aspect-ratio rules its own markup depends
+     * on.
+     *
+     * <p>It did not. Share pages render outside any theme, so the grid CSS was
+     * inlined here as a second hand-maintained copy of the theme macro's. When
+     * the emitter moved from an inline custom property to ar-NNN classes,
+     * only the macro was updated -- so every share-page gallery fell back to a
+     * uniform 3:2 and cropped its portraits, with nothing failing to say so.
+     * Both now come from GalleryMarkup.gridStyles().
+     */
+    @Test
+    void aSharedGalleryShipsTheRulesItsOwnClassesNeed() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "share-css-a.jpg", "sharecssgrid");
+        markDirectoryPrivate(image);
+        ShareLink link = createLink(ShareLink.TYPE_DIRECTORY, directoryId(image), null);
+
+        String html = renderedPage(link.getToken());
+
+        assertTrue(html.contains(".jgrid figure.ar-150{"),
+                "no aspect-ratio rules on the share page; galleries there will "
+                        + "silently lay out at a uniform 3:2:\n" + html);
+        assertTrue(html.contains(".jgrid.jgrid-h320{"),
+                "no row-height ladder on the share page:\n" + html);
+    }
 }
