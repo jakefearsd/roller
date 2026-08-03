@@ -32,7 +32,6 @@ import java.net.URL;
 import static com.codeborne.selenide.CollectionCondition.sizeGreaterThan;
 import static com.codeborne.selenide.Condition.appear;
 import static com.codeborne.selenide.Condition.attribute;
-import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
@@ -175,15 +174,18 @@ class GalleryIT extends RollerIT {
         // the success page calls parent.onEditSuccess(), which closes the
         // modal and re-submits the view form -- wait for it so the save has
         // definitely landed before the entry references the directory
-        $("#mediafile_edit_lightbox").should(disappear);
+        // Then prove the save actually landed, on a page we opened ourselves.
+        //
+        // The success page calls parent.onEditSuccess(), which hides the modal
+        // and re-submits the view form. Waiting on either of those is waiting
+        // on the UI moving: the modal's dismissal is an animation and the
+        // re-submit is a navigation that can still be in flight, and on a
+        // loaded runner the assertion below then runs against whichever page
+        // happens to be current. Loading the view fresh has neither problem,
+        // and the renamed tile appearing on it is the first observable
+        // evidence that the write committed.
+        openPath(MEDIA_VIEW);
         BrowserHealth.current().settle();
-
-        // ...and then prove the save actually landed. Waiting on the modal
-        // alone only proves the browser navigated: the re-submitted view form
-        // can still be in flight, and on a slow runner the entry below then
-        // renders a gallery whose tile has no caption yet, failing far away
-        // from the cause. The renamed tile appearing in the re-rendered view
-        // is the first observable evidence the write committed.
         $("img[alt='" + name + "']").should(exist);
     }
 
