@@ -1544,5 +1544,55 @@ Include Javascript code needed for expanding folder macros (undocumented).
 #end
 
 
-
-
+##
+## A newsletter subscribe form, for themes that want one.
+##
+## Call it with the list's UUID, copied from the newsletter admin:
+##     #showSubscribeForm("2f0f1b0c-...-9a3d" "Get new guides by email")
+##
+## The submit goes to /newsletter/subscribe on THIS blog's own origin, which
+## Caddy forwards to listmonk's public subscription API. Same-origin is not a
+## style choice: every bundled theme sends connect-src 'self', so a fetch to
+## the newsletter's own hostname would simply be blocked and the reader would
+## see nothing happen.
+##
+## Roller stores no subscriber data. Listmonk records the address, sends the
+## double opt-in email, and owns the unsubscribe link -- which is why this
+## needs no database column, no admin screen, and no consent bookkeeping here.
+##
+#macro(showSubscribeForm $listUuid $prompt)
+<form class="newsletter-subscribe" onsubmit="return rollerSubscribe(this)">
+    <label for="newsletter-email">$prompt</label>
+    <input type="email" id="newsletter-email" name="email" required
+           autocomplete="email" placeholder="you@example.com">
+    <input type="hidden" name="list_uuid" value="$listUuid">
+    <button type="submit">Subscribe</button>
+    <p class="newsletter-message" hidden></p>
+</form>
+<script>
+    function rollerSubscribe(form) {
+        var message = form.querySelector('.newsletter-message');
+        message.hidden = false;
+        message.textContent = 'Subscribing\u2026';
+        fetch('/newsletter/subscribe', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: form.email.value,
+                list_uuids: [form.list_uuid.value]
+            })
+        }).then(function (response) {
+            // Listmonk answers 200 for a new subscription and 409 for an
+            // address already on the list. Saying the same thing either way is
+            // deliberate: a different message would let anyone test whether a
+            // given address is subscribed.
+            message.textContent = (response.ok || response.status === 409)
+                ? 'Thanks \u2014 please check your email to confirm.'
+                : 'Sorry, that did not work. Please try again later.';
+        }).catch(function () {
+            message.textContent = 'Sorry, that did not work. Please try again later.';
+        });
+        return false;
+    }
+</script>
+#end

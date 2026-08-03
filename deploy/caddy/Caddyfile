@@ -31,6 +31,23 @@
 		reverse_proxy umami:3000
 	}
 
+	# The newsletter's public subscribe API, and only that.
+	#
+	# A subscribe form on a blog page has to reach a same-origin URL: the
+	# theme CSP's connect-src 'self' blocks a fetch to any other host, exactly
+	# as script-src does for the tracker above. One path is all that needs to
+	# be same-origin -- listmonk's opt-in and unsubscribe pages are followed
+	# from an email client, where no theme CSP applies, so they stay on
+	# {$LISTMONK_DOMAIN}.
+	#
+	# Listmonk is NOT proxied wholesale here: running it under a sub-path is
+	# an open feature request upstream, not a supported configuration. Only
+	# this one endpoint is rewritten onto it.
+	handle /newsletter/subscribe {
+		rewrite * /api/public/subscription
+		reverse_proxy listmonk:9000
+	}
+
 	handle {
 		reverse_proxy app:8080
 	}
@@ -45,4 +62,12 @@
 # than exposing the console by accident.
 {$UMAMI_DOMAIN} {
 	reverse_proxy umami:3000
+}
+
+# The newsletter admin, and the opt-in / unsubscribe pages subscribers reach
+# from their email. On its own hostname for the same reason the analytics
+# dashboard is: listmonk assumes it owns a domain root. Unset, LISTMONK_DOMAIN
+# defaults to a name that cannot resolve.
+{$LISTMONK_DOMAIN} {
+	reverse_proxy listmonk:9000
 }

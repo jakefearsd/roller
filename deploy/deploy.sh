@@ -63,7 +63,7 @@ if [[ "${BUILD}" -eq 1 ]]; then
     "${COMPOSE[@]}" build app
 else
     echo "==> Pulling latest images..."
-    "${COMPOSE[@]}" pull app postgres caddy umami
+    "${COMPOSE[@]}" pull app postgres caddy umami listmonk
 fi
 
 echo "==> Starting postgres..."
@@ -86,25 +86,30 @@ if [[ "${healthy}" -ne 1 ]]; then
 fi
 echo "    postgres healthy."
 
-# The analytics service keeps its own database inside the same postgres
-# instance. Umami creates its own tables, but not the database itself, and
-# postgres only runs its initdb scripts on a first-ever start -- so on an
-# already-deployed stack there is nobody to create it. Do it here, and keep it
-# idempotent: `createdb` on an existing database is an error, so ask first.
-echo "==> Ensuring the analytics database exists..."
-"${COMPOSE[@]}" exec -T -e UMAMI_DB="${UMAMI_DB:-umami}" postgres bash -c '
+# The analytics and newsletter services keep their own databases inside the
+# same postgres instance. Each creates its own tables, but not the database
+# itself, and postgres only runs its initdb scripts on a first-ever start -- so
+# on an already-deployed stack there is nobody to create them. Do it here, and
+# keep it idempotent: `createdb` on an existing database is an error, so ask
+# first.
+echo "==> Ensuring the service databases exist..."
+"${COMPOSE[@]}" exec -T \
+    -e SERVICE_DBS="${UMAMI_DB:-umami} ${LISTMONK_DB:-listmonk}" \
+    postgres bash -c '
     set -euo pipefail
     export PGHOST=localhost
     export PGUSER="${POSTGRES_USER}"
     export PGPASSWORD="${POSTGRES_PASSWORD}"
-    exists="$(psql -d "${POSTGRES_DB}" -tAc \
-        "SELECT 1 FROM pg_database WHERE datname = ${UMAMI_DB@Q}")"
-    if [[ -z "${exists}" ]]; then
-        createdb "${UMAMI_DB}"
-        echo "    created ${UMAMI_DB}."
-    else
-        echo "    ${UMAMI_DB} already exists."
-    fi
+    for db in ${SERVICE_DBS}; do
+        exists="$(psql -d "${POSTGRES_DB}" -tAc \
+            "SELECT 1 FROM pg_database WHERE datname = ${db@Q}")"
+        if [[ -z "${exists}" ]]; then
+            createdb "${db}"
+            echo "    created ${db}."
+        else
+            echo "    ${db} already exists."
+        fi
+    done
 '
 
 echo "==> Applying database migrations..."
@@ -155,7 +160,7 @@ if [[ "${healthy}" -ne 1 ]]; then
 fi
 echo "    app healthy."
 
-echo "==> Reconciling remaining services (caddy, umami, backup)..."
+echo "==> Reconciling remaining services (caddy, umami, listmonk, backup)..."
 "${COMPOSE[@]}" up -d
 
 if [[ "${PRUNE}" -eq 1 ]]; then

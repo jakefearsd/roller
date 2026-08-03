@@ -21,10 +21,11 @@ public IP.
 7. [TLS](#tls)
 8. [Health monitoring](#health-monitoring)
 9. [Analytics](#analytics)
-10. [Backup and restore](#backup-and-restore)
-11. [Upgrades](#upgrades)
-12. [Firewall](#firewall)
-13. [Troubleshooting](#troubleshooting)
+10. [Newsletter](#newsletter)
+11. [Backup and restore](#backup-and-restore)
+12. [Upgrades](#upgrades)
+13. [Firewall](#firewall)
+14. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
@@ -139,9 +140,10 @@ reachable from the public internet to complete the ACME HTTP-01 challenge;
 if DNS isn't live yet, certificate issuance fails and Caddy retries with
 backoff until it is.
 
-If you want the analytics dashboard (see [Analytics](#analytics)), point a
-second name — `analytics.example.com`, say — at the same IP and set
-`UMAMI_DOMAIN` to it. Caddy obtains a certificate for it the same way. Leave
+If you want the analytics dashboard (see [Analytics](#analytics)) or the
+newsletter (see [Newsletter](#newsletter)), point a second and third name —
+`analytics.example.com` and `newsletter.example.com`, say — at the same IP and
+set `UMAMI_DOMAIN` / `LISTMONK_DOMAIN` to them. Caddy obtains a certificate for it the same way. Leave
 it unset and the dashboard is simply unreachable; the blog still works and
 still collects nothing.
 
@@ -308,6 +310,63 @@ blockers that match on the default path.
 
 Nothing is emitted for a weblog whose analytics field is empty, so this is
 opt-in per blog and off until you paste the snippet.
+
+## Newsletter
+
+The stack ships [listmonk](https://listmonk.app): a self-hosted mailing list
+manager. It owns the subscriber list, the double opt-in flow, the sending and
+the unsubscribe links. **Roller stores no subscriber data at all**, which is
+what keeps consent and retention obligations out of the blog software.
+
+### Turning it on
+
+1. Set `LISTMONK_ADMIN_PASSWORD`, and — if you want subscribers to be able to
+   confirm — `LISTMONK_DOMAIN` and `LISTMONK_ROOT_URL` in `.env`. The two must
+   agree: listmonk builds its confirmation and unsubscribe links from
+   `LISTMONK_ROOT_URL`, and those links are the only way a subscriber can
+   confirm or leave.
+2. Run `./deploy/deploy.sh`. It creates the `listmonk` database, and listmonk
+   creates its own schema on first start.
+3. Sign in at `https://<LISTMONK_DOMAIN>/admin` with `admin` and the password
+   you set.
+4. **Set up SMTP** under *Settings → SMTP*. Nothing sends until you do; those
+   credentials live in listmonk's own database, not in `.env`.
+5. Create a list, set it to **double opt-in**, and copy its UUID.
+
+### Putting a subscribe form on a blog
+
+The shared template library has a macro for it. In the theme, wherever the
+form belongs:
+
+```velocity
+#showSubscribeForm("2f0f1b0c-0000-0000-0000-000000000000" "Get new guides by email")
+```
+
+The first argument is the list UUID from step 5; the second is the label.
+
+The form submits to `/newsletter/subscribe` on the **blog's own domain**,
+which Caddy forwards to listmonk's public subscription API. That is required,
+not decorative: every bundled theme sends `connect-src 'self'`, so a form
+posting to `newsletter.example.com` would be blocked by the reader's browser
+and nothing would happen. Only that one endpoint is routed this way — the
+opt-in and unsubscribe pages stay on `LISTMONK_DOMAIN`, because they are
+followed from an email client where no theme CSP applies.
+
+A subscriber who is already on the list gets the same "check your email"
+message as a new one. That is deliberate: a different message would let anyone
+use the form to test whether a given address is subscribed.
+
+### Sending
+
+Compose and send campaigns from listmonk's own console. Roller does not have a
+"send this post as email" button — see the note below.
+
+> **Not built:** triggering a campaign automatically when a post is published.
+> It needs a per-blog list mapping stored in Roller, an API client with
+> credentials, a retry queue, and a hook on *both* publish paths (the editor's
+> and the scheduler's — a hook on only the first silently skips every
+> scheduled post). Until that exists, publishing a post and emailing it are two
+> deliberate acts.
 
 ## Backup and restore
 

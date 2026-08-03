@@ -95,6 +95,7 @@ services:
     depends_on:
       - app
       - umami
+      - listmonk
     ports:
       - "80:80"
       - "443:443"
@@ -104,6 +105,10 @@ services:
       # resolve publicly, so an operator who has not set one gets a site Caddy
       # never serves rather than an analytics console on their blog's domain.
       UMAMI_DOMAIN: ${UMAMI_DOMAIN:-analytics.invalid}
+      # Hostname for the newsletter admin and its opt-in/unsubscribe pages.
+      # Same reasoning as UMAMI_DOMAIN: an unset value is a name that cannot
+      # resolve, not an admin console on the blog's domain.
+      LISTMONK_DOMAIN: ${LISTMONK_DOMAIN:-newsletter.invalid}
     volumes:
       - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
@@ -143,6 +148,49 @@ services:
       - internal
     # No host port: Caddy reaches it over the internal network.
 
+  # Self-hosted newsletter. Like umami it shares the postgres instance in its
+  # own database, created by deploy/deploy.sh.
+  #
+  # Listmonk owns the subscriber list, the double opt-in flow and the sending;
+  # Roller stores no subscriber data at all, which keeps a whole class of
+  # retention and consent work out of the blog. Its UI and its opt-in and
+  # unsubscribe pages live on their own hostname ({$LISTMONK_DOMAIN}), because
+  # running listmonk under a sub-path is an open feature request upstream, not
+  # a supported configuration.
+  #
+  # The one thing served from the blog's own origin is the public subscribe
+  # API, routed by Caddy -- a subscribe form on a blog page has to reach a
+  # same-origin URL or the theme's own connect-src 'self' blocks it.
+  listmonk:
+    image: listmonk/listmonk:v3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # --install --idempotent creates the schema on a first run and does
+    # nothing on later ones, so this is safe on every deploy.
+    command: >
+      sh -c "./listmonk --install --idempotent --yes --config ''
+             && ./listmonk --upgrade --yes --config ''
+             && ./listmonk --config ''"
+    environment:
+      LISTMONK_app__address: "0.0.0.0:9000"
+      # Public URL listmonk builds its opt-in and unsubscribe links from.
+      # These are followed from an email client, so they are not subject to
+      # any theme CSP and can live on listmonk's own hostname.
+      LISTMONK_app__root_url: ${LISTMONK_ROOT_URL:-https://newsletter.invalid}
+      LISTMONK_db__host: postgres
+      LISTMONK_db__port: "5432"
+      LISTMONK_db__user: ${POSTGRES_USER:-roller}
+      LISTMONK_db__password: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      LISTMONK_db__database: ${LISTMONK_DB:-listmonk}
+      LISTMONK_db__ssl_mode: disable
+      LISTMONK_ADMIN_USER: ${LISTMONK_ADMIN_USER:-admin}
+      LISTMONK_ADMIN_PASSWORD: ${LISTMONK_ADMIN_PASSWORD:?LISTMONK_ADMIN_PASSWORD must be set in .env}
+    restart: unless-stopped
+    networks:
+      - internal
+    # No host port: Caddy reaches it over the internal network.
+
   backup:
     # Reuses the postgres image for pg_dump/psql; the loop and single-shot
     # scripts are bind-mounted rather than baked into a custom image, so the
@@ -159,6 +207,7 @@ services:
       PGHOST: postgres
       # Dumped alongside the blog database; see deploy/backup/backup.sh.
       UMAMI_DB: ${UMAMI_DB:-umami}
+      LISTMONK_DB: ${LISTMONK_DB:-listmonk}
       BACKUP_HOUR: ${BACKUP_HOUR:-3}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
     volumes:
