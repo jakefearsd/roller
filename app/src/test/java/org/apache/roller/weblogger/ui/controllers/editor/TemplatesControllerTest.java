@@ -24,6 +24,7 @@ import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.junit.jupiter.api.BeforeEach;
@@ -389,5 +390,31 @@ class TemplatesControllerTest extends EditorControllerTestSupport {
         template.setAction(action);
         template.setWeblog(weblog);
         return template;
+    }
+
+    /**
+     * The delete path took a client-supplied id straight to a global by-id
+     * lookup, so an editor on one weblog could delete another weblog's theme
+     * templates. Worse, the isRequired() guard below the lookup consults the
+     * CALLER's weblog theme, so it would happily have removed a template the
+     * owning weblog does require.
+     */
+    @Test
+    void aTemplateBelongingToAnotherWeblogIsNotDeleted() throws Exception {
+        Weblog otherWeblog = new Weblog();
+        otherWeblog.setId("weblog-2");
+        otherWeblog.setHandle("someoneelse");
+
+        WeblogTemplate foreign = new WeblogTemplate();
+        foreign.setId("foreign-tmpl");
+        foreign.setName("Their Sidebar");
+        foreign.setLink("their-sidebar");
+        foreign.setAction(ComponentType.CUSTOM);
+        foreign.setWeblog(otherWeblog);
+        when(weblogger.getWeblogManager().getTemplate("foreign-tmpl")).thenReturn(foreign);
+
+        controller.remove(request, model, "foreign-tmpl");
+
+        verify(weblogger.getWeblogManager(), never()).removeTemplate(any());
     }
 }

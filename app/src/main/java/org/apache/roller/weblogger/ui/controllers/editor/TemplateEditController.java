@@ -69,7 +69,7 @@ public class TemplateEditController extends BaseController {
         populateCommonModel(request, model);
         addTemplateLanguages(model);
 
-        WeblogTemplate template = lookupTemplate(bean.getId());
+        WeblogTemplate template = lookupTemplate(bean.getId(), request);
         if (template == null) {
             addError(model, "Unable to locate specified template", request);
             return ".Templates";
@@ -99,7 +99,7 @@ public class TemplateEditController extends BaseController {
         populateCommonModel(request, model);
         addTemplateLanguages(model);
 
-        WeblogTemplate template = lookupTemplate(bean.getId());
+        WeblogTemplate template = lookupTemplate(bean.getId(), request);
         if (template == null) {
             addError(model, "Unable to locate specified template", request);
             return ".Templates";
@@ -158,18 +158,6 @@ public class TemplateEditController extends BaseController {
                 log.error("Error checking page link uniqueness", ex);
             }
         }
-    }
-
-    private WeblogTemplate lookupTemplate(String id) {
-        if (id == null) {
-            return null;
-        }
-        try {
-            return weblogger.getWeblogManager().getTemplate(id);
-        } catch (WebloggerException ex) {
-            log.error("Error looking up template - " + id, ex);
-        }
-        return null;
     }
 
     private void addTemplateLanguages(Model model) {

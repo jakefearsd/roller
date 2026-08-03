@@ -131,10 +131,15 @@ public class TemplatesController extends BaseController {
                          @RequestParam(value = "removeId", required = false) String removeId) {
         populateCommonModel(request, model);
 
-        WeblogTemplate template = null;
-        try {
-            template = weblogger.getWeblogManager().getTemplate(removeId);
-        } catch (WebloggerException e) {
+        // Ownership-checked: removeId is client input, and getTemplate is a
+        // global by-id lookup. Without this an editor on one weblog could
+        // delete another weblog's theme templates -- and the isRequired()
+        // guard below would be consulting the WRONG weblog's theme while
+        // doing it.
+        WeblogTemplate template = lookupTemplate(removeId, request);
+        if (template == null) {
+            log.warn("Refusing to delete template " + removeId + ": not owned by weblog "
+                    + getActionWeblog(request).getHandle());
             addError(model, "Error deleting template - check Roller logs", request);
         }
 

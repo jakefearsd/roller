@@ -36,6 +36,7 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
 import org.apache.roller.weblogger.ui.core.util.menu.MenuHelper;
@@ -292,6 +293,36 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
 
         CacheManager.invalidate(entry);
         weblogger.getWeblogEntryManager().removeWeblogEntry(entry);
+    }
+
+    /**
+     * The template with this id, but only when it belongs to the action weblog.
+     *
+     * <p>Exactly the same hazard as {@link #lookupEntry}, and for exactly the
+     * same reason: {@code getTemplate} is a global by-id lookup while the
+     * permission interceptor only establishes that the caller may edit the
+     * <em>action</em> weblog. A template id arrives as client input, so without
+     * this an editor on one weblog can read, overwrite and delete another
+     * weblog's theme templates -- which on a shared install means writing
+     * arbitrary markup into somebody else's public pages.
+     *
+     * <p>An unknown id and a foreign one are deliberately indistinguishable.
+     */
+    protected WeblogTemplate lookupTemplate(String id, HttpServletRequest request) {
+        if (id == null) {
+            return null;
+        }
+        try {
+            WeblogTemplate template = weblogger.getWeblogManager().getTemplate(id);
+            if (template == null || template.getWeblog() == null
+                    || !template.getWeblog().equals(getActionWeblog(request))) {
+                return null;
+            }
+            return template;
+        } catch (WebloggerException ex) {
+            baseLog.error("Error looking up template by id - " + id, ex);
+        }
+        return null;
     }
 
     // --- Comment management helpers ---

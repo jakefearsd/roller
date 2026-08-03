@@ -21,6 +21,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -383,5 +384,59 @@ class TemplateEditControllerTest extends EditorControllerTestSupport {
                 new CustomTemplateRendition(template, RenditionType.STANDARD);
         rendition.setTemplate(contents);
         return rendition;
+    }
+
+    // --- cross-weblog isolation ---
+
+    /**
+     * A template id is client input and {@code getTemplate} is a global by-id
+     * lookup, so without an ownership check an editor on one weblog can pull
+     * another weblog's theme template into their own editor.
+     */
+    @Test
+    void aTemplateBelongingToAnotherWeblogIsNotOpened() throws Exception {
+        givenForeignTemplate();
+        bean.setId("foreign-tmpl");
+
+        String view = controller.execute(request, model, bean);
+
+        assertEquals(".Templates", view);
+        assertNull(bean.getName(),
+                "another weblog's template was copied into this weblog's form");
+        assertNull(model.getAttribute("template"));
+    }
+
+    /**
+     * The worse half: saving would write this weblog's posted content into the
+     * other weblog's template, which is arbitrary markup on somebody else's
+     * public pages.
+     */
+    @Test
+    void aTemplateBelongingToAnotherWeblogIsNotSaved() throws Exception {
+        givenForeignTemplate();
+        bean.setId("foreign-tmpl");
+        bean.setName("Hijacked");
+        bean.setContentsStandard("## replaced by another weblog");
+
+        String view = controller.execute(request, model, bean);
+
+        assertEquals(".Templates", view);
+        verify(weblogger.getWeblogManager(), never()).saveTemplate(any());
+        verify(weblogger.getWeblogManager(), never()).saveTemplateRendition(any());
+    }
+
+    /** A template owned by a different weblog, resolvable by its global id. */
+    private void givenForeignTemplate() throws Exception {
+        Weblog otherWeblog = new Weblog();
+        otherWeblog.setId("weblog-2");
+        otherWeblog.setHandle("someoneelse");
+
+        WeblogTemplate foreign = new WeblogTemplate();
+        foreign.setId("foreign-tmpl");
+        foreign.setName("Their Sidebar");
+        foreign.setLink("their-sidebar");
+        foreign.setAction(ComponentType.CUSTOM);
+        foreign.setWeblog(otherWeblog);
+        when(weblogger.getWeblogManager().getTemplate("foreign-tmpl")).thenReturn(foreign);
     }
 }
