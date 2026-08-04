@@ -257,6 +257,20 @@
 
                     </div>
 
+                    <%-- Allow comments. This control was missing entirely, and
+                         EntryBean.allowComments is a primitive defaulting to
+                         false -- so every entry saved through this editor had
+                         comments switched off no matter what the weblog's
+                         default said, and editing a post silently closed
+                         comments that were open. --%>
+                    <div class="row mb-3">
+                        <div class="offset-sm-3 col-sm-9">
+                            <div class="form-check">
+                                <label class="form-check-label"><input type="checkbox" class="form-check-input" id="entry_bean_allowComments" name="bean.allowComments" value="true" ${bean.allowComments ? 'checked' : ''}/> <spring:message code="weblogEdit.allowComments"/></label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.commentDays"/></label>
                         <div class="col-sm-9">
