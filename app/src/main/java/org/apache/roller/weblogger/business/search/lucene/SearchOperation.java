@@ -187,7 +187,9 @@ public class SearchOperation extends ReadFromIndexOperation {
         if (searchresults == null) {
             return -1;
         }
-        return (int) searchresults.totalHits.value;
+        // TotalHits became a record in Lucene 10, so this is an accessor
+        // rather than a public field.
+        return (int) searchresults.totalHits.value();
     }
 
     /**

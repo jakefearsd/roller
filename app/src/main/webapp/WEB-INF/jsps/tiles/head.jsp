@@ -23,8 +23,8 @@ mismatch 404s the asset on every page that includes this file.
 
 <script src="<c:url value='/webjars/clipboard.js/2.0.11/clipboard.min.js'/>"></script>
 
-<script src="<c:url value='/webjars/easymde/2.20.0/dist/easymde.min.js'/>"></script>
-<link href="<c:url value='/webjars/easymde/2.20.0/dist/easymde.min.css'/>" rel="stylesheet" />
+<script src="<c:url value='/webjars/easymde/2.21.0/dist/easymde.min.js'/>"></script>
+<link href="<c:url value='/webjars/easymde/2.21.0/dist/easymde.min.css'/>" rel="stylesheet" />
 
 <link rel="stylesheet" media="all" href='<c:url value="/roller-ui/styles/roller.css"/>' />
 

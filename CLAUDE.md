@@ -116,7 +116,7 @@ Apache Roller is a multi-user blog server built with:
   expansion and before sanitization — that order is load-bearing (markdown-first
   escapes the quotes in `[gallery dir="x"]`). Raw HTML passes through commonmark
   by design, so `HTMLSanitizer` (OWASP policy) is the only boundary.
-- **Search**: Apache Lucene for full-text search
+- **Search**: Apache Lucene 10 for full-text search (embedded, index on local disk)
 - **DI Container**: Single Spring container. Business beans are defined in
   `WebloggerBeanConfig` (`@Configuration @Lazy`, in
   `org.apache.roller.weblogger.business.jpa`) and are constructed lazily at
