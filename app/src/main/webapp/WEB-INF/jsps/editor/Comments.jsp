@@ -86,8 +86,11 @@
             <input type="hidden" name="weblog" value="${fn:escapeXml(param.weblog)}"/>
         </c:if>
         <c:if test="${actionName != 'comments'}">
-            <input type="hidden" name="bean.offset" value="${fn:escapeXml(bean.offset)}"/>
-            <input type="hidden" name="bean.count" value="${fn:escapeXml(bean.count)}"/>
+            <%-- bean.offset and bean.count used to be carried here. Neither
+                 property exists on either comment bean any more -- paging is
+                 by bean.page -- so evaluating them threw
+                 PropertyNotFoundException and the page 500'd. It only showed
+                 once a comment existed, which no test had ever created. --%>
             <input type="hidden" name="bean.pendingString" value="${fn:escapeXml(bean.pendingString)}"/>
         </c:if>
 

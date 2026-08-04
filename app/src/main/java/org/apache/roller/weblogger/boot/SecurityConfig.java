@@ -34,6 +34,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
@@ -240,6 +241,27 @@ public class SecurityConfig {
                 // default. See security.xml's own comment on this same rule
                 // for why an implicit deny-by-default here would be wrong.
                 .anyRequest().permitAll())
+            // The one CSRF exemption in this application: an anonymous reader
+            // posting a comment.
+            //
+            // The comment form is rendered by a Velocity theme macro onto a
+            // page held in the weblog page cache, so it cannot carry a
+            // per-session token -- caching one would hand every reader another
+            // reader's token. Without an exemption every comment POST is a
+            // 403, which is what it was.
+            //
+            // Exempting it costs nothing real. CSRF defends requests that
+            // carry ambient authority; posting a comment carries none, and an
+            // attacker who wants to submit one can POST from their own server
+            // today. That is why comment spam exists and why the defences here
+            // are moderation, the IP ban list and comment throttling rather
+            // than a token.
+            //
+            // Deliberately narrow: POST to a weblog permalink, which is the
+            // only shape a comment takes. It does not cover /share/<token>,
+            // whose password form is rendered from a JSP and does carry a
+            // token, nor anything under /roller-ui/.
+            .csrf(csrf -> csrf.ignoringRequestMatchers(SecurityConfig::isPublicCommentPost))
             .formLogin(form -> form
                 .loginPage("/roller-ui/login.rol")
                 .loginProcessingUrl("/roller_j_security_check")
@@ -266,5 +288,21 @@ public class SecurityConfig {
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
         return http.build();
+    }
+
+    /**
+     * Whether this is an anonymous reader posting a comment to a weblog entry.
+     *
+     * <p>Matched on the public permalink shape ({@code /<handle>/entry/<anchor>})
+     * because that is where the theme's comment form posts;
+     * {@code WeblogRequestMapper} forwards it to the comment servlet afterwards,
+     * far too late for a security filter to have seen a different path.
+     */
+    private static boolean isPublicCommentPost(HttpServletRequest request) {
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        return !path.startsWith("/roller-ui/") && path.contains("/entry/");
     }
 }
