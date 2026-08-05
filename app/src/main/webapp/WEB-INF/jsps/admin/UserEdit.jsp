@@ -83,7 +83,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="userSettings.screenname"/></label>
         <div class="col-sm-9">
-            <input type="text" id="bean_userName" name="bean.screenName" value="${fn:escapeXml(bean.screenName)}"
+            <input type="text" id="bean_screenName" name="bean.screenName" value="${fn:escapeXml(bean.screenName)}"
                    size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
                    title="<spring:message code='userAdmin.tip.screenName'/>"/>
         </div>
@@ -236,11 +236,15 @@
     });
 
     function formChanged() {
-        let userName = $("#bean_userName:first").val();
+        // These are the screen name, full name and email. The first was read
+        // through id="bean_userName" -- an id sitting on the SCREEN NAME input,
+        // which made this look like it validated the username. It never has;
+        // the username is checked server-side.
+        let screenName = $("#bean_screenName:first").val();
         let fullName = $("#bean_fullName:first").val();
         let email = $("#bean_email:first").val();
 
-        let valid = (userName && userName.trim().length > 0
+        let valid = (screenName && screenName.trim().length > 0
             && fullName && fullName.trim().length > 0
             && email && email.trim().length > 0
             && validateEmail(email));

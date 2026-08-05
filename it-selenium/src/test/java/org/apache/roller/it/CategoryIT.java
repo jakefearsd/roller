@@ -181,6 +181,11 @@ class CategoryIT extends RollerIT {
         $(EDIT_MODAL + " input[name='bean.name']").setValue(name);
         $(EDIT_MODAL + " input[name='bean.description']").setValue(description);
         saveCategoryModal();
+
+        // Wait for the row, rather than assuming the save landed. The modal
+        // closing means the POST returned; it does not mean the reload that
+        // follows it has painted, and the next step needs the row to exist.
+        $(rowFor(name)).should(exist);
     }
 
     private void renameCategory(String from, String to) {
@@ -188,6 +193,7 @@ class CategoryIT extends RollerIT {
         openEditModalFor(from);
         $(EDIT_MODAL + " input[name='bean.name']").setValue(to);
         saveCategoryModal();
+        $(rowFor(to)).should(exist);
     }
 
     /**
@@ -198,7 +204,12 @@ class CategoryIT extends RollerIT {
     private void saveCategoryModal() {
         $(EDIT_MODAL + " button.btn-primary").click();
         $(EDIT_MODAL).shouldNotBe(visible);
+
+        // The modal's own handler also calls location.reload(). Load the list
+        // ourselves and wait for the table so the assertions that follow are
+        // made against a settled page rather than racing that reload.
         openPath(CATEGORIES);
+        $("table#category-table").should(exist);
         BrowserHealth.current().settle();
     }
 
@@ -215,9 +226,11 @@ class CategoryIT extends RollerIT {
             $(DELETE_MODAL + " select[name='targetCategoryId']").selectOptionContainingText(moveTo);
         }
         $(DELETE_MODAL + " button[type='submit']").click();
-        // The handler redirects back to the list; waiting for the table is
-        // waiting for that round trip rather than for an animation.
+        // The handler redirects back to the list; waiting for the row to go is
+        // waiting for that round trip AND for the delete itself, rather than
+        // for an animation.
         $("table#category-table").should(exist);
+        $(rowFor(name)).shouldNot(exist);
         BrowserHealth.current().settle();
     }
 

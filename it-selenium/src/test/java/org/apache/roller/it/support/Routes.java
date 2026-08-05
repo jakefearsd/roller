@@ -191,7 +191,11 @@ public final class Routes {
 
             // UserEdit.jsp posts to a runtime-chosen ${saveAction}, so the form
             // action is not a stable selector; the username input is.
-            new Route("/roller-ui/admin/createUser.rol", Role.ADMIN, "", "#bean_userName"),
+            // Anchored on the username input by NAME. It used to anchor on
+            // id="bean_userName", which sat on the SCREEN NAME field -- so the
+            // marker was proving the wrong control existed.
+            new Route("/roller-ui/admin/createUser.rol", Role.ADMIN, "",
+                    "input[name='bean.userName']"),
 
             // Comments.jsp renders its table and bulk-action controls only when
             // comments exist, and none are seeded. The subtitle paragraph is
@@ -354,7 +358,9 @@ public final class Routes {
                             + "the .Templates view with an error. No custom templates are seeded."),
             new SkippedRoute("/roller-ui/admin/modifyUser.rol", Role.ADMIN,
                     "Needs bean.id or bean.userName; without one it renders .UserAdmin "
-                            + "with a not-found error rather than the edit form."),
+                            + "with a not-found error rather than the edit form. "
+                            + "UserAdminIT drives it with a fixture it creates, through "
+                            + "the admin search form."),
             new SkippedRoute("/roller-ui/admin/modifyUser!firstSave.rol", Role.ADMIN,
                     "Delegates to modifyUser; same missing user id."),
             new SkippedRoute("/roller-ui/menu!accept.rol", Role.EDITOR,

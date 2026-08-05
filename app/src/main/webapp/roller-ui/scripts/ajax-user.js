@@ -34,16 +34,33 @@ var init = false;
 var isBusy = false;
 var userURL = "<%= request.getContextPath() %>" + "/roller-ui/authoring/userdata?length=50";
 
+/*
+ * Submit is available exactly when the username box holds something.
+ *
+ * It used to be driven the other way round: focusing the box DISABLED the
+ * button, and only picking an entry out of the list re-enabled it. So an
+ * administrator who typed a username -- the obvious thing to do with a text
+ * box next to a button marked Edit -- was left with the button greyed out no
+ * matter what they typed, and the only way through was to click the list.
+ *
+ * The null guard is for MembersInvite.jsp, which shares this script and has no
+ * #user-submit of its own.
+ */
+function updateUserSubmitState() {
+    var userSubmitButton = document.getElementById("user-submit");
+    if (!userSubmitButton) return;
+    var userName = document.getElementById("userName");
+    userSubmitButton.disabled = !userName || userName.value.trim().length === 0;
+}
+
 function onUserNameFocus(enabled) {
     if (!init) {
         init = true;
         var u = userURL;
         if (enabled != null) u = u + "&enabled=" + enabled;
         sendUserRequest(u);
-    } else {
-        var userSubmitButton = document.getElementById("user-submit");
-        userSubmitButton.disabled = true;
     }
+    updateUserSubmitState();
 }
 
 function onUserNameChange(enabled) {
@@ -52,6 +69,7 @@ function onUserNameChange(enabled) {
     var userName = document.getElementById("userName");
     if (userName.value.length > 0) u = u + "&startsWith=" + userName.value;
     sendUserRequest(u);
+    updateUserSubmitState();
 }
 
 function onUserSelected() {
@@ -60,8 +78,7 @@ function onUserSelected() {
     var userName = document.getElementById("userName");
     userName.value = user.value;
 
-    var userSubmitButton = document.getElementById("user-submit");
-    userSubmitButton.disabled = false;
+    updateUserSubmitState();
 }
 
 function sendUserRequest(url) {

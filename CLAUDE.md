@@ -299,6 +299,16 @@ Key domain entities:
   published to the host — reachable only via `docker compose exec app curl
   http://localhost:8090/actuator/health` or the container healthcheck.
 
+## Admin UI
+- `roller-ui/scripts/ajax-user.js` is pulled in with `<%@ include %>` (a
+  translation-time include), so JSP scriptlets inside it **are** interpolated —
+  it is not a static resource despite the `.js` extension. Shared by
+  `UserAdmin.jsp` and `MembersInvite.jsp`, which do not have the same element
+  ids, so anything touching one page's controls needs a null guard.
+- Enabling/disabling an account is the Weblog-Settings-shaped hazard again: the
+  checkbox persists whatever happens, so only an end-to-end check (disable, then
+  try to sign in) proves it works. `UserAdminIT` does that.
+
 ## Categories
 - **Ownership-check every id.** `BaseController.lookupCategory` is the third of
   the family alongside `lookupEntry`/`lookupTemplate`: the permission
