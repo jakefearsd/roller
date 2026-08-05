@@ -355,7 +355,9 @@ public final class Routes {
                             + "EditorSeoIT's featured-image picker journey."),
             new SkippedRoute("/roller-ui/authoring/templateEdit.rol", Role.EDITOR,
                     "Needs bean.id of a WeblogTemplate; without one it falls back to "
-                            + "the .Templates view with an error. No custom templates are seeded."),
+                            + "the .Templates view with an error. No custom templates are "
+                            + "seeded. TemplateIT drives it with a template it creates, and "
+                            + "checks the result reaches the public page URL."),
             new SkippedRoute("/roller-ui/admin/modifyUser.rol", Role.ADMIN,
                     "Needs bean.id or bean.userName; without one it renders .UserAdmin "
                             + "with a not-found error rather than the edit form. "

@@ -28,7 +28,7 @@
     <p><spring:message code="pagesForm.themesReminder" arguments="${actionWeblog.editorTheme}"/></p>
 </c:if>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/templates!remove.rol" method="post">
+<form id="templateRemoveForm" action="${pageContext.request.contextPath}/roller-ui/authoring/templates!remove.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
@@ -103,9 +103,14 @@
 
 <script>
     function confirmTemplateDelete(templateId, templateName) {
+        // The form is submitted by id. It used to be getElementById("templates")
+        // -- an id Struts generated from the action name and the JSP never
+        // reproduced -- so this threw "Cannot read properties of null (reading
+        // 'submit')" after the confirm dialog, and no template could be deleted
+        // through the UI at all.
         $('#removeId').val(templateId);
         if (window.confirm('<spring:message code="pageRemove.confirm"/>: \'' + templateName + '\'?')) {
-            document.getElementById("templates").submit();
+            document.getElementById("templateRemoveForm").submit();
         }
     }
 </script>

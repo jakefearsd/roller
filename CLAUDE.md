@@ -299,6 +299,18 @@ Key domain entities:
   published to the host — reachable only via `docker compose exec app curl
   http://localhost:8090/actuator/health` or the container healthcheck.
 
+## Templates
+- Add/edit/remove live in `TemplatesController` and `TemplateEditController`;
+  both resolve client ids through `BaseController.lookupTemplate`, and the
+  isolation is pinned by unit tests in their `*ControllerTest`s.
+- A CUSTOM template gets `link = name` and is then served publicly at
+  `/<handle>/page/<link>` — including on a weblog running a *shared* theme,
+  via `WeblogSharedTheme.getTemplateByLink`'s fallback to the weblog's own
+  templates. `TemplateIT` asserts that end to end.
+- `saveTemplate`/`removeTemplate` bump `weblog.lastModified`, which is what
+  expires the rendered page in `WeblogPageCache` (see Comments — that cache has
+  no CacheHandler and expires lazily).
+
 ## Admin UI
 - `roller-ui/scripts/ajax-user.js` is pulled in with `<%@ include %>` (a
   translation-time include), so JSP scriptlets inside it **are** interpolated —
