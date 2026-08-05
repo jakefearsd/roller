@@ -78,13 +78,23 @@ public class CategoryRemoveController extends BaseController {
                          RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
 
-        WeblogCategory category = lookupCategory(removeId);
+        // Both ids are client input and the permission interceptor only vouches
+        // for the action weblog. Resolving either globally let an editor delete
+        // another weblog's category, or -- worse, because it is silent -- name a
+        // foreign category as the destination and re-file somebody else's posts
+        // into it.
+        WeblogCategory category = lookupCategory(removeId, request);
         if (category != null) {
             try {
                 WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
 
                 if (targetCategoryId != null) {
-                    WeblogCategory target = wmgr.getWeblogCategory(targetCategoryId);
+                    WeblogCategory target = lookupCategory(targetCategoryId, request);
+                    if (target == null) {
+                        addFlashError(redirectAttributes, "categoryForm.error.notFound", request);
+                        return "redirect:/roller-ui/authoring/categories.rol?weblog="
+                                + getActionWeblog(request).getHandle();
+                    }
                     wmgr.moveWeblogCategoryContents(category, target);
                     weblogger.flush();
                 }
@@ -111,16 +121,4 @@ public class CategoryRemoveController extends BaseController {
                 + getActionWeblog(request).getHandle();
     }
 
-    private WeblogCategory lookupCategory(String id) {
-        if (StringUtils.isEmpty(id)) {
-            return null;
-        }
-        try {
-            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
-            return wmgr.getWeblogCategory(id);
-        } catch (WebloggerException ex) {
-            log.error("Error looking up category", ex);
-        }
-        return null;
-    }
 }

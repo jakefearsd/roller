@@ -36,6 +36,7 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
@@ -245,7 +246,9 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * the caller, so a probe cannot map one weblog's entry ids from another.
      */
     protected WeblogEntry lookupEntry(String id, HttpServletRequest request) {
-        if (id == null) {
+        // Blank as well as null: an empty id names nothing, and some managers
+        // read an empty string as a wildcard rather than a miss.
+        if (id == null || id.isBlank()) {
             return null;
         }
         try {
@@ -309,7 +312,9 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * <p>An unknown id and a foreign one are deliberately indistinguishable.
      */
     protected WeblogTemplate lookupTemplate(String id, HttpServletRequest request) {
-        if (id == null) {
+        // Blank as well as null: an empty id names nothing, and some managers
+        // read an empty string as a wildcard rather than a miss.
+        if (id == null || id.isBlank()) {
             return null;
         }
         try {
@@ -321,6 +326,38 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
             return template;
         } catch (WebloggerException ex) {
             baseLog.error("Error looking up template by id - " + id, ex);
+        }
+        return null;
+    }
+
+    /**
+     * The category with this id, but only when it belongs to the action weblog.
+     *
+     * <p>The third of the same hazard, after {@link #lookupEntry} and
+     * {@link #lookupTemplate}: {@code getWeblogCategory} is a global by-id
+     * lookup, the permission interceptor only establishes that the caller may
+     * edit the <em>action</em> weblog, and the id arrives as client input.
+     * Without this, an editor on one weblog could rename another weblog's
+     * categories, delete them, or name one as the destination for a move --
+     * silently re-filing somebody else's posts.
+     *
+     * <p>An unknown id and a foreign one are deliberately indistinguishable.
+     */
+    protected WeblogCategory lookupCategory(String id, HttpServletRequest request) {
+        // Blank as well as null: an empty id names nothing, and some managers
+        // read an empty string as a wildcard rather than a miss.
+        if (id == null || id.isBlank()) {
+            return null;
+        }
+        try {
+            WeblogCategory category = weblogger.getWeblogEntryManager().getWeblogCategory(id);
+            if (category == null || category.getWeblog() == null
+                    || !category.getWeblog().equals(getActionWeblog(request))) {
+                return null;
+            }
+            return category;
+        } catch (WebloggerException ex) {
+            baseLog.error("Error looking up category by id - " + id, ex);
         }
         return null;
     }

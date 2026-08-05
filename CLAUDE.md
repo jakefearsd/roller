@@ -299,6 +299,23 @@ Key domain entities:
   published to the host — reachable only via `docker compose exec app curl
   http://localhost:8090/actuator/health` or the container healthcheck.
 
+## Categories
+- **Ownership-check every id.** `BaseController.lookupCategory` is the third of
+  the family alongside `lookupEntry`/`lookupTemplate`: the permission
+  interceptor only vouches for the *action* weblog, so a global by-id lookup
+  lets any editor rewrite any weblog's data. Both `removeId` and
+  `targetCategoryId` need it — a foreign move target silently re-files this
+  weblog's entries into someone else's blog. All three helpers treat a blank id
+  as absent, not as something to look up.
+- **Modal JS binds by control NAME, not id.** The page's JS was written against
+  Struts-generated ids (`#categoryEditForm_bean_name`) that the JSP migration
+  never reproduced, so add/edit/delete all silently did nothing. Names are what
+  the server binds and cannot drift unnoticed.
+- **Add and edit are different endpoints** (`categoryAdd!save.rol` /
+  `categoryEdit!save.rol`); the shared modal picks by whether `bean.id` is set.
+- A weblog's blogger category **can be null** — `removeWeblogCategory` nulls it
+  when that category is deleted. Anything reading it must cope.
+
 ## Comments
 - **Signed-in only, per weblog, on by default**
   (`Weblog.requireAuthenticatedComments`, column `weblog.comment_auth_required`,

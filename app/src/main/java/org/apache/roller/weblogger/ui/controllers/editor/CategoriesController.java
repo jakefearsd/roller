@@ -33,7 +33,6 @@ import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -78,10 +77,5 @@ public class CategoriesController extends BaseController {
         }
 
         return ".Categories";
-    }
-
-    @PostMapping("/categories!move.rol")
-    public String move(HttpServletRequest request, Model model) {
-        return execute(request, model);
     }
 }

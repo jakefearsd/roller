@@ -33,9 +33,8 @@ import static org.mockito.Mockito.when;
  * Tests for {@link CategoriesController}, the read-only category list page.
  *
  * <p>The only real behaviour here is falling back to an error message instead
- * of a broken page when the category lookup fails, and {@code move} being a
- * plain alias for {@code execute} (drag-and-drop reordering is persisted by a
- * different endpoint; this one just re-renders the list).
+ * of a broken page when the category lookup fails. Adding, editing and deleting
+ * live in their own controllers; this one renders the list.
  */
 class CategoriesControllerTest extends EditorControllerTestSupport {
 
@@ -75,14 +74,14 @@ class CategoriesControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void moveIsAPlainAliasForExecute() throws Exception {
+    void theListPageShowsTheWeblogsCategories() throws Exception {
         WeblogCategory travel = new WeblogCategory();
         travel.setId("cat-1");
         travel.setName("Travel");
         when(weblogger.getWeblogEntryManager().getWeblogCategories(weblog))
                 .thenReturn(List.of(travel));
 
-        String view = controller.move(request, model);
+        String view = controller.execute(request, model);
 
         assertEquals(".Categories", view);
         assertEquals(List.of(travel), model.getAttribute("allCategories"));

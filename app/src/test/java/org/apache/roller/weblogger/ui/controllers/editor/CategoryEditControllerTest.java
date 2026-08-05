@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -220,9 +221,11 @@ class CategoryEditControllerTest extends EditorControllerTestSupport {
 
     @Test
     void editFallsBackToTheListWithAFlashErrorWhenTheCategoryIsMissing() throws Exception {
-        // getWeblogCategory returns null for an unknown id; copyTo then throws
-        // an NPE, which the controller's catch-all must turn into a flash error
-        // rather than a 500.
+        // An unknown id is a not-found, reported as such. It used to reach
+        // copyTo(null) and raise an NPE that the catch-all laundered into
+        // "check the logs" -- a real error message produced by accident, which
+        // told the user nothing and told the operator to go reading logs over
+        // a mistyped id.
         when(weblogger.getWeblogEntryManager().getWeblogCategory("gone")).thenReturn(null);
         bean.setId("gone");
         bean.setName("Travel");
@@ -230,11 +233,43 @@ class CategoryEditControllerTest extends EditorControllerTestSupport {
         String view = controller.categoryEditSave(request, model, bean, redirectAttributes);
 
         assertEquals(LIST_REDIRECT, view);
-        assertTrue(flashErrors(redirectAttributes).contains("generic.error.check.logs"),
-                "Editing a category that no longer exists must report an error, got flash errors: "
+        assertTrue(flashErrors(redirectAttributes).contains("categoryForm.error.notFound"),
+                "Editing a category that no longer exists must report not-found, got flash errors: "
                         + flashErrors(redirectAttributes));
         assertTrue(flashMessages(redirectAttributes).isEmpty(),
                 "A failed edit must not report success");
+    }
+
+    /**
+     * A category id belonging to another weblog must be refused.
+     *
+     * <p>bean.id is client input and the permission interceptor only vouches
+     * for the ACTION weblog, so the global by-id lookup that used to be here
+     * let any editor rename any category on the install -- including renaming
+     * one out of recognition on somebody else's public blog.
+     */
+    @Test
+    void editingACategoryOfAnotherWeblogIsRefused() throws Exception {
+        Weblog otherWeblog = new Weblog();
+        otherWeblog.setId("weblog-2");
+        otherWeblog.setHandle("someoneelse");
+        WeblogCategory foreign = new WeblogCategory();
+        foreign.setId("cat-9");
+        foreign.setName("Their Category");
+        foreign.setWeblog(otherWeblog);
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-9")).thenReturn(foreign);
+
+        bean.setId("cat-9");
+        bean.setName("Renamed By An Outsider");
+
+        String view = controller.categoryEditSave(request, model, bean, redirectAttributes);
+
+        assertEquals(LIST_REDIRECT, view);
+        assertEquals("Their Category", foreign.getName(),
+                "a foreign category must come through the request unchanged");
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
+        assertTrue(flashMessages(redirectAttributes).isEmpty(),
+                "and the edit must not report success");
     }
 
     @Test

@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -158,6 +159,59 @@ class CategoryRemoveControllerTest extends EditorControllerTestSupport {
                 "Expected the failure to be surfaced, got: " + flashErrors(redirectAttributes));
         assertTrue(flashMessages(redirectAttributes).isEmpty(),
                 "A failed delete must not also report success");
+    }
+
+    // --- multi-tenant isolation ---
+
+    /**
+     * A category id belonging to another weblog must be refused.
+     *
+     * <p>removeId is client input and the permission interceptor only
+     * establishes that the caller may edit the ACTION weblog, so a global by-id
+     * lookup here let any editor delete any category on the whole install --
+     * taking that weblog's entries with it, since a delete cascades whatever
+     * the move did not rescue.
+     */
+    @Test
+    void aCategoryBelongingToAnotherWeblogIsNotDeleted() throws Exception {
+        WeblogCategory foreign = foreignCategory("cat-9", "Someone Else's");
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-9")).thenReturn(foreign);
+
+        String view = controller.remove(request, model, "cat-9", null, redirectAttributes);
+
+        assertEquals(LIST_REDIRECT, view);
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogCategory(any());
+    }
+
+    /**
+     * The move destination is a separate id and needs the same check.
+     *
+     * <p>This one is worse than the delete, because it is silent: naming a
+     * foreign category as the target re-files this weblog's entries into
+     * somebody else's blog, and the only visible result is a successful delete.
+     */
+    @Test
+    void aForeignMoveTargetIsRefusedAndNothingIsDeleted() throws Exception {
+        WeblogCategory foreign = foreignCategory("cat-9", "Someone Else's");
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-9")).thenReturn(foreign);
+
+        String view = controller.remove(request, model, "cat-1", "cat-9", redirectAttributes);
+
+        assertEquals(LIST_REDIRECT, view);
+        verify(weblogger.getWeblogEntryManager(), never())
+                .moveWeblogCategoryContents(any(), any());
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogCategory(any());
+    }
+
+    private WeblogCategory foreignCategory(String id, String name) {
+        Weblog otherWeblog = new Weblog();
+        otherWeblog.setId("weblog-2");
+        otherWeblog.setHandle("someoneelse");
+        WeblogCategory category = new WeblogCategory();
+        category.setId(id);
+        category.setName(name);
+        category.setWeblog(otherWeblog);
+        return category;
     }
 
     private WeblogCategory category(String id, String name) {

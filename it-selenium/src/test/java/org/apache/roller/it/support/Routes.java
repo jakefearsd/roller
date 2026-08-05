@@ -227,8 +227,11 @@ public final class Routes {
      */
     private static final List<Route> WEBLOG_ONLY = List.of(
 
+            // Anchored on the category table itself. It used to be anchored on a
+            // wrapper form posting to categories!move.rol -- a control nothing
+            // could submit, which is a poor thing to prove a page rendered by.
             new Route("/roller-ui/authoring/categories.rol", Role.EDITOR, WEBLOG,
-                    "form[action$='/roller-ui/authoring/categories!move.rol']"),
+                    "table#category-table"),
 
             // Same JSP as globalCommentManagement, same reason for the marker.
             new Route("/roller-ui/authoring/comments.rol", Role.EDITOR, WEBLOG, "p.subtitle"),

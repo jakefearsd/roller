@@ -24,12 +24,11 @@
     <spring:message code="categoriesForm.rootPrompt"/>
 </p>
 
-<%-- Form is a table of categories each with checkbox --%>
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/categories!move.rol" method="post">
-<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-    <input type="hidden" name="categoryId" value="${categoryId}"/>
-
-    <table class="rollertable table table-striped" width="100%">
+<%-- A plain table. It used to be wrapped in a form posting to
+     categories!move.rol, left over from a bulk-move UI whose checkboxes and
+     submit button are long gone -- so nothing could submit it, and the handler
+     only re-rendered this same list. --%>
+    <table id="category-table" class="rollertable table table-striped" width="100%">
 
         <tr class="rollertable">
             <th width="30%"><spring:message code="generic.name"/></th>
@@ -42,7 +41,10 @@
 <c:when test="${not empty allCategories}">
 
             <c:forEach items="${allCategories}" var="category" varStatus="rowstatus">
-                <tr>
+                <%-- data-category-* so a test can find a row without parsing the
+                     onclick attributes that drive the modals. --%>
+                <tr data-category-id="${fn:escapeXml(category.id)}"
+                    data-category-name="${fn:escapeXml(category.name)}">
                     <td>${category.name}</td>
 
                     <td>${category.description}</td>
@@ -90,9 +92,6 @@
         </c:otherwise>
 </c:choose></table>
 
-<sec:csrfInput/>
-</form>
-
 
 <%-- ============================================================= --%>
 <%-- add/edit category modal --%>
@@ -138,7 +137,7 @@
 
             <div class="modal-footer">
                 <p id="feedback-area-edit"></p>
-                <button onclick="submitEditedCategory()" class="btn btn-primary">
+                <button id="category-save-button" type="button" onclick="submitEditedCategory()" class="btn btn-primary">
                     <spring:message code="generic.save"/>
                 </button>
                 <button type="button" class="btn" data-bs-dismiss="modal">
@@ -154,14 +153,28 @@
 
     var feedbackAreaEdit = $("#feedback-area-edit");
 
+    /*
+     * Fields are reached by NAME, scoped to the form. They used to be reached by
+     * ids like #categoryEditForm_bean_name, which Struts generated and the JSP
+     * migration never reproduced -- so every selector here matched nothing,
+     * .val(x) was a silent no-op and .val().trim() threw on undefined. The
+     * result was a page where Add, Edit and Delete all did nothing at all.
+     * Names are what the server binds, so they cannot drift without the
+     * handler noticing.
+     */
+    function categoryField( name ) {
+        return $("#categoryEditForm [name='" + name + "']");
+    }
+
     function showCategoryEditModal( id, name, desc, image ) {
         feedbackAreaEdit.html("");
         $('#category-edit-title').html('<spring:message code="categoryForm.edit.title"/>');
 
-        $('#categoryEditForm_bean_id').val(id);
-        $('#categoryEditForm_bean_name').val(name);
-        $('#categoryEditForm_bean_description').val(desc);
-        $('#categoryEditForm_bean_image').val(image);
+        categoryField('bean.id').val(id);
+        categoryField('bean.name').val(name);
+        categoryField('bean.description').val(desc);
+        categoryField('bean.image').val(image);
+        validateCategory();
 
         bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).show();
 
@@ -169,13 +182,13 @@
 
     function validateCategory() {
 
-        var saveCategoryButton = $('#categoryEditForm:first');
+        var saveCategoryButton = $('#category-save-button');
 
-        var categoryName = $("#categoryEditForm_bean_name").val();
-        var imageURL = $("#categoryEditForm_bean_image").val();
+        var categoryName = categoryField('bean.name').val();
+        var imageURL = categoryField('bean.image').val();
 
         if (!categoryName || categoryName.trim() === '') {
-            saveCategoryButton.attr("disabled", true);
+            saveCategoryButton.prop("disabled", true);
             feedbackAreaEdit.html('<spring:message code="categoryForm.requiredFields"/>');
             feedbackAreaEdit.css("color", "red");
             return;
@@ -183,7 +196,7 @@
 
         if (imageURL && imageURL.trim() !== '') {
             if (!isValidUrl(imageURL)) {
-                saveCategoryButton.attr("disabled", true);
+                saveCategoryButton.prop("disabled", true);
                 feedbackAreaEdit.html('<spring:message code="categoryForm.badURL"/>');
                 feedbackAreaEdit.css("color", "red");
                 return;
@@ -191,22 +204,32 @@
         }
 
         feedbackAreaEdit.html('');
-        saveCategoryButton.attr("disabled", false);
+        saveCategoryButton.prop("disabled", false);
     }
 
     function submitEditedCategory() {
 
         // if name is empty reject and show error message
-        if ($("#categoryEditForm_bean_name").val().trim() === "") {
+        var enteredName = categoryField('bean.name').val();
+        if (!enteredName || enteredName.trim() === "") {
             feedbackAreaEdit.html('<spring:message code="categoryForm.requiredFields"/>');
             feedbackAreaEdit.css("color", "red");
             return;
         }
 
+        // Add and edit are different handlers. This always posted to
+        // categoryEdit!save.rol, so "Add Category" arrived at the edit handler
+        // with an empty bean.id, found no such category and failed -- adding a
+        // category through the UI had never worked.
+        var hasId = categoryField('bean.id').val();
+        var saveUrl = hasId && hasId.trim() !== ''
+                ? "${pageContext.request.contextPath}/roller-ui/authoring/categoryEdit!save.rol"
+                : "${pageContext.request.contextPath}/roller-ui/authoring/categoryAdd!save.rol";
+
         // post category via AJAX
         $.ajax({
             method: 'post',
-            url: "${pageContext.request.contextPath}/roller-ui/authoring/categoryEdit!save.rol",
+            url: saveUrl,
             data: $("#categoryEditForm").serialize(),
             context: document.body
 
@@ -229,7 +252,10 @@
                 location.reload(true);
             }
 
-        }).error(function (data) {
+        // .fail, not .error: jQuery removed .error() in 3.0, so this threw
+        // "TypeError: $.ajax(...).done(...).error is not a function" on every
+        // single save.
+        }).fail(function (data) {
             feedbackAreaEdit.html('<spring:message code="generic.error.check.logs"/>');
             feedbackAreaEdit.css("color", "red");
         });
@@ -254,7 +280,7 @@
                 </h3>
             </div>
 
-            <form action="${pageContext.request.contextPath}/roller-ui/authoring/categoryRemove!remove.rol" method="post">
+            <form id="categoryRemoveForm" action="${pageContext.request.contextPath}/roller-ui/authoring/categoryRemove!remove.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="${removeId}"/>
 
@@ -297,15 +323,18 @@
 <script>
 
     function showCategoryDeleteModal( id, name, inUse ) {
-        $('#categoryRemove_removeId').val(id);
-        $('#categoryEdit_bean_name').val(name);
+        // Same story as the edit modal: this set #categoryRemove_removeId,
+        // which does not exist, so Delete posted an empty id and removed
+        // nothing. (It also set the *edit* form's name field, from the delete
+        // dialog, which never meant anything.)
+        $("#categoryRemoveForm [name='removeId']").val(id);
         $('#category-name').html(name);
         if ( inUse ) {
             $('#category-in-use').css('display','block');
-            $('#category-emtpy').css('display', 'none');
+            $('#category-empty').css('display', 'none');
         } else {
             $('#category-in-use').css('display', 'none');
-            $('#category-emtpy').css('display', 'block');
+            $('#category-empty').css('display', 'block');
         }
         populateCategorySelect(id);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-category-modal')).show();
@@ -321,7 +350,11 @@
         });
         </c:forEach>
 
-        const select = $('#categoryRemove_targetCategoryId');
+        // The select is rendered server-side holding every category, this
+        // filter drops the one being deleted. It targeted a non-existent id,
+        // so the filter never ran and the modal offered you the category you
+        // were deleting as the place to move its own entries.
+        const select = $("#categoryRemoveForm [name='targetCategoryId']");
         select.empty();
         allCategories.forEach(function(category) {
             if (category.id !== removeId) {

@@ -120,7 +120,17 @@ public class CategoryEditController extends BaseController {
         if (!hasErrors(model)) {
             try {
                 WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
-                WeblogCategory category = wmgr.getWeblogCategory(bean.getId());
+
+                // Ownership-checked: bean.id is client input and the permission
+                // interceptor only vouches for the action weblog, so a global
+                // by-id lookup here let an editor rename another weblog's
+                // categories.
+                WeblogCategory category = lookupCategory(bean.getId(), request);
+                if (category == null) {
+                    addFlashError(redirectAttributes, "categoryForm.error.notFound", request);
+                    return "redirect:/roller-ui/authoring/categories.rol?weblog="
+                            + getActionWeblog(request).getHandle();
+                }
                 bean.copyTo(category);
 
                 wmgr.saveWeblogCategory(category);
