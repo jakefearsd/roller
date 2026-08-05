@@ -31,10 +31,8 @@ import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.controllers.pagers.CommentsPager;
-import org.apache.roller.weblogger.util.Utilities;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -97,7 +95,6 @@ public class GlobalCommentManagementController extends BaseController {
         model.addAttribute("bean", bean);
 
         loadComments(bean, model, request);
-        bean.loadCheckboxes(((CommentsPager) model.getAttribute("pager")).getItems());
 
         model.addAttribute("commentStatusOptions", getCommentStatusOptions(request));
         model.addAttribute("bulkDeleteCount", 0);
@@ -115,7 +112,6 @@ public class GlobalCommentManagementController extends BaseController {
         model.addAttribute("bean", bean);
 
         loadComments(bean, model, request);
-        bean.loadCheckboxes(((CommentsPager) model.getAttribute("pager")).getItems());
 
         int bulkDeleteCount = 0;
         try {
@@ -173,7 +169,6 @@ public class GlobalCommentManagementController extends BaseController {
         model.addAttribute("bean", bean);
 
         loadComments(bean, model, request);
-        bean.loadCheckboxes(((CommentsPager) model.getAttribute("pager")).getItems());
 
         model.addAttribute("commentStatusOptions", getCommentStatusOptions(request));
         model.addAttribute("bulkDeleteCount", 0);
@@ -199,43 +194,14 @@ public class GlobalCommentManagementController extends BaseController {
             if (!deletes.isEmpty()) {
                 log.debug("Processing deletes - " + deletes.size());
 
-                WeblogEntryComment deleteComment;
                 for (String deleteId : deletes) {
-                    deleteComment = wmgr.getComment(deleteId);
-                    flushList.add(deleteComment.getWeblogEntry().getWebsite());
-                    wmgr.removeComment(deleteComment);
-                }
-            }
-
-            // loop through IDs of all comments displayed on page
-            List<String> spamIds = Arrays.asList(bean.getSpamComments());
-            log.debug(spamIds.size() + " comments marked as spam");
-
-            String[] ids = Utilities.stringToStringArray(bean.getIds(), ",");
-            for (String id : ids) {
-                log.debug("processing id - " + id);
-
-                // if we already deleted it then skip forward
-                if (deletes.contains(id)) {
-                    log.debug("Already deleted, skipping - " + id);
-                    continue;
-                }
-
-                WeblogEntryComment comment = wmgr.getComment(id);
-
-                // mark/unmark spam
-                if (spamIds.contains(id) &&
-                        !ApprovalStatus.SPAM.equals(comment.getStatus())) {
-                    log.debug("Marking as spam - " + comment.getId());
-                    comment.setStatus(ApprovalStatus.SPAM);
-                    wmgr.saveComment(comment);
-                    flushList.add(comment.getWeblogEntry().getWebsite());
-                } else if (!spamIds.contains(id) &&
-                        ApprovalStatus.SPAM.equals(comment.getStatus())) {
-                    log.debug("Marking as disapproved - " + comment.getId());
-                    comment.setStatus(ApprovalStatus.DISAPPROVED);
-                    wmgr.saveComment(comment);
-                    flushList.add(comment.getWeblogEntry().getWebsite());
+                    // Ids come off the posted form; an unknown one is skipped
+                    // rather than allowed to 500 the whole batch.
+                    WeblogEntryComment deleteComment = wmgr.getComment(deleteId);
+                    if (deleteComment != null) {
+                        flushList.add(deleteComment.getWeblogEntry().getWebsite());
+                        wmgr.removeComment(deleteComment);
+                    }
                 }
             }
 
@@ -258,7 +224,6 @@ public class GlobalCommentManagementController extends BaseController {
         model.addAttribute("bean", bean);
 
         loadComments(bean, model, request);
-        bean.loadCheckboxes(((CommentsPager) model.getAttribute("pager")).getItems());
 
         model.addAttribute("commentStatusOptions", getCommentStatusOptions(request));
         model.addAttribute("bulkDeleteCount", 0);

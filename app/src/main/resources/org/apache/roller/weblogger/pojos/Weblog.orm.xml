@@ -53,6 +53,9 @@
 			<basic name="moderateComments">
 				<column name="commentmod" insertable="true" updatable="true" unique="false"/>
 			</basic>
+			<basic name="requireAuthenticatedComments">
+				<column name="comment_auth_required" insertable="true" updatable="true" unique="false"/>
+			</basic>
 			<basic name="emailComments">
 				<column name="emailcomments" insertable="true" updatable="true" unique="false"/>
 			</basic>

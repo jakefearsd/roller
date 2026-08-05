@@ -139,9 +139,6 @@ td.scheduledentry, tr.scheduledentry {
 
 /* comments */
 
-td.spamcomment {
-    background: #ffcccc;
-}
 td.pendingcomment {
     background: #ffffcc;
 }
@@ -151,10 +148,6 @@ td.pendingcomment {
 }
 .pendingCommentBox {
     background: #ffffcc;
-    border: 1px gray solid;
-}
-.spamCommentBox {
-    background: #ffcccc;
     border: 1px gray solid;
 }
 table.innertable {

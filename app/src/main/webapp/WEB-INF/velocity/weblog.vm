@@ -863,7 +863,22 @@ Show comments form for weblog entry.
     <div class="comments-head">$text.get("macro.weblog.postcommentHeader")</div>
     <a name="comment-form"></a>
 
-#if( $entry.commentsStillAllowed )
+#if( $entry.commentsStillAllowed && $entry.website.requireAuthenticatedComments && !$utils.isUserAuthenticated() )
+
+    #**
+    The weblog only takes comments from signed-in readers. Show the way in
+    rather than a form that CommentServlet would refuse. This branch is safe to
+    cache: WeblogPageCache keys carry /user=<name> only when somebody is signed
+    in, so the anonymous rendering and a member's rendering are separate
+    entries.
+    *#
+    #if( $cform.error )
+        <span class="error">$cform.message</span>
+    #end
+    <span class="status">$text.get( "comments.loginRequired" )</span>
+    <p><a href="$url.login">$text.get( "comments.loginRequired.link" )</a></p>
+
+#elseif( $entry.commentsStillAllowed )
 
     #if( $cform.error )
         <span class="error">$cform.message</span>
@@ -875,6 +890,17 @@ Show comments form for weblog entry.
         <input type="hidden" name="method" value="post" />
 
         <ul>
+        #if( $entry.website.requireAuthenticatedComments )
+            #**
+            Signed-in commenting: the server takes the name and email off the
+            account and discards anything posted here, so showing editable
+            fields would be showing controls that do nothing.
+            *#
+            <li>
+                <label class="desc">$text.get( "macro.weblog.name" )</label>
+                <span class="comments-author">$utils.authenticatedUser.screenName</span>
+            </li>
+        #else
             <li>
                 <label class="desc">$text.get( "macro.weblog.name" )</label>
                 <input type="text" name="name" class="text large" value="$cform.name" size="50" maxlength="255" />
@@ -883,6 +909,7 @@ Show comments form for weblog entry.
             <li><label class="desc">$text.get( "macro.weblog.email" )</label>
                 <input type="text" name="email" class="text large" value="$cform.email" size="50" maxlength="255" />
             </li>
+        #end
 
             <li><label class="desc">$text.get( "macro.weblog.url" )</label>
                 <input type="text" name="url" class="text large" value="$cform.url" size="50" maxlength="255" />
@@ -893,10 +920,12 @@ Show comments form for weblog entry.
                     <label for="notify" class="choice">$text.get( "macro.weblog.notifyMeOfComments" )</label>
                 </li>
             #end
+        #if( !$entry.website.requireAuthenticatedComments )
             <li>
                 <input type="checkbox" class="checkbox" id="rememberInfo" name="rememberInfo" />
                 <label for="rememberInfo" class="choice">$text.get( "macro.weblog.rememberinfo" )</label>
             </li>
+        #end
             <li>
                 <label class="desc">$text.get( "macro.weblog.yourcomment" )</label>
                 <textarea name="content" class="textarea large" cols="40" rows="10">$cform.content</textarea>
@@ -929,26 +958,48 @@ Show comments form for weblog entry.
     /* <![CDATA[ */
     clientSideInclude('commentAuthenticator', '$url.commentAuthenticator');
 
-    var author = getCookie("commentAuthor");
-    var email = getCookie("commentEmail");
-    var url = getCookie("commentUrl");
-    // check each field - IE will render "null"
-    if (author) {
-        document.forms['commentForm'].name.value = author;
-    }
-    if (email) {
-        document.forms['commentForm'].email.value = email;
-    }
-    if (url) {
-        document.forms['commentForm'].url.value = url;
+    // Reach fields through form.elements, never form.<name>: HTMLFormElement
+    // defines name, method and action itself, so form.name is the string
+    // "commentForm" and form.name.value is undefined. That is why "remember
+    // me" used to write a cookie reading "undefined" for the author and never
+    // restored one. Fields are also conditional now -- a weblog that requires
+    // a sign-in renders no name or email input at all -- so every lookup has
+    // to tolerate a missing element rather than throw.
+    function commentField(theForm, fieldName) {
+        return theForm ? theForm.elements[fieldName] : null;
     }
 
-    if (author || email || url) {
-        document.forms['commentForm'].rememberInfo.checked = true;
-    }
+    (function restoreRememberedUser() {
+        var form = document.forms['commentForm'];
+        var remember = commentField(form, 'rememberInfo');
+        if (!remember) {
+            // Nothing to remember: the account supplies the identity.
+            return;
+        }
+
+        var remembered = {
+            name: getCookie("commentAuthor"),
+            email: getCookie("commentEmail"),
+            url: getCookie("commentUrl")
+        };
+        var restoredAny = false;
+        Object.keys(remembered).forEach(function (fieldName) {
+            var field = commentField(form, fieldName);
+            // check each value - IE used to render "null"
+            if (field && remembered[fieldName]) {
+                field.value = remembered[fieldName];
+                restoredAny = true;
+            }
+        });
+        remember.checked = restoredAny;
+    })();
 
     function saveUserInformation(theForm) {
-        if (theForm.rememberInfo.checked) {
+        var remember = commentField(theForm, 'rememberInfo');
+        if (!remember) {
+            return;
+        }
+        if (remember.checked) {
             rememberUser(theForm);
         } else {
             forgetUser(theForm);
@@ -956,9 +1007,10 @@ Show comments form for weblog entry.
     }
 
     function validateComments(theForm) {
-        if (theForm.content.value == "") {
+        var content = commentField(theForm, 'content');
+        if (content && content.value === "") {
             alert("$text.get( "macro.weblog.commentwarning" )");
-            theForm.content.focus();
+            content.focus();
             return false;
         }
     }

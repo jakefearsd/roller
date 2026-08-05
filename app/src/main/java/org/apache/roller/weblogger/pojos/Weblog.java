@@ -73,6 +73,7 @@ public class Weblog implements Serializable {
     private Boolean defaultAllowComments = Boolean.TRUE;
     private int     defaultCommentDays = 0;
     private Boolean moderateComments = Boolean.FALSE;
+    private Boolean requireAuthenticatedComments = Boolean.TRUE;
     private int     entryDisplayCount = 15;
     private Date    lastModified     = new Date();
     private boolean enableMultiLang  = false;
@@ -265,7 +266,25 @@ public class Weblog implements Serializable {
     public void setModerateComments(Boolean moderateComments) {
         this.moderateComments = moderateComments;
     }
-    
+
+    /**
+     * True if a commenter must be signed in to this server before they can
+     * comment on this weblog.
+     *
+     * <p>Defaults to true, for new weblogs and for every weblog that existed
+     * when the column arrived. An open comment box is the way spam gets in, and
+     * there is no filter here to catch it -- the honest options are a known
+     * author or no comment at all.
+     */
+    public Boolean getRequireAuthenticatedComments() {
+        return requireAuthenticatedComments;
+    }
+
+    public void setRequireAuthenticatedComments(Boolean requireAuthenticatedComments) {
+        this.requireAuthenticatedComments = requireAuthenticatedComments;
+    }
+
+
     public Boolean getEmailComments() {
         return this.emailComments;
     }

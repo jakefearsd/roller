@@ -116,7 +116,14 @@ class QueryBeansTest {
             assertEquals(ApprovalStatus.APPROVED, statusFor("ONLY_APPROVED"));
             assertEquals(ApprovalStatus.DISAPPROVED, statusFor("ONLY_DISAPPROVED"));
             assertEquals(ApprovalStatus.PENDING, statusFor("ONLY_PENDING"));
-            assertEquals(ApprovalStatus.SPAM, statusFor("ONLY_SPAM"));
+        }
+
+        @Test
+        void theRetiredSpamFilterNoLongerMatchesAnything() {
+            // ONLY_SPAM was a filter option until spam became a deletion. An
+            // unknown filter must fall through to "everything" rather than
+            // throwing, since a stale bookmark can still carry it.
+            assertNull(statusFor("ONLY_SPAM"));
         }
 
         @Test
@@ -171,14 +178,14 @@ class QueryBeansTest {
         }
 
         @Test
-        void loadingCheckboxesRecordsWhichCommentsAreCurrentlyApprovedOrSpam() {
+        void loadingCheckboxesRecordsWhichCommentsAreCurrentlyApproved() {
             // The moderation form submits the *new* state of every checkbox and
             // diffs it against these, so a comment landing in the wrong bucket
-            // would be re-approved or re-flagged on the next save.
+            // would be re-approved or hidden on the next save.
             CommentsBean bean = new CommentsBean();
             bean.loadCheckboxes(List.of(
                     comment("c1", ApprovalStatus.APPROVED),
-                    comment("c2", ApprovalStatus.SPAM),
+                    comment("c2", ApprovalStatus.DISAPPROVED),
                     comment("c3", ApprovalStatus.PENDING),
                     comment("c4", ApprovalStatus.APPROVED)));
 
@@ -186,20 +193,17 @@ class QueryBeansTest {
                     "Every comment on the page must be in the working set, or the ones left "
                             + "out would be untouched by a bulk action");
             assertArrayEqualsIgnoringOrder(new String[]{"c1", "c4"}, bean.getApprovedComments());
-            assertArrayEqualsIgnoringOrder(new String[]{"c2"}, bean.getSpamComments());
         }
 
         @Test
         void loadingCheckboxesForAnEmptyPageClearsThePreviousSelection() {
             CommentsBean bean = new CommentsBean();
             bean.setApprovedComments(new String[]{"stale"});
-            bean.setSpamComments(new String[]{"stale"});
 
             bean.loadCheckboxes(List.of());
 
             assertEquals(0, bean.getApprovedComments().length,
                     "A stale selection would apply a bulk action to comments not on the page");
-            assertEquals(0, bean.getSpamComments().length);
         }
 
         private ApprovalStatus statusFor(String filter) {

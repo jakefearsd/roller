@@ -179,6 +179,17 @@ final class RenderingTestSupport {
         return anonymousRequest("POST", servletPath, pathInfo);
     }
 
+    /**
+     * A POST carrying a signed-in principal, which is what
+     * {@code ParsedRequest} reads to decide whether the caller is logged in.
+     */
+    static MockHttpServletRequest signedInPost(String servletPath, String pathInfo,
+            String userName) {
+        MockHttpServletRequest request = anonymousRequest("POST", servletPath, pathInfo);
+        request.setUserPrincipal(() -> userName);
+        return request;
+    }
+
     private static MockHttpServletRequest anonymousRequest(String method,
             String servletPath, String pathInfo) {
         MockHttpServletRequest request =

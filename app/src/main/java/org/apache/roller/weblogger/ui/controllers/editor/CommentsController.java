@@ -171,8 +171,12 @@ public class CommentsController extends BaseController {
             List<String> deletes = Arrays.asList(bean.getDeleteComments());
             if (!deletes.isEmpty()) {
                 for (String deleteId : deletes) {
+                    // Ids arrive from the posted form, so an unknown one is a
+                    // 404-shaped condition, not a server error: skip it rather
+                    // than dereferencing null and 500ing the whole batch.
                     WeblogEntryComment deleteComment = wmgr.getComment(deleteId);
-                    if (getActionWeblog(request).equals(deleteComment.getWeblogEntry().getWebsite())) {
+                    if (deleteComment != null
+                            && getActionWeblog(request).equals(deleteComment.getWeblogEntry().getWebsite())) {
                         flushList.add(deleteComment);
                         reindexList.add(deleteComment.getWeblogEntry());
                         wmgr.removeComment(deleteComment);
@@ -181,7 +185,6 @@ public class CommentsController extends BaseController {
             }
 
             List<String> approvedIds = Arrays.asList(bean.getApprovedComments());
-            List<String> spamIds = Arrays.asList(bean.getSpamComments());
             List<WeblogEntryComment> approvedComments = new ArrayList<>();
 
             String[] ids = Utilities.stringToStringArray(bean.getIds(), ",");
@@ -191,17 +194,13 @@ public class CommentsController extends BaseController {
                 }
 
                 WeblogEntryComment comment = wmgr.getComment(id);
-                if (getActionWeblog(request).equals(comment.getWeblogEntry().getWebsite())) {
+                if (comment != null
+                        && getActionWeblog(request).equals(comment.getWeblogEntry().getWebsite())) {
                     if (approvedIds.contains(id)) {
                         if (ApprovalStatus.PENDING.equals(comment.getStatus())) {
                             approvedComments.add(comment);
                         }
                         comment.setStatus(ApprovalStatus.APPROVED);
-                        wmgr.saveComment(comment);
-                        flushList.add(comment);
-                        reindexList.add(comment.getWeblogEntry());
-                    } else if (spamIds.contains(id)) {
-                        comment.setStatus(ApprovalStatus.SPAM);
                         wmgr.saveComment(comment);
                         flushList.add(comment);
                         reindexList.add(comment.getWeblogEntry());

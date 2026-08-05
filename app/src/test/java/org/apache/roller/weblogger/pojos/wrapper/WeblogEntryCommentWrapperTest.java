@@ -104,20 +104,18 @@ class WeblogEntryCommentWrapperTest {
     @Test
     void derivedStatusFlagsFollowTheComment() {
         assertTrue(wrapper.getApproved());
-        assertFalse(wrapper.getSpam());
         assertFalse(wrapper.getPending());
 
-        comment.setStatus(ApprovalStatus.SPAM);
-        assertTrue(wrapper.getSpam(),
+        comment.setStatus(ApprovalStatus.DISAPPROVED);
+        assertFalse(wrapper.getApproved(),
                 "The wrapper must read the flags live rather than snapshotting them at "
-                        + "wrap time; a comment marked as spam mid-render must not render");
-        assertFalse(wrapper.getApproved());
+                        + "wrap time; a comment rejected mid-render must not render");
+        assertFalse(wrapper.getPending());
 
         comment.setStatus(ApprovalStatus.PENDING);
         assertTrue(wrapper.getPending(),
                 "A comment awaiting moderation must report as pending -- the moderation "
                         + "queue is built from this flag");
-        assertFalse(wrapper.getSpam());
         assertFalse(wrapper.getApproved());
     }
 

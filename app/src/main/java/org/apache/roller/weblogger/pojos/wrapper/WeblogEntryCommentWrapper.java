@@ -161,11 +161,6 @@ public final class WeblogEntryCommentWrapper {
     }
     
     
-    public Boolean getSpam() {
-        return this.pojo.getSpam();
-    }
-    
-    
     public Boolean getPending() {
         return this.pojo.getPending();
     }

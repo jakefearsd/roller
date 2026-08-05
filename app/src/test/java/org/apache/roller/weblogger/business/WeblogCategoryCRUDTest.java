@@ -103,6 +103,44 @@ public class WeblogCategoryCRUDTest  {
     
     
     /**
+     * Deleting the category a weblog points at as its "blogger category" nulls
+     * that pointer -- {@code removeWeblogCategory} does it deliberately -- so
+     * every later question about a category on that weblog has to cope with the
+     * null. {@code isWeblogCategoryInUse} did not, and threw for every
+     * category on such a weblog, which is what the Categories screen calls
+     * before offering a delete.
+     */
+    @Test
+    public void testCategoryInUseCheckSurvivesANullBloggerCategory() throws Exception {
+
+        log.info("BEGIN");
+
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        WeblogCategory other = new WeblogCategory(testWeblog, "notTheBloggerCategory", null, null);
+        mgr.saveWeblogCategory(other);
+        TestUtils.endSession(true);
+
+        // Put the weblog into the state a category deletion leaves it in.
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        testWeblog.setBloggerCategory(null);
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(testWeblog);
+        TestUtils.endSession(true);
+
+        WeblogCategory managed = mgr.getWeblogCategory(other.getId());
+        assertFalse(mgr.isWeblogCategoryInUse(managed),
+                "An unused category on a weblog with no blogger category must report "
+                        + "as unused rather than throwing");
+
+        mgr.removeWeblogCategory(managed);
+        TestUtils.endSession(true);
+
+        log.info("END");
+    }
+
+
+    /**
      * Test basic persistence operations ... Create, Update, Delete.
      */
     @Test

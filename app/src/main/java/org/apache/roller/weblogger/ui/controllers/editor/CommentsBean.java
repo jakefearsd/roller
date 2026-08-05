@@ -43,7 +43,6 @@ public class CommentsBean {
     private int page = 0;
     
     private String[] approvedComments = new String[0];
-    private String[] spamComments = new String[0];
     private String[] deleteComments = new String[0];
     
     // Limit updates to just this set of comma-separated IDs
@@ -54,26 +53,20 @@ public class CommentsBean {
         
         List<String> allComments = new ArrayList<>();
         List<String> approvedList = new ArrayList<>();
-        List<String> spamList = new ArrayList<>();
-        
+
         for (WeblogEntryComment comment : comments) {
             allComments.add(comment.getId());
-            
+
             if(ApprovalStatus.APPROVED.equals(comment.getStatus())) {
                 approvedList.add(comment.getId());
-            } else if(ApprovalStatus.SPAM.equals(comment.getStatus())) {
-                spamList.add(comment.getId());
             }
         }
-        
+
         // list of ids we are working on
         setIds(Utilities.stringListToString(allComments, ","));
-        
+
         // approved ids list
         setApprovedComments(approvedList.toArray(String[]::new));
-        
-        // spam ids list
-        setSpamComments(spamList.toArray(String[]::new));
     }
     
     
@@ -84,8 +77,6 @@ public class CommentsBean {
             return ApprovalStatus.DISAPPROVED;
         } else if (approvedString.equals("ONLY_PENDING")) {
             return ApprovalStatus.PENDING;
-        } else if (approvedString.equals("ONLY_SPAM")) {
-            return ApprovalStatus.SPAM;
         } else {
             // shows *all* comments, regardless of status
             return null;
@@ -137,14 +128,6 @@ public class CommentsBean {
         this.approvedComments = approvedComments;
     }
     
-    public String[] getSpamComments() {
-        return spamComments;
-    }
-
-    public void setSpamComments(String[] spamComments) {
-        this.spamComments = spamComments;
-    }
-
     public String[] getDeleteComments() {
         return deleteComments;
     }

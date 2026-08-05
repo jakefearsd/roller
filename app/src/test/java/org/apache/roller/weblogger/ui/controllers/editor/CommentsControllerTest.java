@@ -82,10 +82,10 @@ class CommentsControllerTest extends EditorControllerTestSupport {
     @Test
     void executeLoadsThePagerAndTheBeanCheckboxes() throws Exception {
         WeblogEntryComment approved = commentNamed("c-1", ApprovalStatus.APPROVED);
-        WeblogEntryComment spam = commentNamed("c-2", ApprovalStatus.SPAM);
+        WeblogEntryComment hidden = commentNamed("c-2", ApprovalStatus.DISAPPROVED);
         WeblogEntryComment pending = commentNamed("c-3", ApprovalStatus.PENDING);
         when(weblogger.getWeblogEntryManager().getComments(any()))
-                .thenReturn(List.of(approved, spam, pending));
+                .thenReturn(List.of(approved, hidden, pending));
 
         CommentsBean bean = new CommentsBean();
         String view = controller.execute(request, model, bean);
@@ -97,8 +97,6 @@ class CommentsControllerTest extends EditorControllerTestSupport {
                 "loadCheckboxes must record every comment id on the page");
         assertEquals(List.of("c-1"), List.of(bean.getApprovedComments()),
                 "Only the approved comment should be pre-checked as approved");
-        assertEquals(List.of("c-2"), List.of(bean.getSpamComments()),
-                "Only the spam comment should be pre-checked as spam");
     }
 
     @Test
@@ -199,9 +197,9 @@ class CommentsControllerTest extends EditorControllerTestSupport {
         entry2.setAnchor("entry-two");
         entry2.setTitle("entry two");
 
-        WeblogEntryComment comment1 = commentNamed("c-1", ApprovalStatus.SPAM);
+        WeblogEntryComment comment1 = commentNamed("c-1", ApprovalStatus.DISAPPROVED);
         comment1.setWeblogEntry(entry1);
-        WeblogEntryComment comment2 = commentNamed("c-2", ApprovalStatus.SPAM);
+        WeblogEntryComment comment2 = commentNamed("c-2", ApprovalStatus.DISAPPROVED);
         comment2.setWeblogEntry(entry2);
 
         when(weblogger.getWeblogEntryManager().getComments(any()))
@@ -269,19 +267,57 @@ class CommentsControllerTest extends EditorControllerTestSupport {
         assertTrue(weblogger.flushCount() > 0, "A successful update must be committed");
     }
 
+    /**
+     * Deleting has to beat approving, because the form posts both.
+     *
+     * <p>This is the shape of the bug that made spam-flagging useless: the page
+     * pre-ticks "approved" for every already-approved comment, so a moderator
+     * who ticks a second box submits both, and whichever branch the loop tests
+     * first wins. When spam lost that race the comment was re-saved as
+     * APPROVED and stayed on the public page. Delete is now the only other
+     * action, so it is the one that must not lose the same race.
+     */
     @Test
-    void updateMarksACommentAsSpam() throws Exception {
-        WeblogEntryComment approved = commentNamed("c-1", ApprovalStatus.APPROVED);
-        when(weblogger.getWeblogEntryManager().getComment("c-1")).thenReturn(approved);
+    void updateDeletesACommentEvenWhenItIsAlsoTickedApproved() throws Exception {
+        WeblogEntryComment doomed = commentNamed("c-1", ApprovalStatus.APPROVED);
+        when(weblogger.getWeblogEntryManager().getComment("c-1")).thenReturn(doomed);
 
         CommentsBean bean = new CommentsBean();
         bean.setIds("c-1");
-        bean.setSpamComments(new String[]{"c-1"});
+        bean.setDeleteComments(new String[]{"c-1"});
+        bean.setApprovedComments(new String[]{"c-1"});
 
         controller.update(request, model, bean);
 
-        assertEquals(ApprovalStatus.SPAM, approved.getStatus());
-        verify(weblogger.getWeblogEntryManager()).saveComment(approved);
+        verify(weblogger.getWeblogEntryManager()).removeComment(doomed);
+        verify(weblogger.getWeblogEntryManager(), never()).saveComment(doomed);
+        assertEquals(ApprovalStatus.APPROVED, doomed.getStatus(),
+                "The comment is gone, so its in-memory status is irrelevant -- what "
+                        + "matters is that it was removed rather than re-saved");
+    }
+
+    /**
+     * An id that names no comment must be skipped. bean.ids and the delete
+     * boxes are posted form values, so a stale page or a hand-edited form can
+     * carry an id that has since been deleted; dereferencing the null would
+     * 500 the whole batch, losing the moderator's other decisions with it.
+     */
+    @Test
+    void updateSkipsIdsThatNoLongerNameAComment() throws Exception {
+        WeblogEntryComment real = commentNamed("c-1", ApprovalStatus.PENDING);
+        when(weblogger.getWeblogEntryManager().getComment("c-1")).thenReturn(real);
+        when(weblogger.getWeblogEntryManager().getComment("ghost")).thenReturn(null);
+
+        CommentsBean bean = new CommentsBean();
+        bean.setIds("ghost,c-1");
+        bean.setDeleteComments(new String[]{"ghost"});
+        bean.setApprovedComments(new String[]{"c-1"});
+
+        controller.update(request, model, bean);
+
+        assertEquals(ApprovalStatus.APPROVED, real.getStatus(),
+                "The real comment's approval must survive a bogus id in the same batch");
+        verify(weblogger.getWeblogEntryManager()).saveComment(real);
     }
 
     @Test
@@ -319,7 +355,7 @@ class CommentsControllerTest extends EditorControllerTestSupport {
         bean.setSearchString("foo");
         bean.setStartDateString("01/01/24");
         bean.setEndDateString("02/01/24");
-        bean.setApprovedString("ONLY_SPAM");
+        bean.setApprovedString("ONLY_PENDING");
         bean.setEntryId("entry-1");
 
         controller.update(request, model, bean);
@@ -329,7 +365,7 @@ class CommentsControllerTest extends EditorControllerTestSupport {
         assertEquals("foo", freshBean.getSearchString());
         assertEquals("01/01/24", freshBean.getStartDateString());
         assertEquals("02/01/24", freshBean.getEndDateString());
-        assertEquals("ONLY_SPAM", freshBean.getApprovedString());
+        assertEquals("ONLY_PENDING", freshBean.getApprovedString());
         assertEquals("entry-1", freshBean.getEntryId(),
                 "An incoming entryId must be preserved across the reset");
     }

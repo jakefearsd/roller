@@ -144,6 +144,15 @@
     </c:when>
 </c:choose>
 
+    <div class="row mb-3">
+        <div class="offset-sm-3 col-sm-9">
+            <div class="form-check">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input" id="bean_requireAuthenticatedComments" name="bean.requireAuthenticatedComments" value="true" ${bean.requireAuthenticatedComments ? 'checked' : ''}/> <spring:message code="websiteSettings.requireAuthenticatedComments"/></label>
+                <div class="form-text"><spring:message code="websiteSettings.requireAuthenticatedComments.tip"/></div>
+            </div>
+        </div>
+    </div>
+
     <c:if test="${!rc:getBooleanProp('users.moderation.required')}">
         <div class="row mb-3">
             <div class="offset-sm-3 col-sm-9">

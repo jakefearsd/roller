@@ -127,6 +127,15 @@ public final class WeblogWrapper {
         return this.pojo.getModerateComments();
     }
 
+
+    /**
+     * Themes read this to decide whether to render the comment form or a
+     * prompt to sign in; see {@code #showWeblogEntryCommentForm} in weblog.vm.
+     */
+    public Boolean getRequireAuthenticatedComments() {
+        return this.pojo.getRequireAuthenticatedComments();
+    }
+
     public String getAnalyticsCode() {
         // Deliberately NOT sanitized. This field exists to hold a tracking
         // snippet -- a <script> tag -- pasted by a site administrator, and it

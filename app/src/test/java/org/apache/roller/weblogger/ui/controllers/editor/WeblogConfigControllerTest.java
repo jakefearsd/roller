@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -105,6 +106,47 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogManager()).saveWeblog(weblog);
         assertTrue(messages(model).contains("websiteSettings.savedChanges"),
                 "Expected a save confirmation, got: " + messages(model));
+    }
+
+    /**
+     * A weblog with no blogger category must still be savable.
+     *
+     * <p>{@code removeWeblogCategory} nulls a weblog's blogger category when
+     * that category is deleted, so this is a state the product creates for
+     * itself. The save handler then dereferenced it unconditionally and threw,
+     * and the catch turned that into "Error updating configuration" -- for
+     * every save, forever, with nothing in the UI to put it right. A browser
+     * test that merely toggled a checkbox on the settings page is what found
+     * it.
+     */
+    @Test
+    void savingAWeblogThatHasNoBloggerCategoryStillWorks() throws Exception {
+        weblog.setBloggerCategory(null);
+        WeblogCategory chosen = category("cat-1", "General");
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(chosen);
+        bean.setBloggerCategoryId("cat-1");
+        bean.setName("Renamed Blog");
+
+        controller.save(request, model, bean);
+
+        assertEquals(chosen, weblog.getBloggerCategory(),
+                "the posted category must be applied rather than throwing");
+        assertEquals("Renamed Blog", weblog.getName());
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+        assertTrue(messages(model).contains("websiteSettings.savedChanges"),
+                "Expected a save confirmation, got: " + messages(model));
+    }
+
+    @Test
+    void savingLeavesTheBloggerCategoryAloneWhenItAlreadyMatches() throws Exception {
+        WeblogCategory existing = category("cat-1", "General");
+        weblog.setBloggerCategory(existing);
+        bean.setBloggerCategoryId("cat-1");
+
+        controller.save(request, model, bean);
+
+        assertEquals(existing, weblog.getBloggerCategory());
+        verify(weblogger.getWeblogEntryManager(), never()).getWeblogCategory(anyString());
     }
 
     @Test
@@ -313,6 +355,62 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         assertEquals("A,B", target.getDefaultPlugins(),
                 "The checkbox array must be rejoined into the stored csv");
         assertNull(target.getHandle(), "copyTo must never write the handle");
+    }
+
+    /**
+     * The sign-in requirement has to survive the round trip in both directions.
+     *
+     * <p>It is the setting that decides whether an anonymous stranger can write
+     * to the database, so a copyFrom or copyTo that quietly dropped it would
+     * either show a moderator the wrong state or reset the weblog to the bean's
+     * default the next time anything else on the page was saved.
+     */
+    @Test
+    void theSignInRequirementSurvivesTheRoundTripInBothStates() {
+        Weblog source = new Weblog();
+        source.setRequireAuthenticatedComments(Boolean.FALSE);
+
+        WeblogConfigBean opened = new WeblogConfigBean();
+        opened.copyFrom(source);
+        assertFalse(opened.getRequireAuthenticatedComments(),
+                "a weblog that accepts anonymous comments must show the box unticked");
+
+        Weblog target = new Weblog();
+        opened.copyTo(target);
+        assertEquals(Boolean.FALSE, target.getRequireAuthenticatedComments());
+
+        source.setRequireAuthenticatedComments(Boolean.TRUE);
+        opened.copyFrom(source);
+        assertTrue(opened.getRequireAuthenticatedComments());
+        opened.copyTo(target);
+        assertEquals(Boolean.TRUE, target.getRequireAuthenticatedComments());
+    }
+
+    /**
+     * New weblogs require a sign-in; the form bean does not.
+     *
+     * <p>The two defaults have to disagree. An unticked HTML checkbox posts no
+     * parameter at all, so whatever the bean field starts as is exactly what
+     * "unticked" means on save -- a bean defaulting to true would make the
+     * setting impossible to turn off, which is how this was first written and
+     * what a browser test caught. The weblog's own default is the one that
+     * decides what a brand new blog does.
+     */
+    @Test
+    void aBrandNewWeblogRequiresASignInButAnUntickedBoxTurnsItOff() {
+        assertEquals(Boolean.TRUE, new Weblog().getRequireAuthenticatedComments(),
+                "a weblog created before anyone visits its settings page must not be "
+                        + "open to anonymous comments");
+
+        Weblog closed = new Weblog();
+        closed.setRequireAuthenticatedComments(Boolean.TRUE);
+
+        // Exactly what Spring hands the save handler when the box is unticked:
+        // a fresh bean with nothing bound into that field.
+        new WeblogConfigBean().copyTo(closed);
+
+        assertEquals(Boolean.FALSE, closed.getRequireAuthenticatedComments(),
+                "an unticked box must actually turn the requirement off");
     }
 
     @Test

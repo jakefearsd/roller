@@ -55,10 +55,20 @@ function deleteCookie(name,path,domain) {
 function rememberUser(theForm) {
     var expires = new Date();
     expires.setTime(expires.getTime() + 24 * 365 * 60 * 60 * 1000); // sets it for approx 365 days.
+
+    // theForm.elements[...], not theForm.name: HTMLFormElement has its own
+    // name property, so theForm.name is the form's name attribute and
+    // theForm.name.value is undefined -- this used to store the literal
+    // string "undefined" as the remembered author.
+    function value(fieldName) {
+        var field = theForm.elements[fieldName];
+        return field ? field.value : "";
+    }
+
     // sets it for entire domain, so freeroller will remember for all users
-    setCookie("commentAuthor",theForm.name.value,expires,"/");
-    setCookie("commentEmail",theForm.email.value,expires,"/");
-    setCookie("commentUrl",theForm.url.value,expires,"/");
+    setCookie("commentAuthor",value("name"),expires,"/");
+    setCookie("commentEmail",value("email"),expires,"/");
+    setCookie("commentUrl",value("url"),expires,"/");
 }
 
 function forgetUser(theForm) {

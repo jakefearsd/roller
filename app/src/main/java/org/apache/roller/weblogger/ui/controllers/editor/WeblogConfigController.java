@@ -96,11 +96,29 @@ public class WeblogConfigController extends BaseController {
                     bean.setAnalyticsCode(bean.getAnalyticsCode().trim());
                 }
 
+                // Resolve the category BEFORE copyTo mutates the managed
+                // weblog. Anything that throws after that point leaves a
+                // half-applied change on an entity the session will still
+                // commit, while the page reports a failure.
+                //
+                // The null check is the bug this ordering was written for: a
+                // weblog's blogger category is set to null when that category
+                // is deleted (removeWeblogCategory does it deliberately), and
+                // this line then threw on EVERY subsequent save. The settings
+                // page answered "Error updating configuration" forever, with
+                // no way back through the UI.
+                WeblogCategory newBloggerCategory = null;
+                if (bean.getBloggerCategoryId() != null) {
+                    WeblogCategory current = weblog.getBloggerCategory();
+                    if (current == null || !current.getId().equals(bean.getBloggerCategoryId())) {
+                        newBloggerCategory = wmgr.getWeblogCategory(bean.getBloggerCategoryId());
+                    }
+                }
+
                 bean.copyTo(weblog);
 
-                if (bean.getBloggerCategoryId() != null
-                        && !weblog.getBloggerCategory().getId().equals(bean.getBloggerCategoryId())) {
-                    weblog.setBloggerCategory(wmgr.getWeblogCategory(bean.getBloggerCategoryId()));
+                if (newBloggerCategory != null) {
+                    weblog.setBloggerCategory(newBloggerCategory);
                 }
 
                 if (!weblog.getActive()) {

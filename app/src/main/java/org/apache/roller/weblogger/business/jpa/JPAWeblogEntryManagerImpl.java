@@ -691,7 +691,10 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     @Override
     public boolean isWeblogCategoryInUse(WeblogCategory cat)
     throws WebloggerException {
-        if (cat.getWeblog().getBloggerCategory().equals(cat)) {
+        // A weblog can legitimately have no blogger category: removeWeblogCategory
+        // nulls it when the category it pointed at is deleted. Dereferencing it
+        // threw for every category on such a weblog.
+        if (cat.equals(cat.getWeblog().getBloggerCategory())) {
             return true;
         }
         TypedQuery<WeblogEntry> q = strategy.getNamedQuery("WeblogEntry.getByCategory", WeblogEntry.class);

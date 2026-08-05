@@ -299,6 +299,28 @@ Key domain entities:
   published to the host — reachable only via `docker compose exec app curl
   http://localhost:8090/actuator/health` or the container healthcheck.
 
+## Comments
+- **Signed-in only, per weblog, on by default**
+  (`Weblog.requireAuthenticatedComments`, column `weblog.comment_auth_required`,
+  V013). Enforced in `CommentServlet` — the theme also swaps the form for a
+  sign-in prompt (`#showWeblogEntryCommentForm`), but hiding a form stops
+  nobody who posts directly, so the servlet check is the real one. When it is
+  on, the comment's name and email come off the **account**; the posted fields
+  are discarded, otherwise a signed-in commenter could still sign someone
+  else's name.
+- **There is no SPAM status.** `ApprovalStatus` is APPROVED/DISAPPROVED/PENDING;
+  marking a comment as spam means deleting it. The old flag fed nothing (no
+  filter exists) and was unreachable anyway: the moderation page pre-ticks
+  "approved" for approved comments and the update loop tested approved before
+  spam, so ticking spam re-saved the comment as APPROVED and it stayed on the
+  public page. Both moderation screens now delete; only the per-weblog one
+  changes approval.
+- **`WeblogPageCache` has no CacheHandler** — `CacheManager.invalidate(...)`
+  does not reach it. Rendered pages expire lazily against
+  `weblog.lastModified`, which `saveComment`/`removeComment` bump via
+  `saveWeblog`. That is why a comment change is visible without an explicit
+  cache eviction.
+
 ## Entry editing
 - **Editor**: EasyMDE (Markdown + server-rendered preview). The page exposes
   three functions that are the ONLY seam into the editor —
@@ -332,7 +354,7 @@ runtime while unit tests (which call the method directly) keep passing.
 Roller supports plugins for:
 - **Entry Plugins**: Content processing and formatting
 - **Comment Plugins**: Comment text formatting (`WeblogEntryCommentPlugin`) —
-  no spam filtering exists; moderators mark spam manually (`ApprovalStatus.SPAM`)
+  no spam filtering exists. See Comments below for what stands in for one.
 - **UI Plugins**: Editor components and custom functionality
 
 Plugins implement specific interfaces and are configured through the plugin manager system.

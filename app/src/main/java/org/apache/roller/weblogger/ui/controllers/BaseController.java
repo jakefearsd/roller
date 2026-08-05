@@ -336,7 +336,6 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
         opts.add(new KeyValueObject("ONLY_PENDING", getText("commentManagement.onlyPending", request)));
         opts.add(new KeyValueObject("ONLY_APPROVED", getText("commentManagement.onlyApproved", request)));
         opts.add(new KeyValueObject("ONLY_DISAPPROVED", getText("commentManagement.onlyDisapproved", request)));
-        opts.add(new KeyValueObject("ONLY_SPAM", getText("commentManagement.onlySpam", request)));
         return opts;
     }
 

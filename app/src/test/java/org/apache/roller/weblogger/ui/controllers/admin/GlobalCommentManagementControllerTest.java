@@ -128,7 +128,7 @@ class GlobalCommentManagementControllerTest {
         assertEquals(0, model.getAttribute("bulkDeleteCount"));
 
         List<?> options = (List<?>) model.getAttribute("commentStatusOptions");
-        assertEquals(5, options.size());
+        assertEquals(4, options.size());
         assertEquals("ALL", ((KeyValueObject) options.get(0)).getKey());
     }
 
@@ -147,9 +147,8 @@ class GlobalCommentManagementControllerTest {
         assertEquals("c29", ((WeblogEntryComment) model.getAttribute("lastComment")).getId());
         assertTrue(pager.getNextLink().startsWith("http://example.com/roller-ui/admin/globalCommentManagement.rol"),
                 "the next-page link is built on the action URL: " + pager.getNextLink());
-        // Checkboxes have to match the comments actually on the page.
-        GlobalCommentManagementBean bean = (GlobalCommentManagementBean) model.getAttribute("bean");
-        assertTrue(bean.getIds().startsWith("c0,c1,"), "ids: " + bean.getIds());
+        assertEquals("c0", pager.getItems().get(0).getId(),
+                "the page must start at the first comment the query returned");
     }
 
     @Test
@@ -193,7 +192,7 @@ class GlobalCommentManagementControllerTest {
         bean.setSearchString("viagra");
         bean.setStartDateString("03/01/24");
         bean.setEndDateString("03/31/24");
-        bean.setApprovedString("ONLY_SPAM");
+        bean.setApprovedString("ONLY_DISAPPROVED");
         bean.setPage(2);
         when(weblogger.weblogEntryManager().getComments(any())).thenReturn(List.of());
 
@@ -202,7 +201,7 @@ class GlobalCommentManagementControllerTest {
         assertEquals(".GlobalCommentManagement", view);
         CommentSearchCriteria criteria = capturedCriteria();
         assertEquals("viagra", criteria.getSearchText());
-        assertEquals(ApprovalStatus.SPAM, criteria.getStatus());
+        assertEquals(ApprovalStatus.DISAPPROVED, criteria.getStatus());
         assertEquals(2 * PAGE_SIZE, criteria.getOffset(), "page 2 must skip the first two pages of results");
         assertEquals(dayOfMonth(criteria.getStartDate()), 1);
         assertEquals(dayOfMonth(criteria.getEndDate()), 31);
@@ -215,7 +214,7 @@ class GlobalCommentManagementControllerTest {
         when(weblogger.weblogEntryManager().getComments(any())).thenReturn(comments(PAGE_SIZE + 5));
         GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
         bean.setSearchString("viagra");
-        bean.setApprovedString("ONLY_SPAM");
+        bean.setApprovedString("ONLY_DISAPPROVED");
         bean.setStartDateString("03/01/24");
         bean.setEndDateString("03/31/24");
 
@@ -231,7 +230,7 @@ class GlobalCommentManagementControllerTest {
         verify(weblogger.weblogEntryManager(), org.mockito.Mockito.times(2)).getComments(captor.capture());
         CommentSearchCriteria countCriteria = captor.getAllValues().get(1);
         assertEquals("viagra", countCriteria.getSearchText());
-        assertEquals(ApprovalStatus.SPAM, countCriteria.getStatus());
+        assertEquals(ApprovalStatus.DISAPPROVED, countCriteria.getStatus());
         assertTrue(countCriteria.isReverseChrono());
         assertEquals(1, dayOfMonth(countCriteria.getStartDate()));
         assertEquals(31, dayOfMonth(countCriteria.getEndDate()));
@@ -251,20 +250,20 @@ class GlobalCommentManagementControllerTest {
     }
 
     @Test
-    void aQueryLeavesTheTypedFilterOnTheFormAndTicksTheSpamItFound() throws Exception {
-        // The filter has to survive so the admin can page through the results,
-        // and the checkboxes have to match what the query returned.
+    void aQueryLeavesTheTypedFilterOnTheForm() throws Exception {
+        // The filter has to survive so the admin can page through the results.
         when(weblogger.weblogEntryManager().getComments(any()))
-                .thenReturn(List.of(comment("c1", ApprovalStatus.SPAM), comment("c2", ApprovalStatus.APPROVED)));
+                .thenReturn(List.of(comment("c1", ApprovalStatus.DISAPPROVED),
+                        comment("c2", ApprovalStatus.APPROVED)));
         GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
         bean.setSearchString("viagra");
 
         controller.query(request(), model, bean);
 
         assertSame(bean, model.getAttribute("bean"));
-        assertEquals("c1,c2", bean.getIds());
-        assertArrayEquals(new String[]{"c1"}, bean.getSpamComments());
-        assertEquals(5, ((List<?>) model.getAttribute("commentStatusOptions")).size());
+        assertEquals("viagra", bean.getSearchString());
+        assertEquals(2, ((CommentsPager) model.getAttribute("pager")).getItems().size());
+        assertEquals(4, ((List<?>) model.getAttribute("commentStatusOptions")).size());
     }
 
     @Test
@@ -276,7 +275,7 @@ class GlobalCommentManagementControllerTest {
         bean.setSearchString("viagra");
         bean.setStartDateString("03/01/24");
         bean.setEndDateString("03/31/24");
-        bean.setApprovedString("ONLY_SPAM");
+        bean.setApprovedString("ONLY_DISAPPROVED");
 
         controller.query(request(), model, bean);
 
@@ -288,7 +287,7 @@ class GlobalCommentManagementControllerTest {
                         "bean.searchString", "viagra",
                         "bean.startDateString", "03/01/24",
                         "bean.endDateString", "03/31/24",
-                        "bean.approvedString", "ONLY_SPAM"),
+                        "bean.approvedString", "ONLY_DISAPPROVED"),
                 params.getValue());
     }
 
@@ -327,7 +326,7 @@ class GlobalCommentManagementControllerTest {
     void bulkDeleteRemovesExactlyWhatTheFilterDescribedAndSaysHowMany() throws Exception {
         GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
         bean.setSearchString("viagra");
-        bean.setApprovedString("ONLY_SPAM");
+        bean.setApprovedString("ONLY_DISAPPROVED");
         when(weblogger.weblogEntryManager().removeMatchingComments(
                 any(), any(), anyString(), any(), any(), any())).thenReturn(17);
 
@@ -336,7 +335,7 @@ class GlobalCommentManagementControllerTest {
         assertEquals(".GlobalCommentManagement", view);
         // Weblog and entry are null: this screen deletes across the whole site.
         verify(weblogger.weblogEntryManager()).removeMatchingComments(
-                null, null, "viagra", null, null, ApprovalStatus.SPAM);
+                null, null, "viagra", null, null, ApprovalStatus.DISAPPROVED);
         assertEquals(List.of("commentManagement.deleteSuccess[17]"), ControllerTestFixture.messages(model));
     }
 
@@ -344,7 +343,7 @@ class GlobalCommentManagementControllerTest {
     void afterABulkDeleteTheFilterIsClearedSoTheAdminSeesWhatIsLeft() throws Exception {
         GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
         bean.setSearchString("viagra");
-        bean.setApprovedString("ONLY_SPAM");
+        bean.setApprovedString("ONLY_DISAPPROVED");
         when(weblogger.weblogEntryManager().getComments(any()))
                 .thenReturn(List.of(comment("c1", ApprovalStatus.APPROVED)));
 
@@ -355,9 +354,8 @@ class GlobalCommentManagementControllerTest {
         assertEquals("ALL", shown.getApprovedString());
         assertEquals(0, model.getAttribute("bulkDeleteCount"));
         assertEquals("admin", model.getAttribute("desiredMenu"));
-        assertEquals(5, ((List<?>) model.getAttribute("commentStatusOptions")).size());
+        assertEquals(4, ((List<?>) model.getAttribute("commentStatusOptions")).size());
         assertNotNull(model.getAttribute("pager"), "the page is redrawn with what is left");
-        assertEquals("c1", shown.getIds(), "and its checkboxes describe the comments that survived");
     }
 
     @Test
@@ -380,7 +378,6 @@ class GlobalCommentManagementControllerTest {
         when(weblogger.weblogEntryManager().getComment("c1")).thenReturn(doomed);
         when(weblogger.weblogEntryManager().getComment("c2")).thenReturn(spared);
         GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-        bean.setIds("c1,c2");
         bean.setDeleteComments(new String[]{"c1"});
 
         String view = controller.update(request(), model, bean);
@@ -395,81 +392,74 @@ class GlobalCommentManagementControllerTest {
         assertEquals("admin", model.getAttribute("desiredMenu"));
         assertNull(redrawn.getSearchString());
         assertEquals(0, model.getAttribute("bulkDeleteCount"));
-        assertEquals(5, ((List<?>) model.getAttribute("commentStatusOptions")).size());
+        assertEquals(4, ((List<?>) model.getAttribute("commentStatusOptions")).size());
         assertNotNull(model.getAttribute("pager"));
-        assertEquals("", redrawn.getIds(), "no comments were returned for the redrawn page");
     }
 
+    /**
+     * The site administrator's screen changes no statuses at all any more.
+     * Approval belongs to whoever owns the weblog; this screen deletes, and a
+     * comment it leaves alone must come out of the update byte-for-byte
+     * unchanged rather than being quietly disapproved across somebody else's
+     * blog.
+     */
     @Test
-    void tickingSpamMarksThePreviouslyCleanCommentAsSpam() throws Exception {
-        WeblogEntryComment comment = comment("c1", ApprovalStatus.APPROVED);
-        when(weblogger.weblogEntryManager().getComment("c1")).thenReturn(comment);
+    void updatingDoesNotRestatusAnythingItWasNotAskedToDelete() throws Exception {
+        WeblogEntryComment approved = comment("c1", ApprovalStatus.APPROVED);
+        WeblogEntryComment pending = comment("c2", ApprovalStatus.PENDING);
+        when(weblogger.weblogEntryManager().getComment("c1")).thenReturn(approved);
+        when(weblogger.weblogEntryManager().getComment("c2")).thenReturn(pending);
         GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-        bean.setIds("c1");
-        bean.setSpamComments(new String[]{"c1"});
 
         controller.update(request(), model, bean);
 
-        assertEquals(ApprovalStatus.SPAM, comment.getStatus());
-        verify(weblogger.weblogEntryManager()).saveComment(comment);
-        // The blog page for that entry is cached; without this the comment goes
-        // on being served to readers after being marked as spam.
-        verify(CACHE_HANDLER).invalidate(comment.getWeblogEntry().getWebsite());
-    }
-
-    @Test
-    void untickingSpamDisapprovesTheCommentRatherThanPublishingIt() throws Exception {
-        // Un-spamming is a moderation decision, not an approval: the comment
-        // goes back to disapproved and stays off the blog until approved.
-        WeblogEntryComment comment = comment("c1", ApprovalStatus.SPAM);
-        when(weblogger.weblogEntryManager().getComment("c1")).thenReturn(comment);
-        GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-        bean.setIds("c1");
-        bean.setSpamComments(new String[0]);
-
-        controller.update(request(), model, bean);
-
-        assertEquals(ApprovalStatus.DISAPPROVED, comment.getStatus());
-        verify(weblogger.weblogEntryManager()).saveComment(comment);
-    }
-
-    @Test
-    void aCommentWhoseSpamFlagDidNotChangeIsNotRewritten() throws Exception {
-        WeblogEntryComment stillSpam = comment("c1", ApprovalStatus.SPAM);
-        WeblogEntryComment stillClean = comment("c2", ApprovalStatus.APPROVED);
-        when(weblogger.weblogEntryManager().getComment("c1")).thenReturn(stillSpam);
-        when(weblogger.weblogEntryManager().getComment("c2")).thenReturn(stillClean);
-        GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-        bean.setIds("c1,c2");
-        bean.setSpamComments(new String[]{"c1"});
-
-        controller.update(request(), model, bean);
-
-        assertEquals(ApprovalStatus.SPAM, stillSpam.getStatus());
-        assertEquals(ApprovalStatus.APPROVED, stillClean.getStatus());
+        assertEquals(ApprovalStatus.APPROVED, approved.getStatus());
+        assertEquals(ApprovalStatus.PENDING, pending.getStatus());
         verify(weblogger.weblogEntryManager(), never()).saveComment(any());
     }
 
+    /**
+     * The deleted comment's weblog page is cached. Without the invalidation the
+     * comment goes on being served to readers after it is gone from the
+     * database.
+     */
     @Test
-    void aCommentThatWasJustDeletedIsNotLoadedAgainForSpamHandling() throws Exception {
+    void deletingACommentInvalidatesTheCacheForItsWeblog() throws Exception {
         WeblogEntryComment doomed = comment("c1", ApprovalStatus.APPROVED);
         when(weblogger.weblogEntryManager().getComment("c1")).thenReturn(doomed);
         GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-        bean.setIds("c1");
         bean.setDeleteComments(new String[]{"c1"});
-        bean.setSpamComments(new String[]{"c1"});
 
         controller.update(request(), model, bean);
 
         verify(weblogger.weblogEntryManager()).removeComment(doomed);
-        verify(weblogger.weblogEntryManager(), never()).saveComment(any());
+        verify(CACHE_HANDLER).invalidate(doomed.getWeblogEntry().getWebsite());
+    }
+
+    /**
+     * A delete box naming a comment that is already gone must be skipped. The
+     * ids are posted form values, so a stale page carries them; dereferencing
+     * the null would 500 and lose the admin's other deletions with it.
+     */
+    @Test
+    void deletingAnIdThatNoLongerExistsIsSkippedRatherThanFatal() throws Exception {
+        WeblogEntryComment real = comment("c2", ApprovalStatus.APPROVED);
+        when(weblogger.weblogEntryManager().getComment("ghost")).thenReturn(null);
+        when(weblogger.weblogEntryManager().getComment("c2")).thenReturn(real);
+        GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
+        bean.setDeleteComments(new String[]{"ghost", "c2"});
+
+        controller.update(request(), model, bean);
+
+        verify(weblogger.weblogEntryManager()).removeComment(real);
+        assertEquals(List.of("commentManagement.updateSuccess"), ControllerTestFixture.messages(model));
     }
 
     @Test
     void aFailedUpdateIsReportedRatherThanClaimingSuccess() throws Exception {
         when(weblogger.weblogEntryManager().getComment("c1")).thenThrow(new WebloggerException("database down"));
         GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-        bean.setIds("c1");
+        bean.setDeleteComments(new String[]{"c1"});
 
         controller.update(request(), model, bean);
 

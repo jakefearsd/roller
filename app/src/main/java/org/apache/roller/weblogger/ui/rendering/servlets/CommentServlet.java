@@ -43,6 +43,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.rendering.plugins.comments.CommentAuthenticator;
 import org.apache.roller.weblogger.ui.rendering.plugins.comments.DefaultCommentAuthenticator;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogCommentRequest;
@@ -220,10 +221,24 @@ public class CommentServlet extends HttpServlet {
         // collect input from request params and construct new comment object
         // fields: name, email, url, content, notify
         // TODO: data validation on collected comment data
+        // If the weblog only takes comments from signed-in users, the account
+        // is the identity: whatever the form posted for name and email is
+        // discarded. Trusting the posted fields would leave a logged-in
+        // commenter free to sign somebody else's name to their words, which is
+        // most of what requiring a sign-in was supposed to prevent.
+        boolean loginRequired =
+                Boolean.TRUE.equals(weblog.getRequireAuthenticatedComments());
+        User commenter = loginRequired ? commentRequest.getUser() : null;
+
         WeblogEntryComment comment = new WeblogEntryComment();
-        comment.setName(commentRequest.getName());
-        comment.setEmail(commentRequest.getEmail());
-        
+        if (commenter != null) {
+            comment.setName(commenter.getScreenName());
+            comment.setEmail(commenter.getEmailAddress());
+        } else {
+            comment.setName(commentRequest.getName());
+            comment.setEmail(commentRequest.getEmail());
+        }
+
         // Validate url
         if (StringUtils.isNotEmpty(commentRequest.getUrl())) {
             String theUrl = commentRequest.getUrl().trim().toLowerCase();
@@ -272,14 +287,21 @@ public class CommentServlet extends HttpServlet {
         if (!entry.getCommentsStillAllowed() || !entry.isPublished()) {
             error = messageUtils.getString("comments.disabled");
 
+            // The weblog takes comments from signed-in users only, and this
+            // caller is not one. Checked before anything else about the comment
+            // so that an anonymous post is refused on the same grounds whether
+            // or not the rest of it would have been acceptable.
+        } else if (loginRequired && commenter == null) {
+            error = messageUtils.getString("error.commentLoginRequired");
+            log.debug("Anonymous comment refused, weblog requires a sign-in: "
+                    + weblog.getHandle());
+
             // Must have an email and also must be valid
-        } else if (StringUtils.isEmpty(commentRequest.getEmail())
-                || StringUtils.isNotEmpty(commentRequest.getEmail())
-                && !Utilities.isValidEmailAddress(commentRequest.getEmail())) {
+        } else if (StringUtils.isEmpty(comment.getEmail())
+                || !Utilities.isValidEmailAddress(comment.getEmail())) {
             error = messageUtils
                     .getString("error.commentPostFailedEmailAddress");
-            log.debug("Email Adddress is invalid : "
-                    + commentRequest.getEmail());
+            log.debug("Email Adddress is invalid : " + comment.getEmail());
             // if there is an URL it must be valid
         } else if (StringUtils.isNotEmpty(comment.getUrl())
                 && !new UrlValidator(new String[] { "http", "https" })

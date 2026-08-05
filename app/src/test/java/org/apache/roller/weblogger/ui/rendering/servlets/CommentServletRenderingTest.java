@@ -37,9 +37,13 @@ class CommentServletRenderingTest {
         entry = TestUtils.setupWeblogEntry("comment-entry", weblog, user);
         TestUtils.endSession(true);
 
-        // open the comment window explicitly instead of relying on defaults
+        // open the comment window explicitly instead of relying on defaults.
+        // requireAuthenticatedComments ships ON, so most of these tests -- which
+        // drive the anonymous path -- have to turn it off deliberately; the two
+        // that exercise it turn it back on.
         Weblog managedWeblog = TestUtils.getManagedWebsite(weblog);
         managedWeblog.setAllowComments(Boolean.TRUE);
+        managedWeblog.setRequireAuthenticatedComments(Boolean.FALSE);
         WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managedWeblog);
         WeblogEntry managedEntry = TestUtils.getManagedWeblogEntry(entry);
         managedEntry.setAllowComments(Boolean.TRUE);
@@ -132,6 +136,87 @@ class CommentServletRenderingTest {
                 .execute(RenderingTestSupport.commentServlet(), request);
 
         assertEquals(404, response.getStatus());
+    }
+
+    // --- signed-in commenting ------------------------------------------------
+
+    /** Flips the weblog into signed-in-only commenting. */
+    private void requireSignIn() throws Exception {
+        Weblog managedWeblog = TestUtils.getManagedWebsite(weblog);
+        managedWeblog.setRequireAuthenticatedComments(Boolean.TRUE);
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managedWeblog);
+        TestUtils.endSession(true);
+    }
+
+    /**
+     * The whole point of the flag: an anonymous POST is refused even though
+     * every other thing about the comment is valid. Without the servlet-side
+     * check the flag would only hide the form, and hiding a form stops nobody
+     * who posts directly.
+     */
+    @Test
+    void anAnonymousCommentIsRefusedWhenTheWeblogRequiresASignIn() throws Exception {
+        requireSignIn();
+
+        MockHttpServletRequest request = commentPost("drive-by", "spammer@example.com");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.commentServlet(), request);
+
+        assertEquals("/roller-ui/rendering/page/commentblog/entry/comment-entry",
+                response.getForwardedUrl());
+        WeblogEntryCommentForm form =
+                (WeblogEntryCommentForm) request.getAttribute("commentForm");
+        assertNotNull(form, "the error form must ride back on the request");
+        assertTrue(form.isError(), "an anonymous post must be flagged as an error");
+        assertEquals(0, commentsInDb().size(), "nothing may be saved");
+    }
+
+    @Test
+    void aSignedInCommentIsAcceptedWhenTheWeblogRequiresASignIn() throws Exception {
+        requireSignIn();
+
+        MockHttpServletRequest request = RenderingTestSupport.signedInPost(
+                "/roller-ui/rendering/comment", "/commentblog/entry/comment-entry",
+                user.getUserName());
+        request.setParameter("method", "post");
+        request.setParameter("name", "Anonymous Reader");
+        request.setParameter("email", "reader@example.com");
+        request.setParameter("url", "");
+        request.setParameter("content", "a comment with a name behind it");
+
+        RenderingTestSupport.execute(RenderingTestSupport.commentServlet(), request);
+
+        List<WeblogEntryComment> saved = commentsInDb();
+        assertEquals(1, saved.size(), "a signed-in comment must be persisted");
+        assertEquals(ApprovalStatus.APPROVED, saved.get(0).getStatus());
+    }
+
+    /**
+     * The posted name and email are ignored in favour of the account's. A
+     * sign-in requirement that still let the commenter type any name would
+     * leave impersonation exactly as easy as it was before.
+     */
+    @Test
+    void aSignedInCommentIsAttributedToTheAccountNotThePostedFields() throws Exception {
+        requireSignIn();
+
+        MockHttpServletRequest request = RenderingTestSupport.signedInPost(
+                "/roller-ui/rendering/comment", "/commentblog/entry/comment-entry",
+                user.getUserName());
+        request.setParameter("method", "post");
+        request.setParameter("name", "Somebody Else Entirely");
+        request.setParameter("email", "victim@example.com");
+        request.setParameter("url", "");
+        request.setParameter("content", "signed in somebody else's name");
+
+        RenderingTestSupport.execute(RenderingTestSupport.commentServlet(), request);
+
+        List<WeblogEntryComment> saved = commentsInDb();
+        assertEquals(1, saved.size());
+        assertEquals(user.getScreenName(), saved.get(0).getName(),
+                "the account's screen name must win over the posted one");
+        assertEquals(user.getEmailAddress(), saved.get(0).getEmail(),
+                "the account's email must win over the posted one");
     }
 
     @Test

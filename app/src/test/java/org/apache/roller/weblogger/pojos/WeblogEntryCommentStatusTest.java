@@ -30,10 +30,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Covers the derived flags on {@link WeblogEntryComment}.
  *
- * <p>{@code getSpam}, {@code getPending} and {@code getApproved} are views onto
- * a single {@code status} field, and themes and the moderation UI branch on
- * them directly. If two of them can be true at once -- or if the wrong one is
- * true -- spam gets rendered on the public blog.
+ * <p>{@code getPending} and {@code getApproved} are views onto a single
+ * {@code status} field, and themes and the moderation UI branch on them
+ * directly. If both can be true at once -- or if the wrong one is true -- a
+ * comment the owner rejected gets rendered on the public blog.
  */
 class WeblogEntryCommentStatusTest {
 
@@ -47,29 +47,33 @@ class WeblogEntryCommentStatusTest {
     void exactlyOneDerivedFlagIsTrueForEachStatus() {
         WeblogEntryComment approved = comment(ApprovalStatus.APPROVED);
         assertTrue(approved.getApproved(), "APPROVED must read as approved");
-        assertFalse(approved.getSpam(), "An approved comment is not spam");
         assertFalse(approved.getPending(), "An approved comment is not awaiting moderation");
-
-        WeblogEntryComment spam = comment(ApprovalStatus.SPAM);
-        assertTrue(spam.getSpam());
-        assertFalse(spam.getApproved(),
-                "Spam must never read as approved -- getApproved() is what the theme "
-                        + "checks before rendering a comment on the public blog");
-        assertFalse(spam.getPending());
 
         WeblogEntryComment pending = comment(ApprovalStatus.PENDING);
         assertTrue(pending.getPending());
         assertFalse(pending.getApproved(),
                 "A comment still in the moderation queue must not read as approved");
-        assertFalse(pending.getSpam());
 
         WeblogEntryComment rejected = comment(ApprovalStatus.DISAPPROVED);
         assertFalse(rejected.getApproved(),
-                "A comment the owner rejected must not read as approved");
-        assertFalse(rejected.getSpam(),
-                "Rejected is not the same as spam; only SPAM feeds the spam counters");
+                "A comment the owner rejected must not read as approved -- getApproved() "
+                        + "is what the theme checks before rendering a comment publicly");
         assertFalse(rejected.getPending(),
                 "Rejected is a decision, not a pending one");
+    }
+
+    /**
+     * There is no SPAM status to fall back to. Marking a comment as spam
+     * deletes it, so the only states a stored comment can be in are these
+     * three -- a fourth would be a status the moderation screens do not
+     * render and the public query does not know how to treat.
+     */
+    @Test
+    void theOnlyStatusesAreApprovedDisapprovedAndPending() {
+        assertEquals(3, ApprovalStatus.values().length,
+                "Adding a status means teaching every comment query and both moderation "
+                        + "screens what to do with it: " + java.util.Arrays.toString(
+                                ApprovalStatus.values()));
     }
 
     @Test

@@ -18,18 +18,22 @@
 
 package org.apache.roller;
 
-import java.io.PrintStream;
-import java.io.PrintWriter;
-
-
 /**
  * Base Roller exception class.
+ *
+ * <p>The wrapped throwable goes to {@link Throwable}'s own cause chain. It used
+ * to be held in a private field instead, with {@code printStackTrace} overridden
+ * to print it -- which works only when something calls printStackTrace on this
+ * exact object. Nested inside anything else, and everything is: a Spring
+ * BeanCreationException, a surefire report, a logging framework, all of which
+ * walk getCause(). The result was failures that printed "Caused by:
+ * org.apache.roller.weblogger.WebloggerException" as the last line of the trace
+ * and told you nothing at all. A malformed ORM mapping cost two debugging
+ * sessions to that.
  */
 public abstract class RollerException extends Exception {
 
     private static final long serialVersionUID = 1L;
-
-    private final Throwable mRootCause;
 
 
     /**
@@ -37,7 +41,6 @@ public abstract class RollerException extends Exception {
      */
     protected RollerException() {
         super();
-        mRootCause = null;
     }
 
 
@@ -47,7 +50,6 @@ public abstract class RollerException extends Exception {
      */
     protected RollerException(String s) {
         super(s);
-        mRootCause = null;
     }
 
 
@@ -57,8 +59,7 @@ public abstract class RollerException extends Exception {
      * @param t Existing connection to wrap.
      */
     protected RollerException(String s, Throwable t) {
-        super(s);
-        mRootCause = t;
+        super(s, t);
     }
 
 
@@ -67,16 +68,20 @@ public abstract class RollerException extends Exception {
      * @param t Existing exception to be wrapped.
      */
     protected RollerException(Throwable t) {
-        mRootCause = t;
+        super(t);
     }
 
 
     /**
      * Get root cause object, or null if none.
+     *
      * @return Root cause or null if none.
+     * @deprecated the cause is now on the standard chain; call
+     *             {@link Throwable#getCause()}.
      */
+    @Deprecated
     public Throwable getRootCause() {
-        return mRootCause;
+        return getCause();
     }
 
 
@@ -97,46 +102,5 @@ public abstract class RollerException extends Exception {
         return rcmessage;
     }
 
-
-    /**
-     * Print stack trace for exception and for root cause exception if there is one.
-     * @see java.lang.Throwable#printStackTrace()
-     */
-    @Override
-    public void printStackTrace() {
-        super.printStackTrace();
-        if (mRootCause != null) {
-            System.out.println("--- ROOT CAUSE ---");
-            mRootCause.printStackTrace();
-        }
-    }
-
-
-    /**
-     * Print stack trace for exception and for root cause exception if there is one.
-     * @param s Stream to print to.
-     */
-    @Override
-    public void printStackTrace(PrintStream s) {
-        super.printStackTrace(s);
-        if (mRootCause != null) {
-            s.println("--- ROOT CAUSE ---");
-            mRootCause.printStackTrace(s);
-        }
-    }
-
-
-    /**
-     * Print stack trace for exception and for root cause exception if there is one.
-     * @param s Writer to write to.
-     */
-    @Override
-    public void printStackTrace(PrintWriter s) {
-        super.printStackTrace(s);
-        if (null != mRootCause) {
-            s.println("--- ROOT CAUSE ---");
-            mRootCause.printStackTrace(s);
-        }
-    }
 
 }

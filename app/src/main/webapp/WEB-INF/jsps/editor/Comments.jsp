@@ -76,10 +76,14 @@
 
     <form method="post" action="${updateUrl}">
         <sec:csrfInput/>
-        <input type="hidden" name="bean.ids" value="${fn:escapeXml(bean.ids)}"/>
         <input type="hidden" name="bean.startDateString" value="${fn:escapeXml(bean.startDateString)}"/>
         <input type="hidden" name="bean.endDateString" value="${fn:escapeXml(bean.endDateString)}"/>
         <c:if test="${actionName == 'comments'}">
+            <%-- bean.ids scopes the approve/disapprove sweep to the rows this
+                 page displayed. Only the per-weblog screen has that sweep; the
+                 global screen's bean has no ids property at all, so emitting
+                 it there would be reading a property that does not exist. --%>
+            <input type="hidden" name="bean.ids" value="${fn:escapeXml(bean.ids)}"/>
             <input type="hidden" name="bean.entryId" value="${fn:escapeXml(bean.entryId)}"/>
             <input type="hidden" name="bean.searchString" value="${fn:escapeXml(bean.searchString)}"/>
             <input type="hidden" name="bean.approvedString" value="${fn:escapeXml(bean.approvedString)}"/>
@@ -159,9 +163,6 @@
                     </th>
                 </c:if>
                 <th class="rollertable" width="5%">
-                    <spring:message code="commentManagement.columnSpam"/>
-                </th>
-                <th class="rollertable" width="5%">
                     <spring:message code="generic.delete"/>
                 </th>
                 <th class="rollertable">
@@ -184,12 +185,6 @@
                 <td align="center">
                     <spring:message code="commentManagement.select"/><br/>
 
-                    <span id="checkallspam"><a href="#"><spring:message code="generic.all"/></a></span><br/>
-                    <span id="clearallspam"><a href="#"><spring:message code="generic.none"/></a></span>
-                </td>
-                <td align="center">
-                    <spring:message code="commentManagement.select"/><br/>
-
                     <span id="checkalldelete"><a href="#"><spring:message code="generic.all"/></a></span><br/>
                     <span id="clearalldelete"><a href="#"><spring:message code="generic.none"/></a></span>
                 </td>
@@ -197,8 +192,6 @@
                     <br/>
                     <span class="pendingCommentBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
                     <spring:message code="commentManagement.pending"/>&nbsp;&nbsp;
-                    <span class="spamCommentBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                    <spring:message code="commentManagement.spam"/>&nbsp;&nbsp;
                 </td>
             </tr>
 
@@ -220,14 +213,6 @@
                         </td>
                     </c:if>
                     <td>
-                        <c:set var="spamChecked" value=""/>
-                        <c:forEach var="sc" items="${bean.spamComments}">
-                            <c:if test="${sc == comment.id}"><c:set var="spamChecked" value="checked='checked'"/></c:if>
-                        </c:forEach>
-                        <input type="checkbox" name="bean.spamComments" class="comment-select"
-                               value="${fn:escapeXml(comment.id)}" ${spamChecked}/>
-                    </td>
-                    <td>
                         <c:set var="deleteChecked" value=""/>
                         <c:forEach var="dc" items="${bean.deleteComments}">
                             <c:if test="${dc == comment.id}"><c:set var="deleteChecked" value="checked='checked'"/></c:if>
@@ -241,9 +226,6 @@
 
                         <%-- <td> with style if comment is spam or pending --%>
                     <c:choose>
-                        <c:when test="${comment.status == 'SPAM'}">
-                    <td class="spamcomment">
-                        </c:when>
                         <c:when test="${comment.status == 'PENDING'}">
                     <td class="pendingcomment">
                         </c:when>
@@ -396,12 +378,6 @@
         });
         $('#clearallapproved').click(function () {
             toggleFunction(false, "bean.approvedComments");
-        });
-        $('#checkallspam').click(function () {
-            toggleFunction(true, "bean.spamComments");
-        });
-        $('#clearallspam').click(function () {
-            toggleFunction(false, "bean.spamComments");
         });
         $('#checkalldelete').click(function () {
             toggleFunction(true, "bean.deleteComments");

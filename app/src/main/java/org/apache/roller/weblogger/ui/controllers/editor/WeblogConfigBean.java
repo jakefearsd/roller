@@ -35,6 +35,12 @@ public class WeblogConfigBean {
     private boolean defaultAllowComments = false;
     private String defaultCommentDays = "0";
     private boolean moderateComments = false;
+    // false, like every other checkbox on this form, and unlike the Weblog
+    // POJO's own default of true. An unticked checkbox posts no parameter at
+    // all, so whatever this field starts as IS what an unticked box means: a
+    // true default here would make the setting impossible to turn off. New
+    // weblogs get their default from Weblog, not from this per-request bean.
+    private boolean requireAuthenticatedComments = false;
     private boolean emailComments = false;
     private String emailAddress = null;
     private String locale = null;
@@ -110,7 +116,15 @@ public class WeblogConfigBean {
     public void setModerateComments( boolean moderateComments ) {
         this.moderateComments = moderateComments;
     }
-    
+
+    public boolean getRequireAuthenticatedComments() {
+        return this.requireAuthenticatedComments;
+    }
+
+    public void setRequireAuthenticatedComments( boolean requireAuthenticatedComments ) {
+        this.requireAuthenticatedComments = requireAuthenticatedComments;
+    }
+
     public boolean getEmailComments() {
         return this.emailComments;
     }
@@ -239,6 +253,7 @@ public class WeblogConfigBean {
         this.defaultAllowComments = dataHolder.getDefaultAllowComments();
         this.defaultCommentDays = ""+dataHolder.getDefaultCommentDays();
         this.moderateComments = dataHolder.getModerateComments();
+        this.requireAuthenticatedComments = dataHolder.getRequireAuthenticatedComments();
         this.emailComments = dataHolder.getEmailComments();
         this.emailAddress = dataHolder.getEmailAddress();
         this.locale = dataHolder.getLocale();
@@ -267,6 +282,7 @@ public class WeblogConfigBean {
         dataHolder.setAllowComments(this.allowComments);
         dataHolder.setDefaultAllowComments(this.defaultAllowComments);
         dataHolder.setModerateComments(this.moderateComments);
+        dataHolder.setRequireAuthenticatedComments(this.requireAuthenticatedComments);
         dataHolder.setEmailComments(this.emailComments);
         dataHolder.setEmailAddress(this.emailAddress);
         dataHolder.setLocale(this.locale);

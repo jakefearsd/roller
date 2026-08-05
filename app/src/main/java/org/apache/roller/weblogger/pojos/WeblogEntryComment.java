@@ -32,8 +32,16 @@ public class WeblogEntryComment implements Serializable {
     
     public static final long serialVersionUID = -6668122596726478462L;
     
-    // approval status states
-    public enum ApprovalStatus {APPROVED, DISAPPROVED, SPAM, PENDING}
+    /**
+     * Approval status states.
+     *
+     * <p>There is deliberately no SPAM state. It used to exist and held rows
+     * that nothing read: this server has no spam filter, so the flag's only
+     * effect was to keep a comment out of the approved-only public query, which
+     * DISAPPROVED already does. Marking a comment as spam now deletes it, so
+     * there is no row left to carry the status.
+     */
+    public enum ApprovalStatus {APPROVED, DISAPPROVED, PENDING}
 
     // attributes
     private String    id = UUIDGenerator.generateUUID();
@@ -163,14 +171,14 @@ public class WeblogEntryComment implements Serializable {
     
     
     /**
-     * Status of the comment, i.e. APPROVED, SPAM, PENDING, etc.
+     * Status of the comment, i.e. APPROVED, DISAPPROVED or PENDING.
      */
     public ApprovalStatus getStatus() {
         return status;
     }
 
     /**
-     * Status of the comment, i.e. APPROVED, SPAM, PENDING, etc.
+     * Status of the comment, i.e. APPROVED, DISAPPROVED or PENDING.
      */
     public void setStatus(ApprovalStatus status) {
         this.status = status;
@@ -266,14 +274,6 @@ public class WeblogEntryComment implements Serializable {
      */
     public void setContentType(String contentType) {
         this.contentType = contentType;
-    }
-    
-    
-    /**
-     * Indicates that weblog owner considers this comment to be spam.
-     */
-    public Boolean getSpam() {
-        return ApprovalStatus.SPAM.equals(getStatus());
     }
     
     

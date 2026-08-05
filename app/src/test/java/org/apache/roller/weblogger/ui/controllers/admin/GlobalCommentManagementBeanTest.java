@@ -18,9 +18,7 @@
 package org.apache.roller.weblogger.ui.controllers.admin;
 
 import java.util.Calendar;
-import java.util.List;
 
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +50,13 @@ class GlobalCommentManagementBeanTest {
         assertEquals(ApprovalStatus.APPROVED, statusFor("ONLY_APPROVED"));
         assertEquals(ApprovalStatus.DISAPPROVED, statusFor("ONLY_DISAPPROVED"));
         assertEquals(ApprovalStatus.PENDING, statusFor("ONLY_PENDING"));
-        assertEquals(ApprovalStatus.SPAM, statusFor("ONLY_SPAM"));
+    }
+
+    @Test
+    void theRetiredSpamFilterFallsBackToShowingEverything() {
+        // ONLY_SPAM was an option until spam became a deletion; a stale
+        // bookmark carrying it must widen to everything, not throw.
+        assertNull(statusFor("ONLY_SPAM"));
     }
 
     @Test
@@ -65,11 +69,11 @@ class GlobalCommentManagementBeanTest {
     void thePendingAliasIsTheSameFieldAsTheApprovedFilter() {
         // The JSP binds to pendingString; the query reads approvedString.
         GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-        bean.setPendingString("ONLY_SPAM");
+        bean.setPendingString("ONLY_PENDING");
 
-        assertEquals("ONLY_SPAM", bean.getApprovedString());
-        assertEquals("ONLY_SPAM", bean.getPendingString());
-        assertEquals(ApprovalStatus.SPAM, bean.getStatus());
+        assertEquals("ONLY_PENDING", bean.getApprovedString());
+        assertEquals("ONLY_PENDING", bean.getPendingString());
+        assertEquals(ApprovalStatus.PENDING, bean.getStatus());
     }
 
     @Test
@@ -119,33 +123,6 @@ class GlobalCommentManagementBeanTest {
     }
 
     @Test
-    void loadCheckboxesRemembersEveryCommentOnThePageAndTicksTheSpamOnes() {
-        // "ids" is the list the update handler walks; anything missing from it
-        // is invisible to the save, and anything wrongly in spamComments gets
-        // marked as spam on the next save.
-        GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-
-        bean.loadCheckboxes(List.of(
-                comment("c1", ApprovalStatus.APPROVED),
-                comment("c2", ApprovalStatus.SPAM),
-                comment("c3", ApprovalStatus.PENDING)));
-
-        assertEquals("c1,c2,c3", bean.getIds());
-        assertArrayEquals(new String[]{"c2"}, bean.getSpamComments());
-    }
-
-    @Test
-    void loadCheckboxesOnAnEmptyPageClearsTheSelection() {
-        GlobalCommentManagementBean bean = new GlobalCommentManagementBean();
-        bean.setSpamComments(new String[]{"stale"});
-
-        bean.loadCheckboxes(List.of());
-
-        assertEquals("", bean.getIds());
-        assertArrayEquals(new String[0], bean.getSpamComments());
-    }
-
-    @Test
     void theCheckboxArraysCannotBeChangedFromOutsideTheBean() {
         // They drive deletion, so a caller holding a live reference to the
         // internal array could change what gets deleted after validation.
@@ -165,10 +142,4 @@ class GlobalCommentManagementBeanTest {
         return bean.getStatus();
     }
 
-    private static WeblogEntryComment comment(String id, ApprovalStatus status) {
-        WeblogEntryComment comment = new WeblogEntryComment();
-        comment.setId(id);
-        comment.setStatus(status);
-        return comment;
-    }
 }

@@ -20,14 +20,10 @@ package org.apache.roller.weblogger.ui.controllers.admin;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.util.DateUtil;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
-import org.apache.roller.weblogger.util.Utilities;
 
 
 /**
@@ -41,31 +37,14 @@ public class GlobalCommentManagementBean {
     private String approvedString = "ALL";
     private int page = 0;
 
-    private String[] spamComments = new String[0];
     private String[] deleteComments = new String[0];
 
-    // Limit updates to just this set of comma-separated IDs
-    private String ids = null;
-
-
-    public void loadCheckboxes(List<WeblogEntryComment> comments) {
-
-        List<String> allComments = new ArrayList<>();
-        List<String> spamList = new ArrayList<>();
-
-        for (WeblogEntryComment comment : comments) {
-            allComments.add(comment.getId());
-
-            if (ApprovalStatus.SPAM.equals(comment.getStatus())) {
-                spamList.add(comment.getId());
-            }
-        }
-
-        this.setIds(Utilities.stringListToString(allComments, ","));
-
-        spamComments = spamList.toArray(String[]::new);
-    }
-
+    /*
+     * There is no ids field here, unlike CommentsBean. It existed to scope a
+     * per-row status change to the rows the page had displayed, and the global
+     * screen has no per-row status change left: a site administrator deletes a
+     * comment or leaves it, and approval belongs to whoever owns the weblog.
+     */
 
     public ApprovalStatus getStatus() {
         if (approvedString.equals("ONLY_APPROVED")) {
@@ -74,8 +53,6 @@ public class GlobalCommentManagementBean {
             return ApprovalStatus.DISAPPROVED;
         } else if (approvedString.equals("ONLY_PENDING")) {
             return ApprovalStatus.PENDING;
-        } else if (approvedString.equals("ONLY_SPAM")) {
-            return ApprovalStatus.SPAM;
         } else {
             // shows *all* comments, regardless of status
             return null;
@@ -111,28 +88,12 @@ public class GlobalCommentManagementBean {
         this.approvedString = pendingString;
     }
 
-    public String getIds() {
-        return ids;
-    }
-
-    public void setIds(String ids) {
-        this.ids = ids;
-    }
-
     public String getSearchString() {
         return searchString;
     }
 
     public void setSearchString(String searchString) {
         this.searchString = searchString;
-    }
-
-    public String[] getSpamComments() {
-        return spamComments.clone();
-    }
-
-    public void setSpamComments(String[] spamComments) {
-        this.spamComments = spamComments.clone();
     }
 
     public String[] getDeleteComments() {
