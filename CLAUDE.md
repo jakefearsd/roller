@@ -299,6 +299,18 @@ Key domain entities:
   published to the host — reachable only via `docker compose exec app curl
   http://localhost:8090/actuator/health` or the container healthcheck.
 
+## Themes
+- A weblog runs either a **shared** theme (id from `themes/<id>/theme.xml`) or
+  `WeblogTheme.CUSTOM`. Switching to custom **imports** the shared theme's
+  templates as the weblog's own rows and is one-way — the weblog stops tracking
+  the shared theme from then on. `ThemeIT` therefore works on weblogs it creates
+  itself; never switch the seeded IT weblog.
+- `ThemeEdit.jsp` keeps its Save buttons inside blocks hidden until its JS
+  decides something changed, so anything driving that page must pick the theme
+  (or the radio) first to reveal the right one.
+- A theme switch reaches readers via `saveWeblog` bumping `lastModified`, not
+  via `CacheManager.invalidate` — see Comments on `WeblogPageCache`.
+
 ## Templates
 - Add/edit/remove live in `TemplatesController` and `TemplateEditController`;
   both resolve client ids through `BaseController.lookupTemplate`, and the
