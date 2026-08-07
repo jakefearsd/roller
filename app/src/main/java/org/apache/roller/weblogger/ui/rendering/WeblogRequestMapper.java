@@ -277,6 +277,13 @@ public class WeblogRequestMapper implements RequestMapper {
                         forwardUrl.append('/');
                         forwardUrl.append(data);
                     }
+
+                } else {
+                    // A POST to a permalink carrying no content is not a
+                    // comment. Falling through here left forwardUrl empty, and
+                    // the caller only declines on null -- so the request was
+                    // forwarded to "" instead of being passed on.
+                    return null;
                 }
                 
             } else {

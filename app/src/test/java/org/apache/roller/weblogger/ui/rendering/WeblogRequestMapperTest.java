@@ -6,6 +6,8 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -115,6 +117,190 @@ class WeblogRequestMapperTest {
 
         assertFalse(mapper.handleRequest(request, response),
                 "an unknown handle must fall through to the next filter");
+        assertNull(response.getForwardedUrl());
+    }
+
+    // ------------------------------------------- what is NOT a weblog handle
+
+    /**
+     * The protected-URL list is what stops an application path being mistaken
+     * for a weblog. Every name in {@code rendering.weblogMapper.rollerProtectedUrls}
+     * is a path this mapper must decline so the real servlet behind it runs --
+     * and a weblog registered under one of those handles must not be able to
+     * shadow it.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"roller-ui", "images", "theme", "themes", "index.jsp",
+            "favicon.svg", "robots.txt", "sitemap.xml", "share", "webjars",
+            "page", "flavor", "rss", "atom", "language", "search", "comments", "resource"})
+    void protectedPathsAreDeclinedSoTheirOwnServletsRun(String reserved) throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/" + reserved + "/anything");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertFalse(mapper.handleRequest(request, response),
+                reserved + " is a reserved application path, not a weblog handle");
+        assertNull(response.getForwardedUrl());
+    }
+
+    @Test
+    void theBareContextRootIsNotAWeblog() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertFalse(mapper.handleRequest(request, response),
+                "the site root belongs to the front page, not to a weblog lookup");
+    }
+
+    // --------------------------------------------------------------- locales
+
+    /**
+     * A locale segment is optional and sits before the context. Misreading it
+     * as the context would route /blog/en/entry/x to a page named "en".
+     */
+    @Test
+    void aLocaleSegmentIsRecognisedAndPassedThrough() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/en/entry/my-post");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/en/entry/my-post",
+                response.getForwardedUrl());
+    }
+
+    /**
+     * With no context after it, a locale still needs the trailing-slash
+     * redirect -- /blog/en and /blog/en/ are different urls.
+     */
+    @Test
+    void aLocaleWithNoContextRedirectsForTheTrailingSlash() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/en");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/mapperblog/", response.getRedirectedUrl());
+    }
+
+    /**
+     * A path segment that merely looks like a locale must not be swallowed as
+     * one, or a page named "entry" would become unreachable.
+     */
+    @Test
+    void aNonLocaleFirstSegmentIsTreatedAsTheContext() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/category/travel");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/category/travel",
+                response.getForwardedUrl());
+    }
+
+    /**
+     * Extra path segments past the context are reassembled rather than
+     * dropped: a category can be nested.
+     */
+    @Test
+    void extraPathSegmentsAreReassembledOntoTheForward() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/category/travel/spain");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/category/travel/spain",
+                response.getForwardedUrl());
+    }
+
+    // ------------------------------------------------- the trailing-slash rules
+
+    /**
+     * The query string has to survive the trailing-slash redirect, or a link
+     * to /blog?q=x loses its parameters on the way to /blog/.
+     */
+    @Test
+    void theTrailingSlashRedirectKeepsTheQueryString() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog");
+        request.setQueryString("page=2");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/mapperblog/?page=2", response.getRedirectedUrl());
+    }
+
+    /**
+     * Past the weblog root the rule inverts: a trailing slash on a permalink is
+     * a different url from the permalink, and only one of them may exist.
+     */
+    @Test
+    void aTrailingSlashOnAPermalinkIsNotFound() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/entry/my-post/");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response),
+                "the mapper answers this itself rather than declining it");
+        assertEquals(404, response.getStatus());
+    }
+
+    /**
+     * Tags invert it again, and in both directions: the index wants the slash,
+     * a tag query must not have one.
+     */
+    @Test
+    void theTagsIndexRequiresItsTrailingSlash() throws Exception {
+        MockHttpServletResponse withSlash = new MockHttpServletResponse();
+        assertTrue(mapper.handleRequest(publicUrl("GET", "/mapperblog/tags/"), withSlash));
+        assertEquals("/roller-ui/rendering/page/mapperblog/tags", withSlash.getForwardedUrl());
+
+        MockHttpServletResponse without = new MockHttpServletResponse();
+        assertTrue(mapper.handleRequest(publicUrl("GET", "/mapperblog/tags"), without));
+        assertEquals(404, without.getStatus(),
+                "the tags index without its slash is not a url this site serves");
+    }
+
+    @Test
+    void aTagQueryMustNotCarryATrailingSlash() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        assertTrue(mapper.handleRequest(publicUrl("GET", "/mapperblog/tags/spain+food/"), response));
+        assertEquals(404, response.getStatus());
+    }
+
+    // ------------------------------------------------------------ POST rules
+
+    /**
+     * A POST is only meaningful at a permalink, and only as a comment -- which
+     * is what the content parameter identifies. Everything else posting into
+     * the public url space is declined rather than forwarded, so a stray form
+     * cannot reach a rendering servlet.
+     */
+    @Test
+    void aPostToAPermalinkWithContentBecomesACommentSubmission() throws Exception {
+        MockHttpServletRequest request = publicUrl("POST", "/mapperblog/entry/my-post");
+        request.setParameter("content", "a comment");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/roller-ui/rendering/comment/mapperblog/entry/my-post",
+                response.getForwardedUrl());
+    }
+
+    @Test
+    void aPostSomewhereOtherThanAPermalinkIsDeclined() throws Exception {
+        MockHttpServletRequest request = publicUrl("POST", "/mapperblog/category/travel");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertFalse(mapper.handleRequest(request, response),
+                "posting into the public url space is not something this mapper routes");
+        assertNull(response.getForwardedUrl());
+    }
+
+    /**
+     * A POST to a permalink carrying no content is not a comment. It must not
+     * be forwarded to the comment servlet, which would then have to invent a
+     * reason to refuse it.
+     */
+    @Test
+    void aPostToAPermalinkWithoutContentIsNotForwarded() throws Exception {
+        MockHttpServletRequest request = publicUrl("POST", "/mapperblog/entry/my-post");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertFalse(mapper.handleRequest(request, response));
         assertNull(response.getForwardedUrl());
     }
 }

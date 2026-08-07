@@ -1,0 +1,152 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.ui.controllers.ajax;
+
+import java.util.List;
+
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.themes.SharedTheme;
+import org.apache.roller.weblogger.pojos.ThemeResource;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+/**
+ * The endpoint the theme chooser calls to preview a theme before committing to
+ * it.
+ *
+ * <p>{@code ThemeEdit.jsp} fetches this on every selection change and writes
+ * the description straight into the page, so its two shapes matter: a JSON
+ * array when asked for everything, a bare object when asked for one theme. Get
+ * that wrong and the chooser shows nothing while logging a parse error nobody
+ * reads -- which is exactly the class of failure a rendering test cannot see
+ * and this endpoint had no test for at all.
+ */
+class ThemeDataServletTest {
+
+    private ThemeDataServlet servlet;
+    private MockHttpServletRequest request;
+    private MockHttpServletResponse response;
+    private MockWeblogger weblogger;
+
+    @BeforeEach
+    void setUp() {
+        servlet = new ThemeDataServlet();
+        request = new MockHttpServletRequest("GET", "/roller-ui/authoring/themedata");
+        response = new MockHttpServletResponse();
+        weblogger = MockWeblogger.install();
+    }
+
+    @AfterEach
+    void tearDown() {
+        MockWeblogger.uninstall();
+    }
+
+    @Test
+    void askingForEverythingReturnsAJsonArrayOfEveryEnabledTheme() throws Exception {
+        // Built before the stubbing call, not inside thenReturn: Mockito treats a
+        // mock() created mid-when() as an unfinished stubbing and fails.
+        List<SharedTheme> all = List.of(theme("basic", "Basic"), theme("travel", "Travel"));
+        when(weblogger.themeManager().getEnabledThemesList()).thenReturn(all);
+
+        servlet.doGet(request, response);
+
+        String body = response.getContentAsString();
+        assertTrue(body.trim().startsWith("["),
+                "the chooser parses this as an array: " + body);
+        assertTrue(body.contains("\"basic\"") && body.contains("\"travel\""),
+                "every enabled theme must be listed: " + body);
+        assertTrue(response.getContentType().startsWith("application/json"),
+                "got: " + response.getContentType());
+    }
+
+    /**
+     * The single-theme answer is deliberately not wrapped in an array: the
+     * page reads {@code data.description} off it directly.
+     */
+    @Test
+    void askingForOneThemeReturnsThatThemeUnwrapped() throws Exception {
+        SharedTheme portfolio = theme("portfolio", "Portfolio");
+        when(weblogger.themeManager().getTheme("portfolio")).thenReturn(portfolio);
+        request.setParameter("theme", "portfolio");
+
+        servlet.doGet(request, response);
+
+        String body = response.getContentAsString();
+        assertFalse(body.trim().startsWith("["),
+                "a single theme must not arrive wrapped in an array: " + body);
+        assertTrue(body.contains("\"portfolio\""), "got: " + body);
+    }
+
+    /**
+     * An id the theme manager rejects is an error, not an empty answer. The
+     * chooser leaves the previous description in place on failure, which is
+     * only correct if the failure is visible.
+     */
+    @Test
+    void anUnknownThemeIdIsAnError() throws Exception {
+        when(weblogger.themeManager().getTheme("nosuch"))
+                .thenThrow(new WebloggerException("no such theme"));
+        request.setParameter("theme", "nosuch");
+
+        servlet.doGet(request, response);
+
+        assertEquals(500, response.getStatus());
+    }
+
+    /** The chooser posts on some paths; both verbs must answer alike. */
+    @Test
+    void postIsAnAliasForGet() throws Exception {
+        SharedTheme basic = theme("basic", "Basic");
+        when(weblogger.themeManager().getTheme("basic")).thenReturn(basic);
+        request.setMethod("POST");
+        request.setParameter("theme", "basic");
+
+        servlet.doPost(request, response);
+
+        assertTrue(response.getContentAsString().contains("\"basic\""),
+                "got: " + response.getContentAsString());
+    }
+
+    /**
+     * A theme stubbed with every field the endpoint reads. The preview image is
+     * not optional: the servlet dereferences {@code getPreviewImage().getPath()}
+     * unguarded, so a theme without one takes the chooser down with an NPE
+     * rather than rendering without a thumbnail.
+     */
+    private static SharedTheme theme(String id, String name) {
+        ThemeResource preview = mock(ThemeResource.class);
+        when(preview.getPath()).thenReturn(id + "-preview.png");
+
+        SharedTheme theme = mock(SharedTheme.class);
+        when(theme.getId()).thenReturn(id);
+        when(theme.getName()).thenReturn(name);
+        when(theme.getDescription()).thenReturn(name + " description");
+        when(theme.getPreviewImage()).thenReturn(preview);
+        return theme;
+    }
+}

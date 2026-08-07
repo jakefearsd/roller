@@ -27,11 +27,14 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -213,60 +216,184 @@ public class FileContentManagerTest  {
      *
      * This should test all conditions where a save should fail.
      */
-    @Test
-    public void testCanSave() throws Exception {
+    /**
+     * The upload gate, one rule at a time.
+     *
+     * <p>This replaced a single {@code testCanSave} whose later assertions were
+     * vacuous: it called {@code canSave(...)} three times but only ever assigned
+     * the first result, then asserted on that stale variable. The forbidden-type
+     * rule and the uploads-disabled rule therefore passed no matter what the
+     * code did -- the worst kind of coverage, because the report counted them.
+     *
+     * <p>Each rule now gets its own case, and each asserts on the message the
+     * caller is given as well as the verdict: the media page shows that message
+     * and nothing else tells an author why their file bounced.
+     */
+    @Nested
+    class CanSave {
 
-        try {
-            testUser = TestUtils.setupUser("FCMTest_userName2");
-            testWeblog = TestUtils.setupWeblog("FCMTest_handle2", testUser);
+        @BeforeEach
+        void createWeblog() throws Exception {
+            testUser = TestUtils.setupUser("FCMTest_canSave");
+            testWeblog = TestUtils.setupWeblog("FCMTest_canSave", testUser);
             TestUtils.endSession(true);
-        } catch (Exception ex) {
-            log.error(ex);
         }
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
-        Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
-        config.get("uploads.dir.maxsize").setValue("1.00");
-        config.get("uploads.types.forbid").setValue("");
-        config.get("uploads.types.allowed").setValue("");
-        config.get("uploads.enabled").setValue("true");
-        pmgr.saveProperties(config);
-        TestUtils.endSession(true);
+        @AfterEach
+        void removeWeblog() throws Exception {
+            TestUtils.teardownWeblog(testWeblog.getId());
+            TestUtils.teardownUser(testUser.getUserName());
+            TestUtils.endSession(true);
+        }
 
-        config = pmgr.getProperties();
-        config.get("uploads.dir.maxsize").setValue("1.00");
-        pmgr.saveProperties(config);
-        TestUtils.endSession(true);
+        @Test
+        void anOrdinaryFileIsAccepted() throws Exception {
+            configure("true", "1.00", "30000", "", "");
 
-        RollerMessages msgs = new RollerMessages();
-        boolean canSave = fmgr.canSave(testWeblog, "test.gif", "text/plain", 2500000, msgs);
-        assertFalse(canSave);
+            RollerMessages messages = new RollerMessages();
+            assertTrue(canSave("hawk.jpg", "image/jpeg", 1000, messages),
+                    "a small image with no restrictions configured must be accepted");
+            assertEquals(0, messages.getErrorCount());
+        }
 
-        config = pmgr.getProperties();
-        config.get("uploads.types.forbid").setValue("gif");
-        pmgr.saveProperties(config);
-        TestUtils.endSession(true);
+        @Test
+        void uploadsDisabledRefusesEverything() throws Exception {
+            configure("false", "1.00", "30000", "", "");
 
-        // forbidden types check should fail
-        msgs = new RollerMessages();
-        fmgr.canSave(testWeblog, "test.gif", "text/plain", 10, msgs);
-        assertFalse(canSave);
+            RollerMessages messages = new RollerMessages();
+            assertFalse(canSave("hawk.jpg", "image/jpeg", 10, messages),
+                    "with uploads switched off site-wide nothing may be saved");
+            assertTrue(errorKeys(messages).contains("error.upload.disabled"),
+                    "got: " + errorKeys(messages));
+        }
 
+        @Test
+        void aFileOverTheSizeLimitIsRefused() throws Exception {
+            configure("true", "1.00", "30000", "", "");
 
-        config = pmgr.getProperties();
-        config.get("uploads.enabled").setValue("false");
-        pmgr.saveProperties(config);
-        TestUtils.endSession(true);
+            RollerMessages messages = new RollerMessages();
+            assertFalse(canSave("hawk.jpg", "image/jpeg", 2_500_000, messages),
+                    "2.5MB must not pass a 1MB per-file limit");
+            assertTrue(errorKeys(messages).contains("error.upload.filemax"),
+                    "got: " + errorKeys(messages));
+        }
 
-        // uploads disabled should fail
-        msgs = new RollerMessages();
-        fmgr.canSave(testWeblog, "test.gif", "text/plain", 10, msgs);
-        assertFalse(canSave);
+        /**
+         * The quota is on the weblog's whole directory, so the check has to add
+         * the incoming file to what is already there rather than looking at
+         * either alone.
+         */
+        @Test
+        void aFileThatWouldPushTheWeblogOverQuotaIsRefused() throws Exception {
+            configure("true", "10.00", "0.001", "", "");
 
-        TestUtils.endSession(true);
-        TestUtils.teardownWeblog(testWeblog.getId());
-        TestUtils.teardownUser(testUser.getUserName());
+            RollerMessages messages = new RollerMessages();
+            assertFalse(canSave("hawk.jpg", "image/jpeg", 5000, messages),
+                    "5KB must not fit inside a 1KB directory quota");
+            assertTrue(errorKeys(messages).contains("error.upload.dirmax"),
+                    "got: " + errorKeys(messages));
+        }
+
+        @Test
+        void aForbiddenExtensionIsRefused() throws Exception {
+            configure("true", "1.00", "30000", "", "gif");
+
+            RollerMessages messages = new RollerMessages();
+            assertFalse(canSave("test.gif", "image/gif", 10, messages),
+                    "an extension on the forbid list must be refused");
+            assertTrue(errorKeys(messages).contains("error.upload.forbiddenFile"),
+                    "got: " + errorKeys(messages));
+
+            assertTrue(canSave("test.jpg", "image/jpeg", 10, new RollerMessages()),
+                    "and only that extension -- everything else still passes");
+        }
+
+        @Test
+        void aForbiddenContentTypeIsRefused() throws Exception {
+            configure("true", "1.00", "30000", "", "application/x-shockwave-flash");
+
+            assertFalse(canSave("movie.swf", "application/x-shockwave-flash", 10,
+                            new RollerMessages()),
+                    "forbid rules may name a content type as well as an extension");
+        }
+
+        /**
+         * A non-empty allow list inverts the default: anything not named is
+         * refused, which is how an installation locks uploads down to images.
+         */
+        @Test
+        void anAllowListRefusesEverythingItDoesNotName() throws Exception {
+            configure("true", "1.00", "30000", "jpg,png", "");
+
+            assertTrue(canSave("hawk.jpg", "image/jpeg", 10, new RollerMessages()));
+            assertFalse(canSave("notes.txt", "text/plain", 10, new RollerMessages()),
+                    "an extension absent from a non-empty allow list must be refused");
+        }
+
+        @Test
+        void anAllowListMayNameAContentTypeRange() throws Exception {
+            configure("true", "1.00", "30000", "image/*", "");
+
+            assertTrue(canSave("hawk.jpg", "image/jpeg", 10, new RollerMessages()),
+                    "image/* must admit image/jpeg");
+            assertFalse(canSave("notes.txt", "text/plain", 10, new RollerMessages()),
+                    "and must not admit text/plain");
+        }
+
+        /**
+         * Forbid is evaluated after allow and wins. An installation that allows
+         * images but forbids one troublesome type has to get the forbid.
+         */
+        @Test
+        void forbidOverridesAllow() throws Exception {
+            configure("true", "1.00", "30000", "image/*", "gif");
+
+            assertFalse(canSave("test.gif", "image/gif", 10, new RollerMessages()),
+                    "the forbid list is the last word");
+            assertTrue(canSave("hawk.jpg", "image/jpeg", 10, new RollerMessages()),
+                    "without disturbing the rest of the allow list");
+        }
+
+        /**
+         * A missing or malformed content type is refused rather than waved
+         * through. It is the only thing the type rules have to judge by, and a
+         * client that omits it must not thereby escape them.
+         */
+        @Test
+        void aFileWithNoUsableContentTypeIsRefused() throws Exception {
+            configure("true", "1.00", "30000", "", "");
+
+            assertFalse(canSave("mystery", null, 10, new RollerMessages()),
+                    "no content type at all");
+            assertFalse(canSave("mystery", "nonsense", 10, new RollerMessages()),
+                    "a content type with no subtype is not one");
+        }
+
+        private boolean canSave(String fileName, String contentType, long size,
+                RollerMessages messages) throws Exception {
+            return WebloggerFactory.getWeblogger().getFileContentManager()
+                    .canSave(TestUtils.getManagedWebsite(testWeblog), fileName, contentType,
+                            size, messages);
+        }
+
+        private void configure(String enabled, String maxFileMB, String maxDirMB,
+                String allowed, String forbid) throws Exception {
+            PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+            Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
+            config.get("uploads.enabled").setValue(enabled);
+            config.get("uploads.file.maxsize").setValue(maxFileMB);
+            config.get("uploads.dir.maxsize").setValue(maxDirMB);
+            config.get("uploads.types.allowed").setValue(allowed);
+            config.get("uploads.types.forbid").setValue(forbid);
+            pmgr.saveProperties(config);
+            TestUtils.endSession(true);
+        }
+
+        private List<String> errorKeys(RollerMessages messages) {
+            List<String> keys = new ArrayList<>();
+            messages.getErrors().forEachRemaining(error -> keys.add(error.getKey()));
+            return keys;
+        }
     }
 
     /**
