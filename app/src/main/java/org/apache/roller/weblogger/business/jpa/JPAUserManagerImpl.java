@@ -287,7 +287,8 @@ public class JPAUserManagerImpl implements UserManager {
             throws WebloggerException {
         TypedQuery<User> query = strategy.getNamedQuery(
                 "User.getByUserNameOrderByUserName", User.class);
-        query.setParameter(1, letter + "%");
+        // Uppercased to match the query's UPPER(userName).
+        query.setParameter(1, Character.toUpperCase(letter) + "%");
         if (offset != 0) {
             query.setFirstResult(offset);
         }

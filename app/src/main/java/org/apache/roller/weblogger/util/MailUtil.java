@@ -574,6 +574,14 @@ public class MailUtil {
         message.setSubject((subject == null) ? "(no subject)" : subject, "UTF-8");
         message.setContent(content, mimeType);
         message.setSentDate(new java.util.Date());
+
+        // Update the headers from the content just set. Transport.sendMessage
+        // sends the message as it stands -- unlike the static Transport.send,
+        // it does not do this for the caller -- so without it the Content-Type
+        // header keeps its text/plain default however the body was built, and
+        // MIME-Version and Message-ID never appear at all. An HTML comment
+        // notification (users.comments.htmlenabled) arrived as visible markup.
+        message.saveChanges();
         
         // First collect all the addresses together.
         Address[] remainingAddresses = message.getAllRecipients();

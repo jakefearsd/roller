@@ -1,0 +1,247 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.ui.rendering.servlets;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
+import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * What {@link PageServlet} does before it renders anything: conditional GETs,
+ * the page cache, and the way both of them change for a signed-in reader.
+ *
+ * <p>The existing rendering tests all take the render path. These take the ones
+ * that avoid it, which is most requests on a live site -- and where the
+ * failures are silent by construction. A cache key that stops varying serves
+ * one reader the page built for another; a 304 handed to a signed-in author
+ * shows them a page with no edit links and no way to tell why.
+ */
+class PageServletCachingTest {
+
+    private static final DateTimeFormatter HTTP_DATE = DateTimeFormatter
+            .ofPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US)
+            .withZone(ZoneOffset.UTC);
+
+    private User user;
+    private Weblog weblog;
+    private WeblogEntry entry;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        RenderingTestSupport.ensureRenderingRuntime();
+        RenderingTestSupport.clearRenderCaches();
+
+        user = TestUtils.setupUser("pagecacheuser");
+        weblog = TestUtils.setupWeblog("pagecacheblog", user);
+        entry = TestUtils.setupWeblogEntry("cached-entry", weblog, user);
+        TestUtils.endSession(true);
+
+        // A settled, known modification time: the conditional-GET assertions
+        // below compare against it, and "now" would race the request.
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setLastModified(new Timestamp(
+                Instant.now().minusSeconds(3600).toEpochMilli()));
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        TestUtils.teardownWeblog(weblog.getId());
+        TestUtils.teardownUser(user.getUserName());
+        TestUtils.endSession(true);
+    }
+
+    // ------------------------------------------------------ conditional GETs
+
+    @Test
+    void aFirstRequestCarriesALastModifiedHeader() throws Exception {
+        MockHttpServletResponse response = get(null);
+
+        assertEquals(200, response.getStatus());
+        assertTrue(response.getHeader("Last-Modified") != null,
+                "without this header a reader can never make a conditional request");
+    }
+
+    /**
+     * The saving that matters on a busy blog: a reader who already has the page
+     * is told so rather than sent it again.
+     */
+    @Test
+    void anUnchangedPageAnswersNotModified() throws Exception {
+        MockHttpServletResponse first = get(null);
+        String lastModified = first.getHeader("Last-Modified");
+
+        MockHttpServletResponse second = get(lastModified);
+
+        assertEquals(304, second.getStatus(),
+                "the same page, unchanged, must not be sent twice");
+        assertEquals(0, second.getContentAsByteArray().length,
+                "and a 304 carries no body");
+    }
+
+    @Test
+    void aPageModifiedSinceTheReadersCopyIsSentInFull() throws Exception {
+        String longAgo = HTTP_DATE.format(Instant.now().minusSeconds(86_400 * 30));
+
+        MockHttpServletResponse response = get(longAgo);
+
+        assertEquals(200, response.getStatus());
+        assertTrue(response.getContentAsString().contains("cached-entry")
+                        || response.getContentAsByteArray().length > 0,
+                "a stale conditional request must be answered with the page");
+    }
+
+    /**
+     * Deliberately skipped for a signed-in reader. The scenario the servlet
+     * guards against: an author views their weblog anonymously, signs in, and
+     * would otherwise be handed the 304 for the anonymous copy -- a page with
+     * none of their edit links, and no way to tell why.
+     */
+    @Test
+    void aSignedInReaderIsNeverAnsweredNotModified() throws Exception {
+        MockHttpServletResponse anonymous = get(null);
+        String lastModified = anonymous.getHeader("Last-Modified");
+
+        MockHttpServletResponse signedIn = get(lastModified, user.getUserName());
+
+        assertNotEquals(304, signedIn.getStatus(),
+                "a signed-in author must get the page built for them, not the "
+                        + "anonymous copy's 304");
+    }
+
+    // ----------------------------------------------------------- page caching
+
+    /**
+     * A second anonymous request for the same page is served from the cache.
+     * Asserted on the bytes rather than on a hit counter, because identical
+     * output is the thing callers actually depend on.
+     */
+    @Test
+    void aRepeatedAnonymousRequestIsServedFromCache() throws Exception {
+        byte[] first = get(null).getContentAsByteArray();
+        byte[] second = get(null).getContentAsByteArray();
+
+        assertTrue(first.length > 0, "the first request must render something");
+        assertEquals(new String(first), new String(second),
+                "the cached copy must be byte-identical to what was rendered");
+    }
+
+    /**
+     * The cache key has to separate a signed-in reader's view from the
+     * anonymous one. If it stopped doing so, the first author to view their own
+     * weblog would poison the cache with a page carrying edit links for every
+     * anonymous reader after them.
+     */
+    @Test
+    void aSignedInViewIsCachedSeparatelyFromTheAnonymousOne() throws Exception {
+        String anonymous = get(null).getContentAsString();
+        String authored = get(null, user.getUserName()).getContentAsString();
+        String anonymousAgain = get(null).getContentAsString();
+
+        assertEquals(anonymous, anonymousAgain,
+                "an author's visit must not change what the next anonymous reader "
+                        + "is served -- that is a cache key that stopped varying by user");
+        assertFalse(authored.isEmpty());
+    }
+
+    /**
+     * {@code skipCache} is the escape hatch the preview and the editor rely on
+     * to see their own unsaved work rather than yesterday's render.
+     */
+    @Test
+    void skipCacheBypassesTheCacheEntirely() throws Exception {
+        get(null);
+
+        MockHttpServletRequest request = pageRequest(null, null);
+        request.setParameter("skipCache", "true");
+        MockHttpServletResponse response = RenderingTestSupport.execute(
+                RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        assertTrue(response.getContentAsByteArray().length > 0,
+                "the page still renders, just not from the cache");
+    }
+
+    /**
+     * A change to the weblog has to reach readers. WeblogPageCache has no
+     * CacheHandler, so nothing evicts it -- entries expire lazily against
+     * weblog.lastModified, and saveWeblog bumping that is the only thing
+     * standing between an edit and a stale page.
+     */
+    @Test
+    void bumpingTheWeblogsLastModifiedExpiresTheCachedPage() throws Exception {
+        String before = get(null).getContentAsString();
+        assertFalse(before.isEmpty());
+
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setName("Renamed while cached");
+        managed.setLastModified(new Timestamp(Instant.now().toEpochMilli()));
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        String after = get(null).getContentAsString();
+
+        assertTrue(after.contains("Renamed while cached"),
+                "a cached page must expire once the weblog it belongs to changes");
+    }
+
+    // ---------------------------------------------------------------- helpers
+
+    private MockHttpServletResponse get(String ifModifiedSince) throws Exception {
+        return get(ifModifiedSince, null);
+    }
+
+    private MockHttpServletResponse get(String ifModifiedSince, String signedInAs)
+            throws Exception {
+        return RenderingTestSupport.execute(RenderingTestSupport.pageServlet(),
+                pageRequest(ifModifiedSince, signedInAs));
+    }
+
+    private MockHttpServletRequest pageRequest(String ifModifiedSince, String signedInAs) {
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagecacheblog");
+        if (ifModifiedSince != null) {
+            request.addHeader("If-Modified-Since", ifModifiedSince);
+        }
+        if (signedInAs != null) {
+            request.setUserPrincipal(() -> signedInAs);
+        }
+        return request;
+    }
+}

@@ -462,6 +462,16 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         WeblogCategory cat = null;
         if (StringUtils.isNotEmpty(wesc.getCatName()) && wesc.getWeblog() != null) {
             cat = getWeblogCategoryByName(wesc.getWeblog(), wesc.getCatName());
+            if (cat == null) {
+                // A category was asked for and no such category exists, so
+                // nothing can match. Previously the filter was simply left off
+                // and every entry came back -- a url naming a category that had
+                // been renamed answered with the weblog's whole archive, which
+                // reads as "here is everything" rather than "there is nothing
+                // here". Callers that do not care about a category pass no name
+                // at all and are unaffected.
+                return Collections.emptyList();
+            }
         }
 
         List<Object> params = new ArrayList<>();

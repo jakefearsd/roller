@@ -184,12 +184,9 @@ class CommentDataServletTest {
         servlet.doPut(request, response);
 
         assertEquals(200, response.getStatus());
-        // trim(): Utilities.streamToString appends a line separator after every
-        // line including the last, so each save through this endpoint leaves a
-        // trailing newline behind and repeated edits accumulate them. Harmless
-        // as rendered, but it is the stored content growing on every save --
-        // pinned here rather than hidden so a fix is a deliberate change.
-        assertEquals("edited by the moderator", comment.getContent().trim());
+        assertEquals("edited by the moderator", comment.getContent(),
+                "stored exactly, with no trailing newline: streamToString adds one per "
+                        + "line and repeated edits used to accumulate them");
         verify(weblogger.weblogEntryManager()).saveComment(comment);
         assertTrue(weblogger.flushCount() > 0,
                 "an edit that is never flushed never reaches the database");

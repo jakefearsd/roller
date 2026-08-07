@@ -34,7 +34,14 @@
             <query>SELECT u FROM User u WHERE u.userName LIKE ?1 OR u.emailAddress LIKE ?1</query>
         </named-query>
         <named-query name="User.getByUserNameOrderByUserName">
-            <query>SELECT u FROM User u WHERE u.userName= ?1 ORDER BY u.userName</query>
+            <!-- Prefix match, not equality. The only caller (getUsersByLetter)
+                 passes a letter followed by a percent sign. As an '=' this
+                 compared the literal string "J%" against whole usernames and so
+                 matched nothing, ever, while getCountByUserNameLike counted the
+                 same users happily; the admin letter index showed counts that
+                 opened onto an empty list. UPPER() mirrors that count query so
+                 the two agree. -->
+            <query>SELECT u FROM User u WHERE UPPER(u.userName) LIKE ?1 ORDER BY u.userName</query>
         </named-query>
         <named-query name="User.getByEndDate&amp;StartDateOrderByStartDateDesc">
             <query>SELECT u FROM User u WHERE u.dateCreated &lt; ?1 AND u.dateCreated &gt; ?2 ORDER BY u.dateCreated DESC</query>

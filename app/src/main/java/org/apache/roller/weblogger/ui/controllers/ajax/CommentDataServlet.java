@@ -106,7 +106,12 @@ public class CommentDataServlet extends HttpServlet {
                 RollerSession rses = RollerSession.getRollerSession(request);
                 Weblog weblog = c.getWeblogEntry().getWebsite();
                 if (weblog.hasUserPermission(rses.getAuthenticatedUser(), WeblogPermission.POST)) {
-                    String content = Utilities.streamToString(request.getInputStream());
+                    // stripTrailing: streamToString appends a line separator after every
+                    // line including the last, so without this each save through the
+                    // moderation editor left one more trailing newline than the last
+                    // and repeated edits accumulated them.
+                    String content = Utilities.streamToString(request.getInputStream())
+                            .stripTrailing();
                     c.setContent(content);
                     // don't update the posttime when updating the comment
                     c.setPostTime(c.getPostTime());

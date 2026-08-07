@@ -86,6 +86,32 @@ public final class WebloggerStartup {
     public static MailProvider getMailProvider() {
         return mailProvider;
     }
+
+
+    /**
+     * Test seam: install a ready-made mail provider, skipping startup.
+     *
+     * <p>{@code MailUtil} is entirely static and reaches SMTP only through
+     * {@link #getMailProvider()}, which is set during {@link #prepare()} from a
+     * real mail configuration. Without a seam its message composition -- the
+     * password-reset link, who an invitation is addressed to, what a comment
+     * notification says -- cannot be exercised at all: every method returns
+     * early when the provider is null.
+     *
+     * <p>Package-private on purpose, mirroring
+     * {@code WebloggerFactory.installProvider}: only test support in this
+     * package can reach it, so it cannot become a production back door. Pass
+     * {@code null} to reset.
+     */
+    static void installMailProvider(MailProvider provider) {
+        mailProvider = provider;
+    }
+
+
+    /** Test seam companion: the provider currently installed, or null. */
+    static MailProvider currentMailProvider() {
+        return mailProvider;
+    }
     
     
     /**
