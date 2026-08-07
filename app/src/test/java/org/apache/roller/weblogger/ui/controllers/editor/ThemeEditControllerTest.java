@@ -62,6 +62,11 @@ class ThemeEditControllerTest extends EditorControllerTestSupport {
         model = newModel();
         when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of());
 
+        // Most tests here exercise what the theme switch DOES, which presumes
+        // the installation permits custom themes at all. The refusal when it
+        // does not is its own group of tests below.
+        givenRuntimeProperty("themes.customtheme.allowed", "true");
+
         // Weblog.getTheme() routes through WebloggerFactory.getWeblogger().getThemeManager()
         // (the same static factory MockWeblogger installs into), not the controller's
         // injected weblogger field. save() calls it unconditionally via
@@ -145,6 +150,78 @@ class ThemeEditControllerTest extends EditorControllerTestSupport {
         assertFalse(model.containsAttribute("firstCustomization"),
                 "The lookup exception happens while evaluating the addAttribute argument, so the "
                         + "attribute must never be set at all, not merely null");
+    }
+
+    // --- save: themes.customtheme.allowed ---
+    //
+    // The setting gates the Design tab in editor-menu.xml and the customise
+    // link on the main menu, and gated nothing else: posting straight to
+    // themeEdit!save.rol switched the weblog to a custom theme whatever the
+    // setting said. That import is one-way, so a hidden menu entry was the
+    // only thing standing between an installation that had turned the option
+    // off and a weblog that could never go back to a shared theme.
+
+    @Test
+    void saveToCustomIsRefusedWhenTheInstallationDoesNotAllowCustomThemes() throws Exception {
+        givenRuntimeProperty("themes.customtheme.allowed", "false");
+        weblog.setEditorTheme("shared-1");
+
+        String view = controller.save(request, model, WeblogTheme.CUSTOM, "shared-1", true);
+
+        assertEquals(".ThemeEdit", view);
+        assertEquals("shared-1", weblog.getEditorTheme(), "the theme must be left alone");
+        verify(weblogger.getThemeManager(), never())
+                .importTheme(any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(weblog);
+        assertEquals(List.of("themeEditor.error.customThemeNotAllowed"), errors(model));
+    }
+
+    /**
+     * Turning the option off stops new customisations; it must not strand a
+     * weblog that was customised while it was on. There is no way back from a
+     * custom theme, so refusing here would leave that weblog unable to save
+     * its own theme page at all.
+     */
+    @Test
+    void aWeblogAlreadyOnACustomThemeCanStillSaveWhenTheOptionIsOff() throws Exception {
+        givenRuntimeProperty("themes.customtheme.allowed", "false");
+        weblog.setEditorTheme(WeblogTheme.CUSTOM);
+
+        controller.save(request, model, WeblogTheme.CUSTOM, null, false);
+
+        assertEquals(List.of(), errors(model));
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
+    /**
+     * The refusal is scoped to the custom switch. Switching between shared
+     * themes is unaffected by the setting -- it is what the setting leaves you.
+     */
+    @Test
+    void switchingBetweenSharedThemesIsUnaffectedByTheOption() throws Exception {
+        givenRuntimeProperty("themes.customtheme.allowed", "false");
+        weblog.setEditorTheme("shared-1");
+        SharedTheme target = mock(SharedTheme.class);
+        when(target.getName()).thenReturn("Gaurav");
+        when(weblogger.getThemeManager().getTheme("shared-2")).thenReturn(target);
+
+        controller.save(request, model, "shared", "shared-2", false);
+
+        assertEquals(List.of(), errors(model));
+        assertEquals("shared-2", weblog.getEditorTheme());
+    }
+
+    @Test
+    void theViewIsToldWhetherCustomThemesAreAllowedSoItCanHideTheChoice() throws Exception {
+        givenRuntimeProperty("themes.customtheme.allowed", "false");
+        weblog.setEditorTheme("shared-1");
+        WeblogTheme currentTheme = mock(WeblogTheme.class);
+        when(currentTheme.getId()).thenReturn("shared-1");
+        when(weblogger.getThemeManager().getTheme(weblog)).thenReturn(currentTheme);
+
+        controller.execute(request, model);
+
+        assertEquals(Boolean.FALSE, model.getAttribute("customThemeAllowed"));
     }
 
     // --- save: themeType=custom ---

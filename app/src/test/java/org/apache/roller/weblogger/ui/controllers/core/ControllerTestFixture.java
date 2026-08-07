@@ -29,9 +29,11 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import java.lang.reflect.Proxy;
 
+import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
@@ -184,6 +186,39 @@ final class ControllerTestFixture {
             config.setProperty(name, value);
         }
         return previous;
+    }
+
+    /**
+     * Sets a runtime (database-backed) property, returning its previous value
+     * for {@link #restoreRuntimeProperty}.
+     *
+     * <p>For a property that is <em>also</em> present in the startup
+     * properties file — the promoted ones are — this is the setting that
+     * counts: {@code WebloggerRuntimeConfig} reads the database first and only
+     * falls back to the file when no row exists. Setting the file value alone
+     * changes nothing once the row has been seeded.
+     *
+     * <p>Saved and flushed rather than merely set on the map, because callers
+     * read it back through the properties manager.
+     */
+    static String setRuntimeProperty(String name, String value) throws Exception {
+        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
+        RuntimeConfigProperty prop = config.get(name);
+        if (prop == null) {
+            throw new IllegalArgumentException("No runtime property named '" + name
+                    + "'. Runtime properties are seeded from runtimeConfigDefs.xml; a name "
+                    + "with no property-def there can only be set in the startup config.");
+        }
+        String previous = prop.getValue();
+        prop.setValue(value);
+        pmgr.saveProperties(config);
+        WebloggerFactory.getWeblogger().flush();
+        return previous;
+    }
+
+    static void restoreRuntimeProperty(String name, String previous) throws Exception {
+        setRuntimeProperty(name, previous);
     }
 
     static void restoreConfigProperty(String name, String previous) {

@@ -30,6 +30,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Theme;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
@@ -98,7 +99,9 @@ public class ThemeEditController extends BaseController {
         Weblog weblog = getActionWeblog(request);
 
         if (WeblogTheme.CUSTOM.equals(themeType)) {
-            if (importTheme) {
+            if (!customThemeAllowed(request)) {
+                addError(model, "themeEditor.error.customThemeNotAllowed", request);
+            } else if (importTheme) {
                 try {
                     ThemeManager themeMgr = weblogger.getThemeManager();
                     if (!StringUtils.isEmpty(selectedThemeId)) {
@@ -181,10 +184,31 @@ public class ThemeEditController extends BaseController {
         return ".ThemeEdit";
     }
 
+    /**
+     * Whether this weblog may adopt a custom theme.
+     *
+     * <p>{@code themes.customtheme.allowed} gates the Design tab in
+     * {@code editor-menu.xml} and the customise link on the main menu, but a
+     * hidden menu entry stops nobody who posts to {@code themeEdit!save.rol}
+     * directly. The switch imports the shared theme's templates and is
+     * one-way, so an installation that has turned the option off needs the
+     * refusal enforced here, not merely rendered.
+     *
+     * <p>A weblog that is <em>already</em> custom stays editable whatever the
+     * setting says. Turning the option off is meant to stop new
+     * customisations; since there is no way back from custom, refusing here
+     * would strand any weblog customised while it was on.
+     */
+    private boolean customThemeAllowed(HttpServletRequest request) {
+        return WebloggerRuntimeConfig.getBooleanProperty("themes.customtheme.allowed")
+                || WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme());
+    }
+
     private void loadThemeData(HttpServletRequest request, Model model) {
         ThemeManager themeMgr = weblogger.getThemeManager();
         model.addAttribute("themes", themeMgr.getEnabledThemesList());
         model.addAttribute("customTheme", WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme()));
+        model.addAttribute("customThemeAllowed", customThemeAllowed(request));
         model.addAttribute("sharedThemeCustomStylesheet", isSharedThemeCustomStylesheet(request));
 
         // firstCustomization check

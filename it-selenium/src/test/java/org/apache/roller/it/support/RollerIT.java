@@ -20,6 +20,7 @@ package org.apache.roller.it.support;
 
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.Selenide;
+import com.codeborne.selenide.SelenideElement;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.chrome.ChromeOptions;
 
@@ -28,7 +29,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
+import static com.codeborne.selenide.Condition.checked;
 import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Selenide.$;
@@ -182,6 +186,87 @@ public abstract class RollerIT {
         openPath(LOGIN_PATH);
         $("#j_username").should(exist);
         BrowserHealth.current().settle();
+    }
+
+    /** The site-wide settings page, where global runtime properties are edited. */
+    private static final String GLOBAL_CONFIG_PATH = "/roller-ui/admin/globalConfig.rol";
+
+    /**
+     * Sets a global runtime property from the admin settings page and returns
+     * what it was before, so the caller can put it back.
+     *
+     * <p>Driven through the real page rather than the database because that is
+     * the only path an administrator has, and because the page writes through
+     * {@code PropertiesManager} — a direct UPDATE would leave the running
+     * instance holding the old value.
+     *
+     * <p><b>These properties are global and this suite shares one running
+     * instance.</b> Anything switched here stays switched for every test that
+     * runs afterwards, in whatever order JUnit picks, so a test that changes
+     * one must restore it in a {@code finally}:
+     *
+     * <pre>{@code
+     * boolean was = setGlobalFlag("themes.customtheme.allowed", true);
+     * try {
+     *     ...
+     * } finally {
+     *     setGlobalFlag("themes.customtheme.allowed", was);
+     * }
+     * }</pre>
+     *
+     * <p>Requires an administrator session; sign in before calling.
+     *
+     * @param name  the property name, which is also the checkbox's form name
+     * @param value what to set it to
+     * @return the value it had on arrival
+     */
+    protected boolean setGlobalFlag(String name, boolean value) {
+        return setGlobalFlags(Map.of(name, value)).get(name);
+    }
+
+    /**
+     * Sets several global runtime flags in one save, returning what they were.
+     *
+     * <p>One page load and one save however many flags are involved. Setting
+     * them one at a time costs a full settings round trip each, which for a
+     * test that switches three features off and back on again is more time in
+     * the settings page than in the behaviour under test.
+     *
+     * <p>The same restore discipline applies as for {@link #setGlobalFlag}:
+     * these are global, the suite shares one instance, so put them back in a
+     * {@code finally}.
+     *
+     * @param flags property name to desired value
+     * @return each property's value on arrival
+     */
+    protected Map<String, Boolean> setGlobalFlags(Map<String, Boolean> flags) {
+        openPath(GLOBAL_CONFIG_PATH);
+
+        Map<String, Boolean> previous = new LinkedHashMap<>();
+        flags.forEach((name, value) -> {
+            SelenideElement checkbox = $("input[name='" + name + "']").should(exist);
+            previous.put(name, checkbox.isSelected());
+            if (checkbox.isSelected() != value) {
+                checkbox.click();
+            }
+        });
+
+        $("#saveButton").click();
+        $("#messages").should(exist);
+        BrowserHealth.current().settle();
+
+        // Read them back. An unticked checkbox posts nothing at all, so a form
+        // that binds a value wrongly still redirects and still reports success
+        // -- only re-reading the page proves the settings took.
+        openPath(GLOBAL_CONFIG_PATH);
+        flags.forEach((name, value) -> {
+            if (value) {
+                $("input[name='" + name + "']").shouldBe(checked);
+            } else {
+                $("input[name='" + name + "']").shouldNotBe(checked);
+            }
+        });
+        return previous;
     }
 
     /** GET with no cookies, i.e. exactly what an anonymous reader sends. */

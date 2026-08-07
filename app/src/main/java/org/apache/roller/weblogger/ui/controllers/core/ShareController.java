@@ -110,6 +110,9 @@ public class ShareController extends BaseController {
     /** The password form's input name. */
     static final String PASSWORD_PARAMETER = "sharePassword";
 
+    /** Not in the servlet API's constant list, which stops at 505. */
+    private static final int TOO_MANY_REQUESTS = 429;
+
     /**
      * Throttle for wrong password attempts, keyed by client address.
      *
@@ -123,11 +126,7 @@ public class ShareController extends BaseController {
      * can reload a gallery as often as they like, and a shared browser or a
      * NAT gateway cannot lock out a legitimate reader by being busy.
      */
-    /** Not in the servlet API's constant list, which stops at 505. */
-    private static final int TOO_MANY_REQUESTS = 429;
-
     private volatile GenericThrottle passwordThrottle;
-    private volatile boolean passwordThrottleResolved;
 
 
     // ------------------------------------------------------------- security
@@ -226,44 +225,52 @@ public class ShareController extends BaseController {
 
     /** Whether this client has already used up its wrong-password budget. */
     private boolean isGuessingTooFast(HttpServletRequest request) {
-        GenericThrottle throttle = passwordThrottle();
-        return throttle != null && throttle.isAbusive(request.getRemoteAddr());
+        return throttlingEnabled() && passwordThrottle().isAbusive(request.getRemoteAddr());
     }
 
     /** Records one wrong password against this client's budget. */
     private void countWrongPassword(HttpServletRequest request) {
-        GenericThrottle throttle = passwordThrottle();
-        if (throttle != null) {
-            throttle.processHit(request.getRemoteAddr());
+        if (throttlingEnabled()) {
+            passwordThrottle().processHit(request.getRemoteAddr());
         }
     }
 
     /**
-     * The throttle, or null when disabled. Resolved once and cached; the
-     * double-checked flag is what keeps a disabled throttle from re-reading
-     * configuration on every request.
+     * Whether the throttle applies, read per request so an administrator can
+     * turn it on or off from the site settings without a restart.
+     */
+    private static boolean throttlingEnabled() {
+        return WebloggerRuntimeConfig.getBooleanProperty("share.password.throttle.enabled");
+    }
+
+    /**
+     * The throttle itself, built on first use and cached.
+     *
+     * <p>Its threshold/interval/maxentries size a fixed tracking cache and
+     * remain startup-scoped, so the object is built once and never rebuilt.
+     * Whether it is consulted at all is {@link #throttlingEnabled()}'s
+     * decision, taken per request -- keeping the two apart is what lets the
+     * switch be hot without resizing a live cache underneath callers.
      */
     private GenericThrottle passwordThrottle() {
-        if (!passwordThrottleResolved) {
+        GenericThrottle throttle = passwordThrottle;
+        if (throttle == null) {
             synchronized (this) {
-                if (!passwordThrottleResolved) {
-                    passwordThrottle = buildPasswordThrottle();
-                    passwordThrottleResolved = true;
+                throttle = passwordThrottle;
+                if (throttle == null) {
+                    throttle = buildPasswordThrottle();
+                    passwordThrottle = throttle;
                 }
             }
         }
-        return passwordThrottle;
+        return throttle;
     }
 
     private GenericThrottle buildPasswordThrottle() {
-        if (!WebloggerConfig.getBooleanProperty("share.password.throttle.enabled")) {
-            log.info("Share-link password throttling DISABLED");
-            return null;
-        }
         int threshold = intProperty("share.password.throttle.threshold", 10);
         int interval = intProperty("share.password.throttle.interval", 60);
         int maxEntries = intProperty("share.password.throttle.maxentries", 250);
-        log.info("Share-link password throttling ENABLED: " + threshold
+        log.info("Share-link password throttle sized at " + threshold
                 + " wrong attempts per " + interval + "s");
         return new GenericThrottle(threshold, interval * RollerConstants.SEC_IN_MS, maxEntries);
     }

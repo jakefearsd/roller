@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.InitializationException;
 import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.config.runtime.ConfigDef;
 import org.apache.roller.weblogger.config.runtime.DisplayGroup;
@@ -175,21 +176,44 @@ public class JPAPropertiesManagerImpl implements PropertiesManager {
 
                     // do we already have this prop?  if not then add it
                     if(!props.containsKey(propDef.getName())) {
+                        String initialValue = initialValueFor(propDef);
                         RuntimeConfigProperty newprop =
                                 new RuntimeConfigProperty(
-                                        propDef.getName(), propDef.getDefaultValue());
+                                        propDef.getName(), initialValue);
 
                         props.put(propDef.getName(), newprop);
 
                         log.info("Property " + propDef.getName() +
                             " not yet in roller_properties database table, will store with " +
-                            "default value of [" + propDef.getDefaultValue() + "`]");
+                            "value of [" + initialValue + "`]");
                     }
                 }
             }
         }
 
         return props;
+    }
+
+
+    /**
+     * The value a property is stored with the first time it is seeded.
+     *
+     * <p>A value already present in {@code roller.properties} (or the
+     * deployer's {@code roller-custom.properties} overlay) wins over the
+     * definition's {@code <default-value>}. That matters when a property is
+     * <em>promoted</em> from startup-only to runtime-settable: the property
+     * name then appears in both files, and without this the first boot after
+     * the upgrade would seed the shipped default and silently discard the
+     * deployer's choice -- the DB row is authoritative from then on, so the
+     * startup file would never be consulted again.
+     *
+     * <p>For a property that exists only as a definition (the usual case)
+     * there is nothing in the startup config to find and the default applies
+     * unchanged.
+     */
+    private String initialValueFor(PropertyDef propDef) {
+        String configured = WebloggerConfig.getProperty(propDef.getName());
+        return configured != null ? configured : propDef.getDefaultValue();
     }
 
 

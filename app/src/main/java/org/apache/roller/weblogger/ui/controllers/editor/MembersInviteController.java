@@ -25,7 +25,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -68,7 +68,7 @@ public class MembersInviteController extends BaseController {
                           RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
 
-        if (!WebloggerConfig.getBooleanProperty("groupblogging.enabled")) {
+        if (!WebloggerRuntimeConfig.getBooleanProperty("groupblogging.enabled")) {
             addFlashError(redirectAttributes, "inviteMember.disabled", request);
             return "redirect:/roller-ui/authoring/members.rol?weblog="
                     + getActionWeblog(request).getHandle();
@@ -84,7 +84,7 @@ public class MembersInviteController extends BaseController {
                        RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
 
-        if (!WebloggerConfig.getBooleanProperty("groupblogging.enabled")) {
+        if (!WebloggerRuntimeConfig.getBooleanProperty("groupblogging.enabled")) {
             addFlashError(redirectAttributes, "inviteMember.disabled", request);
             return "redirect:/roller-ui/authoring/members.rol?weblog="
                     + getActionWeblog(request).getHandle();

@@ -24,6 +24,7 @@ import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.User;
@@ -117,13 +118,17 @@ class SmallWrapperDelegationTest {
         user.setUserName("alice");
         user.setScreenName("Alice A");
 
-        try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class)) {
-            config.when(() -> WebloggerConfig.getBooleanProperty("user.hideUserNames"))
+        // Mocked on WebloggerRuntimeConfig, not WebloggerConfig: the property is
+        // runtime-settable, so the database value decides and the startup file
+        // is consulted only when no row exists. Stubbing the file here would
+        // pin nothing.
+        try (MockedStatic<WebloggerRuntimeConfig> config = mockStatic(WebloggerRuntimeConfig.class)) {
+            config.when(() -> WebloggerRuntimeConfig.getBooleanProperty("user.hideUserNames"))
                     .thenReturn(false);
             assertEquals("alice", UserWrapper.wrap(user).getUserName(),
                     "With hiding off the real login name is published");
 
-            config.when(() -> WebloggerConfig.getBooleanProperty("user.hideUserNames"))
+            config.when(() -> WebloggerRuntimeConfig.getBooleanProperty("user.hideUserNames"))
                     .thenReturn(true);
             assertEquals("Alice A", UserWrapper.wrap(user).getUserName(),
                     "With hiding on the screen name stands in, so a blog never publishes "

@@ -52,7 +52,6 @@ import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.apache.roller.weblogger.util.I18nMessages;
@@ -68,8 +67,20 @@ public class WeblogEntry implements Serializable {
 
     public enum PubStatus {DRAFT, PUBLISHED, PENDING, SCHEDULED}
 
-    private static final char TITLE_SEPARATOR =
-        WebloggerConfig.getBooleanProperty("weblogentry.title.useUnderscoreSeparator") ? '_' : '-';
+    /**
+     * Word separator for generated anchors.
+     *
+     * <p>Read per call rather than cached in a static: the setting is
+     * runtime-settable, and a {@code static final} initialised at class load
+     * could not see a change made from the site settings. It only affects
+     * anchors generated from here on -- anchors already stored on entries keep
+     * whichever separator was in force when they were created, which is what
+     * keeps existing permalinks working across a change.
+     */
+    private static char titleSeparator() {
+        return WebloggerRuntimeConfig.getBooleanProperty("weblogentry.title.useUnderscoreSeparator")
+                ? '_' : '-';
+    }
 
     // Simple properies
     private String    id            = UUIDGenerator.generateUUID();
@@ -1007,10 +1018,11 @@ public class WeblogEntry implements Serializable {
             StringTokenizer toker = new StringTokenizer(base);
             String tmp = null;
             int count = 0;
+            char separator = titleSeparator();
             while (toker.hasMoreTokens() && count < 5) {
                 String s = toker.nextToken();
                 s = s.toLowerCase();
-                tmp = (tmp == null) ? s : tmp + TITLE_SEPARATOR + s;
+                tmp = (tmp == null) ? s : tmp + separator + s;
                 count++;
             }
             base = tmp;

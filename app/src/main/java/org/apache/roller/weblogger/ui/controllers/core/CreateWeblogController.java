@@ -94,7 +94,7 @@ public class CreateWeblogController extends BaseController {
         User user = getAuthenticatedUser(request);
 
         try {
-            if (!WebloggerConfig.getBooleanProperty("groupblogging.enabled")) {
+            if (!WebloggerRuntimeConfig.getBooleanProperty("groupblogging.enabled")) {
                 UserManager mgr = weblogger.getUserManager();
                 List<WeblogPermission> permissions = mgr.getWeblogPermissions(user);
                 if (!permissions.isEmpty()) {
@@ -126,7 +126,7 @@ public class CreateWeblogController extends BaseController {
 
         User user = getAuthenticatedUser(request);
         try {
-            if (!WebloggerConfig.getBooleanProperty("groupblogging.enabled")) {
+            if (!WebloggerRuntimeConfig.getBooleanProperty("groupblogging.enabled")) {
                 UserManager mgr = weblogger.getUserManager();
                 List<WeblogPermission> permissions = mgr.getWeblogPermissions(user);
                 if (!permissions.isEmpty()) {

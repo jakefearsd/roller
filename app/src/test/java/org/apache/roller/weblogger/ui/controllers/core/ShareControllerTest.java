@@ -551,29 +551,33 @@ class ShareControllerTest {
     }
 
     /**
-     * The throttle is switchable, and a controller built with it off must let
-     * every attempt through -- otherwise an operator who turns it off in a
-     * trusted network still gets 429s and no way to see why.
+     * The throttle is switchable, and with it off every attempt must go
+     * through -- otherwise an operator who turns it off in a trusted network
+     * still gets 429s and no way to see why.
+     *
+     * <p>The switch is a runtime property, so this sets it where the code
+     * reads it: the database, not the startup file. It is also read per
+     * request rather than latched when the throttle is built, which is what
+     * lets an administrator turn it off without a restart -- so this reuses
+     * the controller under test rather than constructing a fresh one, and
+     * that reuse is the assertion that the flag is not being cached.
      */
     @Test
     void throttlingCanBeTurnedOff() throws Exception {
-        String previous = ControllerTestFixture.setConfigProperty(
+        String previous = ControllerTestFixture.setRuntimeProperty(
                 "share.password.throttle.enabled", "false");
         try {
-            // A fresh controller: the throttle is resolved once, on first use.
-            ShareController unthrottled = new ShareController();
-            inject(unthrottled, "weblogger", WebloggerFactory.getWeblogger());
             ShareLink link = passwordProtectedEntryLink("shareThrottleOffEntry", "right-pw");
 
             for (int attempt = 0; attempt < 30; attempt++) {
                 MockHttpServletResponse response = new MockHttpServletResponse();
-                unthrottled.unlock(link.getToken(), "wrong-" + attempt,
+                controller.unlock(link.getToken(), "wrong-" + attempt,
                         guessingRequest(new MockHttpSession()), response);
                 assertEquals(200, response.getStatus(),
                         "no attempt should be refused when throttling is off");
             }
         } finally {
-            ControllerTestFixture.restoreConfigProperty(
+            ControllerTestFixture.restoreRuntimeProperty(
                     "share.password.throttle.enabled", previous);
         }
     }

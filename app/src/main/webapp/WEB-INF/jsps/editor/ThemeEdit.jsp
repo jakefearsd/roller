@@ -41,6 +41,12 @@
             </div>
         </div>
 
+        <%-- Offered only when the installation allows custom themes. The
+             controller refuses the switch either way; this stops the page
+             advertising a choice that would be rejected. A weblog already on a
+             custom theme keeps the control, matching the controller's
+             grandfathering rule. --%>
+        <c:if test="${customThemeAllowed}">
         <div class="col-6">
             <div class="card">
                 <div class="card-body" id="customChooser">
@@ -53,6 +59,7 @@
                 </div>
             </div>
         </div>
+        </c:if>
 
     </div>
 

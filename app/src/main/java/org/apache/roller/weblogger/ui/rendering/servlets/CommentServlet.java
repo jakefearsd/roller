@@ -99,37 +99,38 @@ public class CommentServlet extends HttpServlet {
             }
         }
 
-        // are we doing throttling?
-        if (WebloggerConfig.getBooleanProperty("comment.throttle.enabled")) {
-
-            int threshold = 25;
-            try {
-                threshold = Integer.parseInt(WebloggerConfig.getProperty("comment.throttle.threshold"));
-            } catch (NumberFormatException e) {
-                log.warn("bad input for config property comment.throttle.threshold", e);
-            }
-
-            int interval = RollerConstants.MIN_IN_MS;
-            try {
-                interval = Integer.parseInt(WebloggerConfig.getProperty("comment.throttle.interval"));
-                // convert from seconds to milliseconds
-                interval = interval * RollerConstants.SEC_IN_MS;
-            } catch (NumberFormatException e) {
-                log.warn("bad input for config property comment.throttle.interval", e);
-            }
-
-            int maxEntries = 250;
-            try {
-                maxEntries = Integer.parseInt(WebloggerConfig.getProperty("comment.throttle.maxentries"));
-            } catch (NumberFormatException e) {
-                log.warn("bad input for config property comment.throttle.maxentries", e);
-            }
-
-            commentThrottle = new GenericThrottle(threshold, interval, maxEntries);
-            log.info("Comment Throttling ENABLED");
-        } else {
-            log.info("Comment Throttling DISABLED");
+        // The throttle is sized here and built unconditionally; whether it is
+        // consulted is comment.throttle.enabled, read per request in doPost so
+        // an administrator can switch throttling on from the site settings
+        // without a restart. The sizing knobs stay startup-scoped -- they
+        // dimension a fixed tracking cache, which cannot be resized under
+        // live callers.
+        int threshold = 25;
+        try {
+            threshold = Integer.parseInt(WebloggerConfig.getProperty("comment.throttle.threshold"));
+        } catch (NumberFormatException e) {
+            log.warn("bad input for config property comment.throttle.threshold", e);
         }
+
+        int interval = RollerConstants.MIN_IN_MS;
+        try {
+            interval = Integer.parseInt(WebloggerConfig.getProperty("comment.throttle.interval"));
+            // convert from seconds to milliseconds
+            interval = interval * RollerConstants.SEC_IN_MS;
+        } catch (NumberFormatException e) {
+            log.warn("bad input for config property comment.throttle.interval", e);
+        }
+
+        int maxEntries = 250;
+        try {
+            maxEntries = Integer.parseInt(WebloggerConfig.getProperty("comment.throttle.maxentries"));
+        } catch (NumberFormatException e) {
+            log.warn("bad input for config property comment.throttle.maxentries", e);
+        }
+
+        commentThrottle = new GenericThrottle(threshold, interval, maxEntries);
+        log.info("Comment throttle sized at " + threshold + " posts per "
+                + (interval / RollerConstants.SEC_IN_MS) + "s");
     }
 
     /**
@@ -174,7 +175,8 @@ public class CommentServlet extends HttpServlet {
         }
 
         // throttling protection against spammers
-        if (commentThrottle != null
+        if (WebloggerRuntimeConfig.getBooleanProperty("comment.throttle.enabled")
+                && commentThrottle != null
                 && commentThrottle.processHit(request.getRemoteAddr())) {
 
             log.debug("ABUSIVE " + request.getRemoteAddr());

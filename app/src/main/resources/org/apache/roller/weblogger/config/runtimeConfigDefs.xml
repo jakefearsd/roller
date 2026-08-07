@@ -78,12 +78,31 @@
          <type>string</type>
          <default-value></default-value>
       </property-def>
+      <!-- Promoted from roller.properties so it can be changed without a
+           restart; ShareController reads it per request. Default matches the
+           startup file. -->
+      <property-def  name="share.password.throttle.enabled"  key="configForm.sharePasswordThrottle">
+         <type>boolean</type>
+         <default-value>true</default-value>
+      </property-def>
    </display-group >
 
    <!-- User Settings Group -->
    <display-group name="userSettings" key="configForm.userSettings" >
    
        <property-def name="site.allowUserWeblogCreation" key="configForm.allowUserWeblogCreation">
+           <type>boolean</type>
+           <default-value>true</default-value>
+       </property-def>
+       <!-- Both promoted from roller.properties. CreateWeblogController and
+            MembersInviteController read groupblogging.enabled per request;
+            UserWrapper reads user.hideUserNames per render. Defaults match
+            the startup file. -->
+       <property-def name="groupblogging.enabled" key="configForm.groupBloggingEnabled">
+           <type>boolean</type>
+           <default-value>true</default-value>
+       </property-def>
+       <property-def name="user.hideUserNames" key="configForm.hideUserNames">
            <type>boolean</type>
            <default-value>true</default-value>
        </property-def>
@@ -112,6 +131,13 @@
          <type>integer</type>
          <default-value>-1</default-value>
       </property-def>
+      <!-- Promoted from roller.properties. Only affects anchors generated
+           after the change; anchors already stored on entries keep whichever
+           separator was in force when they were created. -->
+      <property-def  name="weblogentry.title.useUnderscoreSeparator"  key="configForm.underscoreSeparator">
+         <type>boolean</type>
+         <default-value>false</default-value>
+      </property-def>
 
    </display-group>
    
@@ -137,6 +163,14 @@
          <default-value>false</default-value> 
       </property-def>
       <property-def  name="users.moderation.required"  key="configForm.moderationRequired">
+         <type>boolean</type>
+         <default-value>false</default-value>
+      </property-def>
+      <!-- Promoted from roller.properties. The throttle's threshold/interval/
+           maxentries stay startup-only: they size the tracking cache, which is
+           built once. This flag decides whether that cache is consulted, and
+           CommentServlet reads it per request. -->
+      <property-def  name="comment.throttle.enabled"  key="configForm.commentThrottle">
          <type>boolean</type>
          <default-value>false</default-value>
       </property-def>

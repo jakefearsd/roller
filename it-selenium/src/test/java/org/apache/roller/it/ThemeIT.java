@@ -27,6 +27,7 @@ import static com.codeborne.selenide.Condition.value;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
+import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -44,6 +45,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * suite, and there is no clean way back -- the import is one-way.
  */
 class ThemeIT extends RollerIT {
+
+    /** Site-wide switch for whether a weblog may adopt a custom theme. */
+    private static final String CUSTOM_THEMES_ALLOWED = "themes.customtheme.allowed";
 
     /** Distinctive markup from the basic theme's weblog.vm. */
     private static final String BASIC_MARKER = "id_weblog";
@@ -97,22 +101,27 @@ class ThemeIT extends RollerIT {
         assertTrue(templateNames().isEmpty(),
                 "a weblog on a shared theme owns no templates yet, found: " + templateNames());
 
-        switchToCustomTheme(handle);
+        boolean wasAllowed = setGlobalFlag(CUSTOM_THEMES_ALLOWED, true);
+        try {
+            switchToCustomTheme(handle);
 
-        openPath(templatesPath(handle));
-        String names = templateNames();
-        assertFalse(names.isEmpty(),
-                "customising must copy the shared theme's templates onto the weblog");
-        assertTrue(names.contains("Weblog"),
-                "the theme's main Weblog template must be among them: " + names);
+            openPath(templatesPath(handle));
+            String names = templateNames();
+            assertFalse(names.isEmpty(),
+                    "customising must copy the shared theme's templates onto the weblog");
+            assertTrue(names.contains("Weblog"),
+                    "the theme's main Weblog template must be among them: " + names);
 
-        // And the blog still renders -- a copied theme that does not serve is
-        // worse than no copy at all.
-        String rendered = readerView(handle);
-        assertTrue(rendered.contains(BASIC_MARKER),
-                "the weblog must still render after being customised, got: "
-                        + snippet(rendered));
-        logout();
+            // And the blog still renders -- a copied theme that does not serve
+            // is worse than no copy at all.
+            String rendered = readerView(handle);
+            assertTrue(rendered.contains(BASIC_MARKER),
+                    "the weblog must still render after being customised, got: "
+                            + snippet(rendered));
+        } finally {
+            setGlobalFlag(CUSTOM_THEMES_ALLOWED, wasAllowed);
+            logout();
+        }
     }
 
     /**
@@ -130,11 +139,52 @@ class ThemeIT extends RollerIT {
         $("#themeSelector").shouldHave(value("gaurav"));
         $("#sharedRadio").shouldBe(checked);
 
-        switchToCustomTheme(handle);
+        boolean wasAllowed = setGlobalFlag(CUSTOM_THEMES_ALLOWED, true);
+        try {
+            switchToCustomTheme(handle);
 
-        openPath(themeEditPath(handle));
-        $("#customRadio").shouldBe(checked);
-        logout();
+            openPath(themeEditPath(handle));
+            $("#customRadio").shouldBe(checked);
+        } finally {
+            setGlobalFlag(CUSTOM_THEMES_ALLOWED, wasAllowed);
+            logout();
+        }
+    }
+
+    /**
+     * With custom themes switched off site-wide, the weblog must stay on its
+     * shared theme -- and not merely be told so.
+     *
+     * <p>The setting used to gate only the Design tab in the menu, so a POST
+     * straight to {@code themeEdit!save.rol} converted the weblog anyway. That
+     * import is one-way, which made a hidden menu entry the only thing between
+     * an installation that had turned the option off and a weblog that could
+     * never go back. This posts the way that page's own form does and then
+     * checks the weblog, not the wording.
+     */
+    @Test
+    void aCustomThemeIsRefusedWhenTheSiteHasThemTurnedOff() {
+        String handle = createWeblogWithTheme("basic");
+
+        boolean wasAllowed = setGlobalFlag(CUSTOM_THEMES_ALLOWED, false);
+        try {
+            postCustomThemeSwitch(handle);
+
+            // The weblog is still on the shared theme it started with, which
+            // only its own rendering can show: a custom copy would serve the
+            // same markup until someone edited it.
+            openPath(templatesPath(handle));
+            assertTrue(templateNames().isEmpty(),
+                    "a refused switch must not have copied any templates onto the weblog, found: "
+                            + templateNames());
+
+            openPath(themeEditPath(handle));
+            $("#sharedRadio").shouldBe(checked);
+            $("#customRadio").shouldNot(exist);
+        } finally {
+            setGlobalFlag(CUSTOM_THEMES_ALLOWED, wasAllowed);
+            logout();
+        }
     }
 
     // ---------------------------------------------------------------- helpers
@@ -174,6 +224,26 @@ class ThemeIT extends RollerIT {
         $("#sharedChangeToShared button[type='submit']").click();
 
         $("#messages").should(exist);
+        BrowserHealth.current().settle();
+    }
+
+    /**
+     * Posts the theme form asking for a custom theme, the way somebody who
+     * knows the URL would.
+     *
+     * <p>Deliberately not through the radio button: with the option off the
+     * page no longer offers one, and that hidden control was exactly what used
+     * to be doing the "enforcing". The form is otherwise real -- same action,
+     * same session, and the page's own CSRF token and weblog parameter ride
+     * along with it.
+     */
+    private void postCustomThemeSwitch(String handle) {
+        openPath(themeEditPath(handle));
+        executeJavaScript(
+                "var f = document.querySelector(\"form[action$='themeEdit!save.rol']\");"
+                        + "var t = document.createElement('input');"
+                        + "t.type = 'hidden'; t.name = 'themeType'; t.value = 'custom';"
+                        + "f.appendChild(t); f.submit();");
         BrowserHealth.current().settle();
     }
 

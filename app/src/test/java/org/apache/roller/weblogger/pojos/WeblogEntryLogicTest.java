@@ -26,6 +26,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.mockito.MockedStatic;
 
 import java.sql.Timestamp;
@@ -81,6 +82,33 @@ class WeblogEntryLogicTest {
                 "The anchor takes the leading words of the title, lowercased and "
                         + "hyphen-joined. Changing the word count or the separator changes "
                         + "the permalink of every post created from then on.");
+    }
+
+    /**
+     * The separator is a site setting, and it is runtime-settable — so it has
+     * to be read when the anchor is built, not latched into a static when the
+     * class loads. A cached separator would ignore the setting until the next
+     * restart, which is exactly the trap a {@code static final} laid.
+     *
+     * <p>Only new anchors are affected. Anchors already stored on entries keep
+     * whichever separator was in force when they were created, which is what
+     * stops a change of setting from breaking every existing permalink.
+     */
+    @Test
+    void anchorUsesUnderscoresWhenTheSiteIsConfiguredThatWay() {
+        entry.setTitle("The Quick Brown Fox Jumps Over The Lazy Dog");
+
+        try (MockedStatic<WebloggerRuntimeConfig> config =
+                     mockStatic(WebloggerRuntimeConfig.class)) {
+            config.when(() -> WebloggerRuntimeConfig
+                            .getBooleanProperty("weblogentry.title.useUnderscoreSeparator"))
+                    .thenReturn(true);
+
+            assertEquals("the_quick_brown_fox_jumps", entry.createAnchorBase(),
+                    "With the pre-5.1 separator selected the anchor must join on "
+                            + "underscores; reading the setting once at class-load would "
+                            + "silently keep hyphens until a restart");
+        }
     }
 
     @Test

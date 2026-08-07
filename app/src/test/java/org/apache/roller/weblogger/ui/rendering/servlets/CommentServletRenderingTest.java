@@ -1,11 +1,17 @@
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
+import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -75,6 +81,92 @@ class CommentServletRenderingTest {
         CommentSearchCriteria criteria = new CommentSearchCriteria();
         criteria.setEntry(TestUtils.getManagedWeblogEntry(entry));
         return manager.getComments(criteria);
+    }
+
+    /**
+     * Comment throttling can be switched on and off while the server runs.
+     *
+     * <p>It used to be latched at servlet init: with {@code
+     * comment.throttle.enabled} false at startup no throttle object existed at
+     * all, so an administrator meeting a flood of spam could only turn
+     * throttling on by restarting. The flag is now a runtime property read per
+     * request, and the throttle itself is sized once — so this drives ONE
+     * servlet instance across both settings. A fresh servlet per phase would
+     * pass even with the old latching behaviour and prove nothing.
+     *
+     * <p>The sizing knobs stay startup-scoped, hence the threshold override
+     * before the servlet is built: it makes the limit reachable in three posts
+     * instead of twenty-six.
+     */
+    @Test
+    void commentThrottlingCanBeSwitchedOnAndOffWithoutARestart() throws Exception {
+        String previousThreshold = overrideStartupProperty("comment.throttle.threshold", "2");
+        String previousEnabled = setRuntimeProperty("comment.throttle.enabled", "true");
+        try {
+            // One servlet for the whole test: the throttle is sized at init,
+            // and the switch has to be read after that or nothing is proved.
+            CommentServlet servlet = RenderingTestSupport.commentServlet();
+
+            assertEquals(200, throttledPost(servlet, "within budget 1").getStatus());
+            assertEquals(200, throttledPost(servlet, "within budget 2").getStatus());
+
+            // Past the threshold the servlet refuses the post outright rather
+            // than saving it, so the comment count is the real assertion.
+            assertEquals(404, throttledPost(servlet, "over budget").getStatus(),
+                    "a client past the throttle threshold must be refused");
+            assertEquals(2, commentsInDb().size(),
+                    "the refused post must not have been saved");
+
+            setRuntimeProperty("comment.throttle.enabled", "false");
+
+            assertEquals(200, throttledPost(servlet, "throttle now off").getStatus(),
+                    "turning throttling off must take effect on the running servlet; a "
+                            + "flag latched at init would still be refusing this client");
+            assertEquals(3, commentsInDb().size());
+        } finally {
+            setRuntimeProperty("comment.throttle.enabled", previousEnabled);
+            overrideStartupProperty("comment.throttle.threshold", previousThreshold);
+        }
+    }
+
+    /**
+     * A comment post from one fixed client address, so the throttle counts
+     * these together.
+     *
+     * <p>The address is unique to this test because tripping the throttle also
+     * adds the caller to {@code IPBanList}, a JVM-wide singleton that outlives
+     * the test.
+     */
+    private MockHttpServletResponse throttledPost(CommentServlet servlet, String content)
+            throws Exception {
+        MockHttpServletRequest request = commentPost(content, "reader@example.com");
+        request.setRemoteAddr("203.0.113.42");
+        return RenderingTestSupport.execute(servlet, request);
+    }
+
+    /** Sets a runtime property, returning what it was. */
+    private static String setRuntimeProperty(String name, String value) throws Exception {
+        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
+        String previous = config.get(name).getValue();
+        config.get(name).setValue(value);
+        pmgr.saveProperties(config);
+        WebloggerFactory.getWeblogger().flush();
+        return previous;
+    }
+
+    /** Sets a startup-config property, returning what it was. Process-global. */
+    private static String overrideStartupProperty(String name, String value) throws Exception {
+        Field field = WebloggerConfig.class.getDeclaredField("config");
+        field.setAccessible(true);
+        Properties config = (Properties) field.get(null);
+        String previous = config.getProperty(name);
+        if (value == null) {
+            config.remove(name);
+        } else {
+            config.setProperty(name, value);
+        }
+        return previous;
     }
 
     @Test
