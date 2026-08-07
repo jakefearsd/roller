@@ -220,75 +220,7 @@ public class PageServlet extends HttpServlet {
         log.debug("Looking for template to use for rendering");
 
         // figure out what template to use
-        ThemeTemplate page = null;
-
-        // If this is a popup request, then deal with it specially
-        // TODO: do we really need to keep supporting this?
-        if (request.getParameter("popup") != null) {
-            try {
-                // Does user have a popupcomments page?
-                page = weblog.getTheme().getTemplateByName("_popupcomments");
-            } catch (Exception e) {
-                // ignored ... considered page not found
-            }
-
-            // User doesn't have one so return the default
-            if (page == null) {
-                page = new StaticThemeTemplate(
-                        "templates/weblog/popupcomments.vm", TemplateLanguage.VELOCITY);
-            }
-
-            // If request specified the page, then go with that
-        } else if ("page".equals(pageRequest.getContext())) {
-            page = pageRequest.getWeblogPage();
-
-            // if we don't have this page then 404, we don't let
-            // this one fall through to the default template
-            if (page == null) {
-                RenderingServletUtils.sendNotFound(response);
-                return;
-            }
-
-            // If request specified tags section index, then look for custom
-            // template
-        } else if ("tags".equals(pageRequest.getContext())
-                && pageRequest.getTags() != null) {
-            try {
-                page = weblog.getTheme().getTemplateByAction(
-                        ComponentType.TAGSINDEX);
-            } catch (Exception e) {
-                log.error("Error getting weblog page for action 'tagsIndex'", e);
-            }
-
-            // if we don't have a custom tags page then 404, we don't let
-            // this one fall through to the default template
-            if (page == null) {
-                RenderingServletUtils.sendNotFound(response);
-                return;
-            }
-
-            // If this is a permalink then look for a permalink template
-        } else if (pageRequest.getWeblogAnchor() != null) {
-            try {
-                page = weblog.getTheme().getTemplateByAction(
-                        ComponentType.PERMALINK);
-            } catch (Exception e) {
-                log.error("Error getting weblog page for action 'permalink'", e);
-            }
-        }
-
-        // if we haven't found a page yet then try our default page
-        if (page == null) {
-            try {
-                page = weblog.getTheme().getDefaultTemplate();
-            } catch (Exception e) {
-                log.error(
-                        "Error getting default page for weblog = "
-                                + weblog.getHandle(), e);
-            }
-        }
-
-        // Still no page? Then that is a 404
+        ThemeTemplate page = selectTemplate(request, pageRequest, weblog);
         if (page == null) {
             RenderingServletUtils.sendNotFound(response);
             return;
@@ -297,52 +229,9 @@ public class PageServlet extends HttpServlet {
         log.debug("page found, dealing with it");
 
         // validation. make sure that request input makes sense.
-        boolean invalid = false;
-        if (pageRequest.getWeblogPageName() != null && page.isHidden()) {
-            invalid = true;
-        }
-        // locale view allowed only if weblog has enabled it
-        if (pageRequest.getLocale() != null
-                && !pageRequest.getWeblog().isEnableMultiLang()) {
-            invalid = true;
-        }
-        if (pageRequest.getWeblogAnchor() != null) {
-
-            // permalink specified.
-            // entry must exist, be published before current time, and locale
-            // must match
-            WeblogEntry entry = pageRequest.getWeblogEntry();
-            if (entry == null) {
-                invalid = true;
-            } else if (pageRequest.getLocale() != null
-                    && !entry.getLocale().startsWith(pageRequest.getLocale())) {
-                invalid = true;
-            } else if (!entry.isPublished()) {
-                invalid = true;
-            } else if (new Date().before(entry.getPubTime())) {
-                invalid = true;
-            }
-        } else if (pageRequest.getWeblogCategoryName() != null) {
-
-            // category specified. category must exist.
-            if (pageRequest.getWeblogCategory() == null) {
-                invalid = true;
-            }
-        } else if (pageRequest.getTags() != null && !pageRequest.getTags().isEmpty()) {
-
-            try {
-                // tags specified. make sure they exist.
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger()
-                        .getWeblogEntryManager();
-                invalid = !wmgr.getTagComboExists(pageRequest.getTags(),
-                        (isSiteWide) ? null : weblog);
-            } catch (WebloggerException ex) {
-                invalid = true;
-            }
-        }
-
-        if (invalid) {
-            log.debug("page failed validation, bailing out");
+        String rejection = rejectionReason(pageRequest, weblog, page, isSiteWide);
+        if (rejection != null) {
+            log.debug("page failed validation, bailing out: " + rejection);
             RenderingServletUtils.sendNotFound(response);
             return;
         }
@@ -361,24 +250,7 @@ public class PageServlet extends HttpServlet {
 
         // looks like we need to render content
         // set the content deviceType
-        String contentType;
-        if (StringUtils.isNotEmpty(page.getOutputContentType())) {
-            contentType = page.getOutputContentType() + "; charset=utf-8";
-        } else {
-            final String defaultContentType = "text/html; charset=utf-8";
-            if (page.getLink() == null) {
-                contentType = defaultContentType;
-            } else {
-                String mimeType = RollerContext.getServletContext().getMimeType(
-                        page.getLink());
-                if (mimeType != null) {
-                    // we found a match ... set the content deviceType
-                    contentType = mimeType + "; charset=utf-8";
-                } else {
-                    contentType = defaultContentType;
-                }
-            }
-        }
+        String contentType = resolveContentType(page);
 
         HashMap<String, Object> model = new HashMap<>();
         try {
@@ -470,6 +342,167 @@ public class PageServlet extends HttpServlet {
         }
 
         log.debug("Exiting");
+    }
+
+
+    /**
+     * The template that renders this request, or {@code null} when nothing
+     * does and the answer is a 404.
+     *
+     * <p>Extracted from {@code doGet}, which reached 380 lines doing eight
+     * separate jobs and could only be exercised end to end. The order of the
+     * branches below is the behaviour: a popup wins over everything, an
+     * explicitly named page never falls through to the default (asking for a
+     * page that does not exist is a 404, not the front page), a tags index
+     * likewise, and only a permalink is allowed to fall back.
+     */
+    static ThemeTemplate selectTemplate(HttpServletRequest request,
+            WeblogPageRequest pageRequest, Weblog weblog) {
+
+        ThemeTemplate page = null;
+
+        // If this is a popup request, then deal with it specially
+        if (request.getParameter("popup") != null) {
+            try {
+                // Does user have a popupcomments page?
+                page = weblog.getTheme().getTemplateByName("_popupcomments");
+            } catch (Exception e) {
+                // ignored ... considered page not found
+            }
+
+            // User doesn't have one so return the default
+            if (page == null) {
+                page = new StaticThemeTemplate(
+                        "templates/weblog/popupcomments.vm", TemplateLanguage.VELOCITY);
+            }
+            return page;
+        }
+
+        // If request specified the page, then go with that. No fallback: this
+        // one 404s rather than quietly serving the default template.
+        if ("page".equals(pageRequest.getContext())) {
+            return pageRequest.getWeblogPage();
+        }
+
+        // If request specified tags section index, then look for a custom
+        // template. Also no fallback.
+        if ("tags".equals(pageRequest.getContext()) && pageRequest.getTags() != null) {
+            try {
+                return weblog.getTheme().getTemplateByAction(ComponentType.TAGSINDEX);
+            } catch (Exception e) {
+                log.error("Error getting weblog page for action 'tagsIndex'", e);
+                return null;
+            }
+        }
+
+        // If this is a permalink then look for a permalink template
+        if (pageRequest.getWeblogAnchor() != null) {
+            try {
+                page = weblog.getTheme().getTemplateByAction(ComponentType.PERMALINK);
+            } catch (Exception e) {
+                log.error("Error getting weblog page for action 'permalink'", e);
+            }
+        }
+
+        // if we haven't found a page yet then try our default page
+        if (page == null) {
+            try {
+                page = weblog.getTheme().getDefaultTemplate();
+            } catch (Exception e) {
+                log.error("Error getting default page for weblog = "
+                        + weblog.getHandle(), e);
+            }
+        }
+
+        return page;
+    }
+
+    /**
+     * Why this request cannot be served, or {@code null} when it can.
+     *
+     * <p>Returns a reason rather than a boolean deliberately. Every one of
+     * these ends in the same bare 404, and when one fires wrongly -- a
+     * permalink readers say is missing, a locale view that will not open --
+     * the log line used to read only "page failed validation", which is the
+     * same sentence for eight different causes.
+     */
+    static String rejectionReason(WeblogPageRequest pageRequest, Weblog weblog,
+            ThemeTemplate page, boolean isSiteWide) {
+
+        if (pageRequest.getWeblogPageName() != null && page.isHidden()) {
+            return "template is hidden";
+        }
+
+        // locale view allowed only if weblog has enabled it
+        if (pageRequest.getLocale() != null && !pageRequest.getWeblog().isEnableMultiLang()) {
+            return "locale view requested but the weblog does not enable multiple languages";
+        }
+
+        if (pageRequest.getWeblogAnchor() != null) {
+            // permalink specified. entry must exist, be published before the
+            // current time, and its locale must match.
+            WeblogEntry entry = pageRequest.getWeblogEntry();
+            if (entry == null) {
+                return "no entry with that anchor";
+            }
+            if (pageRequest.getLocale() != null
+                    && !entry.getLocale().startsWith(pageRequest.getLocale())) {
+                return "entry is not in the requested locale";
+            }
+            if (!entry.isPublished()) {
+                return "entry is not published";
+            }
+            if (new Date().before(entry.getPubTime())) {
+                return "entry is scheduled for the future";
+            }
+            return null;
+        }
+
+        if (pageRequest.getWeblogCategoryName() != null) {
+            // category specified. category must exist.
+            if (pageRequest.getWeblogCategory() == null) {
+                return "no category by that name";
+            }
+            return null;
+        }
+
+        if (pageRequest.getTags() != null && !pageRequest.getTags().isEmpty()) {
+            try {
+                // tags specified. make sure they exist.
+                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger()
+                        .getWeblogEntryManager();
+                if (!wmgr.getTagComboExists(pageRequest.getTags(),
+                        isSiteWide ? null : weblog)) {
+                    return "no entries carry that combination of tags";
+                }
+            } catch (WebloggerException ex) {
+                return "tag lookup failed: " + ex.getMessage();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The content type this template renders as: its own declaration, else the
+     * type implied by its link's extension, else HTML.
+     *
+     * <p>The middle case is what lets a custom template named
+     * {@code something.css} be served as a stylesheet rather than as markup a
+     * browser refuses to apply.
+     */
+    static String resolveContentType(ThemeTemplate page) {
+        if (StringUtils.isNotEmpty(page.getOutputContentType())) {
+            return page.getOutputContentType() + "; charset=utf-8";
+        }
+
+        final String defaultContentType = "text/html; charset=utf-8";
+        if (page.getLink() == null) {
+            return defaultContentType;
+        }
+
+        String mimeType = RollerContext.getServletContext().getMimeType(page.getLink());
+        return mimeType != null ? mimeType + "; charset=utf-8" : defaultContentType;
     }
 
     /**

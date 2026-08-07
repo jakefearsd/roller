@@ -1,0 +1,402 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.business;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.List;
+
+import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
+import org.apache.roller.weblogger.pojos.StatCount;
+import org.apache.roller.weblogger.pojos.TagStat;
+import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogCategory;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
+import org.apache.roller.weblogger.pojos.WeblogEntryComment;
+import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * The parts of {@code JPAWeblogEntryManagerImpl} outside the entry-criteria
+ * query: tag aggregates, comment bulk operations, entry navigation and
+ * attributes.
+ *
+ * <p>Unlike {@code PageServlet}, nothing here needed restructuring -- these are
+ * small, single-purpose methods that simply had no tests. Four were at zero
+ * ({@code removeMatchingComments}, {@code applyCommentDefaultsToEntries},
+ * {@code removeWeblogEntryAttribute}, {@code getRevision}), and two more
+ * carried most of their branches in the null-or-not permutations of their
+ * parameters, which is exactly what goes wrong when a caller starts passing a
+ * null it never used to.
+ */
+class WeblogEntryManagerQueryTest {
+
+    private User user;
+    private Weblog blog;
+    private WeblogCategory travel;
+    private WeblogEntry popular;
+    private WeblogEntry quiet;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        TestUtils.setupWeblogger();
+
+        user = TestUtils.setupUser("wemqUser");
+        blog = TestUtils.setupWeblog("wemqblog", user);
+        TestUtils.endSession(true);
+
+        travel = TestUtils.setupWeblogCategory(TestUtils.getManagedWebsite(blog), "Travel");
+        TestUtils.endSession(true);
+
+        popular = entry("popular-post", "Popular", Instant.now().minus(2, ChronoUnit.DAYS));
+        quiet = entry("quiet-post", "Quiet", Instant.now().minus(1, ChronoUnit.DAYS));
+        TestUtils.endSession(true);
+
+        comment(popular, "first thoughts");
+        comment(popular, "second thoughts");
+        TestUtils.endSession(true);
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        TestUtils.teardownWeblog(blog.getId());
+        TestUtils.teardownUser(user.getUserName());
+        TestUtils.endSession(true);
+    }
+
+    // ------------------------------------------------------------------ tags
+
+    @Test
+    void popularTagsAreReturnedForAWeblog() throws Exception {
+        tag(popular, "spain");
+        tag(quiet, "spain");
+        tag(quiet, "food");
+        TestUtils.endSession(true);
+
+        List<TagStat> tags = entries().getPopularTags(
+                TestUtils.getManagedWebsite(blog), null, 0, 10);
+
+        List<String> names = tags.stream().map(TagStat::getName).toList();
+        assertTrue(names.containsAll(List.of("spain", "food")), "got: " + names);
+
+        // Alphabetical, not by count. The query orders by total to pick the top
+        // N and the results are then deliberately re-sorted by name, because
+        // this feeds a tag cloud: position is alphabetical and popularity is
+        // carried by intensity, the 1-5 bucket a theme renders as font size.
+        assertEquals(List.of("food", "spain"), names,
+                "a tag cloud reads alphabetically: " + names);
+
+        int spain = tags.stream().filter(t -> t.getName().equals("spain"))
+                .findFirst().orElseThrow().getIntensity();
+        int food = tags.stream().filter(t -> t.getName().equals("food"))
+                .findFirst().orElseThrow().getIntensity();
+        assertTrue(spain > food,
+                "the tag used twice must render larger than the one used once: "
+                        + "spain=" + spain + " food=" + food);
+    }
+
+    /**
+     * A start date bounds the aggregate, which is how "popular this month"
+     * differs from "popular ever".
+     */
+    @Test
+    void popularTagsCanBeBoundedByStartDate() throws Exception {
+        tag(popular, "spain");
+        TestUtils.endSession(true);
+
+        Date future = Date.from(Instant.now().plus(1, ChronoUnit.DAYS));
+        List<TagStat> none = entries().getPopularTags(
+                TestUtils.getManagedWebsite(blog), future, 0, 10);
+
+        assertTrue(none.isEmpty(),
+                "nothing was tagged after tomorrow: " + none.stream().map(TagStat::getName).toList());
+    }
+
+    /** A null weblog aggregates across the whole site, for the front page. */
+    @Test
+    void popularTagsAcrossTheWholeSiteDoNotRequireAWeblog() throws Exception {
+        tag(popular, "spain");
+        TestUtils.endSession(true);
+
+        List<String> names = entries().getPopularTags(null, null, 0, 50)
+                .stream().map(TagStat::getName).toList();
+
+        assertTrue(names.contains("spain"), "got: " + names);
+    }
+
+    @Test
+    void tagsCanBeListedAndFilteredByPrefix() throws Exception {
+        tag(popular, "spain");
+        tag(quiet, "food");
+        TestUtils.endSession(true);
+
+        Weblog managed = TestUtils.getManagedWebsite(blog);
+        List<String> all = entries().getTags(managed, null, null, 0, 50)
+                .stream().map(TagStat::getName).toList();
+        assertTrue(all.containsAll(List.of("spain", "food")), "got: " + all);
+
+        List<String> starting = entries().getTags(managed, null, "sp", 0, 50)
+                .stream().map(TagStat::getName).toList();
+        assertEquals(List.of("spain"), starting);
+    }
+
+    @Test
+    void tagsCanBeSortedByCountInsteadOfName() throws Exception {
+        tag(popular, "spain");
+        tag(quiet, "spain");
+        tag(quiet, "food");
+        TestUtils.endSession(true);
+
+        List<String> byCount = entries()
+                .getTags(TestUtils.getManagedWebsite(blog), "count", null, 0, 50)
+                .stream().map(TagStat::getName).toList();
+
+        assertEquals("spain", byCount.get(0),
+                "sorted by count the most-used tag leads: " + byCount);
+    }
+
+    // -------------------------------------------------------------- comments
+
+    @Test
+    void theMostCommentedEntriesAreRankedByCommentCount() throws Exception {
+        List<StatCount> ranked = entries().getMostCommentedWeblogEntries(
+                TestUtils.getManagedWebsite(blog), null, null, 0, 10);
+
+        assertFalse(ranked.isEmpty(), "the commented entry must be ranked");
+        assertEquals(popular.getAnchor(), ranked.get(0).getSubjectNameShort(),
+                "the entry with two comments must lead");
+        assertEquals(2, ranked.get(0).getCount(), "and carry its comment count");
+    }
+
+    @Test
+    void theMostCommentedEntriesCanSpanTheWholeSite() throws Exception {
+        List<StatCount> ranked = entries()
+                .getMostCommentedWeblogEntries(null, null, null, 0, 50);
+
+        assertFalse(ranked.isEmpty(), "a null weblog means site-wide, not nothing");
+    }
+
+    /**
+     * Bulk comment removal is what the moderation screen's "delete all matching"
+     * runs. It has to delete exactly what the query matched -- deleting more is
+     * unrecoverable.
+     */
+    @Test
+    void removingMatchingCommentsDeletesOnlyWhatMatched() throws Exception {
+        comment(quiet, "keep me");
+        TestUtils.endSession(true);
+
+        int removed = entries().removeMatchingComments(
+                TestUtils.getManagedWebsite(blog), null, "first thoughts", null, null, null);
+        TestUtils.endSession(true);
+
+        assertEquals(1, removed, "one comment matched that text");
+
+        List<String> left = commentTexts();
+        assertFalse(left.contains("first thoughts"), "got: " + left);
+        assertTrue(left.containsAll(List.of("second thoughts", "keep me")),
+                "everything else must survive: " + left);
+    }
+
+    @Test
+    void removingMatchingCommentsCanBeScopedToOneEntry() throws Exception {
+        comment(quiet, "on the quiet post");
+        TestUtils.endSession(true);
+
+        int removed = entries().removeMatchingComments(
+                TestUtils.getManagedWebsite(blog), TestUtils.getManagedWeblogEntry(quiet),
+                null, null, null, null);
+        TestUtils.endSession(true);
+
+        assertEquals(1, removed);
+        assertTrue(commentTexts().containsAll(List.of("first thoughts", "second thoughts")),
+                "the other entry's comments must be untouched: " + commentTexts());
+    }
+
+    @Test
+    void removingMatchingCommentsCanBeScopedByApprovalStatus() throws Exception {
+        int removed = entries().removeMatchingComments(
+                TestUtils.getManagedWebsite(blog), null, null, null, null,
+                ApprovalStatus.DISAPPROVED);
+        TestUtils.endSession(true);
+
+        assertEquals(0, removed, "no comment is disapproved, so nothing matches");
+        assertEquals(2, commentTexts().size(), "and nothing was deleted");
+    }
+
+    /**
+     * Applying the weblog's comment defaults rewrites every existing entry --
+     * the settings page offers it as an explicit action because it is not
+     * undoable.
+     */
+    @Test
+    void applyingCommentDefaultsRewritesEveryEntry() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(blog);
+        managed.setDefaultAllowComments(Boolean.FALSE);
+        managed.setDefaultCommentDays(0);
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        entries().applyCommentDefaultsToEntries(TestUtils.getManagedWebsite(blog));
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        WeblogEntry after = entries().getWeblogEntry(popular.getId());
+        assertEquals(Boolean.FALSE, after.getAllowComments(),
+                "every entry must take the weblog's new default");
+        assertEquals(0, after.getCommentDays().intValue());
+    }
+
+    // ------------------------------------------------------------ navigation
+
+    /**
+     * Next and previous are what a permalink's pager links to, and they are
+     * ordered by publication time rather than by insertion.
+     */
+    @Test
+    void nextAndPreviousFollowPublicationOrder() throws Exception {
+        WeblogEntry managedPopular = TestUtils.getManagedWeblogEntry(popular);
+        WeblogEntry managedQuiet = TestUtils.getManagedWeblogEntry(quiet);
+
+        WeblogEntry next = entries().getNextEntry(managedPopular, null, null);
+        assertNotNull(next, "the older post must have a newer one after it");
+        assertEquals(managedQuiet.getAnchor(), next.getAnchor());
+
+        WeblogEntry previous = entries().getPreviousEntry(managedQuiet, null, null);
+        assertNotNull(previous);
+        assertEquals(managedPopular.getAnchor(), previous.getAnchor());
+    }
+
+    @Test
+    void theNewestEntryHasNothingAfterIt() throws Exception {
+        assertNull(entries().getNextEntry(TestUtils.getManagedWeblogEntry(quiet), null, null),
+                "the pager must stop rather than wrap around");
+    }
+
+    @Test
+    void navigationCanBeConfinedToACategory() throws Exception {
+        WeblogEntry next = entries().getNextEntry(
+                TestUtils.getManagedWeblogEntry(popular), "Travel", null);
+
+        assertNotNull(next, "both entries are in Travel: " + next);
+        assertEquals(quiet.getAnchor(), next.getAnchor());
+    }
+
+    // ------------------------------------------------------------ attributes
+
+    @Test
+    void anEntryAttributeCanBeRemoved() throws Exception {
+        WeblogEntry managed = TestUtils.getManagedWeblogEntry(popular);
+        managed.putEntryAttribute("pinned", "yes");
+        entries().saveWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        managed = TestUtils.getManagedWeblogEntry(popular);
+        assertNotNull(managed.findEntryAttribute("pinned"));
+
+        entries().removeWeblogEntryAttribute("pinned", managed);
+        entries().saveWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        assertNull(TestUtils.getManagedWeblogEntry(popular).findEntryAttribute("pinned"),
+                "a removed attribute must be gone from the entry and the database");
+    }
+
+    /**
+     * Removing an attribute that is not there is a no-op, not an error -- the
+     * caller does not know what the entry carries.
+     */
+    @Test
+    void removingAnAttributeThatIsNotThereChangesNothing() throws Exception {
+        WeblogEntry managed = TestUtils.getManagedWeblogEntry(popular);
+        int before = managed.getEntryAttributes().size();
+
+        entries().removeWeblogEntryAttribute("never-set", managed);
+
+        assertEquals(before, managed.getEntryAttributes().size());
+    }
+
+    // -------------------------------------------------------------- revisions
+
+    @Test
+    void anUnknownRevisionIdResolvesToNothing() throws Exception {
+        assertNull(entries().getRevision("no-such-revision"));
+        assertNull(entries().getRevision(null),
+                "a null id must not reach the database");
+    }
+
+    // ---------------------------------------------------------------- helpers
+
+    private static WeblogEntryManager entries() {
+        return WebloggerFactory.getWeblogger().getWeblogEntryManager();
+    }
+
+    private List<String> commentTexts() throws Exception {
+        CommentSearchCriteria criteria = new CommentSearchCriteria();
+        criteria.setWeblog(TestUtils.getManagedWebsite(blog));
+        return entries().getComments(criteria).stream()
+                .map(WeblogEntryComment::getContent).toList();
+    }
+
+    private WeblogEntry entry(String anchor, String title, Instant pubTime) throws Exception {
+        WeblogEntry created = TestUtils.setupWeblogEntry(anchor, travel,
+                PubStatus.PUBLISHED, blog, user);
+        WeblogEntry managed = entries().getWeblogEntry(created.getId());
+        managed.setTitle(title);
+        managed.setPubTime(new Timestamp(pubTime.toEpochMilli()));
+        managed.setUpdateTime(new Timestamp(pubTime.toEpochMilli()));
+        entries().saveWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+        return managed;
+    }
+
+    private void comment(WeblogEntry entry, String content) throws Exception {
+        WeblogEntryComment comment = new WeblogEntryComment();
+        comment.setWeblogEntry(TestUtils.getManagedWeblogEntry(entry));
+        comment.setName("A Reader");
+        comment.setEmail("reader@example.invalid");
+        comment.setContent(content);
+        comment.setPostTime(new Timestamp(System.currentTimeMillis()));
+        comment.setStatus(ApprovalStatus.APPROVED);
+        entries().saveComment(comment);
+        WebloggerFactory.getWeblogger().flush();
+    }
+
+    private void tag(WeblogEntry entry, String tagName) throws Exception {
+        WeblogEntry managed = entries().getWeblogEntry(entry.getId());
+        managed.addTag(tagName);
+        entries().saveWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+    }
+}

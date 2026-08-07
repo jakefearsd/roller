@@ -221,6 +221,28 @@ class PageServletCachingTest {
                 "a cached page must expire once the weblog it belongs to changes");
     }
 
+    /**
+     * A POST reaches the same rendering as a GET but never from the cache. The
+     * comment servlet forwards here after a post so the reader sees their own
+     * comment, or the moderation message about it -- serving that from the
+     * cache would show them the page as it was before they wrote anything.
+     */
+    @Test
+    void aPostRendersLikeAGetButAlwaysSkipsTheCache() throws Exception {
+        get(null);
+
+        MockHttpServletRequest request = pageRequest(null, null);
+        request.setMethod("POST");
+        MockHttpServletResponse response = RenderingTestSupport.execute(
+                RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        assertTrue(response.getContentAsByteArray().length > 0,
+                "a POST must still render the page");
+        assertEquals("true", request.getAttribute("skipCache"),
+                "and must have marked the request as bypassing the cache");
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private MockHttpServletResponse get(String ifModifiedSince) throws Exception {
