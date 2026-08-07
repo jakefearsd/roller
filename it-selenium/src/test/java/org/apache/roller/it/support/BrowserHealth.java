@@ -32,8 +32,10 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
@@ -69,6 +71,68 @@ public final class BrowserHealth {
     private static final Set<String> IGNORED_PATH_SUFFIXES = Set.of("/favicon.ico");
 
     /**
+     * Resource types a page may legitimately abandon mid-flight.
+     *
+     * <p>These are requests <em>page script starts</em>, and script that starts
+     * a request may reasonably decide it no longer wants the answer. Two
+     * examples in this suite, both correct behaviour: Leaflet cancels tile
+     * requests as the viewport settles -- 48 in a single map render -- and
+     * paints the aborted ones with a {@code data:} GIF; jQuery UI's
+     * autocomplete cancels the in-flight lookup on every further keystroke, so
+     * typing a username aborts one XHR per character.
+     *
+     * <p>{@code Document} is here for the same reason one level up: navigating
+     * again before the previous navigation finished cancels it, and this suite
+     * does exactly that (signing out then going straight to the login page).
+     *
+     * <p>Everything NOT listed here is a sub-resource the <em>document</em>
+     * declared -- a stylesheet, a script, a font. Nothing cancels those, so an
+     * abort means the browser refused the resource, and that is precisely the
+     * case worth failing on.
+     *
+     * <p>Excusing these costs little. A request that genuinely fails with a
+     * status still produces a response and is caught by
+     * {@link #assertNoBrokenResources()}; one that fails at the network level
+     * without being cancelled is still reported here. Only deliberate
+     * cancellation is excused, and only for types that are cancelled on
+     * purpose.
+     */
+    private static final Set<String> ABORT_IS_EXPECTED_FOR =
+            Set.of("Image", "XHR", "Fetch", "Document");
+
+    /**
+     * Network errors that describe the machine running the test rather than
+     * anything the page did.
+     *
+     * <p>{@code ERR_NETWORK_CHANGED} is Chrome noticing the host's network
+     * interface changed underneath it -- a laptop switching wifi, a VPN coming
+     * up. No page can cause it and no page can prevent it, so failing a test
+     * for it reports a defect that does not exist.
+     *
+     * <p>Observed once, in a full run, on a script that loads fine every other
+     * time. Kept to what has actually been seen: adding the neighbouring
+     * {@code ERR_*} constants speculatively would widen the blind spot for
+     * failures nobody has met.
+     */
+    private static final Set<String> ENVIRONMENTAL_ERRORS = Set.of("net::ERR_NETWORK_CHANGED");
+
+    /**
+     * Whether a request that produced no response can be excused.
+     *
+     * <p>A blocked request is never excusable, however it ended and whatever
+     * its type: a CSP refusal is a real defect in the page that asked for the
+     * resource.
+     */
+    private static boolean isExcusableFailure(String type, String blockedReason,
+            boolean canceled, String errorText) {
+        if (blockedReason != null) {
+            return false;
+        }
+        return (canceled && ABORT_IS_EXPECTED_FOR.contains(type))
+                || ENVIRONMENTAL_ERRORS.contains(errorText);
+    }
+
+    /**
      * Only 4xx and 5xx count as broken. Roller redirects constantly - Spring Security
      * bounces unauthenticated requests to the login form, controllers answer POSTs with
      * {@code redirect:} views - so treating "not 2xx" as failure would fail everything.
@@ -102,8 +166,28 @@ public final class BrowserHealth {
         }
     }
 
+    /**
+     * A request the browser gave up on without ever receiving a response.
+     *
+     * @param type    the CDP resource type ({@code Stylesheet}, {@code Image}, ...)
+     * @param reason  a readable account of why it failed
+     */
+    public record FailedRequest(String url, String type, String reason, String page) {
+        @Override
+        public String toString() {
+            return type + " " + url + "   (" + reason + ", while on " + page + ")";
+        }
+    }
+
     // Written from the CDP websocket thread, read from the test thread.
     private final List<Resource> responses = new CopyOnWriteArrayList<>();
+    private final List<FailedRequest> failedRequests = new CopyOnWriteArrayList<>();
+
+    /**
+     * Request id to URL, because {@code Network.loadingFailed} carries no URL of
+     * its own. Bounded by the life of one browser, which is one test.
+     */
+    private final Map<String, String> requestUrls = new ConcurrentHashMap<>();
     private final List<String> consoleErrors = new CopyOnWriteArrayList<>();
     private final List<String> jsExceptions = new CopyOnWriteArrayList<>();
     private final AtomicLong lastEventNanos = new AtomicLong(System.nanoTime());
@@ -179,6 +263,30 @@ public final class BrowserHealth {
             markEventSeen();
         });
 
+        // Needed only so a failed request can be named: loadingFailed identifies
+        // the request by id and nothing else.
+        devTools.addListener(Network.requestWillBeSent(), event ->
+                requestUrls.put(event.getRequestId().toString(), event.getRequest().getUrl()));
+
+        // Requests that never produced a response at all. Without this the
+        // suite is blind to a whole class of breakage -- see the exemption
+        // comment on ABORT_IS_EXPECTED_FOR.
+        devTools.addListener(Network.loadingFailed(), event -> {
+            String type = String.valueOf(event.getType());
+            String blockedReason = event.getBlockedReason().map(String::valueOf).orElse(null);
+            boolean canceled = event.getCanceled().orElse(Boolean.FALSE);
+            String url = requestUrls.getOrDefault(event.getRequestId().toString(), "(unknown url)");
+
+            if (!isExcusableFailure(type, blockedReason, canceled, event.getErrorText())) {
+                String reason = blockedReason != null
+                        ? "blocked: " + blockedReason
+                        : (event.getErrorText() == null || event.getErrorText().isBlank()
+                                ? "request failed" : event.getErrorText());
+                failedRequests.add(new FailedRequest(url, type, reason, page));
+            }
+            markEventSeen();
+        });
+
         devTools.addListener(Network.responseReceived(), event -> {
             responses.add(new Resource(event.getResponse().getUrl(), event.getResponse().getStatus(),
                     event.getType().toString(), page));
@@ -240,7 +348,26 @@ public final class BrowserHealth {
      * has rather than one per fix-and-rerun cycle.
      */
     public void assertHealthy() {
-        report(Stream.concat(brokenResourceReport().stream(), consoleReport().stream()).toList());
+        report(Stream.of(brokenResourceReport(), failedRequestReport(), consoleReport())
+                .flatMap(List::stream)
+                .toList());
+    }
+
+    /**
+     * Fails if a request ended without a response for a reason the page cannot
+     * be excused for.
+     *
+     * <p>This is not the same check as {@link #assertNoBrokenResources()}, and
+     * it exists because that one has a blind spot: a stylesheet whose URL 404s
+     * is served an HTML error page, and Chrome -- refusing to apply a
+     * stylesheet with the wrong content type -- aborts the load rather than
+     * completing it. No response event is ever emitted, so the status check
+     * never sees it. A theme whose CSS had gone missing rendered unstyled and
+     * passed. Webfonts refused by a page's own Content-Security-Policy arrive
+     * here too, for the same reason.
+     */
+    public void assertNoFailedRequests() {
+        report(failedRequestReport());
     }
 
     /**
@@ -272,6 +399,21 @@ public final class BrowserHealth {
         List<String> lines = new ArrayList<>();
         lines.add("The browser loaded " + broken.size() + " broken sub-resource(s):");
         broken.forEach(resource -> lines.add("  " + resource));
+        return lines;
+    }
+
+    private List<String> failedRequestReport() {
+        List<FailedRequest> failed = failedRequests.stream()
+                .filter(request -> !isIgnored(request.url()))
+                .filter(request -> expectedRefusals.stream()
+                        .noneMatch(suffix -> pathOf(request.url()).endsWith(suffix)))
+                .toList();
+        if (failed.isEmpty()) {
+            return List.of();
+        }
+        List<String> lines = new ArrayList<>();
+        lines.add("The browser gave up on " + failed.size() + " request(s) without a response:");
+        failed.forEach(request -> lines.add("  " + request));
         return lines;
     }
 

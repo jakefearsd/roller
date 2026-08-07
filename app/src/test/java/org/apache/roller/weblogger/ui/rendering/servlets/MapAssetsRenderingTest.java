@@ -79,12 +79,20 @@ class MapAssetsRenderingTest {
     private static final String ATTRIBUTION =
             "https://www.openstreetmap.org/copyright";
 
-    /** The CSP line every declaring theme head ships, verbatim, now with data:. */
-    private static final String CSP_META =
-            "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; "
-            + "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
-            + "img-src * data:; base-uri 'self'; connect-src 'self'; form-action 'self'; "
-            + "frame-ancestors 'none'\">";
+    /**
+     * The directive this test is actually about.
+     *
+     * <p>Was the whole policy string, verbatim, which pinned far more than the
+     * subject: it made every theme's policy identical by assertion, so a theme
+     * could not name a directive its own assets need without failing a map
+     * test. {@code gaurav} needs {@code font-src} for its icon font and this
+     * check was what stood in the way. What matters here is only that
+     * {@code data:} images are allowed; the directives every theme genuinely
+     * shares ({@code script-src}, {@code connect-src}, and having a policy at
+     * all) are asserted for every template by {@code ThemeCspCoverageTest},
+     * and the portfolio and travel themes still pin their own policies whole.
+     */
+    private static final String CSP_DATA_IMAGES = "img-src * data:;";
 
     private User user;
     private Weblog weblog;
@@ -288,28 +296,28 @@ class MapAssetsRenderingTest {
      */
     @Test
     void everyDeclaringHeadAllowsDataUrisForImages() throws Exception {
-        assertTrue(render("/" + HANDLE).contains(CSP_META),
+        assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
                 "basic weblog.vm must allow data: images");
 
         switchTheme("frontpage");
-        assertTrue(render("/" + HANDLE).contains(CSP_META),
+        assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
                 "frontpage _header.vm must allow data: images");
 
         switchTheme("gaurav");
-        assertTrue(render("/" + HANDLE).contains(CSP_META),
+        assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
                 "gaurav std_head.vm must allow data: images");
 
         switchTheme("fauxcoly");
-        assertTrue(render("/" + HANDLE).contains(CSP_META),
+        assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
                 "fauxcoly weblog.vm must allow data: images");
 
         switchTheme("portfolio");
-        assertTrue(render("/" + HANDLE).contains(CSP_META),
+        assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
                 "portfolio weblog.vm must allow data: images");
-        assertTrue(search().contains(CSP_META),
+        assertTrue(search().contains(CSP_DATA_IMAGES),
                 "portfolio searchresults.vm must allow data: images");
         entryWithText("csp-map-entry", "<p>nothing to see</p>");
-        assertTrue(render("/" + HANDLE + "/entry/csp-map-entry").contains(CSP_META),
+        assertTrue(render("/" + HANDLE + "/entry/csp-map-entry").contains(CSP_DATA_IMAGES),
                 "portfolio permalink.vm must allow data: images");
     }
 

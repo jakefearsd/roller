@@ -310,6 +310,107 @@ Key domain entities:
   (or the radio) first to reveal the right one.
 - A theme switch reaches readers via `saveWeblog` bumping `lastModified`, not
   via `CacheManager.invalidate` — see Comments on `WeblogPageCache`.
+- **`themes.customtheme.allowed` is enforced in `ThemeEditController`, not just
+  in the menu.** `editor-menu.xml` gates the Design tab on it and that used to
+  be the *only* check, so a POST to `themeEdit!save.rol` converted the weblog
+  whatever the setting said — a one-way conversion behind a hidden menu entry.
+  A weblog already on a custom theme is grandfathered (turning the option off
+  stops new customisations; it must not strand a weblog that has no way back).
+
+## Configuration scope
+Three scopes, and which one a property lives in decides whether it can be
+changed without a restart — and therefore whether the test suites can cover
+both of its branches in a single run.
+
+- **Runtime (`runtimeConfigDefs.xml` → `roller_properties` → Admin Settings).**
+  Read through `WebloggerRuntimeConfig`, which checks the DB row first and
+  falls back to `WebloggerConfig` when there is none. Hot.
+- **Startup (`roller.properties` / `roller-custom.properties`).** Read once via
+  `WebloggerConfig`. Changing one needs a restart.
+- **Per-weblog** (`Weblog` columns, edited on Weblog Settings) and **per-entry**.
+
+**Promoting a startup property to runtime** means adding a `<property-def>` and
+switching the call site to `WebloggerRuntimeConfig`. Three traps, all pinned by
+`PromotedRuntimePropertyTest`:
+1. The name now lives in two files; the defaults must match, or a fresh install
+   and an upgraded one behave differently from identical configuration.
+2. The DB row wins once it exists, so seeding must take the *startup* value
+   (`JPAPropertiesManagerImpl.initialValueFor`) or the first boot after an
+   upgrade silently discards what the deployer set.
+3. The call site must genuinely re-read it. A `static final` (as
+   `WeblogEntry`'s anchor separator was) or a value latched in `init()` (as the
+   comment and share throttles were) keeps the old value until a restart, so
+   promoting it buys nothing.
+
+Promoted so far: `groupblogging.enabled`, `user.hideUserNames`,
+`comment.throttle.enabled`, `share.password.throttle.enabled`,
+`weblogentry.title.useUnderscoreSeparator`. Throttle *sizing*
+(threshold/interval/maxentries) stays startup-scoped — it dimensions a fixed
+cache that cannot be resized under live callers; only the on/off switch is hot.
+
+**Deliberately NOT promoted**, and not to be promoted without a decision:
+- `weblogAdminsUntrusted` and `passwds.encryption.enabled` — promoting these
+  would put "disable HTML sanitization" and "stop hashing passwords" on a web
+  form. Security invariants stay at boot scope.
+- `rememberme.enabled`, `themes.reload.mode`, `users.firstUserAdmin` —
+  structurally boot-scoped (filter chain, Velocity engine config, first-user
+  bootstrap).
+- `search.enabled` — gates whether a Lucene index is built at all, so making it
+  hot would mean either always paying for the index or serving search over one
+  that does not exist.
+
+Browser tests permute global runtime properties via `RollerIT.setGlobalFlag`
+(or `setGlobalFlags` for several in one save), which drives the real Admin
+Settings page and returns the previous value. **These are global and the suite
+shares one instance**, so every caller must restore in a `finally`.
+
+### Permutation coverage in the browser suite
+Four classes carry the configuration matrix. The split is deliberate:
+
+- `ThemeMatrixIT` — every bundled theme rendering one entry that carries
+  `[image]`/`[gallery]`/`[map]`/`[faq]`, on both the home page and the
+  permalink (different templates). One test looping the themes, not one per
+  theme: the fixture costs ~9s and five methods would pay it five times.
+  `frontpage` is excluded — it renders through `$site`, which exists only for
+  the weblog named by `site.frontpage.weblog.handle`.
+- `WeblogConfigMatrixIT` — per-weblog settings. Each test owns its weblog and
+  touches no global state.
+- `GlobalConfigMatrixIT` — **the only class that mutates site-wide state.**
+  Kept to one on purpose: it is what would have to be serialised if the suite
+  ever runs classes in parallel, since everything else is per-weblog.
+- `ScheduledEntryIT` — a future-dated entry is withheld from pages, feeds and
+  the sitemap.
+
+Two settings have **no reachable browser coverage**, both documented in place
+rather than silently skipped:
+- per-weblog `analyticsCode` — its textarea renders only when
+  `weblogAdminsUntrusted` is off, and this fork keeps it on.
+- `user.hideUserNames` — every bundled theme and feed uses
+  `$entry.creator.screenName`, never `.userName`, so the flag changes nothing
+  in shipped output.
+
+`ScheduledEntriesTask` promoting a scheduled entry is also uncovered: an entry
+is only `SCHEDULED` when its pubtime is >1 minute out, and the task cadence is
+configured in whole minutes, so observing it costs 1-3 minutes with real
+variance.
+
+### BrowserHealth: two checks, not one
+`assertNoBrokenResources` catches any sub-resource that came back 4xx/5xx.
+`assertNoFailedRequests` catches requests that produced **no response at all**,
+and exists because the first has a blind spot: a stylesheet whose URL 404s is
+served an HTML error page, and Chrome — refusing a stylesheet with the wrong
+content type — *aborts* the load rather than completing it. No
+`Network.responseReceived` is ever emitted, so a theme whose CSS had gone
+missing rendered unstyled and passed. Webfonts refused by a page's own CSP
+arrive the same way.
+
+The discriminator is what may legitimately be cancelled. Page script starts
+`Image`/`XHR`/`Fetch` and may abandon them (Leaflet cancels ~48 tiles per map
+render; jQuery UI's autocomplete cancels one XHR per keystroke), and a
+`Document` navigation is cancelled by navigating again. A `Stylesheet`,
+`Script` or `Font` is declared by the document and nothing cancels those, so an
+abort there means the browser refused it. A **blocked** request is never
+excused whatever its type.
 
 ## Templates
 - Add/edit/remove live in `TemplatesController` and `TemplateEditController`;

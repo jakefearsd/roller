@@ -24,6 +24,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -178,4 +180,89 @@ class ThemeCspCoverageTest {
                         + "service depends on, which fails silently in the browser:\n  "
                         + String.join("\n  ", tooStrict));
     }
+
+    /**
+     * A theme that asks for a webfont must ship it and must allow it.
+     *
+     * <p>Both halves were broken in {@code gaurav} and neither was visible.
+     * The policies here start from {@code default-src 'none'} and none of them
+     * named {@code font-src}, so every webfont the theme asked for was refused
+     * by the browser -- its icons simply did not draw. Behind that, its
+     * vendored Bootstrap declared a Glyphicons face pointing at a {@code fonts/}
+     * directory the theme has never contained, so those urls would have 404d
+     * even once unblocked.
+     *
+     * <p>Neither shows up in a rendering test, which compares markup, and
+     * neither showed up in the browser suite either until {@code BrowserHealth}
+     * learned to report requests that end without a response. A source scan
+     * catches both before that ever runs.
+     */
+    @Test
+    public void everyFontAThemeAsksForIsShippedAndAllowedByItsPolicy() throws IOException {
+        List<String> problems = new ArrayList<>();
+
+        try (Stream<Path> themeDirs = Files.list(THEMES)) {
+            for (Path theme : themeDirs.filter(Files::isDirectory).toList()) {
+                List<Path> missing = new ArrayList<>();
+                boolean wantsFonts = false;
+
+                try (Stream<Path> files = Files.walk(theme)) {
+                    for (Path css : files.filter(Files::isRegularFile)
+                            .filter(f -> f.toString().endsWith(".css")).toList()) {
+                        for (String reference : fontReferences(read(css))) {
+                            wantsFonts = true;
+                            Path resolved = css.getParent().resolve(reference).normalize();
+                            if (!Files.exists(resolved)) {
+                                missing.add(resolved);
+                            }
+                        }
+                    }
+                }
+
+                for (Path gone : missing) {
+                    problems.add(theme.getFileName() + " asks for a font it does not ship: " + gone);
+                }
+                if (wantsFonts && !policyOf(theme).contains("font-src")) {
+                    problems.add(theme.getFileName() + " uses webfonts but its policy has no "
+                            + "font-src, so the browser refuses every one of them");
+                }
+            }
+        }
+
+        assertTrue(problems.isEmpty(),
+                "Themes whose webfonts cannot load. Neither symptom is visible in the "
+                        + "rendered markup -- the icons just do not draw:\n  "
+                        + String.join("\n  ", problems));
+    }
+
+    /**
+     * Font urls referenced by a stylesheet, stripped of the cache-busting query
+     * and the {@code #iefix} fragment that would otherwise never resolve on disk.
+     */
+    private static List<String> fontReferences(String css) {
+        List<String> references = new ArrayList<>();
+        Matcher matcher = FONT_URL.matcher(css);
+        while (matcher.find()) {
+            references.add(matcher.group(1).replaceAll("[?#].*$", ""));
+        }
+        return references;
+    }
+
+    /** The policy governing a theme, wherever in its templates it is declared. */
+    private static String policyOf(Path theme) throws IOException {
+        try (Stream<Path> files = Files.walk(theme)) {
+            for (Path template : files.filter(Files::isRegularFile)
+                    .filter(f -> f.toString().endsWith(".vm")).toList()) {
+                String source = read(template);
+                int at = source.indexOf(CSP);
+                if (at >= 0) {
+                    return source.substring(at, source.indexOf('>', at));
+                }
+            }
+        }
+        return "";
+    }
+
+    private static final Pattern FONT_URL =
+            Pattern.compile("url\\([\"']?([^)\"']+\\.(?:woff2?|ttf|eot|otf))[^)]*\\)");
 }
