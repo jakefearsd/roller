@@ -278,6 +278,17 @@ public class PasswordResetController extends BaseController {
      * account (if any) the identifier names, swallowing every failure --
      * this runs off the request thread, so nothing in here can change the
      * response the caller already received.
+     *
+     * <p>This is the runnable's body: it executes on a pooled background
+     * thread that never passes through {@code PersistenceSessionFilter}, so
+     * nothing else releases this thread's EntityManager/connection when the
+     * work is done -- {@code flush()} only commits, it does not close.
+     * Every other off-request-thread JPA site in this codebase releases in a
+     * {@code finally} for the same reason ({@code AddEntryOperation},
+     * {@code ReIndexEntryOperation}, {@code ScheduledEntriesTask}); this
+     * mirrors that, and it must stay in this method rather than move up into
+     * {@code deferIssueAndMail} -- that method runs on the request thread,
+     * before the background work has even started.
      */
     private void issueAndMailBestEffort(String identifier, String subject) {
         try {
@@ -290,6 +301,8 @@ public class PasswordResetController extends BaseController {
             sendResetEmail(user, raw, subject);
         } catch (Exception ex) {
             log.error("Could not process forgot-password request", ex);
+        } finally {
+            weblogger.release();
         }
     }
 

@@ -108,6 +108,7 @@ class PasswordResetControllerTest {
         assertEquals(".ForgotPassword", view);
         assertEquals(List.of("forgotPassword.confirmation"), ControllerTestFixture.messages(model));
         verify(mocks.getUserTokenManager()).issueToken(user, UserToken.Purpose.PASSWORD_RESET);
+        verify(mocks.weblogger()).release();
 
         jakarta.mail.internet.MimeMessage sent = mail.onlyMessage();
         assertEquals("dana@example.invalid", sent.getAllRecipients()[0].toString());
@@ -125,6 +126,29 @@ class PasswordResetControllerTest {
         assertEquals(List.of("forgotPassword.confirmation"), ControllerTestFixture.messages(model));
         verify(mocks.getUserTokenManager(), never()).issueToken(any(), any());
         assertTrue(mail.sent().isEmpty());
+        // Even the "nobody found" path runs the lookup on the worker thread
+        // (this test's default stub runs the background runnable inline) and
+        // must still release the EntityManager/connection it opened doing so.
+        verify(mocks.weblogger()).release();
+    }
+
+    /**
+     * The regression this pins: the background runnable does JPA work
+     * ({@code issueToken}, {@code weblogger.flush()}) on a pooled thread that
+     * never passes through {@code PersistenceSessionFilter}, so nothing else
+     * releases that thread's EntityManager/connection.
+     * {@code issueAndMailBestEffort} must release it itself, in a
+     * {@code finally}, on the worker thread -- exactly like
+     * {@code AddEntryOperation} does for the same reason.
+     */
+    @Test
+    void theBackgroundWorkReleasesItsOwnWeblogSessionOnTheWorkerThread() throws Exception {
+        User user = user("dana", "dana@example.invalid");
+        when(mocks.getUserManager().getUserByUserName("dana", Boolean.TRUE)).thenReturn(user);
+
+        controller.forgotSend(request(), model, "dana");
+
+        verify(mocks.weblogger()).release();
     }
 
     @Test
@@ -187,6 +211,9 @@ class PasswordResetControllerTest {
         assertEquals(".ForgotPassword", view);
         assertEquals(List.of("forgotPassword.confirmation"), ControllerTestFixture.messages(model));
         assertTrue(mail.sent().isEmpty(), "a failed token issue must not attempt to mail a token that was never made");
+        // The finally that releases the session must run on the exception
+        // path too, or a failing background attempt leaks a connection.
+        verify(mocks.weblogger()).release();
     }
 
     /**
@@ -208,6 +235,9 @@ class PasswordResetControllerTest {
             assertEquals(List.of("forgotPassword.confirmation"), ControllerTestFixture.messages(model));
             assertTrue(Thread.currentThread().isInterrupted(),
                     "the interrupt must be restored on the thread, not silently dropped");
+            // Scheduling itself failed -- the runnable never ran, so nothing
+            // opened a session that would need releasing.
+            verify(mocks.weblogger(), never()).release();
         } finally {
             // Clear the flag this test just set, so it cannot bleed into
             // whatever the test runner schedules on this thread next.
@@ -280,6 +310,9 @@ class PasswordResetControllerTest {
         assertEquals(List.of("forgotPassword.confirmation"), ControllerTestFixture.messages(model));
         verify(mocks.getUserTokenManager(), never()).issueToken(any(), any());
         assertTrue(mail.sent().isEmpty(), "no mail work may happen synchronously in-request");
+        // release() belongs to the worker thread's runnable, which never ran
+        // here -- the request thread itself must not have called it either.
+        verify(mocks.weblogger(), never()).release();
     }
 
     @Test
