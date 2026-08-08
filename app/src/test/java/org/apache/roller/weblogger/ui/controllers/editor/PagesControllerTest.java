@@ -112,6 +112,32 @@ class PagesControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogPageManager(), never()).removePage(any());
     }
 
+    @Test
+    void aFailedRemovalIsReportedGenericallyRatherThanThrowing() throws Exception {
+        WeblogPage mine = pageOn(weblogA, "about");
+        org.mockito.Mockito.doThrow(new WebloggerException("database down"))
+                .when(weblogger.getWeblogPageManager()).removePage(mine);
+        when(weblogger.getWeblogPageManager().getPages(weblogA)).thenReturn(List.of());
+
+        String view = controller.remove(requestFor(weblogA), model, mine.getId());
+
+        assertEquals(".Pages", view);
+        assertTrue(errors(model).contains("generic.error.check.logs"),
+                "Expected a generic failure, got: " + errors(model));
+    }
+
+    @Test
+    void aFailedListLookupIsReportedGenericallyRatherThanThrowing() throws Exception {
+        when(weblogger.getWeblogPageManager().getPages(weblogA))
+                .thenThrow(new WebloggerException("database down"));
+
+        String view = controller.execute(requestFor(weblogA), model);
+
+        assertEquals(".Pages", view);
+        assertTrue(errors(model).contains("generic.error.check.logs"),
+                "Expected a generic failure, got: " + errors(model));
+    }
+
     // --- fixtures ---
 
     private HttpServletRequest requestFor(Weblog weblog) {

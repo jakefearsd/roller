@@ -502,6 +502,47 @@ build does not pass `-parameters`, so a bare `@RequestParam String id` throws at
 runtime while unit tests (which call the method directly) keep passing.
 `ControllerMetadataTest` fails on any unnamed one.
 
+## Pages
+Static pages (`WeblogPage`, V014) are a separate entity from `WeblogEntry` **on
+purpose** — folding them into entries would have meant threading a page/entry
+distinction through all 25 of `WeblogEntryManager`'s query paths (date
+archives, tags, feeds, pagers …), every one of which a page has no business
+answering to.
+- **Routing**: a published page is served at `/<handle>/<slug>` — a bare,
+  single path segment. `ReservedSlugs` is the single source of truth for what
+  a slug may **not** be, shared by the page-save validator
+  (`WeblogPageManager`) and the request parser (`WeblogPageRequest`), so a
+  slug that would collide with `entry`/`category`/`tags`/`feed`/… can never be
+  saved in the first place. `WeblogRequestMapper` forwards any unknown
+  single-segment path to the page servlet — the context whitelist gap the
+  browser ITs caught; before this the mapper declined the request outright and
+  a published page was never reachable at its own URL.
+- **Lazy resolution**: `WeblogPageRequest` parsing sets only `pageSlug` (no
+  database access — this is the field cache-key generation reads).
+  `getWeblogPageContent()` resolves it lazily, memoized, on first call; a
+  cache hit therefore never resolves the page it names, and a resolved slug
+  that does not name a published page (unknown, or a draft) is a 404, never a
+  fall-through to the permalink/default-page branches. `WeblogPageCache` and
+  `SiteWideCache` keys carry a `/pageslug/<slug>` segment so a page and a same-
+  named context never share a cache entry.
+- **Rendering**: a theme may override the shipped page template with one
+  named `_page`, exactly as `_popupcomments` is overridden — same
+  `StaticThemeTemplate` fallback path through `VelocityRendererFactory`, so a
+  theme that has never heard of pages still renders them. `savePage`/
+  `removePage` bump `weblog.lastModified`, the same lazy-expiry contract
+  `WeblogPageCache` already relies on for templates and comments (see
+  Comments above) — there is no explicit cache eviction for a page edit.
+- **Editor**: `PageEditController`/`PagesController` reuse the entry editor's
+  shape (Markdown + shortcodes + SEO card) via `PageBean`. `lookupPage` joins
+  `lookupEntry`/`lookupTemplate`/`lookupCategory` as the fourth
+  ownership-checked-by-id family member on `BaseController` — a page id is
+  client input and `getPage` is a global by-id lookup. The `showInNav`
+  checkbox uses Spring's field-marker convention with the marker named
+  `_showInNav`, **not** `_bean.showInNav` — the `bean.` prefix breaks marker
+  resolution silently (the box stays checked forever), which is why a unit
+  test reads `PageEdit.jsp` directly to pin the marker's actual name rather
+  than hardcoding it.
+
 ## Plugin System
 Roller supports plugins for:
 - **Entry Plugins**: Content processing and formatting
@@ -522,7 +563,15 @@ responsive `<figure><picture>` (the Summernote media insert pastes it);
 justified grid (`GalleryMarkup`, flex-grow `--ar` CSS from the
 `#showGalleryGridStyles` macro) with a PhotoSwipe lightbox
 (`#showGalleryAssets`; EXIF overlay, captions), refusing private
-directories.
+directories; `[video url=".." caption=".."]` (YouTube/Vimeo) matches the url
+against an allowlist of known provider shapes but never fetches anything — it
+emits an inert placeholder `<div>` because
+`HTMLSanitizer` strips iframes outright, and `#showEmbedAssets`
+click-injects the real `<iframe>` client-side only once a reader opts in
+(consent-gated embeds, not autoplaying trackers on page load). The theme
+CSPs each carry a `frame-src` naming the provider's embed origin, pinned
+byte-for-byte by three rendering tests the same way the Leaflet `img-src *
+data:` addition is.
 `[[name ...]]` / `[[/name]]` escape a registered shortcode to literal text;
 unknown names and malformed input pass through byte-for-byte. New handlers
 implement `ShortcodeHandler` and register in `defaultExpander()`; the interface

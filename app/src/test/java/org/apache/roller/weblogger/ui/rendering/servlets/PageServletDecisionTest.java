@@ -117,6 +117,65 @@ class PageServletDecisionTest {
     }
 
     /**
+     * A bare-slug page request whose slug did not resolve to a published page
+     * (unknown, or a draft the reader is not entitled to see) is a 404, not a
+     * fall-through to the branches below -- a page slug never doubles as a
+     * permalink or the weblog's default view. {@link PageRoutingTest} covers
+     * this end to end; this is the same decision in isolation.
+     */
+    @Test
+    void aPageSlugThatDidNotResolveIsNotFound() throws Exception {
+        when(pageRequest.getPageSlug()).thenReturn("no-such-page");
+        when(pageRequest.getWeblogPageContent()).thenReturn(null);
+
+        assertNull(PageServlet.selectTemplate(request, pageRequest, weblog));
+    }
+
+    /**
+     * A resolved page prefers the theme's own {@code _page} override,
+     * exactly as popups prefer {@code _popupcomments}.
+     */
+    @Test
+    void aResolvedPagePrefersTheThemesOwnPageTemplate() throws Exception {
+        when(pageRequest.getPageSlug()).thenReturn("about");
+        when(pageRequest.getWeblogPageContent())
+                .thenReturn(new org.apache.roller.weblogger.pojos.WeblogPage());
+        ThemeTemplate override = mock(ThemeTemplate.class);
+        when(theme.getTemplateByName("_page")).thenReturn(override);
+
+        assertEquals(override, PageServlet.selectTemplate(request, pageRequest, weblog));
+    }
+
+    /**
+     * A theme with no {@code _page} override falls back to the shipped
+     * default rather than 404ing -- a theme does not have to know pages
+     * exist. Covers the fallback both when the theme answers null and when
+     * looking it up throws, the same defensive shape as the popup lookup.
+     */
+    @Test
+    void aResolvedPageFallsBackToTheBundledPageTemplateWithNoThemeOverride() throws Exception {
+        when(pageRequest.getPageSlug()).thenReturn("about");
+        when(pageRequest.getWeblogPageContent())
+                .thenReturn(new org.apache.roller.weblogger.pojos.WeblogPage());
+        when(theme.getTemplateByName("_page")).thenReturn(null);
+
+        assertInstanceOf(StaticThemeTemplate.class,
+                PageServlet.selectTemplate(request, pageRequest, weblog));
+    }
+
+    @Test
+    void aResolvedPageFallsBackToTheBundledPageTemplateWhenTheThemeLookupThrows() throws Exception {
+        when(pageRequest.getPageSlug()).thenReturn("about");
+        when(pageRequest.getWeblogPageContent())
+                .thenReturn(new org.apache.roller.weblogger.pojos.WeblogPage());
+        when(theme.getTemplateByName("_page")).thenThrow(new WebloggerException("theme is broken"));
+
+        assertInstanceOf(StaticThemeTemplate.class,
+                PageServlet.selectTemplate(request, pageRequest, weblog),
+                "a broken theme lookup must fall back, not propagate, the same as the popup path");
+    }
+
+    /**
      * A named page that does not exist is a 404. It must not fall through to
      * the default template, or every mistyped page url would quietly render the
      * front page and readers would never learn the link was wrong.

@@ -284,6 +284,23 @@ class WeblogRequestMapperTest {
     }
 
     /**
+     * The locale segment, when present, must survive onto the forwarded
+     * page-slug url exactly as it does for every other context -- the
+     * page-slug branch builds its own forward url from scratch rather than
+     * reusing the locale-aware builder above it, so it has to repeat the
+     * locale handling, not just the handle.
+     */
+    @Test
+    void anUnknownSingleSegmentWithALocaleCarriesTheLocaleOntoTheForward() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/en/about");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/en/about",
+                response.getForwardedUrl());
+    }
+
+    /**
      * A second path segment is never a page slug -- WeblogPageRequest only
      * treats a single remaining path element as one -- so this must stay
      * declined exactly as it was before the page-slug forward existed.

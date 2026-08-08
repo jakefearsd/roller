@@ -38,6 +38,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.ServletRequestDataBinder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -97,6 +98,17 @@ class PageEditControllerTest extends EditorControllerTestSupport {
     @Test
     void aBlankIdIsTreatedAsAbsentRatherThanLookedUp() throws Exception {
         assertNull(controller.lookupPage("   ", requestFor(weblogA)));
+    }
+
+    @Test
+    void aFailedPageLookupYieldsNullRatherThanThrowing() throws Exception {
+        // Same defensive shape as lookupEntry/lookupTemplate/lookupCategory: a
+        // failing global lookup must degrade to "not found", not propagate out
+        // of what both edit() and save() treat as an ordinary miss.
+        when(weblogger.getWeblogPageManager().getPage("page-1"))
+                .thenThrow(new WebloggerException("database down"));
+
+        assertNull(controller.lookupPage("page-1", requestFor(weblogA)));
     }
 
     @Test
@@ -273,6 +285,109 @@ class PageEditControllerTest extends EditorControllerTestSupport {
         assertTrue(messages(model).isEmpty(), "A failed save must not also report success");
     }
 
+    @Test
+    void aRejectedSlugOnAnExistingPageRedisplaysThatPage() throws Exception {
+        // The blank-slug/new-page variants above never carry a "page" model
+        // attribute back, since there is nothing looked up yet to redisplay;
+        // an edit of an existing page must still show it after a rejected save.
+        WeblogPage existing = pageOn(weblogA, "about");
+        doThrow(new WebloggerException("page slug is reserved: feed"))
+                .when(weblogger.getWeblogPageManager()).savePage(any());
+
+        PageBean bean = new PageBean();
+        bean.setId(existing.getId());
+        bean.setSlug("feed");
+        bean.setTitle("About");
+
+        String view = controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals(".PageEdit", view);
+        assertEquals(existing, model.getAttribute("page"),
+                "the looked-up page must still be on the model after a rejected save");
+    }
+
+    @Test
+    void anUnexpectedRuntimeExceptionDuringSaveIsReportedGenericallyToo() throws Exception {
+        // The WebloggerException catch above handles the expected failure
+        // modes (reserved/blank/malformed slug); this is the catch-all for
+        // anything else savePage might throw, matching EntryEditController's
+        // shape -- nothing here may turn into a 500.
+        WeblogPage existing = pageOn(weblogA, "about");
+        doThrow(new IllegalStateException("something unrelated broke"))
+                .when(weblogger.getWeblogPageManager()).savePage(any());
+
+        PageBean bean = new PageBean();
+        bean.setId(existing.getId());
+        bean.setSlug("about");
+        bean.setTitle("About");
+
+        String view = controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals(".PageEdit", view);
+        assertTrue(errors(model).contains("generic.error.check.logs"),
+                "Expected a generic failure, got: " + errors(model));
+        assertEquals(existing, model.getAttribute("page"),
+                "the looked-up page must still be on the model after the catch-all path too");
+    }
+
+    // --- SEO card's social-image thumbnail preview ---
+
+    @Test
+    void anOgImageBelongingToThisWeblogGetsAThumbnailPreview() throws Exception {
+        org.apache.roller.weblogger.pojos.MediaFile mediaFile =
+                new org.apache.roller.weblogger.pojos.MediaFile();
+        mediaFile.setId("media-1");
+        mediaFile.setWeblog(weblogA);
+        when(weblogger.getMediaFileManager().getMediaFile("media-1")).thenReturn(mediaFile);
+        when(weblogger.getUrlStrategy().getMediaFileThumbnailURL(weblogA, "media-1", true))
+                .thenReturn("https://example.com/thumb.jpg");
+
+        PageBean bean = new PageBean();
+        bean.setSlug("about");
+        bean.setTitle("About");
+        bean.setOgImageId("media-1");
+
+        String view = controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals(".PageEdit", view);
+        assertEquals("https://example.com/thumb.jpg", model.getAttribute("ogImageThumbnailUrl"));
+    }
+
+    @Test
+    void anOgImageBelongingToAnotherWeblogGetsNoThumbnailPreview() throws Exception {
+        org.apache.roller.weblogger.pojos.MediaFile foreign =
+                new org.apache.roller.weblogger.pojos.MediaFile();
+        foreign.setId("media-2");
+        foreign.setWeblog(weblogB);
+        when(weblogger.getMediaFileManager().getMediaFile("media-2")).thenReturn(foreign);
+
+        PageBean bean = new PageBean();
+        bean.setSlug("about");
+        bean.setTitle("About");
+        bean.setOgImageId("media-2");
+
+        controller.save(requestFor(weblogA), model, bean);
+
+        assertNull(model.getAttribute("ogImageThumbnailUrl"),
+                "an og image belonging to another weblog must not render a preview");
+    }
+
+    @Test
+    void aFailedOgImageLookupSkipsThePreviewRatherThanFailingTheWholePage() throws Exception {
+        when(weblogger.getMediaFileManager().getMediaFile("media-3"))
+                .thenThrow(new WebloggerException("database down"));
+
+        PageBean bean = new PageBean();
+        bean.setSlug("about");
+        bean.setTitle("About");
+        bean.setOgImageId("media-3");
+
+        String view = controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals(".PageEdit", view, "a failed thumbnail lookup must not stop the save from redisplaying");
+        assertNull(model.getAttribute("ogImageThumbnailUrl"));
+    }
+
     // --- checkbox field-marker binding (real Spring WebDataBinder) ---
     //
     // Every test above calls controller.save(...) directly with a hand-built
@@ -336,6 +451,14 @@ class PageEditControllerTest extends EditorControllerTestSupport {
         Matcher matcher = Pattern.compile("name=\"(_[^\"]*[Ss]howInNav[^\"]*)\"").matcher(content);
         assertTrue(matcher.find(), "PageEdit.jsp must carry a showInNav field-marker hidden input");
         return matcher.group(1);
+    }
+
+    @Test
+    void theModelAttributeFactoryHandsSpringAFreshBean() {
+        // @ModelAttribute("bean") is what Spring calls to seed the form on a
+        // GET that supplies no bean of its own; every test above builds a
+        // PageBean by hand instead; this is the seam itself.
+        assertNotNull(controller.getBean());
     }
 
     // --- PageBean ---
@@ -413,6 +536,30 @@ class PageEditControllerTest extends EditorControllerTestSupport {
         bean.copyTo(page);
 
         assertEquals(WeblogPage.PubStatus.DRAFT, page.getStatus());
+    }
+
+    @Test
+    void everySeoFieldSetterRoundTripsIndependentlyOfCopyFromAndCopyTo() {
+        // beanCopiesRoundTrip above exercises these getters, but only through
+        // copyFrom, which assigns the underlying fields directly rather than
+        // through the bean's own setters -- Spring's data binder is what
+        // actually calls them on a real POST, so each one needs its own
+        // direct call to be reachable at all.
+        PageBean bean = new PageBean();
+
+        bean.setNavOrder(5);
+        bean.setMetaTitle("A title");
+        bean.setSearchDescription("A description");
+        bean.setCanonicalUrl("https://example.com/canonical");
+        bean.setNoindex(true);
+        bean.setOgImageId("media-9");
+
+        assertEquals(5, bean.getNavOrder());
+        assertEquals("A title", bean.getMetaTitle());
+        assertEquals("A description", bean.getSearchDescription());
+        assertEquals("https://example.com/canonical", bean.getCanonicalUrl());
+        assertEquals(true, bean.getNoindex());
+        assertEquals("media-9", bean.getOgImageId());
     }
 
     // --- fixtures ---

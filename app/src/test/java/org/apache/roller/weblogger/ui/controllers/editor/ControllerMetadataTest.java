@@ -70,6 +70,17 @@ class ControllerMetadataTest {
     }
 
     @Test
+    void pageManagementRequiresPostPermission() {
+        // Static pages are blog-wide structure like categories and media, not
+        // a single draft, so they sit at the same POST level rather than
+        // falling back to the ADMIN default.
+        assertEquals(List.of(WeblogPermission.POST),
+                new PageEditController().requiredWeblogPermissionActions());
+        assertEquals(List.of(WeblogPermission.POST),
+                new PagesController().requiredWeblogPermissionActions());
+    }
+
+    @Test
     void settingsMembershipAndTemplatesFallBackToWeblogAdmin() {
         // These do not override the inherited default, and must not: changing a
         // blog's configuration, its members or its templates is an owner's job.

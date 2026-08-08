@@ -308,6 +308,99 @@ class LazyLookupTest {
         verify(weblogger, org.mockito.Mockito.never()).getWeblogManager();
     }
 
+    // -------------------------------------------------- bare-slug page content
+
+    @Test
+    void pageRequestPageContentIsLookedUpOnceBySlugAndCached() throws Exception {
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        Weblogger weblogger = mock(Weblogger.class);
+        org.apache.roller.weblogger.business.WeblogPageManager pageManager =
+                mock(org.apache.roller.weblogger.business.WeblogPageManager.class);
+        Weblog weblog = weblog();
+        org.apache.roller.weblogger.pojos.WeblogPage page =
+                new org.apache.roller.weblogger.pojos.WeblogPage();
+        page.setStatus(org.apache.roller.weblogger.pojos.WeblogPage.PubStatus.PUBLISHED);
+        when(weblogger.getWeblogManager()).thenReturn(weblogManager);
+        when(weblogger.getWeblogPageManager()).thenReturn(pageManager);
+        when(weblogManager.getWeblogByHandle(anyString(), any())).thenReturn(weblog);
+        when(pageManager.getPageBySlug(weblog, "about")).thenReturn(page);
+
+        WeblogPageRequest request =
+                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/about"));
+
+        withWeblogger(weblogger, () -> {
+            assertSame(page, request.getWeblogPageContent());
+            assertSame(page, request.getWeblogPageContent());
+        });
+
+        verify(pageManager, times(1)).getPageBySlug(weblog, "about");
+    }
+
+    @Test
+    void pageRequestNoPageContentLookupHappensWithoutACandidateSlug() throws Exception {
+        // The homepage carries no page slug at all, so lookUpPage must return
+        // null immediately rather than resolving the weblog it does not need.
+        Weblogger weblogger = mock(Weblogger.class);
+
+        WeblogPageRequest request =
+                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog"));
+
+        withWeblogger(weblogger, () -> assertNull(request.getWeblogPageContent()));
+
+        verify(weblogger, org.mockito.Mockito.never()).getWeblogManager();
+    }
+
+    @Test
+    void pageRequestPageContentIsNullWhenTheWeblogItselfDoesNotResolve() throws Exception {
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        Weblogger weblogger = mock(Weblogger.class);
+        when(weblogger.getWeblogManager()).thenReturn(weblogManager);
+        when(weblogManager.getWeblogByHandle(anyString(), any())).thenReturn(null);
+
+        WeblogPageRequest request =
+                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/about"));
+
+        withWeblogger(weblogger, () ->
+                assertNull(request.getWeblogPageContent(),
+                        "a candidate slug on a weblog that does not itself resolve must not throw"));
+    }
+
+    @Test
+    void pageRequestAFailingPageContentLookupYieldsNull() throws Exception {
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        Weblogger weblogger = mock(Weblogger.class);
+        org.apache.roller.weblogger.business.WeblogPageManager pageManager =
+                mock(org.apache.roller.weblogger.business.WeblogPageManager.class);
+        Weblog weblog = weblog();
+        when(weblogger.getWeblogManager()).thenReturn(weblogManager);
+        when(weblogger.getWeblogPageManager()).thenReturn(pageManager);
+        when(weblogManager.getWeblogByHandle(anyString(), any())).thenReturn(weblog);
+        when(pageManager.getPageBySlug(any(), anyString()))
+                .thenThrow(new WebloggerException("database is down"));
+
+        WeblogPageRequest request =
+                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/about"));
+
+        withWeblogger(weblogger, () ->
+                assertNull(request.getWeblogPageContent(),
+                        "A failed page lookup must degrade to null, not propagate out of a "
+                                + "getter a template is calling"));
+    }
+
+    @Test
+    void pageRequestInjectedPageContentShortCircuitsTheLookup() throws Exception {
+        Weblogger weblogger = mock(Weblogger.class);
+        WeblogPageRequest request =
+                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/about"));
+        org.apache.roller.weblogger.pojos.WeblogPage page =
+                new org.apache.roller.weblogger.pojos.WeblogPage();
+        request.setWeblogPageContent(page);
+
+        withWeblogger(weblogger, () -> assertSame(page, request.getWeblogPageContent()));
+
+        verify(weblogger, org.mockito.Mockito.never()).getWeblogManager();
+    }
+
     // ------------------------------------------------------- feed and search
 
     @Test

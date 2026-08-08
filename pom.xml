@@ -52,7 +52,7 @@ limitations under the License.
              ever raise them, never lower them. Targets are documented in
              CLAUDE.md. -->
         <jacoco.line.minimum>0.8600</jacoco.line.minimum>
-        <jacoco.branch.minimum>0.7750</jacoco.branch.minimum>
+        <jacoco.branch.minimum>0.7800</jacoco.branch.minimum>
         <jacoco.check.skip>false</jacoco.check.skip>
     </properties>
 
