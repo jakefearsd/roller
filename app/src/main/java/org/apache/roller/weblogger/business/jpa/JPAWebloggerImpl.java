@@ -26,6 +26,7 @@ import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.WebloggerImpl;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
@@ -51,6 +52,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
         MediaFileManager     mediaFileManager,
         FileContentManager   fileContentManager,
         ShareLinkManager     shareLinkManager,
+        WeblogPageManager    weblogPageManager,
         PluginManager        pluginManager,
         PropertiesManager    propertiesManager,
         ThemeManager         themeManager,
@@ -65,6 +67,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
             mediaFileManager,
             fileContentManager,
             shareLinkManager,
+            weblogPageManager,
             pluginManager,
             propertiesManager,
             themeManager,

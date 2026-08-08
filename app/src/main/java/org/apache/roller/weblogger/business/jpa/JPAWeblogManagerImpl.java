@@ -161,6 +161,11 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         removeShareLinks.setParameter(1, weblog);
         removeShareLinks.executeUpdate();
 
+        // remove static pages
+        Query removePages = strategy.getNamedUpdate("WeblogPage.removeByWeblog");
+        removePages.setParameter(1, weblog);
+        removePages.executeUpdate();
+
         // remove mediafile metadata
         // remove uploaded files
         MediaFileManager mfmgr = WebloggerFactory.getWeblogger().getMediaFileManager();

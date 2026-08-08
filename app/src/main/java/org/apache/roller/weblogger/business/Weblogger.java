@@ -97,6 +97,11 @@ public interface Weblogger {
     ShareLinkManager getShareLinkManager();
 
     /**
+     * Get the WeblogPageManager, which handles static pages.
+     */
+    WeblogPageManager getWeblogPageManager();
+
+    /**
      * Get the URLStrategy used to build all urls in the system.
      */
     URLStrategy getUrlStrategy();
