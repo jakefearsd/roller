@@ -226,6 +226,29 @@ class PageEditControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void savingWithAnUnrecognizedStatusSavesAsDraftRatherThanThrowing() throws Exception {
+        // A crafted POST can carry any string in bean.status -- the dropdown
+        // only ever offers DRAFT/PUBLISHED, but nothing stops a direct POST
+        // of bean.status=BOGUS. PubStatus.valueOf throws IllegalArgumentException
+        // on anything it does not recognize, and that must not reach the
+        // caller as a 500.
+        PageBean bean = new PageBean();
+        bean.setSlug("about");
+        bean.setTitle("About");
+        bean.setStatus("BOGUS");
+
+        String view = controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals(".PageEdit", view);
+        assertTrue(errors(model).isEmpty(), "Expected no error, got: " + errors(model));
+
+        org.mockito.ArgumentCaptor<WeblogPage> saved =
+                org.mockito.ArgumentCaptor.forClass(WeblogPage.class);
+        verify(weblogger.getWeblogPageManager()).savePage(saved.capture());
+        assertEquals(WeblogPage.PubStatus.DRAFT, saved.getValue().getStatus());
+    }
+
+    @Test
     void anUnrelatedSaveFailureIsReportedGenerically() throws Exception {
         doThrow(new WebloggerException("database down"))
                 .when(weblogger.getWeblogPageManager()).savePage(any());
@@ -296,6 +319,21 @@ class PageEditControllerTest extends EditorControllerTestSupport {
     void copyToDefaultsABlankStatusToDraftRatherThanThrowing() {
         PageBean bean = new PageBean();
         bean.setStatus(null);
+        WeblogPage page = new WeblogPage();
+
+        bean.copyTo(page);
+
+        assertEquals(WeblogPage.PubStatus.DRAFT, page.getStatus());
+    }
+
+    @Test
+    void copyToDefaultsAnUnrecognizedStatusToDraftRatherThanThrowing() {
+        // The dropdown only ever offers DRAFT/PUBLISHED, but the bean is
+        // bound from raw POST data, so PubStatus.valueOf's
+        // IllegalArgumentException on anything else must be caught here, not
+        // just the blank case.
+        PageBean bean = new PageBean();
+        bean.setStatus("BOGUS");
         WeblogPage page = new WeblogPage();
 
         bean.copyTo(page);

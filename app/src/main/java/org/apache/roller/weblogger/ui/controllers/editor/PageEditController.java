@@ -121,9 +121,12 @@ public class PageEditController extends BaseController {
             }
         }
 
-        bean.copyTo(page);
-
+        // copyTo is inside the try, not before it, the same shape as
+        // EntryEditController#doSave -- it is defensive against a garbage
+        // status (see PageBean#parseStatus) but is still ordinary application
+        // code reachable from a crafted POST, and nothing here may 500.
         try {
+            bean.copyTo(page);
             weblogger.getWeblogPageManager().savePage(page);
             weblogger.flush();
             bean.copyFrom(page);
@@ -142,6 +145,14 @@ public class PageEditController extends BaseController {
                 log.error("Error saving page " + bean.getId(), ex);
                 addError(model, "generic.error.check.logs", request);
             }
+            if (!isNew) {
+                model.addAttribute("page", page);
+            }
+        } catch (Exception ex) {
+            // Catch-all, matching EntryEditController#doSave's shape: nothing
+            // in this method may turn a bad POST into a 500.
+            log.error("Error saving page " + bean.getId(), ex);
+            addError(model, "generic.error.check.logs", request);
             if (!isNew) {
                 model.addAttribute("page", page);
             }

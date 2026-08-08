@@ -153,11 +153,7 @@ public class PageBean {
         page.setSlug(slug);
         page.setTitle(title);
         page.setContent(content);
-        // A blank/unrecognized status defaults to DRAFT rather than throwing
-        // -- the same reasoning as WeblogPage's own field default: a status
-        // the form somehow failed to carry must not turn into a 500.
-        page.setStatus(StringUtils.isBlank(status)
-                ? WeblogPage.PubStatus.DRAFT : WeblogPage.PubStatus.valueOf(status));
+        page.setStatus(parseStatus(status));
         page.setShowInNav(showInNav);
         page.setNavOrder(navOrder);
         page.setMetaTitle(metaTitle);
@@ -165,6 +161,26 @@ public class PageBean {
         page.setCanonicalUrl(canonicalUrl);
         page.setNoindex(noindex);
         page.setOgImageId(ogImageId);
+    }
+
+    /**
+     * A blank or unrecognized status defaults to DRAFT rather than throwing --
+     * the same reasoning as {@code WeblogEntry.JsonLdType.fromString}: a
+     * status the form somehow failed to carry, or a crafted POST carrying
+     * garbage ({@code bean.status=BOGUS}), must not turn into a 500. This is
+     * genuinely lenient (catches {@link IllegalArgumentException}), not just
+     * a blank check -- {@code PubStatus.valueOf} throws on any unrecognized
+     * name, and a blank check alone leaves every other bad value unguarded.
+     */
+    private static WeblogPage.PubStatus parseStatus(String value) {
+        if (!StringUtils.isBlank(value)) {
+            try {
+                return WeblogPage.PubStatus.valueOf(value);
+            } catch (IllegalArgumentException ignored) {
+                // falls through to the DRAFT default below
+            }
+        }
+        return WeblogPage.PubStatus.DRAFT;
     }
 
     /** Populates this bean from an existing page, for the edit form. */

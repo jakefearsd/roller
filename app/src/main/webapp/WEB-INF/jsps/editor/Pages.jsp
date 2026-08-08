@@ -55,13 +55,13 @@
 
             <c:forEach items="${pages}" var="p">
                 <tr data-page-id="${fn:escapeXml(p.id)}" data-page-slug="${fn:escapeXml(p.slug)}">
-                    <td>/${p.slug}</td>
+                    <td>/<c:out value="${p.slug}"/></td>
                     <td>
                         <c:url var="editUrl" value="/roller-ui/authoring/pageEdit.rol">
                             <c:param name="weblog" value="${actionWeblog.handle}"/>
                             <c:param name="id" value="${p.id}"/>
                         </c:url>
-                        <a href="${editUrl}">${p.title}</a>
+                        <a href="${editUrl}"><c:out value="${p.title}"/></a>
                     </td>
                     <td>
                         <c:choose>
