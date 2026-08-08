@@ -35,5 +35,6 @@
     <mapping-file>org/apache/roller/weblogger/pojos/WeblogPage.orm.xml</mapping-file>
     <mapping-file>org/apache/roller/weblogger/pojos/RollerEvent.orm.xml</mapping-file>
     <mapping-file>org/apache/roller/weblogger/pojos/FormSubmission.orm.xml</mapping-file>
+    <mapping-file>org/apache/roller/weblogger/pojos/UserToken.orm.xml</mapping-file>
   </persistence-unit>
 </persistence>

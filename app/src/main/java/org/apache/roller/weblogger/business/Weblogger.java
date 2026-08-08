@@ -112,6 +112,12 @@ public interface Weblogger {
     FormSubmissionManager getFormSubmissionManager();
 
     /**
+     * Get the UserTokenManager, which handles single-use, expiring account
+     * tokens (forgot-password, admin set-password links).
+     */
+    UserTokenManager getUserTokenManager();
+
+    /**
      * Get the URLStrategy used to build all urls in the system.
      */
     URLStrategy getUrlStrategy();

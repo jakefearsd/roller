@@ -58,6 +58,9 @@
 
         </form>
 
+<p class="mt-3"><a href="<c:url value='/roller-ui/forgotPassword.rol'/>">
+    <spring:message code="loginPage.forgotPassword"/></a></p>
+
 <script>
 
     // There used to be a second, OpenID login form on this page, and

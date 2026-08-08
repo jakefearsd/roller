@@ -75,6 +75,7 @@ public final class MockWeblogger {
     private final URLStrategy urlStrategy = mock(URLStrategy.class);
     private final FormSubmissionManager formSubmissionManager = mock(FormSubmissionManager.class);
     private final EventManager eventManager = mock(EventManager.class);
+    private final UserTokenManager userTokenManager = mock(UserTokenManager.class);
 
     private int flushCount;
 
@@ -94,6 +95,7 @@ public final class MockWeblogger {
         when(weblogger.getUrlStrategy()).thenReturn(urlStrategy);
         when(weblogger.getFormSubmissionManager()).thenReturn(formSubmissionManager);
         when(weblogger.getEventManager()).thenReturn(eventManager);
+        when(weblogger.getUserTokenManager()).thenReturn(userTokenManager);
 
         // Count commits. A manager call that is never flushed is a change that
         // never reaches the database, and nothing else these tests can observe
@@ -235,6 +237,10 @@ public final class MockWeblogger {
         return eventManager;
     }
 
+    public UserTokenManager getUserTokenManager() {
+        return userTokenManager;
+    }
+
     public UserManager userManager() {
         return userManager;
     }
@@ -289,5 +295,9 @@ public final class MockWeblogger {
 
     public EventManager eventManager() {
         return eventManager;
+    }
+
+    public UserTokenManager userTokenManager() {
+        return userTokenManager;
     }
 }

@@ -145,6 +145,46 @@ class UserQueryAndRoleTest {
         assertNull(users().getUser("no-such-id"));
     }
 
+    /**
+     * The forgot-password identifier lookup. {@code TestUtils.setupUser}
+     * gives every fixture the same email address, so this gives alice a
+     * distinct one first -- otherwise the query could not tell her apart
+     * from bob or the disabled account.
+     */
+    @Test
+    void lookupByEmailFindsAnEnabledAccount() throws Exception {
+        String email = aliceName + "@example.invalid";
+        User managed = users().getUserByUserName(aliceName);
+        managed.setEmailAddress(email);
+        users().saveUser(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        User found = users().getUserByEmail(email);
+
+        assertNotNull(found);
+        assertEquals(aliceName, found.getUserName());
+    }
+
+    @Test
+    void lookupByEmailHidesADisabledAccount() throws Exception {
+        String email = disabledName + "@example.invalid";
+        User managed = users().getUserByUserName(disabledName, Boolean.FALSE);
+        managed.setEmailAddress(email);
+        users().saveUser(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        assertNull(users().getUserByEmail(email),
+                "the forgot-password lookup must not find a disabled account, "
+                        + "the same as the by-username lookup it backstops");
+    }
+
+    @Test
+    void lookupByEmailOfAnUnknownAddressReturnsNothing() throws Exception {
+        assertNull(users().getUserByEmail("nobody@example.invalid"));
+    }
+
     // -------------------------------------------------------------- listing
 
     @Test

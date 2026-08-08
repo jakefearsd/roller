@@ -226,13 +226,22 @@ class EqualsContractTest {
 
                 new Specimen("FormSubmission (keyed on id)",
                         formSubmission("submission-a"), formSubmission("submission-a"),
-                        formSubmission("submission-b")));
+                        formSubmission("submission-b")),
+
+                new Specimen("UserToken (keyed on id)",
+                        userToken("token-a"), userToken("token-a"), userToken("token-b")));
     }
 
     private static FormSubmission formSubmission(String id) {
         FormSubmission submission = new FormSubmission();
         submission.setId(id);
         return submission;
+    }
+
+    private static UserToken userToken(String id) {
+        UserToken token = new UserToken();
+        token.setId(id);
+        return token;
     }
 
     private static WeblogPage page(String id) {

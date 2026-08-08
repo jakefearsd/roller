@@ -106,6 +106,19 @@ public interface UserManager {
     User getUserByUserName(String userName, Boolean enabled)
         throws WebloggerException;
 
+    /**
+     * Lookup an enabled user by email address.
+     *
+     * <p>Restricted to enabled users, the same as {@link #getUserByUserName(String)}
+     * -- a disabled account must not be reachable through the forgot-password
+     * identifier lookup.
+     *
+     * @param emailAddress email address of the user to lookup.
+     * @return The enabled user with this email address, or null if not found.
+     * @throws WebloggerException If there is a problem.
+     */
+    User getUserByEmail(String emailAddress) throws WebloggerException;
+
 
     /**
      * Lookup a group of users.

@@ -48,6 +48,7 @@ public abstract class WebloggerImpl implements Weblogger {
     private final WeblogPageManager    weblogPageManager;
     private final EventManager         eventManager;
     private final FormSubmissionManager formSubmissionManager;
+    private final UserTokenManager     userTokenManager;
     private final PluginManager        pluginManager;
     private final PropertiesManager    propertiesManager;
     private final ThemeManager         themeManager;
@@ -74,6 +75,7 @@ public abstract class WebloggerImpl implements Weblogger {
         WeblogPageManager    weblogPageManager,
         EventManager         eventManager,
         FormSubmissionManager formSubmissionManager,
+        UserTokenManager     userTokenManager,
         PluginManager        pluginManager,
         PropertiesManager    propertiesManager,
         ThemeManager         themeManager,
@@ -90,6 +92,7 @@ public abstract class WebloggerImpl implements Weblogger {
         this.weblogPageManager   = weblogPageManager;
         this.eventManager        = eventManager;
         this.formSubmissionManager = formSubmissionManager;
+        this.userTokenManager    = userTokenManager;
         this.pluginManager       = pluginManager;
         this.propertiesManager   = propertiesManager;
         this.themeManager        = themeManager;
@@ -219,6 +222,17 @@ public abstract class WebloggerImpl implements Weblogger {
     @Override
     public FormSubmissionManager getFormSubmissionManager() {
         return formSubmissionManager;
+    }
+
+
+    /**
+     *
+     *
+     * @see org.apache.roller.weblogger.business.Weblogger#getUserTokenManager()
+     */
+    @Override
+    public UserTokenManager getUserTokenManager() {
+        return userTokenManager;
     }
 
 

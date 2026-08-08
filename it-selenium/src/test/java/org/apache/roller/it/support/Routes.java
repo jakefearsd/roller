@@ -152,6 +152,11 @@ public final class Routes {
             // logged out or logged in. Login.jsp's form is unconditional.
             new Route("/roller-ui/login.rol", Role.ANONYMOUS, "", "#loginForm"),
 
+            // PasswordResetController.isUserRequired() is false, matching
+            // LoginController; the form is unconditional.
+            new Route("/roller-ui/forgotPassword.rol", Role.ANONYMOUS, "",
+                    "form[action$='/roller-ui/forgotPassword!send.rol']"),
+
             // Landing page for authorization failures. RollerHandlerInterceptor
             // redirects here; it previously had no handler at all, so every denial
             // produced a bare 404. denied.jsp's only distinctive element is its h2.
@@ -338,6 +343,12 @@ public final class Routes {
                             + "reason as the share page above. ShareLinkIT asserts the "
                             + "grid's share-scoped media URLs load and that the base "
                             + "media path 404s for the private directory."),
+            new SkippedRoute("/roller-ui/resetPassword.rol", Role.ANONYMOUS,
+                    "Needs a token= query parameter naming a live UserToken row; "
+                            + "tokens are minted per forgot-password request, so there is "
+                            + "no literal URL to sweep. Without one the required "
+                            + "@RequestParam makes the request 400 rather than render a "
+                            + "page. Covered by PasswordResetControllerTest."),
 
             // --- need a seeded entity id ---
 

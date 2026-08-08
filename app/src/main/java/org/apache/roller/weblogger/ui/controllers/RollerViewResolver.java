@@ -185,6 +185,18 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "styles",  "/WEB-INF/jsps/core/Login-css.jsp"
                 ));
 
+        addExtendedDefinition(".ForgotPassword", ".tiles-loginpage",
+                Map.of(
+                        "content", "/WEB-INF/jsps/core/ForgotPassword.jsp",
+                        "styles",  "/WEB-INF/jsps/core/Login-css.jsp"
+                ));
+
+        addExtendedDefinition(".ResetPassword", ".tiles-loginpage",
+                Map.of(
+                        "content", "/WEB-INF/jsps/core/ResetPassword.jsp",
+                        "styles",  "/WEB-INF/jsps/core/Login-css.jsp"
+                ));
+
 
         // ---- setup / install pages ----
 

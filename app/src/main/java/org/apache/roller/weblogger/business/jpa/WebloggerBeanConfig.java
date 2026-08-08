@@ -29,6 +29,7 @@ import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.ShareLinkManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.UserManager;
+import org.apache.roller.weblogger.business.UserTokenManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.WeblogPageManager;
@@ -141,6 +142,11 @@ public class WebloggerBeanConfig {
     }
 
     @Bean
+    public UserTokenManager userTokenManager(JPAPersistenceStrategy strategy) {
+        return new JPAUserTokenManagerImpl(strategy);
+    }
+
+    @Bean
     public IndexManager indexManager(@Lazy Weblogger weblogger) {
         return new LuceneIndexManager(weblogger);
     }
@@ -170,6 +176,7 @@ public class WebloggerBeanConfig {
             WeblogPageManager weblogPageManager,
             EventManager eventManager,
             FormSubmissionManager formSubmissionManager,
+            UserTokenManager userTokenManager,
             PluginManager pluginManager,
             PropertiesManager propertiesManager,
             ThemeManager themeManager,
@@ -187,6 +194,7 @@ public class WebloggerBeanConfig {
                 weblogPageManager,
                 eventManager,
                 formSubmissionManager,
+                userTokenManager,
                 pluginManager,
                 propertiesManager,
                 themeManager,

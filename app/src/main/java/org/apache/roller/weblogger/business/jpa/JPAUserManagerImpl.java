@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import jakarta.persistence.NoResultException;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -73,12 +74,18 @@ public class JPAUserManagerImpl implements UserManager {
     @Override
     public void removeUser(User user) throws WebloggerException {
         String userName = user.getUserName();
-        
+
         // remove permissions, maintaining both sides of relationship
         List<WeblogPermission> perms = getWeblogPermissions(user);
         for (WeblogPermission perm : perms) {
             this.strategy.remove(perm);
         }
+
+        // roller_user_token rows FK the user with no cascade
+        Query removeTokens = strategy.getNamedUpdate("UserToken.removeByUser");
+        removeTokens.setParameter(1, user);
+        removeTokens.executeUpdate();
+
         this.strategy.remove(user);
 
         // remove entry from cache mapping
@@ -183,6 +190,21 @@ public class JPAUserManagerImpl implements UserManager {
         }
 
         return user;
+    }
+
+    @Override
+    public User getUserByEmail(String emailAddress) throws WebloggerException {
+        if (emailAddress == null) {
+            throw new WebloggerException("emailAddress cannot be null");
+        }
+        TypedQuery<User> query = strategy.getNamedQuery("User.getByEmailAddress&Enabled", User.class);
+        query.setParameter(1, emailAddress);
+        query.setParameter(2, Boolean.TRUE);
+        try {
+            return query.getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
     }
 
     @Override

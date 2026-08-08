@@ -30,6 +30,9 @@
         <named-query name="User.getByUserName&amp;Enabled">
             <query>SELECT u FROM User u WHERE u.userName= ?1 AND u.enabled = ?2</query>
         </named-query>
+        <named-query name="User.getByEmailAddress&amp;Enabled">
+            <query>SELECT u FROM User u WHERE u.emailAddress = ?1 AND u.enabled = ?2</query>
+        </named-query>
         <named-query name="User.getByUserNameOrEmailAddressStartsWith">
             <query>SELECT u FROM User u WHERE u.userName LIKE ?1 OR u.emailAddress LIKE ?1</query>
         </named-query>
