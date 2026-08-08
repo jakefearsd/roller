@@ -46,13 +46,12 @@ import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.MarkdownRenderer;
+import org.apache.roller.weblogger.business.ContentRenderer;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeContext;
-import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.apache.roller.weblogger.util.I18nMessages;
@@ -1183,27 +1182,10 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
                 }
             }
         }
-        // Shortcodes are NOT opt-in the way named plugins are: they expand
-        // unconditionally in every render path, before sanitization
-        // (see docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md).
-        ret = ShortcodeExpander.defaultExpander().expand(this, ret);
-        // Markdown, unconditionally: it is the storage format for every entry
-        // in the system, not a per-entry option.
-        //
-        // It runs AFTER shortcode expansion, which is the reverse of what it
-        // looks like it should be. Markdown first would escape the quotes in
-        // [gallery dir="Iceland"] to &quot;, and the expander's attribute
-        // grammar does not match entity-quoted values, so every shortcode
-        // carrying an attribute would silently stop working. Expanding first is
-        // safe because commonmark passes raw HTML through verbatim in block and
-        // inline positions alike; the only cost is that markdown syntax inside
-        // a shortcode's own emitted text is interpreted, which is cosmetic.
-        //
-        // Raw HTML is deliberately not escaped here -- authors paste embed
-        // snippets, and the shortcodes emit HTML. The sanitizer below is the
-        // security boundary.
-        ret = MarkdownRenderer.render(ret);
-        return HTMLSanitizer.conditionallySanitize(ret);
+        // Named entry plugins are opt-in per entry and stay here. Everything
+        // below -- shortcodes, markdown, sanitization -- is universal and
+        // lives in ContentRenderer so WeblogPage gets the identical pipeline.
+        return ContentRenderer.render(this, ret);
     }
     
     
