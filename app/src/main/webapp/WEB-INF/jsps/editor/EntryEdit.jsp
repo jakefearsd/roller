@@ -594,6 +594,82 @@
 
 <%-- ========================================================================================== --%>
 
+<%-- "Send as newsletter": a manual, synchronous, cannot-double-send action.
+     Shown for published entries only -- an unpublished draft has no rendered
+     content to mail out. Outside the main entry form, its own POST with its
+     own CSRF input, exactly like the share-link card above. --%>
+
+<c:if test="${actionName == 'entryEdit' && entry.published}">
+    <div id="newsletterCard" class="card mt-3">
+        <div class="card-header"><spring:message code="newsletter.cardTitle"/></div>
+        <div class="card-body">
+            <c:choose>
+                <c:when test="${not empty entry.newsletterSentAt}">
+                    <p class="pagetip" id="newsletterSentAt">
+                        <spring:message code="newsletter.sentAt" arguments="${entry.newsletterSentAt}"/>
+                    </p>
+                </c:when>
+                <c:when test="${empty actionWeblog.newsletterListUuid}">
+                    <p class="pagetip" id="newsletterNoList">
+                        <spring:message code="newsletter.noList"/>
+                        <c:url value="/roller-ui/authoring/weblogConfig.rol" var="newsletterWeblogConfigUrl">
+                            <c:param name="weblog" value="${actionWeblog.handle}"/>
+                        </c:url>
+                        <a href="${newsletterWeblogConfigUrl}"><spring:message code="tabbedmenu.website.settings"/></a>
+                    </p>
+                </c:when>
+                <c:otherwise>
+                    <button type="button" class="btn btn-primary" id="sendNewsletterButton"
+                            onclick="showNewsletterModal()">
+                        <spring:message code="newsletter.send"/>
+                    </button>
+                </c:otherwise>
+            </c:choose>
+        </div>
+    </div>
+
+    <div id="newsletter-confirm-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!sendNewsletter.rol"
+                      method="post">
+                    <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+                    <input type="hidden" name="bean.id" value="${entry.id}"/>
+
+                    <div class="modal-header">
+                        <h4 class="modal-title"><spring:message code="newsletter.confirmTitle"/></h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <p><spring:message code="newsletter.confirmBody"/></p>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary" id="confirmSendNewsletterButton">
+                            <spring:message code="newsletter.send"/>
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <spring:message code="generic.no"/>
+                        </button>
+                    </div>
+
+                    <sec:csrfInput/>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showNewsletterModal() {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('newsletter-confirm-modal')).show();
+        }
+    </script>
+</c:if>
+
+
+<%-- ========================================================================================== --%>
+
 <%-- entry revisions: every content-changing save leaves one. Outside the main
      entry form for the same reason the share card is: restore is its own POST
      with its own CSRF token, and forms must not nest. --%>

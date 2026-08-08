@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,9 +32,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.ListmonkClient;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
@@ -80,6 +83,15 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class EntryEditController extends BaseController {
 
     private static final Log log = LogFactory.getLog(EntryEditController.class);
+
+    /**
+     * The Listmonk client used by {@link #entryEditSendNewsletter}, built
+     * lazily on first use -- {@code WebloggerConfig} is not necessarily
+     * loaded when Spring instantiates controllers, exactly as
+     * {@code NewsletterController.listmonkClient} is deferred for the same
+     * reason.
+     */
+    private volatile ListmonkClient listmonkClient;
 
     @Override
     public List<String> requiredWeblogPermissionActions() {
@@ -440,6 +452,110 @@ public class EntryEditController extends BaseController {
             addFlashError(redirectAttributes, "shareLink.error", request);
         }
         return redirectToEntryEdit(request, entry);
+    }
+
+    /**
+     * Sends the entry as a Listmonk newsletter campaign to the weblog's
+     * configured list -- SYNCHRONOUSLY, in the POST itself. This is a
+     * deliberate spec deviation from a background job: there is no retry
+     * queue, so the human who clicked "Send as newsletter" IS the retry
+     * mechanism. {@code newsletterSentAt} is stamped ONLY after
+     * {@link ListmonkClient#sendCampaign} returns successfully, so a failed
+     * attempt leaves the button showing and nothing gets stamped -- and,
+     * conversely, an already-stamped entry is refused before the client is
+     * ever touched. Together those two guarantee an entry cannot be sent
+     * twice.
+     *
+     * <p>Re-renders the edit view either way (never a redirect), so the
+     * author sees the result -- success, "already sent", or the failure
+     * message -- on the same page they clicked from.
+     */
+    @PostMapping("/entryEdit!sendNewsletter.rol")
+    public String entryEditSendNewsletter(
+            @RequestParam(name = "bean.id") String entryId,
+            HttpServletRequest request, Model model) {
+        populateCommonModel(request, model);
+        model.addAttribute("actionName", "entryEdit");
+        model.addAttribute("pageTitle", getText("weblogEdit.title.editEntry", request));
+
+        WeblogEntry entry = lookupEntry(entryId, request);
+        if (entry == null) {
+            return "redirect:/roller-ui/menu.rol";
+        }
+
+        if (!entry.isPublished()) {
+            addError(model, "newsletter.notPublished", request);
+        } else if (entry.getNewsletterSentAt() != null) {
+            addError(model, "newsletter.alreadySent", request);
+        } else {
+            String listUuid = getActionWeblog(request).getNewsletterListUuid();
+            ListmonkClient client = listmonkClient();
+            if (StringUtils.isBlank(listUuid)) {
+                addError(model, "newsletter.noList", request);
+            } else if (!client.isCampaignConfigured()) {
+                addError(model, "newsletter.notConfigured", request);
+            } else {
+                sendNewsletterCampaign(entry, listUuid, client, model, request);
+            }
+        }
+
+        EntryBean bean = new EntryBean();
+        bean.copyFrom(entry, request.getLocale());
+        model.addAttribute("entry", entry);
+        addEntryModelAttributes(request, model, entry, bean);
+        return ".EntryEdit";
+    }
+
+    /**
+     * The actual send, isolated so {@link #entryEditSendNewsletter} reads as
+     * the guard sequence it is. Builds the campaign HTML from the same
+     * theme-independent seam feeds use ({@code getTransformedText()}) so the
+     * newsletter body matches what the entry renders as, escapes only the
+     * title (the body is already-sanitized HTML by the time it reaches
+     * here), and stamps {@code newsletterSentAt} strictly after
+     * {@code sendCampaign} returns without throwing.
+     */
+    private void sendNewsletterCampaign(WeblogEntry entry, String listUuid, ListmonkClient client,
+                                        Model model, HttpServletRequest request) {
+        String html = "<h1>" + StringEscapeUtils.escapeHtml4(entry.getTitle()) + "</h1>\n"
+                + entry.getTransformedText()
+                + "\n<p><a href=\"" + entry.getPermalink() + "\">Read on the site</a></p>";
+        try {
+            client.sendCampaign(listUuid, entry.getTitle(), html);
+            entry.setNewsletterSentAt(new Timestamp(System.currentTimeMillis()));
+            weblogger.getWeblogEntryManager().saveWeblogEntry(entry);
+            weblogger.flush();
+            addMessage(model, "newsletter.sent", request);
+        } catch (IOException ex) {
+            log.error("Error sending newsletter campaign for entry " + entry.getId(), ex);
+            addError(model, "newsletter.sendFailed", ex.getMessage(), request);
+        } catch (WebloggerException ex) {
+            log.error("Error saving entry after newsletter send " + entry.getId(), ex);
+            addError(model, "generic.error.check.logs", request);
+        }
+    }
+
+    /**
+     * Package-private so {@code EntryEditNewsletterTest} can inject a mock
+     * without a real Listmonk instance -- the same seam shape
+     * {@code NewsletterController.setListmonkClient} gives its collaborator.
+     */
+    void setListmonkClient(ListmonkClient client) {
+        this.listmonkClient = client;
+    }
+
+    private ListmonkClient listmonkClient() {
+        ListmonkClient client = listmonkClient;
+        if (client == null) {
+            synchronized (this) {
+                client = listmonkClient;
+                if (client == null) {
+                    client = ListmonkClient.fromConfig();
+                    listmonkClient = client;
+                }
+            }
+        }
+        return client;
     }
 
     private String redirectToEntryEdit(HttpServletRequest request, WeblogEntry entry) {
