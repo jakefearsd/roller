@@ -29,6 +29,7 @@ import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.pojos.wrapper.ThemeTemplateWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogCategoryWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
@@ -194,6 +195,14 @@ public class PageModel implements Model {
     }
     
     
+    /**
+     * The static page being rendered, or null on every other weblog view.
+     */
+    public WeblogPage getPage() {
+        return pageRequest.getWeblogPageContent();
+    }
+
+
     /**
      * Get weblog entry being displayed or null if none specified by request.
      */

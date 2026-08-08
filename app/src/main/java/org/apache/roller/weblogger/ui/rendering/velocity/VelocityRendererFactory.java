@@ -21,6 +21,7 @@ package org.apache.roller.weblogger.ui.rendering.velocity;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.pojos.StaticThemeTemplate;
 import org.apache.roller.weblogger.pojos.Template;
 import org.apache.roller.weblogger.pojos.TemplateRendition;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
@@ -35,7 +36,7 @@ import org.apache.velocity.exception.ResourceNotFoundException;
  */
 public class VelocityRendererFactory implements RendererFactory {
     private static final Log log = LogFactory.getLog(VelocityRendererFactory.class);
-    
+
     @Override
     public Renderer getRenderer(Template template) {
 
@@ -44,19 +45,31 @@ public class VelocityRendererFactory implements RendererFactory {
             return null;
         }
 
-        TemplateRendition tr;
-        try {
-            tr = template.getTemplateRendition(RenditionType.STANDARD);
-            if (tr == null) {
+        // A StaticThemeTemplate (e.g. the popup-comments or the static-page
+        // fallback shipped inside the WAR) is not persisted, so it has no
+        // rendition row to read a language from -- by design,
+        // getTemplateRendition() always answers null for one. It carries its
+        // language directly instead; read that rather than treating "no
+        // rendition" as "not a Velocity template".
+        TemplateLanguage lang;
+        if (template instanceof StaticThemeTemplate staticThemeTemplate) {
+            lang = staticThemeTemplate.getTemplateLanguage();
+        } else {
+            TemplateRendition tr;
+            try {
+                tr = template.getTemplateRendition(RenditionType.STANDARD);
+                if (tr == null) {
+                    return null;
+                }
+            } catch (WebloggerException e) {
                 return null;
             }
-        } catch (WebloggerException e) {
-            return null;
+            lang = tr.getTemplateLanguage();
         }
 
         Renderer renderer = null;
 
-        if (TemplateLanguage.VELOCITY.equals(tr.getTemplateLanguage())) {
+        if (TemplateLanguage.VELOCITY.equals(lang)) {
             // standard velocity template
             try {
                renderer = new VelocityRenderer(template);

@@ -38,14 +38,14 @@ import org.springframework.mock.web.MockServletContext;
  * the whole app suite shares one forked JVM and RollerVelocity cannot be
  * re-initialized.
  */
-final class RenderingTestSupport {
+public final class RenderingTestSupport {
 
     private static boolean runtimeReady;
 
     private RenderingTestSupport() {
     }
 
-    static synchronized void ensureRenderingRuntime() throws Exception {
+    public static synchronized void ensureRenderingRuntime() throws Exception {
         TestUtils.setupWeblogger();
         if (runtimeReady) {
             return;
@@ -58,7 +58,7 @@ final class RenderingTestSupport {
     }
 
     /** Render caches are per-JVM singletons and nothing clears them between tests. */
-    static void clearRenderCaches() {
+    public static void clearRenderCaches() {
         CacheManager.clear();
     }
 
@@ -134,7 +134,7 @@ final class RenderingTestSupport {
         }
     }
 
-    static PageServlet pageServlet() throws ServletException {
+    public static PageServlet pageServlet() throws ServletException {
         return init(new PageServlet());
     }
 
@@ -171,7 +171,7 @@ final class RenderingTestSupport {
         return servlet;
     }
 
-    static MockHttpServletRequest anonymousGet(String servletPath, String pathInfo) {
+    public static MockHttpServletRequest anonymousGet(String servletPath, String pathInfo) {
         return anonymousRequest("GET", servletPath, pathInfo);
     }
 
@@ -203,7 +203,7 @@ final class RenderingTestSupport {
         return request;
     }
 
-    static MockHttpServletResponse execute(HttpServlet servlet,
+    public static MockHttpServletResponse execute(HttpServlet servlet,
             MockHttpServletRequest request) throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
         try {

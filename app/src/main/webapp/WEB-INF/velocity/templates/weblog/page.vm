@@ -1,0 +1,33 @@
+#**
+The default rendering for a static page, used when the weblog's theme does
+not supply a template named _page. Kept close to the themes' own permalink
+markup so a page does not look foreign inside any of them.
+*#
+<!DOCTYPE html>
+<html lang="$utils.escapeHTML($model.weblog.locale)">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
+    <title>$utils.escapeHTML($model.page.title) : $utils.escapeHTML($model.weblog.name)</title>
+    #showSeoHead()
+    #showAnalyticsTrackingCode($model.weblog)
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    #showGalleryGridStyles()
+</head>
+<body>
+<header>
+    <p><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
+    <nav>#showPageLinks($model.weblog)</nav>
+</header>
+<main>
+    <article>
+        <h1>$utils.escapeHTML($model.page.title)</h1>
+        $model.page.renderedContent
+    </article>
+</main>
+#showGalleryAssets()
+#showMapAssets()
+#showEmbedAssets()
+</body>
+</html>

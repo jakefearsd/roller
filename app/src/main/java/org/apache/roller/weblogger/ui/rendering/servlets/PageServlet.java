@@ -378,6 +378,22 @@ public class PageServlet extends HttpServlet {
             return page;
         }
 
+        // A static page: the theme may override with a custom template named
+        // _page, exactly as it may override _popupcomments; otherwise the
+        // shipped default renders it. Falling back rather than 404ing means a
+        // theme does not have to know pages exist.
+        if (pageRequest.getWeblogPageContent() != null) {
+            ThemeTemplate template = null;
+            try {
+                template = weblog.getTheme().getTemplateByName("_page");
+            } catch (Exception e) {
+                // ignored ... considered page not found
+            }
+            return template != null ? template
+                    : new StaticThemeTemplate("templates/weblog/page.vm",
+                            TemplateLanguage.VELOCITY);
+        }
+
         // If request specified the page, then go with that. No fallback: this
         // one 404s rather than quietly serving the default template.
         if ("page".equals(pageRequest.getContext())) {

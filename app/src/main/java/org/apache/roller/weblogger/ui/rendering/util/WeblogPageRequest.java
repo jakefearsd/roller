@@ -26,9 +26,12 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.pojos.ReservedSlugs;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.util.Utilities;
 
@@ -65,6 +68,7 @@ public class WeblogPageRequest extends WeblogRequest {
     private WeblogEntry weblogEntry = null;
     private ThemeTemplate weblogPage = null;
     private WeblogCategory weblogCategory = null;
+    private WeblogPage weblogPageContent = null;
 
     // Page hits
     private boolean websitePageHit = false;
@@ -168,10 +172,20 @@ public class WeblogPageRequest extends WeblogRequest {
                 }
 
             } else {
-                // empty data is only allowed for the tags section
+                // A single path element. It is either /tags (the one context
+                // that takes no argument) or a page slug: /<handle>/about.
+                // Anything else 404s at the servlet, not here.
                 if (!"tags".equals(this.context)) {
-                    throw new InvalidRequestException("invalid index page, "
-                            + request.getRequestURL());
+                    if (ReservedSlugs.isReserved(this.context)) {
+                        throw new InvalidRequestException("invalid index page, "
+                                + request.getRequestURL());
+                    }
+                    this.weblogPageContent = lookUpPage(this.context);
+                    if (this.weblogPageContent == null) {
+                        throw new InvalidRequestException("no such page, "
+                                + request.getRequestURL());
+                    }
+                    otherPageHit = true;
                 }
             }
         } else {
@@ -258,6 +272,27 @@ public class WeblogPageRequest extends WeblogRequest {
 
     boolean isValidDestination(String servlet) {
         return (servlet != null && PAGE_SERVLET.equals(servlet));
+    }
+
+    /**
+     * The page for a bare slug on this weblog, or null. Drafts are invisible
+     * here rather than at the servlet: an unpublished page must be
+     * indistinguishable from one that does not exist.
+     */
+    private WeblogPage lookUpPage(String slug) {
+        try {
+            Weblog weblog = getWeblog();
+            if (weblog == null) {
+                return null;
+            }
+            WeblogPage page = WebloggerFactory.getWeblogger()
+                    .getWeblogPageManager().getPageBySlug(weblog, slug);
+            return page != null && page.getStatus() == WeblogPage.PubStatus.PUBLISHED
+                    ? page : null;
+        } catch (WebloggerException ex) {
+            log.error("Error looking up page " + slug, ex);
+            return null;
+        }
     }
 
     /**
@@ -389,6 +424,18 @@ public class WeblogPageRequest extends WeblogRequest {
 
     public void setWeblogPage(WeblogTemplate weblogPage) {
         this.weblogPage = weblogPage;
+    }
+
+    /**
+     * The published {@link WeblogPage} resolved from a bare path segment
+     * (/<handle>/<slug>), or null on every other kind of request.
+     */
+    public WeblogPage getWeblogPageContent() {
+        return weblogPageContent;
+    }
+
+    public void setWeblogPageContent(WeblogPage weblogPageContent) {
+        this.weblogPageContent = weblogPageContent;
     }
 
     public WeblogCategory getWeblogCategory() {
