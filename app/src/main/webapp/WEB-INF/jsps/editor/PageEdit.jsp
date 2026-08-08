@@ -65,16 +65,33 @@
     <div class="row mb-3">
         <div class="offset-sm-3 col-sm-9">
             <div class="form-check">
-                <%-- The "_bean.showInNav" marker is Spring's documented way to
-                     tell a plain HTML checkbox from "not part of this form":
+                <%-- The "_showInNav" marker is Spring's documented way to tell
+                     a plain HTML checkbox from "not part of this form":
                      PageBean.showInNav defaults to true (matching
                      WeblogPage's own default), so a browser leaving the box
                      unchecked submits no "bean.showInNav" param at all, and
                      without the marker WebDataBinder would fall back to that
                      true default -- meaning nav could be turned on but never
                      off. With the marker present, WebDataBinder treats a
-                     missing real value as an explicit false. --%>
-                <input type="hidden" name="_bean.showInNav" value="on"/>
+                     missing real value as an explicit false.
+
+                     The marker name is deliberately "_showInNav", NOT
+                     "_bean.showInNav" -- BaseController#initBeanBinder sets
+                     the binder's *field-default* prefix to "bean." so plain
+                     "bean.xxx" params bind by their Struts2-style name, and
+                     that rewrite (checkFieldDefaults) runs before the
+                     *field-marker* pass (checkFieldMarkers) and only ever
+                     touches params that literally start with "bean.". A
+                     marker named "_bean.showInNav" starts with "_", not
+                     "bean.", so checkFieldDefaults leaves it untouched;
+                     checkFieldMarkers then strips only the "_" and looks for
+                     a writable property named "bean.showInNav", which does
+                     not exist on PageBean, so the marker was silently
+                     discarded and an unchecked box never took effect. The
+                     marker must name the bean's real property path
+                     ("showInNav"), the same path checkFieldDefaults produces
+                     for the checked case, not the raw submitted name. --%>
+                <input type="hidden" name="_showInNav" value="on"/>
                 <label class="form-check-label">
                     <input type="checkbox" class="form-check-input" name="bean.showInNav" value="true" ${bean.showInNav ? 'checked' : ''}/>
                     <spring:message code="weblogPagesForm.showInNav"/>

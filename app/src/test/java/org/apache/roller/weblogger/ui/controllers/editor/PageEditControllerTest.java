@@ -17,7 +17,14 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -26,7 +33,9 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.ServletRequestDataBinder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -262,6 +271,71 @@ class PageEditControllerTest extends EditorControllerTestSupport {
         assertTrue(errors(model).contains("generic.error.check.logs"),
                 "Expected a generic failure, got: " + errors(model));
         assertTrue(messages(model).isEmpty(), "A failed save must not also report success");
+    }
+
+    // --- checkbox field-marker binding (real Spring WebDataBinder) ---
+    //
+    // Every test above calls controller.save(...) directly with a hand-built
+    // PageBean, bypassing Spring's WebDataBinder entirely -- so none of them
+    // would have caught a bug in the marker convention itself. These two
+    // build the exact ServletRequestDataBinder Spring MVC would construct
+    // for a POST to pageEdit!save.rol (running it through
+    // BaseController#initBeanBinder, the real @InitBinder) and bind a
+    // request carrying PageEdit.jsp's actual marker input name -- read
+    // straight out of the JSP so a regression to the wrong name fails here,
+    // not only in the browser suite.
+
+    @Test
+    void uncheckingShowInNavBindsToFalseThroughTheRealBinder() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/roller-ui/authoring/pageEdit!save.rol");
+        request.setParameter("bean.slug", "about");
+        request.setParameter("bean.title", "About Us");
+        // The box was unchecked: the browser omits "bean.showInNav" entirely,
+        // submitting only the marker PageEdit.jsp always renders.
+        request.setParameter(showInNavMarkerName(), "on");
+
+        PageBean bean = new PageBean();
+        ServletRequestDataBinder binder = new ServletRequestDataBinder(bean, "bean");
+        controller.initBeanBinder(binder);
+        binder.bind(request);
+
+        assertEquals(false, bean.getShowInNav(),
+                "an unchecked box must bind to false -- PageBean defaults to "
+                        + "true, so a marker name that does not round-trip "
+                        + "through BaseController's \"bean.\" field-default "
+                        + "prefix leaves nav on forever (see "
+                        + "BaseController#initBeanBinder)");
+    }
+
+    @Test
+    void checkingShowInNavBindsToTrueThroughTheRealBinder() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/roller-ui/authoring/pageEdit!save.rol");
+        request.setParameter("bean.slug", "about");
+        request.setParameter("bean.title", "About Us");
+        request.setParameter("bean.showInNav", "true");
+        request.setParameter(showInNavMarkerName(), "on");
+
+        PageBean bean = new PageBean();
+        bean.setShowInNav(false);
+        ServletRequestDataBinder binder = new ServletRequestDataBinder(bean, "bean");
+        controller.initBeanBinder(binder);
+        binder.bind(request);
+
+        assertEquals(true, bean.getShowInNav());
+    }
+
+    /**
+     * The {@code name} of PageEdit.jsp's showInNav field-marker hidden
+     * input, read from the JSP itself rather than hardcoded, so these tests
+     * fail if the marker is ever renamed back to the broken
+     * {@code "_bean.showInNav"} (see BaseController#initBeanBinder).
+     */
+    private static String showInNavMarkerName() throws IOException {
+        Path jsp = Paths.get("src/main/webapp/WEB-INF/jsps/editor/PageEdit.jsp");
+        String content = Files.readString(jsp, StandardCharsets.UTF_8);
+        Matcher matcher = Pattern.compile("name=\"(_[^\"]*[Ss]howInNav[^\"]*)\"").matcher(content);
+        assertTrue(matcher.find(), "PageEdit.jsp must carry a showInNav field-marker hidden input");
+        return matcher.group(1);
     }
 
     // --- PageBean ---

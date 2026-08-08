@@ -75,6 +75,18 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * This preserves the Struts2 convention where form fields were named bean.title, bean.id, etc.
      * Controllers using Spring form:form tags (which don't use the prefix) should override
      * this method with a no-op.
+     *
+     * <p><strong>Checkbox field markers ("_xxx" hidden inputs) must name the
+     * bean's real property path, not the "bean."-prefixed one.</strong>
+     * {@code WebDataBinder.doBind} runs {@code checkFieldDefaults} (which
+     * strips this "bean." prefix) BEFORE {@code checkFieldMarkers}, and
+     * {@code checkFieldDefaults} only rewrites parameters that literally
+     * start with "bean." -- a marker named e.g. {@code "_bean.showInNav"}
+     * starts with {@code "_"}, so it is left alone, and
+     * {@code checkFieldMarkers} then looks for a writable property literally
+     * named {@code "bean.showInNav"}, which does not exist, so the marker is
+     * silently discarded and an unchecked box never binds to {@code false}.
+     * The marker must be named {@code "_showInNav"} (see PageEdit.jsp).
      */
     @InitBinder("bean")
     public void initBeanBinder(WebDataBinder binder) {
