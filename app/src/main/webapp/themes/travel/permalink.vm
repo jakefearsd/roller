@@ -21,6 +21,7 @@
     <p class="tg-name"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
     <nav class="tg-nav">
         #showWeblogCategoryLinksList()
+        #showPageLinks($model.weblog)
     </nav>
 </header>
 

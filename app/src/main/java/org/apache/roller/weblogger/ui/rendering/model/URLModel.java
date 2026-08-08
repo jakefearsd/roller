@@ -253,7 +253,18 @@ public class URLModel implements Model {
     public String page(String pageLink, String dateString, String catName, int pageNum) {
         return urlStrategy.getWeblogPageURL(weblog, locale, pageLink, null, catName, dateString, null, pageNum, true);
     }
-    
+
+
+    /**
+     * URL for a static {@link org.apache.roller.weblogger.pojos.WeblogPage},
+     * routed at the bare {@code /<handle>/<slug>} path -- distinct from
+     * {@link #page(String)}, which builds the {@code /page/<link>} URL for a
+     * template page.
+     */
+    public String staticPage(String slug) {
+        return urlStrategy.getWeblogURL(weblog, null, false) + slug;
+    }
+
     
     public String resource(String filePath) {
         return urlStrategy.getWeblogResourceURL(weblog, filePath, true);

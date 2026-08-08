@@ -19,6 +19,7 @@
 		<div class="collapse navbar-collapse navbar-ex1-collapse">
 			<ul class="nav navbar-nav">
 				<li><a href="$url.home">Home</a></li>
+				#showPageLinks($model.weblog)
 				#set($cats = $model.weblog.getWeblogCategories())
 				#if ($cats.size() > 1)
 				    <li class="dropdown">

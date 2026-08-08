@@ -19,8 +19,10 @@
 package org.apache.roller.weblogger.ui.rendering.model; 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -200,6 +202,30 @@ public class PageModel implements Model {
      */
     public WeblogPage getPage() {
         return pageRequest.getWeblogPageContent();
+    }
+
+
+    /**
+     * Published pages that belong in navigation, in nav order -- the source
+     * for {@code #showPageLinks} in every bundled theme.
+     *
+     * <p>Takes the {@link WeblogWrapper} that {@code $model.weblog} hands
+     * templates (not the raw {@link Weblog} pojo): every theme calls this
+     * with {@code $model.weblog} or a {@code $weblog} macro parameter that
+     * traces back to it, and Velocity resolves an overload by the argument's
+     * actual type, so a {@code Weblog}-typed parameter here would silently
+     * fail to match and render nothing.
+     */
+    public List<WeblogPage> getNavPages(WeblogWrapper navWeblog) {
+        try {
+            return WebloggerFactory.getWeblogger().getWeblogPageManager()
+                    .getPublishedPages(navWeblog.getPojo()).stream()
+                    .filter(page -> Boolean.TRUE.equals(page.getShowInNav()))
+                    .collect(Collectors.toList());
+        } catch (WebloggerException ex) {
+            log.error("Error getting nav pages for weblog - " + navWeblog, ex);
+            return Collections.emptyList();
+        }
     }
 
 

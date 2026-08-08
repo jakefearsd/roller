@@ -19,6 +19,9 @@
 
 <header class="pf-header">
     <p class="pf-name"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
+    <nav class="pf-nav">
+        #showPageLinks($model.weblog)
+    </nav>
 </header>
 
 <main class="pf-main">

@@ -22,12 +22,14 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MultiWeblogURLStrategy;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesDayPager;
@@ -543,6 +545,44 @@ class PageModelTest {
                 "A custom page canonicalises to its own URL; was: " + canonical);
         assertTrue(canonical.startsWith("http://localhost:8080/roller/testblog/"),
                 "The canonical URL must be absolute; was: " + canonical);
+    }
+
+    // ------------------------------------------------------------- nav pages
+
+    @Test
+    void getNavPagesReturnsOnlyThePublishedPagesMarkedShowInNav() throws Exception {
+        WeblogPageManager pageManager = mock(WeblogPageManager.class);
+        when(weblogger.getWeblogPageManager()).thenReturn(pageManager);
+
+        WeblogPage shown = new WeblogPage();
+        shown.setTitle("Shown");
+        shown.setShowInNav(true);
+        WeblogPage hidden = new WeblogPage();
+        hidden.setTitle("Hidden");
+        hidden.setShowInNav(false);
+        when(pageManager.getPublishedPages(weblog)).thenReturn(List.of(shown, hidden));
+
+        PageModel model = modelFor(pageRequest());
+
+        assertEquals(List.of(shown), model.getNavPages(model.getWeblog()),
+                "getNavPages must keep only the pages with showInNav=true, in the "
+                        + "order the manager already returned them.");
+    }
+
+    @Test
+    void getNavPagesDegradesToAnEmptyListWhenTheManagerFails() throws Exception {
+        // A page lookup failure must not take the whole rendered page down --
+        // the theme's nav just renders with nothing extra in it.
+        WeblogPageManager pageManager = mock(WeblogPageManager.class);
+        when(weblogger.getWeblogPageManager()).thenReturn(pageManager);
+        when(pageManager.getPublishedPages(weblog))
+                .thenThrow(new WebloggerException("boom"));
+
+        PageModel model = modelFor(pageRequest());
+
+        assertEquals(List.of(), model.getNavPages(model.getWeblog()),
+                "A WebloggerException from the manager must not propagate into "
+                        + "the rendered page.");
     }
 
     @Test

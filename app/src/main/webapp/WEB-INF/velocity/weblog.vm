@@ -1085,6 +1085,20 @@ Show entries as a HTML ul list.
 
 
 #**
+Navigation links for a weblog's published pages, in nav order.
+
+Emits <li> items and nothing else -- no <ul>, no wrapper -- so each theme
+supplies its own container and keeps its own CSS. That is why this is a
+separate macro from #showPageMenu rather than an extension of it.
+*#
+#macro(showPageLinks $weblog)
+#foreach($navPage in $model.getNavPages($weblog))
+    <li class="page-nav-item"><a href="$url.staticPage($navPage.slug)">$utils.escapeHTML($navPage.title)</a></li>
+#end
+#end
+
+
+#**
 Show weblog's categories in specified parent category.
 *#
 #macro(showWeblogCategoryLinksList)
@@ -1178,6 +1192,7 @@ Show weblog's categories in specified parent category.
         <li class="rNavItem">
             <a href="$url.home"><span>Weblog</span></a>
         </li>
+        #showPageLinks($weblog)
         #foreach($iPage in $weblog.pages)
             #if (!$iPage.hidden && $iPage.navbar && $iPage.link != "Weblog")
                 #set($isSelected = false)
