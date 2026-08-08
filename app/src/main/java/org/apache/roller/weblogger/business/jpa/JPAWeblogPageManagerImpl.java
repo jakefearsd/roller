@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogPageManager;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.ReservedSlugs;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPage;
@@ -38,10 +39,12 @@ public class JPAWeblogPageManagerImpl implements WeblogPageManager {
 
     private static final Log log = LogFactory.getLog(JPAWeblogPageManagerImpl.class);
 
+    private final Weblogger roller;
     private final JPAPersistenceStrategy strategy;
 
-    protected JPAWeblogPageManagerImpl(JPAPersistenceStrategy strategy) {
+    protected JPAWeblogPageManagerImpl(Weblogger roller, JPAPersistenceStrategy strategy) {
         log.debug("Instantiating JPA Weblog Page Manager");
+        this.roller = roller;
         this.strategy = strategy;
     }
 
@@ -66,11 +69,21 @@ public class JPAWeblogPageManagerImpl implements WeblogPageManager {
         page.setUpdated(now);
 
         strategy.store(page);
+
+        // update weblog last modified date.  date updated by saveWeblog().
+        // WeblogPageCache has no CacheHandler -- a rendered page expires
+        // lazily by comparing itself against weblog.lastModified (see
+        // saveTemplate/saveComment for the same pattern) -- so without this
+        // a published page never reaches a reader holding a cached copy.
+        roller.getWeblogManager().saveWeblog(page.getWeblog());
     }
 
     @Override
     public void removePage(WeblogPage page) throws WebloggerException {
         this.strategy.remove(page);
+
+        // update weblog last modified date.  date updated by saveWeblog()
+        roller.getWeblogManager().saveWeblog(page.getWeblog());
     }
 
     @Override

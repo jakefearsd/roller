@@ -64,11 +64,17 @@ public class WeblogPageRequest extends WeblogRequest {
     private int pageNum = 0;
     private Map<String, String[]> customParams = Collections.emptyMap();
 
+    // lightweight: the raw, unresolved path segment for a candidate bare-slug
+    // page request (/<handle>/<slug>), set during parsing with no database
+    // access. null on every other kind of request.
+    private String pageSlug = null;
+
     // heavyweight attributes
     private WeblogEntry weblogEntry = null;
     private ThemeTemplate weblogPage = null;
     private WeblogCategory weblogCategory = null;
     private WeblogPage weblogPageContent = null;
+    private boolean weblogPageContentResolved = false;
 
     // Page hits
     private boolean websitePageHit = false;
@@ -174,17 +180,18 @@ public class WeblogPageRequest extends WeblogRequest {
             } else {
                 // A single path element. It is either /tags (the one context
                 // that takes no argument) or a page slug: /<handle>/about.
-                // Anything else 404s at the servlet, not here.
+                // Reserved words are rejected here (a cheap string check, no
+                // database); resolving the slug against the database is
+                // deferred to getWeblogPageContent() -- see its javadoc --
+                // so that a cache hit never pays for a lookup that its
+                // answer doesn't need. A slug that turns out not to name a
+                // published page 404s at the servlet, not here.
                 if (!"tags".equals(this.context)) {
                     if (ReservedSlugs.isReserved(this.context)) {
                         throw new InvalidRequestException("invalid index page, "
                                 + request.getRequestURL());
                     }
-                    this.weblogPageContent = lookUpPage(this.context);
-                    if (this.weblogPageContent == null) {
-                        throw new InvalidRequestException("no such page, "
-                                + request.getRequestURL());
-                    }
+                    this.pageSlug = this.context;
                     otherPageHit = true;
                 }
             }
@@ -280,6 +287,9 @@ public class WeblogPageRequest extends WeblogRequest {
      * indistinguishable from one that does not exist.
      */
     private WeblogPage lookUpPage(String slug) {
+        if (slug == null) {
+            return null;
+        }
         try {
             Weblog weblog = getWeblog();
             if (weblog == null) {
@@ -427,15 +437,41 @@ public class WeblogPageRequest extends WeblogRequest {
     }
 
     /**
-     * The published {@link WeblogPage} resolved from a bare path segment
-     * (/<handle>/<slug>), or null on every other kind of request.
+     * The raw, unresolved path segment of a candidate bare-slug page request
+     * (/<handle>/<slug>), or null on every other kind of request. Set during
+     * parsing with no database access -- this is the field cache-key
+     * generation reads, precisely so that generating a key never resolves
+     * the page it might name.
+     */
+    public String getPageSlug() {
+        return pageSlug;
+    }
+
+    public void setPageSlug(String pageSlug) {
+        this.pageSlug = pageSlug;
+    }
+
+    /**
+     * The published {@link WeblogPage} resolved from {@link #getPageSlug()},
+     * or null on every other kind of request, or when the slug does not name
+     * a published page. Resolved lazily, on first call, against the
+     * database -- and memoized, including a null answer, so that repeat
+     * calls (the servlet's template selection, then the model, on the same
+     * request) cost one lookup rather than one each. A cache hit never
+     * reaches this getter at all, since the servlet only calls it after a
+     * cache miss.
      */
     public WeblogPage getWeblogPageContent() {
+        if (!weblogPageContentResolved) {
+            weblogPageContent = lookUpPage(pageSlug);
+            weblogPageContentResolved = true;
+        }
         return weblogPageContent;
     }
 
     public void setWeblogPageContent(WeblogPage weblogPageContent) {
         this.weblogPageContent = weblogPageContent;
+        this.weblogPageContentResolved = true;
     }
 
     public WeblogCategory getWeblogCategory() {

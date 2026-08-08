@@ -379,6 +379,29 @@ public class SiteWideCacheTest {
         withParams.setCustomParams(Map.of("colour", new String[]{"red"}));
         assertNotEquals(base, cache.generateKey(withParams),
                 "Query parameters reach the template and change what it renders");
+
+        WeblogPageRequest bareSlugPage = pageRequest();
+        bareSlugPage.setPageSlug("about");
+        assertNotEquals(base, cache.generateKey(bareSlugPage), "A bare-slug page is a different page");
+    }
+
+    /**
+     * The defect this pins: two bare-slug pages on the site-wide weblog used
+     * to share the front page's key, because none of the fields the key
+     * already accounted for is set for that kind of request.
+     */
+    @Test
+    public void twoBareSlugPagesGetDifferentKeys() {
+        WeblogPageRequest about = pageRequest();
+        about.setPageSlug("about");
+
+        WeblogPageRequest contact = pageRequest();
+        contact.setPageSlug("contact");
+
+        assertNotEquals(cache.generateKey(pageRequest()), cache.generateKey(about),
+                "A bare-slug page must not share the front page's cache key");
+        assertNotEquals(cache.generateKey(about), cache.generateKey(contact),
+                "Two different page slugs must not share a cache key");
     }
 
     @Test

@@ -158,13 +158,14 @@ public final class WeblogPageCache {
      *
      * <handle>[/entry/<anchor>][/<language>][/page=<num>][/user=<user>]
      *   or
-     * <handle>[/page/<weblogPage>][/date/<date>][/cat/<category>][/tags/<tags>][/<language>][/page=<num>][/user=<user>][/qp=<params>]
+     * <handle>[/pageslug/<slug>][/page/<weblogPage>][/date/<date>][/cat/<category>][/tags/<tags>][/<language>][/page=<num>][/user=<user>][/qp=<params>]
      *
      *
      * examples ...
      *
      * cache.weblogpage:foo/en/page=0
      * cache.weblogpage:foo/entry/entry_anchor/en
+     * cache.weblogpage:foo/pageslug/about/en/page=0
      * cache.weblogpage:foo/date/20051110/en/page=0
      * cache.weblogpage:foo/cat/MyCategory/en/page=0/user=myname
      *
@@ -182,6 +183,16 @@ public final class WeblogPageCache {
             // may contain spaces or other bad chars
             key.append("/entry/").append(CacheKeys.encode(pageRequest.getWeblogAnchor()));
         } else {
+
+            if(pageRequest.getPageSlug() != null) {
+                // the raw path segment of a bare-slug page (/<handle>/about),
+                // read here rather than the WeblogPage it resolves to, so
+                // that generating a key never queries the database. Without
+                // this segment every bare-slug page on a weblog -- and the
+                // weblog's homepage -- shared one cache key, so whichever
+                // page rendered first was served for all of them.
+                key.append("/pageslug/").append(CacheKeys.encode(pageRequest.getPageSlug()));
+            }
 
             if(pageRequest.getWeblogPageName() != null) {
                 // comes straight off the url path, so it may contain slashes

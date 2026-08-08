@@ -378,11 +378,24 @@ public class PageServlet extends HttpServlet {
             return page;
         }
 
-        // A static page: the theme may override with a custom template named
-        // _page, exactly as it may override _popupcomments; otherwise the
-        // shipped default renders it. Falling back rather than 404ing means a
-        // theme does not have to know pages exist.
-        if (pageRequest.getWeblogPageContent() != null) {
+        // A static page: getPageSlug() is the syntactic signal, set during
+        // parsing with no database access, that this request's single path
+        // segment looked like a page slug. Only inside this branch do we
+        // resolve it -- getWeblogPageContent() is the deferred database
+        // lookup -- so that a cache hit, or a request that never gets this
+        // far, never pays for it. An unresolved slug (unknown, or a draft
+        // this reader is not entitled to see) is a 404, not a fall-through
+        // to the branches below: a page slug never doubles as a permalink or
+        // the weblog's default view.
+        if (pageRequest.getPageSlug() != null) {
+            if (pageRequest.getWeblogPageContent() == null) {
+                return null;
+            }
+
+            // The theme may override with a custom template named _page,
+            // exactly as it may override _popupcomments; otherwise the
+            // shipped default renders it. Falling back rather than 404ing
+            // means a theme does not have to know pages exist.
             ThemeTemplate template = null;
             try {
                 template = weblog.getTheme().getTemplateByName("_page");

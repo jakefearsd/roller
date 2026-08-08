@@ -255,6 +255,32 @@ public class WeblogPageCacheTest {
         WeblogPageRequest customPage = pageRequest();
         customPage.setWeblogPageName("aboutme");
         assertNotEquals(base, cache.generateKey(customPage), "A custom page is a different page");
+
+        WeblogPageRequest bareSlugPage = pageRequest();
+        bareSlugPage.setPageSlug("about");
+        assertNotEquals(base, cache.generateKey(bareSlugPage), "A bare-slug page is a different page");
+    }
+
+    /**
+     * The defect this pins: /myblog/about and /myblog/contact used to share
+     * the homepage's key, because neither weblogAnchor, weblogPageName,
+     * weblogDate, weblogCategoryName nor tags is ever set for a bare-slug
+     * page request. Whichever page rendered first was then served, from
+     * cache, for the homepage and for every other bare-slug page on the
+     * weblog until the weblog's lastModified moved.
+     */
+    @Test
+    public void aBareSlugPageGetsItsOwnKeyDistinctFromTheHomepageAndItsSiblings() {
+        WeblogPageRequest about = pageRequest();
+        about.setPageSlug("about");
+
+        WeblogPageRequest contact = pageRequest();
+        contact.setPageSlug("contact");
+
+        assertNotEquals(cache.generateKey(pageRequest()), cache.generateKey(about),
+                "A bare-slug page must not share the homepage's cache key");
+        assertNotEquals(cache.generateKey(about), cache.generateKey(contact),
+                "Two different page slugs on the same weblog must not share a cache key");
     }
 
     @Test

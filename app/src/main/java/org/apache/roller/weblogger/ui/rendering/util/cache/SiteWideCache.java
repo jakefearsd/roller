@@ -199,13 +199,14 @@ public final class SiteWideCache implements CacheHandler {
      *
      * page/<handle>[/entry/<anchor>][/<language>][/page=<num>][/user=<user>][/qp=<params>]
      *   or
-     * page/<handle>[/page/<weblogPage>][/date/<date>][/cat/<category>][/tags/<tags>][/<language>][/page=<num>][/user=<user>][/qp=<params>]
+     * page/<handle>[/pageslug/<slug>][/page/<weblogPage>][/date/<date>][/cat/<category>][/tags/<tags>][/<language>][/page=<num>][/user=<user>][/qp=<params>]
      *
      *
      * examples ...
      *
      * cache.sitewide:page/foo/en/page=0
      * cache.sitewide:page/foo/entry/entry_anchor/en
+     * cache.sitewide:page/foo/pageslug/about/en/page=0
      * cache.sitewide:page/foo/date/20051110/en/page=0
      * cache.sitewide:page/foo/cat/MyCategory/en/page=0/user=myname
      *
@@ -224,6 +225,13 @@ public final class SiteWideCache implements CacheHandler {
             // may contain spaces or other bad chars
             key.append("/entry/").append(CacheKeys.encode(pageRequest.getWeblogAnchor()));
         } else {
+
+            if(pageRequest.getPageSlug() != null) {
+                // the raw path segment of a bare-slug page (/<handle>/about),
+                // read here rather than the WeblogPage it resolves to, so
+                // that generating a key never queries the database.
+                key.append("/pageslug/").append(CacheKeys.encode(pageRequest.getPageSlug()));
+            }
 
             if(pageRequest.getWeblogPageName() != null) {
                 // comes straight off the url path, so it may contain slashes

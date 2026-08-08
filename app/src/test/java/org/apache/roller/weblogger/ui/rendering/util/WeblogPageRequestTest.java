@@ -172,9 +172,31 @@ class WeblogPageRequestTest {
     }
 
     @Test
-    void unknownContextWithNoValueIsRejected() {
-        assertThrows(InvalidRequestException.class, () -> parse("/myblog/bogus"),
-                "A context with nothing after it is not an index page");
+    void aSingleUnreservedSegmentParsesAsACandidatePageSlug() throws Exception {
+        // /myblog/bogus no longer 404s during parsing. A bare, non-reserved
+        // segment is a candidate page slug: getPageSlug() records it (no
+        // database access), and getWeblogPageContent() resolves it lazily,
+        // on first call, against the database -- see both methods' javadoc.
+        // A slug naming no published page still ends in a 404, just later,
+        // once the servlet asks and gets nothing back (PageRoutingTest
+        // covers that end to end); this parser-level test has no database
+        // behind it to resolve against.
+        WeblogPageRequest request = parse("/myblog/bogus");
+
+        assertEquals("bogus", request.getContext());
+        assertEquals("bogus", request.getPageSlug());
+        assertTrue(request.isOtherPageHit());
+    }
+
+    @Test
+    void aReservedWordAloneIsRejectedWithoutTryingToResolveAsAPage() {
+        // "entry" with nothing after it is not a permalink (that needs an
+        // anchor) and must not be mistaken for a page slug either -- a page
+        // could never be saved under that slug in the first place
+        // (ReservedSlugs, enforced at save time), so treating it as a
+        // candidate would only ever resolve to nothing, more slowly.
+        assertThrows(InvalidRequestException.class, () -> parse("/myblog/entry"),
+                "A reserved word alone is rejected outright, not deferred");
     }
 
     @Test

@@ -1,5 +1,6 @@
 package org.apache.roller.weblogger.business;
 
+import java.util.Date;
 import java.util.List;
 
 import org.apache.roller.weblogger.TestUtils;
@@ -130,6 +131,65 @@ class WeblogPageManagerTest {
         TestUtils.endSession(true);
 
         assertNull(manager().getPageBySlug(TestUtils.getManagedWebsite(weblog), "about"));
+    }
+
+    /**
+     * WeblogPageCache has no CacheHandler -- a rendered page expires lazily
+     * by comparing itself against weblog.lastModified (the same mechanism
+     * saveTemplate and saveComment rely on). If savePage stopped bumping it,
+     * publishing or editing a page would never reach a reader holding a
+     * cached copy of the weblog.
+     */
+    @Test
+    void savingAPageBumpsTheWeblogsLastModified() throws Exception {
+        Date before = freshLastModifiedBaseline();
+        // Guarantee a distinguishable millisecond boundary even on a very
+        // fast clock/database so the "must have moved" assertion below
+        // can't pass by coincidence (see MediaFileTest for the same pattern).
+        Thread.sleep(5);
+
+        save(weblog, "about", WeblogPage.PubStatus.PUBLISHED);
+
+        Date after = TestUtils.getManagedWebsite(weblog).getLastModified();
+        assertTrue(after.after(before),
+                "savePage must bump weblog.lastModified or a cached copy of the weblog's "
+                        + "pages never expires when a page is published or edited");
+    }
+
+    /**
+     * The same requirement as above, for the other write path: a reader must
+     * not keep seeing a page that was just deleted.
+     */
+    @Test
+    void removingAPageBumpsTheWeblogsLastModified() throws Exception {
+        WeblogPage page = save(weblog, "about", WeblogPage.PubStatus.PUBLISHED);
+        Date before = freshLastModifiedBaseline();
+        Thread.sleep(5);
+
+        manager().removePage(manager().getPage(page.getId()));
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        Date after = TestUtils.getManagedWebsite(weblog).getLastModified();
+        assertTrue(after.after(before),
+                "removePage must bump weblog.lastModified or a cached copy of the removed "
+                        + "page keeps being served");
+    }
+
+    /**
+     * A known, non-null starting point for the before/after comparisons
+     * above. saveWeblog always stamps lastModified with the current time
+     * (it does not honour a value set on the pojo beforehand), so this is a
+     * real save, not a fabricated past date; it exists so "before" is never
+     * null -- addWeblog does not set lastModified, and Date.after(null)
+     * throws.
+     */
+    private Date freshLastModifiedBaseline() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+        return TestUtils.getManagedWebsite(weblog).getLastModified();
     }
 
     /**

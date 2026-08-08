@@ -124,8 +124,8 @@ public class WebloggerBeanConfig {
     }
 
     @Bean
-    public WeblogPageManager weblogPageManager(JPAPersistenceStrategy strategy) {
-        return new JPAWeblogPageManagerImpl(strategy);
+    public WeblogPageManager weblogPageManager(@Lazy Weblogger weblogger, JPAPersistenceStrategy strategy) {
+        return new JPAWeblogPageManagerImpl(weblogger, strategy);
     }
 
     @Bean
