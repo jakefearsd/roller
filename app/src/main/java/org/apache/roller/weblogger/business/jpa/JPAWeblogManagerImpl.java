@@ -369,6 +369,18 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Nothing enforces uniqueness on {@code newsletter_list_uuid} -- V016
+     * adds no unique constraint, and settings validation only checks the
+     * uuid's format -- so more than one weblog can legitimately share a
+     * list (a family of blogs sharing one newsletter). {@code getResultList}
+     * rather than {@code getSingleResult} tolerates that instead of throwing
+     * {@code NonUniqueResultException}; the named query's {@code ORDER BY
+     * handle} makes "the first result" the same weblog every time, and that
+     * first-by-handle weblog is the one credited with the subscribe event.
+     */
     @Override
     public Weblog getWeblogByNewsletterListUuid(String listUuid) throws WebloggerException {
         if (listUuid == null) {
@@ -377,11 +389,8 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         TypedQuery<Weblog> query = strategy.getNamedQuery(
                 "Weblog.getByNewsletterListUuid", Weblog.class);
         query.setParameter(1, listUuid);
-        try {
-            return query.getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
+        List<Weblog> results = query.getResultList();
+        return results.isEmpty() ? null : results.get(0);
     }
 
     /**

@@ -133,6 +133,20 @@ class NewsletterControllerTest {
         verify(listmonk, never()).subscribe(any(), any());
     }
 
+    @Test
+    void anOverLengthEmailReturns400BeforeEverReachingListmonk() throws Exception {
+        Weblog weblog = weblog("newsblog");
+        when(mocks.getWeblogManager().getWeblogByNewsletterListUuid(UUID)).thenReturn(weblog);
+
+        // FormSubmissionManager.MAX_EMAIL is 255; this is 256 characters.
+        String tooLongEmail = "a".repeat(251) + "@x.co";
+        ResponseEntity<Void> response = controller.subscribe(
+                payload(tooLongEmail, UUID, "", 5000L), request());
+
+        assertEquals(400, response.getStatusCode().value());
+        verify(listmonk, never()).subscribe(any(), any());
+    }
+
     // ---------------------------------------------------- silent bot drops
 
     @Test

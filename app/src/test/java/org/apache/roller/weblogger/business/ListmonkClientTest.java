@@ -29,6 +29,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -84,5 +87,23 @@ class ListmonkClientTest {
     void anUnconfiguredClientReportsItself() {
         assertTrue(new ListmonkClient("", HttpClient.newHttpClient()).isUnconfigured());
         assertTrue(new ListmonkClient(null, HttpClient.newHttpClient()).isUnconfigured());
+    }
+
+    /**
+     * A quote or backslash in the email must not break the hand-built JSON
+     * body -- {@code jsonString} is the only thing standing between
+     * {@code subscribe}'s two interpolated values and a malformed request.
+     * Round-tripping the captured body through a real JSON parser is a
+     * stronger check than matching an escaped literal: it fails on ANY
+     * escaping bug, not just the one this hand-picked value happens to hit.
+     */
+    @Test
+    void aQuoteAndBackslashInTheEmailAreEscapedSoTheBodyStaysValidJson() throws Exception {
+        String tricky = "weird\"name\\test@example.com";
+
+        client().subscribe(tricky, "2f0f1b0c-1111-2222-3333-444455556666");
+
+        JsonNode body = new ObjectMapper().readTree(lastBody.get());
+        assertEquals(tricky, body.get("email").asText(), lastBody.get());
     }
 }

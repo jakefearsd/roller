@@ -10,7 +10,12 @@
 			<query>SELECT w FROM Weblog w WHERE w.handle = ?1</query>
 		</named-query>
 		<named-query name="Weblog.getByNewsletterListUuid">
-			<query>SELECT w FROM Weblog w WHERE w.newsletterListUuid = ?1</query>
+			<!-- No unique constraint on newsletter_list_uuid: a shared family
+			     newsletter across several weblogs is a legitimate setup, so
+			     more than one row can match. ORDER BY handle makes "the
+			     first result" deterministic rather than whatever order the
+			     database happens to return. -->
+			<query>SELECT w FROM Weblog w WHERE w.newsletterListUuid = ?1 ORDER BY w.handle</query>
 		</named-query>
 		<named-query name="Weblog.getByLetterOrderByHandle">
 			<query>SELECT w FROM Weblog w WHERE UPPER(w.handle) like ?1 ORDER BY w.handle</query>

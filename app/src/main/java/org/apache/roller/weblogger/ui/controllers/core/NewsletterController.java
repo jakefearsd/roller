@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.FormSubmissionManager;
 import org.apache.roller.weblogger.business.ListmonkClient;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.RollerEvent;
@@ -157,7 +158,8 @@ public class NewsletterController extends BaseController {
             return ResponseEntity.ok().build();
         }
 
-        if (StringUtils.isBlank(payload.email()) || !payload.email().contains("@")) {
+        if (StringUtils.isBlank(payload.email()) || !payload.email().contains("@")
+                || payload.email().length() > FormSubmissionManager.MAX_EMAIL) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -166,6 +168,10 @@ public class NewsletterController extends BaseController {
             return ResponseEntity.status(SERVICE_UNAVAILABLE).build();
         }
 
+        // Counted here, before the actual Listmonk call, so every real
+        // attempt -- 200, 409, or a 502 from a Listmonk-side failure --
+        // counts toward the budget alike; only requests refused before this
+        // point (404/400/503/honeypot) are free.
         if (throttlingEnabled()) {
             throttle().processHit(request.getRemoteAddr());
         }

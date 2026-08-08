@@ -193,6 +193,20 @@ public class WeblogTest  {
             assertNotNull(weblog);
             assertEquals(testWeblog1.getHandle(), weblog.getHandle());
 
+            // two weblogs sharing the same list uuid (no unique constraint on
+            // it -- a family of blogs sharing one newsletter is legitimate)
+            // must not throw NonUniqueResultException; the first result is
+            // deterministic (ORDER BY handle in the named query)
+            weblog = mgr.getWeblogByHandle(testWeblog2.getHandle());
+            weblog.setNewsletterListUuid("2f0f1b0c-1111-2222-3333-444455556666");
+            mgr.saveWeblog(weblog);
+            TestUtils.endSession(true);
+            weblog = null;
+            weblog = mgr.getWeblogByNewsletterListUuid("2f0f1b0c-1111-2222-3333-444455556666");
+            assertNotNull(weblog);
+            assertEquals(testWeblog1.getHandle(), weblog.getHandle(),
+                    "two weblogs sharing a list uuid must resolve to the first by handle, not throw");
+
             // make sure disabled weblogs are not returned
             weblog.setVisible(Boolean.FALSE);
             mgr.saveWeblog(weblog);

@@ -79,6 +79,12 @@ public interface WeblogManager {
      * by uuid, never by weblog handle, so this is the only way to recover
      * which weblog (and therefore which {@code EventManager} bookkeeping) a
      * subscription belongs to.
+     *
+     * <p>The uuid is not required to be unique across weblogs -- sharing one
+     * newsletter list across a family of blogs is permitted -- so when more
+     * than one weblog is configured with the same uuid, the first one by
+     * handle is returned deterministically, and it is the one credited with
+     * the subscribe event.
      * @param listUuid The newsletter list uuid to look up
      */
     Weblog getWeblogByNewsletterListUuid(String listUuid) throws WebloggerException;
