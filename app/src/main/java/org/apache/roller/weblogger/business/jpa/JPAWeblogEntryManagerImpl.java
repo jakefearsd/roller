@@ -33,6 +33,7 @@ import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
+import org.apache.roller.weblogger.pojos.RollerEvent;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
@@ -246,6 +247,24 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         // revision RECORDS is still the pre-save content -- that was captured
         // when the entry was loaded, not now.
         recordRevision(entry);
+
+        // First arrival at PUBLISHED is a first-party outcome the analytics
+        // tier joins against traffic. Best-effort: an event insert must never
+        // fail the save that produced it.
+        if (entry.getStatus() == PubStatus.PUBLISHED
+                && entry.getLoadedStatus() != PubStatus.PUBLISHED) {
+            try {
+                RollerEvent event = new RollerEvent();
+                event.setWeblog(entry.getWebsite());
+                event.setEventType(RollerEvent.EventType.ENTRY_PUBLISHED);
+                event.setEntryAnchor(entry.getAnchor());
+                event.setOccurredAt(new Timestamp(System.currentTimeMillis()));
+                roller.getEventManager().record(event);
+            } catch (Exception ex) {
+                LOG.warn("Could not record entry_published event for "
+                        + entry.getAnchor(), ex);
+            }
+        }
 
         // The entry's new content is now what a further save in this session
         // would be replacing.

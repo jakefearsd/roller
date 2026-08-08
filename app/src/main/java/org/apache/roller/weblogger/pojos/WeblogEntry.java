@@ -208,6 +208,10 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
      */
     private transient WeblogEntryRevision loadedContent;
 
+    /** Status as loaded from the database; null for a new entry. Set by the
+     *  same post-load callback that snapshots content for revisions. */
+    private transient PubStatus loadedStatus = null;
+
     /**
      * JPA {@code post-load} callback: remember the content as read from the
      * database. See WeblogEntry.orm.xml, which is where this is wired -- there
@@ -215,6 +219,11 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
      */
     public void snapshotLoadedContent() {
         loadedContent = WeblogEntryRevision.of(this, null);
+        loadedStatus = getStatus();
+    }
+
+    public PubStatus getLoadedStatus() {
+        return loadedStatus;
     }
 
     /**

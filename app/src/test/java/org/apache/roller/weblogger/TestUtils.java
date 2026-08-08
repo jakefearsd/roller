@@ -278,6 +278,17 @@ public final class TestUtils {
     }
 
     /**
+     * Convenience method for creating a weblog entry with the blog's default
+     * category, at a caller-supplied status.
+     */
+    public static WeblogEntry setupWeblogEntry(String anchor, Weblog weblog,
+            User user, PubStatus status) throws Exception {
+
+        return TestUtils.setupWeblogEntry(anchor, weblog.getWeblogCategories()
+                .iterator().next(), status, weblog, user);
+    }
+
+    /**
      * Convenience method for creating a weblog entry
      */
     public static WeblogEntry setupWeblogEntry(String anchor,
