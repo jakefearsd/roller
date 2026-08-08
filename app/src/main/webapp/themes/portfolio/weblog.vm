@@ -45,6 +45,7 @@
     <form class="pf-search" method="get" action="$url.search">
         <input type="search" name="q" placeholder="Search" aria-label="Search">
     </form>
+    #showSubscribeForm($model.weblog "New work, by email")
 </footer>
 
 </body>

@@ -45,6 +45,7 @@
     <form class="tg-search" method="get" action="$url.search">
         <input type="search" name="q" placeholder="Search guides" aria-label="Search">
     </form>
+    #showSubscribeForm($model.weblog "Get new guides by email")
 </footer>
 
 </body>

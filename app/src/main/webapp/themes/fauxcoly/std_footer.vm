@@ -8,3 +8,4 @@
     <p><img src='$url.resource("icons/asf-logo.png")' border="0" alt="Apache feather" /></p>
     <p>Powered by <a href="http://roller.apache.org">Apache Roller</a></p>
 </div>
+#showSubscribeForm($model.weblog "Subscribe by email")

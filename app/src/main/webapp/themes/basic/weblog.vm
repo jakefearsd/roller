@@ -44,5 +44,9 @@
   </div>
 </div>
 
+<footer>
+    #showSubscribeForm($model.weblog "Subscribe by email")
+</footer>
+
 </body>
 </html>
