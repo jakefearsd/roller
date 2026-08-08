@@ -205,6 +205,36 @@ class MailUtilTest {
         assertEquals("Line one.\nLine two.", mail.onlyMessage().getContent().toString());
     }
 
+    // ----------------------------------------------------------- reply-to
+
+    /**
+     * A contact-form notification is sent as the weblog, but a reply must
+     * reach the submitter, not the weblog's own from address. This is the
+     * one path in the whole class that reaches the private widened
+     * {@code sendMessage} with a non-null {@code replyTo}.
+     */
+    @Test
+    void aReplyToOverloadSetsTheHeaderWhenProvided() throws Exception {
+        MailUtil.sendTextMessage("owner@example.invalid", "submitter@example.invalid",
+                new String[]{"owner@example.invalid"}, "subject", "body");
+
+        MimeMessage message = mail.onlyMessage();
+        assertEquals(List.of("submitter@example.invalid"), replyToAddresses(message));
+    }
+
+    /**
+     * Every pre-existing overload keeps delegating with a null replyTo, so
+     * none of them must start emitting a Reply-To header just because the
+     * private method underneath grew a parameter.
+     */
+    @Test
+    void existingOverloadsSetNoReplyToHeader() throws Exception {
+        MailUtil.sendTextMessage("owner@example.invalid",
+                new String[]{"to@example.invalid"}, null, null, "subject", "body");
+
+        assertEquals(List.of(), replyToAddresses(mail.onlyMessage()));
+    }
+
     // ----------------------------------------------------------- invitations
 
     /**
@@ -251,5 +281,12 @@ class MailUtilTest {
             return List.of();
         }
         return Arrays.stream(message.getRecipients(type)).map(Object::toString).toList();
+    }
+
+    private static List<String> replyToAddresses(MimeMessage message) throws Exception {
+        if (message.getHeader("Reply-To") == null) {
+            return List.of();
+        }
+        return Arrays.stream(message.getReplyTo()).map(Object::toString).toList();
     }
 }

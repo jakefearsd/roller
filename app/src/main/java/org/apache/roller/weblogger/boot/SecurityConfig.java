@@ -241,8 +241,8 @@ public class SecurityConfig {
                 // default. See security.xml's own comment on this same rule
                 // for why an implicit deny-by-default here would be wrong.
                 .anyRequest().permitAll())
-            // The one CSRF exemption in this application: an anonymous reader
-            // posting a comment.
+            // The CSRF exemptions in this application: anonymous readers
+            // posting a comment, or submitting the contact/subscribe forms.
             //
             // The comment form is rendered by a Velocity theme macro onto a
             // page held in the weblog page cache, so it cannot carry a
@@ -257,11 +257,15 @@ public class SecurityConfig {
             // are moderation, the IP ban list and comment throttling rather
             // than a token.
             //
-            // Deliberately narrow: POST to a weblog permalink, which is the
-            // only shape a comment takes. It does not cover /share/<token>,
-            // whose password form is rendered from a JSP and does carry a
-            // token, nor anything under /roller-ui/.
-            .csrf(csrf -> csrf.ignoringRequestMatchers(SecurityConfig::isPublicCommentPost))
+            // isPublicCommentPost is deliberately narrow: POST to a weblog
+            // permalink, which is the only shape a comment takes. It does not
+            // cover /share/<token>, whose password form is rendered from a
+            // JSP and does carry a token. isPublicAudiencePost is the second,
+            // separate exemption for the contact/subscribe endpoints below --
+            // see its own comment for why the same reasoning applies there.
+            .csrf(csrf -> csrf.ignoringRequestMatchers(
+                    SecurityConfig::isPublicCommentPost,
+                    SecurityConfig::isPublicAudiencePost))
             .formLogin(form -> form
                 .loginPage("/roller-ui/login.rol")
                 .loginProcessingUrl("/roller_j_security_check")
@@ -304,5 +308,21 @@ public class SecurityConfig {
         }
         String path = request.getRequestURI().substring(request.getContextPath().length());
         return !path.startsWith("/roller-ui/") && path.contains("/entry/");
+    }
+
+    /**
+     * The audience endpoints: an anonymous reader submitting the contact
+     * form or the subscribe form. Same reasoning as the comment exemption
+     * above -- the forms are injected onto cached pages that cannot carry a
+     * per-session token, the requests carry no ambient authority, and the
+     * real defences are the honeypot, the timing check and the throttle.
+     */
+    private static boolean isPublicAudiencePost(HttpServletRequest request) {
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        return path.equals("/roller-ui/rendering/contact.rol")
+                || path.equals("/newsletter/subscribe");
     }
 }

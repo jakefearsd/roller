@@ -73,6 +73,8 @@ public final class MockWeblogger {
     private final ShareLinkManager shareLinkManager = mock(ShareLinkManager.class);
     private final WeblogPageManager weblogPageManager = mock(WeblogPageManager.class);
     private final URLStrategy urlStrategy = mock(URLStrategy.class);
+    private final FormSubmissionManager formSubmissionManager = mock(FormSubmissionManager.class);
+    private final EventManager eventManager = mock(EventManager.class);
 
     private int flushCount;
 
@@ -90,6 +92,8 @@ public final class MockWeblogger {
         when(weblogger.getShareLinkManager()).thenReturn(shareLinkManager);
         when(weblogger.getWeblogPageManager()).thenReturn(weblogPageManager);
         when(weblogger.getUrlStrategy()).thenReturn(urlStrategy);
+        when(weblogger.getFormSubmissionManager()).thenReturn(formSubmissionManager);
+        when(weblogger.getEventManager()).thenReturn(eventManager);
 
         // Count commits. A manager call that is never flushed is a change that
         // never reaches the database, and nothing else these tests can observe
@@ -223,6 +227,14 @@ public final class MockWeblogger {
         return weblogPageManager;
     }
 
+    public FormSubmissionManager getFormSubmissionManager() {
+        return formSubmissionManager;
+    }
+
+    public EventManager getEventManager() {
+        return eventManager;
+    }
+
     public UserManager userManager() {
         return userManager;
     }
@@ -269,5 +281,13 @@ public final class MockWeblogger {
 
     public WeblogPageManager weblogPageManager() {
         return weblogPageManager;
+    }
+
+    public FormSubmissionManager formSubmissionManager() {
+        return formSubmissionManager;
+    }
+
+    public EventManager eventManager() {
+        return eventManager;
     }
 }

@@ -16,6 +16,10 @@
  */
 package org.apache.roller.weblogger.boot;
 
+import java.lang.reflect.Method;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.core.security.RollerUserDetailsService;
 import org.junit.jupiter.api.AfterAll;
@@ -40,8 +44,12 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -331,4 +339,54 @@ class SecurityConfigTest {
         }
     }
 
+    // -------------------------------------------------- CSRF exemption predicate
+
+    /**
+     * {@code isPublicAudiencePost} is a request predicate, not a mapped
+     * route, so it is pinned directly by reflection rather than through
+     * {@code mockMvc} -- the same shape {@code ControllerMetadataTest}'s
+     * private-method style tests use elsewhere. This is what
+     * {@code SecurityConfig}'s {@code .csrf(...).ignoringRequestMatchers(...)}
+     * consults; a {@code true} here is what lets an anonymous contact-form or
+     * subscribe POST through without a CSRF token.
+     */
+    @Test
+    void audiencePostsAreRecognisedOnlyOnTheirExactPaths() throws Exception {
+        assertTrue(isPublicAudiencePost(postRequest("/roller-ui/rendering/contact.rol")));
+        assertTrue(isPublicAudiencePost(postRequest("/newsletter/subscribe")));
+
+        assertFalse(isPublicAudiencePost(postRequest("/roller-ui/rendering/comment.rol")),
+                "only the two named audience endpoints are exempt");
+        assertFalse(isPublicAudiencePost(postRequest("/newsletter/subscribe/extra")),
+                "the match must be exact, not a prefix");
+    }
+
+    @Test
+    void nonPostRequestsAreNeverAudiencePostsEvenOnTheExactPath() throws Exception {
+        assertFalse(isPublicAudiencePost(getRequest("/roller-ui/rendering/contact.rol")),
+                "the predicate only ever exempts POST");
+        assertFalse(isPublicAudiencePost(request("PUT", "/roller-ui/rendering/contact.rol")));
+    }
+
+    private static boolean isPublicAudiencePost(HttpServletRequest request) throws Exception {
+        Method method = SecurityConfig.class.getDeclaredMethod("isPublicAudiencePost", HttpServletRequest.class);
+        method.setAccessible(true);
+        return (boolean) method.invoke(null, request);
+    }
+
+    private static HttpServletRequest postRequest(String path) {
+        return request("POST", path);
+    }
+
+    private static HttpServletRequest getRequest(String path) {
+        return request("GET", path);
+    }
+
+    private static HttpServletRequest request(String method, String path) {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getMethod()).thenReturn(method);
+        when(request.getRequestURI()).thenReturn(path);
+        when(request.getContextPath()).thenReturn("");
+        return request;
+    }
 }

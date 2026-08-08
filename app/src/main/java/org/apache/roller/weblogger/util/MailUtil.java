@@ -518,15 +518,34 @@ public class MailUtil {
      */
     public static void sendMessage(String from, String[] to, String[] cc, String[] bcc, String subject,
             String content, String mimeType) throws MessagingException {
-        
+        sendMessage(from, null, to, cc, bcc, subject, content, mimeType);
+    }
+
+    /**
+     * This method is used to send a Message with a pre-defined mime-type and
+     * an optional Reply-To address.
+     *
+     * @param from e-mail address of sender
+     * @param replyTo e-mail address recipients should reply to instead of
+     *                {@code from}, or null to leave the header unset (the
+     *                MTA then defaults replies to {@code from})
+     * @param to e-mail address(es) of recipients
+     * @param subject subject of e-mail
+     * @param content the body of the e-mail
+     * @param mimeType type of message, i.e. text/plain or text/html
+     * @throws MessagingException the exception to indicate failure
+     */
+    private static void sendMessage(String from, String replyTo, String[] to, String[] cc, String[] bcc,
+            String subject, String content, String mimeType) throws MessagingException {
+
         MailProvider mailProvider = WebloggerStartup.getMailProvider();
         if (mailProvider == null) {
             return;
         }
-        
+
         Session session = mailProvider.getSession();
         MimeMessage message = new MimeMessage(session);
-        
+
         // n.b. any default from address is expected to be determined by caller.
         if (! StringUtils.isEmpty(from)) {
             InternetAddress sentFrom = new InternetAddress(from);
@@ -535,7 +554,17 @@ public class MailUtil {
                 log.debug("e-mail from: " + sentFrom);
             }
         }
-        
+
+        // A form submitter's or commenter's address is not the account this
+        // notification is sent as, so replies must not silently go to the
+        // weblog's own from address (or nowhere, when no from is set).
+        if (! StringUtils.isEmpty(replyTo)) {
+            message.setReplyTo(new InternetAddress[]{ new InternetAddress(replyTo) });
+            if (log.isDebugEnabled()) {
+                log.debug("e-mail reply-to: " + replyTo);
+            }
+        }
+
         if (to!=null) {
             InternetAddress[] sendTo = new InternetAddress[to.length];
             
@@ -635,6 +664,25 @@ public class MailUtil {
     public static void sendTextMessage(String from, String[] to, String[] cc, String[] bcc,
                                        String subject, String content) throws MessagingException {
         sendMessage(from, to, cc, bcc, subject, content, "text/plain; charset=utf-8");
+    }
+
+    /**
+     * This method is used to send a Text Message whose replies should go
+     * somewhere other than {@code from} -- e.g. a contact-form notification
+     * sent as the weblog, where a reply should reach the submitter, not the
+     * weblog's own address.
+     *
+     * @param from e-mail address of sender
+     * @param replyTo e-mail address recipients should reply to, or null to
+     *                leave the header unset
+     * @param to e-mail addresses of recipients
+     * @param subject subject of e-mail
+     * @param content the body of the e-mail
+     * @throws MessagingException the exception to indicate failure
+     */
+    public static void sendTextMessage(String from, String replyTo, String[] to,
+                                       String subject, String content) throws MessagingException {
+        sendMessage(from, replyTo, to, null, null, subject, content, "text/plain; charset=utf-8");
     }
 
     /**
