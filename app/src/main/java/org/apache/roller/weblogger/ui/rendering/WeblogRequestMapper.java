@@ -375,8 +375,30 @@ public class WeblogRequestMapper implements RequestMapper {
                         }
                         break;
 
-                    // unsupported url
+                    // Every reserved first-segment word (page/entry/date/
+                    // category/tags/feed/resource/mediaresource/search) is
+                    // one of the cases above, so anything that reaches here
+                    // is either a static-page slug (/<handle>/<slug>, no
+                    // further path data) or truly unsupported
+                    // (/<handle>/<foo>/<bar>). Forward the first kind to
+                    // PageServlet -- WeblogPageRequest resolves the slug
+                    // (WeblogPageManager) and 404s itself, drafts included,
+                    // exactly like an unknown "page"/"entry" name already
+                    // does above. The second kind stays unsupported: a
+                    // second path segment is never a page slug.
                     default:
+                        if (data == null) {
+                            forwardUrl.append(PAGE_SERVLET);
+                            forwardUrl.append('/');
+                            forwardUrl.append(handle);
+                            if(locale != null) {
+                                forwardUrl.append('/');
+                                forwardUrl.append(locale);
+                            }
+                            forwardUrl.append('/');
+                            forwardUrl.append(context);
+                            break;
+                        }
                         return null;
                 }
             }

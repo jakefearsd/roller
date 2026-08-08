@@ -261,6 +261,58 @@ class WeblogRequestMapperTest {
         assertEquals(404, response.getStatus());
     }
 
+    // --------------------------------------------------- static-page slugs
+
+    /**
+     * A single unrecognised segment is a page-slug candidate
+     * (/<handle>/<slug>): every reserved word the mapper actually knows
+     * about (page/entry/date/category/tags/feed/resource/mediaresource/
+     * search) is handled by name above, so anything else that reaches the
+     * default branch with no further path data must be forwarded to
+     * PageServlet, which resolves the slug and 404s itself when it does not
+     * name a published page (see WeblogPageRequest/WeblogPageManager). Before
+     * this, the mapper declined the request outright and a published static
+     * page never became reachable.
+     */
+    @Test
+    void anUnknownSingleSegmentForwardsToPageServletAsAPageSlugCandidate() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/about");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/about", response.getForwardedUrl());
+    }
+
+    /**
+     * A second path segment is never a page slug -- WeblogPageRequest only
+     * treats a single remaining path element as one -- so this must stay
+     * declined exactly as it was before the page-slug forward existed.
+     */
+    @Test
+    void anUnknownTwoSegmentPathStaysDeclined() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/about/extra");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertFalse(mapper.handleRequest(request, response),
+                "a second path segment past an unknown context is not a page slug");
+        assertNull(response.getForwardedUrl());
+    }
+
+    /**
+     * A known context (page/entry/date/category/tags/feed/resource/
+     * mediaresource/search) must keep forwarding exactly as before -- the
+     * page-slug fallback only ever fires from the switch's default branch.
+     */
+    @Test
+    void aKnownContextStillForwardsAsBefore() throws Exception {
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/date/20260101");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/date/20260101",
+                response.getForwardedUrl());
+    }
+
     // ------------------------------------------------------------ POST rules
 
     /**
