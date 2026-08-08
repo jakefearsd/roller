@@ -10,10 +10,12 @@ class AudienceSanitizationTest {
     @Test
     void thePlaceholderDataAttributesSurvive() {
         String clean = HTMLSanitizer.conditionallySanitize(
-                "<div class=\"contact-form-slot\" data-weblog=\"myblog\"></div>"
+                "<div class=\"contact-form-slot\" data-weblog=\"myblog\" "
+                + "data-endpoint=\"/roller/roller-ui/rendering/contact.rol\"></div>"
                 + "<div class=\"subscribe-form-slot\" data-list-uuid=\"2f0f1b0c-1111-2222-3333-444455556666\"></div>");
 
         assertTrue(clean.contains("data-weblog=\"myblog\""), clean);
+        assertTrue(clean.contains("data-endpoint=\"/roller/roller-ui/rendering/contact.rol\""), clean);
         assertTrue(clean.contains("data-list-uuid="), clean);
     }
 
@@ -29,8 +31,9 @@ class AudienceSanitizationTest {
     @Test
     void theAttributesAreNotGrantedGlobally() {
         String clean = HTMLSanitizer.conditionallySanitize(
-                "<a data-weblog=\"x\">link</a>");
+                "<a data-weblog=\"x\" data-endpoint=\"/x\">link</a>");
 
         assertFalse(clean.contains("data-weblog"), clean);
+        assertFalse(clean.contains("data-endpoint"), clean);
     }
 }

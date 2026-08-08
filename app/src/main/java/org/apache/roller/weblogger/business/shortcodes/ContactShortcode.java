@@ -19,7 +19,9 @@ package org.apache.roller.weblogger.business.shortcodes;
 
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 
 /**
  * The built-in {@code [contact]} shortcode: a placeholder for a contact form.
@@ -30,6 +32,16 @@ import org.apache.commons.text.StringEscapeUtils;
  * authored form is a phishing kit), so {@code #showAudienceAssets} builds the
  * real form client-side and posts it to the weblog named by
  * {@code data-weblog}.
+ *
+ * <p><b>{@code data-endpoint} is server-built, not client-guessed.</b> The
+ * client-side script cannot reliably rebuild the app's context path (e.g.
+ * {@code /roller}) on its own -- an earlier version tried to infer it by
+ * scanning the page for a stylesheet link containing {@code /roller-ui/},
+ * which breaks the moment the first stylesheet on the page is something else
+ * (a weblog's own theme CSS, a webjar), silently posting to the wrong origin
+ * and failing the form with no visible cause. {@link WebloggerRuntimeConfig}
+ * already carries the context path the {@code InitFilter} published for this
+ * exact reason -- it is what {@code $url.site} resolves to in every theme.
  */
 public class ContactShortcode implements ShortcodeHandler {
 
@@ -50,8 +62,12 @@ public class ContactShortcode implements ShortcodeHandler {
                 || content.getWeblog().getHandle() == null) {
             return null;
         }
+        String endpoint = StringUtils.defaultString(WebloggerRuntimeConfig.getRelativeContextURL())
+                + "/roller-ui/rendering/contact.rol";
         return "<div class=\"contact-form-slot\" data-weblog=\""
                 + StringEscapeUtils.escapeHtml4(content.getWeblog().getHandle())
+                + "\" data-endpoint=\""
+                + StringEscapeUtils.escapeHtml4(endpoint)
                 + "\"></div>";
     }
 }

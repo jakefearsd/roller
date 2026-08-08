@@ -2,7 +2,10 @@ package org.apache.roller.weblogger.business.shortcodes;
 
 import java.util.Map;
 
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,6 +21,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ContactShortcodeTest {
 
     private final ContactShortcode shortcode = new ContactShortcode();
+
+    private String previousRelativeContextURL;
+
+    @BeforeEach
+    void setUp() {
+        // The endpoint the shortcode emits is built from this -- set it to a
+        // known, non-empty value so the assertions below do not depend on
+        // whatever some earlier-running test left behind in this shared
+        // static field (see URLModelTest for the same discipline).
+        previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+    }
+
+    @AfterEach
+    void tearDown() {
+        WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
+    }
 
     private static ShortcodeContext context(String handle) {
         Weblog weblog = handle == null ? null : new Weblog();
@@ -40,6 +60,22 @@ class ContactShortcodeTest {
         assertTrue(html.contains("data-weblog=\"travelblog\""), html);
         assertFalse(html.contains("<form"), "the macro injects the form, not the shortcode");
         assertFalse(html.contains("<input"), html);
+    }
+
+    /**
+     * The submit endpoint is built here, server-side, from the context path
+     * the {@code InitFilter} published -- not guessed by the client script.
+     * A client-side guess (an earlier version scanned the page for a
+     * stylesheet link) breaks the moment the page's first stylesheet is
+     * something other than {@code /roller-ui/...} (a weblog's own theme CSS,
+     * a webjar), which is every real page: it posts to the wrong origin with
+     * no visible cause.
+     */
+    @Test
+    void theEndpointCarriesTheContextPathServerSide() {
+        String html = shortcode.render(Map.of(), null, context("travelblog"));
+
+        assertTrue(html.contains("data-endpoint=\"/roller/roller-ui/rendering/contact.rol\""), html);
     }
 
     @Test

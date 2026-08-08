@@ -790,18 +790,6 @@ faster than a human could type. Neither is secret; neither needs to be.
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   var loadedAt = Date.now();
-  var base = document.querySelector('base') ? null : null; // context path derived below
-
-  function contextPath() {
-    // The page lives at <ctx>/<handle>/... ; every theme is served under the
-    // application context. Derive it from a known marker: the stylesheet link
-    // that every bundled theme emits points under the context path.
-    var link = document.querySelector('link[rel=stylesheet][href]');
-    if (!link) { return ''; }
-    var href = link.getAttribute('href');
-    var idx = href.indexOf('/roller-ui/');
-    return idx > 0 ? href.substring(0, idx) : '';
-  }
 
   function showMessage(container, text) {
     var p = container.querySelector('.audience-message');
@@ -811,7 +799,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   Array.prototype.forEach.call(document.querySelectorAll('.contact-form-slot'), function (slot) {
     var handle = slot.getAttribute('data-weblog');
-    if (!handle) { return; }
+    // Server-built (ContactShortcode), not derived here: the app's context
+    // path cannot be reliably guessed from the page, and guessing it wrong
+    // used to post to the wrong origin with no visible cause.
+    var endpoint = slot.getAttribute('data-endpoint');
+    if (!handle || !endpoint) { return; }
     var form = document.createElement('form');
     form.className = 'contact-form';
     form.innerHTML =
@@ -825,7 +817,7 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       showMessage(form, 'Sending…');
-      fetch(contextPath() + '/roller-ui/rendering/contact.rol', {
+      fetch(endpoint, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
