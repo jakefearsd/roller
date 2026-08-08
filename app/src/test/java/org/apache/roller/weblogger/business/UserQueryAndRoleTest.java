@@ -185,6 +185,32 @@ class UserQueryAndRoleTest {
         assertNull(users().getUserByEmail("nobody@example.invalid"));
     }
 
+    /**
+     * {@code emailaddress} carries no unique constraint at the database level
+     * (see V002 baseline schema), so two enabled accounts really can share an
+     * address. The lookup must not throw {@code NonUniqueResultException} --
+     * it caps to one row, ordered deterministically by username.
+     */
+    @Test
+    void lookupByEmailToleratesTwoAccountsSharingAnAddress() throws Exception {
+        String sharedEmail = "shared@example.invalid";
+        User managedAlice = users().getUserByUserName(aliceName);
+        managedAlice.setEmailAddress(sharedEmail);
+        users().saveUser(managedAlice);
+        User managedBob = users().getUserByUserName(bobName);
+        managedBob.setEmailAddress(sharedEmail);
+        users().saveUser(managedBob);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        User found = users().getUserByEmail(sharedEmail);
+
+        assertNotNull(found, "a duplicate address must not make the lookup throw or find nothing");
+        assertEquals(aliceName, found.getUserName(),
+                "the deterministic order must return the same one every time, "
+                        + "not whichever the database happens to return first");
+    }
+
     // -------------------------------------------------------------- listing
 
     @Test

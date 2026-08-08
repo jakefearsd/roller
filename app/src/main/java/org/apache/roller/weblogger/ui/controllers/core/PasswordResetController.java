@@ -71,6 +71,14 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * throttled submission still returns the generic confirmation: a distinct
  * "you are being throttled" response would itself leak which identifiers are
  * real.
+ *
+ * <p><b>No in-request timing tell.</b> An existing identifier used to cost a
+ * synchronous SMTP send before the response, an unknown one only two
+ * SELECTs -- a difference an attacker can literally time. {@code forgotSend}
+ * now hands the whole lookup-issue-mail sequence to
+ * {@code ThreadManager.executeInBackground}, so both paths return as soon as
+ * the throttle bookkeeping is done and neither does any user-dependent work
+ * in-request.
  */
 @Controller
 @RequestMapping("/roller-ui")
@@ -124,6 +132,12 @@ public class PasswordResetController extends BaseController {
     public String forgotForm(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
         model.addAttribute("pageTitle", "forgotPassword.title");
+        if (!resetMailReady()) {
+            // A notice, not an error: the form still renders (a submission
+            // would just say the same thing back), but there is no point
+            // hiding from an administrator that reset links cannot go out.
+            addMessage(model, "forgotPassword.mailNotConfigured", request);
+        }
         return ".ForgotPassword";
     }
 
@@ -133,7 +147,7 @@ public class PasswordResetController extends BaseController {
         populateCommonModel(request, model);
         model.addAttribute("pageTitle", "forgotPassword.title");
 
-        if (!MailUtil.isMailConfigured()) {
+        if (!resetMailReady()) {
             addMessage(model, "forgotPassword.mailNotConfigured", request);
             return ".ForgotPassword";
         }
@@ -141,7 +155,11 @@ public class PasswordResetController extends BaseController {
                 && (throttle().isAbusive(request.getRemoteAddr())
                     || throttle().isAbusive(idKey(identifier)));
         if (!throttled) {
-            issueAndMailBestEffort(identifier, request);
+            // Off-thread: an existing identifier costs a token insert and an
+            // SMTP send, an unknown one costs two SELECTs. Doing either
+            // in-request makes the response time itself an enumeration
+            // oracle, so neither happens before the response below.
+            deferIssueAndMail(identifier, request);
             if (throttlingEnabled()) {
                 throttle().processHit(request.getRemoteAddr());
                 throttle().processHit(idKey(identifier));
@@ -152,6 +170,18 @@ public class PasswordResetController extends BaseController {
         // cannot enumerate accounts or reveal that throttling engaged.
         addMessage(model, "forgotPassword.confirmation", request);
         return ".ForgotPassword";
+    }
+
+    /**
+     * Whether this server can actually deliver a reset link: a transport is
+     * configured AND there is a site email address to send from. Checking
+     * only {@code MailUtil.isMailConfigured()} left a server with mail set up
+     * but a blank {@code site.adminemail} silently unable to send -- every
+     * submission looked identical to a real one and quietly went nowhere.
+     */
+    private static boolean resetMailReady() {
+        return MailUtil.isMailConfigured()
+                && StringUtils.isNotBlank(WebloggerRuntimeConfig.getProperty("site.adminemail"));
     }
 
     // ----------------------------------------------------------- reset form
@@ -226,11 +256,30 @@ public class PasswordResetController extends BaseController {
     // -------------------------------------------------------------- helpers
 
     /**
+     * Hands the lookup-issue-mail sequence to the background thread pool so
+     * the controller's response does not depend on whether the identifier
+     * named anyone. Resolves the (locale-dependent) email subject
+     * synchronously first -- cheap, no I/O -- so the background runnable
+     * never needs to hold onto the request.
+     */
+    private void deferIssueAndMail(String identifier, HttpServletRequest request) {
+        String subject = getText("forgotPassword.email.subject", request);
+        try {
+            weblogger.getThreadManager().executeInBackground(
+                    () -> issueAndMailBestEffort(identifier, subject));
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.error("Could not schedule forgot-password background work", ex);
+        }
+    }
+
+    /**
      * Issues a token and attempts the notification email for whichever
      * account (if any) the identifier names, swallowing every failure --
-     * nothing in here may change the caller-visible response.
+     * this runs off the request thread, so nothing in here can change the
+     * response the caller already received.
      */
-    private void issueAndMailBestEffort(String identifier, HttpServletRequest request) {
+    private void issueAndMailBestEffort(String identifier, String subject) {
         try {
             User user = findUser(identifier);
             if (user == null) {
@@ -238,7 +287,7 @@ public class PasswordResetController extends BaseController {
             }
             String raw = weblogger.getUserTokenManager().issueToken(user, UserToken.Purpose.PASSWORD_RESET);
             weblogger.flush();
-            sendResetEmail(user, raw, request);
+            sendResetEmail(user, raw, subject);
         } catch (Exception ex) {
             log.error("Could not process forgot-password request", ex);
         }
@@ -257,11 +306,10 @@ public class PasswordResetController extends BaseController {
         return userManager.getUserByEmail(identifier);
     }
 
-    private void sendResetEmail(User user, String rawToken, HttpServletRequest request) throws Exception {
+    private void sendResetEmail(User user, String rawToken, String subject) throws Exception {
         String from = WebloggerRuntimeConfig.getProperty("site.adminemail");
         String url = WebloggerRuntimeConfig.getAbsoluteContextURL()
                 + "/roller-ui/resetPassword.rol?token=" + rawToken;
-        String subject = getText("forgotPassword.email.subject", request);
         String body = "A password reset was requested for your account.\n\n"
                 + "Use the link below to choose a new password. It is valid for one hour "
                 + "and can only be used once.\n\n"

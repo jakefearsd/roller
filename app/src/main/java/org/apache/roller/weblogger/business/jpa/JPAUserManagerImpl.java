@@ -200,6 +200,11 @@ public class JPAUserManagerImpl implements UserManager {
         TypedQuery<User> query = strategy.getNamedQuery("User.getByEmailAddress&Enabled", User.class);
         query.setParameter(1, emailAddress);
         query.setParameter(2, Boolean.TRUE);
+        // emailaddress has no unique constraint at the database level, so
+        // more than one enabled account could share an address; the query is
+        // ordered deterministically and this caps it to one so a duplicate
+        // cannot throw NonUniqueResultException.
+        query.setMaxResults(1);
         try {
             return query.getSingleResult();
         } catch (NoResultException e) {

@@ -121,6 +121,34 @@ class UserTokenManagerTest {
         assertNull(second, "a token must not be redeemable twice");
     }
 
+    /**
+     * Proves the redemption is guarded by the atomic bulk-update's WHERE
+     * clause, not by two racing requests both having read {@code usedAt ==
+     * null} through {@code validate()} first. A row stamped used by some
+     * other path entirely -- never observed by this manager's own
+     * {@code validate()} -- must still be refused: the update's affected-row
+     * count is the single source of truth, and here it must be 0.
+     */
+    @Test
+    void aTokenAlreadyStampedUsedByAnotherPathIsNotConsumable() throws Exception {
+        User managedUser = TestUtils.getManagedUser(user);
+        String raw = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        // Stamp usedAt directly on the managed row, bypassing consume()
+        // entirely -- simulates a second process that already redeemed it.
+        UserToken token = manager().validate(raw);
+        assertNotNull(token, "precondition: the token exists and reads as usable");
+        token.setUsedAt(new Timestamp(System.currentTimeMillis()));
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        assertNull(manager().consume(raw),
+                "the atomic update must affect 0 rows once usedAt is set, however "
+                        + "that came to be, and consume() must report that as null");
+    }
+
     @Test
     void anExpiredTokenDoesNotValidate() throws Exception {
         User managedUser = TestUtils.getManagedUser(user);
@@ -141,6 +169,37 @@ class UserTokenManagerTest {
     @Test
     void aGarbageTokenValidatesToNullWithoutThrowing() throws Exception {
         assertNull(manager().validate("this-is-not-a-real-token"));
+    }
+
+    @Test
+    void aNullOrBlankTokenValidatesAndConsumesToNullWithoutThrowing() throws Exception {
+        assertNull(manager().validate(null));
+        assertNull(manager().validate(""));
+        assertNull(manager().consume(null));
+        assertNull(manager().consume(" "));
+    }
+
+    /**
+     * {@code consume()} no longer routes through {@code validate()} (the
+     * atomic bulk update is a separate query), so {@code validate()}'s own
+     * "already used" branch needs its own direct exercise: a token consumed
+     * once must still read as unusable through a plain {@code validate()}
+     * call, not just through a second {@code consume()}.
+     */
+    @Test
+    void validateReportsAnAlreadyConsumedTokenAsUnusable() throws Exception {
+        User managedUser = TestUtils.getManagedUser(user);
+        String raw = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        assertNotNull(manager().consume(raw), "precondition: the token starts out consumable");
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        assertNull(manager().validate(raw),
+                "validate() must itself recognise a consumed token as unusable, "
+                        + "independent of consume()'s own atomic check");
     }
 
     @Test

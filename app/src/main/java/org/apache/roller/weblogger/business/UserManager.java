@@ -113,6 +113,16 @@ public interface UserManager {
      * -- a disabled account must not be reachable through the forgot-password
      * identifier lookup.
      *
+     * <p>The match is case-sensitive, the same as {@link #getUserByUserName(String)}
+     * -- callers that want a case-insensitive identifier lookup (e.g. an
+     * email typed with different capitalisation) must normalise the case
+     * themselves before calling.
+     *
+     * <p>{@code emailaddress} carries no uniqueness constraint at the
+     * database level, so more than one enabled account can in principle share
+     * an address; this returns at most one, chosen deterministically (lowest
+     * username) rather than whichever the database happens to return first.
+     *
      * @param emailAddress email address of the user to lookup.
      * @return The enabled user with this email address, or null if not found.
      * @throws WebloggerException If there is a problem.

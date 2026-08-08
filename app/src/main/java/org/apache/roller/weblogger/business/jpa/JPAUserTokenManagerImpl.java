@@ -85,13 +85,33 @@ public class JPAUserTokenManagerImpl implements UserTokenManager {
 
     @Override
     public User consume(String rawToken) throws WebloggerException {
-        UserToken token = validate(rawToken);
-        if (token == null) {
+        if (rawToken == null || rawToken.isBlank()) {
             return null;
         }
-        token.setUsedAt(new Timestamp(System.currentTimeMillis()));
-        strategy.store(token);
-        return token.getUser();
+        // Atomic redeem: a read-then-write (validate(), then a separate
+        // store()) lets two racing requests both observe usedAt == null and
+        // both redeem the same token. This bulk UPDATE's WHERE clause is the
+        // only thing that decides "still usable", and the database guarantees
+        // at most one concurrent statement wins it -- the affected-row count
+        // is the single source of truth, not a second SELECT.
+        String digest = TokenGenerator.sha256Hex(rawToken);
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        Query consumeUpdate = strategy.getNamedUpdate("UserToken.consumeIfUsable");
+        consumeUpdate.setParameter(1, now);
+        consumeUpdate.setParameter(2, digest);
+        consumeUpdate.setParameter(3, now);
+        if (consumeUpdate.executeUpdate() != 1) {
+            return null;
+        }
+        TypedQuery<UserToken> query = strategy.getNamedQuery("UserToken.getByDigest", UserToken.class);
+        query.setParameter(1, digest);
+        try {
+            return query.getSingleResult().getUser();
+        } catch (NoResultException e) {
+            // Cannot happen -- the update above just touched this exact row --
+            // but a manager must not throw on a lookup miss.
+            return null;
+        }
     }
 
     @Override

@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.business.startup.MockMailProvider;
+import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.UserToken;
 import org.apache.roller.weblogger.ui.core.RollerLoginSessionManager;
@@ -42,6 +43,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -60,12 +64,27 @@ class PasswordResetControllerTest {
     private Object previousPasswordEncoder;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         mocks = MockWeblogger.install();
         mail = MockMailProvider.install();
         previousPasswordEncoder = ControllerTestFixture.installNoopPasswordEncoder();
         controller = ControllerTestFixture.withMessages(new PasswordResetController());
         model = new ExtendedModelMap();
+
+        // resetMailReady() needs both a transport (MockMailProvider, above)
+        // and a non-blank site.adminemail; give every test a sane default so
+        // individual tests can override it to exercise the "unready" branch.
+        when(mocks.getPropertiesManager().getProperty("site.adminemail"))
+                .thenReturn(new RuntimeConfigProperty("site.adminemail", "admin@example.invalid"));
+
+        // The controller hands the lookup-issue-mail sequence to
+        // ThreadManager.executeInBackground; run it inline by default so
+        // most tests can assert on its effects synchronously. Tests
+        // exercising the deferral itself override this per-test.
+        doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        }).when(mocks.getThreadManager()).executeInBackground(any());
     }
 
     @AfterEach
@@ -142,6 +161,61 @@ class PasswordResetControllerTest {
     }
 
     @Test
+    void aBlankIdentifierGetsTheIdenticalConfirmationAndIssuesNoToken() throws Exception {
+        String view = controller.forgotSend(request(), model, "");
+
+        assertEquals(".ForgotPassword", view);
+        assertEquals(List.of("forgotPassword.confirmation"), ControllerTestFixture.messages(model));
+        verify(mocks.getUserManager(), never()).getUserByUserName(any(), any());
+        verify(mocks.getUserTokenManager(), never()).issueToken(any(), any());
+    }
+
+    /**
+     * A failure inside the background lookup-issue-mail sequence (this test's
+     * default stub runs it inline) must be logged and swallowed, not thrown
+     * -- the response was already decided before this work ever started.
+     */
+    @Test
+    void aFailureInTheBackgroundWorkIsSwallowedAndDoesNotAffectTheResponse() throws Exception {
+        User user = user("dana", "dana@example.invalid");
+        when(mocks.getUserManager().getUserByUserName("dana", Boolean.TRUE)).thenReturn(user);
+        when(mocks.getUserTokenManager().issueToken(any(), any()))
+                .thenThrow(new org.apache.roller.weblogger.WebloggerException("db down"));
+
+        String view = controller.forgotSend(request(), model, "dana");
+
+        assertEquals(".ForgotPassword", view);
+        assertEquals(List.of("forgotPassword.confirmation"), ControllerTestFixture.messages(model));
+        assertTrue(mail.sent().isEmpty(), "a failed token issue must not attempt to mail a token that was never made");
+    }
+
+    /**
+     * {@code executeInBackground} declares {@code InterruptedException}; if
+     * scheduling itself is interrupted, the controller must restore the
+     * interrupt flag and let the response go out rather than propagating.
+     */
+    @Test
+    void anInterruptedSchedulingAttemptReInterruptsAndStillReturnsTheConfirmation() throws Exception {
+        doThrow(new InterruptedException("shutting down"))
+                .when(mocks.getThreadManager()).executeInBackground(any());
+        User user = user("dana", "dana@example.invalid");
+        when(mocks.getUserManager().getUserByUserName("dana", Boolean.TRUE)).thenReturn(user);
+
+        try {
+            String view = controller.forgotSend(request(), model, "dana");
+
+            assertEquals(".ForgotPassword", view);
+            assertEquals(List.of("forgotPassword.confirmation"), ControllerTestFixture.messages(model));
+            assertTrue(Thread.currentThread().isInterrupted(),
+                    "the interrupt must be restored on the thread, not silently dropped");
+        } finally {
+            // Clear the flag this test just set, so it cannot bleed into
+            // whatever the test runner schedules on this thread next.
+            Thread.interrupted();
+        }
+    }
+
+    @Test
     void mailNotConfiguredShowsThePlainMessageAndIssuesNoToken() throws Exception {
         MockMailProvider.uninstall();
         try {
@@ -156,6 +230,56 @@ class PasswordResetControllerTest {
         } finally {
             mail = MockMailProvider.install();
         }
+    }
+
+    @Test
+    void mailConfiguredButNoSiteAdminEmailShowsThePlainMessageAndIssuesNoToken() throws Exception {
+        // Transport is configured (setUp's MockMailProvider), but there is
+        // nowhere to send from -- resetMailReady() must catch this too, not
+        // just an absent transport.
+        when(mocks.getPropertiesManager().getProperty("site.adminemail"))
+                .thenReturn(new RuntimeConfigProperty("site.adminemail", "   "));
+        User user = user("dana", "dana@example.invalid");
+        when(mocks.getUserManager().getUserByUserName("dana", Boolean.TRUE)).thenReturn(user);
+
+        String view = controller.forgotSend(request(), model, "dana");
+
+        assertEquals(".ForgotPassword", view);
+        assertEquals(List.of("forgotPassword.mailNotConfigured"), ControllerTestFixture.messages(model));
+        verify(mocks.getUserTokenManager(), never()).issueToken(any(), any());
+        assertTrue(mail.sent().isEmpty());
+    }
+
+    @Test
+    void theLookupIssueAndMailSequenceIsHandedToTheBackgroundThreadManager() throws Exception {
+        User user = user("dana", "dana@example.invalid");
+        when(mocks.getUserManager().getUserByUserName("dana", Boolean.TRUE)).thenReturn(user);
+
+        controller.forgotSend(request(), model, "dana");
+
+        verify(mocks.getThreadManager()).executeInBackground(any());
+    }
+
+    /**
+     * The timing side channel this closes: an existing identifier used to
+     * cost a synchronous SMTP send in-request, an unknown one only two
+     * SELECTs -- a caller could literally time the difference. With a thread
+     * manager that genuinely defers (unlike this test class's default inline
+     * stub) the response must come back identical either way, having done
+     * none of the user-dependent work itself.
+     */
+    @Test
+    void whenTheThreadManagerActuallyDefersTheResponseDoesNoSynchronousLookupOrMailWork() throws Exception {
+        doNothing().when(mocks.getThreadManager()).executeInBackground(any());
+        User user = user("dana", "dana@example.invalid");
+        when(mocks.getUserManager().getUserByUserName("dana", Boolean.TRUE)).thenReturn(user);
+
+        String view = controller.forgotSend(request(), model, "dana");
+
+        assertEquals(".ForgotPassword", view);
+        assertEquals(List.of("forgotPassword.confirmation"), ControllerTestFixture.messages(model));
+        verify(mocks.getUserTokenManager(), never()).issueToken(any(), any());
+        assertTrue(mail.sent().isEmpty(), "no mail work may happen synchronously in-request");
     }
 
     @Test
@@ -214,6 +338,18 @@ class PasswordResetControllerTest {
 
         assertEquals(".ForgotPassword", view);
         assertEquals("forgotPassword.title", model.getAttribute("pageTitle"));
+        assertEquals(List.of(), ControllerTestFixture.messages(model),
+                "no notice when mail is actually ready to send");
+    }
+
+    @Test
+    void theForgotPasswordFormShowsANoticeWhenMailIsNotReady() throws Exception {
+        when(mocks.getPropertiesManager().getProperty("site.adminemail")).thenReturn(null);
+
+        String view = controller.forgotForm(request(), model);
+
+        assertEquals(".ForgotPassword", view);
+        assertEquals(List.of("forgotPassword.mailNotConfigured"), ControllerTestFixture.messages(model));
     }
 
     // -------------------------------------------------------- reset (GET)
