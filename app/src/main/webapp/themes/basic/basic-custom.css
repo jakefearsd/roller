@@ -259,9 +259,13 @@ div.dayTitle {
 .content {
     padding: 0em 2em 2em 2em;
 }
-.rightbar_wrapper { 
+.rightbar_wrapper {
     width: 20%;
     float: right;
+}
+footer {
+    clear: both;
+    padding: 1em 0;
 }
 
 /* featured images (responsive rendition ladder) -------- */

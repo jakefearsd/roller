@@ -255,6 +255,10 @@ ul.activities li {
 #poweredby {
     float:right;
 }
+.newsletter-subscribe-block {
+    clear: both;
+    padding-top: 1em;
+}
 #footer_content {
     font-size: 70%;
     color: gray;
