@@ -49,29 +49,53 @@ class ContentRendererTest {
     }
 
     /**
-     * Shortcodes expand BEFORE markdown. Markdown escapes the quotes in
-     * what looks like an attribute to numeric entities (&#34;), and the
-     * expander's attribute grammar does not match entity-quoted values -- so
-     * every shortcode carrying an attribute would silently stop working if
-     * markdown ran first. This test confirms the shortcode survives in the
-     * output even though markdown escapes the quotes, which proves the order
-     * (shortcodes first, then markdown) is correct and necessary.
+     * Regression check: unknown shortcodes are not silently deleted, and
+     * markdown's entity escaping of quote characters in HTML-like text is
+     * stable. The expander doesn't touch unknown shortcodes; markdown escapes
+     * them in the normal way.
      */
     @Test
-    void anUnknownShortcodeSurvivesEvenWhenMarkdownEscapesIt() {
+    void unknownShortcodeRegressionCheck() {
         String source = "[nosuchcode attr=\"value\"]";
 
         String html = ContentRenderer.render(context(source), source);
 
-        // The shortcode passes through shortcode expander unchanged, then markdown
-        // escapes the quotes as &#34; (numeric entities) as it would for HTML-like
-        // text. The important thing is that the shortcode's core structure survives
-        // intact in the output: the tag name, the attribute name, and the value.
+        // The shortcode passes through shortcode expander unchanged (it's unknown),
+        // then markdown escapes the quotes as &#34; (numeric entities).
         assertTrue(html.contains("[nosuchcode attr") && html.contains("value"),
                 "unknown shortcode must survive in output: " + html);
         // Confirm the exact escaping that markdown/sanitizer produces
         assertTrue(html.contains("&#34;"),
                 "markdown-escaped quotes must be in output: " + html);
+    }
+
+    /**
+     * Shortcodes expand BEFORE markdown. A registered shortcode with quoted
+     * attributes is parsed correctly only when quotes are literal (before
+     * markdown runs). If markdown ran first, entity-escaped quotes would be
+     * parsed as part of the attribute value itself, not as delimiters.
+     * This test uses [cta] with a label attribute to detect the difference:
+     * in correct order, label="test" → label renders as "test" (no quotes);
+     * in reversed order, markdown would make it label=&quot;test&quot; → label
+     * renders with the quote entities embedded.
+     */
+    @Test
+    void registeredShortcodeWithQuotedAttributesPinsExpansionBeforeMarkdown() {
+        // [cta] is registered; it requires href and label to render, otherwise returns null
+        String source = "[cta href=\"http://example.com\" label=\"test\"]";
+
+        String html = ContentRenderer.render(context(source), source);
+
+        // In the correct order (shortcodes first, then markdown):
+        // - Expander sees literal quotes, matches the regex, parses attributes correctly
+        // - Handler gets {href: "http://example.com", label: "test"}
+        // - Renders: <span class="cta-label">test</span> (no quotes in output)
+        assertTrue(html.contains("<span class=\"cta-label\">test</span>"),
+                "label must render without quote entities in correct order: " + html);
+        // If markdown ran first, the output would have the quotes as entities:
+        // <span class="cta-label">&#34;test&#34;</span> or similar
+        assertFalse(html.contains("cta-label\">&#34;") || html.contains("cta-label\">&quot;"),
+                "label must not include escaped quotes in correct order: " + html);
     }
 
     /** The sanitizer is the security boundary, and it runs last. */
