@@ -114,7 +114,8 @@ public final class ShortcodeExpander {
      */
     private static final ShortcodeExpander DEFAULT =
             new ShortcodeExpander(List.of(new ImageShortcode(), new GalleryShortcode(),
-                    new MapShortcode(), new CtaShortcode(), new FaqShortcode()));
+                    new MapShortcode(), new CtaShortcode(), new FaqShortcode(),
+                    new VideoShortcode()));
 
     private final Map<String, ShortcodeHandler> handlers;
 
