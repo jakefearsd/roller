@@ -10,6 +10,7 @@
     #showGalleryGridStyles()
     #showGalleryAssets()
     #showEmbedAssets()
+    #showAudienceAssets()
     #showMapAssets()
     <link rel="stylesheet" media="all" href="$model.weblog.stylesheet">
 </head>

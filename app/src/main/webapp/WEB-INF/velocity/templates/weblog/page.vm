@@ -29,5 +29,6 @@ markup so a page does not look foreign inside any of them.
 #showGalleryAssets()
 #showMapAssets()
 #showEmbedAssets()
+#showAudienceAssets()
 </body>
 </html>

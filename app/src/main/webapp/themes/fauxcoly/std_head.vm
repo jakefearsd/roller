@@ -3,6 +3,7 @@
 #showGalleryGridStyles()
 #showGalleryAssets()
 #showEmbedAssets()
+#showAudienceAssets()
 #showMapAssets()
 <link rel="stylesheet" href="$url.resource('css/cssgrids-min.css')" />
 <link rel="stylesheet" href="$url.page('style.css')" />

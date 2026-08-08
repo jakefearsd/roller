@@ -765,6 +765,129 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 #**
+Client-side injection for the [contact] and [subscribe] placeholders -- the
+audience twin of #showEmbedAssets.
+
+The sanitizer strips <form> from authored content on purpose (an authored
+form is a phishing kit), so the shortcodes emit inert divs and this macro
+builds the real forms. Both endpoints are same-origin, which is why no theme
+CSP changes: connect-src 'self' already allows the fetches.
+
+The hidden "website" field is a honeypot: bots fill every field, humans
+never see it. elapsedMs is a naive-bot timer: the server refuses a submit
+faster than a human could type. Neither is secret; neither needs to be.
+*#
+#macro(showAudienceAssets)
+<style>
+.contact-form label, .newsletter-subscribe label { display: block; margin-top: .75em; }
+.contact-form input, .contact-form textarea, .newsletter-subscribe input[type=email] {
+  width: 100%; max-width: 32em; padding: .4em; box-sizing: border-box; }
+.contact-form textarea { min-height: 8em; }
+.contact-form button, .newsletter-subscribe button { margin-top: .75em; padding: .4em 1.2em; }
+.audience-hp { position: absolute; left: -9999px; top: -9999px; }
+.audience-message { margin-top: .75em; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var loadedAt = Date.now();
+  var base = document.querySelector('base') ? null : null; // context path derived below
+
+  function contextPath() {
+    // The page lives at <ctx>/<handle>/... ; every theme is served under the
+    // application context. Derive it from a known marker: the stylesheet link
+    // that every bundled theme emits points under the context path.
+    var link = document.querySelector('link[rel=stylesheet][href]');
+    if (!link) { return ''; }
+    var href = link.getAttribute('href');
+    var idx = href.indexOf('/roller-ui/');
+    return idx > 0 ? href.substring(0, idx) : '';
+  }
+
+  function showMessage(container, text) {
+    var p = container.querySelector('.audience-message');
+    p.hidden = false;
+    p.textContent = text;
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.contact-form-slot'), function (slot) {
+    var handle = slot.getAttribute('data-weblog');
+    if (!handle) { return; }
+    var form = document.createElement('form');
+    form.className = 'contact-form';
+    form.innerHTML =
+        '<label>Name <input name="name" required maxlength="255"></label>'
+      + '<label>Email <input type="email" name="email" required maxlength="255" autocomplete="email"></label>'
+      + '<label>Subject <input name="subject" maxlength="255"></label>'
+      + '<label>Message <textarea name="message" required maxlength="4000"></textarea></label>'
+      + '<label class="audience-hp" aria-hidden="true">Website <input name="website" tabindex="-1" autocomplete="off"></label>'
+      + '<button type="submit">Send</button>'
+      + '<p class="audience-message" hidden></p>';
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      showMessage(form, 'Sending…');
+      fetch(contextPath() + '/roller-ui/rendering/contact.rol', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          weblog: handle,
+          name: form.name.value,
+          email: form.email.value,
+          subject: form.subject.value,
+          message: form.message.value,
+          website: form.website.value,
+          elapsedMs: Date.now() - loadedAt,
+          source: window.location.pathname
+        })
+      }).then(function (response) {
+        showMessage(form, response.ok
+            ? 'Thanks — your message has been sent.'
+            : 'Sorry, that did not work. Please try again later.');
+        if (response.ok) { form.querySelector('button').disabled = true; }
+      }).catch(function () {
+        showMessage(form, 'Sorry, that did not work. Please try again later.');
+      });
+    });
+    slot.appendChild(form);
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.subscribe-form-slot'), function (slot) {
+    var uuid = slot.getAttribute('data-list-uuid');
+    if (!uuid) { return; }
+    var form = document.createElement('form');
+    form.className = 'newsletter-subscribe';
+    form.innerHTML =
+        '<label>Email <input type="email" name="email" required maxlength="255" autocomplete="email" placeholder="you@example.com"></label>'
+      + '<label class="audience-hp" aria-hidden="true">Website <input name="website" tabindex="-1" autocomplete="off"></label>'
+      + '<button type="submit">Subscribe</button>'
+      + '<p class="audience-message" hidden></p>';
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      showMessage(form, 'Subscribing…');
+      fetch('/newsletter/subscribe', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: form.email.value,
+          list_uuids: [uuid],
+          website: form.website.value,
+          elapsedMs: Date.now() - loadedAt
+        })
+      }).then(function (response) {
+        showMessage(form, (response.ok || response.status === 409)
+            ? 'Thanks — please check your email to confirm.'
+            : 'Sorry, that did not work. Please try again later.');
+      }).catch(function () {
+        showMessage(form, 'Sorry, that did not work. Please try again later.');
+      });
+    });
+    slot.appendChild(form);
+  });
+});
+</script>
+#end
+
+
+#**
 Shows weblog entries pager via default day template
 *#
 #macro(showWeblogEntriesPager $pager)

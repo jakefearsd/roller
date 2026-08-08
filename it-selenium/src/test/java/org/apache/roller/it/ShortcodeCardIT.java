@@ -62,7 +62,7 @@ class ShortcodeCardIT extends RollerIT {
         // rather than an accident.
         $$("#shortcodeInsertMenu .shortcode-card").shouldHave(exactTexts(
                 "Image…", "Photo gallery", "Map with pins",
-                "Call to action", "Questions and answers", "Video"));
+                "Call to action", "Questions and answers", "Video", "Contact form"));
     }
 
     @Test
