@@ -82,6 +82,7 @@ public class Weblog implements Serializable {
     private String  about            = null;
     private String  creator          = null;
     private String  analyticsCode    = null;
+    private String  newsletterListUuid = null;
 
     // Associated objects
     private WeblogCategory bloggerCategory = null;
@@ -545,6 +546,19 @@ public class Weblog implements Serializable {
 
     public void setAnalyticsCode(String analyticsCode) {
         this.analyticsCode = analyticsCode;
+    }
+
+    /**
+     * The Listmonk list UUID this weblog's subscribe form feeds. Null or
+     * blank disables the subscribe form for this weblog; Roller stores no
+     * subscriber data itself.
+     */
+    public String getNewsletterListUuid() {
+        return newsletterListUuid;
+    }
+
+    public void setNewsletterListUuid(String newsletterListUuid) {
+        this.newsletterListUuid = newsletterListUuid;
     }
 
     /**

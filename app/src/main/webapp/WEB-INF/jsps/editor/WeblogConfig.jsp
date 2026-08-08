@@ -240,6 +240,18 @@
         </div>
     </c:if>
 
+    <%-- ***** Newsletter settings ***** --%>
+
+    <h3><spring:message code="websiteSettings.newsletterSettings"/></h3>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.newsletterListUuid"/></label>
+        <div class="col-sm-9">
+            <input type="text" name="bean.newsletterListUuid" value="${bean.newsletterListUuid}" size="40" maxlength="64" class="form-control"/>
+            <div class="form-text"><spring:message code="websiteSettings.newsletterListUuid.tip"/></div>
+        </div>
+    </div>
+
     <div class="control" style="margin-bottom:5em">
         <button type="submit" class="btn btn-success"><spring:message code="websiteSettings.button.update"/></button>
     </div>

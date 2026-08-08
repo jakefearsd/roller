@@ -145,6 +145,14 @@ public final class WeblogWrapper {
         return this.pojo.getAnalyticsCode();
     }
 
+    /**
+     * The Listmonk list UUID this weblog's subscribe form feeds, or null if
+     * the subscribe form is disabled for this weblog.
+     */
+    public String getNewsletterListUuid() {
+        return this.pojo.getNewsletterListUuid();
+    }
+
     public Boolean getEmailComments() {
         return this.pojo.getEmailComments();
     }

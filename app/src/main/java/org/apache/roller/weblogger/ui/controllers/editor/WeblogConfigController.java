@@ -23,9 +23,11 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
@@ -149,10 +151,18 @@ public class WeblogConfigController extends BaseController {
         return ".WeblogConfig";
     }
 
+    private static final Pattern UUID_PATTERN = Pattern.compile(
+            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+
     private void myValidate(WeblogConfigBean bean, HttpServletRequest request, Model model) {
         int maxEntries = WebloggerRuntimeConfig.getIntProperty("site.pages.maxEntries");
         if (bean.getEntryDisplayCount() > maxEntries) {
             addError(model, "websiteSettings.error.entryDisplayCount", request);
+        }
+
+        String newsletterListUuid = StringUtils.trimToNull(bean.getNewsletterListUuid());
+        if (newsletterListUuid != null && !UUID_PATTERN.matcher(newsletterListUuid).matches()) {
+            addError(model, "websiteSettings.newsletterListUuid.invalid", request);
         }
     }
 

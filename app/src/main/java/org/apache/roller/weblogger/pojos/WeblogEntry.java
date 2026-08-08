@@ -116,6 +116,9 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     private Timestamp eventEnd        = null;
     private String    eventLocation   = null;
 
+    // Wave B audience: newsletter
+    private Timestamp newsletterSentAt = null;
+
     // set to true when switching between pending/draft/scheduled and published
     // either the aggregate table needs the entry's tags added (for published)
     // or subtracted (anything else)
@@ -547,6 +550,18 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
 
     public void setEventLocation(String eventLocation) {
         this.eventLocation = eventLocation;
+    }
+
+    /**
+     * When "Send as newsletter" succeeded for this entry. Null means never
+     * sent; stamped so an entry cannot be mailed twice.
+     */
+    public Timestamp getNewsletterSentAt() {
+        return newsletterSentAt;
+    }
+
+    public void setNewsletterSentAt(Timestamp newsletterSentAt) {
+        this.newsletterSentAt = newsletterSentAt;
     }
 
     /**

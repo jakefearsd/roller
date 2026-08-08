@@ -41,6 +41,9 @@
             <basic name="analyticsCode">
                 <column name="analyticscode" insertable="true" updatable="true" unique="false"/>
             </basic>
+            <basic name="newsletterListUuid">
+                <column name="newsletter_list_uuid" insertable="true" updatable="true" unique="false"/>
+            </basic>
 			<basic name="allowComments">
 				<column name="allowcomments" insertable="true" updatable="true" unique="false"/>
 			</basic>

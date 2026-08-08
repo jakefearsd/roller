@@ -124,6 +124,9 @@
             <basic name="eventLocation">
                 <column name="event_location" insertable="true" updatable="true" unique="false" nullable="true"/>
             </basic>
+            <basic name="newsletterSentAt">
+                <column name="newsletter_sent_at" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
             <many-to-one name="category" target-entity="org.apache.roller.weblogger.pojos.WeblogCategory">
                 <join-column name="categoryid" insertable="true" updatable="true" nullable="false"/>
             </many-to-one>
