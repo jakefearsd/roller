@@ -32,6 +32,7 @@ import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
+import org.apache.roller.weblogger.util.URLUtilities;
 
 
 /**
@@ -260,9 +261,13 @@ public class URLModel implements Model {
      * routed at the bare {@code /<handle>/<slug>} path -- distinct from
      * {@link #page(String)}, which builds the {@code /page/<link>} URL for a
      * template page.
+     *
+     * <p>The slug is URL-encoded: {@code savePage} only rejects a blank
+     * slug, one containing '/', and reserved names, so quote/angle-bracket
+     * characters can otherwise reach this href raw.
      */
     public String staticPage(String slug) {
-        return urlStrategy.getWeblogURL(weblog, null, false) + slug;
+        return urlStrategy.getWeblogURL(weblog, null, false) + URLUtilities.encode(slug);
     }
 
     

@@ -133,7 +133,7 @@ ul.rNavigationBar {
     margin: 0 0 0 0;
 }
 
-li.rNavItem {
+li.rNavItem, li.page-nav-item {
     list-style-type: none;
     display: inline;
     padding: 0 0 0 0;

@@ -120,6 +120,10 @@ class PageNavRenderingTest {
         savePage("first-page", "First & Best", WeblogPage.PubStatus.PUBLISHED, true, 10);
         savePage("hidden-page", "Hidden Page", WeblogPage.PubStatus.PUBLISHED, false, 0);
         savePage("draft-page", "Draft Page", WeblogPage.PubStatus.DRAFT, true, 0);
+        // a slug with a character URLEncoder must escape, so the rendered
+        // href proves #url.staticPage encodes the path segment rather than
+        // interpolating the slug raw
+        savePage("space page", "Spacey", WeblogPage.PubStatus.PUBLISHED, true, 30);
 
         List<String> failures = new ArrayList<>();
         for (String theme : THEMES) {
@@ -140,11 +144,15 @@ class PageNavRenderingTest {
     private void checkTheme(String theme, String body) {
         String firstHref = BASE + "/first-page";
         String secondHref = BASE + "/second-page";
+        String spaceyHref = BASE + "/space+page";
 
         assertTrue(body.contains("<a href=\"" + firstHref + "\">First &amp; Best</a>"),
                 theme + ": expected an escaped nav link to the first page:\n" + body);
         assertTrue(body.contains("<a href=\"" + secondHref + "\">Second Page</a>"),
                 theme + ": expected a nav link to the second page:\n" + body);
+        assertTrue(body.contains("<a href=\"" + spaceyHref + "\">Spacey</a>"),
+                theme + ": a slug with a space must render URL-encoded ('+' for the "
+                        + "space), not raw:\n" + body);
 
         assertFalse(body.contains("Hidden Page"),
                 theme + ": a page with showInNav=false must not appear:\n" + body);
@@ -157,7 +165,32 @@ class PageNavRenderingTest {
                 theme + ": nav links must follow navOrder (first-page navOrder=10 before "
                         + "second-page navOrder=20):\n" + body);
 
+        // Each theme supplies its own <ul> container around #showPageLinks'
+        // bare <li> items -- a theme that drops the items as siblings after
+        // an already-closed </ul> renders invalid HTML that CSS scoped to
+        // "ul.some-class li" silently fails to style.
+        assertLinkIsInsideAUl(theme, body, firstHref);
+        assertLinkIsInsideAUl(theme, body, secondHref);
+
         // a Velocity error resolving the macro would leak the raw directive
         assertFalse(body.contains("#showPageLinks"), theme + ":\n" + body);
+    }
+
+    /**
+     * Confirms the nearest {@code <ul} before the link's {@code href} is
+     * closer than the nearest {@code </ul>} before it -- i.e. the link
+     * renders while a {@code <ul>} is still open, not as a bare {@code <li>}
+     * sitting between two already-self-contained lists.
+     */
+    private static void assertLinkIsInsideAUl(String theme, String body, String href) {
+        String needle = "href=\"" + href + "\"";
+        int index = body.indexOf(needle);
+        assertTrue(index >= 0, theme + ": expected to find a link to " + href + ":\n" + body);
+
+        int ulOpen = body.lastIndexOf("<ul", index);
+        int ulClose = body.lastIndexOf("</ul>", index);
+        assertTrue(ulOpen >= 0 && ulOpen > ulClose,
+                theme + ": the nav link to " + href + " must render inside an open "
+                        + "<ul> supplied by the theme, not as a bare <li>:\n" + body);
     }
 }

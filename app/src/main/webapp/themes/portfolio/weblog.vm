@@ -24,7 +24,9 @@
     #end
     <nav class="pf-nav">
         #showWeblogCategoryLinksList()
+        <ul class="rCategory">
         #showPageLinks($model.weblog)
+        </ul>
     </nav>
 </header>
 

@@ -24,7 +24,9 @@
     #end
     <nav class="tg-nav">
         #showWeblogCategoryLinksList()
+        <ul>
         #showPageLinks($model.weblog)
+        </ul>
     </nav>
 </header>
 
