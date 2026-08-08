@@ -23,7 +23,6 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.pojos.WeblogEntry;
 
 /**
  * The built-in {@code [faq]} shortcode: a body of
@@ -65,7 +64,7 @@ public class FaqShortcode implements ShortcodeHandler {
     }
 
     @Override
-    public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
+    public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
         if (StringUtils.isBlank(body)) {
             log.debug("[faq] shortcode without a body; leaving it as written");
             return null;

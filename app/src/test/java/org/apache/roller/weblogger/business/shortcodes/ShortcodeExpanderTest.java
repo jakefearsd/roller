@@ -53,7 +53,7 @@ class ShortcodeExpanderTest {
             }
 
             @Override
-            public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
+            public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
                 String source = body != null ? body : attributes.getOrDefault("word", "");
                 return source.toUpperCase();
             }
@@ -74,7 +74,7 @@ class ShortcodeExpanderTest {
             }
 
             @Override
-            public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
+            public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
                 StringBuilder out = new StringBuilder("{");
                 attributes.forEach((k, v) -> out.append(k).append('=').append(v).append(';'));
                 return out.append('}').toString();
@@ -429,7 +429,7 @@ class ShortcodeExpanderTest {
 
                     @Override
                     public String render(Map<String, String> attributes, String body,
-                            WeblogEntry entry) {
+                            ShortcodeContext content) {
                         throw new IllegalStateException("boom");
                     }
                 },
@@ -446,7 +446,7 @@ class ShortcodeExpanderTest {
 
                     @Override
                     public String render(Map<String, String> attributes, String body,
-                            WeblogEntry entry) {
+                            ShortcodeContext content) {
                         return null;
                     }
                 },

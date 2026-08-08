@@ -96,13 +96,13 @@ public class MapShortcode implements ShortcodeHandler {
                     + "[pin lat=\"48.8606\" lng=\"2.3376\" label=\"Louvre\"]\n[/map]");
 
     @Override
-    public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
-        List<MapPins.Pin> pins = resolvePins(attributes, body, entry);
+    public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
+        List<MapPins.Pin> pins = resolvePins(attributes, body, content);
         if (pins == null) {
             return null;
         }
 
-        String center = centerOf(entry);
+        String center = centerOf(content);
         if (pins.isEmpty() && center == null) {
             log.debug("[map] shortcode with no pins and no entry coordinates"
                     + " to center on; leaving it as written");
@@ -146,10 +146,10 @@ public class MapShortcode implements ShortcodeHandler {
      * consumer is a {@code <script>} tag rather than a {@code <div>}.
      */
     public static List<MapPins.Pin> resolvePins(Map<String, String> attributes,
-            String body, WeblogEntry entry) {
+            String body, ShortcodeContext content) {
         String auto = StringUtils.trimToNull(attributes.get("auto"));
         if (auto != null) {
-            return autoPins(auto, entry);
+            return autoPins(auto, content);
         }
         List<MapPins.Pin> pins = MapPins.parse(body);
         if (pins.isEmpty() && StringUtils.containsIgnoreCase(body, "[pin")) {
@@ -174,8 +174,8 @@ public class MapShortcode implements ShortcodeHandler {
      * construction. The collector returns null so nothing is rewritten; the
      * expanded text is discarded and only the pins are kept.
      */
-    public static List<MapPins.Pin> pinsInEntry(WeblogEntry entry) {
-        if (entry == null || entry.getText() == null) {
+    public static List<MapPins.Pin> pinsInEntry(ShortcodeContext content) {
+        if (content == null || content.getRawText() == null) {
             return List.of();
         }
         List<MapPins.Pin> collected = new ArrayList<>();
@@ -191,15 +191,15 @@ public class MapShortcode implements ShortcodeHandler {
             }
 
             @Override
-            public String render(Map<String, String> attributes, String body, WeblogEntry e) {
-                List<MapPins.Pin> pins = resolvePins(attributes, body, e);
+            public String render(Map<String, String> attributes, String body, ShortcodeContext c) {
+                List<MapPins.Pin> pins = resolvePins(attributes, body, c);
                 if (pins != null) {
                     collected.addAll(pins);
                 }
                 return null;
             }
         }));
-        collector.expand(entry, entry.getText());
+        collector.expand(content, content.getRawText());
         return List.copyOf(collected);
     }
 
@@ -209,8 +209,8 @@ public class MapShortcode implements ShortcodeHandler {
      * {@link GalleryShortcode}: missing or private directory, resolution
      * failure, or nothing to render.
      */
-    private static List<MapPins.Pin> autoPins(String directoryName, WeblogEntry entry) {
-        Weblog weblog = entry == null ? null : entry.getWebsite();
+    private static List<MapPins.Pin> autoPins(String directoryName, ShortcodeContext content) {
+        Weblog weblog = content == null ? null : content.getWeblog();
         if (weblog == null) {
             return null;
         }
@@ -255,9 +255,15 @@ public class MapShortcode implements ShortcodeHandler {
         return pins;
     }
 
-    /** {@code "lat,lng"} from the entry's geo fields, or null when unset or invalid. */
-    private static String centerOf(WeblogEntry entry) {
-        if (entry == null) {
+    /**
+     * {@code "lat,lng"} from the entry's geo fields, or null when unset or
+     * invalid. The geo fields are entry-only -- not part of
+     * {@link ShortcodeContext} -- so a page (or any future implementation)
+     * has nothing to center on here; that is unchanged behaviour, since
+     * every {@code [map]} today renders from a {@link WeblogEntry}.
+     */
+    private static String centerOf(ShortcodeContext content) {
+        if (!(content instanceof WeblogEntry entry)) {
             return null;
         }
         Double lat = entry.getGeoLatitude();

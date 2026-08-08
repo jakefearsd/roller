@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
-import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 
@@ -64,7 +63,7 @@ public class ImageShortcode implements ShortcodeHandler {
     }
 
     @Override
-    public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
+    public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
         String id = attributes.get("id");
         if (StringUtils.isBlank(id)) {
             log.debug("[image] shortcode without an id attribute; leaving it as written");

@@ -19,8 +19,6 @@ package org.apache.roller.weblogger.business.shortcodes;
 
 import java.util.Map;
 
-import org.apache.roller.weblogger.pojos.WeblogEntry;
-
 /**
  * Renders one registered shortcode. Unlike
  * {@link org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin}s,
@@ -52,11 +50,11 @@ public interface ShortcodeHandler {
      * @param body       the text between {@code [name]} and {@code [/name]}
      *                   (already expanded, so shortcodes may nest), or null
      *                   when the shortcode was written self-closing
-     * @param entry      the entry being rendered, for weblog context
+     * @param content    the entry or page being rendered, for weblog context
      * @return the replacement HTML, or null to leave the shortcode text in
      *         the output exactly as the author wrote it (the "I can't render
      *         this" signal -- it keeps the problem visible to the author
      *         instead of silently swallowing their markup)
      */
-    String render(Map<String, String> attributes, String body, WeblogEntry entry);
+    String render(Map<String, String> attributes, String body, ShortcodeContext content);
 }

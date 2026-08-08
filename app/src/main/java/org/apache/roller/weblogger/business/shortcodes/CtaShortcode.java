@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.pojos.Weblog;
-import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 
 /**
@@ -81,7 +80,7 @@ public class CtaShortcode implements ShortcodeHandler {
     }
 
     @Override
-    public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
+    public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
         String href = StringUtils.trimToNull(attributes.get("href"));
         String label = StringUtils.trimToNull(attributes.get("label"));
         if (href == null || label == null) {
@@ -97,7 +96,7 @@ public class CtaShortcode implements ShortcodeHandler {
         }
 
         StringBuilder html = new StringBuilder(160);
-        html.append("<a class=\"cta-card\" href=\"").append(escape(withUtmParams(href, entry)))
+        html.append("<a class=\"cta-card\" href=\"").append(escape(withUtmParams(href, content)))
                 .append("\" rel=\"nofollow sponsored noopener\" target=\"_blank\">");
         html.append("<span class=\"cta-label\">").append(escape(label)).append("</span>");
         String note = StringUtils.trimToNull(attributes.get("note"));
@@ -113,15 +112,15 @@ public class CtaShortcode implements ShortcodeHandler {
      * fragment: source = the weblog handle, medium = blog, campaign = the
      * entry anchor (each skipped when unavailable or already present).
      */
-    private static String withUtmParams(String href, WeblogEntry entry) {
+    private static String withUtmParams(String href, ShortcodeContext content) {
         int hash = href.indexOf('#');
         String base = hash >= 0 ? href.substring(0, hash) : href;
         String fragment = hash >= 0 ? href.substring(hash) : "";
 
         Set<String> existing = existingParamNames(base);
-        Weblog weblog = entry == null ? null : entry.getWebsite();
+        Weblog weblog = content == null ? null : content.getWeblog();
         String handle = weblog == null ? null : StringUtils.trimToNull(weblog.getHandle());
-        String anchor = entry == null ? null : StringUtils.trimToNull(entry.getAnchor());
+        String anchor = content == null ? null : StringUtils.trimToNull(content.getSlug());
 
         StringBuilder url = new StringBuilder(base);
         appendParam(url, existing, "utm_source", handle);

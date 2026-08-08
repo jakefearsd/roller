@@ -27,7 +27,6 @@ import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.Weblog;
-import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 
 /**
@@ -73,13 +72,13 @@ public class GalleryShortcode implements ShortcodeHandler {
     }
 
     @Override
-    public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
+    public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
         String directoryName = attributes.get("dir");
         if (StringUtils.isBlank(directoryName)) {
             log.debug("[gallery] shortcode without a dir attribute; leaving it as written");
             return null;
         }
-        Weblog weblog = entry == null ? null : entry.getWebsite();
+        Weblog weblog = content == null ? null : content.getWeblog();
         if (weblog == null) {
             return null;
         }

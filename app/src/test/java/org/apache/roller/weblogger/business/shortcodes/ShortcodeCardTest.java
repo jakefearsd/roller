@@ -168,7 +168,7 @@ class ShortcodeCardTest {
             }
 
             @Override
-            public String render(Map<String, String> attributes, String body, WeblogEntry entry) {
+            public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
                 seen.add(name);
                 return "rendered";
             }

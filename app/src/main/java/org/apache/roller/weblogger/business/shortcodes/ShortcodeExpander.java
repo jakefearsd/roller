@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.pojos.WeblogEntry;
 
 /**
  * Expands {@code [name attr="value"]body[/name]} shortcodes in entry text
@@ -147,11 +146,11 @@ public final class ShortcodeExpander {
      * {@code text} itself when there is nothing to do. A handler that throws
      * or returns null leaves its shortcode in the output exactly as written.
      */
-    public String expand(WeblogEntry entry, String text) {
-        return expand(entry, text, 0);
+    public String expand(ShortcodeContext content, String text) {
+        return expand(content, text, 0);
     }
 
-    private String expand(WeblogEntry entry, String text, int depth) {
+    private String expand(ShortcodeContext content, String text, int depth) {
         if (text == null || handlers.isEmpty() || depth > MAX_NESTING_DEPTH
                 || text.indexOf('[') < 0) {
             return text;
@@ -208,14 +207,14 @@ public final class ShortcodeExpander {
             if (!selfClosing) {
                 int closerAt = findMatchingCloser(text, name, matcher.end());
                 if (closerAt >= 0) {
-                    body = expand(entry, text.substring(matcher.end(), closerAt), depth + 1);
+                    body = expand(content, text.substring(matcher.end(), closerAt), depth + 1);
                     consumedEnd = closerAt + name.length() + 3; // "[/" + name + "]"
                 }
             }
 
             String replacement = null;
             try {
-                replacement = handler.render(parseAttributes(attributeText), body, entry);
+                replacement = handler.render(parseAttributes(attributeText), body, content);
             } catch (Exception e) {
                 log.warn("Shortcode [" + name + "] handler failed; leaving the "
                         + "shortcode text as the author wrote it", e);

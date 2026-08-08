@@ -51,6 +51,7 @@ import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
+import org.apache.roller.weblogger.business.shortcodes.ShortcodeContext;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
@@ -60,7 +61,7 @@ import org.apache.roller.weblogger.util.Utilities;
 /**
  * Represents a Weblog Entry.
  */
-public class WeblogEntry implements Serializable {
+public class WeblogEntry implements Serializable, ShortcodeContext {
     private static final Log mLogger = LogFactory.getFactory().getInstance(WeblogEntry.class);
     
     public static final long serialVersionUID = 2341505386843044125L;
@@ -343,11 +344,30 @@ public class WeblogEntry implements Serializable {
     public Weblog getWebsite() {
         return this.website;
     }
-    
+
     public void setWebsite(Weblog website) {
         this.website = website;
     }
-    
+
+    // ---- ShortcodeContext. Delegates to the accessors this class already
+    // had; WeblogEntry.orm.xml is metadata-complete, so an extra getter
+    // cannot create a phantom persistent field.
+
+    @Override
+    public Weblog getWeblog() {
+        return getWebsite();
+    }
+
+    @Override
+    public String getSlug() {
+        return getAnchor();
+    }
+
+    @Override
+    public String getRawText() {
+        return getText();
+    }
+
     public User getCreator() {
         try {
             return WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(getCreatorUserName());
