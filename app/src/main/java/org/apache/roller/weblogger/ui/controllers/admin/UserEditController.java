@@ -25,7 +25,6 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.CharSetUtils;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,16 +34,20 @@ import org.apache.roller.weblogger.config.AuthMethod;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.pojos.UserToken;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.apache.roller.weblogger.ui.controllers.core.PasswordLinkMailer;
 import org.apache.roller.weblogger.ui.core.RollerLoginSessionManager;
 import org.apache.roller.weblogger.ui.controllers.util.UIUtils;
+import org.apache.roller.weblogger.util.TokenGenerator;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 
 /**
@@ -92,6 +95,7 @@ public class UserEditController extends BaseController {
 
         model.addAttribute("bean", bean);
         model.addAttribute("authMethod", authMethod.name());
+        model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         addLocalesAndTimezones(model);
 
         return ".UserEdit";
@@ -105,6 +109,7 @@ public class UserEditController extends BaseController {
         model.addAttribute("pageTitle", "userAdmin.title.createNewUser");
         model.addAttribute("bean", bean);
         model.addAttribute("authMethod", authMethod.name());
+        model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         addLocalesAndTimezones(model);
 
         User user = new User();
@@ -115,10 +120,12 @@ public class UserEditController extends BaseController {
         if (!hasErrors(model)) {
             bean.copyTo(user);
 
-            // reset password if set
-            if (!StringUtils.isEmpty(bean.getPassword())) {
-                user.resetPassword(bean.getPassword());
-            }
+            // A blank password only reaches here when myValidate() let it
+            // through, which happens only when mail is ready to deliver a
+            // set-password link -- the account still needs SOME password, so
+            // it gets a random one nobody is ever told.
+            boolean emailSetPasswordLink = StringUtils.isEmpty(bean.getPassword());
+            user.resetPassword(emailSetPasswordLink ? TokenGenerator.newToken() : bean.getPassword());
 
             try {
                 UserManager mgr = weblogger.getUserManager();
@@ -135,7 +142,11 @@ public class UserEditController extends BaseController {
 
                 weblogger.flush();
 
-                addMessage(model, "createUser.add.success", bean.getUserName(), request);
+                if (emailSetPasswordLink) {
+                    issueAndMailPasswordSetLink(user, model, request, "userAdmin.userCreatedLinkSent");
+                } else {
+                    addMessage(model, "createUser.add.success", bean.getUserName(), request);
+                }
                 model.addAttribute("bean", new CreateUserBean());
                 return ".UserAdmin";
 
@@ -166,6 +177,7 @@ public class UserEditController extends BaseController {
             addError(model, "userAdmin.error.userNotFound", request);
             model.addAttribute("bean", bean);
             model.addAttribute("authMethod", authMethod.name());
+            model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
             addLocalesAndTimezones(model);
             return ".UserAdmin";
         }
@@ -174,6 +186,7 @@ public class UserEditController extends BaseController {
         bean.copyFrom(user);
         model.addAttribute("bean", bean);
         model.addAttribute("authMethod", authMethod.name());
+        model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         model.addAttribute("permissions", getPermissions(user));
         addLocalesAndTimezones(model);
 
@@ -195,6 +208,7 @@ public class UserEditController extends BaseController {
         model.addAttribute("pageTitle", "userAdmin.title.editUser");
         model.addAttribute("bean", bean);
         model.addAttribute("authMethod", authMethod.name());
+        model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         addLocalesAndTimezones(model);
 
         User user = lookupUser(bean);
@@ -272,6 +286,74 @@ public class UserEditController extends BaseController {
         return "redirect:/roller-ui/admin/userAdmin.rol";
     }
 
+    // --- Send set-password link ---
+
+    /**
+     * Lets an admin email an existing user a set-password link instead of
+     * inventing (and having to relay) a password themselves. Synchronous,
+     * unlike the public forgot-password flow's off-thread send
+     * ({@code PasswordResetController.deferIssueAndMail}): this action is
+     * authenticated admin-only traffic, one request at a time, so there is no
+     * enumeration risk to hide behind a background thread and no volume to
+     * worry about -- and a synchronous send lets the admin see immediately
+     * whether it actually went out.
+     */
+    @PostMapping("/userEdit!sendPasswordLink.rol")
+    public String sendPasswordLink(HttpServletRequest request, Model model,
+                                   @RequestParam(name = "bean.userName") String userName) {
+        populateCommonModel(request, model);
+        model.addAttribute("actionName", "modifyUser");
+        model.addAttribute("pageTitle", "userAdmin.title.editUser");
+        model.addAttribute("authMethod", authMethod.name());
+        model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
+        addLocalesAndTimezones(model);
+
+        CreateUserBean bean = new CreateUserBean();
+        bean.setUserName(userName);
+        User user = lookupUser(bean);
+        if (user == null) {
+            addError(model, "userAdmin.error.userNotFound", request);
+            return ".UserAdmin";
+        }
+
+        bean.copyFrom(user);
+        model.addAttribute("bean", bean);
+        model.addAttribute("permissions", getPermissions(user));
+
+        if (!PasswordLinkMailer.isReady()) {
+            addError(model, "userAdmin.mailNotConfigured", request);
+            return ".UserEdit";
+        }
+
+        issueAndMailPasswordSetLink(user, model, request, "userAdmin.passwordLinkSent", user.getEmailAddress());
+        return ".UserEdit";
+    }
+
+    /**
+     * Issues a {@code PASSWORD_SET} token for {@code user} and mails it via
+     * {@link PasswordLinkMailer}, reporting {@code successKey} on success (with
+     * whatever {@code successArg}, if any, it takes) or
+     * {@code generic.error.check.logs} if either step throws. Shared by the
+     * create-with-a-blank-password path and {@link #sendPasswordLink}.
+     */
+    private void issueAndMailPasswordSetLink(User user, Model model, HttpServletRequest request,
+                                             String successKey, String... successArg) {
+        try {
+            String raw = weblogger.getUserTokenManager().issueToken(user, UserToken.Purpose.PASSWORD_SET);
+            weblogger.flush();
+            String subject = getText("userAdmin.setPassword.email.subject", request);
+            PasswordLinkMailer.sendLink(user, raw, subject);
+            if (successArg.length > 0) {
+                addMessage(model, successKey, successArg[0], request);
+            } else {
+                addMessage(model, successKey, request);
+            }
+        } catch (Exception ex) {
+            log.error("Error sending set-password link for " + user.getUserName(), ex);
+            addError(model, "generic.error.check.logs", request);
+        }
+    }
+
     // --- Helpers ---
 
     private User lookupUser(CreateUserBean bean) {
@@ -302,7 +384,10 @@ public class UserEditController extends BaseController {
             } else if (!safe.equals(bean.getUserName())) {
                 addError(model, "error.add.user.badUserName", request);
             }
-            if (StringUtils.isEmpty(bean.getPassword())) {
+            // A blank password is only safe to accept when mail is ready to
+            // deliver a set-password link instead -- otherwise there is no
+            // way to hand the account over at all, so the old rule stands.
+            if (StringUtils.isEmpty(bean.getPassword()) && !PasswordLinkMailer.isReady()) {
                 addError(model, "error.add.user.missingPassword", request);
             }
         } else {

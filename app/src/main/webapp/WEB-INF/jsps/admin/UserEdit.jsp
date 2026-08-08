@@ -104,6 +104,9 @@
                 <input type="password" name="bean.password" size="30" maxlength="30"
                        onkeyup="formChanged()" class="form-control"
                        title="<spring:message code='userAdmin.tip.password'/>"/>
+                <c:if test="${actionName == 'createUser' && mailConfigured}">
+                    <div class="form-text"><spring:message code="userAdmin.passwordOptionalWithMail"/></div>
+                </c:if>
             </div>
         </div>
 
@@ -223,6 +226,19 @@
     </div>
 
 </form>
+
+<c:if test="${actionName == 'modifyUser' && not empty bean.id}">
+    <%-- A second, sibling form -- HTML does not allow nesting one inside the
+         save form above, and this button posts to a different action. --%>
+    <form method="post" action="<c:url value='/roller-ui/admin/userEdit!sendPasswordLink.rol'/>"
+          class="mt-3">
+        <sec:csrfInput/>
+        <input type="hidden" name="bean.userName" value="${fn:escapeXml(bean.userName)}"/>
+        <button type="submit" class="btn btn-secondary">
+            <spring:message code="userAdmin.sendPasswordLink"/>
+        </button>
+    </form>
+</c:if>
 
 
 <script>

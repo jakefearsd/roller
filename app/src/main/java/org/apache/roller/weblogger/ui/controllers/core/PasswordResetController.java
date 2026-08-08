@@ -31,13 +31,11 @@ import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.UserToken;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.core.RollerLoginSessionManager;
 import org.apache.roller.weblogger.util.GenericThrottle;
-import org.apache.roller.weblogger.util.MailUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -132,7 +130,7 @@ public class PasswordResetController extends BaseController {
     public String forgotForm(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
         model.addAttribute("pageTitle", "forgotPassword.title");
-        if (!resetMailReady()) {
+        if (!PasswordLinkMailer.isReady()) {
             // A notice, not an error: the form still renders (a submission
             // would just say the same thing back), but there is no point
             // hiding from an administrator that reset links cannot go out.
@@ -147,7 +145,7 @@ public class PasswordResetController extends BaseController {
         populateCommonModel(request, model);
         model.addAttribute("pageTitle", "forgotPassword.title");
 
-        if (!resetMailReady()) {
+        if (!PasswordLinkMailer.isReady()) {
             addMessage(model, "forgotPassword.mailNotConfigured", request);
             return ".ForgotPassword";
         }
@@ -170,18 +168,6 @@ public class PasswordResetController extends BaseController {
         // cannot enumerate accounts or reveal that throttling engaged.
         addMessage(model, "forgotPassword.confirmation", request);
         return ".ForgotPassword";
-    }
-
-    /**
-     * Whether this server can actually deliver a reset link: a transport is
-     * configured AND there is a site email address to send from. Checking
-     * only {@code MailUtil.isMailConfigured()} left a server with mail set up
-     * but a blank {@code site.adminemail} silently unable to send -- every
-     * submission looked identical to a real one and quietly went nowhere.
-     */
-    private static boolean resetMailReady() {
-        return MailUtil.isMailConfigured()
-                && StringUtils.isNotBlank(WebloggerRuntimeConfig.getProperty("site.adminemail"));
     }
 
     // ----------------------------------------------------------- reset form
@@ -298,7 +284,7 @@ public class PasswordResetController extends BaseController {
             }
             String raw = weblogger.getUserTokenManager().issueToken(user, UserToken.Purpose.PASSWORD_RESET);
             weblogger.flush();
-            sendResetEmail(user, raw, subject);
+            PasswordLinkMailer.sendLink(user, raw, subject);
         } catch (Exception ex) {
             log.error("Could not process forgot-password request", ex);
         } finally {
@@ -317,29 +303,6 @@ public class PasswordResetController extends BaseController {
             return user;
         }
         return userManager.getUserByEmail(identifier);
-    }
-
-    private void sendResetEmail(User user, String rawToken, String subject) throws Exception {
-        String from = WebloggerRuntimeConfig.getProperty("site.adminemail");
-        String url = WebloggerRuntimeConfig.getAbsoluteContextURL()
-                + "/roller-ui/resetPassword.rol?token=" + rawToken;
-        String body = "A password reset was requested for your account.\n\n"
-                + "Use the link below to choose a new password. It is valid for one hour "
-                + "and can only be used once.\n\n"
-                + url + "\n\n"
-                + "If you did not request this, you can safely ignore this email.";
-        sendMail(user.getEmailAddress(), from, subject, body);
-    }
-
-    /**
-     * The only call into {@link MailUtil} from this controller -- package-
-     * private so a test can override it to observe or fail the notification
-     * without static-mocking {@code MailUtil} or standing up a mail
-     * transport, matching how {@code ContactController} exposes its own mail
-     * seam.
-     */
-    void sendMail(String to, String from, String subject, String body) throws Exception {
-        MailUtil.sendTextMessage(from, new String[] { to }, null, null, subject, body);
     }
 
     /** The throttle key for an identifier: case-insensitive, distinct from a remote address. */
