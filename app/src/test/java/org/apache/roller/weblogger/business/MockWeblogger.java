@@ -71,6 +71,7 @@ public final class MockWeblogger {
     private final MediaFileManager mediaFileManager = mock(MediaFileManager.class);
     private final FileContentManager fileContentManager = mock(FileContentManager.class);
     private final ShareLinkManager shareLinkManager = mock(ShareLinkManager.class);
+    private final WeblogPageManager weblogPageManager = mock(WeblogPageManager.class);
     private final URLStrategy urlStrategy = mock(URLStrategy.class);
 
     private int flushCount;
@@ -87,6 +88,7 @@ public final class MockWeblogger {
         when(weblogger.getMediaFileManager()).thenReturn(mediaFileManager);
         when(weblogger.getFileContentManager()).thenReturn(fileContentManager);
         when(weblogger.getShareLinkManager()).thenReturn(shareLinkManager);
+        when(weblogger.getWeblogPageManager()).thenReturn(weblogPageManager);
         when(weblogger.getUrlStrategy()).thenReturn(urlStrategy);
 
         // Count commits. A manager call that is never flushed is a change that
@@ -217,6 +219,10 @@ public final class MockWeblogger {
         return shareLinkManager;
     }
 
+    public WeblogPageManager getWeblogPageManager() {
+        return weblogPageManager;
+    }
+
     public UserManager userManager() {
         return userManager;
     }
@@ -259,5 +265,9 @@ public final class MockWeblogger {
 
     public ShareLinkManager shareLinkManager() {
         return shareLinkManager;
+    }
+
+    public WeblogPageManager weblogPageManager() {
+        return weblogPageManager;
     }
 }

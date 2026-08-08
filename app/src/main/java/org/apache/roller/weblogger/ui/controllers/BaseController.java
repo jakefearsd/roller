@@ -24,6 +24,7 @@ import java.util.Locale;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -37,6 +38,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
+import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
@@ -358,6 +360,36 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
             return category;
         } catch (WebloggerException ex) {
             baseLog.error("Error looking up category by id - " + id, ex);
+        }
+        return null;
+    }
+
+    /**
+     * The page named by {@code id}, but only when it belongs to the weblog
+     * this action is scoped to. The fourth of the same hazard, after
+     * {@link #lookupEntry}, {@link #lookupTemplate} and {@link #lookupCategory}:
+     * {@code getPage} is a global by-id lookup, the permission interceptor only
+     * vouches for the <em>action</em> weblog, and the id arrives as client
+     * input. A blank id is absent, not something to look up.
+     *
+     * <p>Public rather than {@code protected} like its three siblings, so that
+     * {@code PageEditControllerTest} -- in a different package -- can pin the
+     * blank-id guard directly, the same way the ownership check itself is
+     * pinned through the controller's own {@code edit}/{@code save} methods.
+     */
+    public WeblogPage lookupPage(String id, HttpServletRequest request) {
+        if (StringUtils.isBlank(id)) {
+            return null;
+        }
+        try {
+            WeblogPage page = weblogger.getWeblogPageManager().getPage(id);
+            if (page == null || page.getWeblog() == null
+                    || !page.getWeblog().equals(getActionWeblog(request))) {
+                return null;
+            }
+            return page;
+        } catch (WebloggerException ex) {
+            baseLog.error("Error looking up page by id - " + id, ex);
         }
         return null;
     }

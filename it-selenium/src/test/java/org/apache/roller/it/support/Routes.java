@@ -269,6 +269,13 @@ public final class Routes {
             new Route("/roller-ui/authoring/memberResign.rol", Role.EDITOR, WEBLOG,
                     "form[action$='/roller-ui/authoring/memberResign!resign.rol']"),
 
+            // Table is empty with no pages seeded, but the remove form around
+            // it is emitted unconditionally, same reasoning as entries.rol.
+            new Route("/roller-ui/authoring/pages.rol", Role.EDITOR, WEBLOG, "#pageRemoveForm"),
+
+            // "New page" mode (no id parameter): the edit form always renders.
+            new Route("/roller-ui/authoring/pageEdit.rol", Role.EDITOR, WEBLOG, "#pageEditForm"),
+
             // Both of StylesheetEdit.jsp's forms sit inside a <c:choose> on the
             // weblog's theme state, so neither is a reliable marker. The subtitle
             // is outside the choose.

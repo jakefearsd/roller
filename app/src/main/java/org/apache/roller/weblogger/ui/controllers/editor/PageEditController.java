@@ -1,0 +1,194 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+
+package org.apache.roller.weblogger.ui.controllers.editor;
+
+import java.util.Collections;
+import java.util.List;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
+import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.WeblogPage;
+import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+/**
+ * Add or edit a single static page.
+ *
+ * <p>One route handles both: {@code id} absent (or blank) means "new page",
+ * present means "edit the page it names" -- modelled on
+ * {@code TemplateEditController}, which does the same for templates, rather
+ * than the entry editor's separate add/edit action pair.
+ */
+@Controller
+@RequestMapping("/roller-ui/authoring")
+public class PageEditController extends BaseController {
+
+    private static final Log log = LogFactory.getLog(PageEditController.class);
+
+    @Override
+    public List<String> requiredWeblogPermissionActions() {
+        return Collections.singletonList(WeblogPermission.POST);
+    }
+
+    @Override
+    public String getDesiredMenu() {
+        return "editor";
+    }
+
+    @Override
+    public String getActionName() {
+        return "pageEdit";
+    }
+
+    @Override
+    public String getPageTitle() {
+        return "pageEdit.title";
+    }
+
+    @GetMapping("/pageEdit.rol")
+    public String edit(@RequestParam(name = "id", required = false) String id,
+                       HttpServletRequest request, Model model) {
+        populateCommonModel(request, model);
+        model.addAttribute("actionName", "pageEdit");
+
+        PageBean bean = new PageBean();
+        if (!StringUtils.isBlank(id)) {
+            // Ownership-checked: id is client input and getPage is a global
+            // by-id lookup, so without this an editor on one weblog could
+            // open (and, on save, overwrite) another weblog's page.
+            WeblogPage page = lookupPage(id, request);
+            if (page == null) {
+                addError(model, "pageEdit.notFound", request);
+                return DENIED_VIEW;
+            }
+            bean.copyFrom(page);
+            model.addAttribute("page", page);
+        }
+
+        addPageEditModelAttributes(request, model, bean);
+        model.addAttribute("bean", bean);
+        return ".PageEdit";
+    }
+
+    @PostMapping("/pageEdit!save.rol")
+    public String save(HttpServletRequest request, Model model,
+                       @ModelAttribute("bean") PageBean bean) {
+        populateCommonModel(request, model);
+        model.addAttribute("actionName", "pageEdit");
+
+        boolean isNew = StringUtils.isBlank(bean.getId());
+        WeblogPage page;
+        if (isNew) {
+            page = new WeblogPage();
+            page.setWeblog(getActionWeblog(request));
+        } else {
+            // Same ownership check as the GET side: bean.id is client input,
+            // and a global by-id lookup here would let a posted form
+            // overwrite another weblog's page.
+            page = lookupPage(bean.getId(), request);
+            if (page == null) {
+                addError(model, "pageEdit.notFound", request);
+                return DENIED_VIEW;
+            }
+        }
+
+        bean.copyTo(page);
+
+        try {
+            weblogger.getWeblogPageManager().savePage(page);
+            weblogger.flush();
+            bean.copyFrom(page);
+            model.addAttribute("page", page);
+            addMessage(model, "pageEdit.saved", request);
+        } catch (WebloggerException ex) {
+            // A reserved or malformed slug is the one expected failure mode
+            // here (see WeblogPageManager#savePage), and it must surface as a
+            // field error the author can fix, not a 500.
+            String message = ex.getMessage() == null ? "" : ex.getMessage();
+            if (message.contains("reserved")) {
+                addError(model, "pageEdit.error.slugReserved", request);
+            } else if (message.contains("slug")) {
+                addError(model, "pageEdit.error.slugInvalid", request);
+            } else {
+                log.error("Error saving page " + bean.getId(), ex);
+                addError(model, "generic.error.check.logs", request);
+            }
+            if (!isNew) {
+                model.addAttribute("page", page);
+            }
+        }
+
+        addPageEditModelAttributes(request, model, bean);
+        model.addAttribute("bean", bean);
+        return ".PageEdit";
+    }
+
+    private void addPageEditModelAttributes(HttpServletRequest request, Model model, PageBean bean) {
+        // The editor's insert menu, generated from the shortcode registry
+        // itself so it can never advertise a shortcode that does not render,
+        // or omit one that does. Pages go through the same shortcode-expanding
+        // render pipeline as entries (WeblogPage implements ShortcodeContext).
+        model.addAttribute("shortcodeCards", ShortcodeExpander.defaultExpander().cards());
+
+        // Thumbnail preview for the SEO panel's social-image picker. Read off
+        // the bean rather than the page so a save that failed validation
+        // still shows the image the author picked in the form.
+        if (!StringUtils.isEmpty(bean.getOgImageId())) {
+            try {
+                MediaFile mediaFile = weblogger.getMediaFileManager().getMediaFile(bean.getOgImageId());
+                // A dangling id (image deleted after being picked) or one
+                // belonging to another weblog -- getMediaFile is a global
+                // by-id lookup, and this id comes off the submitted form --
+                // simply renders no preview rather than a broken page.
+                if (mediaFile != null && getActionWeblog(request).equals(mediaFile.getWeblog())) {
+                    model.addAttribute("ogImageThumbnailUrl", weblogger.getUrlStrategy()
+                            .getMediaFileThumbnailURL(mediaFile.getWeblog(), mediaFile.getId(), true));
+                }
+            } catch (WebloggerException ex) {
+                log.error("Error looking up media file - " + bean.getOgImageId(), ex);
+            }
+        }
+    }
+
+    /**
+     * Where a denied lookup goes: back to the list, same as
+     * {@code TemplateEditController} falling back to {@code .Templates}. An
+     * unknown id and a foreign one are deliberately indistinguishable to the
+     * caller.
+     */
+    private static final String DENIED_VIEW = ".Pages";
+
+    @ModelAttribute("bean")
+    public PageBean getBean() {
+        return new PageBean();
+    }
+}

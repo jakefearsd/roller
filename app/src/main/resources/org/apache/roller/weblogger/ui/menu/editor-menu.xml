@@ -47,11 +47,17 @@ Each menu or menu item is governed by four attributes:
                    weblogPerms="post" />
         
         <!-- globalPerms="login" -->
-        <menu-item action="categories"   
-                   name="tabbedmenu.weblog.categories" 
+        <menu-item action="categories"
+                   name="tabbedmenu.weblog.categories"
                    weblogPerms="post"
                    subactions="categoryAdd,categoryEdit,categoryRemove" />
-        
+
+        <!-- globalPerms="login" -->
+        <menu-item action="pages"
+                   name="tabbedmenu.pages"
+                   weblogPerms="post"
+                   subactions="pageEdit,pageRemove" />
+
         <!-- globalPerms="login" -->
         <menu-item action="mediaFileView"
                    name="tabbedmenu.weblog.mediaFiles"
