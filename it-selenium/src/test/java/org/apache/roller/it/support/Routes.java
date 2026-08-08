@@ -281,6 +281,12 @@ public final class Routes {
             // is outside the choose.
             new Route("/roller-ui/authoring/stylesheetEdit.rol", Role.EDITOR, WEBLOG, "p.subtitle"),
 
+            // Table is empty with no submissions seeded, but the delete form
+            // around it is emitted unconditionally, same reasoning as
+            // pages.rol/entries.rol.
+            new Route("/roller-ui/authoring/submissions.rol", Role.EDITOR, WEBLOG,
+                    "#submissionsDeleteForm"),
+
             new Route("/roller-ui/authoring/templates.rol", Role.EDITOR, WEBLOG,
                     "form[action$='/roller-ui/authoring/templates!remove.rol']"),
 

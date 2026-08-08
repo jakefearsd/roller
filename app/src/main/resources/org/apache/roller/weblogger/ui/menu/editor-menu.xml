@@ -42,10 +42,15 @@ Each menu or menu item is governed by four attributes:
                    subactions="entryRemoveViaList" />
 
         <!-- globalPerms="login" -->
-        <menu-item action="comments" 
-                   name="tabbedmenu.admin.commentManagement" 
+        <menu-item action="comments"
+                   name="tabbedmenu.admin.commentManagement"
                    weblogPerms="post" />
-        
+
+        <!-- globalPerms="login" -->
+        <menu-item action="submissions"
+                   name="tabbedmenu.submissions"
+                   weblogPerms="post"/>
+
         <!-- globalPerms="login" -->
         <menu-item action="categories"
                    name="tabbedmenu.weblog.categories"
