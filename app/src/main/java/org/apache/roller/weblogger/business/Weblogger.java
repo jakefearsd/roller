@@ -107,6 +107,11 @@ public interface Weblogger {
     EventManager getEventManager();
 
     /**
+     * Get the FormSubmissionManager, which records contact-form inquiries.
+     */
+    FormSubmissionManager getFormSubmissionManager();
+
+    /**
      * Get the URLStrategy used to build all urls in the system.
      */
     URLStrategy getUrlStrategy();

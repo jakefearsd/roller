@@ -222,7 +222,17 @@ class EqualsContractTest {
                         page("page-a"), page("page-a"), page("page-b")),
 
                 new Specimen("RollerEvent (keyed on id)",
-                        event("event-a"), event("event-a"), event("event-b")));
+                        event("event-a"), event("event-a"), event("event-b")),
+
+                new Specimen("FormSubmission (keyed on id)",
+                        formSubmission("submission-a"), formSubmission("submission-a"),
+                        formSubmission("submission-b")));
+    }
+
+    private static FormSubmission formSubmission(String id) {
+        FormSubmission submission = new FormSubmission();
+        submission.setId(id);
+        return submission;
     }
 
     private static WeblogPage page(String id) {

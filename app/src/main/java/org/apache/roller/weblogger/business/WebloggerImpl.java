@@ -47,6 +47,7 @@ public abstract class WebloggerImpl implements Weblogger {
     private final ShareLinkManager     shareLinkManager;
     private final WeblogPageManager    weblogPageManager;
     private final EventManager         eventManager;
+    private final FormSubmissionManager formSubmissionManager;
     private final PluginManager        pluginManager;
     private final PropertiesManager    propertiesManager;
     private final ThemeManager         themeManager;
@@ -72,6 +73,7 @@ public abstract class WebloggerImpl implements Weblogger {
         ShareLinkManager     shareLinkManager,
         WeblogPageManager    weblogPageManager,
         EventManager         eventManager,
+        FormSubmissionManager formSubmissionManager,
         PluginManager        pluginManager,
         PropertiesManager    propertiesManager,
         ThemeManager         themeManager,
@@ -87,6 +89,7 @@ public abstract class WebloggerImpl implements Weblogger {
         this.shareLinkManager    = shareLinkManager;
         this.weblogPageManager   = weblogPageManager;
         this.eventManager        = eventManager;
+        this.formSubmissionManager = formSubmissionManager;
         this.pluginManager       = pluginManager;
         this.propertiesManager   = propertiesManager;
         this.themeManager        = themeManager;
@@ -205,6 +208,17 @@ public abstract class WebloggerImpl implements Weblogger {
     @Override
     public EventManager getEventManager() {
         return eventManager;
+    }
+
+
+    /**
+     *
+     *
+     * @see org.apache.roller.weblogger.business.Weblogger#getFormSubmissionManager()
+     */
+    @Override
+    public FormSubmissionManager getFormSubmissionManager() {
+        return formSubmissionManager;
     }
 
 

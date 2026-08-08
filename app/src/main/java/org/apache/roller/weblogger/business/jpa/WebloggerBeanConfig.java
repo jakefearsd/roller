@@ -22,6 +22,7 @@ import org.apache.roller.weblogger.business.DatabaseProvider;
 import org.apache.roller.weblogger.business.EventManager;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.FileContentManagerImpl;
+import org.apache.roller.weblogger.business.FormSubmissionManager;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.MultiWeblogURLStrategy;
 import org.apache.roller.weblogger.business.PropertiesManager;
@@ -135,6 +136,11 @@ public class WebloggerBeanConfig {
     }
 
     @Bean
+    public FormSubmissionManager formSubmissionManager(JPAPersistenceStrategy strategy) {
+        return new JPAFormSubmissionManagerImpl(strategy);
+    }
+
+    @Bean
     public IndexManager indexManager(@Lazy Weblogger weblogger) {
         return new LuceneIndexManager(weblogger);
     }
@@ -163,6 +169,7 @@ public class WebloggerBeanConfig {
             ShareLinkManager shareLinkManager,
             WeblogPageManager weblogPageManager,
             EventManager eventManager,
+            FormSubmissionManager formSubmissionManager,
             PluginManager pluginManager,
             PropertiesManager propertiesManager,
             ThemeManager themeManager,
@@ -179,6 +186,7 @@ public class WebloggerBeanConfig {
                 shareLinkManager,
                 weblogPageManager,
                 eventManager,
+                formSubmissionManager,
                 pluginManager,
                 propertiesManager,
                 themeManager,

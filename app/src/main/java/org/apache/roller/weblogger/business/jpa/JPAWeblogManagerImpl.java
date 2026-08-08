@@ -170,6 +170,10 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         strategy.getNamedUpdate("RollerEvent.removeByWeblog")
                 .setParameter(1, weblog).executeUpdate();
 
+        // roller_form_submission rows FK the weblog with no cascade
+        strategy.getNamedUpdate("FormSubmission.removeByWeblog")
+                .setParameter(1, weblog).executeUpdate();
+
         // remove mediafile metadata
         // remove uploaded files
         MediaFileManager mfmgr = WebloggerFactory.getWeblogger().getMediaFileManager();

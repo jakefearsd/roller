@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.business.jpa;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.EventManager;
 import org.apache.roller.weblogger.business.FileContentManager;
+import org.apache.roller.weblogger.business.FormSubmissionManager;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.ShareLinkManager;
@@ -55,6 +56,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
         ShareLinkManager     shareLinkManager,
         WeblogPageManager    weblogPageManager,
         EventManager         eventManager,
+        FormSubmissionManager formSubmissionManager,
         PluginManager        pluginManager,
         PropertiesManager    propertiesManager,
         ThemeManager         themeManager,
@@ -71,6 +73,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
             shareLinkManager,
             weblogPageManager,
             eventManager,
+            formSubmissionManager,
             pluginManager,
             propertiesManager,
             themeManager,
