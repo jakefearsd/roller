@@ -102,6 +102,11 @@ public interface Weblogger {
     WeblogPageManager getWeblogPageManager();
 
     /**
+     * Get the EventManager, which records first-party outcome events.
+     */
+    EventManager getEventManager();
+
+    /**
      * Get the URLStrategy used to build all urls in the system.
      */
     URLStrategy getUrlStrategy();

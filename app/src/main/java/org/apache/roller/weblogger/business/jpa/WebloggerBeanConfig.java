@@ -19,6 +19,7 @@ package org.apache.roller.weblogger.business.jpa;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.DatabaseProvider;
+import org.apache.roller.weblogger.business.EventManager;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.FileContentManagerImpl;
 import org.apache.roller.weblogger.business.MediaFileManager;
@@ -129,6 +130,11 @@ public class WebloggerBeanConfig {
     }
 
     @Bean
+    public EventManager eventManager(JPAPersistenceStrategy strategy) {
+        return new JPAEventManagerImpl(strategy);
+    }
+
+    @Bean
     public IndexManager indexManager(@Lazy Weblogger weblogger) {
         return new LuceneIndexManager(weblogger);
     }
@@ -156,6 +162,7 @@ public class WebloggerBeanConfig {
             FileContentManager fileContentManager,
             ShareLinkManager shareLinkManager,
             WeblogPageManager weblogPageManager,
+            EventManager eventManager,
             PluginManager pluginManager,
             PropertiesManager propertiesManager,
             ThemeManager themeManager,
@@ -171,6 +178,7 @@ public class WebloggerBeanConfig {
                 fileContentManager,
                 shareLinkManager,
                 weblogPageManager,
+                eventManager,
                 pluginManager,
                 propertiesManager,
                 themeManager,

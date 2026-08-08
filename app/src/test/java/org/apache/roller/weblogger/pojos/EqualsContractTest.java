@@ -219,13 +219,22 @@ class EqualsContractTest {
                         revision("revision-a"), revision("revision-a"), revision("revision-b")),
 
                 new Specimen("WeblogPage (keyed on id)",
-                        page("page-a"), page("page-a"), page("page-b")));
+                        page("page-a"), page("page-a"), page("page-b")),
+
+                new Specimen("RollerEvent (keyed on id)",
+                        event("event-a"), event("event-a"), event("event-b")));
     }
 
     private static WeblogPage page(String id) {
         WeblogPage page = new WeblogPage();
         page.setId(id);
         return page;
+    }
+
+    private static RollerEvent event(String id) {
+        RollerEvent event = new RollerEvent();
+        event.setId(id);
+        return event;
     }
 
     /**
