@@ -17,6 +17,7 @@ import javax.imageio.ImageIO;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -25,6 +26,7 @@ import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.ui.controllers.editor.EntryBean;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.junit.jupiter.api.AfterEach;
@@ -71,6 +73,9 @@ class SeoHeadRenderingTest {
 
     @AfterEach
     void tearDown() throws Exception {
+        WebloggerFactory.getWeblogger().getWeblogPageManager()
+                .removePages(TestUtils.getManagedWebsite(weblog));
+        TestUtils.endSession(true);
         TestUtils.teardownWeblog(weblog.getId());
         TestUtils.teardownUser(user.getUserName());
         TestUtils.endSession(true);
@@ -95,6 +100,29 @@ class SeoHeadRenderingTest {
         mutation.accept(managed);
         mgr.saveWeblogEntry(managed);
         TestUtils.endSession(true);
+    }
+
+    /**
+     * Saves a published static page, applying {@code mutation} to set
+     * whichever SEO fields a test needs -- the {@code WeblogPage} twin of
+     * {@link #updateEntry}, but a page has no pre-existing row to fetch and
+     * mutate, so this both creates and saves in one call.
+     */
+    private WeblogPage savePage(String slug, String title, Consumer<WeblogPage> mutation)
+            throws Exception {
+        WeblogPageManager mgr = WebloggerFactory.getWeblogger().getWeblogPageManager();
+        WeblogPage page = new WeblogPage();
+        page.setWeblog(TestUtils.getManagedWebsite(weblog));
+        page.setSlug(slug);
+        page.setTitle(title);
+        page.setContent("Body of " + slug);
+        page.setStatus(WeblogPage.PubStatus.PUBLISHED);
+        if (mutation != null) {
+            mutation.accept(page);
+        }
+        mgr.savePage(page);
+        TestUtils.endSession(true);
+        return page;
     }
 
     /**
@@ -283,6 +311,99 @@ class SeoHeadRenderingTest {
         JsonNode posting = singleLdJson(body, "BlogPosting");
         assertEquals("https://original.example.com/first-home",
                 posting.path("mainEntityOfPage").asString());
+    }
+
+    // ------------------------------------------------------------- static pages
+
+    @Test
+    void staticPageEmitsItsOwnCanonicalNotTheHomepage() throws Exception {
+        savePage("about-us", "About Us", null);
+
+        String body = render("/" + HANDLE + "/about-us");
+        String canonical = BASE + "/about-us";
+
+        assertTrue(body.contains("<link rel=\"canonical\" href=\"" + canonical + "\">"),
+                "a static page must canonicalize to its own URL:\n" + body);
+        assertFalse(body.contains("<link rel=\"canonical\" href=\"" + BASE + "/\">"),
+                "a static page must NOT canonicalize to the weblog homepage:\n" + body);
+        assertTrue(body.contains("<meta property=\"og:type\" content=\"website\">"),
+                "a static page is an og website, not an article:\n" + body);
+        assertTrue(body.contains("<meta property=\"og:title\" content=\"About Us\">"),
+                "og:title must fall back to the page title:\n" + body);
+        assertTrue(body.contains("<meta property=\"og:url\" content=\"" + canonical + "\">"));
+
+        JsonNode blog = singleLdJson(body, "Blog");
+        assertEquals(canonical, blog.path("url").asString(),
+                "the page's own JSON-LD url must match its canonical:\n" + body);
+    }
+
+    @Test
+    void noindexPageGetsARobotsMeta() throws Exception {
+        savePage("hidden-page", "Hidden Page", p -> p.setNoindex(true));
+
+        String body = render("/" + HANDLE + "/hidden-page");
+
+        assertTrue(body.contains("<meta name=\"robots\" content=\"noindex\">"),
+                "a noindex page must carry the robots directive:\n" + body);
+    }
+
+    @Test
+    void pageSearchDescriptionIsEmittedAsTheMetaDescription() throws Exception {
+        savePage("described-page", "Described Page",
+                p -> p.setSearchDescription("A concise page description."));
+
+        String body = render("/" + HANDLE + "/described-page");
+
+        assertTrue(body.contains(
+                "<meta name=\"description\" content=\"A concise page description.\">"),
+                "the page meta description must be the page's own search description:\n" + body);
+        assertTrue(body.contains(
+                "<meta property=\"og:description\" content=\"A concise page description.\">"));
+    }
+
+    @Test
+    void pageMetaTitleOverridesTheTitleTagAndOgTitleButNotTheHeading() throws Exception {
+        savePage("meta-page", "Real Page Title", p -> p.setMetaTitle("SEO Title Override"));
+
+        String body = render("/" + HANDLE + "/meta-page");
+
+        assertTrue(body.contains("<title>SEO Title Override : Test Weblog</title>"),
+                "the meta title must replace the page title in <title>:\n" + body);
+        assertTrue(body.contains("<meta property=\"og:title\" content=\"SEO Title Override\">"));
+        assertTrue(body.contains("<h1>Real Page Title</h1>"),
+                "the meta title must not leak into the page's own heading:\n" + body);
+    }
+
+    @Test
+    void perPageCanonicalOverrideWinsOnTheStaticPage() throws Exception {
+        savePage("syndicated-page", "Syndicated Page",
+                p -> p.setCanonicalUrl("https://original.example.com/first-home"));
+
+        String body = render("/" + HANDLE + "/syndicated-page");
+
+        assertTrue(body.contains(
+                "<link rel=\"canonical\" href=\"https://original.example.com/first-home\">"),
+                "the per-page canonical override must win:\n" + body);
+        assertFalse(body.contains(
+                "<link rel=\"canonical\" href=\"" + BASE + "/syndicated-page\">"),
+                "the natural page URL must not also be claimed as canonical:\n" + body);
+    }
+
+    @Test
+    void aPageOgImageIsResolvedFromItsOwnOgImageId() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "page-og-image");
+        String imageId = image.getId();
+        TestUtils.endSession(true);
+        savePage("pictured-page", "Pictured Page", p -> p.setOgImageId(imageId));
+
+        String body = render("/" + HANDLE + "/pictured-page");
+
+        String imageUrl = BASE + "/mediaresource/" + imageId;
+        assertTrue(body.contains("<meta property=\"og:image\" content=\"" + imageUrl + "\">"),
+                "og:image must point at the page's own og image:\n" + body);
+        assertTrue(body.contains(
+                "<meta name=\"twitter:card\" content=\"summary_large_image\">"),
+                "with an image the twitter card upgrades to summary_large_image:\n" + body);
     }
 
     // ------------------------------------------------------ escaping (carry-forward)

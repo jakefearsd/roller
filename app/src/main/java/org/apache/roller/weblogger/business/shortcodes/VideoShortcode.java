@@ -42,7 +42,10 @@ import org.apache.commons.text.StringEscapeUtils;
  * <p>Like {@code [map]}, the emitted markup is a {@code <div>} carrying data
  * attributes, never a frame: the sanitizer would delete a frame, so the
  * {@code #showEmbedAssets} macro injects one client-side when a reader
- * clicks. Nothing loads from the provider before that click.
+ * clicks. No frame, no cookies, and no script from the provider load before
+ * that click -- but the thumbnail {@code <img>} above (YouTube's
+ * {@code i.ytimg.com}) does load at render time, which sends the reader's IP
+ * and referer to the provider's CDN like any other embedded image.
  */
 public class VideoShortcode implements ShortcodeHandler {
 

@@ -568,7 +568,10 @@ against an allowlist of known provider shapes but never fetches anything — it
 emits an inert placeholder `<div>` because
 `HTMLSanitizer` strips iframes outright, and `#showEmbedAssets`
 click-injects the real `<iframe>` client-side only once a reader opts in
-(consent-gated embeds, not autoplaying trackers on page load). The theme
+(consent-gated embeds: no frame, no cookies, and no script from the provider
+before that click — though the placeholder's thumbnail `<img>`, e.g.
+YouTube's `i.ytimg.com`, does load from the provider's CDN at render time).
+The theme
 CSPs each carry a `frame-src` naming the provider's embed origin, pinned
 byte-for-byte by three rendering tests the same way the Leaflet `img-src *
 data:` addition is.

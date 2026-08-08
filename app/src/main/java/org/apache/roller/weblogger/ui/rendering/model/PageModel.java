@@ -29,9 +29,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogPage;
+import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.ThemeTemplateWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogCategoryWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
@@ -44,6 +46,7 @@ import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesPermalinkPag
 import org.apache.roller.weblogger.ui.rendering.util.WeblogEntryCommentForm;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
+import org.apache.roller.weblogger.util.URLUtilities;
 
 
 /**
@@ -156,11 +159,16 @@ public class PageModel implements Model {
      *
      * <p>On permalinks a non-blank per-entry canonical-URL override wins (the
      * entry is syndicated from elsewhere and canonical credit belongs there);
-     * otherwise this is the natural absolute URL of the request: the entry
-     * permalink, the custom page URL, or the collection URL
-     * (home/category/date/tags -- keeping the page number, so page 2
-     * canonicalizes to itself instead of claiming to duplicate page 1).
-     * Returns null on search results pages, which have no canonical form.
+     * a static page (a {@link WeblogPage} resolved from a bare
+     * {@code /<handle>/<slug>} request) honors its own stored override the
+     * same way. Otherwise this is the natural absolute URL of the request:
+     * the entry permalink, the static page URL (same shape as
+     * {@link org.apache.roller.weblogger.ui.rendering.model.URLModel#staticPage},
+     * so the canonical link matches the href readers actually follow), the
+     * custom page URL, or the collection URL (home/category/date/tags --
+     * keeping the page number, so page 2 canonicalizes to itself instead of
+     * claiming to duplicate page 1). Returns null on search results pages,
+     * which have no canonical form.
      */
     public String getCanonicalUrl() {
         if (isSearchResults()) {
@@ -173,6 +181,19 @@ public class PageModel implements Model {
             }
             return urlStrategy.getWeblogEntryURL(weblog,
                     pageRequest.getLocale(), pageRequest.getWeblogAnchor(), true);
+        }
+        if (pageRequest.getPageSlug() != null) {
+            WeblogPage page = pageRequest.getWeblogPageContent();
+            if (page != null) {
+                if (StringUtils.isNotBlank(page.getCanonicalUrl())) {
+                    return page.getCanonicalUrl();
+                }
+                // Mirrors URLModel#staticPage's URL shape (no locale segment,
+                // same URLUtilities.encode of the slug) but absolute, like
+                // every other branch of this method.
+                return urlStrategy.getWeblogURL(weblog, null, true)
+                        + URLUtilities.encode(page.getSlug());
+            }
         }
         if (pageRequest.getWeblogPageName() != null) {
             return urlStrategy.getWeblogPageURL(weblog, pageRequest.getLocale(),
@@ -202,6 +223,30 @@ public class PageModel implements Model {
      */
     public WeblogPage getPage() {
         return pageRequest.getWeblogPageContent();
+    }
+
+
+    /**
+     * Resolves {@link #getPage()}'s {@code ogImageId} to its
+     * {@link MediaFileWrapper}, or null if the page has no Open Graph image
+     * set, isn't being rendered, or the id no longer resolves (the media
+     * file was deleted independently). {@link WeblogPage} has no pojo
+     * wrapper of its own -- unlike {@link WeblogEntryWrapper#getOgImage()},
+     * which this mirrors -- so the resolution lives here instead.
+     */
+    public MediaFileWrapper getPageOgImage() {
+        WeblogPage page = getPage();
+        if (page == null || page.getOgImageId() == null) {
+            return null;
+        }
+        try {
+            MediaFile mediaFile = WebloggerFactory.getWeblogger()
+                    .getMediaFileManager().getMediaFile(page.getOgImageId());
+            return MediaFileWrapper.wrap(mediaFile, urlStrategy);
+        } catch (Exception ex) {
+            log.debug("Could not resolve media file " + page.getOgImageId(), ex);
+            return null;
+        }
     }
 
 

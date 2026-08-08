@@ -59,7 +59,7 @@
                             <c:param name="weblog" value="${actionWeblog.handle}"/>
                             <c:param name="bean.id" value="${p.id}"/>
                         </c:url>
-                        <a href="${edit}">${p.name}</a>
+                        <a href="${edit}"><c:out value="${p.name}"/></a>
                     </td>
 
                     <td style="vertical-align:middle">${p.action.readableName}</td>
@@ -74,7 +74,7 @@
                                 <c:param name="removeId" value="${p.id}"/>
                             </c:url>
                             <a href="#" onclick=
-                                    "confirmTemplateDelete('${p.id}', '${p.name}' )">
+                                    "confirmTemplateDelete('${p.id}', '${fn:escapeXml(p.name)}' )">
                                 <span class="bi bi-trash"></span>
                             </a>
 

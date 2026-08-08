@@ -24,6 +24,7 @@ These are the documented macros in order defined in this file:
     #showAutodiscoveryLinks($weblog)
     #showSeoHead()
     #showEntryTitle($entry)
+    #showPageTitle($page)
     #showMetaDescription()          (superseded by #showSeoHead)
     #showAnalyticsTrackingCode($weblog)
     #showResponsiveImage($image $alt $sizes $imgClass)
@@ -109,11 +110,21 @@ Emits the automatic SEO baseline for the current page and supersedes
 inside the <head> element of every theme page template.
 
 Emits, in order: a meta description (the entry search description on
-permalinks, else the weblog's about text), a robots noindex directive when
-the entry asks for one, rel=canonical from $model.canonicalUrl (the
-per-entry canonical override wins on permalinks; search pages get none),
+permalinks, the static page's search description on a $model.page view,
+else the weblog's about text), a robots noindex directive when the entry or
+page asks for one, rel=canonical from $model.canonicalUrl (the per-entry or
+per-page canonical override wins on its own view; search pages get none),
 the Open Graph card, the Twitter card, and JSON-LD structured data
-(BlogPosting on permalinks, Blog on the weblog's other pages).
+(BlogPosting on permalinks, Blog on the weblog's other pages -- including
+static pages, which get no dedicated JSON-LD type of their own).
+
+A static page ($model.page, a bare-slug WeblogPage -- see PageModel#getPage)
+is treated as its own SEO subject, structurally parallel to a permalink
+entry: metaTitle/searchDescription/canonicalUrl/noindex/ogImageId are the
+same five fields WeblogEntry carries, just unwrapped (WeblogPage has no pojo
+wrapper), so the page branch below reads them directly rather than through a
+wrapper's sanitizing getters. og:type stays "website" for a page, same as
+every other non-permalink view.
 
 og:image sizing: the rendition ladder tops out at 2400px, but social-card
 crawlers are happy with far less, so og:image points at the 1600px-wide
@@ -134,7 +145,14 @@ containing "</script>" cannot terminate the inline JSON-LD block).
     #if ($model.permalink && $model.weblogEntry)
         #set($seoEntry = $model.weblogEntry)
     #end
-    ## description: entry search description on permalinks, else weblog about.
+    ## A static page ($model.page, raw WeblogPage pojo -- see PageModel#getPage)
+    ## is mutually exclusive with a permalink entry, never both on one request.
+    #set($seoPage = false)
+    #if (!$seoEntry && $model.page)
+        #set($seoPage = $model.page)
+    #end
+    ## description: entry search description on permalinks, page search
+    ## description on a static page, else weblog about.
     ## Values are read RAW off the pojo and escaped exactly once at emit time:
     ## the wrapper getters conditionally sanitize, which already entity-encodes
     ## quotes when the sanitizer is on (double-escaping) and passes everything
@@ -146,6 +164,10 @@ containing "</script>" cannot terminate the inline JSON-LD block).
         #if ($utils.isNotEmpty($seoEntry.pojo.searchDescription))
             #set($seoDescription = $seoEntry.pojo.searchDescription)
         #end
+    #elseif ($seoPage)
+        #if ($utils.isNotEmpty($seoPage.searchDescription))
+            #set($seoDescription = $seoPage.searchDescription)
+        #end
     #elseif ($utils.isNotEmpty($model.weblog.pojo.about))
         #set($seoDescription = $model.weblog.pojo.about)
     #end
@@ -154,16 +176,18 @@ containing "</script>" cannot terminate the inline JSON-LD block).
     #end
     #if ($seoEntry && $seoEntry.noindex)
     <meta name="robots" content="noindex">
+    #elseif ($seoPage && $seoPage.noindex)
+    <meta name="robots" content="noindex">
     #end
     #set($seoCanonical = false)
     #set($seoCanonical = $model.canonicalUrl)
     #if ($seoCanonical)
     <link rel="canonical" href="$utils.escapeHTML($seoCanonical)">
     #end
-    ## Open Graph card. The title needs per-source escaping, because the three
+    ## Open Graph card. The title needs per-source escaping, because the
     ## sources are stored differently:
-    ##  - metaTitle is stored raw (a new field), so it is escaped exactly once
-    ##    here, like the description above;
+    ##  - metaTitle (entry or page) is stored raw (a new field), so it is
+    ##    escaped exactly once here, like the description above;
     ##  - the entry title is stored ALREADY HTML-escaped for UI-authored
     ##    entries (EntryBean.copyTo escapeHtml4, symmetric unescape in
     ##    copyFrom), which is why themes emit $entry.title raw -- so it must be
@@ -172,6 +196,9 @@ containing "</script>" cannot terminate the inline JSON-LD block).
     ##    literal entity in the JSON-LD headline. Unescape-then-escape-once
     ##    also keeps the attribute-escape guarantee for titles containing
     ##    quotes;
+    ##  - the page title, unlike the entry title, is stored RAW (PageBean.copyTo
+    ##    has no escapeHtml4 step -- page.vm's own <h1> escapes it at render
+    ##    time the same way this macro does), so it needs no unescape first;
     ##  - the weblog name is already HTML-escaped by WeblogWrapper.getName(),
     ##    so escaping it again would render "&amp;" literally in the card title.
     #if ($seoEntry)
@@ -183,6 +210,14 @@ containing "</script>" cannot terminate the inline JSON-LD block).
             #set($seoNamePlain = $seoEntry.pojo.metaTitle)
         #else
             #set($seoNamePlain = $utils.unescapeHTML($seoEntry.pojo.title))
+        #end
+        #set($seoTitleAttr = $utils.escapeHTML($seoNamePlain))
+        #set($seoTitleJson = $utils.escapeJson($seoNamePlain))
+    #elseif ($seoPage)
+        #if ($utils.isNotEmpty($seoPage.metaTitle))
+            #set($seoNamePlain = $seoPage.metaTitle)
+        #else
+            #set($seoNamePlain = $seoPage.title)
         #end
         #set($seoTitleAttr = $utils.escapeHTML($seoNamePlain))
         #set($seoTitleJson = $utils.escapeJson($seoNamePlain))
@@ -200,13 +235,17 @@ containing "</script>" cannot terminate the inline JSON-LD block).
     #end
     <meta property="og:site_name" content="$utils.escapeHTML($config.siteName)">
     ## dedicated og:image wins, else the featured image (wrapper getOgImage
-    ## does not fall back on its own)
+    ## does not fall back on its own). A page has no featuredImage field of
+    ## its own, so there is nothing to fall back to -- $model.pageOgImage is
+    ## the whole answer.
     #set($seoImage = false)
     #if ($seoEntry)
         #set($seoImage = $seoEntry.ogImage)
         #if (!$seoImage)
             #set($seoImage = $seoEntry.featuredImage)
         #end
+    #elseif ($seoPage)
+        #set($seoImage = $model.pageOgImage)
     #end
     #if ($seoImage)
         ## The 1600px rendition only exists for rendition-eligible formats
@@ -307,6 +346,17 @@ have always emitted it). The meta title is a new field so it is
 HTML-escaped on the way out.
 *#
 #macro(showEntryTitle $entry)#if($utils.isNotEmpty($entry.pojo.metaTitle))$utils.escapeHTML($entry.pojo.metaTitle)#else$entry.title#end#end
+
+
+#**
+The #showEntryTitle twin for a static page ($model.page): emits the text for
+its <title> element, the page's SEO meta title when one is set, else the
+page title. Unlike an entry title, a page title is stored RAW (PageBean.copyTo
+has no escapeHtml4 step, unlike EntryBean.copyTo), so -- unlike
+#showEntryTitle -- BOTH branches here are HTML-escaped, not just the meta
+title one.
+*#
+#macro(showPageTitle $page)#if($utils.isNotEmpty($page.metaTitle))$utils.escapeHTML($page.metaTitle)#else$utils.escapeHTML($page.title)#end#end
 
 
 #**
