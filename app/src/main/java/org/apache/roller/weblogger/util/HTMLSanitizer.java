@@ -100,8 +100,11 @@ public final class HTMLSanitizer {
 
             .allowAttributes("srcset", "sizes", "type", "media").onElements("source")
 
-            // the map shortcode's payload: pins as JSON in a data attribute
-            .allowAttributes("data-pins", "data-center", "data-zoom", "data-route")
+            // the map shortcode's payload: pins as JSON in a data attribute;
+            // and the video shortcode's provider + id, which #showEmbedAssets
+            // reads to build the frame on click
+            .allowAttributes("data-pins", "data-center", "data-zoom", "data-route",
+                    "data-provider", "data-video-id")
             .onElements("div")
 
             .allowAttributes("colspan", "rowspan", "align", "valign", "scope")

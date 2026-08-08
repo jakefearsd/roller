@@ -94,6 +94,16 @@ class MapAssetsRenderingTest {
      */
     private static final String CSP_DATA_IMAGES = "img-src * data:;";
 
+    /**
+     * The single authorised CSP widening for this wave: frame-src limited to
+     * the two providers {@code [video]} can target. Asserted wherever
+     * {@link #CSP_DATA_IMAGES} is, for the five themes {@code #showEmbedAssets}
+     * shipped to -- frontpage is out of scope for this wave and keeps its
+     * existing policy unchanged.
+     */
+    private static final String CSP_VIDEO_FRAMES =
+            "frame-src https://www.youtube-nocookie.com https://player.vimeo.com;";
+
     private User user;
     private Weblog weblog;
 
@@ -296,29 +306,50 @@ class MapAssetsRenderingTest {
      */
     @Test
     void everyDeclaringHeadAllowsDataUrisForImages() throws Exception {
-        assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
+        String basicBody = render("/" + HANDLE);
+        assertTrue(basicBody.contains(CSP_DATA_IMAGES),
                 "basic weblog.vm must allow data: images");
+        assertTrue(basicBody.contains(CSP_VIDEO_FRAMES),
+                "basic weblog.vm must allow the video providers' frames");
 
+        // frontpage is out of scope for the [video] CSP widening -- it renders
+        // through $site, a different model, and #showEmbedAssets was not added
+        // to it.
         switchTheme("frontpage");
         assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
                 "frontpage _header.vm must allow data: images");
 
         switchTheme("gaurav");
-        assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
+        String gauravBody = render("/" + HANDLE);
+        assertTrue(gauravBody.contains(CSP_DATA_IMAGES),
                 "gaurav std_head.vm must allow data: images");
+        assertTrue(gauravBody.contains(CSP_VIDEO_FRAMES),
+                "gaurav std_head.vm must allow the video providers' frames");
 
         switchTheme("fauxcoly");
-        assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
+        String fauxcolyBody = render("/" + HANDLE);
+        assertTrue(fauxcolyBody.contains(CSP_DATA_IMAGES),
                 "fauxcoly weblog.vm must allow data: images");
+        assertTrue(fauxcolyBody.contains(CSP_VIDEO_FRAMES),
+                "fauxcoly weblog.vm must allow the video providers' frames");
 
         switchTheme("portfolio");
-        assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
+        String portfolioBody = render("/" + HANDLE);
+        assertTrue(portfolioBody.contains(CSP_DATA_IMAGES),
                 "portfolio weblog.vm must allow data: images");
-        assertTrue(search().contains(CSP_DATA_IMAGES),
+        assertTrue(portfolioBody.contains(CSP_VIDEO_FRAMES),
+                "portfolio weblog.vm must allow the video providers' frames");
+        String searchBody = search();
+        assertTrue(searchBody.contains(CSP_DATA_IMAGES),
                 "portfolio searchresults.vm must allow data: images");
+        assertTrue(searchBody.contains(CSP_VIDEO_FRAMES),
+                "portfolio searchresults.vm must allow the video providers' frames");
         entryWithText("csp-map-entry", "<p>nothing to see</p>");
-        assertTrue(render("/" + HANDLE + "/entry/csp-map-entry").contains(CSP_DATA_IMAGES),
+        String permalinkBody = render("/" + HANDLE + "/entry/csp-map-entry");
+        assertTrue(permalinkBody.contains(CSP_DATA_IMAGES),
                 "portfolio permalink.vm must allow data: images");
+        assertTrue(permalinkBody.contains(CSP_VIDEO_FRAMES),
+                "portfolio permalink.vm must allow the video providers' frames");
     }
 
     /**

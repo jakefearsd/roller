@@ -50,16 +50,20 @@ class TravelThemeRenderingTest {
     private static final String BASE = "http://localhost:8080/roller/" + HANDLE;
 
     /**
-     * The CSP line every theme head ships, verbatim -- the same constant
-     * {@code PortfolioThemeRenderingTest} and {@code MapAssetsRenderingTest}
-     * hold. A new theme that drifts here would ship a weaker (or broken)
-     * policy than its siblings.
+     * The directives this test actually cares about, not the whole policy
+     * string -- the same constants {@code PortfolioThemeRenderingTest} and
+     * {@code MapAssetsRenderingTest} hold. Pinning the whole string made it
+     * impossible for a theme to name a directive its own assets need without
+     * failing this test.
      */
-    private static final String CSP_META =
-            "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; "
-            + "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
-            + "img-src * data:; base-uri 'self'; connect-src 'self'; form-action 'self'; "
-            + "frame-ancestors 'none'\">";
+    private static final String CSP_DATA_IMAGES = "img-src * data:;";
+
+    /**
+     * The single authorised CSP widening for this wave: frame-src limited to
+     * the two providers {@code [video]} can target.
+     */
+    private static final String CSP_VIDEO_FRAMES =
+            "frame-src https://www.youtube-nocookie.com https://player.vimeo.com;";
 
     private User user;
     private Weblog weblog;
@@ -112,8 +116,10 @@ class TravelThemeRenderingTest {
 
     /** The shared head contract plus the no-Velocity-leak assertions. */
     private static void assertTravelHead(String body) {
-        assertTrue(body.contains(CSP_META),
-                "the travel head must carry the exact CSP meta the other themes ship:\n" + body);
+        assertTrue(body.contains(CSP_DATA_IMAGES),
+                "the travel head must allow data: images, like the other themes:\n" + body);
+        assertTrue(body.contains(CSP_VIDEO_FRAMES),
+                "the travel head must allow the video providers' frames:\n" + body);
         assertTrue(body.contains("<link rel=\"canonical\""),
                 "#showSeoHead must contribute the canonical link:\n" + body);
         assertTrue(body.contains(".jgrid { display: flex;"),

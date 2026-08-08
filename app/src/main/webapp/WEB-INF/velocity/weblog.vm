@@ -667,6 +667,54 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 #**
+Click-to-play video embeds for the [video] shortcode -- the twin of
+#showMapAssets and #showGalleryAssets.
+
+Nothing loads from the provider until a reader clicks: the shortcode emits a
+thumbnail and this macro swaps in the frame on demand. That is a privacy
+property, not only a performance one, and it is why the theme CSP needs
+frame-src but not connect-src for these hosts.
+*#
+#macro(showEmbedAssets)
+<style>
+.video-figure { margin: 1em 0; }
+.video-embed { position: relative; aspect-ratio: 16 / 9; background: #000; cursor: pointer; }
+.video-embed img, .video-embed iframe { width: 100%; height: 100%; border: 0; display: block; object-fit: cover; }
+.video-embed::after { content: "\25B6"; position: absolute; inset: 0; display: flex;
+  align-items: center; justify-content: center; font-size: 3rem; color: #fff;
+  text-shadow: 0 0 12px rgba(0,0,0,.7); pointer-events: none; }
+.video-embed.is-playing { cursor: default; }
+.video-embed.is-playing::after { display: none; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var embeds = document.querySelectorAll('.video-embed');
+  if (!embeds.length) { return; }
+  Array.prototype.forEach.call(embeds, function (embed) {
+    embed.addEventListener('click', function () {
+      if (embed.classList.contains('is-playing')) { return; }
+      var provider = embed.getAttribute('data-provider');
+      var id = embed.getAttribute('data-video-id');
+      if (!provider || !id) { return; }
+      var src = provider === 'vimeo'
+        ? 'https://player.vimeo.com/video/' + encodeURIComponent(id) + '?autoplay=1'
+        : 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(id) + '?autoplay=1';
+      var frame = document.createElement('iframe');
+      frame.setAttribute('src', src);
+      frame.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+      frame.setAttribute('allowfullscreen', 'allowfullscreen');
+      frame.setAttribute('title', 'Embedded video');
+      embed.innerHTML = '';
+      embed.appendChild(frame);
+      embed.classList.add('is-playing');
+    });
+  });
+});
+</script>
+#end
+
+
+#**
 Shows weblog entries pager via default day template
 *#
 #macro(showWeblogEntriesPager $pager)

@@ -51,18 +51,24 @@ class PortfolioThemeRenderingTest {
     private static final String BASE = "http://localhost:8080/roller/" + HANDLE;
 
     /**
-     * The CSP line every theme head ships, verbatim. {@code data:} joined
-     * {@code img-src} when Leaflet arrived: it paints aborted and
-     * out-of-range tiles with a base64 GIF placeholder, and per CSP3 the
-     * {@code *} wildcard does not match the {@code data:} scheme.
-     * {@code MapAssetsRenderingTest} holds the same constant for the other
-     * six declaring heads.
+     * The directives this test actually cares about, not the whole policy
+     * string -- pinning the whole string made it impossible for a theme to
+     * name a directive its own assets need without failing this test (see
+     * {@code MapAssetsRenderingTest#CSP_DATA_IMAGES}, which holds the same
+     * lesson). {@code data:} joined {@code img-src} when Leaflet arrived: it
+     * paints aborted and out-of-range tiles with a base64 GIF placeholder,
+     * and per CSP3 the {@code *} wildcard does not match the {@code data:}
+     * scheme.
      */
-    private static final String CSP_META =
-            "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; "
-            + "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
-            + "img-src * data:; base-uri 'self'; connect-src 'self'; form-action 'self'; "
-            + "frame-ancestors 'none'\">";
+    private static final String CSP_DATA_IMAGES = "img-src * data:;";
+
+    /**
+     * The single authorised CSP widening for this wave: frame-src limited to
+     * the two providers {@code [video]} can target. Same constant
+     * {@code MapAssetsRenderingTest} and {@code TravelThemeRenderingTest} hold.
+     */
+    private static final String CSP_VIDEO_FRAMES =
+            "frame-src https://www.youtube-nocookie.com https://player.vimeo.com;";
 
     private User user;
     private Weblog weblog;
@@ -115,8 +121,10 @@ class PortfolioThemeRenderingTest {
 
     /** The shared head contract plus the no-Velocity-leak assertions. */
     private static void assertPortfolioHead(String body) {
-        assertTrue(body.contains(CSP_META),
-                "the portfolio head must carry the exact CSP meta the other themes ship:\n" + body);
+        assertTrue(body.contains(CSP_DATA_IMAGES),
+                "the portfolio head must allow data: images, like the other themes:\n" + body);
+        assertTrue(body.contains(CSP_VIDEO_FRAMES),
+                "the portfolio head must allow the video providers' frames:\n" + body);
         assertTrue(body.contains("<link rel=\"canonical\""),
                 "#showSeoHead must contribute the canonical link:\n" + body);
         assertTrue(body.contains(".jgrid { display: flex;"),
@@ -264,8 +272,10 @@ class PortfolioThemeRenderingTest {
 
         assertEquals(200, response.getStatus());
         String body = response.getContentAsString();
-        assertTrue(body.contains(CSP_META),
-                "the search head must carry the same CSP meta:\n" + body);
+        assertTrue(body.contains(CSP_DATA_IMAGES),
+                "the search head must allow data: images:\n" + body);
+        assertTrue(body.contains(CSP_VIDEO_FRAMES),
+                "the search head must allow the video providers' frames:\n" + body);
         assertTrue(body.contains(".jgrid { display: flex;"), body);
         assertTrue(body.contains("/webjars/photoswipe/"), body);
         assertTrue(body.contains("<div class=\"pf-grid\">"),
