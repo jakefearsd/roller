@@ -53,3 +53,11 @@ mail.hostname=smtp.example.com
 mail.port=587
 #mail.username=
 #mail.password=
+
+#-----------------------------------------------------------------------------
+# Newsletter -- forwards /newsletter/subscribe to the listmonk service in
+# docker-compose.prod.yml over the compose network (not through Caddy: see
+# deploy/caddy/Caddyfile's comment on why that rewrite was deleted). Blank
+# (the roller.properties default) leaves the endpoint returning 503.
+#-----------------------------------------------------------------------------
+newsletter.listmonk.baseurl=http://listmonk:9000

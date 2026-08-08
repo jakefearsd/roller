@@ -1801,10 +1801,11 @@ Include Javascript code needed for expanding folder macros (undocumented).
 ##     #showSubscribeForm("2f0f1b0c-...-9a3d" "Get new guides by email")
 ##
 ## The submit goes to /newsletter/subscribe on THIS blog's own origin, which
-## Caddy forwards to listmonk's public subscription API. Same-origin is not a
-## style choice: every bundled theme sends connect-src 'self', so a fetch to
-## the newsletter's own hostname would simply be blocked and the reader would
-## see nothing happen.
+## NewsletterController (throttle + honeypot + roller_event) forwards to
+## listmonk's public subscription API via ListmonkClient. Same-origin is not
+## a style choice: every bundled theme sends connect-src 'self', so a fetch
+## to the newsletter's own hostname would simply be blocked and the reader
+## would see nothing happen.
 ##
 ## Roller stores no subscriber data. Listmonk records the address, sends the
 ## double opt-in email, and owns the unsubscribe link -- which is why this

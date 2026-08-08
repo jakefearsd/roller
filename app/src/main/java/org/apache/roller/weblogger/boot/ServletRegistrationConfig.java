@@ -219,6 +219,16 @@ public class ServletRegistrationConfig {
      */
     static final String[] SHARE_URL_PATTERNS = {"/share/*"};
 
+    /**
+     * Routes the public newsletter subscribe endpoint
+     * ({@code NewsletterController}) to the dispatcher, the same way
+     * {@link #SHARE_URL_PATTERNS} routes {@code ShareController}: a legal
+     * servlet-spec prefix mapping, so the lookup path has {@code /newsletter}
+     * stripped and the controller's {@code @PostMapping} is written relative
+     * to it ({@code /subscribe}, not {@code /newsletter/subscribe}).
+     */
+    static final String[] NEWSLETTER_URL_PATTERNS = {"/newsletter/*"};
+
     @Bean
     public DispatcherServletRegistrationBean dispatcherServletRegistration(
             DispatcherServlet dispatcherServlet,
@@ -230,6 +240,7 @@ public class ServletRegistrationConfig {
                         super.configure(servletRegistration);
                         servletRegistration.addMapping(SEO_URL_PATTERNS);
                         servletRegistration.addMapping(SHARE_URL_PATTERNS);
+                        servletRegistration.addMapping(NEWSLETTER_URL_PATTERNS);
                     }
                 };
         registration.setName("springMvc");

@@ -368,7 +368,22 @@ public class JPAWeblogManagerImpl implements WeblogManager {
             return null;
         }
     }
-    
+
+    @Override
+    public Weblog getWeblogByNewsletterListUuid(String listUuid) throws WebloggerException {
+        if (listUuid == null) {
+            return null;
+        }
+        TypedQuery<Weblog> query = strategy.getNamedQuery(
+                "Weblog.getByNewsletterListUuid", Weblog.class);
+        query.setParameter(1, listUuid);
+        try {
+            return query.getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
+    }
+
     /**
      * Get weblogs of a user
      */

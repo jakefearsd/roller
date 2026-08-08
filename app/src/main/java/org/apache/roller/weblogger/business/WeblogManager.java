@@ -72,8 +72,17 @@ public interface WeblogManager {
      */
     Weblog getWeblogByHandle(String handle, Boolean enabled)
         throws WebloggerException;
-    
-    
+
+    /**
+     * Get the weblog whose newsletter list uuid matches, or null when no
+     * weblog is configured with it. A subscribe request names its target list
+     * by uuid, never by weblog handle, so this is the only way to recover
+     * which weblog (and therefore which {@code EventManager} bookkeeping) a
+     * subscription belongs to.
+     * @param listUuid The newsletter list uuid to look up
+     */
+    Weblog getWeblogByNewsletterListUuid(String listUuid) throws WebloggerException;
+
     /**
      * Get websites optionally restricted by user, enabled and active status.
      * @param enabled   Get all with this enabled state (or null or all)

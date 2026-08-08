@@ -177,7 +177,22 @@ public class WeblogTest  {
             weblog = mgr.getWeblogByHandle(testWeblog1.getHandle());
             assertNotNull(weblog);
             assertEquals(testWeblog1.getHandle(), weblog.getHandle());
-            
+
+            // lookup by newsletter list uuid -- unknown uuid is a miss
+            weblog = null;
+            weblog = mgr.getWeblogByNewsletterListUuid("2f0f1b0c-1111-2222-3333-444455556666");
+            assertNull(weblog);
+
+            // a weblog configured with that uuid is found by it
+            weblog = mgr.getWeblogByHandle(testWeblog1.getHandle());
+            weblog.setNewsletterListUuid("2f0f1b0c-1111-2222-3333-444455556666");
+            mgr.saveWeblog(weblog);
+            TestUtils.endSession(true);
+            weblog = null;
+            weblog = mgr.getWeblogByNewsletterListUuid("2f0f1b0c-1111-2222-3333-444455556666");
+            assertNotNull(weblog);
+            assertEquals(testWeblog1.getHandle(), weblog.getHandle());
+
             // make sure disabled weblogs are not returned
             weblog.setVisible(Boolean.FALSE);
             mgr.saveWeblog(weblog);

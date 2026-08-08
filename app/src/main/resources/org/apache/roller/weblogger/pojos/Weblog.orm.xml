@@ -9,6 +9,9 @@
 		<named-query name="Weblog.getByHandle">
 			<query>SELECT w FROM Weblog w WHERE w.handle = ?1</query>
 		</named-query>
+		<named-query name="Weblog.getByNewsletterListUuid">
+			<query>SELECT w FROM Weblog w WHERE w.newsletterListUuid = ?1</query>
+		</named-query>
 		<named-query name="Weblog.getByLetterOrderByHandle">
 			<query>SELECT w FROM Weblog w WHERE UPPER(w.handle) like ?1 ORDER BY w.handle</query>
 		</named-query>
