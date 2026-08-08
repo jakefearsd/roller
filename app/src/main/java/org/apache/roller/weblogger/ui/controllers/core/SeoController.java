@@ -32,7 +32,9 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
+import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.apache.roller.weblogger.util.URLUtilities;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -50,12 +52,14 @@ import org.springframework.web.bind.annotation.PathVariable;
  * machinery.
  *
  * <p>The per-weblog sitemap lists the weblog home page plus every PUBLISHED
- * entry that is not flagged {@code noindex} ({@code null} on pre-existing rows
- * means indexable). Entries with a featured image get a Google image-sitemap
- * {@code image:image} element whose {@code loc} is the media-resource URL of
- * the largest rendition ({@code ?w=1600}); before renditions exist for a file,
- * MediaResourceServlet serves the original for that URL, so the link is valid
- * either way.
+ * entry and PUBLISHED page that is not flagged {@code noindex} ({@code null}
+ * on pre-existing rows means indexable). A page's {@code loc} is encoded the
+ * same way {@code URLModel#staticPage} builds it, since that is the URL the
+ * theme's own nav emits for the page. Entries with a featured image get a
+ * Google image-sitemap {@code image:image} element whose {@code loc} is the
+ * media-resource URL of the largest rendition ({@code ?w=1600}); before
+ * renditions exist for a file, MediaResourceServlet serves the original for
+ * that URL, so the link is valid either way.
  *
  * <p>Routing: the DispatcherServlet is mapped {@code *.rol} plus the explicit
  * SEO patterns added in {@code ServletRegistrationConfig} -- see
@@ -151,6 +155,7 @@ public class SeoController extends BaseController {
         }
 
         List<WeblogEntry> entries;
+        List<WeblogPage> pages;
         try {
             WeblogEntrySearchCriteria criteria = new WeblogEntrySearchCriteria();
             criteria.setWeblog(weblog);
@@ -163,6 +168,7 @@ public class SeoController extends BaseController {
             // produce something no crawler will accept.
             criteria.setMaxResults(MAX_SITEMAP_URLS);
             entries = weblogger.getWeblogEntryManager().getWeblogEntries(criteria);
+            pages = weblogger.getWeblogPageManager().getPublishedPages(weblog);
         } catch (WebloggerException e) {
             log.error("Error building the sitemap for weblog " + handle, e);
             return ResponseEntity.internalServerError().build();
@@ -192,6 +198,27 @@ public class SeoController extends BaseController {
             appendLastmod(xml, "    ",
                     entry.getUpdateTime() != null ? entry.getUpdateTime() : entry.getPubTime());
             appendFeaturedImage(xml, urlStrategy, weblog, entry);
+            xml.append("  </url>\n");
+        }
+
+        // Pages sit alongside entries in the sitemap: they are the addresses a
+        // business site most wants indexed. noindex is honoured here for the
+        // same reason it is for entries -- a page excluded from search must be
+        // excluded from what we hand the crawler.
+        for (WeblogPage page : pages) {
+            if (Boolean.TRUE.equals(page.getNoindex())) {
+                continue;
+            }
+            xml.append("  <url>\n");
+            // Match URLModel#staticPage's encoding exactly: that is the same
+            // /<handle>/<slug> URL the theme's own nav emits, and a slug is
+            // free-form enough (spaces, punctuation) that the raw value is
+            // not always a valid URL.
+            xml.append("    <loc>").append(escapeXml(
+                    urlStrategy.getWeblogURL(weblog, null, true)
+                            + URLUtilities.encode(page.getSlug())))
+                    .append("</loc>\n");
+            appendLastmod(xml, "    ", page.getUpdated());
             xml.append("  </url>\n");
         }
         xml.append("</urlset>\n");

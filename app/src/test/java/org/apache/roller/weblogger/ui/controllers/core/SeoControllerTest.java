@@ -31,6 +31,7 @@ import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -364,15 +365,18 @@ class SeoControllerTest {
         Weblogger broken = mock(Weblogger.class);
         WeblogManager weblogManager = mock(WeblogManager.class);
         WeblogEntryManager entryManager = mock(WeblogEntryManager.class);
+        WeblogPageManager pageManager = mock(WeblogPageManager.class);
         MediaFileManager mediaFileManager = mock(MediaFileManager.class);
         URLStrategy urlStrategy = mock(URLStrategy.class);
         when(broken.getWeblogManager()).thenReturn(weblogManager);
         when(broken.getWeblogEntryManager()).thenReturn(entryManager);
+        when(broken.getWeblogPageManager()).thenReturn(pageManager);
         when(broken.getMediaFileManager()).thenReturn(mediaFileManager);
         when(broken.getUrlStrategy()).thenReturn(urlStrategy);
 
         Weblog mockWeblog = activeWeblog("mockblog");
         when(weblogManager.getWeblogByHandle("mockblog", Boolean.TRUE)).thenReturn(mockWeblog);
+        when(pageManager.getPublishedPages(mockWeblog)).thenReturn(List.of());
 
         WeblogEntry entry = new WeblogEntry();
         entry.setAnchor("mock-entry");
