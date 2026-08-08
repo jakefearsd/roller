@@ -55,7 +55,7 @@ class ShortcodeCardTest {
 
     @Test
     void everyShippedShortcodeIsOfferedExactlyOnce() {
-        assertEquals(List.of("image", "gallery", "map", "cta", "faq"),
+        assertEquals(List.of("image", "gallery", "map", "cta", "faq", "video"),
                 cards.stream().map(ShortcodeCard::name).toList(),
                 "The insert menu is the registry's card list; if a shortcode was added "
                         + "or removed, update this expectation deliberately.");

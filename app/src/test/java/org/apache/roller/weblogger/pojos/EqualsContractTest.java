@@ -216,7 +216,16 @@ class EqualsContractTest {
                         shareLink("token-a"), shareLink("token-a"), shareLink("token-b")),
 
                 new Specimen("WeblogEntryRevision (keyed on id)",
-                        revision("revision-a"), revision("revision-a"), revision("revision-b")));
+                        revision("revision-a"), revision("revision-a"), revision("revision-b")),
+
+                new Specimen("WeblogPage (keyed on id)",
+                        page("page-a"), page("page-a"), page("page-b")));
+    }
+
+    private static WeblogPage page(String id) {
+        WeblogPage page = new WeblogPage();
+        page.setId(id);
+        return page;
     }
 
     /**
