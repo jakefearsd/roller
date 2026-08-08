@@ -17,8 +17,11 @@
  */
 package org.apache.roller.weblogger.ui.rendering;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -34,6 +37,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -120,10 +124,6 @@ class PageNavRenderingTest {
         savePage("first-page", "First & Best", WeblogPage.PubStatus.PUBLISHED, true, 10);
         savePage("hidden-page", "Hidden Page", WeblogPage.PubStatus.PUBLISHED, false, 0);
         savePage("draft-page", "Draft Page", WeblogPage.PubStatus.DRAFT, true, 0);
-        // a slug with a character URLEncoder must escape, so the rendered
-        // href proves #url.staticPage encodes the path segment rather than
-        // interpolating the slug raw
-        savePage("space page", "Spacey", WeblogPage.PubStatus.PUBLISHED, true, 30);
 
         List<String> failures = new ArrayList<>();
         for (String theme : THEMES) {
@@ -144,15 +144,11 @@ class PageNavRenderingTest {
     private void checkTheme(String theme, String body) {
         String firstHref = BASE + "/first-page";
         String secondHref = BASE + "/second-page";
-        String spaceyHref = BASE + "/space+page";
 
         assertTrue(body.contains("<a href=\"" + firstHref + "\">First &amp; Best</a>"),
                 theme + ": expected an escaped nav link to the first page:\n" + body);
         assertTrue(body.contains("<a href=\"" + secondHref + "\">Second Page</a>"),
                 theme + ": expected a nav link to the second page:\n" + body);
-        assertTrue(body.contains("<a href=\"" + spaceyHref + "\">Spacey</a>"),
-                theme + ": a slug with a space must render URL-encoded ('+' for the "
-                        + "space), not raw:\n" + body);
 
         assertFalse(body.contains("Hidden Page"),
                 theme + ": a page with showInNav=false must not appear:\n" + body);
@@ -192,5 +188,63 @@ class PageNavRenderingTest {
         assertTrue(ulOpen >= 0 && ulOpen > ulClose,
                 theme + ": the nav link to " + href + " must render inside an open "
                         + "<ul> supplied by the theme, not as a bare <li>:\n" + body);
+    }
+
+    // ------------------------------------------------------ encoding round trip
+
+    /**
+     * A slug carrying a space and an ampersand must both render as a
+     * correctly encoded {@code href} AND resolve back to the same page when
+     * that exact link is followed -- a string-only assertion on the rendered
+     * {@code href} previously locked in a value ({@code #url.staticPage}
+     * encoding a space as {@code '+'}) that looked right but 404'd when
+     * clicked, because {@code WeblogPageRequest}'s bare-slug branch never
+     * decoded it back on the way in. This proves the whole round trip, not
+     * just the half {@code URLModel} controls.
+     */
+    @Test
+    void aNavLinkForASlugWithSpacesAndAnAmpersandRoundTripsToTheRealPage() throws Exception {
+        savePage("space & page", "Roundtrip Page", WeblogPage.PubStatus.PUBLISHED, true, 1);
+
+        switchTheme("basic");
+        RenderingTestSupport.clearRenderCaches();
+        String body = renderHomePage();
+
+        String href = extractHref(body, "Roundtrip Page");
+        assertNotNull(href, "expected a nav link to Roundtrip Page:\n" + body);
+        assertEquals(BASE + "/space+%26+page", href,
+                "the encoded href must turn the space into '+' and the '&' into "
+                        + "'%26', the same convention #url.entry(anchor) uses:\n" + body);
+
+        // MockHttpServletRequest does not simulate a container's own
+        // percent-decoding pass, so this stands in for it: a real container
+        // hands application code a path where %XX sequences are already
+        // resolved but a literal '+' is untouched (that conversion is a
+        // decodeOrReject-only rule, applied once WeblogPageRequest parses the
+        // path). Skipping this step would test something a browser can never
+        // actually send.
+        String pathInfo = URI.create("http://example.invalid"
+                        + href.substring("/roller".length()))
+                .getPath();
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", pathInfo);
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(200, response.getStatus(),
+                "clicking the rendered nav link must resolve the real page, not "
+                        + "404 -- rendered href was " + href + ", decoded pathInfo was "
+                        + pathInfo);
+        assertTrue(response.getContentAsString().contains("<h1>Roundtrip Page</h1>"),
+                "the resolved page must be the one the slug names:\n"
+                        + response.getContentAsString());
+    }
+
+    private static String extractHref(String body, String linkText) {
+        Matcher matcher = Pattern
+                .compile("<a href=\"([^\"]+)\">" + Pattern.quote(linkText) + "</a>")
+                .matcher(body);
+        return matcher.find() ? matcher.group(1) : null;
     }
 }

@@ -187,11 +187,18 @@ public class WeblogPageRequest extends WeblogRequest {
                 // answer doesn't need. A slug that turns out not to name a
                 // published page 404s at the servlet, not here.
                 if (!"tags".equals(this.context)) {
-                    if (ReservedSlugs.isReserved(this.context)) {
+                    // decodeOrReject mirrors the entry/category branches above:
+                    // URLModel#staticPage encodes the slug with URLUtilities.encode
+                    // (a space becomes '+'), and the servlet container's own path
+                    // decoding never touches '+' -- only URLDecoder does. Without
+                    // this, a slug with a space round-trips as a literal '+' and
+                    // 404s.
+                    String slug = decodeOrReject(this.context, request);
+                    if (ReservedSlugs.isReserved(slug)) {
                         throw new InvalidRequestException("invalid index page, "
                                 + request.getRequestURL());
                     }
-                    this.pageSlug = this.context;
+                    this.pageSlug = slug;
                     otherPageHit = true;
                 }
             }
