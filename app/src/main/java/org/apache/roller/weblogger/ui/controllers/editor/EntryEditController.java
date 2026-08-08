@@ -514,6 +514,16 @@ public class EntryEditController extends BaseController {
      * title (the body is already-sanitized HTML by the time it reaches
      * here), and stamps {@code newsletterSentAt} strictly after
      * {@code sendCampaign} returns without throwing.
+     *
+     * <p>The two exception scopes below are deliberately separate, not
+     * merged into one try/catch. Once {@code sendCampaign} returns
+     * successfully the email is irreversibly gone to every subscriber; a
+     * failure recording that -- {@code saveWeblogEntry} or {@code flush}
+     * throwing -- is a completely different situation from the send itself
+     * failing, and must not be reported with the same generic message. That
+     * would leave the button showing (nothing looks stamped) and invite the
+     * author to click it again, which really would send the campaign twice.
+     * {@code newsletter.sentButNotRecorded} says explicitly not to retry.
      */
     private void sendNewsletterCampaign(WeblogEntry entry, String listUuid, ListmonkClient client,
                                         Model model, HttpServletRequest request) {
@@ -522,16 +532,23 @@ public class EntryEditController extends BaseController {
                 + "\n<p><a href=\"" + entry.getPermalink() + "\">Read on the site</a></p>";
         try {
             client.sendCampaign(listUuid, entry.getTitle(), html);
+        } catch (IOException ex) {
+            log.error("Error sending newsletter campaign for entry " + entry.getId(), ex);
+            addError(model, "newsletter.sendFailed", ex.getMessage(), request);
+            return;
+        }
+
+        // The campaign is already sent at this point. Nothing from here on
+        // may be reported as an ordinary, retry-inviting failure.
+        try {
             entry.setNewsletterSentAt(new Timestamp(System.currentTimeMillis()));
             weblogger.getWeblogEntryManager().saveWeblogEntry(entry);
             weblogger.flush();
             addMessage(model, "newsletter.sent", request);
-        } catch (IOException ex) {
-            log.error("Error sending newsletter campaign for entry " + entry.getId(), ex);
-            addError(model, "newsletter.sendFailed", ex.getMessage(), request);
         } catch (WebloggerException ex) {
-            log.error("Error saving entry after newsletter send " + entry.getId(), ex);
-            addError(model, "generic.error.check.logs", request);
+            log.error("Newsletter campaign for entry " + entry.getId()
+                    + " was sent, but recording newsletterSentAt failed", ex);
+            addError(model, "newsletter.sentButNotRecorded", ex.getMessage(), request);
         }
     }
 

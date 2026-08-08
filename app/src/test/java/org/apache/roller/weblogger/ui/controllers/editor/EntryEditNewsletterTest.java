@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -155,6 +156,7 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
         String view = controller.entryEditSendNewsletter("entry-1", request, model);
 
         assertEquals(".EntryEdit", view);
+        assertTrue(errors(model).contains("newsletter.notPublished"), errors(model).toString());
         verify(listmonk, never()).sendCampaign(any(), any(), any());
         assertNull(entry.getNewsletterSentAt());
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
@@ -205,12 +207,16 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
     }
 
     /**
-     * A successful Listmonk send followed by a save failure -- rare, but not
-     * unreachable -- must be reported like any other persistence failure
-     * rather than propagating as a 500.
+     * A successful Listmonk send followed by a save failure is NOT an
+     * ordinary, retry-inviting failure: the campaign already went out to
+     * every subscriber, so the generic "something went wrong, try again"
+     * message would be actively dangerous here -- it reads exactly like a
+     * failure where nothing was sent, and the button reappearing invites a
+     * real second send. This must get its own distinctive message, and
+     * {@code sendCampaign} must never be called a second time to "fix" it.
      */
     @Test
-    void aSaveFailureAfterASuccessfulSendIsReportedRatherThanPropagated() throws Exception {
+    void aSaveFailureAfterASuccessfulSendGetsItsOwnMessageNotTheGenericOne() throws Exception {
         publishedEntry();
         when(listmonk.isCampaignConfigured()).thenReturn(true);
         doThrow(new WebloggerException("constraint violation"))
@@ -219,8 +225,12 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
         String view = controller.entryEditSendNewsletter("entry-1", request, model);
 
         assertEquals(".EntryEdit", view);
-        assertTrue(errors(model).contains("generic.error.check.logs"), errors(model).toString());
+        assertTrue(errors(model).stream().anyMatch(m -> m.contains("newsletter.sentButNotRecorded")),
+                "expected the distinctive post-send-failure message, got: " + errors(model));
+        assertFalse(errors(model).contains("generic.error.check.logs"),
+                "the generic message is indistinguishable from an unsent failure and must not be used here");
         assertEquals(0, weblogger.flushCount(), "a failed save must not be committed");
+        verify(listmonk, org.mockito.Mockito.times(1)).sendCampaign(any(), any(), any());
     }
 
     // -------------------------------------------------------------- wiring
