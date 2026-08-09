@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -46,7 +47,7 @@ import static org.mockito.Mockito.when;
  * Tests for {@link EntryBean}, the form model behind the entry editor.
  *
  * <p>Two things here are worth pinning down. First {@code getPubTime}, which
- * turns a hand-typed date plus three integer selectors into the instant an
+ * turns the {@code datetime-local} value the editor submits into the instant an
  * entry goes live: get the timezone handling wrong and posts publish hours off,
  * or a scheduled post fires immediately. Second {@code copyTo}, which is the
  * only place that checks a submitted category actually belongs to the weblog
@@ -67,25 +68,22 @@ class EntryBeanTest extends EditorControllerTestSupport {
     // --- getPubTime ---
 
     @Test
-    void pubTimeCombinesTheTypedDateWithTheHourMinuteSecondSelectors() {
-        bean.setDateString("3/15/24");
-        bean.setHours(14);
-        bean.setMinutes(30);
-        bean.setSeconds(45);
+    void pubTimeParsesTheDatetimeLocalValueAsWallClockTimeInTheGivenZone() {
+        // What an <input type="datetime-local"> submits.
+        bean.setPubTimeLocal("2024-03-15T14:30");
 
-        Timestamp pubTime = bean.getPubTime(Locale.US, NEW_YORK);
+        Timestamp pubTime = bean.getPubTime(NEW_YORK);
 
-        assertEquals("2024-03-15 14:30:45", formatIn(pubTime, NEW_YORK),
-                "The selectors must be applied as wall-clock time in the weblog's timezone");
+        assertEquals("2024-03-15 14:30:00", formatIn(pubTime, NEW_YORK),
+                "The datetime-local value must be applied as wall-clock time in the given zone");
     }
 
     @Test
-    void pubTimeIsInterpretedInTheWeblogsTimezoneNotTheServersa() {
-        bean.setDateString("3/15/24");
-        bean.setHours(12);
+    void pubTimeIsInterpretedInTheGivenTimezoneNotTheServers() {
+        bean.setPubTimeLocal("2024-03-15T12:00");
 
-        Timestamp inNewYork = bean.getPubTime(Locale.US, NEW_YORK);
-        Timestamp inTokyo = bean.getPubTime(Locale.US, TimeZone.getTimeZone("Asia/Tokyo"));
+        Timestamp inNewYork = bean.getPubTime(NEW_YORK);
+        Timestamp inTokyo = bean.getPubTime(TimeZone.getTimeZone("Asia/Tokyo"));
 
         assertNotEquals(inNewYork, inTokyo,
                 "Noon in New York and noon in Tokyo are different instants; if these come out "
@@ -94,54 +92,41 @@ class EntryBeanTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void pubTimeAcceptsSingleDigitMonthAndDay() {
-        // The pattern is "M/d/yy" precisely so users need not type leading
-        // zeroes; "03/05/24" must still work too.
-        bean.setDateString("3/5/24");
-        Timestamp terse = bean.getPubTime(Locale.US, NEW_YORK);
+    void pubTimeAcceptsSecondsIfABrowserSubmitsThem() {
+        // Mirrors eventDatesWithSecondsAreAcceptedAndShownToTheMinute below:
+        // some browsers submit seconds on a datetime-local field even though
+        // the editor's own field never carries them, and that must not be
+        // rejected.
+        bean.setPubTimeLocal("2024-03-15T14:30:45");
 
-        bean.setDateString("03/05/24");
-        Timestamp padded = bean.getPubTime(Locale.US, NEW_YORK);
-
-        assertEquals(terse, padded, "Leading zeroes must be optional, not significant");
-        assertEquals("2024-03-05 00:00:00", formatIn(terse, NEW_YORK));
+        assertEquals("2024-03-15 14:30:45", formatIn(bean.getPubTime(NEW_YORK), NEW_YORK));
     }
 
     @Test
-    void pubTimeIgnoresTheRequestLocale() {
-        // Pins the behaviour the TODO in getPubTime describes: the date is
-        // parsed with a fixed US pattern regardless of the user's locale,
-        // because the calendar widget that produces it only speaks US format.
-        // If this ever starts failing, the widget and the parser have been made
-        // locale-aware together -- update the TODO and this test as a pair.
-        bean.setDateString("3/15/24");
-        bean.setHours(9);
-
-        Timestamp asUs = bean.getPubTime(Locale.US, NEW_YORK);
-        Timestamp asFrench = bean.getPubTime(Locale.FRANCE, NEW_YORK);
-        Timestamp asThai = bean.getPubTime(Locale.forLanguageTag("th-TH-u-ca-buddhist"), NEW_YORK);
-
-        assertEquals(asUs, asFrench, "Locale must not change how the date string is read");
-        assertEquals(asUs, asThai,
-                "A non-Gregorian calendar locale must not shift the year either");
-    }
-
-    @Test
-    void pubTimeIsNullWhenNoDateWasTyped() {
+    void pubTimeIsNullWhenNoDatetimeWasChosen() {
         // A null pubTime is meaningful: EntryEditController reads it as
         // "publish now" rather than "schedule".
-        assertNull(bean.getPubTime(Locale.US, NEW_YORK), "No date string means no pub time");
+        assertNull(bean.getPubTime(NEW_YORK), "No pubTimeLocal means no pub time");
 
-        bean.setDateString("");
-        assertNull(bean.getPubTime(Locale.US, NEW_YORK), "An empty date string means no pub time");
+        bean.setPubTimeLocal("");
+        assertNull(bean.getPubTime(NEW_YORK), "An empty pubTimeLocal means no pub time");
+
+        bean.setPubTimeLocal("   ");
+        assertNull(bean.getPubTime(NEW_YORK), "A whitespace-only pubTimeLocal means no pub time");
     }
 
     @Test
-    void pubTimeIsNullWhenTheDateCannotBeParsed() {
-        bean.setDateString("not-a-date");
+    void pubTimeThrowsOnAMalformedValueRatherThanSilentlyPublishingNow() {
+        // The old dateString/hours/minutes/seconds combination swallowed a
+        // parse failure (log + null), which EntryEditController then read as
+        // "publish now" -- a mistyped date silently published immediately
+        // instead of telling the author anything was wrong. The input type
+        // keeps ordinary browsers honest, but a hand-crafted POST must not
+        // get that silent behaviour back: it must surface as a validation
+        // error instead.
+        bean.setPubTimeLocal("not-a-date");
 
-        assertNull(bean.getPubTime(Locale.US, NEW_YORK),
-                "Unparseable input must degrade to 'publish now', not throw out of the controller");
+        assertThrows(DateTimeParseException.class, () -> bean.getPubTime(NEW_YORK));
     }
 
     // --- status predicates ---
@@ -307,7 +292,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setCategoryId("cat-1");
         bean.setAllowComments(true);
         bean.setCommentDays(14);
-        bean.setRightToLeft(true);
         bean.setSummary("A summary");
         bean.setSearchDescription("For search engines");
         bean.setLocale("fr_FR");
@@ -327,7 +311,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
 
         assertTrue(entry.getAllowComments());
         assertEquals(14, entry.getCommentDays());
-        assertTrue(entry.getRightToLeft());
         assertEquals("A summary", entry.getSummary());
         assertEquals("For search engines", entry.getSearchDescription());
         assertEquals("fr_FR", entry.getLocale());
@@ -469,7 +452,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setStatus(PubStatus.DRAFT.name());
         bean.setCategoryId("cat-1");
         bean.setPinnedToMain(false);
-        bean.setDateString("1/1/20");
+        bean.setPubTimeLocal("2020-01-01T00:00");
 
         bean.copyTo(entry);
 
@@ -505,32 +488,29 @@ class EntryBeanTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void copyFromSplitsAStoredPubTimeIntoTheEditorsDateAndTimeFields() throws Exception {
+    void copyFromFormatsTheStoredPubTimeAsADatetimeLocalValueInTheWeblogsTimezone() throws Exception {
         WeblogEntry entry = storedEntry();
-        // 2024-03-15 14:30:45 in America/New_York.
-        entry.setPubTime(Timestamp.valueOf("2024-03-15 14:30:45"));
         // The weblog's timezone is what the editor displays in.
         weblog.setTimeZone("America/New_York");
-        SimpleDateFormat utcInput = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        utcInput.setTimeZone(NEW_YORK);
-        entry.setPubTime(new Timestamp(utcInput.parse("2024-03-15 14:30:45").getTime()));
+        SimpleDateFormat inZone = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        inZone.setTimeZone(NEW_YORK);
+        entry.setPubTime(new Timestamp(inZone.parse("2024-03-15 14:30:45").getTime()));
 
         bean.copyFrom(entry, Locale.US);
 
-        assertEquals("03/15/24", bean.getDateString());
-        assertEquals(14, bean.getHours());
-        assertEquals(30, bean.getMinutes());
-        assertEquals(45, bean.getSeconds());
+        // Truncated to the minute, the same trade eventStartLocal already
+        // makes -- a datetime-local input has no seconds control.
+        assertEquals("2024-03-15T14:30", bean.getPubTimeLocal());
     }
 
     @Test
-    void copyFromLeavesTheDateBlankForAnEntryThatWasNeverPublished() throws Exception {
+    void copyFromLeavesPubTimeLocalUnsetForAnEntryThatWasNeverPublished() throws Exception {
         WeblogEntry entry = storedEntry();
         entry.setPubTime(null);
 
         bean.copyFrom(entry, Locale.US);
 
-        assertNull(bean.getDateString(),
+        assertNull(bean.getPubTimeLocal(),
                 "A draft with no pub time must not be given a fabricated date");
     }
 
@@ -542,11 +522,11 @@ class EntryBeanTest extends EditorControllerTestSupport {
         WeblogEntry entry = storedEntry();
         SimpleDateFormat inZone = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         inZone.setTimeZone(NEW_YORK);
-        Timestamp original = new Timestamp(inZone.parse("2024-07-04 09:08:07").getTime());
+        Timestamp original = new Timestamp(inZone.parse("2024-07-04 09:08:00").getTime());
         entry.setPubTime(original);
 
         bean.copyFrom(entry, Locale.US);
-        Timestamp reparsed = bean.getPubTime(Locale.US, NEW_YORK);
+        Timestamp reparsed = bean.getPubTime(NEW_YORK);
 
         assertEquals(original, reparsed,
                 "Opening an entry and saving it unchanged must not move its publication time");
@@ -569,7 +549,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         entry.setTagsAsString("alpha beta");
         entry.setAllowComments(Boolean.FALSE);
         entry.setCommentDays(30);
-        entry.setRightToLeft(Boolean.TRUE);
         entry.setPinnedToMain(Boolean.TRUE);
         entry.setFeaturedImageId("mf-featured-1");
         entry.setMetaTitle("Stored SEO Title");
@@ -596,7 +575,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         assertEquals("alpha beta", bean.getTagsAsString());
         assertFalse(bean.getAllowComments());
         assertEquals(30, bean.getCommentDays());
-        assertTrue(bean.getRightToLeft());
         assertTrue(bean.getPinnedToMain());
         assertEquals("mf-featured-1", bean.getFeaturedImageId());
         assertEquals("Stored SEO Title", bean.getMetaTitle());
@@ -652,16 +630,13 @@ class EntryBeanTest extends EditorControllerTestSupport {
         // sets them to true.
         WeblogEntry entry = entryInCategory("cat-1");
         entry.setAllowComments(Boolean.TRUE);
-        entry.setRightToLeft(Boolean.TRUE);
         bean.setStatus(PubStatus.DRAFT.name());
         bean.setCategoryId("cat-1");
         bean.setAllowComments(false);
-        bean.setRightToLeft(false);
 
         bean.copyTo(entry);
 
         assertFalse(entry.getAllowComments());
-        assertFalse(entry.getRightToLeft());
     }
 
     @Test
@@ -687,21 +662,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         // true would silently pin every new post to the site front page.
         EntryBean fresh = new EntryBean();
         assertFalse(fresh.getPinnedToMain());
-        assertFalse(fresh.getRightToLeft());
         assertFalse(fresh.getAllowComments());
-    }
-
-    @Test
-    void copyFromPicksUpTheEnclosureUrlFromTheEntryAttributes() throws Exception {
-        WeblogEntry entry = storedEntry();
-        entry.putEntryAttribute("att_mediacast_url", "https://example.com/podcast.mp3");
-        entry.putEntryAttribute("att_mediacast_type", "audio/mpeg");
-
-        bean.copyFrom(entry, Locale.US);
-
-        assertEquals("https://example.com/podcast.mp3", bean.getEnclosureURL(),
-                "The podcast enclosure must be read back out of the attribute set, and only "
-                        + "the url attribute -- not the type or length -- is the enclosure");
     }
 
     @Test

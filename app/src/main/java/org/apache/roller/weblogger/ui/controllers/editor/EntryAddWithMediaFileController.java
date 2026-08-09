@@ -104,15 +104,6 @@ public class EntryAddWithMediaFileController extends MediaFileBase {
                 }
             }
 
-            if (!StringUtils.isEmpty(bean.getEnclosureURL())) {
-                sb.append("<p>")
-                  .append(getText("mediaFileEdit.includesEnclosure", request))
-                  .append("<br />")
-                  .append("<a href='").append(bean.getEnclosureURL()).append("'>")
-                  .append(bean.getEnclosureURL())
-                  .append("</a></p>");
-            }
-
             bean.setText(sb.toString());
 
         } catch (Exception e) {

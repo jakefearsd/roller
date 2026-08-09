@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.io.IOException;
 import java.sql.Timestamp;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -57,9 +58,6 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.apache.roller.weblogger.util.TextDiff;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.util.MailUtil;
-import org.apache.roller.weblogger.util.MediacastException;
-import org.apache.roller.weblogger.util.MediacastResource;
-import org.apache.roller.weblogger.util.MediacastUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -157,13 +155,15 @@ public class EntryEditController extends BaseController {
         entry.setCreatorUserName(getAuthenticatedUser(request).getUserName());
         entry.setWebsite(getActionWeblog(request));
 
+        Timestamp pubTime = resolvePubTime(bean, request, model);
+
         if ("saveDraft".equals(action)) {
             bean.setStatus(PubStatus.DRAFT.name());
         } else if ("publish".equals(action)) {
-            setPublishStatus(bean, entry, request);
+            setPublishStatus(bean, entry, pubTime, request);
         }
 
-        String result = doSave(request, model, bean, entry, "entryAdd");
+        String result = doSave(request, model, bean, entry, "entryAdd", pubTime);
         model.addAttribute("entry", entry);
         addEntryModelAttributes(request, model, entry, bean);
         return result;
@@ -543,26 +543,51 @@ public class EntryEditController extends BaseController {
             return "redirect:/roller-ui/menu.rol";
         }
 
+        Timestamp pubTime = resolvePubTime(bean, request, model);
+
         if ("saveDraft".equals(action)) {
             bean.setStatus(PubStatus.DRAFT.name());
             if (entry.isPublished()) {
                 entry.setRefreshAggregates(true);
             }
         } else if ("publish".equals(action)) {
-            setPublishStatus(bean, entry, request);
+            setPublishStatus(bean, entry, pubTime, request);
         }
 
-        String result = doSave(request, model, bean, entry, "entryEdit");
+        String result = doSave(request, model, bean, entry, "entryEdit", pubTime);
         model.addAttribute("entry", entry);
         addEntryModelAttributes(request, model, entry, bean);
         return result;
     }
 
-    private void setPublishStatus(EntryBean bean, WeblogEntry entry, HttpServletRequest request) {
+    /**
+     * {@code bean.pubTimeLocal} parsed in the action weblog's timezone, once
+     * per save so {@link #setPublishStatus} and {@link #doSave} agree on the
+     * same instant -- the old code called {@code bean.getPubTime(...)} twice,
+     * which was harmless when a parse failure just returned null, but is not
+     * once a bad value has to be reported.
+     *
+     * <p>A value that will not parse adds a validation error to the model
+     * and resolves to null here, the same as a blank field. That is
+     * deliberate: this method runs before {@link #doSave}'s own {@code
+     * hasErrors} gate is checked, and that gate -- not this method -- is
+     * what actually blocks the save. Reporting the error here just means a
+     * mistyped pubtime is never silently read as "publish now" the way the
+     * old dateString parser swallowed it.
+     */
+    private Timestamp resolvePubTime(EntryBean bean, HttpServletRequest request, Model model) {
+        try {
+            return bean.getPubTime(getActionWeblog(request).getTimeZoneInstance());
+        } catch (DateTimeParseException e) {
+            addError(model, "entryEdit.pubTimeInvalid", request);
+            return null;
+        }
+    }
+
+    private void setPublishStatus(EntryBean bean, WeblogEntry entry, Timestamp pubTime,
+                                  HttpServletRequest request) {
         if (getActionWeblog(request).hasUserPermission(
                 getAuthenticatedUser(request), WeblogPermission.POST)) {
-            Timestamp pubTime = bean.getPubTime(request.getLocale(),
-                    getActionWeblog(request).getTimeZoneInstance());
             if (pubTime != null && pubTime.after(
                     new Date(System.currentTimeMillis() + RollerConstants.MIN_IN_MS))) {
                 bean.setStatus(PubStatus.SCHEDULED.name());
@@ -581,7 +606,7 @@ public class EntryEditController extends BaseController {
     }
 
     private String doSave(HttpServletRequest request, Model model, EntryBean bean,
-                          WeblogEntry entry, String actionName) {
+                          WeblogEntry entry, String actionName, Timestamp pubTime) {
         if (StringUtils.isNotBlank(bean.getCanonicalUrl())
                 && !CANONICAL_URL_VALIDATOR.isValid(bean.getCanonicalUrl())) {
             addError(model, "entryEdit.canonicalUrlInvalid", request);
@@ -592,8 +617,7 @@ public class EntryEditController extends BaseController {
                 IndexManager indexMgr = weblogger.getIndexManager();
 
                 entry.setUpdateTime(new Timestamp(new Date().getTime()));
-                entry.setPubTime(bean.getPubTime(request.getLocale(),
-                        getActionWeblog(request).getTimeZoneInstance()));
+                entry.setPubTime(pubTime);
 
                 bean.copyTo(entry);
 
@@ -606,25 +630,6 @@ public class EntryEditController extends BaseController {
                 if (weblogger.getUserManager()
                         .checkPermission(adminPerm, getAuthenticatedUser(request))) {
                     entry.setPinnedToMain(bean.getPinnedToMain());
-                }
-
-                if (!StringUtils.isEmpty(bean.getEnclosureURL())) {
-                    try {
-                        MediacastResource mediacast = MediacastUtil.lookupResource(bean.getEnclosureURL());
-                        entry.putEntryAttribute("att_mediacast_url", mediacast.getUrl());
-                        entry.putEntryAttribute("att_mediacast_type", mediacast.getContentType());
-                        entry.putEntryAttribute("att_mediacast_length", "" + mediacast.getLength());
-                    } catch (MediacastException ex) {
-                        addMessage(model, ex.getErrorKey(), request);
-                    }
-                } else if ("entryEdit".equals(actionName)) {
-                    try {
-                        weblogEntryManager.removeWeblogEntryAttribute("att_mediacast_url", entry);
-                        weblogEntryManager.removeWeblogEntryAttribute("att_mediacast_type", entry);
-                        weblogEntryManager.removeWeblogEntryAttribute("att_mediacast_length", entry);
-                    } catch (WebloggerException e) {
-                        addMessage(model, "weblogEdit.mediaCastErrorRemoving", request);
-                    }
                 }
 
                 weblogEntryManager.saveWeblogEntry(entry);
@@ -706,16 +711,6 @@ public class EntryEditController extends BaseController {
                     .getPreviewURLStrategy(null)
                     .getWeblogEntryURL(getActionWeblog(request), null, entry.getAnchor(), true));
         }
-
-        // Hour/minute/second lists for pub time selectors
-        List<Integer> hoursList = new ArrayList<>();
-        for (int i = 0; i < 24; i++) hoursList.add(i);
-        model.addAttribute("hoursList", hoursList);
-
-        List<Integer> minutesList = new ArrayList<>();
-        for (int i = 0; i < 60; i++) minutesList.add(i);
-        model.addAttribute("minutesList", minutesList);
-        model.addAttribute("secondsList", new ArrayList<>(minutesList));
 
         // Locale list for multi-language blogs
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());

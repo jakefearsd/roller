@@ -66,8 +66,8 @@ class ScheduledEntryIT extends RollerIT {
     /** Rendered on the edit page only once the entry has been saved. */
     private static final String PERMALINK = "#entry_bean_permalink";
 
-    /** {@code EntryBean.getPubTime} parses the date field with exactly this pattern. */
-    private static final DateTimeFormatter ENTRY_DATE = DateTimeFormatter.ofPattern("M/d/yy");
+    /** The wire format {@code bean.pubTimeLocal}'s {@code datetime-local} input carries. */
+    private static final DateTimeFormatter ENTRY_PUB_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
     @Test
     void aScheduledEntryIsWithheldFromReaders() {
@@ -132,10 +132,8 @@ class ScheduledEntryIT extends RollerIT {
         $(EDITOR_BODY).should(visible);
         executeJavaScript("rollerSetEntryText(arguments[0]);", "Body of " + title);
 
-        // The date field is readonly -- the datepicker writes it -- so this
-        // writes it the same way rather than typing into it.
-        executeJavaScript("document.getElementsByName('bean.dateString')[0].value = arguments[0];",
-                LocalDate.now().plusYears(1).format(ENTRY_DATE));
+        executeJavaScript("document.getElementsByName('bean.pubTimeLocal')[0].value = arguments[0];",
+                LocalDate.now().plusYears(1).atStartOfDay().format(ENTRY_PUB_TIME));
 
         $("button[formaction$='entryAdd!publish.rol']").click();
 

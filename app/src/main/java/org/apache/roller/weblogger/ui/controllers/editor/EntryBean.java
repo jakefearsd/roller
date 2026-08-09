@@ -30,20 +30,15 @@ import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
-import org.apache.roller.weblogger.pojos.WeblogEntryAttribute;
 import org.apache.roller.weblogger.util.Utilities;
 
 import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Locale;
-import java.util.Set;
 import java.util.TimeZone;
 
 
@@ -64,15 +59,10 @@ public class EntryBean {
     private String status = null;
 
     private String[] plugins = null;
-    private String dateString = null;
-    private int hours = 0;
-    private int minutes = 0;
-    private int seconds = 0;
+    private String pubTimeLocal = null;
     private boolean allowComments = false;
     private Integer commentDays = 0;
-    private boolean rightToLeft = false;
     private boolean pinnedToMain = false;
-    private String enclosureURL = null;
     private String searchDescription = null;
 
     private int commentCount = 0;
@@ -169,38 +159,14 @@ public class EntryBean {
         this.plugins = plugins;
     }
     
-    public String getDateString() {
-        return dateString;
+    public String getPubTimeLocal() {
+        return pubTimeLocal;
     }
-    
-    public void setDateString(String date) {
-        this.dateString = date;
+
+    public void setPubTimeLocal(String pubTimeLocal) {
+        this.pubTimeLocal = pubTimeLocal;
     }
-    
-    public int getHours() {
-        return hours;
-    }
-    
-    public void setHours(int hours) {
-        this.hours = hours;
-    }
-    
-    public int getMinutes() {
-        return minutes;
-    }
-    
-    public void setMinutes(int minutes) {
-        this.minutes = minutes;
-    }
-    
-    public int getSeconds() {
-        return seconds;
-    }
-    
-    public void setSeconds(int seconds) {
-        this.seconds = seconds;
-    }
-    
+
     public boolean getAllowComments() {
         return this.allowComments;
     }
@@ -228,30 +194,14 @@ public class EntryBean {
         this.commentCount = commentCount;
     }
 
-    public boolean getRightToLeft() {
-        return this.rightToLeft;
-    }
-    
-    public void setRightToLeft( boolean rightToLeft ) {
-        this.rightToLeft = rightToLeft;
-    }
-    
     public boolean getPinnedToMain() {
         return this.pinnedToMain;
     }
-    
+
     public void setPinnedToMain( boolean pinnedToMain ) {
         this.pinnedToMain = pinnedToMain;
     }
-    
-    public String getEnclosureURL() {
-        return enclosureURL;
-    }
-    
-    public void setEnclosureURL(String enclosureUrl) {
-        this.enclosureURL = enclosureUrl;
-    }
-    
+
     public String getSearchDescription() {
         return searchDescription;
     }
@@ -414,44 +364,30 @@ public class EntryBean {
         }
     }
 
-    // a convenient way to get the final pubtime of the entry
-    public Timestamp getPubTime(Locale locale, TimeZone timezone) {
-        
-        Timestamp pubtime = null;
-        
-        if(!StringUtils.isEmpty(getDateString())) {
-            try {
-                log.debug("pubtime vals are "+getDateString()+", "+getHours()+", "+getMinutes()+", "+getSeconds());
-
-                // first convert the specified date string into an actual Date obj
-                // TODO: at some point this date conversion should be locale sensitive,
-                // however at this point our calendar widget does not take into account
-                // locales and only operates in the standard English US locale.
-
-                // Don't require user add preceding '0' of month and day.
-                DateFormat df = new SimpleDateFormat("M/d/yy");
-                df.setTimeZone(timezone);
-                Date newDate = df.parse(getDateString());
-
-                log.debug("dateString yields date - "+newDate);
-
-                // Now handle the time from the hour, minute and second combos
-                Calendar cal = Calendar.getInstance(timezone,locale);
-                cal.setTime(newDate);
-                cal.set(Calendar.HOUR_OF_DAY, getHours());
-                cal.set(Calendar.MINUTE, getMinutes());
-                cal.set(Calendar.SECOND, getSeconds());
-                pubtime = new Timestamp(cal.getTimeInMillis());
-
-                log.debug("pubtime is "+pubtime);
-            } catch(Exception e) {
-                log.error("Error calculating pubtime", e);
-            }
+    /**
+     * The final pubtime of the entry: {@link #getPubTimeLocal()} -- what an
+     * {@code <input type="datetime-local">} submits -- parsed as wall-clock
+     * time in {@code timezone}. Callers pass
+     * {@code getActionWeblog(request).getTimeZoneInstance()}, exactly as the
+     * old dateString/hours/minutes/seconds combination this replaces did;
+     * pubtime has always meant the WEBLOG's timezone, never the server's or
+     * the request locale's.
+     *
+     * <p>A blank {@code pubTimeLocal} means "no time chosen" and returns
+     * null, which {@code EntryEditController} reads as "publish now". A
+     * non-blank value that will not parse throws {@link
+     * DateTimeParseException} rather than being silently discarded the way
+     * the old dateString parser did -- a mistyped pubtime must surface as a
+     * validation error, not quietly publish "now".
+     */
+    public Timestamp getPubTime(TimeZone timezone) {
+        if (StringUtils.isBlank(pubTimeLocal)) {
+            return null;
         }
-        
-        return pubtime;
+        LocalDateTime local = LocalDateTime.parse(pubTimeLocal.trim());
+        return Timestamp.from(local.atZone(timezone.toZoneId()).toInstant());
     }
-    
+
     public boolean isDraft() {
         return PubStatus.DRAFT.name().equals(status);
     }
@@ -516,11 +452,10 @@ public class EntryBean {
         // join values from all plugins into a single string
         entry.setPlugins(StringUtils.join(getPlugins(),","));
         
-        // comment settings & right-to-left option
+        // comment settings
         entry.setAllowComments(getAllowComments());
         entry.setCommentDays(getCommentDays());
-        entry.setRightToLeft(getRightToLeft());
-        
+
         // NOTE: pubtime and pinned to main attributes are set in action
     }
     
@@ -570,43 +505,19 @@ public class EntryBean {
             setPlugins(StringUtils.split(entry.getPlugins(), ","));
         }
         
-        // init pubtime values
-        if(entry.getPubTime() != null) {
-            log.debug("entry pubtime is "+entry.getPubTime());
-            
-            //Calendar cal = Calendar.getInstance(locale);
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(entry.getPubTime());
-            cal.setTimeZone(entry.getWebsite().getTimeZoneInstance());
-            
-            setHours(cal.get(Calendar.HOUR_OF_DAY));
-            setMinutes(cal.get(Calendar.MINUTE));
-            setSeconds(cal.get(Calendar.SECOND));
-            
-            // TODO: at some point this date conversion should be locale sensitive,
-            // however at this point our calendar widget does not take into account
-            // locales and only operates in the standard English US locale.
-            DateFormat df = new SimpleDateFormat("MM/dd/yy");
-            df.setTimeZone(entry.getWebsite().getTimeZoneInstance());
-            setDateString(df.format(entry.getPubTime()));
-            
-            log.debug("pubtime vals are "+getDateString()+", "+getHours()+", "+getMinutes()+", "+getSeconds());
+        // init pubtime value -- emitted in the WEBLOG's timezone, matching
+        // what getPubTime(TimeZone) parses it back with, so opening and
+        // saving an entry unchanged does not move its publication time.
+        if (entry.getPubTime() != null) {
+            log.debug("entry pubtime is " + entry.getPubTime());
+            ZonedDateTime zoned = entry.getPubTime().toInstant()
+                    .atZone(entry.getWebsite().getTimeZoneInstance().toZoneId());
+            setPubTimeLocal(zoned.toLocalDateTime().format(DATETIME_LOCAL));
         }
-        
+
         setAllowComments(entry.getAllowComments());
         setCommentDays(entry.getCommentDays());
-        setRightToLeft(entry.getRightToLeft());
         setPinnedToMain(entry.getPinnedToMain());
-        
-        // enclosure url, if it exists
-        Set<WeblogEntryAttribute> attrs = entry.getEntryAttributes();
-        if(attrs != null && !attrs.isEmpty()) {
-            for (WeblogEntryAttribute attr : attrs) {
-                if ("att_mediacast_url".equals(attr.getName())) {
-                    setEnclosureURL(attr.getValue());
-                }
-            }
-        }
     }
     
     
@@ -614,16 +525,13 @@ public class EntryBean {
     public String toString() {
         StringBuilder buf = new StringBuilder();
         
-        //title,locale,catId,tags,text,summary,dateString,status,comments,plugins
+        //title,locale,catId,tags,text,summary,pubTimeLocal,status,comments,plugins
         buf.append("title = ").append(getTitle()).append("\n");
         buf.append("locale = ").append(getLocale()).append("\n");
         buf.append("status = ").append(getStatus()).append("\n");
         buf.append("catId = ").append(getCategoryId()).append("\n");
         buf.append("tags = ").append(getTagsAsString()).append("\n");
-        buf.append("date = ").append(getDateString()).append("\n");
-        buf.append("hours = ").append(getHours()).append("\n");
-        buf.append("minutes = ").append(getMinutes()).append("\n");
-        buf.append("seconds = ").append(getSeconds()).append("\n");
+        buf.append("pubTimeLocal = ").append(getPubTimeLocal()).append("\n");
         buf.append("text = ").append(getText()).append("\n");
         buf.append("summary = ").append(getSummary()).append("\n");
         buf.append("search description = ").append(getSearchDescription()).append("\n");

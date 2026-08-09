@@ -224,35 +224,8 @@
                         <label class="col-form-label col-sm-3"><spring:message code="weblogEdit.pubTime"/></label>
 
                         <div class="col-sm-9">
-
-                            <select name="bean.hours">
-<c:forEach items="${hoursList}" var="opt">
-<option value="${opt}" ${opt == bean.hours ? 'selected' : ''}>${opt}</option>
-</c:forEach>
-</select> :
-                            <select name="bean.minutes">
-<c:forEach items="${minutesList}" var="opt">
-<option value="${opt}" ${opt == bean.minutes ? 'selected' : ''}>${opt}</option>
-</c:forEach>
-</select> :
-                            <select name="bean.seconds">
-<c:forEach items="${secondsList}" var="opt">
-<option value="${opt}" ${opt == bean.seconds ? 'selected' : ''}>${opt}</option>
-</c:forEach>
-</select> <br/>
-
-                            <img src="<c:url value='/roller-ui/images/spacer.png'/>"
-                                 alt="spacer" style="min-height: 0.3em"/>
-
-                            <div class="input-group">
-                                <input type="text" name="bean.dateString" value="${bean.dateString}" readonly class="date-picker form-control" style="width:15em"/>
-                                <label for="bean.dateString" class="input-group-text" style="width:3em">
-                                    <span class="bi bi-calendar"></span>
-                                </label>
-                            </div>
-
-                            ${actionWeblog.timeZone}
-
+                            <input type="datetime-local" name="bean.pubTimeLocal" value="${bean.pubTimeLocal}" class="form-control"/>
+                            <div class="form-text">${actionWeblog.timeZone}</div>
                         </div>
 
                     </div>
@@ -282,14 +255,6 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="offset-sm-3 col-sm-9">
-                            <div class="form-check">
-                                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.rightToLeft" value="true" ${bean.rightToLeft ? 'checked' : ''}/> <spring:message code="weblogEdit.rightToLeft"/></label>
-                            </div>
-                        </div>
-                    </div>
-
                         <%-- global admin can pin items to front page weblog --%>
                     <c:if test="${authenticatedUser.hasGlobalPermission('admin')}">
                         <div class="row mb-3">
@@ -299,22 +264,6 @@
                                 </div>
                             </div>
                         </div>
-                    </c:if>
-
-                    <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.enclosureURL"/></label>
-                        <div class="col-sm-9">
-                            <input type="text" name="bean.enclosureURL" value="${bean.enclosureURL}" maxlength="255" class="form-control"/>
-                        </div>
-                    </div>
-
-                    <c:if test="${actionName == 'entryEdit'}">
-                        <c:if test="${not empty bean.enclosureURL}">
-                            <spring:message code="weblogEdit.enclosureType"/>:
-                            ${entry.findEntryAttribute("att_mediacast_type")}
-                            <spring:message code="weblogEdit.enclosureLength"/>:
-                            ${entry.findEntryAttribute("att_mediacast_length")}
-                        </c:if>
                     </c:if>
 
                 </div>
@@ -753,10 +702,6 @@
 <%-- ========================================================================================== --%>
 
 <script>
-
-    $(document).ready(function () {
-        $("#entry_bean_dateString").datepicker();
-    });
 
     function fullPreviewMode() {
         window.open('${previewURL}', 'roller-preview');

@@ -130,19 +130,6 @@ class EntryAddWithMediaFileControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void anEnclosureUrlAppendsAnExtraParagraphAfterAnySelectedImages() {
-        bean.setEnclosureURL("http://example.com/podcast.mp3");
-        registerMessage("mediaFileEdit.includesEnclosure", "Also includes an enclosure:");
-
-        controller.execute(request, model, bean, null, null);
-
-        assertEquals("<p>Also includes an enclosure:<br />"
-                + "<a href='http://example.com/podcast.mp3'>http://example.com/podcast.mp3</a></p>",
-                bean.getText(),
-                "With nothing selected, the enclosure paragraph is the entire generated text");
-    }
-
-    @Test
     void theViewIsAlwaysTheForwardToEntryAddRegardlessOfOutcome() throws Exception {
         when(weblogger.getMediaFileManager().getMediaFile("missing"))
                 .thenThrow(new WebloggerException("no such file"));

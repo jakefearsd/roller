@@ -18,14 +18,14 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.JsonLdType;
@@ -198,7 +198,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         // Otherwise a published entry would have a null pub time and sort to
         // the bottom of (or fall out of) every date-ordered feed.
         userMayPost = true;
-        bean.setDateString(null);
+        bean.setPubTimeLocal(null);
 
         controller.entryAddPublish(request, model, bean);
 
@@ -247,10 +247,14 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
     @Test
     void aDateInsideTheSchedulingThresholdPublishesImmediately() throws Exception {
         // The controller only treats a time as "scheduled" when it is more than
-        // MIN_IN_MS ahead, so that clicking publish with the current minute
-        // still in the date box does not park the entry in the scheduler.
+        // MIN_IN_MS ahead. bean.pubTimeLocal is minute-granularity -- a
+        // datetime-local input has no seconds control -- so "the current
+        // minute" is exactly the class of values this guards against being
+        // mistaken for the future: truncating a "now" timestamp down to the
+        // minute can only ever move it into the past or leave it unchanged,
+        // never push it forward, so it must never schedule.
         userMayPost = true;
-        setBeanPubTime(new Date(System.currentTimeMillis() + RollerConstants.MIN_IN_MS / 2));
+        setBeanPubTime(new Date());
 
         controller.entryAddPublish(request, model, bean);
 
@@ -512,14 +516,50 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void theEditorOffersTheFullRangeOfPublicationTimes() throws Exception {
-        // These populate the hour/minute/second selectors next to the date box.
-        // A truncated range silently makes part of the day unschedulable.
-        controller.entryAddExecute(request, model, bean);
+    void aPublishedEntrysPubTimeIsParsedInTheWeblogsTimezone() throws Exception {
+        // bean.pubTimeLocal is a datetime-local value with no offset; it must
+        // be read as wall-clock time in the WEBLOG's zone, not the server's --
+        // exactly what the old dateString/hours/minutes/seconds combination did.
+        userMayPost = true;
+        weblog.setTimeZone("America/New_York");
+        bean.setPubTimeLocal("2020-01-01T09:00");
 
-        assertEquals(24, ((java.util.List<?>) model.getAttribute("hoursList")).size());
-        assertEquals(60, ((java.util.List<?>) model.getAttribute("minutesList")).size());
-        assertEquals(60, ((java.util.List<?>) model.getAttribute("secondsList")).size());
+        controller.entryAddPublish(request, model, bean);
+
+        WeblogEntry saved = captureSavedEntry();
+        Timestamp expected = Timestamp.from(
+                LocalDateTime.of(2020, 1, 1, 9, 0).atZone(ZoneId.of("America/New_York")).toInstant());
+        assertEquals(expected, saved.getPubTime());
+    }
+
+    @Test
+    void aBlankPubTimeLocalFallsBackToPublishingNow() throws Exception {
+        userMayPost = true;
+        bean.setPubTimeLocal("");
+
+        controller.entryAddPublish(request, model, bean);
+
+        WeblogEntry saved = captureSavedEntry();
+        assertEquals(PubStatus.PUBLISHED, saved.getStatus());
+        assertEquals(saved.getUpdateTime(), saved.getPubTime(),
+                "A blank pubTimeLocal must fall back to publish-now, exactly like the old blank "
+                        + "dateString did");
+    }
+
+    @Test
+    void aMalformedPubTimeLocalIsRejectedAndNothingIsSaved() throws Exception {
+        // The old dateString parser swallowed a parse failure and quietly
+        // published "now" instead. A hand-crafted POST with an unparseable
+        // pubTimeLocal must surface a validation error and save nothing,
+        // exactly like the canonicalUrl validation just above it.
+        bean.setPubTimeLocal("not-a-datetime");
+
+        String view = controller.entryAddSaveDraft(request, model, bean);
+
+        assertEquals(".EntryEdit", view, "a rejected pubTimeLocal must redisplay the form");
+        assertTrue(errors(model).contains("entryEdit.pubTimeInvalid"),
+                "Expected a pubTimeInvalid error, got: " + errors(model));
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
     }
 
     @Test
@@ -617,62 +657,6 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         controller.entryAddSaveDraft(request, model, bean);
 
         assertTrue(captureSavedEntry().getPinnedToMain());
-    }
-
-    // --- enclosures / mediacast ---
-
-    @Test
-    void anUnusableEnclosureUrlIsReportedWithoutLosingTheEntry() throws Exception {
-        // A podcast URL the server cannot resolve must not cost the author
-        // their post -- the entry still saves, with a warning.
-        bean.setEnclosureURL("this is not a url");
-
-        controller.entryAddSaveDraft(request, model, bean);
-
-        assertTrue(messages(model).contains("weblogEdit.mediaCastUrlMalformed"),
-                "Expected the malformed-url message, got: " + messages(model));
-        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(any());
-    }
-
-    @Test
-    void clearingTheEnclosureUrlRemovesTheStoredPodcastAttributes() throws Exception {
-        // All three attributes have to go. Leaving any behind would keep a
-        // half-populated enclosure in the feed.
-        existingEntry(PubStatus.DRAFT);
-        bean.setEnclosureURL("");
-
-        controller.entryEditSaveDraft(request, model, bean);
-
-        verify(weblogger.getWeblogEntryManager())
-                .removeWeblogEntryAttribute(org.mockito.ArgumentMatchers.eq("att_mediacast_url"), any());
-        verify(weblogger.getWeblogEntryManager())
-                .removeWeblogEntryAttribute(org.mockito.ArgumentMatchers.eq("att_mediacast_type"), any());
-        verify(weblogger.getWeblogEntryManager())
-                .removeWeblogEntryAttribute(org.mockito.ArgumentMatchers.eq("att_mediacast_length"), any());
-    }
-
-    @Test
-    void aNewEntryWithNoEnclosureDoesNotTryToRemoveAttributesThatCannotExist() throws Exception {
-        bean.setEnclosureURL(null);
-
-        controller.entryAddSaveDraft(request, model, bean);
-
-        verify(weblogger.getWeblogEntryManager(), never())
-                .removeWeblogEntryAttribute(any(), any());
-    }
-
-    @Test
-    void aFailureToClearTheEnclosureIsReportedRatherThanSwallowed() throws Exception {
-        existingEntry(PubStatus.DRAFT);
-        bean.setEnclosureURL("");
-        doThrow(new WebloggerException("no such attribute"))
-                .when(weblogger.getWeblogEntryManager())
-                .removeWeblogEntryAttribute(org.mockito.ArgumentMatchers.eq("att_mediacast_url"), any());
-
-        controller.entryEditSaveDraft(request, model, bean);
-
-        assertTrue(messages(model).contains("weblogEdit.mediaCastErrorRemoving"),
-                "Expected the removal failure to be surfaced, got: " + messages(model));
     }
 
     // --- error handling ---
@@ -880,15 +864,12 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         return captor.getValue();
     }
 
+    private static final DateTimeFormatter PUB_TIME_LOCAL =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm", Locale.ROOT);
+
     private void setBeanPubTime(Date when) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yy", Locale.US);
-        dateFormat.setTimeZone(NEW_YORK);
-        java.util.Calendar calendar = java.util.Calendar.getInstance(NEW_YORK, Locale.US);
-        calendar.setTime(when);
-        bean.setDateString(dateFormat.format(when));
-        bean.setHours(calendar.get(java.util.Calendar.HOUR_OF_DAY));
-        bean.setMinutes(calendar.get(java.util.Calendar.MINUTE));
-        bean.setSeconds(calendar.get(java.util.Calendar.SECOND));
+        LocalDateTime local = LocalDateTime.ofInstant(when.toInstant(), ZoneId.of("America/New_York"));
+        bean.setPubTimeLocal(local.format(PUB_TIME_LOCAL));
     }
 
     /**
