@@ -69,8 +69,7 @@
 
         <%-- you have shared theme X --%>
         <p class="lead">
-            <spring:message code="themeEditor.yourCurrentTheme"/>
-            <b>${actionWeblog.theme.name}</b>
+            <spring:message code="themeEditor.yourCurrentTheme"/>&nbsp;<b>${actionWeblog.theme.name}</b>
             <c:choose>
 <c:when test="${sharedThemeCustomStylesheet}">
                 <spring:message code="themeEditor.yourCustomStylesheet"/>
@@ -102,6 +101,21 @@
 
     <%-- ================================================= --%>
 
+    <%-- Below: four mutually-exclusive "something is about to change" blocks,
+         each with its own copy of the Preview/Update/Cancel action row (kept
+         per-block, not consolidated, so existing IT selectors like
+         "#sharedChangeToShared button[type='submit']" keep working). Exactly
+         one of these six state blocks (this four, plus #sharedNoChange /
+         #customNoChange above) may be visible at a time -- updateView() below
+         now calls hideAll() unconditionally on every call, first, before
+         deciding what to show, rather than relying on each branch's own
+         hide()/show() pairs to have covered every other block. That
+         unconditional reset is the actual fix for "three Update Theme
+         buttons visible at once": some transitions (moving from a *NoChange
+         state straight into a *ChangeTo* one) previously showed the new
+         block's button without ever hiding the old block's, so more than one
+         stayed in the DOM, visible, simultaneously. --%>
+
     <div id="sharedChangeToShared" style="display:none;">
 
         <div class="alert alert-warning" style="margin-top:3em; margin-bottom:2em; padding: 1em">
@@ -119,8 +133,6 @@
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
     </div>
-
-    <%-- ================================================= --%>
 
     <div id="sharedChangeToCustom" style="display:none;">
 
@@ -146,13 +158,9 @@
 
     </div>
 
-    <%-- ================================================= --%>
-
     <div id="customNoChange" style="display:none;">
         <p class="lead"><spring:message code="themeEditor.youAreUsingACustomTheme"/></p>
     </div>
-
-    <%-- ================================================= --%>
 
     <div id="customChangeToShared" style="display:none;">
 
@@ -267,11 +275,20 @@
             + selector.options[selected].value);
     }
 
+    <%-- Shows exactly one of the six state blocks for the given radio
+         selection. hideAll() runs first on every call -- unconditionally --
+         so this never has to rely on the *previous* call having hidden the
+         right things; that was the bug (see the comment above the state
+         blocks in the markup): some transitions showed the new block without
+         hiding the old one, leaving more than one Update Theme button
+         visible at once. --%>
     function updateView(selected) {
 
         changed =
                (proposedThemeId    !== "" && proposedThemeId    !== originalThemeId)
             || (proposedChangeType !== "" && proposedChangeType !== originalType )
+
+        hideAll();
 
         if (selected[0].value === 'shared') {
 
@@ -280,24 +297,12 @@
 
             $('#themeChooser').show();
 
-            $('#customNoChange').hide();
-            $('#customChangeToShared').hide();
-
             if ( !changed ) {
                 $('#sharedNoChange').show();
-                $('#sharedChangeToShared').hide();
-                $('#sharedChangeToCustom').hide();
-
+            } else if ( originalType === "shared" ) {
+                $('#sharedChangeToShared').show();
             } else {
-
-                if ( originalType === "shared" ) {
-                    $('#sharedChangeToShared').show();
-                    $('#sharedChangeToCustom').hide();
-                }  else {
-                    $('#customChangeToShared').show();
-                    $('#sharedChangeToShared').hide();
-                    $('#sharedChangeToCustom').hide();
-                }
+                $('#customChangeToShared').show();
             }
 
         } else {
@@ -305,19 +310,10 @@
             $('#sharedChooser').css("background", "white")
             $('#customChooser').css("background", "#bfb")
 
-            $('#themeChooser').hide();
-
-            $('#sharedNoChange').hide();
-            $('#sharedChangeToShared').hide();
-            $('#sharedChangeToCustom').hide();
-
-            $('#customChangeToShared').hide();
-
             if ( !changed ) {
                 $('#customNoChange').show();
             } else {
                 $('#sharedChangeToCustom').show();
-                $('#customNoChange').hide();
             }
 
         }
