@@ -207,6 +207,26 @@ sets these headers automatically for proxied requests; there is nothing to
 configure, and existing deployments pick this up on their next image update
 with no action needed.
 
+That header-forwarding filter only affects `getScheme()`/`isSecure()`/
+`getRequestURL()` — it does **not** change what `HttpServletRequest
+.getRemoteAddr()` reports. Without a second piece of configuration, every
+request the app tier sees, from any reader anywhere on the internet, would
+report Caddy's own container IP as its remote address, because Caddy — not
+the reader — is the TCP peer. That collapses every per-client throttle
+(contact form, newsletter subscribe, password-reset) onto one shared key,
+so `server.tomcat.remoteip.remote-ip-header=x-forwarded-for` and
+`server.tomcat.remoteip.protocol-header=x-forwarded-proto` (also in
+`application.properties`) install Tomcat's `RemoteIpValve`, which rewrites
+`getRemoteAddr()`/`getScheme()` from those headers before the request ever
+reaches the app. Caddy is this stack's only ingress, and the valve only
+trusts `X-Forwarded-For` from its default internal-proxies address ranges
+(private/loopback), so an external client cannot spoof its way past a
+throttle by forging the header itself — Caddy's own hop is the only one the
+valve believes. The security-relevant case is the password-reset throttle,
+which suppresses a flood of reset requests per source address; without the
+valve it would suppress (or fail to suppress) based on Caddy's address
+instead of the reader's.
+
 ## Health monitoring
 
 The app's health endpoint (`/actuator/health`, Spring Boot Actuator) lives

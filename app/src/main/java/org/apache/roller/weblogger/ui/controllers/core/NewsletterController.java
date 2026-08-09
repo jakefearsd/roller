@@ -57,8 +57,11 @@ import org.springframework.web.bind.annotation.RequestBody;
  * template mapped under {@code /share/*}: the two prefixes are disjoint
  * dispatcher registrations, and even a hypothetical collision would resolve
  * to this controller's exact-literal {@code /subscribe} over a template
- * pattern (Spring's handler-mapping precedence prefers an exact match), and
- * the HTTP methods differ regardless (POST here, GET/POST there).
+ * pattern (Spring's handler-mapping precedence prefers an exact match) --
+ * {@code ShareController}'s unlock endpoint is POST too, so it is precedence,
+ * not HTTP method, that decides it here. {@code NewsletterRoutingTest} pins
+ * this claim against a real {@code RequestMappingHandlerMapping} rather than
+ * trusting this prose.
  *
  * <p><b>The open-relay guard.</b> The posted {@code list_uuids[0]} is looked
  * up against {@code WeblogManager.getWeblogByNewsletterListUuid} BEFORE

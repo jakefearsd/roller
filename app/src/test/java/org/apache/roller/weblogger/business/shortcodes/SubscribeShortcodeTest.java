@@ -19,7 +19,10 @@ package org.apache.roller.weblogger.business.shortcodes;
 
 import java.util.Map;
 
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,6 +41,24 @@ class SubscribeShortcodeTest {
     private static final String VALID_UUID = "2f0f1b0c-1111-2222-3333-444455556666";
 
     private final SubscribeShortcode shortcode = new SubscribeShortcode();
+
+    private String previousRelativeContextURL;
+
+    @BeforeEach
+    void setUp() {
+        // The endpoint the shortcode emits is built from this -- pin it to a
+        // known, non-empty value so the assertions below do not depend on
+        // whatever some earlier-running test left behind in this shared
+        // static field (see ContactShortcodeTest/URLModelTest for the same
+        // discipline).
+        previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+    }
+
+    @AfterEach
+    void tearDown() {
+        WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
+    }
 
     private static ShortcodeContext context(Weblog weblog) {
         return new ShortcodeContext() {
@@ -61,6 +82,20 @@ class SubscribeShortcodeTest {
         assertTrue(html.contains("data-list-uuid=\"" + VALID_UUID + "\""), html);
         assertFalse(html.contains("<form"), "the macro injects the form, not the shortcode");
         assertFalse(html.contains("<input"), html);
+    }
+
+    /**
+     * Same reasoning as {@code ContactShortcodeTest.theEndpointCarriesTheContextPathServerSide}:
+     * an absolute-root {@code /newsletter/subscribe} 404s under any non-root
+     * context path, so the endpoint is built here, server-side, from the
+     * context path {@code InitFilter} published -- never guessed by the
+     * client script.
+     */
+    @Test
+    void theEndpointCarriesTheContextPathServerSide() {
+        String html = shortcode.render(Map.of(), null, context(weblogWithUuid(VALID_UUID)));
+
+        assertTrue(html.contains("data-endpoint=\"/roller/newsletter/subscribe\""), html);
     }
 
     @Test

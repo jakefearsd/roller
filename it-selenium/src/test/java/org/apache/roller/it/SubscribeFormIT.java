@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 
 import static com.codeborne.selenide.Condition.attribute;
 import static com.codeborne.selenide.Condition.exist;
+import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,18 +41,31 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * weblog with a list uuid configured shows the footer block and its
  * client-injected form ({@code #showAudienceAssets}); clearing the uuid
  * removes it; the forwarding endpoint fails closed without Listmonk and 404s
- * for a uuid no weblog owns.
+ * for a uuid no weblog owns; and a real browser submit reaches that same
+ * server-built endpoint and shows the graceful "Sorry" message for the 503.
  *
  * <p>Owns its own weblog rather than the seeded {@code it_weblog}, and never
  * switches that seeded weblog's theme -- per the suite-wide rule.
  *
- * <p>The endpoint checks go through raw {@code HttpClient}, not the browser:
- * the forward legitimately fails in this environment (no Listmonk configured,
- * {@code newsletter.listmonk.baseurl} blank -- see {@code roller-it.properties}),
- * and a browser {@code fetch} surfacing that 503 would trip
- * {@code assertNoFailedRequests}/{@code assertNoBrokenResources} for a failure
- * the test asked for on purpose. This is exactly the {@code PageIT} precedent
- * for a deliberate non-2xx check.
+ * <p>The 404/503-by-status checks go through raw {@code HttpClient}, not the
+ * browser: the forward legitimately fails in this environment (no Listmonk
+ * configured, {@code newsletter.listmonk.baseurl} blank -- see {@code
+ * roller-it.properties}), and asserting an exact status code from a browser
+ * {@code fetch} would need reading the response back out of page script for
+ * no benefit raw HTTP doesn't already give directly.
+ *
+ * <p>The one browser-driven submit below is a different, narrower claim:
+ * that {@code data-endpoint} -- not a client-guessed absolute-root path --
+ * is what the injected form actually posts to, and that the graceful-failure
+ * message the reader sees is wired correctly to a non-2xx response. A 503
+ * <em>response</em> is not a failed <em>request</em> in {@code BrowserHealth}'s
+ * vocabulary -- {@code assertNoFailedRequests} only catches a request that
+ * never got a response at all (a refused stylesheet, a blocked resource; see
+ * its own javadoc) -- so it stays asserted unconditionally. {@code
+ * assertNoBrokenResources} DOES flag any 4xx/5xx sub-resource, so the
+ * deliberate 503 has to be scoped out with {@code expectRefusal}, exactly
+ * the {@code MultiUserJourneyIT} precedent for a refusal the test asked for
+ * on purpose.
  */
 class SubscribeFormIT extends RollerIT {
 
@@ -80,6 +94,13 @@ class SubscribeFormIT extends RollerIT {
         openPath("/" + handle + "/");
         $(".newsletter-subscribe-block").should(exist);
         $(".subscribe-form-slot").shouldHave(attribute("data-list-uuid", uuid));
+        // Server-built, context-path-aware (SubscribeShortcode/#showSubscribeForm),
+        // never a client-guessed absolute-root "/newsletter/subscribe" -- that
+        // 404s under any non-root context path. baseUrl() already carries the
+        // context path (e.g. ".../roller"), so its own path component is what
+        // the injected form must be pointed at.
+        String expectedEndpoint = URI.create(baseUrl()).getPath() + SUBSCRIBE_ENDPOINT;
+        $(".subscribe-form-slot").shouldHave(attribute("data-endpoint", expectedEndpoint));
         $(".newsletter-subscribe-block form.newsletter-subscribe input[name='email']")
                 .should(visible);
         $(".newsletter-subscribe-block form.newsletter-subscribe input[name='website']")
@@ -92,6 +113,28 @@ class SubscribeFormIT extends RollerIT {
                 "an unconfigured Listmonk must fail closed (503), not silently succeed");
         assertEquals(404, postSubscribe(UUID.randomUUID().toString(), 5000),
                 "a list uuid matching no weblog must 404");
+
+        // --- the SAME endpoint, this time driven by a real browser submit ------
+        // Clears the naive-bot timer (MIN_ELAPSED_MS, 3s) first, as ContactFormIT
+        // does, so this genuine submission is not itself mistaken for automation
+        // and short-circuited into the honeypot's look-alike-success branch --
+        // this test wants the real unconfigured-Listmonk 503 to be exercised.
+        sleepFor(Duration.ofMillis(3200));
+        $(".newsletter-subscribe-block form.newsletter-subscribe input[name='email']")
+                .setValue("reader@example.invalid");
+        BrowserHealth.current().expectRefusal(SUBSCRIBE_ENDPOINT);
+        $(".newsletter-subscribe-block form.newsletter-subscribe button[type='submit']").click();
+
+        $(".newsletter-subscribe-block .audience-message")
+                .shouldHave(text("Sorry, that did not work. Please try again later."));
+        BrowserHealth.current().settle();
+        // The 503 IS a completed response, not a request that produced no
+        // response at all, so this must still pass unconditionally.
+        BrowserHealth.current().assertNoFailedRequests();
+        // The 503 status IS a broken sub-resource by BrowserHealth's status-code
+        // rule, and it is the one this test asked for on purpose -- scoped out
+        // above, so this passes too.
+        BrowserHealth.current().assertNoBrokenResources();
 
         // --- clearing the uuid removes the block -------------------------------
         loginAsAdmin();
@@ -150,5 +193,14 @@ class SubscribeFormIT extends RollerIT {
 
     private static String nonce() {
         return Long.toString(System.nanoTime(), 36);
+    }
+
+    private static void sleepFor(Duration duration) {
+        try {
+            Thread.sleep(duration.toMillis());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("interrupted while waiting out the bot timer", e);
+        }
     }
 }

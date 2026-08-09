@@ -25,6 +25,7 @@ import org.apache.roller.weblogger.business.ListmonkClient;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
+import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
@@ -66,7 +67,7 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
     private ListmonkClient listmonk;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         controller = prepare(new EntryEditController());
         model = newModel();
         listmonk = mock(ListmonkClient.class);
@@ -79,6 +80,13 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
         weblog.getWeblogCategories().add(category);
 
         weblog.setNewsletterListUuid("2f0f1b0c-1111-2222-3333-444455556666");
+
+        // The action gate: entryEditSendNewsletter requires WeblogPermission.POST
+        // on top of the class-level EDIT_DRAFT gate. Every test in this class
+        // exercises a user who holds it; the denial itself is pinned by
+        // theEditDraftOnlyUserIsDeniedAndNeverTouchesTheClient below, which
+        // overrides this stub to false.
+        when(weblogger.getUserManager().checkPermission(any(), any())).thenReturn(true);
 
         // getPermalink() is built off the WeblogEntry's own anchor through
         // the URLStrategy the entry text below is checked against.
@@ -253,6 +261,33 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
 
         assertEquals(".EntryEdit", view);
         assertTrue(errors(model).contains("newsletter.notConfigured"), errors(model).toString());
+    }
+
+    // ------------------------------------------------------------- authority
+
+    /**
+     * The class-level gate is {@code WeblogPermission.EDIT_DRAFT}; mailing
+     * every subscriber needs strictly more than that -- {@code POST} -- the
+     * same distinction {@code setPublishStatus} draws for publishing itself.
+     * An EDIT_DRAFT-only contributor must be denied before the entry is even
+     * looked at, and the Listmonk client must never be touched.
+     */
+    @Test
+    void editDraftOnlyUserIsDeniedAndNeverTouchesTheClient() throws Exception {
+        when(weblogger.getUserManager().checkPermission(any(), any())).thenAnswer(invocation -> {
+            Object permission = invocation.getArgument(0);
+            if (permission instanceof WeblogPermission weblogPermission) {
+                return !weblogPermission.hasAction(WeblogPermission.POST);
+            }
+            return false;
+        });
+        publishedEntry();
+
+        String view = controller.entryEditSendNewsletter("entry-1", request, model);
+
+        assertEquals("redirect:/roller-ui/access-denied.rol", view);
+        verify(listmonk, never()).sendCampaign(any(), any(), any());
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
     }
 
     // -------------------------------------------------------------- ownership

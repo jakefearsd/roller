@@ -469,11 +469,24 @@ public class EntryEditController extends BaseController {
      * <p>Re-renders the edit view either way (never a redirect), so the
      * author sees the result -- success, "already sent", or the failure
      * message -- on the same page they clicked from.
+     *
+     * <p><b>Requires {@code WeblogPermission.POST}, not just the class-level
+     * {@code EDIT_DRAFT} gate.</b> Mailing every subscriber is a much bigger
+     * blast radius than editing a draft, so a contributor who can only draft
+     * (not publish) must not be able to trigger a send -- the same distinction
+     * {@link #setPublishStatus} draws for publishing itself. Denied the same
+     * way {@code RollerHandlerInterceptor} would have denied it at the class
+     * level, had this action needed a stricter class-wide gate.
      */
     @PostMapping("/entryEdit!sendNewsletter.rol")
     public String entryEditSendNewsletter(
             @RequestParam(name = "bean.id") String entryId,
             HttpServletRequest request, Model model) {
+        if (!getActionWeblog(request).hasUserPermission(
+                getAuthenticatedUser(request), WeblogPermission.POST)) {
+            return "redirect:/roller-ui/access-denied.rol";
+        }
+
         populateCommonModel(request, model);
         model.addAttribute("actionName", "entryEdit");
         model.addAttribute("pageTitle", getText("weblogEdit.title.editEntry", request));

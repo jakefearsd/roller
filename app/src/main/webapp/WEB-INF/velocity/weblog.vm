@@ -797,13 +797,24 @@ document.addEventListener('DOMContentLoaded', function () {
     p.textContent = text;
   }
 
+  // Both slots' data-endpoint is server-built (ContactShortcode/
+  // SubscribeShortcode/#showSubscribeForm), never derived here: the app's
+  // context path cannot be reliably guessed from the page, and guessing it
+  // wrong used to post to the wrong origin with no visible cause. This is a
+  // second, cheap check on TOP of that -- an authored div anywhere in
+  // same-origin content could otherwise point data-endpoint at any
+  // same-origin path and have this script build a real PII-bearing form
+  // around it; requiring the exact suffix this slot may legitimately point
+  // to closes that residual without any fallback/guessing logic.
+  function endpointOk(endpoint, suffix) {
+    return !!endpoint && endpoint.length >= suffix.length
+        && endpoint.slice(-suffix.length) === suffix;
+  }
+
   Array.prototype.forEach.call(document.querySelectorAll('.contact-form-slot'), function (slot) {
     var handle = slot.getAttribute('data-weblog');
-    // Server-built (ContactShortcode), not derived here: the app's context
-    // path cannot be reliably guessed from the page, and guessing it wrong
-    // used to post to the wrong origin with no visible cause.
     var endpoint = slot.getAttribute('data-endpoint');
-    if (!handle || !endpoint) { return; }
+    if (!handle || !endpointOk(endpoint, '/roller-ui/rendering/contact.rol')) { return; }
     var form = document.createElement('form');
     form.className = 'contact-form';
     form.innerHTML =
@@ -844,7 +855,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   Array.prototype.forEach.call(document.querySelectorAll('.subscribe-form-slot'), function (slot) {
     var uuid = slot.getAttribute('data-list-uuid');
-    if (!uuid) { return; }
+    var endpoint = slot.getAttribute('data-endpoint');
+    if (!uuid || !endpointOk(endpoint, '/newsletter/subscribe')) { return; }
     var form = document.createElement('form');
     form.className = 'newsletter-subscribe';
     form.innerHTML =
@@ -855,7 +867,7 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       showMessage(form, 'Subscribing…');
-      fetch('/newsletter/subscribe', {
+      fetch(endpoint, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -1796,17 +1808,20 @@ Renders NOTHING when the weblog has no newsletter list configured (Weblog
 Settings -> Newsletter list UUID), so themes call it unconditionally.
 
 Emits only the placeholder slot; #showAudienceAssets injects the actual
-form client-side and posts same-origin to /newsletter/subscribe, which THIS
-application serves (throttled, honeypotted, recorded as a first-party
-event) and forwards to Listmonk. Roller stores no subscriber data --
-Listmonk records the address, sends the double opt-in email and owns the
-unsubscribe link.
+form client-side and posts same-origin to the server-built data-endpoint
+below (never a client-guessed /newsletter/subscribe -- that 404s under any
+non-root context path, the same bug class #showAudienceAssets' contact slot
+had), which THIS application serves (throttled, honeypotted, recorded as a
+first-party event) and forwards to Listmonk. Roller stores no subscriber
+data -- Listmonk records the address, sends the double opt-in email and owns
+the unsubscribe link.
 *#
 #macro(showSubscribeForm $weblog $prompt)
 #if($weblog.newsletterListUuid && $weblog.newsletterListUuid != "")
 <div class="newsletter-subscribe-block">
     <p class="newsletter-prompt">$utils.escapeHTML($prompt)</p>
-    <div class="subscribe-form-slot" data-list-uuid="$utils.escapeHTML($weblog.newsletterListUuid)"></div>
+    <div class="subscribe-form-slot" data-list-uuid="$utils.escapeHTML($weblog.newsletterListUuid)"
+         data-endpoint="$utils.escapeHTML($url.site)/newsletter/subscribe"></div>
 </div>
 #end
 #end

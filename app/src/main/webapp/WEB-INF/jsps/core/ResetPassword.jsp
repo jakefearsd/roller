@@ -29,7 +29,7 @@
         <form method="post" id="resetPasswordForm" class="form-signin"
               action="<c:url value='/roller-ui/resetPassword!save.rol'/>">
 
-            <input type="hidden" name="token" value="${resetToken}"/>
+            <input type="hidden" name="token" value="${fn:escapeXml(resetToken)}"/>
 
             <div class="mb-3">
                 <label for="passwordText" class="form-label"><spring:message code="resetPassword.newPassword"/></label>

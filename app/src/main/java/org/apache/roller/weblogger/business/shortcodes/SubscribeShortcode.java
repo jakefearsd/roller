@@ -20,7 +20,9 @@ package org.apache.roller.weblogger.business.shortcodes;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 
 /**
  * The built-in {@code [subscribe]} shortcode: a placeholder for a newsletter
@@ -30,7 +32,16 @@ import org.apache.commons.text.StringEscapeUtils;
  * data attributes, never a {@code <form>}: the sanitizer strips
  * {@code <form>} from authored content by design (an authored form is a
  * phishing kit), so {@code #showAudienceAssets} builds the real form
- * client-side and posts it to the list named by {@code data-list-uuid}.
+ * client-side and posts it to the list named by {@code data-list-uuid}, at
+ * the endpoint named by {@code data-endpoint}.
+ *
+ * <p><b>{@code data-endpoint} is server-built, not client-guessed</b> --
+ * exactly the same reasoning as {@link ContactShortcode}: the client-side
+ * script cannot reliably rebuild the app's context path (e.g. {@code
+ * /roller}) on its own, so an absolute-root {@code /newsletter/subscribe}
+ * 404s under any non-root context path. {@link WebloggerRuntimeConfig}
+ * carries the context path the {@code InitFilter} published for this exact
+ * reason.
  *
  * <p>Renders nothing (the author's text stays visible) when the weblog has
  * no newsletter list configured, or when the stored UUID does not have the
@@ -62,8 +73,12 @@ public class SubscribeShortcode implements ShortcodeHandler {
         if (uuid == null || !UUID_SHAPE.matcher(uuid).matches()) {
             return null;
         }
+        String endpoint = StringUtils.defaultString(WebloggerRuntimeConfig.getRelativeContextURL())
+                + "/newsletter/subscribe";
         return "<div class=\"subscribe-form-slot\" data-list-uuid=\""
                 + StringEscapeUtils.escapeHtml4(uuid)
+                + "\" data-endpoint=\""
+                + StringEscapeUtils.escapeHtml4(endpoint)
                 + "\"></div>";
     }
 }
