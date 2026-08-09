@@ -527,6 +527,102 @@ table.mm_table_actions td {
     z-index: 10000 !important;
 }
 
+/* ---- Tables: table.rollertable ----
+   Bootstrap 5 themes tables through --bs-table-* custom properties, the
+   same mechanism .btn uses above: .table's own rules read
+   var(--bs-table-border-color)/-color/-bg/-striped-*, so retheming happens
+   by redefining those variables rather than fighting cell-level color/
+   border rules (and rather than winning a specificity fight with
+   .table-striped, which every one of these tables also carries and which
+   is left in place, unrenamed). The quiet card calls for plain --line row
+   borders and a single hover tint, not zebra banding, so the striped
+   variant is pointed at the same background as a plain row -- neutralized,
+   not removed. */
+table.rollertable {
+    --bs-table-color: var(--ink);
+    --bs-table-bg: var(--surface);
+    --bs-table-border-color: var(--line);
+    --bs-table-striped-color: var(--ink);
+    --bs-table-striped-bg: var(--surface);
+}
+
+/* Header row: caps-label per the type scale (12px/600, .08em tracking,
+   uppercase, --ink-soft). The literal class "rollertable" is reused
+   inconsistently across these tables -- sometimes on the header <th>s
+   (Entries/Pages/Submissions/Comments/Members), sometimes on body <td>s
+   (Members.jsp's data cells) -- so trusting the class would caps-label
+   real data. None of these tables declare a <thead>, so the header row is
+   always the first <tr> of the table's own (implicit) <tbody>; targeting
+   that structurally is correct everywhere the class is not. */
+table.rollertable > tbody > tr:first-child > th,
+table.rollertable > tbody > tr:first-child > td {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    text-align: left;
+}
+
+table.rollertable > tbody > tr:hover > * {
+    background: var(--accent-quiet);
+}
+
+/* Additive utility -- opt a date/count/slug cell into the mono/tabular
+   data face without renaming or removing anything it already carries.
+   JSPs that want it add class="data" alongside the cell's existing
+   attributes. */
+td.data {
+    font-family: var(--font-data);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- Empty states: invitations, not shrugs ----
+   Same shape everywhere a list has nothing in it: one 600/16px title line,
+   one --ink-soft sentence, at most one primary-button action -- icon-free,
+   per the design spec's "empty states as invitations" signature move. */
+/* Pages.jsp/Submissions.jsp render their empty state as the lone <tr> in
+   an otherwise-empty table body, which makes its <td> the tbody's
+   first-child -- the same structural hook the table header rule above
+   uses for its caps-label/tracking treatment. Reset those inherited
+   properties here (rather than trusting every future caller to remember)
+   so the invitation reads as normal prose regardless of which table, if
+   any, it's nested inside. */
+.empty-state {
+    padding: 32px 24px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-weight: 450;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.empty-state-title {
+    margin: 0 0 8px;
+    font-family: var(--font-ui);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.empty-state-body {
+    margin: 0 0 16px;
+    font-family: var(--font-ui);
+    font-size: 14.5px;
+    font-weight: 450;
+    color: var(--ink-soft);
+}
+
+/* No action button in this instance (e.g. Inquiries: messages arrive from
+   readers, there's nothing for an admin to create) -- the sentence becomes
+   the last element and shouldn't carry trailing space. */
+.empty-state-body:last-child {
+    margin-bottom: 0;
+}
+
 /* entries page */
 
 /* Quiet Instrument: status pills/tints. Draft -> warn tint, Pending ->

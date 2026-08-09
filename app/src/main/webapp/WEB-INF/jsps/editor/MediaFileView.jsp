@@ -149,10 +149,6 @@
 
                         <%-- NOT SEARCH RESULTS --%>
 
-                        <c:if test="${fn:length(childFiles) == 0}">
-                            <spring:message code="mediaFileView.noFiles"/>
-                        </c:if>
-
                         <%-- List media files --%>
 
                         <c:forEach items="${childFiles}" var="mediaFile">
@@ -296,6 +292,25 @@
     <sec:csrfInput/>
 </form>
 
+</c:if>
+
+<%-- Empty state: no search in progress (a zero-result search has its own
+     "no matching results" message above) and this directory has no files.
+     Kept as its own block rather than nested inside the guard above, which
+     only enters for a directory/search that already has something to
+     show. --%>
+<c:if test="${empty pager && empty childFiles}">
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="empty.media.title"/></p>
+        <p class="empty-state-body"><spring:message code="empty.media.body"/></p>
+        <c:url var="emptyMediaAddUrl" value="/roller-ui/authoring/mediaFileAdd.rol">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+            <c:param name="directoryName" value="${directoryName}"/>
+        </c:url>
+        <a href="${emptyMediaAddUrl}" class="btn btn-primary">
+            <spring:message code="empty.media.action"/>
+        </a>
+    </div>
 </c:if>
 
 

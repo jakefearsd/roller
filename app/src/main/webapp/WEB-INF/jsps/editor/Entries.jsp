@@ -121,13 +121,13 @@
         </a>
     </td>
 
-    <td>
+    <td class="data">
         <c:if test="${post.pubTime != null}">
             <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${post.pubTime}"/>
         </c:if>
     </td>
-    
-    <td>
+
+    <td class="data">
         <c:if test="${post.updateTime != null}">
             <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${post.updateTime}"/>
         </c:if>
@@ -235,7 +235,16 @@
 </nav>
 
 <c:if test="${empty pager.items}">
-    <spring:message code="weblogEntryQuery.noneFound"/>
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="empty.entries.title"/></p>
+        <p class="empty-state-body"><spring:message code="empty.entries.body"/></p>
+        <c:url var="emptyEntriesAddUrl" value="/roller-ui/authoring/entryAdd.rol">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+        </c:url>
+        <a href="${emptyEntriesAddUrl}" class="btn btn-primary">
+            <spring:message code="empty.entries.action"/>
+        </a>
+    </div>
 </c:if>
 
 

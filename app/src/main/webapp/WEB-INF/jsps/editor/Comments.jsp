@@ -48,7 +48,10 @@
 
 <c:choose>
 <c:when test="${empty pager.items}">
-    <spring:message code="commentManagement.noCommentsFound"/>
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="commentManagement.noCommentsFound"/></p>
+        <p class="empty-state-body"><spring:message code="empty.comments.body"/></p>
+    </div>
 </c:when>
 <c:otherwise>
     <p class="pagetip">

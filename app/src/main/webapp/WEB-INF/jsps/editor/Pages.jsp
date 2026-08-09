@@ -55,7 +55,7 @@
 
             <c:forEach items="${pages}" var="p">
                 <tr data-page-id="${fn:escapeXml(p.id)}" data-page-slug="${fn:escapeXml(p.slug)}">
-                    <td>/<c:out value="${p.slug}"/></td>
+                    <td class="data">/<c:out value="${p.slug}"/></td>
                     <td>
                         <c:url var="editUrl" value="/roller-ui/authoring/pageEdit.rol">
                             <c:param name="weblog" value="${actionWeblog.handle}"/>
@@ -74,7 +74,7 @@
                         </c:choose>
                     </td>
                     <td>${p.showInNav ? '&#10003;' : ''}</td>
-                    <td>${p.navOrder}</td>
+                    <td class="data">${p.navOrder}</td>
                     <td>
                         <a href="${editUrl}">
                             <span class="bi bi-pencil-square" title="<spring:message code="generic.edit"/>"></span>
@@ -91,7 +91,15 @@
         </c:when>
         <c:otherwise>
             <tr>
-                <td colspan="7"><spring:message code="weblogPagesForm.noneFound"/></td>
+                <td colspan="7">
+                    <div class="empty-state">
+                        <p class="empty-state-title"><spring:message code="weblogPagesForm.noneFound"/></p>
+                        <p class="empty-state-body"><spring:message code="empty.pages.body"/></p>
+                        <a href="${addUrl}" class="btn btn-primary">
+                            <spring:message code="weblogPagesForm.add"/>
+                        </a>
+                    </div>
+                </td>
             </tr>
         </c:otherwise>
         </c:choose>

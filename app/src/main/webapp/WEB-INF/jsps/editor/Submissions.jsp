@@ -80,7 +80,7 @@
                         <input type="checkbox" class="form-check-input submission-select"
                                name="deleteIds" value="${fn:escapeXml(s.id)}"/>
                     </td>
-                    <td>
+                    <td class="data">
                         <c:if test="${s.created != null}">
                             <fmt:formatDate value="${s.created}" type="both"
                                             dateStyle="short" timeStyle="short"/>
@@ -122,7 +122,12 @@
         </c:when>
         <c:otherwise>
             <tr>
-                <td colspan="6"><spring:message code="submissions.none"/></td>
+                <td colspan="6">
+                    <div class="empty-state">
+                        <p class="empty-state-title"><spring:message code="submissions.none"/></p>
+                        <p class="empty-state-body"><spring:message code="empty.inquiries.body"/></p>
+                    </div>
+                </td>
             </tr>
         </c:otherwise>
         </c:choose>
