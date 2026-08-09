@@ -18,6 +18,24 @@
 
 /* roller.css: Base CSS styles for Roller web UI */
 
+/* Quiet Instrument: map Bootstrap's own root channel onto the design
+   tokens. Bootstrap 5.3 reads --bs-body-bg/--bs-body-color/--bs-border-color
+   (not literal white/black) for a long tail of components this file never
+   themes directly -- stock modals (incl. EntryEdit.jsp's revision-diff and
+   newsletter-confirm dialogs), the shortcode-insert dropdown, and the
+   navbar-toggler border among them. Without this mapping those stayed
+   pure white with a black border in dark mode even though every token
+   resolved correctly elsewhere. roller-tokens.css defines --paper/--ink/
+   --line (light on :root, dark under prefers-color-scheme) and loads
+   before this file, so the three var() references below always resolve;
+   in light mode they equal Bootstrap's own defaults, so this is a no-op
+   there. */
+:root {
+    --bs-body-bg: var(--paper);
+    --bs-body-color: var(--ink);
+    --bs-border-color: var(--line);
+}
+
 table {
     border:0;
 }
@@ -203,9 +221,14 @@ label,
     font-weight: 600;
 }
 
+/* `background` (the shorthand) resets every longhand it doesn't mention --
+   including background-image, which is how Bootstrap paints the .form-select
+   caret (`--bs-form-select-bg-img`, appearance:none so there's no native
+   arrow to fall back on). Using the shorthand here silently deleted the
+   caret on every <select> in the admin UI. background-color only. */
 .form-control,
 .form-select {
-    background: var(--surface);
+    background-color: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     color: var(--ink);
@@ -214,7 +237,7 @@ label,
 
 .form-control:focus,
 .form-select:focus {
-    background: var(--surface);
+    background-color: var(--surface);
     border-color: var(--focus);
     color: var(--ink);
     box-shadow: none;
@@ -239,6 +262,35 @@ label,
 .form-control.is-invalid:focus,
 .form-select.is-invalid:focus {
     border-color: var(--bad);
+    box-shadow: none;
+}
+
+/* ---- Checkboxes & radios ----
+   29 uses across the admin UI, none previously themed -- every checkbox and
+   radio stayed pure white with a stock-blue check/dot regardless of mode.
+   Bootstrap paints the unchecked box through --bs-form-check-bg (read by its
+   own background-color declaration) and borders every .form-check-input
+   through --bs-border-color, which the :root mapping above already points
+   at --line, so only the background var needs restating here. The checked
+   state hardcodes background-color/border-color (#0d6efd) directly on
+   `.form-check-input:checked`, so that needs an explicit override rather
+   than a variable; the checkmark/radio-dot glyph itself is Bootstrap's own
+   white SVG (--bs-form-check-bg-image) and stays legible unchanged against
+   --accent. Focus follows the same border-color/box-shadow:none convention
+   as .form-control:focus/.form-select:focus above -- the ring itself comes
+   from roller-tokens.css's global :focus-visible rule. */
+.form-check-input {
+    --bs-form-check-bg: var(--surface);
+    border-color: var(--line);
+}
+
+.form-check-input:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+.form-check-input:focus {
+    border-color: var(--focus);
     box-shadow: none;
 }
 

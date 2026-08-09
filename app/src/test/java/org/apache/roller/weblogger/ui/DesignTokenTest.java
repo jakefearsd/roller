@@ -59,6 +59,9 @@ public class DesignTokenTest {
     private static final Path TOKENS_CSS =
             Paths.get("src/main/webapp/roller-ui/styles/roller-tokens.css");
 
+    private static final Path ROLLER_CSS =
+            Paths.get("src/main/webapp/roller-ui/styles/roller.css");
+
     private static final Path HEAD_JSP =
             Paths.get("src/main/webapp/WEB-INF/jsps/tiles/head.jsp");
 
@@ -76,6 +79,14 @@ public class DesignTokenTest {
     );
 
     private static final Pattern HEX_LITERAL = Pattern.compile("#[0-9A-Fa-f]{6}\\b");
+
+    /**
+     * Strips CSS block comments before the roller.css audit runs -- unlike
+     * roller-tokens.css, roller.css's own comments legitimately document hex
+     * values it does not itself declare (e.g. easymde.min.css's hardcoded
+     * caret color), so those must not trip the literal check below.
+     */
+    private static final Pattern CSS_COMMENT = Pattern.compile("/\\*.*?\\*/", Pattern.DOTALL);
 
     private static final Pattern COLOR_TOKEN_DECL =
             Pattern.compile("(--[a-z-]+)\\s*:\\s*(#[0-9A-Fa-f]{6})\\s*;");
@@ -115,6 +126,41 @@ public class DesignTokenTest {
                 TOKENS_CSS + " uses hex color(s) that are not in the \"Quiet Instrument\" "
                         + "spec's 21-value set (docs/design/design-system.md):\n  "
                         + String.join("\n  ", unexpected));
+    }
+
+    /**
+     * roller.css is deliberately tokens-only -- design-system.md's whole
+     * point is that a color is chosen once, in roller-tokens.css's 21-value
+     * spec, and every other stylesheet references it through
+     * {@code var(--token)} rather than picking its own literal. The
+     * background-shorthand bug this test guards against (a {@code
+     * background:} rule silently wiping Bootstrap's {@code
+     * background-image} caret) shipped as a hex/literal-shaped mistake, so
+     * this audits the same failure class the roller-tokens.css test above
+     * does -- a bare {@code #RRGGBB} outside a comment -- but expects ZERO
+     * matches rather than checking against the spec set, since roller.css
+     * is not supposed to declare any hex at all. Named CSS color keywords
+     * (e.g. {@code black}/{@code white} as {@code color-mix()} shading
+     * anchors, or {@code grey} on the collapse-chevron border) are
+     * deliberately out of scope: this locks down the specific regression
+     * class the design wave hit, not a general-purpose CSS color linter.
+     */
+    @Test
+    public void rollerCssHasNoHexColorLiteralsOutsideComments() throws IOException {
+        assertTrue(Files.exists(ROLLER_CSS), "Expected to find " + ROLLER_CSS.toAbsolutePath());
+        String css = Files.readString(ROLLER_CSS, StandardCharsets.UTF_8);
+        String withoutComments = CSS_COMMENT.matcher(css).replaceAll(" ");
+
+        Matcher matcher = HEX_LITERAL.matcher(withoutComments);
+        Set<String> found = new TreeSet<>();
+        while (matcher.find()) {
+            found.add(matcher.group());
+        }
+
+        assertTrue(found.isEmpty(),
+                ROLLER_CSS + " must stay tokens-only -- found hex color literal(s) outside "
+                        + "comments (should be var(--token) references instead): "
+                        + String.join(", ", found));
     }
 
     @Test

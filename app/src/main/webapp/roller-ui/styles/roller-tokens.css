@@ -85,6 +85,27 @@ body {
   font-family: var(--font-ui);
 }
 
+/* Dark-mode <select> caret. Bootstrap re-strokes its stock chevron per
+   color-scheme (dark grey by default, a light grey under its own
+   data-bs-theme="dark" attribute) via the --bs-form-select-bg-img custom
+   property; roller.css can't do the equivalent itself and stay hex-free
+   (`url()` doesn't resolve CSS custom properties, so a var(--ink) reference
+   inside the SVG string is just literal text, not a color) -- this file
+   already carries the dark palette's hex by design (DesignTokenTest audits
+   it against the spec), so the literal belongs here instead. Re-stroked to
+   this file's dark --ink value so the caret reads at the same weight as
+   dark-mode body text, same idea as Bootstrap's own light-grey caret. A
+   second, sibling `dark)` media block (selector .form-select, not :root) on
+   purpose -- keeps this out of DesignTokenTest's :root-anchored dark-block
+   regex and its light/dark
+   token-name parity check, neither of which apply to a non-color
+   custom property. */
+@media (prefers-color-scheme: dark) {
+  .form-select {
+    --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23DCE7E5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
