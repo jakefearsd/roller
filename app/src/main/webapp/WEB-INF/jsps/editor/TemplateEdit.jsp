@@ -28,7 +28,7 @@
 <c:otherwise>
     <p class="pagetip"><spring:message code="pageForm.tip"/></p>
 </c:otherwise>
-</c:choose><form id="template" action="${pageContext.request.contextPath}/roller-ui/authoring/templateEdit!save.rol" method="post">
+</c:choose><form id="template" class="form-stacked" action="${pageContext.request.contextPath}/roller-ui/authoring/templateEdit!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.id" value="${bean.id}"/>
     <input type="hidden" name="bean.type" value="${bean.type}"/>
@@ -42,7 +42,7 @@
             <c:choose>
                 <c:when test="${template.required}">
                     <%-- Cannot edit name of a required template --%>
-                    <input type="text" name="bean.name" value="${bean.name}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
+                    <input type="text" name="bean.name" value="${bean.name}" size="50" readonly class="form-control" style="background: var(--paper)"/>
                 </c:when>
                 <c:otherwise>
                     <input type="text" name="bean.name" value="${bean.name}" size="50" class="form-control"/>
@@ -54,7 +54,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="pageForm.action"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control" style="background: #e5e5e5"/>
+            <input type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control" style="background: var(--paper)"/>
         </div>
     </div>
 
@@ -79,7 +79,7 @@
                  style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
                 <spring:message code="pageForm.resultingUrlWillBe"/>
                 ${actionWeblog.absoluteURL}page/
-                <span id="linkPreview" style="color:red">${bean.link}</span>
+                <span id="linkPreview" style="color:var(--bad)">${bean.link}</span>
                 <c:if test="${template.link != null}">
                     [<a id="launchLink" onClick="launchPage()"><spring:message code="pageForm.launch"/></a>]
                 </c:if>
@@ -94,7 +94,7 @@
             <c:choose>
                 <c:when test="${template.required}">
                     <%-- Required templates have a description--%>
-                    <textarea name="bean.description" rows="2" cols="50" readonly style="background: #e5e5e5">${bean.description}</textarea>
+                    <textarea name="bean.description" rows="2" cols="50" readonly style="background: var(--paper)">${bean.description}</textarea>
                 </c:when>
                 <c:otherwise>
                     <textarea name="bean.description" rows="2" cols="50">${bean.description}</textarea>

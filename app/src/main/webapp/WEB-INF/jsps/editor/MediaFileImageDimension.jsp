@@ -54,7 +54,7 @@ function addImage() {
 
 <form name="imageDimForm" method="POST" onsubmit="addImage()">
 
-    <div id="imageAlign" style="border:1px solid #000000;width:120px;height:100px;margin:5px;">
+    <div id="imageAlign" style="border:1px solid var(--line);width:120px;height:100px;margin:5px;">
         <img border="0" src='${mediaFileURL}' width="120px" height="100px" />
     </div>
 

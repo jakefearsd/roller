@@ -30,7 +30,7 @@
     <spring:message code="weblogPagesForm.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<form id="pageEditForm" method="post"
+<form id="pageEditForm" method="post" class="form-stacked"
       action="${pageContext.request.contextPath}/roller-ui/authoring/pageEdit!save.rol">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.id" value="${bean.id}"/>

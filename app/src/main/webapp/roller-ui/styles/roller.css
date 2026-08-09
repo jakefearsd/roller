@@ -473,7 +473,7 @@ label,
 /* page tips - instructional text below page subtitle */
 
 p.pagetip {
-    color: #666;
+    color: var(--ink-soft);
     font-size: 0.9em;
     margin-top: 0;
     margin-bottom: 1em;
@@ -486,8 +486,11 @@ p.pagetip {
     font-weight: bold; 
 }
 
+/* .card already sets --surface/--line/radius; this second, later rule used
+   to force a literal white background here too, which -- exactly like the
+   sign-in body rule above -- fought dark mode on every "Your weblogs" card. */
 .yourWeblogBox {
-    background: white;
+    background: var(--surface);
     padding: 1em;
 }
 
@@ -707,17 +710,20 @@ table.innertable tr .viewbody .bot {
 }
 
 #category-in-use {
-    background-color: #ffcccc;
-    border: 1px solid #ff0000;
+    background-color: color-mix(in srgb, var(--bad) 15%, var(--surface));
+    border: 1px solid var(--bad);
     padding: 10px;
     border-radius: 5px;
 }
 
 /* sign-in */
 
-body {
-    background-color: white;
-}
+/* Quiet Instrument: roller-tokens.css already sets `body { background:
+   var(--paper); }` -- this second, later-in-cascade `body` rule used to force
+   a literal white background on every page regardless of token or
+   prefers-color-scheme (same specificity, later wins), which broke dark mode
+   admin-wide, not just on the sign-in page it was written for. Deleted
+   rather than tokened: the token rule already does the job. */
 
 .form-signin {
     max-width: 330px;
@@ -771,7 +777,7 @@ body {
     list-style-type:none;
     width:140px;
     height:160px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--line);
     text-align: center;
 }
 
@@ -799,7 +805,7 @@ body {
 }
 
 .highlight {
-    border: 3px solid #aaa;
+    border: 3px solid var(--accent);
 }
 
 span.button {
@@ -848,7 +854,89 @@ div.image-controls input {
 /* members */
 
 tr.rollertable_pending {
-    background: #ffffcc;
+    background: color-mix(in srgb, var(--warn) 15%, var(--surface));
+}
+
+/* Quiet Instrument: the legacy multi-row search select (UserAdmin.jsp's
+   #userList, reused verbatim by MembersInvite.jsp -- same ajax-user.js,
+   same id, different page) gets its native browser highlight retoned.
+   Plain `background-color` on `option:checked` is ignored by most engines
+   for a real native selection highlight; the linear-gradient trick (a
+   "background image" rather than a flat color) is the standard workaround
+   and paints identically to a solid fill. */
+#userList option:checked {
+    background: linear-gradient(0deg, var(--accent-quiet) 0%, var(--accent-quiet) 100%);
+    color: var(--ink);
+}
+
+/* Quiet Instrument: ThemeEdit.jsp's shared/custom chooser cards used to
+   set an inline `background: #bfb` (selected) / `background: white`
+   (unselected) via jQuery .css() -- both hardcoded and, for the "white"
+   reset, another dark-mode-breaking literal. The JS now toggles this class
+   instead. */
+.chooser-selected {
+    background: var(--accent-quiet);
+}
+
+/* Quiet Instrument: GlobalConfig.jsp's live numeric-validation highlight
+   used to set inline `background: #FBB` (invalid) / `background: white`
+   (valid) via jQuery .css() -- same dark-mode hazard as the chooser above.
+   The JS now toggles this class instead of writing colors directly. */
+.field-invalid-highlight {
+    background: color-mix(in srgb, var(--bad) 20%, var(--surface));
+}
+
+/* Quiet Instrument: status badges (weblogEdit.status on EntryEdit.jsp,
+   the page-list status column on Pages.jsp) keep Bootstrap's bg-* classes
+   -- restyled, not renamed -- to the same quiet tint treatment as the
+   draftEntryBox/pendingEntryBox family above rather than Bootstrap's stock
+   saturated badge colors. Bootstrap's .bg-* utilities set background-color
+   with !important, so overriding needs !important too; .badge.bg-* (two
+   classes) is more specific than Bootstrap's bare .bg-* so it still wins
+   the specificity tie-break within the !important bucket. */
+.badge.bg-success {
+    background-color: color-mix(in srgb, var(--good) 25%, var(--surface)) !important;
+    color: var(--ink) !important;
+}
+.badge.bg-info {
+    background-color: var(--accent-quiet) !important;
+    color: var(--ink) !important;
+}
+.badge.bg-warning {
+    background-color: color-mix(in srgb, var(--warn) 25%, var(--surface)) !important;
+    color: var(--ink) !important;
+}
+.badge.bg-danger {
+    background-color: color-mix(in srgb, var(--bad) 25%, var(--surface)) !important;
+    color: var(--ink) !important;
+}
+
+/* Quiet Instrument: flash messages (tiles/messages.jsp, #messages/#errors --
+   ids pinned, restyled only) and the theme-change notices on ThemeEdit.jsp
+   ride Bootstrap's alert-* classes. Bootstrap 5.3 themes .alert-* entirely
+   through --bs-alert-* custom properties (no !important), so -- like .btn
+   and table.rollertable above -- redefining those variables here is enough;
+   a later same-specificity rule wins the cascade tie without a specificity
+   fight. */
+.alert-success {
+    --bs-alert-bg: color-mix(in srgb, var(--good) 15%, var(--surface));
+    --bs-alert-border-color: color-mix(in srgb, var(--good) 45%, var(--surface));
+    --bs-alert-color: var(--ink);
+}
+.alert-info {
+    --bs-alert-bg: var(--accent-quiet);
+    --bs-alert-border-color: color-mix(in srgb, var(--accent) 40%, var(--surface));
+    --bs-alert-color: var(--ink);
+}
+.alert-warning {
+    --bs-alert-bg: color-mix(in srgb, var(--warn) 15%, var(--surface));
+    --bs-alert-border-color: color-mix(in srgb, var(--warn) 45%, var(--surface));
+    --bs-alert-color: var(--ink);
+}
+.alert-danger {
+    --bs-alert-bg: color-mix(in srgb, var(--bad) 15%, var(--surface));
+    --bs-alert-border-color: color-mix(in srgb, var(--bad) 45%, var(--surface));
+    --bs-alert-color: var(--ink);
 }
 
 

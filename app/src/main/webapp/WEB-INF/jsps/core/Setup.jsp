@@ -89,7 +89,7 @@
 
         <c:if test="${blogCount > 0}">
 
-            <form action="${pageContext.request.contextPath}/roller-ui/setup!save.rol" method="post">
+            <form action="${pageContext.request.contextPath}/roller-ui/setup!save.rol" method="post" class="form-stacked">
                 <sec:csrfInput/>
 
                 <div class="row mb-3">

@@ -49,7 +49,7 @@
     </c:otherwise>
 </c:choose>
 
-<form method="post" action="<c:url value='${saveAction}'/>">
+<form method="post" action="<c:url value='${saveAction}'/>" class="form-stacked">
     <sec:csrfInput/>
     <c:if test="${actionName == 'modifyUser'}">
         <%-- bean for add does not have a bean id yet --%>
@@ -63,7 +63,7 @@
                 <div class="col-sm-9">
                     <input type="text" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
                            size="30" maxlength="30" onkeyup="formChanged()"
-                           readonly="readonly" style="background: #e5e5e5" class="form-control"
+                           readonly="readonly" style="background: var(--paper)" class="form-control"
                            title="<spring:message code='userSettings.tip.username'/>"/>
                 </div>
             </div>

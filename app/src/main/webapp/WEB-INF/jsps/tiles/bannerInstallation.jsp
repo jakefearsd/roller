@@ -17,7 +17,7 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<nav class="navbar navbar-expand-md navbar-dark bg-dark">
+<nav class="navbar navbar-expand-md roller-topbar">
     <div class="container-fluid">
 
         <a class="navbar-brand" href="#"><spring:message code="installer.bannerTitleLeft"/></a>

@@ -292,8 +292,8 @@
 
         if (selected[0].value === 'shared') {
 
-            $('#sharedChooser').css("background", "#bfb")
-            $('#customChooser').css("background", "white")
+            $('#sharedChooser').addClass("chooser-selected")
+            $('#customChooser').removeClass("chooser-selected")
 
             $('#themeChooser').show();
 
@@ -307,8 +307,8 @@
 
         } else {
 
-            $('#sharedChooser').css("background", "white")
-            $('#customChooser').css("background", "#bfb")
+            $('#sharedChooser').removeClass("chooser-selected")
+            $('#customChooser').addClass("chooser-selected")
 
             if ( !changed ) {
                 $('#customNoChange').show();

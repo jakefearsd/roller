@@ -40,7 +40,7 @@
     <spring:message code="${subtitleKey}" arguments="${actionWeblog.handle}"/>
 </p>
 
-<form id="entry" method="post">
+<form id="entry" method="post" class="form-stacked">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.status" value="${bean.status}"/>
     <c:choose>
@@ -725,9 +725,9 @@
 
     <style>
         #revisionDiffBody pre { white-space: pre-wrap; }
-        #revisionDiffBody .diff-added { background-color: #e6ffed; display: block; }
-        #revisionDiffBody .diff-removed { background-color: #ffeef0; display: block; }
-        #revisionDiffBody .diff-same { color: #6c757d; display: block; }
+        #revisionDiffBody .diff-added { background-color: color-mix(in srgb, var(--good) 15%, var(--surface)); display: block; }
+        #revisionDiffBody .diff-removed { background-color: color-mix(in srgb, var(--bad) 15%, var(--surface)); display: block; }
+        #revisionDiffBody .diff-same { color: var(--ink-soft); display: block; }
     </style>
 
     <script>

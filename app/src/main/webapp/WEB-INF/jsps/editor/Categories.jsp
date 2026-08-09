@@ -107,7 +107,7 @@
             </div>
 
             <div class="modal-body">
-                <form id="categoryEditForm" action="${pageContext.request.contextPath}/roller-ui/authoring/categoryEdit.rol" method="post">
+                <form id="categoryEditForm" class="form-stacked" action="${pageContext.request.contextPath}/roller-ui/authoring/categoryEdit.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                     <input type="hidden" name="bean.id" value="${bean.id}"/>
 
@@ -190,7 +190,7 @@
         if (!categoryName || categoryName.trim() === '') {
             saveCategoryButton.prop("disabled", true);
             feedbackAreaEdit.html('<spring:message code="categoryForm.requiredFields"/>');
-            feedbackAreaEdit.css("color", "red");
+            feedbackAreaEdit.css("color", "var(--bad)");
             return;
         }
 
@@ -198,7 +198,7 @@
             if (!isValidUrl(imageURL)) {
                 saveCategoryButton.prop("disabled", true);
                 feedbackAreaEdit.html('<spring:message code="categoryForm.badURL"/>');
-                feedbackAreaEdit.css("color", "red");
+                feedbackAreaEdit.css("color", "var(--bad)");
                 return;
             }
         }
@@ -213,7 +213,7 @@
         var enteredName = categoryField('bean.name').val();
         if (!enteredName || enteredName.trim() === "") {
             feedbackAreaEdit.html('<spring:message code="categoryForm.requiredFields"/>');
-            feedbackAreaEdit.css("color", "red");
+            feedbackAreaEdit.css("color", "var(--bad)");
             return;
         }
 
@@ -240,13 +240,13 @@
             var notUnique = data.indexOf('<spring:message code="categoryForm.error.duplicateName"/>');
             var notValid = data.indexOf('<spring:message code="categoryForm.error.invalidName"/>');
             if (notUnique > 0 && notUnique < alertEnd) {
-                feedbackAreaEdit.css("color", "red");
+                feedbackAreaEdit.css("color", "var(--bad)");
                 feedbackAreaEdit.html('<spring:message code="categoryForm.error.duplicateName"/>');
             } else if (notValid > 0 && notValid < alertEnd) {
-                feedbackAreaEdit.css("color", "red");
+                feedbackAreaEdit.css("color", "var(--bad)");
                 feedbackAreaEdit.html('<spring:message code="categoryForm.error.invalidName"/>');
             } else {
-                feedbackAreaEdit.css("color", "green");
+                feedbackAreaEdit.css("color", "var(--good)");
                 feedbackAreaEdit.html('<spring:message code="generic.success"/>');
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).hide();
                 location.reload(true);
@@ -257,7 +257,7 @@
         // single save.
         }).fail(function (data) {
             feedbackAreaEdit.html('<spring:message code="generic.error.check.logs"/>');
-            feedbackAreaEdit.css("color", "red");
+            feedbackAreaEdit.css("color", "var(--bad)");
         });
     }
 

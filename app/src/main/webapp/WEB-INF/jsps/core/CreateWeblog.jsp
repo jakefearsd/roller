@@ -22,7 +22,7 @@
 <br/>
 
 <form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/createWeblog!save.rol"
-           method="post" cssClass="validate-form">
+           method="post" cssClass="validate-form form-stacked">
 
     <sec:csrfInput/>
 

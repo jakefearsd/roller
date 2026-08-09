@@ -21,7 +21,7 @@
 <p class="subtitle"> <spring:message code="mediaFileAdd.title"/> </p>
 <p class="pagetip"> <spring:message code="mediaFileAdd.pageTip"/> </p>
 
-<form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol" method="POST" enctype="multipart/form-data">
+<form id="entry" class="form-stacked" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="directoryName" value="${directoryName}"/>
 

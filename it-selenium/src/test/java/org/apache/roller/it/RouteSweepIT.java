@@ -116,6 +116,25 @@ class RouteSweepIT extends RollerIT {
     }
 
     /**
+     * Smoke test for the "quiet instrument" design wave's rail
+     * (tiles-tabbedpage.jsp / tiles-mainmenupage.jsp, {@code id="adminRail"}):
+     * a tabbed admin page renders the rail, and exactly the current tab's
+     * link carries the {@code .rail-active} spine treatment. Entries is a
+     * convenient, already-covered tabbed route (see {@link Routes#covered()}),
+     * not a new fixture -- this rides the same login/weblog setup the rest of
+     * the sweep uses.
+     */
+    @Test
+    void adminRailIsPresentWithAnActiveSpineOnATabbedPage() {
+        openPath("/roller-ui/authoring/entries.rol?weblog=" + Routes.WEBLOG_HANDLE);
+
+        assertTrue($$("#adminRail").size() > 0,
+                "Expected the tabbed admin layout to render the #adminRail nav");
+        assertTrue($$("#adminRail .rail-active").size() > 0,
+                "Expected #adminRail to have a .rail-active link marking the current tab");
+    }
+
+    /**
      * Asserts the six routes in {@link Routes#broken()} are still broken.
      *
      * <p>Deliberately inverted. If somebody registers the {@code .EntryRemove}

@@ -168,25 +168,25 @@
             if (isInteger || isFloat) {
 
                 if (isNaN(this.valueAsNumber)) {
-                    $(this).css("background", "#FBB")
+                    $(this).addClass("field-invalid-highlight")
                     error = true;
 
                 } else if (isInteger && !Number.isInteger(this.valueAsNumber)) {
-                    $(this).css("background", "#FBB")
+                    $(this).addClass("field-invalid-highlight")
                     error = true;
 
                 } else {
-                    $(this).css("background", "white")
+                    $(this).removeClass("field-invalid-highlight")
                 }
 
             } else if (isFloat) {
 
                 if (isNaN(this.valueAsNumber)) {
-                    $(this).css("background", "#FBB")
+                    $(this).addClass("field-invalid-highlight")
                     error = true;
 
                 } else {
-                    $(this).css("background", "white")
+                    $(this).removeClass("field-invalid-highlight")
                 }
 
             } else if (isBoolean) {

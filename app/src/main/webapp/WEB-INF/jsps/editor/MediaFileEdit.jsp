@@ -21,7 +21,7 @@
     <spring:message code="mediaFileEdit.pagetip"/>
 </p>
 
-<form id="entry" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileEdit!save.rol" method="POST" enctype="multipart/form-data">
+<form id="entry" class="form-stacked" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileEdit!save.rol" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="mediaFileId" value="${mediaFileId}" id="mediaFileId"/>
     <input type="hidden" name="bean.permalink" value="${bean.permalink}"/>
@@ -49,7 +49,7 @@
                     <span id="focalMarker"
                           style="position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px;
                                  border:2px solid #fff; border-radius:50%;
-                                 background:rgba(220,53,69,0.85); box-shadow:0 0 3px #000;
+                                 background:color-mix(in srgb, var(--bad) 85%, transparent); box-shadow:0 0 3px #000;
                                  pointer-events:none; display:none"></span>
                 </div>
                 <div class="form-text"><spring:message code="mediaFileEdit.focalPoint.tip"/></div>

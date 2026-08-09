@@ -21,7 +21,7 @@
 
 
 
-<form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/profile!save.rol" method="post">
+<form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/profile!save.rol" method="post" cssClass="form-stacked">
     <sec:csrfInput/>
 
     <div class="row mb-3">
