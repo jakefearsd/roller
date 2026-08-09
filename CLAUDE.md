@@ -176,8 +176,59 @@ IndexManager getIndexManager()
 ### Theme System
 - **Shared Themes**: System-provided themes in `/themes/` directory
   (incl. `portfolio` — dark justified-grid photography theme driven by
-  featured images + focal points, Stage 2 Wave 2; and `travel` — light
-  guide-card theme that frames the travel shortcodes, Stage 2 Wave 3)
+  featured images + focal points, Stage 2 Wave 2; `travel` — light
+  guide-card theme that frames the travel shortcodes, Stage 2 Wave 3; and
+  `journal` — the current default, "Quiet Journal": reading-first entry
+  list with date marginalia, `qj-*` vocabulary, light+dark, self-hosted IBM
+  Plex Serif/Sans/Mono (`ibm__plex-serif` 0.0.3-alpha.0 joins the existing
+  Sans/Mono webjars in `app/pom.xml`, Theme Wave). A theme that ships its
+  own webfont needs `font-src 'self'` added to its CSP on top of
+  `CSP_STANDARD` — omitting it means the browser refuses every `@font-face`
+  the theme just shipped — and `JournalThemeRenderingTest` pins the
+  resulting string byte-for-byte the same way the other themes' CSPs are
+  pinned. `ThemeCspCoverageTest` enforces the `font-src` addition generically
+  (any theme whose CSS references `@font-face` must carry it) and, because
+  Plex is served from the classpath via Spring Boot's static-resource merge
+  rather than from a file under `webapp/`, checks `/webjars/`-referencing
+  themes against `getResource("META-INF/resources/webjars/...")` instead of
+  the filesystem — a plain file-existence check would false-negative on
+  every webjar-hosted font. `journal` ships a `_page` template from day one
+  (unlike `travel`/`portfolio`, which grew theirs later), covered for both
+  the `[contact]` slot and the draft-404 case.
+  **Retired**: `basic`, `fauxcoly` and `gaurav` are gone — directories
+  deleted, `V018__retire_legacy_themes.sql` moves any weblog still on one of
+  them to `journal` (idempotent; a custom-theme weblog stores `'custom'` in
+  `editortheme` and is untouched by definition). The test fixture theme
+  (`TestUtils`, the seeded IT weblog) is `journal` now, and `ThemeMatrixIT`'s
+  theme list is `journal`/`portfolio`/`travel`. These three ids never come
+  back — do not reintroduce a theme directory or a migration branch that
+  writes `editortheme` back to one of them.
+- `frontpage` (the multi-weblog aggregator theme, distinct from a per-weblog
+  shared theme) was restyled to the `fd-*` front-door design: hero, latest-
+  across-the-site post rows, and a teal-wash weblog directory with a live
+  dot — same `font-src` CSP addition as `journal`, self-hosted Plex. The
+  portal-era `_blogprofile.vm` (a per-weblog profile view) and the
+  already-dead `_blogs.vm` are deleted along with their `theme.xml`
+  registrations; the weblog directory now links each card straight to the
+  weblog itself instead of an intermediate profile page.
+- **Entry/page titles are stored HTML-escaped, not rendered-escaped —
+  templates must emit them bare.** `EntryBean.copyTo` runs
+  `StringEscapeUtils.escapeHtml4` on the title once, at save time; that is
+  the only place raw author input becomes escaped markup, and it is why
+  `WeblogEntry.getTitle()`/`WeblogPage.getTitle()` already return
+  entity-escaped text. A template that calls `$utils.escapeHTML($entry.title)`
+  double-encodes (`&amp;amp;`) — cosmetic breakage, not a security bug, but
+  still a defect wherever it happens. `journal`'s `_day.vm` emits
+  `$entry.title` bare, the convention `basic` used to follow; `travel` and
+  `portfolio` still call `$utils.escapeHTML($entry.title)` and so still
+  double-escape (found during the Theme Wave sweep, parked as a follow-up —
+  not fixed here because `ResponsiveImageRenderingTest` and other pinned
+  fixtures target their current output). The inverse mistake — a *never*-
+  escaped author field rendered raw — is stored XSS; see
+  `EditorJspEscapingTest` for the admin-JSP side of the same invariant (it
+  pins that every author-controlled EL expression, `entry.title` included,
+  goes through `fn:escapeXml` in the editor JSPs, since JSP-side fields get
+  no save-time escaping the way the entry title does).
 - **Custom Themes**: User-customized themes per blog
 - **Template Types**: Main templates (`.vm`), stylesheets, and resources
 - **Hot Reload**: Theme changes reload automatically in development mode

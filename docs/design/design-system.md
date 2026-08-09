@@ -58,6 +58,27 @@ Radius: 6px (cards/inputs), 99px (pills). Shadows: none in light except overlay 
 11. public-travel-page.html  group="Public themes" — travel-theme _page treatment: teal guide-card header (site title, nav All/General/About), page title, prose, and the CONTACT FORM styled to travel's identity (teal accents, card fields). Single light panel only (travel is a light theme) — note says so.
 12. public-portfolio.html    group="Public themes" — two stacked sections, dark only (portfolio is dark by identity): (a) _page treatment: header + prose + contact form on near-black; (b) the no-image entry card: grid card with generated placeholder (title set large in Plex over a subtle teal-to-transparent linear-gradient wash + mono date) next to the current empty-box for contrast, labeled "before / after".
 
+## Shipped reference cards: journal + front door (Theme Wave)
+
+Unlike the twelve preview cards above (which live in the companion design
+project / `.superpowers/design`, not committed), the `journal` theme and the
+`frontpage` restyle shipped their reference cards into the repo, under
+`docs/design/journal/`, because they were built to spec alongside the theme
+templates rather than before them:
+
+- `journal-home.html` — group="Quiet Journal" — the reading-first entry
+  list: date marginalia, serif `qj-title`s, teal hover spine.
+- `journal-permalink.html` — group="Quiet Journal" — the reading view: serif
+  prose at reading measure, quiet comments.
+- `journal-page.html` — group="Quiet Journal" — the `_page` treatment: About
+  prose plus the contact form in journal dress.
+- `frontpage-front-door.html` — group="Frontpage" — the aggregator: recent
+  posts across weblogs plus the teal-wash weblog directory.
+
+Same `@dsCard` header convention and token/type rules as the cards above;
+treat these as the worked examples for any future theme's reference cards
+that need to live in-repo rather than in the design project.
+
 ## Quality bar
 
 Focus states visible; text-wrap balance on headings; tabular-nums wherever digits column; no horizontal scroll inside a panel; every color from the token set; both panels legible standalone.
