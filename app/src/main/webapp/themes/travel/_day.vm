@@ -15,7 +15,7 @@
             #showResponsiveImage($entry.featuredImage $entry.title "100vw" "tg-hero-img")
         </figure>
         #end
-        <h1 class="tg-entry-title">$utils.escapeHTML($entry.title)</h1>
+        <h1 class="tg-entry-title">$entry.title</h1>
         <p class="tg-entry-meta">
             $utils.formatDate($entry.pubTime, "MMMM d, yyyy")
             &middot; <a href="$url.category($entry.category.name)">$utils.escapeHTML($entry.category.name)</a>
@@ -36,7 +36,7 @@
         #end
         <div class="tg-card-body">
             <h2 class="tg-card-title">
-                <a href="$url.entry($entry.anchor)">$utils.escapeHTML($entry.title)</a>
+                <a href="$url.entry($entry.anchor)">$entry.title</a>
             </h2>
             <p class="tg-card-meta">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</p>
             #if($utils.isNotEmpty($entry.searchDescription))

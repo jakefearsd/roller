@@ -14,8 +14,9 @@
  * drops every face (ThemeCspCoverageTest#everyFontAThemeAsksForIsShippedAndAllowedByItsPolicy
  * enforces this for every theme, not just this one). The url()s below use
  * $url.site (this file is rendered through Velocity like every other theme
- * template -- see basic-custom.css's own $url.absoluteSite precedent)
- * rather than a hand-written ../.. relative path, so they resolve under
+ * template -- the same webjar-path convention frontpage-custom.css uses for
+ * its own self-hosted Plex faces) rather than a hand-written ../.. relative
+ * path, so they resolve under
  * whatever context path the app is deployed at. Only the weights this theme
  * actually uses are declared -- Serif 400 (body/prose) and 600 (titles),
  * Sans 450 (UI labels/nav) and 600 (nav/meta emphasis), Mono 400 (the date

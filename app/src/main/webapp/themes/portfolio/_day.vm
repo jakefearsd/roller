@@ -17,7 +17,7 @@
         </figure>
         #end
         <div class="pf-entry-body">
-            <h1 class="pf-entry-title">$utils.escapeHTML($entry.title)</h1>
+            <h1 class="pf-entry-title">$entry.title</h1>
             <div class="pf-entry-content">$entry.displayContent</div>
             <p class="pf-entry-meta">
                 $utils.formatDate($entry.pubTime, "MMMM d, yyyy")
@@ -41,13 +41,13 @@
     <figure class="pf-card"#if($cardAspect) style="--ar:$cardAspect"#end>
         <a class="pf-card-link" href="$url.entry($entry.anchor)">
             #showResponsiveImage($entry.featuredImage $entry.title "(max-width: 640px) 100vw, 40vw" "pf-card-img")
-            <span class="pf-card-title">$utils.escapeHTML($entry.title)</span>
+            <span class="pf-card-title">$entry.title</span>
         </a>
     </figure>
         #else
     <figure class="pf-card pf-card-text">
         <a class="pf-card-link" href="$url.entry($entry.anchor)">
-            <span class="pf-card-title">$utils.escapeHTML($entry.title)</span>
+            <span class="pf-card-title">$entry.title</span>
             <span class="pf-card-date">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</span>
         </a>
     </figure>

@@ -17,6 +17,7 @@
  */
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -248,6 +249,40 @@ class TravelThemeRenderingTest {
                 "the theme CSP declares no font-src, so web fonts must not appear:\n" + css);
         assertFalse(css.contains("http://"),
                 "no remote CSS references -- script/style-src are 'self':\n" + css);
+    }
+
+    // ----------------------------------------------------- escaping (once)
+
+    /**
+     * Entry titles are stored pre-escaped by {@code EntryBean.copyTo} (see
+     * {@code EntryBeanTest#copyToEscapesTheTitleButNotTheBody}) -- mirrored
+     * here rather than driving the controller. {@code _day.vm} used to call
+     * {@code $utils.escapeHTML($entry.title)} on top of that, double-encoding
+     * ('&' became {@code &amp;amp;}); this pins the fix (bare {@code
+     * $entry.title}) on both the card title and the permalink h1.
+     */
+    @Test
+    void theEntryTitleEscapesExactlyOnce() throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry("sea-and-stone", weblog, user);
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
+        // Stored form of "Sea & Stone" -- the transformation EntryBean.copyTo
+        // applies at save time (see EntryBeanTest:212), not raw author input.
+        managed.setTitle(StringEscapeUtils.escapeHtml4("Sea & Stone"));
+        mgr.saveWeblogEntry(managed);
+        TestUtils.endSession(true);
+
+        String cardBody = render("/" + HANDLE + "/");
+        assertTrue(cardBody.contains("Sea &amp; Stone"),
+                "the card title must render escaped exactly once:\n" + cardBody);
+        assertFalse(cardBody.contains("&amp;amp;"),
+                "the stored-escaped title must not be double-encoded:\n" + cardBody);
+
+        String permalinkBody = render("/" + HANDLE + "/entry/sea-and-stone");
+        assertTrue(permalinkBody.contains("Sea &amp; Stone"),
+                "the permalink h1 must render escaped exactly once:\n" + permalinkBody);
+        assertFalse(permalinkBody.contains("&amp;amp;"),
+                "the stored-escaped title must not be double-encoded:\n" + permalinkBody);
     }
 
     // -------------------------------------------------------------- _page

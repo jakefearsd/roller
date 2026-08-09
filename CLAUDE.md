@@ -211,24 +211,31 @@ IndexManager getIndexManager()
   already-dead `_blogs.vm` are deleted along with their `theme.xml`
   registrations; the weblog directory now links each card straight to the
   weblog itself instead of an intermediate profile page.
-- **Entry/page titles are stored HTML-escaped, not rendered-escaped —
-  templates must emit them bare.** `EntryBean.copyTo` runs
-  `StringEscapeUtils.escapeHtml4` on the title once, at save time; that is
-  the only place raw author input becomes escaped markup, and it is why
-  `WeblogEntry.getTitle()`/`WeblogPage.getTitle()` already return
-  entity-escaped text. A template that calls `$utils.escapeHTML($entry.title)`
-  double-encodes (`&amp;amp;`) — cosmetic breakage, not a security bug, but
-  still a defect wherever it happens. `journal`'s `_day.vm` emits
-  `$entry.title` bare, the convention `basic` used to follow; `travel` and
-  `portfolio` still call `$utils.escapeHTML($entry.title)` and so still
-  double-escape (found during the Theme Wave sweep, parked as a follow-up —
-  not fixed here because `ResponsiveImageRenderingTest` and other pinned
-  fixtures target their current output). The inverse mistake — a *never*-
-  escaped author field rendered raw — is stored XSS; see
-  `EditorJspEscapingTest` for the admin-JSP side of the same invariant (it
-  pins that every author-controlled EL expression, `entry.title` included,
-  goes through `fn:escapeXml` in the editor JSPs, since JSP-side fields get
-  no save-time escaping the way the entry title does).
+- **Entry titles are stored HTML-escaped; page titles are stored raw — the
+  two are opposite conventions, and a template (or a future doc revision)
+  that assumes they match ships either double-escaped garbage or stored
+  XSS.** `EntryBean.copyTo` runs `StringEscapeUtils.escapeHtml4` on the title
+  once, at save time — the only place raw author input becomes escaped
+  markup for an entry — which is why `WeblogEntry.getTitle()` already
+  returns entity-escaped text and every theme must emit `$entry.title` bare;
+  `journal`, `travel` and `portfolio` all do this now (the latter two were
+  found still calling `$utils.escapeHTML($entry.title)` — and so
+  double-encoding to `&amp;amp;` — during the Theme Wave sweep and fixed in
+  the same pass, cosmetic breakage rather than a security bug, but still a
+  defect wherever it happens). `PageBean.copyTo` does the opposite: it
+  copies `title` straight through with **no** escaping at all, so
+  `WeblogPage.getTitle()` returns raw author input and every page-rendering
+  template **must** call `$utils.escapeHTML($model.page.title)` (or
+  `#showPageTitle`, which does the same) itself — `journal`/`travel`/
+  `portfolio`'s `page.vm` all do. Skipping that escape on a future theme is
+  stored XSS the moment a page title carries `<script>`, not a cosmetic bug
+  like the entry-side mistake. The inverse mistake on the entry side — a
+  *never*-escaped author field rendered raw — is the same class of stored
+  XSS; see `EditorJspEscapingTest` for the admin-JSP side of the same
+  invariant (it pins that every author-controlled EL expression,
+  `entry.title` included, goes through `fn:escapeXml` in the editor JSPs,
+  since JSP-side fields get no save-time escaping the way the entry title
+  does).
 - **Custom Themes**: User-customized themes per blog
 - **Template Types**: Main templates (`.vm`), stylesheets, and resources
 - **Hot Reload**: Theme changes reload automatically in development mode

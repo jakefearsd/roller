@@ -11,12 +11,6 @@
     ## set($pager = $planet.getAggregationPager($since, $maxResults))
     ## The below pager code should work against either:
 
-    #if($pager.items.size() > 0)
-        #set($entryCount = $pager.items.size() - 1)
-        #set($startDate = $pager.items.get(0).pubTime)
-        #set($endDate = $entries.get($entryCount).pubTime)
-    #end
-
     <p class="fd-label">Latest across the site</p>
     <div class="fd-posts">
     #if(!$pager.nextLink)

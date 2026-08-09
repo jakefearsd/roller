@@ -17,6 +17,7 @@
  */
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -329,6 +330,47 @@ class JournalThemeRenderingTest {
                         + "rendered body -- this is what actually proves the form renders:\n" + body);
         assertFalse(body.contains("<h1>About This Journal</h1>"),
                 "the naked fallback template's unstyled h1 must not be what renders:\n" + body);
+    }
+
+    // ----------------------------------------------------- escaping (once)
+
+    /**
+     * Pins the fix end-to-end for the two independent single-escape
+     * contracts a journal page's head/permalink carries: {@code
+     * $model.weblog.name} comes back from {@code WeblogWrapper#getName}
+     * already {@code escapeHtml4}'d, and an entry title is stored
+     * pre-escaped by {@code EntryBean.copyTo} (mirrored here rather than
+     * driving the controller, per {@code EntryBeanTest
+     * #copyToEscapesTheTitleButNotTheBody}). Templates must emit both bare;
+     * calling {@code $utils.escapeHTML} on either double-encodes. An '&'
+     * in both fixtures makes a double-escape ({@code &amp;amp;}) impossible
+     * to miss.
+     */
+    @Test
+    void theWeblogNameAndEntryTitleEscapeExactlyOnce() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setName("Fog & Light Journal");
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.endSession(true);
+
+        WeblogEntry entry = TestUtils.setupWeblogEntry("tides-and-time", weblog, user);
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntry managedEntry = mgr.getWeblogEntry(entry.getId());
+        // Stored form of "Tides & Time" -- the transformation EntryBean.copyTo
+        // applies at save time (see EntryBeanTest:212), not raw author input.
+        managedEntry.setTitle(StringEscapeUtils.escapeHtml4("Tides & Time"));
+        mgr.saveWeblogEntry(managedEntry);
+        TestUtils.endSession(true);
+
+        String body = render("/" + HANDLE + "/entry/tides-and-time");
+
+        assertTrue(body.contains("Fog &amp; Light Journal"),
+                "the weblog name must render escaped exactly once:\n" + body);
+        assertTrue(body.contains("Tides &amp; Time"),
+                "the entry title must render escaped exactly once:\n" + body);
+        assertFalse(body.contains("&amp;amp;"),
+                "no reference may double-encode a value that is already "
+                        + "stored/wrapped escaped:\n" + body);
     }
 
     @Test

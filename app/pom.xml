@@ -367,10 +367,9 @@ limitations under the License.
             <groupId>org.webjars</groupId>
             <artifactId>jquery</artifactId>
             <!-- Held at 3.x deliberately. jQuery 4 removes .bind()/.unbind(),
-                 which MediaFileSidebar.jsp still uses, and $.isFunction, which
-                 the gaurav theme's vendored bootstrap.js calls; jquery-ui
-                 1.14.x and jquery-validation are also not certified against
-                 it. Moving to 4 is a piece of work, not a version bump. -->
+                 which MediaFileSidebar.jsp still uses; jquery-ui 1.14.x and
+                 jquery-validation are also not certified against it. Moving
+                 to 4 is a piece of work, not a version bump. -->
             <version>3.7.1</version>
         </dependency>
 

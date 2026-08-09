@@ -12,7 +12,10 @@
 #if($model.permalink)
     #foreach($entry in $entries)
     <article class="qj-reading">
-        <p class="qj-crumb"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a> &middot; $utils.escapeHTML($entry.category.name)</p>
+        ## $model.weblog.name is pre-escaped by WeblogWrapper#getName
+        ## (StringEscapeUtils.escapeHtml4) -- emit it bare, or it double-encodes
+        ## ("&amp;" -> "&amp;amp;"), same as frontpage/weblog.vm's $blog.name.
+        <p class="qj-crumb"><a href="$url.home">$model.weblog.name</a> &middot; $utils.escapeHTML($entry.category.name)</p>
         <h1 class="qj-h1">$entry.title</h1>
         <p class="qj-byline">
             <span>By $utils.escapeHTML($entry.creator.screenName)</span>
