@@ -24,6 +24,7 @@ import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -289,5 +290,59 @@ class JournalThemeRenderingTest {
         assertTrue(body.contains("class=\"qj-search-head\""),
                 "the search head wrapper must be present:\n" + body);
         assertFalse(body.contains("$utils."), body);
+    }
+
+    // -------------------------------------------------------------- _page
+
+    private void savePage(String slug, String title, String content, WeblogPage.PubStatus status)
+            throws Exception {
+        WeblogPage page = new WeblogPage();
+        page.setWeblog(TestUtils.getManagedWebsite(weblog));
+        page.setSlug(slug);
+        page.setTitle(title);
+        page.setContent(content);
+        page.setStatus(status);
+        WebloggerFactory.getWeblogger().getWeblogPageManager().savePage(page);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+    }
+
+    @Test
+    void aPageRendersThroughTheJournalThemeInsteadOfTheFallback() throws Exception {
+        savePage("about", "About This Journal", "Some prose about the journal. [contact]",
+                WeblogPage.PubStatus.PUBLISHED);
+
+        String body = render("/" + HANDLE + "/about");
+
+        assertJournalHead(body);
+        assertTrue(body.contains("class=\"qj-head\""),
+                "the page must wear the journal header chrome:\n" + body);
+        assertTrue(body.contains("<h1 class=\"qj-h1\">About This Journal</h1>"),
+                "the page title must render as the serif qj-h1:\n" + body);
+        assertTrue(body.contains("class=\"qj-prose\""),
+                "the page content must render inside the qj-prose reading column:\n" + body);
+        assertTrue(body.contains("audience-hp"),
+                "showAudienceAssets must run in the head, whatever the page contains -- "
+                        + "this alone does not prove the [contact] shortcode rendered:\n" + body);
+        assertTrue(body.contains("contact-form-slot"),
+                "the [contact] shortcode must have expanded to its placeholder div in the "
+                        + "rendered body -- this is what actually proves the form renders:\n" + body);
+        assertFalse(body.contains("<h1>About This Journal</h1>"),
+                "the naked fallback template's unstyled h1 must not be what renders:\n" + body);
+    }
+
+    @Test
+    void aDraftPageStill404sUnderTheJournalTheme() throws Exception {
+        savePage("still-drafting", "Not Yet", "Nothing to see.", WeblogPage.PubStatus.DRAFT);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/" + HANDLE + "/still-drafting");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(404, response.getStatus(),
+                "a draft page must not be reachable through the journal theme's _page "
+                        + "template either -- draft status is checked before any template "
+                        + "renders:\n" + response.getContentAsString());
     }
 }

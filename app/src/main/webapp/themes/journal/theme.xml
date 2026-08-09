@@ -89,4 +89,16 @@
             <templateLanguage>velocity</templateLanguage>
         </rendition>
     </template>
+
+    <template action="custom">
+        <name>_page</name>
+        <description>_page</description>
+        <navbar>false</navbar>
+        <hidden>true</hidden>
+        <contentType>text/html</contentType>
+        <rendition>
+            <contentsFile>page.vm</contentsFile>
+            <templateLanguage>velocity</templateLanguage>
+        </rendition>
+    </template>
 </weblogtheme>

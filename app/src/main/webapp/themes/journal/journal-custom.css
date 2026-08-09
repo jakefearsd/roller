@@ -371,3 +371,83 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 /* ---- search results ---- */
 
 .qj-search-head { margin-bottom: 1.5rem; }
+
+/* ---- contact form & newsletter subscribe ----
+ * #showAudienceAssets/#showSubscribeForm inject these forms unscoped
+ * (form.className = 'contact-form' / 'newsletter-subscribe'); the body.qj
+ * prefix here outranks that head-level style block by specificity so the
+ * theme's own card treatment wins without touching the shared macro (same
+ * precedent as body.tg in travel-custom.css / body.pf in
+ * portfolio-custom.css). Per docs/design/journal/journal-page.html's
+ * .qg-form: a --qj-surface card, caps 12px labels, paper-background
+ * inputs with a --qj-line border and a --qj-focus focus ring, and an
+ * accent Send button. */
+body.qj .contact-form,
+body.qj .newsletter-subscribe {
+    background: var(--qj-surface);
+    border: 1px solid var(--qj-line);
+    border-radius: var(--qj-radius);
+    padding: 1.25rem 1.375rem;
+    max-width: 30rem;
+    margin: 1.75rem 0;
+}
+body.qj .contact-form label,
+body.qj .newsletter-subscribe label {
+    display: block;
+    margin-top: .875rem;
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: .75rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--qj-ink-soft);
+}
+body.qj .contact-form label:first-child,
+body.qj .newsletter-subscribe label:first-child {
+    margin-top: 0;
+}
+body.qj .contact-form input,
+body.qj .contact-form textarea,
+body.qj .newsletter-subscribe input[type=email] {
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin-top: .3125rem;
+    padding: .5rem .6875rem;
+    box-sizing: border-box;
+    font: inherit;
+    font-size: .90625rem;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--qj-ink);
+    background: var(--qj-paper);
+    border: 1px solid var(--qj-line);
+    border-radius: var(--qj-radius);
+}
+body.qj .contact-form input:focus,
+body.qj .contact-form textarea:focus,
+body.qj .newsletter-subscribe input[type=email]:focus {
+    outline: none;
+    border-color: var(--qj-focus);
+}
+body.qj .contact-form textarea { min-height: 5.25rem; resize: vertical; }
+body.qj .contact-form .audience-hp,
+body.qj .newsletter-subscribe .audience-hp { position: absolute; left: -9999px; top: -9999px; }
+body.qj .contact-form button,
+body.qj .newsletter-subscribe button {
+    margin-top: 1rem;
+    padding: .5rem 1.375rem;
+    font: inherit;
+    font-size: .875rem;
+    font-weight: 600;
+    color: #FFFFFF;
+    background: var(--qj-accent);
+    border: 1px solid var(--qj-accent);
+    border-radius: var(--qj-radius);
+    cursor: pointer;
+}
+body.qj .contact-form button:hover,
+body.qj .newsletter-subscribe button:hover {
+    opacity: .9;
+}
+body.qj .audience-message { margin-top: .75rem; font-size: .84375rem; color: var(--qj-accent); }
