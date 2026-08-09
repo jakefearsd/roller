@@ -141,10 +141,10 @@ class WeblogConfigMatrixIT extends RollerIT {
      * The weblog's locale reaches the rendered page.
      *
      * <p>Asserted on the theme's own message lookups rather than on dates: the
-     * day template resolves {@code macro.weblog.comments} through the bundle for
-     * the weblog's locale, so a French weblog says "Commentaires". A date would
-     * work too but drags in month-name and timezone-boundary flakiness for no
-     * extra proof.
+     * journal home page's category nav ({@code #showWeblogCategoryLinksList})
+     * resolves {@code generic.all} through the bundle for the weblog's locale,
+     * so a French weblog says "Tous". A date would work too but drags in
+     * month-name and timezone-boundary flakiness for no extra proof.
      */
     @Test
     void theWeblogsLocaleDecidesTheLanguageOfTheRenderedPage() {
@@ -154,12 +154,12 @@ class WeblogConfigMatrixIT extends RollerIT {
         String handle = createWeblog();
         publishEntry(handle, "Localised " + suffix);
 
-        // Anchored on the day template's own comments link. The page carries
-        // other, hardcoded English ("Recent Comments (Atom)" in
-        // #showAutodiscoveryLinks), so a bare search for "Comments" would be
-        // true whatever the locale.
-        String englishLabel = "commentsLink\">Comments";
-        String frenchLabel = "commentsLink\">Commentaires";
+        // Anchored on the category nav's "All" entry, closing tags included.
+        // The page carries other, hardcoded English ("Recent Comments (Atom)"
+        // in #showAutodiscoveryLinks, "comments" in the qj-meta line), so a
+        // bare word search would be true whatever the locale.
+        String englishLabel = ">All</a></li>";
+        String frenchLabel = ">Tous</a></li>";
 
         String english = readerHome(handle);
         assertTrue(english.contains(englishLabel),

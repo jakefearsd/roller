@@ -38,7 +38,7 @@ class PublicSurfaceIT extends RollerIT {
     @Test
     void frontPageShowsSeededEntry() {
         openPath("/" + WEBLOG_HANDLE + "/");
-        $("h1.weblogName").shouldHave(text("IT Weblog"));
+        $("p.qj-site").shouldHave(text("IT Weblog"));
         $("body").shouldHave(text("IT Seeded Entry"));
     }
 
@@ -52,7 +52,7 @@ class PublicSurfaceIT extends RollerIT {
     @Test
     void searchPageRendersAnonymously() {
         openPath("/" + WEBLOG_HANDLE + "/search?q=zzznope");
-        $("h1.weblogName").shouldHave(text("IT Weblog"));
+        $("p.qj-site").shouldHave(text("IT Weblog"));
     }
 
     @Test

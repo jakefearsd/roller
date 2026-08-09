@@ -62,7 +62,7 @@ class AnalyticsInjectionIT extends RollerIT {
         logout();
 
         openPath("/" + handle + "/");
-        $("h1.weblogName").should(exist);
+        $("p.qj-site").should(exist);
         $$("script[src^='/analytics/']").shouldHave(CollectionCondition.size(0));
 
         BrowserHealth.current().assertNoBrokenResources();
