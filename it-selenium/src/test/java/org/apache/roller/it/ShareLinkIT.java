@@ -26,6 +26,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
+import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>The tokened share routes themselves are SKIPPED in the Routes catalogue
  * (they are dynamic secrets, not literal URLs) -- this test is their
  * content-asserting coverage, PublicSurfaceIT-style.
+ *
+ * <p><b>Dead links.</b> A third scenario, not a journey but the boundary
+ * around both of the above: a share token that is well-formed
+ * ({@code [A-Za-z0-9_-]+}, the {@code TokenGenerator} alphabet) but names no
+ * {@code ShareLink} 404s through {@code ShareController.sharePage}'s
+ * {@code liveLink(token) == null} branch, while a token shaped outside that
+ * pattern (containing a {@code .}) never reaches the controller at all and
+ * 404s through the dispatcher's own no-handler-found path instead -- two
+ * different code paths landing on the same status, both covered. The
+ * browser-driven half arms {@code BrowserHealth.current().expectRefusal}
+ * first (the {@code SubscribeFormIT}/{@code MultiUserJourneyIT} precedent for
+ * a refusal the test asked for on purpose), then confirms the 404 itself
+ * doesn't leave the page unhealthy -- no broken sub-resource beyond the
+ * expected one, nothing the browser gave up on without a response.
  */
 class ShareLinkIT extends RollerIT {
 
@@ -183,6 +198,34 @@ class ShareLinkIT extends RollerIT {
                 "a private directory's file must 404 on the base media path: " + basePath);
         assertEquals(404, anonymousStatusOf(basePath + "?w=480"),
                 "the rendition variant must 404 too");
+    }
+
+    @Test
+    void aDeadShareLinkIsFourOhFourForBothWellFormedAndMalformedTokens() {
+        String suffix = Long.toString(System.nanoTime(), 36);
+
+        // --- well-formed token shape, but no ShareLink was ever created for
+        // it -- liveLink(token) returns null and the controller sends 404 ----
+        String unknownToken = "unknown-share-token-" + suffix;
+        String unknownUrl = baseUrl() + "/share/" + unknownToken;
+        assertEquals(404, anonymousStatusOf(unknownUrl),
+                "a well-formed but unknown token must 404: " + unknownUrl);
+
+        // --- malformed token (contains a dot) misses the @GetMapping's
+        // [A-Za-z0-9_-]+ pattern entirely, so it never reaches the controller
+        // -- and must still 404 rather than fall through to something else --
+        String malformedUrl = baseUrl() + "/share/not.a.real.token." + suffix;
+        assertEquals(404, anonymousStatusOf(malformedUrl),
+                "a token shape the route pattern rejects must still 404: " + malformedUrl);
+
+        // --- and the same unknown token 404s for a real browser, not just
+        // curl -- armed first, since a 404 top-level navigation is itself a
+        // broken sub-resource in BrowserHealth's vocabulary ------------------
+        BrowserHealth.current().expectRefusal("/share/" + unknownToken);
+        openPath("/share/" + unknownToken);
+        BrowserHealth.current().settle();
+        BrowserHealth.current().assertNoFailedRequests();
+        BrowserHealth.current().assertNoBrokenResources();
     }
 
     // ------------------------------------------------------------- helpers
