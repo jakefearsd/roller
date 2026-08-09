@@ -79,6 +79,15 @@ public class PageEditController extends BaseController {
                        HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "pageEdit");
+        // getPageTitle() (via populateCommonModel above) always answers
+        // "pageEdit.title" ("Edit page") -- this one route handles both add
+        // and edit (id absent vs present), unlike the entry editor's separate
+        // entryAdd.rol/entryEdit.rol pair, so only the request has enough
+        // information to pick the right title. Same override-after-populate
+        // shape as EntryEditController's actionName.
+        if (StringUtils.isBlank(id)) {
+            model.addAttribute("pageTitle", "pageEdit.title.new");
+        }
 
         PageBean bean = new PageBean();
         if (!StringUtils.isBlank(id)) {
@@ -156,6 +165,19 @@ public class PageEditController extends BaseController {
             if (!isNew) {
                 model.addAttribute("page", page);
             }
+        }
+
+        // See the matching comment in edit(): getPageTitle() (via
+        // populateCommonModel above) always answers "pageEdit.title" ("Edit
+        // page"), and this route re-renders the same view whether the save
+        // succeeded or failed validation. Decided here, at the end, off the
+        // bean's FINAL id rather than the isNew flag captured on entry: a
+        // successful create leaves this POST on the same URL but bean.copyFrom
+        // (above) has since populated bean.id from the newly-persisted page,
+        // so the title should flip to "Edit page" along with it -- a failed
+        // create leaves bean.id blank and the title stays "New page".
+        if (StringUtils.isBlank(bean.getId())) {
+            model.addAttribute("pageTitle", "pageEdit.title.new");
         }
 
         addPageEditModelAttributes(request, model, bean);

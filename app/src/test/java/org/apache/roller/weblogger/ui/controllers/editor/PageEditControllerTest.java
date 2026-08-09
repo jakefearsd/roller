@@ -154,6 +154,78 @@ class PageEditControllerTest extends EditorControllerTestSupport {
         assertNull(bean.getId());
     }
 
+    // --- page title ---
+    //
+    // One route (pageEdit.rol) handles both add and edit, unlike the entry
+    // editor's separate entryAdd.rol/entryEdit.rol pair, so getPageTitle()
+    // alone (a per-controller-instance method, not per-request) cannot tell
+    // them apart -- it always answers "pageEdit.title" ("Edit page"). Both
+    // edit() and save() must override the "pageTitle" model attribute that
+    // populateCommonModel() seeds from it, the same shape EntryEditController
+    // uses to override "actionName" after calling populateCommonModel.
+
+    @Test
+    void openingWithNoIdTitlesThePageNewPage() throws Exception {
+        controller.edit(null, requestFor(weblogA), model);
+
+        assertEquals("pageEdit.title.new", model.getAttribute("pageTitle"),
+                "a new page must not be titled \"Edit page\"");
+    }
+
+    @Test
+    void openingAnExistingPageTitlesItEditPage() throws Exception {
+        WeblogPage page = pageOn(weblogA, "about");
+
+        controller.edit(page.getId(), requestFor(weblogA), model);
+
+        assertEquals("pageEdit.title", model.getAttribute("pageTitle"));
+    }
+
+    @Test
+    void savingANewPageTitlesTheRedisplayedFormEditPage() throws Exception {
+        // Success leaves this POST on the same view (no redirect), but
+        // bean.copyFrom (inside save()) has by then populated bean.id from
+        // the newly-persisted page -- the title must track that, not the
+        // isNew flag captured when the request came in.
+        PageBean bean = new PageBean();
+        bean.setSlug("about");
+        bean.setTitle("About");
+
+        controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals("pageEdit.title", model.getAttribute("pageTitle"),
+                "once a new page is persisted the redisplayed form is no longer \"new\"");
+    }
+
+    @Test
+    void aFailedCreateKeepsTheNewPageTitle() throws Exception {
+        doThrow(new WebloggerException("page slug is reserved: feed"))
+                .when(weblogger.getWeblogPageManager()).savePage(any());
+
+        PageBean bean = new PageBean();
+        bean.setSlug("feed");
+        bean.setTitle("Feed");
+
+        controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals("pageEdit.title.new", model.getAttribute("pageTitle"),
+                "a create that failed validation has no persisted id, so it is still \"New page\"");
+    }
+
+    @Test
+    void savingAnExistingPageKeepsTheEditPageTitle() throws Exception {
+        WeblogPage existing = pageOn(weblogA, "about");
+
+        PageBean bean = new PageBean();
+        bean.setId(existing.getId());
+        bean.setSlug("about");
+        bean.setTitle("New Title");
+
+        controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals("pageEdit.title", model.getAttribute("pageTitle"));
+    }
+
     // --- saving ---
 
     @Test
