@@ -221,3 +221,153 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
     color: var(--qj-ink);
     font: inherit;
 }
+
+/* ---- reading view (permalink) ----
+ * Visual source of truth: docs/design/journal/journal-permalink.html (the
+ * "Journal -- Reading view" card, classes qp-*). This theme's established
+ * vocabulary is qj-*, so the mapping is qp-crumb->qj-crumb, qp-h1->qj-h1,
+ * qp-byline->qj-byline, qp-prose->qj-prose (blockquote gets the pull-quote
+ * treatment directly, since markdown output has no class to hang a qp-pull
+ * equivalent on), qp-comments->qj-comments, qp-comment->the shared
+ * #showWeblogEntryComments macro's own .comment/.comments-head/.status
+ * classes, scoped under .qj-comments the same way portfolio scopes its
+ * .pf-comments (see portfolio-custom.css) -- the macro markup is shared
+ * across every theme and cannot carry theme-specific classes itself. */
+
+.qj-main-entry { max-width: 40rem; }
+
+.qj-reading { padding: .5rem 0 1rem; }
+
+.qj-crumb {
+    margin: 0 0 1.375rem;
+    font-size: .8125rem;
+    color: var(--qj-ink-soft);
+}
+.qj-crumb a { color: var(--qj-accent); text-decoration: none; font-weight: 600; }
+
+.qj-h1 {
+    margin: 0;
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: 1.7rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-wrap: balance;
+    max-width: 24ch;
+}
+
+.qj-byline {
+    display: flex;
+    gap: .875rem;
+    align-items: baseline;
+    margin: .75rem 0 1.625rem;
+    padding-bottom: 1.125rem;
+    border-bottom: 1px solid var(--qj-line);
+    font-size: .8125rem;
+    color: var(--qj-ink-soft);
+}
+.qj-byline .d {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+.qj-prose {
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: 1.03rem;
+    line-height: 1.68;
+    max-width: 58ch;
+}
+.qj-prose p + p { margin-top: .875rem; }
+.qj-prose a { color: var(--qj-accent); }
+.qj-prose img { border-radius: var(--qj-radius); }
+
+/* pull-quote treatment -- every blockquote in the rendered entry body gets
+   this, matching the qp-pull rule in the design card. */
+.qj-prose blockquote {
+    margin: 1.125rem 0;
+    padding: .25rem 0 .25rem 1rem;
+    border-left: 2px solid var(--qj-accent);
+    color: var(--qj-ink-soft);
+    font-style: italic;
+}
+.qj-prose blockquote p { margin: 0; }
+
+/* ---- comments (shared macro markup, scoped and quieted) ---- */
+
+.qj-comments {
+    margin-top: 2.125rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--qj-line);
+    max-width: 58ch;
+}
+
+.qj-comments .comments-head {
+    margin: 0 0 .875rem;
+    font-size: .75rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--qj-ink-soft);
+}
+
+.qj-comments .comment {
+    background: var(--qj-surface);
+    border: 1px solid var(--qj-line);
+    border-radius: var(--qj-radius);
+    padding: .75rem 1rem;
+    font-size: .875rem;
+    line-height: 1.55;
+}
+.qj-comments .comment + .comment { margin-top: .75rem; }
+.qj-comments .comment-details { color: var(--qj-ink-soft); font-size: .8125rem; }
+.qj-comments .comment-details a { color: var(--qj-accent); }
+
+.qj-comments .status {
+    display: block;
+    margin-top: .75rem;
+    font-size: .84rem;
+    color: var(--qj-ink-soft);
+}
+.qj-comments .error { color: #b3261e; }
+
+/* the sign-in prompt: the macro's bare <p><a> right after .status */
+.qj-comments .status + p a {
+    color: var(--qj-accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.qj-comments .comments-form ul { list-style: none; margin: 1rem 0 0; padding: 0; }
+.qj-comments .comments-form li { margin: .6rem 0; }
+.qj-comments label.desc {
+    display: block;
+    font-size: .75rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--qj-ink-soft);
+    margin-bottom: .25rem;
+}
+.qj-comments input.text,
+.qj-comments textarea.textarea {
+    width: 100%;
+    max-width: 30rem;
+    padding: .5rem .7rem;
+    border: 1px solid var(--qj-line);
+    border-radius: var(--qj-radius);
+    background: var(--qj-surface);
+    color: var(--qj-ink);
+    font: inherit;
+}
+.qj-comments input.button {
+    padding: .5rem 1.1rem;
+    border: 1px solid var(--qj-accent);
+    border-radius: var(--qj-radius);
+    background: var(--qj-accent);
+    color: var(--qj-surface);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ---- search results ---- */
+
+.qj-search-head { margin-bottom: 1.5rem; }

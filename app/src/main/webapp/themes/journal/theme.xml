@@ -54,8 +54,6 @@
         </rendition>
     </template>
 
-    <!-- permalink points at weblog.vm until Task 2 ships a dedicated
-         reading view (permalink.vm) -->
     <template action="permalink">
         <name>permalink</name>
         <description>permalink</description>
@@ -63,7 +61,19 @@
         <hidden>true</hidden>
         <contentType>text/html</contentType>
         <rendition>
-            <contentsFile>weblog.vm</contentsFile>
+            <contentsFile>permalink.vm</contentsFile>
+            <templateLanguage>velocity</templateLanguage>
+        </rendition>
+    </template>
+
+    <template action="search">
+        <name>searchresults</name>
+        <description>searchresults</description>
+        <navbar>false</navbar>
+        <hidden>true</hidden>
+        <contentType>text/html</contentType>
+        <rendition>
+            <contentsFile>searchresults.vm</contentsFile>
             <templateLanguage>velocity</templateLanguage>
         </rendition>
     </template>

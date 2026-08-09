@@ -1,12 +1,27 @@
 ## $model here is a PageModel
 ## $entry here is a WeblogEntryWrapper
 ##
-## Quiet Journal day fragment -- the date-marginalia entry row. Task 1 keeps
-## this unified for both the entry list and (until Task 2's permalink.vm
-## ships) the permalink action, which currently also renders through
-## weblog.vm: a single qj-entry row is a reasonable degrade for one entry,
-## the same way the reading view will replace it wholesale in Task 2.
+## Quiet Journal day fragment. On the entry list (home page, search results)
+## it emits the date-marginalia qj-entry row. On the permalink page
+## ($model.permalink) it emits the reading view instead -- crumb, serif
+## qj-h1, byline with the mono date, then the entry body inside the qj-prose
+## reading column (58ch measure, blockquotes styled as the pull-quote
+## treatment; see journal-custom.css) -- per
+## docs/design/journal/journal-permalink.html.
 <!-- _day -->
+#if($model.permalink)
+    #foreach($entry in $entries)
+    <article class="qj-reading">
+        <p class="qj-crumb"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a> &middot; $utils.escapeHTML($entry.category.name)</p>
+        <h1 class="qj-h1">$utils.escapeHTML($entry.title)</h1>
+        <p class="qj-byline">
+            <span>By $utils.escapeHTML($entry.creator.screenName)</span>
+            <span class="d">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</span>
+        </p>
+        <div class="qj-prose">$entry.displayContent</div>
+    </article>
+    #end
+#else
 #foreach($entry in $entries)
 <article class="qj-entry">
     <p class="qj-date">$utils.formatDate($entry.pubTime, "MMM dd")<br>$utils.formatDate($entry.pubTime, "yyyy")</p>
@@ -18,4 +33,5 @@
         <p class="qj-meta">In <b>$utils.escapeHTML($entry.category.name)</b> &middot; $entry.commentCount comments</p>
     </div>
 </article>
+#end
 #end

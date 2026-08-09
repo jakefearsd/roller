@@ -35,13 +35,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Renders the journal theme's home page through the real PageServlet: a
- * reading-first entry list with date marginalia (the qj-date cell), serif
- * titles, and the same head-chain contract every other bundled theme carries.
+ * Renders the journal theme's home page and reading view through the real
+ * PageServlet/SearchServlet: a reading-first entry list with date marginalia
+ * (the qj-date cell), serif titles, and the same head-chain contract every
+ * other bundled theme carries.
  *
- * <p>Task 1 skeleton only -- the permalink action still points at weblog.vm
- * (see {@code theme.xml}), so this class does not yet assert anything about a
- * dedicated reading view; that lands in Task 2.
+ * <p>Task 2 adds the dedicated permalink reading view (permalink.vm, the
+ * qj-h1/qj-byline/qj-prose treatment per docs/design/journal/journal-permalink.html)
+ * and the search results page (searchresults.vm) -- both now declared in
+ * theme.xml instead of falling back to weblog.vm / the default template.
  */
 class JournalThemeRenderingTest {
 
@@ -189,5 +191,85 @@ class JournalThemeRenderingTest {
                 "the nav block must be present:\n" + body);
         assertFalse(body.contains("#showPageLinks"),
                 "a Velocity error resolving the macro would leak the raw directive:\n" + body);
+    }
+
+    // ------------------------------------------------------------- permalink
+
+    @Test
+    void thePermalinkRendersTheReadingView() throws Exception {
+        entryWithSummary("field-notes-from-the-coast",
+                "Three mornings of fog, one of clear light.");
+
+        String body = render("/" + HANDLE + "/entry/field-notes-from-the-coast");
+
+        assertJournalHead(body);
+        assertTrue(body.contains(CSP_JOURNAL),
+                "the permalink template must carry the same CSP as every other "
+                        + "journal template:\n" + body);
+        assertTrue(body.contains("class=\"qj-crumb\""),
+                "the weblog/category crumb must be present:\n" + body);
+        assertTrue(body.contains("<h1 class=\"qj-h1\">"),
+                "the entry title must render as the serif qj-h1:\n" + body);
+        assertTrue(body.contains("class=\"qj-byline\""),
+                "the byline (author + mono date) must be present:\n" + body);
+        assertTrue(body.contains("class=\"qj-prose\""),
+                "the entry content must render inside the qj-prose reading column:\n" + body);
+        assertTrue(body.contains("field-notes-from-the-coast"),
+                "the entry's own body content must render:\n" + body);
+        assertFalse(body.contains("class=\"qj-entry\""),
+                "the permalink must not fall back to the entry-list row markup:\n" + body);
+    }
+
+    @Test
+    void thePermalinkShowsTheCommentAreaAndSignInPromptWhenAnonymous() throws Exception {
+        entryWithSummary("harbor-cottage-guide",
+                "Everything guests ask in the first hour.");
+
+        String body = render("/" + HANDLE + "/entry/harbor-cottage-guide");
+
+        assertJournalHead(body);
+        assertTrue(body.contains("class=\"qj-comments\""),
+                "the comment area must render below the entry:\n" + body);
+        // requireAuthenticatedComments defaults to true (see Weblog) and this
+        // request is anonymous, so the sign-in prompt -- not a postable form --
+        // must show (CommentServlet would refuse the post anyway).
+        assertTrue(body.contains("Please sign in to leave a comment on this blog."),
+                "an anonymous reader on an authenticated-only weblog must see the "
+                        + "sign-in prompt:\n" + body);
+        assertTrue(body.contains("/roller-ui/login-redirect.rol"),
+                "the sign-in prompt must link to the login page:\n" + body);
+        assertFalse(body.contains("name=\"commentForm\""),
+                "no postable comment form for a signed-out reader here:\n" + body);
+    }
+
+    // ---------------------------------------------------------------- search
+
+    @Test
+    void theSearchPageRendersThroughTheJournalTheme() throws Exception {
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/search", "/" + HANDLE);
+        request.setParameter("q", "zzznope");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.searchServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+
+        // Not assertJournalHead here: search pages get no rel=canonical (see
+        // #showSeoHead's own comment -- there is no one canonical URL for a
+        // query), so the shared head assertion (which requires it) does not
+        // apply to this template.
+        assertTrue(body.contains(CSP_JOURNAL),
+                "the search results head must carry the same CSP as every "
+                        + "other journal template:\n" + body);
+        assertTrue(body.contains(".jgrid { display: flex;"),
+                "#showGalleryGridStyles must be in the head:\n" + body);
+        assertTrue(body.contains("journal-custom.css"),
+                "the head must link the theme stylesheet:\n" + body);
+        assertTrue(body.contains("id=\"searchAgain\""),
+                "the search-again form must render:\n" + body);
+        assertTrue(body.contains("class=\"qj-search-head\""),
+                "the search head wrapper must be present:\n" + body);
+        assertFalse(body.contains("$utils."), body);
     }
 }
