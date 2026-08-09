@@ -67,6 +67,11 @@
      duplicate control is a submit button with its own formaction rather than
      a form of its own: a form nested inside another is not valid HTML and
      browsers drop the inner one. --%>
+<%-- entries-list-marker wraps the list region in BOTH states (table or
+     empty-state invitation): the browser ITs identify this page by
+     "#entries-list-marker, table.rollertable", and gating the table on
+     emptiness left an empty weblog's Entries page with neither match. --%>
+<div id="entries-list-marker">
 <form id="entriesBulkForm" method="post"
       action="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkPublish.rol">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
@@ -256,6 +261,7 @@
         </a>
     </div>
 </c:if>
+</div>
 
 
 <div id="delete-entry-modal" class="modal fade delete-entry-modal" tabindex="-1" role="dialog">
