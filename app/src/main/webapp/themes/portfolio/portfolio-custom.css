@@ -163,7 +163,7 @@ body.pf a:hover {
     aspect-ratio: var(--ar);
     border: 1px solid var(--pf-line);
     background:
-        linear-gradient(135deg, color-mix(in srgb, var(--pf-accent) 30%, transparent), transparent 70%),
+        linear-gradient(135deg, color-mix(in srgb, var(--pf-accent) 35%, transparent), transparent 70%),
         var(--pf-bg);
 }
 

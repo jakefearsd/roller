@@ -253,10 +253,21 @@ label,
 }
 
 .form-control.is-invalid,
-.form-select.is-invalid,
 .is-invalid {
     border-color: var(--bad);
     background-image: none;
+}
+
+/* Bootstrap composites background-image from two layers:
+   var(--bs-form-select-bg-img) (the caret) and var(--bs-form-select-bg-icon)
+   (a warning icon, set only on .is-invalid). Blanking background-image here
+   -- as .form-control.is-invalid does above -- would erase the caret too,
+   the same bug just fixed globally for plain selects. Suppressing only the
+   icon variable keeps the caret while still killing the icon, matching this
+   design's quiet style. */
+.form-select.is-invalid {
+    border-color: var(--bad);
+    --bs-form-select-bg-icon: none;
 }
 
 .form-control.is-invalid:focus,

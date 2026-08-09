@@ -278,7 +278,11 @@ class TravelThemeRenderingTest {
         assertTrue(body.contains("<div class=\"tg-entry-content\">"),
                 "the page content must open the measured column:\n" + body);
         assertTrue(body.contains("audience-hp"),
-                "the audience assets (contact form script/style) must be in the head:\n" + body);
+                "showAudienceAssets must run in the head, whatever the page contains -- "
+                        + "this alone does not prove the [contact] shortcode rendered:\n" + body);
+        assertTrue(body.contains("contact-form-slot"),
+                "the [contact] shortcode must have expanded to its placeholder div in the "
+                        + "rendered body -- this is what actually proves the form renders:\n" + body);
         assertFalse(body.contains("<h1>About This Guide</h1>"),
                 "the naked fallback template's unstyled h1 must not be what renders:\n" + body);
     }

@@ -16,15 +16,7 @@
   directory of this distribution.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
-<%@ page import="org.apache.roller.weblogger.ui.core.util.menu.Menu" %>
-
-<%-- Extract the menu from the request. The model attribute "menu" may collide
-     with other attributes during request dispatching, so we safely cast it. --%>
-<%
-    Object menuObj = request.getAttribute("menu");
-    Menu navMenu = (menuObj instanceof Menu) ? (Menu) menuObj : null;
-    request.setAttribute("navMenu", navMenu);
-%>
+<%@ include file="/WEB-INF/jsps/tiles/menu-model.jsp" %>
 <!DOCTYPE html>
 <html>
 <head>

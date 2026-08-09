@@ -45,14 +45,22 @@
 <%-- ============================================================= --%>
 <%-- Entry table--%>
 
+<%-- Legend, table and bulk-action bar are all gated on there being entries
+     to show -- an empty weblog must never render a bare table strip above
+     the empty-state invitation below. The <form> itself stays unconditional
+     (unchanged id/name) because the bulk-delete confirmation modal further
+     down references #entriesBulkForm via form="..."; only its contents are
+     conditional. --%>
+<c:if test="${not empty pager.items}">
 <p style="text-align: center">
-    <span class="draftEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span> 
+    <span class="draftEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
     <spring:message code="weblogEntryQuery.draft"/>&nbsp;&nbsp;
     <span class="pendingEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
     <spring:message code="weblogEntryQuery.pending"/>&nbsp;&nbsp;
     <span class="scheduledEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
     <spring:message code="weblogEntryQuery.scheduled"/>&nbsp;&nbsp;
 </p>
+</c:if>
 
 <%-- One form around the whole table. The row checkboxes, the duplicate
      button and the bulk action bar all post through it, which is why the
@@ -64,6 +72,7 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 <sec:csrfInput/>
 
+<c:if test="${not empty pager.items}">
 <table class="rollertable table table-striped" width="100%">
 
 <tr>
@@ -180,6 +189,7 @@
 </c:forEach>
 
 </table>
+</c:if>
 
 <%-- Bulk action bar. Each button carries its own formaction, so the server
      endpoint is chosen by which button was pressed rather than by JavaScript
