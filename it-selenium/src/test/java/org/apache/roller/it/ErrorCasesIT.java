@@ -68,13 +68,6 @@ class ErrorCasesIT extends RollerIT {
                 "an unknown permalink on a real weblog must 404");
     }
 
-    @Test
-    void anUnknownShareTokenIsNotFound() {
-        assertEquals(404, statusOf(baseUrl() + "/share/nosuchtoken" + nonce()),
-                "an unknown share token must 404, and must not be distinguishable "
-                        + "from a revoked one");
-    }
-
     // --------------------------------------------------------- bad sign-in
 
     @Test

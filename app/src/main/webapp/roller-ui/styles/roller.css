@@ -671,7 +671,9 @@ table.mm_table_actions td {
     content: "";
     display: inline-block;
     float: right;
-    margin-top: 6px;
+    /* Vertically centred against the caps-label line the header now is --
+       the old fixed 6px offset was tuned for the un-styled h4 line box. */
+    margin-top: 4px;
     border-top: 5px solid grey;
     border-right: 5px solid transparent;
     border-left: 5px solid transparent;
