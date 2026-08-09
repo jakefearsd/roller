@@ -361,13 +361,6 @@ public final class Routes {
                     "Needs selectedImage(s) holding MediaFile ids; no media files are seeded."),
             new SkippedRoute("/roller-ui/authoring/mediaFileEdit.rol", Role.EDITOR,
                     "Needs mediaFileId; no media files are seeded."),
-            new SkippedRoute("/roller-ui/authoring/mediaFileView!fetchDirectoryContentLight.rol",
-                    Role.EDITOR,
-                    "Fixed (the controller returned an absolute view path that the "
-                            + "InternalResourceViewResolver double-prefixed), but it renders "
-                            + "MediaFileViewLight.jsp, a bare AJAX fragment with no chrome and "
-                            + "no id or class to anchor a marker on. Exercised indirectly "
-                            + "whenever mediaFileView.rol loads it."),
             new SkippedRoute("/roller-ui/authoring/mediaFileImageDim.rol", Role.EDITOR,
                     "Needs mediaFileId; no media files are seeded."),
             new SkippedRoute("/roller-ui/authoring/overlay/mediaFileImageChooser.rol", Role.EDITOR,
@@ -453,7 +446,10 @@ public final class Routes {
             // views and returned unresolvable or empty pages. They have been
             // removed, so there is no route left to test. The sixth,
             // mediaFileView!fetchDirectoryContentLight, had a double-prefixed view
-            // path and is now fixed -- see SKIPPED for why it is not swept.
+            // path; rather than fix the prefixing, the handler and its
+            // MediaFileViewLight.jsp fragment were deleted outright as dead code
+            // (no caller ever requested that route), so it too is gone rather
+            // than swept.
             //
             // Add an entry here when a route is found broken and cannot be fixed
             // immediately: RouteSweepIT asserts these are STILL broken, so the

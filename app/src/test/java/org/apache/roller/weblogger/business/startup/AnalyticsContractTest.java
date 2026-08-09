@@ -31,10 +31,11 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -55,26 +56,27 @@ public class AnalyticsContractTest {
 
     @Test
     public void grafanaRoCanReadTheContractViewsAndNothingElse() throws Exception {
-        try (Connection con = freshDatabase("grafana_privileges")) {
+        String dbName = "analyticscontracttest_grafana_privileges";
+        try (Connection con = freshDatabase(dbName)) {
             assertTrue(canSelect(con, "analytics_events"),
                     "grafana_ro must be able to SELECT analytics_events");
             assertTrue(canSelect(con, "analytics_weblog_sites"),
                     "grafana_ro must be able to SELECT analytics_weblog_sites");
 
-            assertFalse(canSelect(con, "roller_event"),
-                    "grafana_ro must NOT be able to SELECT the underlying roller_event table");
-            assertFalse(canSelect(con, "weblog"),
-                    "grafana_ro must NOT be able to SELECT the underlying weblog table");
-            assertFalse(canSelect(con, "roller_form_submission"),
-                    "grafana_ro must NOT be able to SELECT roller_form_submission");
-            assertFalse(canSelect(con, "roller_user_token"),
-                    "grafana_ro must NOT be able to SELECT roller_user_token");
+            assertEquals(Set.of("analytics_events", "analytics_weblog_sites"),
+                    grantedTableNames(con, "grafana_ro"),
+                    "grafana_ro must hold a privilege on exactly the two contract views and "
+                            + "nothing else -- not roller_event, weblog, roller_form_submission, "
+                            + "roller_user_token, or anything else in the schema");
+        } finally {
+            dropDatabase(dbName);
         }
     }
 
     @Test
     public void analyticsEventsRollsUpByHandleTypeAndDay() throws Exception {
-        try (Connection con = freshDatabase("events_rollup")) {
+        String dbName = "analyticscontracttest_events_rollup";
+        try (Connection con = freshDatabase(dbName)) {
             String weblogId = UUID.randomUUID().toString();
             String handle = "handle-" + UUID.randomUUID().toString().substring(0, 8);
             insertWeblog(con, weblogId, handle);
@@ -91,6 +93,8 @@ public class AnalyticsContractTest {
                     "today's rollup should count the two same-day events");
             assertEquals(1, eventCount(con, handle, "FORM_SUBMITTED", yesterday),
                     "yesterday's rollup should count only the one event on that day");
+        } finally {
+            dropDatabase(dbName);
         }
     }
 
@@ -103,6 +107,27 @@ public class AnalyticsContractTest {
                 return rs.getBoolean(1);
             }
         }
+    }
+
+    /**
+     * The complete set of tables/views {@code grantee} holds ANY privilege on,
+     * read from {@code information_schema.role_table_grants} rather than
+     * probing a handful of named tables -- so a future grant this test's
+     * author never thought to name still fails it.
+     */
+    private Set<String> grantedTableNames(Connection con, String grantee) throws Exception {
+        Set<String> names = new HashSet<>();
+        try (var ps = con.prepareStatement(
+                "SELECT DISTINCT table_name FROM information_schema.role_table_grants "
+                        + "WHERE grantee = ? AND table_schema = 'public'")) {
+            ps.setString(1, grantee);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    names.add(rs.getString(1));
+                }
+            }
+        }
+        return names;
     }
 
     private void insertWeblog(Connection con, String id, String handle) throws Exception {
@@ -149,9 +174,8 @@ public class AnalyticsContractTest {
         }
     }
 
-    /** Applies the full chain to a brand-new database and returns a connection to it. */
-    private Connection freshDatabase(String suffix) throws Exception {
-        String dbName = "analyticscontracttest_" + suffix;
+    /** Applies the full chain to a brand-new database (dropping any leftover of the same name first) and returns a connection to it. */
+    private Connection freshDatabase(String dbName) throws Exception {
         try (Connection admin = adminConnection();
              Statement st = admin.createStatement()) {
             st.execute("DROP DATABASE IF EXISTS " + dbName);
@@ -168,6 +192,14 @@ public class AnalyticsContractTest {
             }
         }
         return con;
+    }
+
+    /** Drops the scratch database. Callers must close their connection to it first. */
+    private void dropDatabase(String dbName) throws Exception {
+        try (Connection admin = adminConnection();
+             Statement st = admin.createStatement()) {
+            st.execute("DROP DATABASE IF EXISTS " + dbName);
+        }
     }
 
     private String readMigration(Path migration) throws Exception {

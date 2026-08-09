@@ -132,17 +132,6 @@ public class MediaFileViewController extends MediaFileBase {
         return ".MediaFileView";
     }
 
-    @GetMapping("/mediaFileView!fetchDirectoryContentLight.rol")
-    public String fetchDirectoryContentLight(HttpServletRequest request, Model model,
-                                             @RequestParam(value = "directoryId", required = false) String directoryId,
-                                             @RequestParam(value = "directoryName", required = false) String directoryName,
-                                             @RequestParam(value = "sortBy", required = false) String sortBy) {
-        populateCommonModel(request, model);
-        model.addAttribute("allDirectories", refreshAllDirectories(request));
-        loadDirectory(request, model, directoryId, directoryName, sortBy);
-        return "editor/MediaFileViewLight";
-    }
-
     @PostMapping("/mediaFileView!deleteSelected.rol")
     public String deleteSelected(HttpServletRequest request, Model model,
                                  @RequestParam(value = "directoryId", required = false) String directoryId,

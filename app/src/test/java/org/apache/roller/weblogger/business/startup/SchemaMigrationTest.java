@@ -111,7 +111,8 @@ public class SchemaMigrationTest {
 
     @Test
     public void chainBuildsTheSchemaTheOrmExpects() throws Exception {
-        try (Connection con = freshDatabase("schema_shape")) {
+        String dbName = "migrationtest_schema_shape";
+        try (Connection con = freshDatabase(dbName)) {
             List<String> tables = tableNames(con);
 
             for (String expected : EXPECTED_TABLES) {
@@ -127,6 +128,8 @@ public class SchemaMigrationTest {
                         "Table '" + removed + "' belongs to a feature removed in 6.2.0 and "
                                 + "must not be in the baseline schema");
             }
+        } finally {
+            dropDatabase(dbName);
         }
     }
 
@@ -136,7 +139,8 @@ public class SchemaMigrationTest {
      */
     @Test
     public void everyMigrationIsIdempotent() throws Exception {
-        try (Connection con = freshDatabase("idempotency")) {
+        String dbName = "migrationtest_idempotency";
+        try (Connection con = freshDatabase(dbName)) {
             List<String> before = tableNames(con);
 
             for (Path migration : MigrationFiles.all()) {
@@ -152,12 +156,13 @@ public class SchemaMigrationTest {
 
             assertEquals(before, tableNames(con),
                     "Re-applying the migration chain changed the set of tables");
+        } finally {
+            dropDatabase(dbName);
         }
     }
 
-    /** Applies the full chain to a brand-new database and returns a connection to it. */
-    private Connection freshDatabase(String suffix) throws Exception {
-        String dbName = "migrationtest_" + suffix;
+    /** Applies the full chain to a brand-new database (dropping any leftover of the same name first) and returns a connection to it. */
+    private Connection freshDatabase(String dbName) throws Exception {
         try (Connection admin = adminConnection();
              Statement st = admin.createStatement()) {
             st.execute("DROP DATABASE IF EXISTS " + dbName);
@@ -174,6 +179,14 @@ public class SchemaMigrationTest {
             }
         }
         return con;
+    }
+
+    /** Drops the scratch database. Callers must close their connection to it first. */
+    private void dropDatabase(String dbName) throws Exception {
+        try (Connection admin = adminConnection();
+             Statement st = admin.createStatement()) {
+            st.execute("DROP DATABASE IF EXISTS " + dbName);
+        }
     }
 
     private String readMigration(Path migration) throws Exception {
