@@ -25,6 +25,7 @@ import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -117,6 +118,18 @@ class PortfolioThemeRenderingTest {
         mgr.saveWeblogEntry(managed);
         TestUtils.endSession(true);
         return entry;
+    }
+
+    private void savePage(String slug, String title, String content) throws Exception {
+        WeblogPage page = new WeblogPage();
+        page.setWeblog(TestUtils.getManagedWebsite(weblog));
+        page.setSlug(slug);
+        page.setTitle(title);
+        page.setContent(content);
+        page.setStatus(WeblogPage.PubStatus.PUBLISHED);
+        WebloggerFactory.getWeblogger().getWeblogPageManager().savePage(page);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
     }
 
     /** The shared head contract plus the no-Velocity-leak assertions. */
@@ -240,6 +253,28 @@ class PortfolioThemeRenderingTest {
         assertTrue(body.contains("blah blah entry"), body);
     }
 
+    // ------------------------------------------------------------------ page
+
+    @Test
+    void aPageRendersThroughThePortfolioThemeInsteadOfTheFallback() throws Exception {
+        savePage("about", "About This Work", "Some prose about the work. [contact]");
+
+        String body = render("/" + HANDLE + "/about");
+
+        assertPortfolioHead(body);
+        assertTrue(body.contains("class=\"pf-header\""),
+                "the page must wear the portfolio header chrome:\n" + body);
+        assertTrue(body.contains("<h1 class=\"pf-entry-title\">About This Work</h1>"),
+                "the page title must render as the entry title, the same class "
+                        + "the permalink uses:\n" + body);
+        assertTrue(body.contains("class=\"pf-entry-content\">"),
+                "the page content must render inside the entry-content column:\n" + body);
+        assertTrue(body.contains("audience-hp"),
+                "the audience assets (contact form script/style) must be in the head:\n" + body);
+        assertFalse(body.contains("<h1>About This Work</h1>"),
+                "the naked fallback template's unstyled h1 must not be what renders:\n" + body);
+    }
+
     // ------------------------------------------------------------ stylesheet
 
     /**
@@ -258,6 +293,26 @@ class PortfolioThemeRenderingTest {
         assertTrue(body.contains("#searchAgain input.text"),
                 "id selectors must pass through Velocity untouched:\n" + body);
         assertFalse(body.contains("ParseErrorException"), body);
+    }
+
+    /**
+     * The no-image entry card ({@code .pf-card-text}, see
+     * {@code anEntryWithoutAFeaturedImageBecomesAQuietTextCard} above) trades
+     * its former flat empty box for a teal wash off the theme's new accent
+     * token -- CSS only, the pinned {@code figure.pf-card.pf-card-text} /
+     * {@code span.pf-card-title} markup does not change.
+     */
+    @Test
+    void theNoImageCardGetsATealWashFromTheNewAccentToken() throws Exception {
+        String body = render("/" + HANDLE + "/page/portfolio-custom.css");
+
+        assertTrue(body.contains("--pf-accent: #4FB3AA;"),
+                "the theme must declare its new accent token:\n" + body);
+        int cardTextRule = body.indexOf(".pf-card-text {");
+        assertTrue(cardTextRule >= 0, "expected a .pf-card-text rule:\n" + body);
+        String rule = body.substring(cardTextRule, body.indexOf('}', cardTextRule));
+        assertTrue(rule.contains("linear-gradient") && rule.contains("var(--pf-accent)"),
+                "the no-image card must wash with the accent token, not sit flat:\n" + rule);
     }
 
     // ---------------------------------------------------------------- search

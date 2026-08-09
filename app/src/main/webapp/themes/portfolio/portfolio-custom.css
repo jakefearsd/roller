@@ -12,6 +12,7 @@ gallery shortcode's .jgrid.
     --pf-fg: #e8e8e6;
     --pf-muted: #8f8f96;
     --pf-line: #26262a;
+    --pf-accent: #4FB3AA;
     --pf-gap: 4px;
     --pf-row-h: 320px;
     --pf-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -161,15 +162,17 @@ body.pf a:hover {
 .pf-card-text {
     aspect-ratio: var(--ar);
     border: 1px solid var(--pf-line);
-    background: var(--pf-bg);
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--pf-accent) 30%, transparent), transparent 70%),
+        var(--pf-bg);
 }
 
 .pf-card-text .pf-card-link {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-end;
+    justify-content: flex-start;
     height: 100%;
-    padding: 1rem;
+    padding: 1.25rem;
 }
 
 .pf-card-text .pf-card-title {
@@ -177,8 +180,12 @@ body.pf a:hover {
     background: none;
     opacity: 1;
     padding: 0;
-    text-align: center;
-    color: var(--pf-muted);
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--pf-fg);
 }
 
 .pf-card-text:hover .pf-card-title {
@@ -385,6 +392,100 @@ body.pf a:hover {
 }
 
 .pf-comments .status {
+    color: var(--pf-muted);
+}
+
+/* contact form & newsletter subscribe -------------------
+ * #showAudienceAssets/#showSubscribeForm inject these forms unscoped
+ * (form.className = 'contact-form' / 'newsletter-subscribe'); the body.pf
+ * prefix here outranks that head-level style block by specificity so the
+ * theme's own dark card treatment wins without touching the shared macro. */
+
+body.pf .contact-form,
+body.pf .newsletter-subscribe {
+    max-width: 46rem;
+    margin: 1.5rem auto 0;
+    padding: 1.375rem;
+    background: var(--pf-surface);
+    border: 1px solid var(--pf-line);
+    border-radius: 4px;
+}
+
+body.pf .contact-form label,
+body.pf .newsletter-subscribe label {
+    display: block;
+    margin-top: 0.875rem;
+    color: var(--pf-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+body.pf .contact-form label:first-child,
+body.pf .newsletter-subscribe label:first-child {
+    margin-top: 0;
+}
+
+body.pf .contact-form input,
+body.pf .contact-form textarea,
+body.pf .newsletter-subscribe input[type=email] {
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin-top: 0.375rem;
+    padding: 0.5rem 0.65rem;
+    box-sizing: border-box;
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--pf-fg);
+    background: var(--pf-bg);
+    border: 1px solid var(--pf-line);
+    border-radius: 2px;
+}
+
+body.pf .contact-form input:focus,
+body.pf .contact-form textarea:focus,
+body.pf .newsletter-subscribe input[type=email]:focus {
+    outline: 2px solid var(--pf-accent);
+    outline-offset: 1px;
+    border-color: var(--pf-accent);
+}
+
+body.pf .contact-form textarea {
+    min-height: 8em;
+    resize: vertical;
+}
+
+body.pf .contact-form .audience-hp,
+body.pf .newsletter-subscribe .audience-hp {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+}
+
+body.pf .contact-form button,
+body.pf .newsletter-subscribe button {
+    margin-top: 1rem;
+    padding: 0.55rem 1.35rem;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    color: var(--pf-bg);
+    background: var(--pf-accent);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+body.pf .contact-form button:hover,
+body.pf .newsletter-subscribe button:hover {
+    background: color-mix(in srgb, var(--pf-accent) 85%, white);
+}
+
+body.pf .audience-message {
+    margin-top: 0.75rem;
     color: var(--pf-muted);
 }
 

@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
+    <title>#showPageTitle($model.page) : $utils.escapeHTML($model.weblog.name)</title>
+    #showAutodiscoveryLinks($model.weblog)
+    #showAnalyticsTrackingCode($model.weblog)
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    #showSeoHead()
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+    #showEmbedAssets()
+    #showAudienceAssets()
+    #showMapAssets()
+</head>
+<!-- page -->
+<body class="pf">
+
+<header class="pf-header">
+    <p class="pf-name"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
+    #if($utils.isNotEmpty($model.weblog.tagline))
+    <p class="pf-tagline">$utils.escapeHTML($model.weblog.tagline)</p>
+    #end
+    <nav class="pf-nav">
+        #showWeblogCategoryLinksList()
+        <ul class="rCategory">
+        #showPageLinks($model.weblog)
+        </ul>
+    </nav>
+</header>
+
+<main class="pf-main pf-main-entry">
+    <article class="pf-entry">
+        <div class="pf-entry-body">
+            <h1 class="pf-entry-title">$utils.escapeHTML($model.page.title)</h1>
+            <div class="pf-entry-content">$model.page.renderedContent</div>
+        </div>
+    </article>
+</main>
+
+<footer class="pf-footer">
+    <form class="pf-search" method="get" action="$url.search">
+        <input type="search" name="q" placeholder="Search" aria-label="Search">
+    </form>
+    #showSubscribeForm($model.weblog "New work, by email")
+</footer>
+
+</body>
+</html>
