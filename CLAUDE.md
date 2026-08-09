@@ -630,6 +630,94 @@ CAPTCHA anywhere; no CSP change anywhere — every endpoint is same-origin.
   `newsletter.sentButNotRecorded` message rather than the generic error, so
   an editor isn't invited to click Send again and double-mail the list.
 
+## Analytics
+Per-weblog Umami tracking plus a read-only Grafana contract over two
+databases (Stage 2 Wave C). Umami owns traffic; Roller owns first-party
+outcomes; nothing is emitted that an admin typed.
+
+- **Structured injection vs `weblogAdminsUntrusted`, and why.** `Weblog
+  .analyticsSiteId` is a validated UUID (`WeblogConfigController.myValidate`
+  rejects anything else), not markup. `#showAnalyticsTrackingCode`
+  (`weblog.vm`) checks it first and, when present, **builds** the
+  `<script defer src="…" data-website-id="…" data-host-url="…">` tag itself
+  from that UUID plus two startup properties
+  (`ConfigModel.getAnalyticsBasePath()`/`getAnalyticsScriptName()`, backed by
+  `analytics.umami.basePath`/`analytics.umami.scriptName` in
+  `roller.properties`) — no admin-typed text ever reaches the page head.
+  That is what lets per-weblog analytics exist at all in this fork: the
+  legacy free-text `analyticsCode` textarea it sits beside only renders when
+  *Allow analytics code override* is on **and** `weblogAdminsUntrusted` is
+  off, and this fork keeps `weblogAdminsUntrusted` on everywhere (see
+  Permutation coverage above) — that textarea has never actually been
+  reachable, and the structured field is what a weblog owner uses instead.
+  The legacy branches remain in the macro (config-default fallback included)
+  but are dead weight for any weblog on this fork's default settings.
+- **Same-origin, so the pinned CSPs never moved.** The tracker is served
+  from the blog's own origin through Caddy's `/analytics/*` handle
+  (`docker_deployment.md`), which is why it runs under every bundled theme's
+  `script-src 'self'` / `connect-src 'self'` without a single CSP edit this
+  wave — `ThemeCspCoverageTest.everyPolicyStillAllowsSameOriginScriptsAndBeacons`
+  is what would fail if that stopped being true.
+- **The Grafana contract splits across two databases, because Postgres
+  cannot query across them.** `rollerdb` and Umami's database share one
+  Postgres instance but not a connection. `analytics_events` (first-party
+  outcomes from `roller_event` — form submissions, subscriptions,
+  publishes) and `analytics_weblog_sites` (the weblog-handle ↔ Umami-website-
+  id join key) live in `rollerdb`, shipped by
+  `bin/db/migrations/V017__analytics_contract.sql`. `analytics_traffic`
+  (Umami's `website_event` rolled up to sessions/views by path and day)
+  lives in Umami's own database, shipped by `deploy/analytics/umami-views.sql`
+  and applied by `deploy/deploy.sh` — it cannot live in the migration chain,
+  which only ever touches `rollerdb`. Grafana is the thing that joins the
+  two halves (two datasources, a panel-level join on `website_id`); no
+  server-side query ever spans both. `page_slug`/`entry_anchor` on
+  `analytics_events`' `FORM_SUBMITTED` rows are copied from the contact
+  form's reader-controlled `source` field — untrusted display text, not
+  metadata — and `ENTRY_PUBLISHED` counts publish *events*, so an
+  unpublish/republish cycle double-counts (same mechanism as the Audience
+  section's `roller_event` note).
+- **`SQLScriptRunner` is now dollar-quote-aware.** `V017`'s cluster-global
+  `CREATE ROLE grafana_ro` needs a `DO $$ … EXCEPTION WHEN duplicate_object
+  … END $$;` guard to survive re-application, but the install wizard's
+  `SQLScriptRunner` — the third of the three migration appliers, alongside
+  `migrate.sh` and the test harness — used to split SQL on bare semicolons
+  with no awareness that one could be inside a dollar-quoted block, which
+  would have silently corrupted that guard into broken fragments. The
+  splitter now tracks dollar-quote state (`\$[A-Za-z0-9_]*\$` delimiters,
+  any tag including the empty `$$`) and suspends both semicolon-splitting
+  and `--`-comment-stripping while inside one.
+  `SqlScriptRunnerMigrationTest` is what makes this real rather than
+  theoretical: it runs the *actual* migration chain through
+  `SQLScriptRunner`, the same applier `DatabaseInstaller` uses, not a
+  synthetic fixture. One edge case is deliberately still a hazard, not a
+  bug: a closing delimiter and a trailing `--` comment on the **same physical
+  line** (e.g. `END $$; -- done`) isn't stripped, because the stripper only
+  ever looks at the dollar-quote state *incoming* to that line — the comment
+  becomes part of the accumulated (single-line-joined) command text and
+  silently swallows whatever statement follows. Keep dollar-quote delimiters
+  and any trailing comment off the same line as a terminating `;`.
+- **The hitcount subsystem is gone; Umami replaced it.** Deleted whole:
+  `HitCountQueue`, `HitCountProcessingJob`, `ResetHitCountsTask`,
+  `ContinuousWorkerThread`/`WorkerThread` (orphaned once the queue went),
+  `WeblogHitCount` (pojo + `.orm.xml`), the `roller_hitcounts` table (`V017`),
+  `WeblogEntryManager`'s eight hitcount methods (`getHitCount`,
+  `getHitCountByWeblog`, `getHotWeblogs`, `saveHitCount`, `removeHitCount`,
+  `incrementHitCount`, `resetAllHitCounts`, `resetHitCount`),
+  `Weblog.getTodaysHits()`/`WeblogWrapper`'s delegate, the Maintenance
+  page's reset button, and the frontpage theme's "Hot blogs" sidebar.
+  `WeblogPageRequest.isWebsitePageHit()`/`isOtherPageHit()` **survive** —
+  they classify a request URL (website-root hit vs. some other page), which
+  `PageServlet` still uses; only the *counting* that used to gate on them is
+  gone, marked with a one-line comment at the old call sites.
+- **`grafana_ro` ships `NOLOGIN`.** `V017` creates it with no password (a
+  migration cannot carry a secret) and grants `SELECT` on exactly the
+  contract views, never the underlying tables. An operator enables it with
+  `ALTER ROLE grafana_ro LOGIN PASSWORD '...'` over `docker compose exec
+  postgres psql` (`docker_deployment.md`); `deploy.sh` grants it `CONNECT`
+  on both databases so one password works for both Grafana datasources.
+  Postgres keeps no published host port in any compose file — access is
+  tunnel-only, same as every other direct-DB debugging path in this repo.
+
 ## Plugin System
 Roller supports plugins for:
 - **Entry Plugins**: Content processing and formatting

@@ -305,31 +305,102 @@ dashboard, so this costs nothing.
 
 ### Pointing a weblog at it
 
-Analytics are per-weblog, using the field Roller already has. As a site
-administrator, first enable the override once
-(*Server Administration → Configuration → Allow analytics code override*),
-then for each weblog paste this into
-*Settings → Weblog Settings → Analytics tracking code*, substituting your own
-domain and the website ID from step 4:
+Analytics are per-weblog and opt-in, through a field dedicated to it —
+**not** the free-text "Analytics tracking code" textarea that has always
+lived on the same Settings page. That textarea only renders when *Server
+Administration → Configuration → Allow analytics code override* is on **and**
+`weblogAdminsUntrusted` is off — and this fork keeps `weblogAdminsUntrusted`
+on everywhere (see `CLAUDE.md`), so the textarea has never actually been
+reachable. If an earlier revision of this document told you to paste a
+`<script>` snippet into it, that procedure never worked; disregard it.
 
-```html
-<script defer
-        src="https://your-blog.example.com/analytics/script.js"
-        data-website-id="00000000-0000-0000-0000-000000000000"
-        data-host-url="https://your-blog.example.com/analytics"></script>
+The real steps, once [Turning it on](#turning-it-on) above has a website
+registered in Umami:
+
+1. In Umami, open the website and copy its **Website ID** — the bare UUID
+   Umami shows under the website's settings, not the `<script>` snippet
+   Umami also offers on the same screen (that snippet is the impossible
+   textarea path above; ignore it).
+2. In Roller, as the weblog's owner or a site admin: *Settings → Weblog
+   Settings → Analytics website ID*, paste the UUID, save. Roller validates
+   it as a UUID and rejects anything else.
+3. Optionally also set *Analytics share URL* to Umami's public share link
+   for the site. This is display-only — a convenience link shown back to the
+   editor on the Settings page — and plays no part in tracking.
+
+`#showAnalyticsTrackingCode` (called from every bundled theme's `<head>`)
+builds the `<script defer src="…" data-website-id="…" data-host-url="…">`
+tag itself from the validated UUID plus two startup properties
+(`analytics.umami.basePath`, default `/analytics`; `analytics.umami.scriptName`,
+default `script.js`, in `roller-production.properties`) — nothing an
+operator or weblog admin types is ever emitted as raw HTML into the page
+head. That is precisely what lets this coexist with `weblogAdminsUntrusted`
+staying on: there is no admin-authored markup anywhere in the path. If you
+set `UMAMI_SCRIPT_NAME` to something other than `script.js` when deploying
+(the cheapest defence against content blockers that match the default
+path), set `analytics.umami.scriptName` to the same value or the tag will
+point at a script Caddy never serves.
+
+Nothing is emitted for a weblog whose Analytics website ID is blank, so this
+stays opt-in per blog and off until an admin sets it.
+
+### The Grafana contract
+
+Roller and Umami both expose their data to Grafana as small, versioned SQL
+**views** — never raw tables, and Grafana is never granted anything beyond
+`SELECT` on those views.
+
+**Two databases, two view halves, and why.** `rollerdb` and Umami's own
+database (`${UMAMI_DB:-umami}`) both live inside the one shared Postgres
+instance, but PostgreSQL has no cross-database queries, so the contract is
+split down that seam — each half lives with the data it reads:
+
+| View | Lives in | Ships via | What it holds |
+| --- | --- | --- | --- |
+| `analytics_events` | `rollerdb` | `bin/db/migrations/V017__analytics_contract.sql` (the migration chain) | First-party outcomes from `roller_event` — form submissions, newsletter subscriptions, entry publishes — grouped by weblog handle, event type, day |
+| `analytics_weblog_sites` | `rollerdb` | same migration | The join key: which Umami website UUID belongs to which weblog handle |
+| `analytics_traffic` | `${UMAMI_DB:-umami}` | `deploy/analytics/umami-views.sql`, applied by `deploy/deploy.sh` (not the migration chain — it can only reach `rollerdb`) | Umami's raw `website_event` rolled up to sessions/views by website, path and day |
+
+Grafana joins the two halves itself: two PostgreSQL datasources (one per
+database, both authenticating as `grafana_ro`), with `analytics_traffic.website_id`
+joined to `analytics_weblog_sites.website_id` using a panel-level join
+transformation (Grafana's "Outer join" / "Join by field" transform) —
+Postgres cannot do this join server-side because it spans two databases.
+
+**`grafana_ro`: created `NOLOGIN`, enabled out of band.** `V017` creates the
+role with `CREATE ROLE grafana_ro NOLOGIN` (guarded by a `DO $$ … EXCEPTION
+WHEN duplicate_object …` block, since roles are cluster-global and the
+migration chain re-applies on every deploy) and grants it `SELECT` on
+exactly the contract views — never the underlying tables, never
+`roller_user`'s privileges. A migration cannot carry a secret, so the role
+ships with no password and cannot log in until you set one:
+
+```bash
+docker compose -f docker-compose.prod.yml exec postgres \
+    psql -U "${POSTGRES_USER:-roller}" -d "${POSTGRES_DB:-rollerdb}" \
+    -c "ALTER ROLE grafana_ro LOGIN PASSWORD 'choose-a-strong-password-here';"
 ```
 
-`data-host-url` is not optional here. Without it the tracker reports to
-wherever its script was loaded from, which works — but stating it explicitly
-means a future change to the script's path cannot silently send your traffic
-somewhere that no longer exists.
+`deploy.sh` already grants `grafana_ro` `CONNECT` on both databases, so the
+one role/password pair you set above works for both Grafana datasources —
+just point one at `rollerdb` and the other at `${UMAMI_DB:-umami}`, same
+credentials.
 
-If you set `UMAMI_SCRIPT_NAME` to something other than `script.js`, use that
-filename in `src`. Renaming it is the cheapest defence against content
-blockers that match on the default path.
+**Access is tunnel-only.** Postgres never gets a published host port in this
+stack (see [Firewall](#firewall) — port 5432 is reachable only on the
+internal Docker network). Point Grafana's datasources at an SSH tunnel or a
+bastion into the host, never at a directly exposed port; do not add a host
+port mapping for `postgres` to make this easier.
 
-Nothing is emitted for a weblog whose analytics field is empty, so this is
-opt-in per blog and off until you paste the snippet.
+**Two labels on `analytics_events` are untrusted display text, not
+metadata.** `page_slug` and `entry_anchor` on `FORM_SUBMITTED` rows are
+copied from the contact form's reader-controlled `source` field — a visitor
+chooses that text, not Roller. Treat them as display strings in any
+dashboard, never as something safe to interpolate elsewhere. Separately,
+`ENTRY_PUBLISHED` counts publish **events**, not distinct published entries:
+unpublishing and republishing an entry records a second event, so a
+"posts published" panel built naively from this view will over-count
+republished entries.
 
 ## Newsletter
 
