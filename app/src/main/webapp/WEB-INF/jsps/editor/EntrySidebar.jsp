@@ -55,7 +55,7 @@
                         </c:url>
                         <span class="bi bi-lock" aria-hidden="true"> </span>
                         <a href="${editUrl}"><str:truncateNicely lower="40">
-                             ${post.title}</str:truncateNicely></a>
+                             ${fn:escapeXml(post.title)}</str:truncateNicely></a>
                     </span><br />
                 </c:forEach>
 
@@ -76,7 +76,7 @@
                         </c:url>
                         <span class="bi bi-pencil-square" aria-hidden="true"> </span>
                         <a href="${editUrl}"><str:truncateNicely lower="40">
-                             ${post.title}</str:truncateNicely></a>
+                             ${fn:escapeXml(post.title)}</str:truncateNicely></a>
                     </span><br />
                 </c:forEach>
                 
@@ -100,7 +100,7 @@
                             </c:url>
                             <span class="bi bi-book" aria-hidden="true"> </span>
                             <a href="${editUrl}"><str:truncateNicely lower="40">
-                                ${post.title}</str:truncateNicely></a>
+                                ${fn:escapeXml(post.title)}</str:truncateNicely></a>
                         </span><br />
                     </c:forEach>
 
@@ -122,7 +122,7 @@
                             </c:url>
                             <span class="bi bi-clock" aria-hidden="true"> </span>
                             <a href="${editUrl}"><str:truncateNicely lower="40">
-                                ${post.title}</str:truncateNicely></a>
+                                ${fn:escapeXml(post.title)}</str:truncateNicely></a>
                         </span><br />
                     </c:forEach>
                     

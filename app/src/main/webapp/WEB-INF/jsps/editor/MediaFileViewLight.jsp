@@ -20,10 +20,10 @@
 "Result":
 [
     <c:forEach items="${childDirectories}" var="directory" varStatus="dirStatus">
-{"label":"${directory.name}","key":"${directory.id}","type":"dir"}<c:if test="${(!dirStatus.last) || (dirStatus.last && fn:length(childFiles) > 0)}">,</c:if>
+{"label":"${fn:escapeXml(directory.name)}","key":"${directory.id}","type":"dir"}<c:if test="${(!dirStatus.last) || (dirStatus.last && fn:length(childFiles) > 0)}">,</c:if>
     </c:forEach>
     <c:forEach items="${childFiles}" var="mediaFile" varStatus="fileStatus">
-{"label":"${mediaFile.name}","key":"${mediaFile.id}","type":"file"}<c:if test="${!fileStatus.last}">,</c:if>
+{"label":"${fn:escapeXml(mediaFile.name)}","key":"${mediaFile.id}","type":"file"}<c:if test="${!fileStatus.last}">,</c:if>
     </c:forEach>
 ]
 }

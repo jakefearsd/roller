@@ -165,15 +165,15 @@
                                         <img border="0" src='${mediaFile.thumbnailURL}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
-                                             title='${mediaFile.name}'
-                                             alt='${mediaFile.name}'
+                                             title='${fn:escapeXml(mediaFile.name)}'
+                                             alt='${fn:escapeXml(mediaFile.name)}'
                                             <%-- onclick="onClickEdit('${mediaFile.id}')" --%> />
                                     </c:when>
 <c:otherwise>
                                         <c:url var="mediaFileURL" value="/images/page.png"/>
                                         <img border="0" src='${mediaFileURL}'
                                              style="padding:40px 50px;"
-                                             alt='${mediaFile.name}'
+                                             alt='${fn:escapeXml(mediaFile.name)}'
                                             <%-- onclick="onClickEdit('${mediaFile.id}')" --%> />
                                     </c:otherwise>
                                     </c:choose>
@@ -188,7 +188,7 @@
                                            value="${mediaFile.id}"/>
 
                                     <str:truncateNicely lower="47" upper="47">
-                                        ${mediaFile.name}
+                                        ${fn:escapeXml(mediaFile.name)}
                                     </str:truncateNicely>
 
                                 </div>
@@ -218,13 +218,13 @@
                                         <img border="0" src='${mediaFile.thumbnailURL}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
-                                             title='${mediaFile.name}'
-                                             alt='${mediaFile.name}'/>
+                                             title='${fn:escapeXml(mediaFile.name)}'
+                                             alt='${fn:escapeXml(mediaFile.name)}'/>
                                     </c:when>
 <c:otherwise>
                                         <c:url var="mediaFileURL" value="/images/page.png"/>
                                         <img border="0" src='${mediaFileURL}'
-                                             style="padding:40px 50px;" alt='${mediaFile.name}'/>
+                                             style="padding:40px 50px;" alt='${fn:escapeXml(mediaFile.name)}'/>
                                     </c:otherwise>
 </c:choose></div>
 
@@ -237,7 +237,7 @@
                                            value="${mediaFile.id}">
 
                                     <str:truncateNicely lower="40" upper="50">
-                                        ${mediaFile.name}
+                                        ${fn:escapeXml(mediaFile.name)}
                                     </str:truncateNicely>
 
                                     <span class="button" id="addbutton-${mediaFile.id}">
