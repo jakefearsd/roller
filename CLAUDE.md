@@ -600,12 +600,79 @@ excused whatever its type.
   always.
 
 ## Entry editing
+- **Layout**: `EntryEdit.jsp` (the approved card is committed at
+  `docs/design/editor/editor-writing-surface.html`) is a writing surface plus
+  a 252px publish rail, not a top-to-bottom form. The main column carries
+  only title (large serif, borderless — **emphasis elsewhere is weight, never
+  size**, the rule the whole card follows), the permalink as a mono line with
+  a copy control, and the untouched `EntryEditor.jsp` include. Everything
+  about *managing* the entry — not writing it — lives in the rail: a Publish
+  box (status pill, the one visible time field, the submit buttons), an
+  Organize box (category/tags/locale), an SEO drawer (the SEO & Social
+  Sharing card, unchanged, just collapsed by default), a Comments drawer, and
+  the newsletter/revisions cards as quiet boxes below. Delete is a quiet text
+  link, not a red button. The `#entry` form is `display:contents` specifically
+  so the newsletter/revisions cards — which carry their own `<form>`s (own
+  CSRF token, own POST target) — can sit in the rail's grid column without
+  nesting a `<form>` inside a `<form>`.
+- **`bean.pubTimeLocal` is the entry's only pubtime field, and it means the
+  WEBLOG's clock, not the browser's or the server's.** One `<input
+  type="datetime-local">` replaced the old three-`<select>` hour/minute/second
+  row plus a separate readonly date field. `EntryBean.getPubTime(TimeZone)`
+  parses the submitted wall-clock string against whatever `TimeZone` the
+  caller passes, and `EntryEditController` always passes
+  `getActionWeblog(request).getTimeZoneInstance()` — pubtime has always meant
+  the weblog's timezone, never the request locale's. A non-blank value that
+  fails to parse now **throws** and the save is blocked with
+  `entryEdit.pubTimeInvalid` via the normal `hasErrors` gate; the old
+  dateString parser used to swallow a bad value and silently publish "now",
+  which is exactly the failure mode a mistyped pubtime must not have. A blank
+  field still means "no time chosen" → publish now, unchanged.
+  **The SEO card's event-schedule fields (`bean.eventStartLocal`/
+  `eventEndLocal`) are a different, older, and pre-existing quirk — do not
+  assume they share pubTimeLocal's weblog-zone semantics.** They round-trip
+  through `Timestamp.valueOf(LocalDateTime)` with no `TimeZone` parameter at
+  all, so the stored instant is whatever the **server's default zone**
+  happens to be at read/write time, not the weblog's. This predates the
+  editor rebuild (SEO Wave 1) and was out of scope for it; a multi-timezone
+  deployment where the weblog's zone differs from the server's will see
+  `eventStart`/`eventEnd` drift from what an author typed. Fixing it means
+  giving `EntryBean` the same `TimeZone`-parameterized accessor pubTimeLocal
+  has — not yet done.
+- **The sidebar is retired.** `EntrySidebar.jsp` is deleted;
+  `RollerViewResolver`'s `.EntryEdit` layout definition now maps its
+  `"sidebar"` attribute to `tiles/empty.jsp` instead. The four recent-entries
+  lists (published/scheduled/draft/pending, 20 each) it used to render are
+  gone from `EntryEditController` too — nothing else consumed them; Entries.jsp
+  is where recent-entries lists live now. The one thing the sidebar carried
+  that readers still need — the "N comments" line — moved into the rail's
+  Comments drawer, fed by `bean.commentCount`.
+- **The Comments drawer keeps the legacy `collapseAdvanced` id on purpose.**
+  It used to be the "Advanced settings" collapse; `CommentIT` opens it via
+  `a[href='#collapseAdvanced']` to reach the allow-comments checkbox, and that
+  selector is a pinned test contract, not a description of what's inside the
+  drawer today. Documented in place in `EntryEdit.jsp` — do not rename the id
+  to something more sidebar-shaped without updating `CommentIT` in the same
+  commit.
+- **Entry plugins are gone; the shortcode render seam stays.** The "Plugins to
+  apply" checkbox card, `weblogentry.plugins`/`weblog.defaultplugins`
+  (dropped V021, idempotent), and the sole registered plugin
+  (`ConvertLineBreaksPlugin`) are all deleted — see Plugin System below.
+  `PluginManagerImpl`/`WeblogEntryPlugin` and `WeblogEntry.render()`'s call
+  into `applyWeblogEntryPlugins` are **not** deleted, because that call is
+  also where `ShortcodeExpander` runs (see Shortcodes below); ripping out the
+  seam would have ripped out shortcode expansion with it. With the per-entry
+  opt-in column gone, both call sites now apply every site-registered plugin
+  unconditionally rather than filtering by a name list that no longer exists
+  anywhere — the same policy shortcodes already followed. In production the
+  registry is presently empty, so this is a no-op today; it is the seam a
+  future plugin would register into.
 - **Editor**: EasyMDE (Markdown + server-rendered preview). The page exposes
   three functions that are the ONLY seam into the editor —
   `insertMediaFile`, `rollerSetEntryText`, `rollerGetEntryText` — so replacing
   the editor (e.g. with a WYSIWYG surface that edits Markdown) is one file.
   Browser ITs drive `.CodeMirror` and go through those functions, never the
-  editor's own API.
+  editor's own API. Byte-untouched by the rail rebuild.
 - **Preview** is rendered server-side (`entryEdit!preview.rol`) because only the
   server can expand shortcodes; a browser-side Markdown library would disagree
   with the published page.
@@ -621,7 +688,8 @@ excused whatever its type.
   `saveWeblogEntry` only ever sees the caller's NEW values. Retention is the
   runtime property `entry.revisions.retention`: **-1 (default) keeps
   everything**, 0 records none, n>0 prunes to the n newest in the save's own
-  transaction.
+  transaction. Rendered as a rail box below the publish rail, own form/CSRF
+  per restore button.
 
 **Controllers: always name `@RequestParam`/`@PathVariable` explicitly.** The
 build does not pass `-parameters`, so a bare `@RequestParam String id` throws at
@@ -850,13 +918,25 @@ outcomes; nothing is emitted that an admin typed.
   tunnel-only, same as every other direct-DB debugging path in this repo.
 
 ## Plugin System
-Roller supports plugins for:
-- **Entry Plugins**: Content processing and formatting
-- **Comment Plugins**: Comment text formatting (`WeblogEntryCommentPlugin`) —
-  no spam filtering exists. See Comments below for what stands in for one.
-- **UI Plugins**: Editor components and custom functionality
-
-Plugins implement specific interfaces and are configured through the plugin manager system.
+- **Entry plugins are a seam with nothing registered in it, on purpose.**
+  `ConvertLineBreaksPlugin` — the only `WeblogEntryPlugin` ever shipped
+  (`roller.properties` `plugins.page`) — is deleted, along with the per-entry
+  "Plugins to apply" checkbox card and the per-weblog default in
+  `WeblogConfig.jsp`'s Formatting section (permanently empty once the plugin
+  was gone). `weblogentry.plugins`/`weblog.defaultplugins` drop via V021
+  (idempotent) — any live `"ConvertLineBreaks"` data on an existing database
+  is discarded deliberately. `PluginManagerImpl`, the `WeblogEntryPlugin`
+  interface, and `Weblog.getInitializedPlugins()` all **stay**:
+  `applyWeblogEntryPlugins` is also the render seam `ShortcodeExpander` runs
+  through (see Shortcodes below and Entry editing above), so deleting the
+  seam would have deleted shortcode expansion with it. With the opt-in column
+  gone, both `applyWeblogEntryPlugins` and `WeblogEntry.render()` now apply
+  every site-registered plugin unconditionally instead of filtering by a
+  per-entry name list that no longer exists — a future
+  `WeblogEntryPlugin` registers into this seam and runs for every entry, no
+  UI required.
+- **Comment plugins**: comment text formatting (`WeblogEntryCommentPlugin`) —
+  no spam filtering exists. See Comments above for what stands in for one.
 
 ## Shortcodes
 `org.apache.roller.weblogger.business.shortcodes` — `ShortcodeExpander`

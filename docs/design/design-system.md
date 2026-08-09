@@ -35,6 +35,7 @@ Radius: 6px (cards/inputs), 99px (pills). Shadows: none in light except overlay 
 1. THE SPINE: active nav item in the rail = 2px inset-left rule in --accent + --accent-quiet background + 600 weight. Nothing else in the rail is colored.
 2. THE RAIL (replaces the "Powered by Apache Roller" card): 232px sidebar; top block = weblog context (weblog name 600, handle in mono, small status dot --good "Live"); below: tool groups under caps-labels (CONTENT: Entries, Pages, Media, Comments, Inquiries / DESIGN: Theme, Stylesheet, Templates / SETTINGS: Weblog, Members, Maintenance). Footer of rail: user + Sign out, quiet.
 3. EMPTY STATES AS INVITATIONS: icon-free; one 16px 600 line ("No entries yet."), one --ink-soft sentence ("Your first post starts the archive."), one primary button ("Write an entry"). Never a bare table strip.
+4. WEIGHT, NOT SIZE: a page gets at most one piece of *layout* hierarchy allowed to sit outside the type scale (an entry title, a card's lead field) — everything else that needs emphasis reaches for font-weight (600, against 450 body) rather than a bigger size. The editor's title field is the canonical example: 26px serif, the one oversized element on the page, capped there on purpose; every other "this matters" cue on the same page — status pill, rail group labels, drawer headers — stays on-scale and leans on weight/color instead. Adding a second oversized element to compete with the title is the mistake this rule exists to block.
 
 ## Card format (every file)
 
@@ -79,6 +80,20 @@ templates rather than before them:
 Same `@dsCard` header convention and token/type rules as the cards above;
 treat these as the worked examples for any future theme's reference cards
 that need to live in-repo rather than in the design project.
+
+## Shipped reference card: the editor (Editor Rebuild)
+
+`docs/design/editor/editor-writing-surface.html` is the approved card the
+admin-side `EntryEdit.jsp` rebuild was built against — same in-repo pattern
+as the journal/frontpage cards above (built to spec alongside the JSP rather
+than only living in the companion design project), because the editor is
+admin chrome, not a public theme, and its rail is a shape ("writing surface
++ 252px publish rail": Publish/Organize boxes, SEO/Comments drawers, quiet
+newsletter/revisions boxes, a text-link delete) other admin edit screens with
+a lot of secondary metadata may want to reuse. Same `@dsCard` header
+convention as the twelve preview cards; treat it as the worked example for
+"one writing surface, many settings" admin layouts, and see signature move 4
+(WEIGHT, NOT SIZE) above for the rule its title field demonstrates.
 
 ## Quality bar
 
