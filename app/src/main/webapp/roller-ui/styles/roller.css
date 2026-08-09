@@ -301,8 +301,16 @@ label,
 /* easymde.min.css hardcodes the caret at #000 and selection at #d9d9d9 --
    both effectively invisible/wrong against a dark --surface. Token them;
    `.EasyMDEContainer .CodeMirror-focused .CodeMirror-selected` is the
-   highest-specificity of the three selection rules the stylesheet
-   declares, so it needs its own override alongside the unfocused one. */
+   highest-specificity of the three `.CodeMirror-selected` rules the
+   stylesheet declares, so it needs its own override alongside the
+   unfocused one. Separately, `.CodeMirror-line`(`>span`/`>span>span`)
+   `::selection`/`::-moz-selection` is easymde's OWN rule for native
+   browser text selection (distinct from the `.CodeMirror-selected`
+   rendered-highlight rule above -- CodeMirror uses whichever one applies
+   depending on browser/rendering mode) and is hardcoded to the same
+   light-lavender #d7d4f0, so it needs the identical selector list
+   token-overridden too or a native selection can still leak light-mode
+   color in dark mode. */
 .CodeMirror-cursor {
     border-left-color: var(--ink);
 }
@@ -310,6 +318,18 @@ label,
 .CodeMirror-selected,
 .CodeMirror-focused .CodeMirror-selected,
 .EasyMDEContainer .CodeMirror-focused .CodeMirror-selected {
+    background: var(--accent-quiet);
+}
+
+.CodeMirror-line::selection,
+.CodeMirror-line > span::selection,
+.CodeMirror-line > span > span::selection {
+    background: var(--accent-quiet);
+}
+
+.CodeMirror-line::-moz-selection,
+.CodeMirror-line > span::-moz-selection,
+.CodeMirror-line > span > span::-moz-selection {
     background: var(--accent-quiet);
 }
 
