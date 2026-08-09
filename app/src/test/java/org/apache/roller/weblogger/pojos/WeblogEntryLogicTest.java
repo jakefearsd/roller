@@ -248,18 +248,6 @@ class WeblogEntryLogicTest {
         assertEquals("real-id", entry.getId(), "A real id must still be accepted");
     }
 
-    // ------------------------------------------------------------- plugins
-
-    @Test
-    void pluginListIsParsedFromTheCommaSeparatedColumn() {
-        assertEquals(List.of(), entry.getPluginsList(),
-                "An entry with no plugins configured must yield an empty list, not null -- "
-                        + "the render loop iterates it directly");
-
-        entry.setPlugins("ConvertLineBreaks,SmileysPlugin");
-        assertEquals(List.of("ConvertLineBreaks", "SmileysPlugin"), entry.getPluginsList());
-    }
-
     // ---------------------------------------------------------- attributes
 
     @Test
@@ -612,7 +600,6 @@ class WeblogEntryLogicTest {
         entry.setPubTime(Timestamp.valueOf("2024-03-09 15:30:00"));
         entry.setUpdateTime(Timestamp.valueOf("2024-03-10 09:00:00"));
         entry.setStatus(PubStatus.PUBLISHED);
-        entry.setPlugins("ConvertLineBreaks");
         entry.setAllowComments(Boolean.FALSE);
         entry.setCommentDays(14);
         entry.setRightToLeft(Boolean.TRUE);
@@ -636,7 +623,6 @@ class WeblogEntryLogicTest {
         assertEquals(PubStatus.PUBLISHED, copy.getStatus(),
                 "Status must be copied; silently resetting it to DRAFT would unpublish "
                         + "the post the copy is standing in for");
-        assertEquals("ConvertLineBreaks", copy.getPlugins());
         assertEquals(Boolean.FALSE, copy.getAllowComments());
         assertEquals(Integer.valueOf(14), copy.getCommentDays());
         assertEquals(Boolean.TRUE, copy.getRightToLeft());

@@ -1,0 +1,42 @@
+-- Licensed to the Apache Software Foundation (ASF) under one or more
+-- contributor license agreements.  The ASF licenses this file to You
+-- under the Apache License, Version 2.0 (the "License"); you may not
+-- use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+--
+-- Migration: drop weblogentry.plugins and weblog.defaultplugins
+--
+-- ConvertLineBreaksPlugin was the last WeblogEntryPlugin ever registered
+-- (roller.properties plugins.page), and it is deleted in this same change.
+-- With it gone, these two columns have nothing left to name: weblogentry
+-- .plugins held the comma-separated list of plugins an author opted an
+-- entry into, and weblog.defaultplugins held the csv a new entry's list was
+-- seeded from. Both the "Plugins to apply" card on the entry editor and the
+-- "Formatting" section on Weblog Settings read/wrote these columns and are
+-- removed alongside them.
+--
+-- Unlike V012's enablebloggerapi (a boolean that was already permanently
+-- false because nothing could ever set it), these columns can carry live
+-- data on a database that has been running a while: an entry saved before
+-- this change could genuinely have "ConvertLineBreaks" sitting in its
+-- plugins column. That string is discarded deliberately -- the plugin that
+-- string named no longer exists to apply, so keeping the column around
+-- would only preserve a value nothing reads.
+--
+-- PluginManagerImpl, the WeblogEntryPlugin interface, and Weblog
+-- .getInitializedPlugins() all stay: applyWeblogEntryPlugins is a shortcode
+-- render seam (see CLAUDE.md, Shortcodes), and the registry is designed to
+-- be empty -- a zero-plugin site is the normal case now, not an error.
+--
+-- Prerequisites: V002__baseline_schema.
+
+ALTER TABLE weblogentry DROP COLUMN IF EXISTS plugins;
+ALTER TABLE weblog DROP COLUMN IF EXISTS defaultplugins;

@@ -21,7 +21,6 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -40,8 +39,6 @@ import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.ListmonkClient;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.plugins.PluginManager;
-import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -125,9 +122,6 @@ public class EntryEditController extends BaseController {
         bean.setLocale(getActionWeblog(request).getLocale());
         bean.setAllowComments(getActionWeblog(request).getDefaultAllowComments());
         bean.setCommentDays(getActionWeblog(request).getDefaultCommentDays());
-        if (getActionWeblog(request).getDefaultPlugins() != null) {
-            bean.setPlugins(StringUtils.split(getActionWeblog(request).getDefaultPlugins(), ","));
-        }
 
         model.addAttribute("entry", entry);
         addEntryModelAttributes(request, model, entry, bean);
@@ -688,7 +682,6 @@ public class EntryEditController extends BaseController {
     private void addEntryModelAttributes(HttpServletRequest request, Model model, WeblogEntry entry,
                                          EntryBean bean) {
         model.addAttribute("categories", getCategories(request));
-        model.addAttribute("entryPlugins", getEntryPlugins(request));
         model.addAttribute("userAnAuthor", getActionWeblog(request).hasUserPermission(
                 getAuthenticatedUser(request), WeblogPermission.POST));
 
@@ -781,19 +774,6 @@ public class EntryEditController extends BaseController {
             log.error("Error getting category list", ex);
             return Collections.emptyList();
         }
-    }
-
-    private List<WeblogEntryPlugin> getEntryPlugins(HttpServletRequest request) {
-        try {
-            PluginManager ppmgr = weblogger.getPluginManager();
-            Map<String, WeblogEntryPlugin> plugins = ppmgr.getWeblogEntryPlugins(getActionWeblog(request));
-            if (!plugins.isEmpty()) {
-                return new ArrayList<>(plugins.values());
-            }
-        } catch (Exception ex) {
-            log.error("Error getting plugins list", ex);
-        }
-        return Collections.emptyList();
     }
 
     private List<WeblogEntry> getRecentEntries(HttpServletRequest request, PubStatus pubStatus,

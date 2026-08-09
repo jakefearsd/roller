@@ -37,7 +37,6 @@ import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Arrays;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -58,7 +57,6 @@ public class EntryBean {
     private String text = null;
     private String status = null;
 
-    private String[] plugins = null;
     private String pubTimeLocal = null;
     private boolean allowComments = false;
     private Integer commentDays = 0;
@@ -150,15 +148,7 @@ public class EntryBean {
         this.categoryId = categoryId;
     }
     
-    
-    public String[] getPlugins() {
-        return this.plugins;
-    }
-    
-    public void setPlugins(String[] plugins ) {
-        this.plugins = plugins;
-    }
-    
+
     public String getPubTimeLocal() {
         return pubTimeLocal;
     }
@@ -448,10 +438,7 @@ public class EntryBean {
         } else {
             throw new WebloggerException("No category specified");
         }
-        
-        // join values from all plugins into a single string
-        entry.setPlugins(StringUtils.join(getPlugins(),","));
-        
+
         // comment settings
         entry.setAllowComments(getAllowComments());
         entry.setCommentDays(getCommentDays());
@@ -499,12 +486,7 @@ public class EntryBean {
             log.error("Error getting comment count", e);
             setCommentCount(0);
         }
-        
-        // init plugins values
-        if(entry.getPlugins() != null) {
-            setPlugins(StringUtils.split(entry.getPlugins(), ","));
-        }
-        
+
         // init pubtime value -- emitted in the WEBLOG's timezone, matching
         // what getPubTime(TimeZone) parses it back with, so opening and
         // saving an entry unchanged does not move its publication time.
@@ -537,8 +519,7 @@ public class EntryBean {
         buf.append("search description = ").append(getSearchDescription()).append("\n");
         buf.append("comments = ").append(getAllowComments()).append("\n");
         buf.append("commentDays = ").append(getCommentDays()).append("\n");
-        buf.append("plugins = ").append(Arrays.toString(getPlugins())).append("\n");
-        
+
         return buf.toString();
     }
 }

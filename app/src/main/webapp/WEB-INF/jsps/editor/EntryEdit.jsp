@@ -176,34 +176,6 @@
 
         <jsp:include page="/WEB-INF/jsps/editor/EntryEditor.jsp"/>
 
-            <%-- Plugins --%>
-
-        <c:choose>
-<c:when test="${not empty entryPlugins}">
-
-            <div class="card" id="panel-plugins">
-                <div class="card-header">
-
-                    <h4 class="card-title">
-                        <a class="collapsed" data-bs-toggle="collapse" data-bs-target="#collapsePlugins" href="#">
-                            <spring:message code="weblogEdit.pluginsToApply"/> </a>
-                    </h4>
-
-                </div>
-                <div id="collapsePlugins" class="collapse">
-                    <div class="card-body">
-
-                        <c:forEach items="${entryPlugins}" var="opt">
-<div class="form-check"><label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.plugins" value="${opt.name}"/> ${opt.name}</label></div>
-</c:forEach>
-
-                    </div>
-                </div>
-            </div>
-
-        </c:when>
-</c:choose>
-
             <%-- Advanced settings --%>
 
         <div class="card" id="panel-settings">

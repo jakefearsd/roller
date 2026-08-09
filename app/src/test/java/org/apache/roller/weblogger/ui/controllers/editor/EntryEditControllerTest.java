@@ -126,7 +126,6 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         weblog.setLocale("fr_FR");
         weblog.setDefaultAllowComments(Boolean.TRUE);
         weblog.setDefaultCommentDays(30);
-        weblog.setDefaultPlugins("ConvertLineBreaks,TextileFormatter");
 
         String view = controller.entryAddExecute(request, model, bean);
 
@@ -134,18 +133,6 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         assertEquals("fr_FR", bean.getLocale());
         assertTrue(bean.getAllowComments());
         assertEquals(30, bean.getCommentDays());
-        assertEquals(2, bean.getPlugins().length,
-                "The weblog's default plugin csv must be split onto the new entry");
-    }
-
-    @Test
-    void openingTheNewEntryFormLeavesPluginsUnsetWhenTheWeblogHasNoDefaults() {
-        weblog.setDefaultPlugins(null);
-
-        controller.entryAddExecute(request, model, bean);
-
-        assertNull(bean.getPlugins(),
-                "A weblog with no default plugins must not produce a bogus plugin array");
     }
 
     @Test
@@ -563,19 +550,10 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void theEditorOffersTheWeblogsCategoriesAndPlugins() throws Exception {
-        org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin plugin =
-                org.mockito.Mockito.mock(
-                        org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin.class);
-        when(weblogger.getPluginManager().getWeblogEntryPlugins(weblog))
-                .thenReturn(java.util.Map.of("ConvertLineBreaks", plugin));
-
+    void theEditorOffersTheWeblogsCategories() throws Exception {
         controller.entryAddExecute(request, model, bean);
 
         assertEquals(java.util.List.of(category), model.getAttribute("categories"));
-        assertEquals(1, ((java.util.List<?>) model.getAttribute("entryPlugins")).size(),
-                "The plugin checkboxes come from this list; empty means the author cannot "
-                        + "enable any formatting plugin");
     }
 
     @Test

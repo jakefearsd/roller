@@ -77,7 +77,6 @@ class WeblogEntryWrapperTest {
         entry.setText("Some body text");
         entry.setLink("http://example.com/link");
         entry.setLocale("fr");
-        entry.setPlugins("ConvertLineBreaks,SmileysPlugin");
         entry.setStatus(PubStatus.PUBLISHED);
         entry.setPubTime(Timestamp.valueOf("2024-03-09 15:30:00"));
         entry.setUpdateTime(Timestamp.valueOf("2024-03-10 09:00:00"));
@@ -103,7 +102,6 @@ class WeblogEntryWrapperTest {
         assertEquals("A search description", wrapper.getSearchDescription());
         assertEquals("http://example.com/link", wrapper.getLink());
         assertEquals("fr", wrapper.getLocale());
-        assertEquals("ConvertLineBreaks,SmileysPlugin", wrapper.getPlugins());
         assertEquals(PubStatus.PUBLISHED, wrapper.getStatus());
         assertEquals(Timestamp.valueOf("2024-03-09 15:30:00"), wrapper.getPubTime());
         assertEquals(Timestamp.valueOf("2024-03-10 09:00:00"), wrapper.getUpdateTime());
@@ -222,7 +220,6 @@ class WeblogEntryWrapperTest {
         assertEquals("Body...", wrapper.getRss09xDescription(7),
                 "The length argument has to reach the entry; dropping it would put the "
                         + "whole post into an RSS 0.9x description");
-        assertEquals(List.of("ConvertLineBreaks", "SmileysPlugin"), wrapper.getPluginsList());
     }
 
     @Test

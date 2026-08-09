@@ -146,11 +146,6 @@ public final class WeblogEntryWrapper {
     }
     
     
-    public String getPlugins() {
-        return this.pojo.getPlugins();
-    }
-    
-    
     public Boolean getAllowComments() {
         return this.pojo.getAllowComments();
     }
@@ -266,14 +261,8 @@ public final class WeblogEntryWrapper {
     public String getRss09xDescription(int maxLength) {
         return this.pojo.getRss09xDescription(maxLength);
     }
-    
-    
-    // TODO: check this method for safety
-    public List<String> getPluginsList() {
-        return this.pojo.getPluginsList();
-    }
-    
-    
+
+
     public String getTransformedText() {
         return this.pojo.getTransformedText();
     }

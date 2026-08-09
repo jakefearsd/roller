@@ -59,8 +59,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
 
         when(weblogger.getWeblogEntryManager().getWeblogCategories(weblog))
                 .thenReturn(Collections.emptyList());
-        when(weblogger.getPluginManager().getWeblogEntryPlugins(weblog))
-                .thenReturn(Collections.emptyMap());
         // The display-count cap is a runtime property; unstubbed it reads as -1,
         // which would reject every possible value.
         givenRuntimeProperty("site.pages.maxEntries", "30");
@@ -325,7 +323,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         source.setTimeZone("Asia/Tokyo");
         source.setEntryDisplayCount(7);
         source.setDefaultCommentDays(14);
-        source.setDefaultPlugins("A,B");
         source.setAbout("About me");
         source.setIconPath("icon.png");
         source.setActive(Boolean.TRUE);
@@ -342,7 +339,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         assertEquals(7, copy.getEntryDisplayCount());
         assertEquals("14", copy.getDefaultCommentDays(),
                 "The dropdown binds a string, so the numeric setting is stringified");
-        assertEquals(2, copy.getDefaultPluginsArray().length);
         assertEquals("About me", copy.getAbout());
         assertEquals("icon.png", copy.getIcon());
 
@@ -352,8 +348,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         assertEquals("Source Blog", target.getName());
         assertEquals("Asia/Tokyo", target.getTimeZone());
         assertEquals(14, target.getDefaultCommentDays());
-        assertEquals("A,B", target.getDefaultPlugins(),
-                "The checkbox array must be rejoined into the stored csv");
         assertNull(target.getHandle(), "copyTo must never write the handle");
     }
 

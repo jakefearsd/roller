@@ -66,7 +66,6 @@ public class Weblog implements Serializable {
     private String  editorTheme      = null;
     private String  locale           = null;
     private String  timeZone         = null;
-    private String  defaultPlugins   = null;
     private Boolean visible          = Boolean.TRUE;
     private Boolean active           = Boolean.TRUE;
     private Date    dateCreated      = new java.util.Date();
@@ -351,17 +350,6 @@ public class Weblog implements Serializable {
         } else {
             dateCreated = null;
         }
-    }
-
-    /**
-     * Comma-delimited list of user's default Plugins.
-     */
-    public String getDefaultPlugins() {
-        return defaultPlugins;
-    }
-
-    public void setDefaultPlugins(String string) {
-        defaultPlugins = string;
     }
 
     /**

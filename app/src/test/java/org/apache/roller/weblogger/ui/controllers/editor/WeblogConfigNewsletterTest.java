@@ -50,8 +50,6 @@ class WeblogConfigNewsletterTest extends EditorControllerTestSupport {
 
         when(weblogger.getWeblogEntryManager().getWeblogCategories(weblog))
                 .thenReturn(Collections.emptyList());
-        when(weblogger.getPluginManager().getWeblogEntryPlugins(weblog))
-                .thenReturn(Collections.emptyMap());
         givenRuntimeProperty("site.pages.maxEntries", "30");
 
         weblog.setActive(Boolean.TRUE);

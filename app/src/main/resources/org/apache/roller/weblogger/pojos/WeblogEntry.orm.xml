@@ -69,9 +69,6 @@
             <basic name="link">
                 <column name="link" insertable="true" updatable="true" unique="false"/>
             </basic>
-            <basic name="plugins">
-                <column name="plugins" insertable="true" updatable="true" unique="false"/>
-            </basic>
             <basic name="allowComments">
                 <column name="allowcomments" insertable="true" updatable="true" unique="false"/>
             </basic>
@@ -163,7 +160,6 @@
             <transient name="transformedText"/>
             <transient name="transformedSummary"/>         
             <transient name="comments"/>
-            <transient name="pluginsList"/>
             <transient name="addedTags"/>
             <transient name="removedTags"/>
             <transient name="refreshAggregates"/>

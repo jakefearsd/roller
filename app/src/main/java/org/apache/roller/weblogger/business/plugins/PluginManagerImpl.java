@@ -96,15 +96,15 @@ public class PluginManagerImpl implements PluginManager {
     public String applyWeblogEntryPlugins(Map<String, WeblogEntryPlugin> pagePlugins, WeblogEntry entry, String str) {
 
         String ret = str;
-        List<String> plugins = entry.getPluginsList();
 
-        for (String key : plugins) {
-            WeblogEntryPlugin pagePlugin = pagePlugins.get(key);
-            if (pagePlugin != null) {
-                ret = pagePlugin.render(entry, ret);
-            } else {
-                log.warn("plugin not found: " + key);
-            }
+        // Per-entry opt-in died with weblogentry.plugins (V021, the entry
+        // editor's last plugin checkbox). Every plugin the caller passes in
+        // is now applied unconditionally, the same way shortcodes always
+        // have been -- there is no more per-entry list to filter against. An
+        // empty map (the only case left in production, since plugins.page is
+        // no longer configured) is a first-class no-op, not an error.
+        for (WeblogEntryPlugin pagePlugin : pagePlugins.values()) {
+            ret = pagePlugin.render(entry, ret);
         }
 
         // Shortcodes are NOT opt-in the way named plugins are: they expand

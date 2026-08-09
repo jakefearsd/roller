@@ -23,7 +23,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -91,7 +90,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     private String    anchor        = null;
     private Timestamp pubTime       = null;
     private Timestamp updateTime    = null;
-    private String    plugins       = null;
     private Boolean   allowComments = Boolean.TRUE;
     private Integer   commentDays   = 7;
     private Boolean   rightToLeft   = Boolean.FALSE;
@@ -194,7 +192,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
         this.setPubTime(other.getPubTime());
         this.setUpdateTime(other.getUpdateTime());
         this.setStatus(other.getStatus());
-        this.setPlugins(other.getPlugins());
         this.setAllowComments(other.getAllowComments());
         this.setCommentDays(other.getCommentDays());
         this.setRightToLeft(other.getRightToLeft());
@@ -690,17 +687,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     }
     
     /**
-     * Comma-delimited list of this entry's Plugins.
-     */
-    public String getPlugins() {
-        return plugins;
-    }
-    
-    public void setPlugins(String string) {
-        plugins = string;
-    }
-
-    /**
      * True if comments are allowed on this weblog entry.
      */
     public Boolean getAllowComments() {
@@ -1106,17 +1092,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     }
     
     
-    /**
-     * Convenience method to transform mPlugins to a List
-     * @return
-     */
-    public List<String> getPluginsList() {
-        if (getPlugins() != null) {
-            return Arrays.asList( StringUtils.split(getPlugins(), ",") );
-        }
-        return Collections.emptyList();
-    }
-
     /** Convenience method for checking status */
     public boolean isDraft() {
         return getStatus().equals(PubStatus.DRAFT);
@@ -1179,36 +1154,34 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     }
     
     /**
-     * Transform string based on plugins enabled for this weblog entry.
+     * Transform string based on plugins registered for this weblog entry's
+     * site.
+     *
+     * <p>Per-entry opt-in died with {@code weblogentry.plugins} (V021, the
+     * entry editor's last plugin checkbox) -- there is no more per-entry list
+     * to filter against, so every plugin the site has registered
+     * ({@link Weblog#getInitializedPlugins()}) is applied unconditionally,
+     * the same way shortcodes already are. In production that map is always
+     * empty ({@code plugins.page} is no longer configured), so this loop is
+     * presently a no-op; it stays as the render seam a future page plugin
+     * would use.
      */
     private String render(String str) {
         String ret = str;
         mLogger.debug("Applying page plugins to string");
         Map<String, WeblogEntryPlugin> inPlugins = getWebsite().getInitializedPlugins();
         if (str != null && inPlugins != null) {
-            List<String> entryPlugins = getPluginsList();
-            
-            // if no Entry plugins, don't bother looping.
-            if (entryPlugins != null && !entryPlugins.isEmpty()) {
-                
-                // now loop over mPagePlugins, matching
-                // against Entry plugins (by name):
-                // where a match is found render Plugin.
-                for (Map.Entry<String, WeblogEntryPlugin> entry : inPlugins.entrySet()) {
-                    if (entryPlugins.contains(entry.getKey())) {
-                        WeblogEntryPlugin pagePlugin = entry.getValue();
-                        try {
-                            ret = pagePlugin.render(this, ret);
-                        } catch (Exception e) {
-                            mLogger.error("ERROR from plugin: " + pagePlugin.getName(), e);
-                        }
-                    }
+            for (WeblogEntryPlugin pagePlugin : inPlugins.values()) {
+                try {
+                    ret = pagePlugin.render(this, ret);
+                } catch (Exception e) {
+                    mLogger.error("ERROR from plugin: " + pagePlugin.getName(), e);
                 }
             }
         }
-        // Named entry plugins are opt-in per entry and stay here. Everything
-        // below -- shortcodes, markdown, sanitization -- is universal and
-        // lives in ContentRenderer so WeblogPage gets the identical pipeline.
+        // Everything below -- shortcodes, markdown, sanitization -- is
+        // universal and lives in ContentRenderer so WeblogPage gets the
+        // identical pipeline.
         return ContentRenderer.render(this, ret);
     }
     

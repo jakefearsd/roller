@@ -274,18 +274,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void copyToJoinsSelectedPluginsIntoTheStoredCsv() throws Exception {
-        WeblogEntry entry = entryInCategory("cat-1");
-        bean.setStatus(PubStatus.DRAFT.name());
-        bean.setCategoryId("cat-1");
-        bean.setPlugins(new String[]{"ConvertLineBreaks", "TextileFormatter"});
-
-        bean.copyTo(entry);
-
-        assertEquals("ConvertLineBreaks,TextileFormatter", entry.getPlugins());
-    }
-
-    @Test
     void copyToCarriesCommentSettingsAcross() throws Exception {
         WeblogEntry entry = entryInCategory("cat-1");
         bean.setStatus(PubStatus.DRAFT.name());
@@ -473,18 +461,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.copyFrom(entry, Locale.US);
 
         assertEquals("Tom & Jerry", bean.getTitle());
-    }
-
-    @Test
-    void copyFromSplitsTheStoredPluginCsvBackIntoAnArray() throws Exception {
-        WeblogEntry entry = storedEntry();
-        entry.setPlugins("ConvertLineBreaks,TextileFormatter");
-
-        bean.copyFrom(entry, Locale.US);
-
-        assertEquals(2, bean.getPlugins().length);
-        assertEquals("ConvertLineBreaks", bean.getPlugins()[0]);
-        assertEquals("TextileFormatter", bean.getPlugins()[1]);
     }
 
     @Test

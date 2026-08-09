@@ -198,10 +198,6 @@ public final class WeblogWrapper {
     }
 
 
-    public String getDefaultPlugins() {
-        return this.pojo.getDefaultPlugins();
-    }
-
     public Locale getLocaleInstance() {
         return this.pojo.getLocaleInstance();
     }

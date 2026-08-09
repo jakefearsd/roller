@@ -45,10 +45,12 @@ import static org.mockito.Mockito.when;
 /**
  * Covers how a {@link WeblogEntry} turns itself into the text a theme renders.
  *
- * <p>Three rules live here. Plugins named in the entry's {@code plugins} column
- * are applied, and ones that are not named are left alone -- an entry must not
- * silently pick up a plugin its author did not choose. Shortcodes, by contrast,
- * expand unconditionally in every render path (Stage 2 Wave 1 T3 contract
+ * <p>Three rules live here. Every plugin the site has registered
+ * ({@link Weblog#getInitializedPlugins()}) is applied to every entry
+ * unconditionally -- per-entry opt-in died with {@code weblogentry.plugins}
+ * (V021, the entry editor's last plugin checkbox; see CLAUDE.md, Shortcodes),
+ * so a plugin either exists site-wide or it does not apply at all. Shortcodes
+ * expand unconditionally too, in every render path (Stage 2 Wave 1 T3 contract
  * change; see docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md). And
  * {@code displayContent} decides between the summary and the full text
  * depending on whether it was given a "read more" link, which is what makes the
@@ -96,57 +98,49 @@ class WeblogEntryRenderingTest {
     }
 
     @Test
-    void onlyThePluginsTheEntryNamesAreApplied() throws Exception {
-        WeblogEntryPlugin shout = shouting();
-        WeblogEntryPlugin unused = mock(WeblogEntryPlugin.class);
-        when(unused.getName()).thenReturn("Unused");
-        when(unused.render(any(), anyString())).thenReturn("SHOULD NOT APPEAR");
-        installPlugins(Map.of("Shout", shout, "Unused", unused));
+    void everyRegisteredPluginIsAppliedToEveryEntry() throws Exception {
+        installPlugins(Map.of("Shout", shouting()));
 
         entry.setText("hello");
         entry.setSummary("summary");
-        entry.setPlugins("Shout");
 
         assertEquals("<p>HELLO</p>\n", withWeblogger(entry::getTransformedText),
-                "A plugin the entry names must be applied to its body");
+                "A registered plugin must be applied to the entry's body");
         assertEquals("<p>SUMMARY</p>\n", withWeblogger(entry::getTransformedSummary),
                 "and to its summary");
     }
 
     @Test
-    void anEntryThatNamesNoPluginsGetsNoPluginApplied() throws Exception {
-        // DELIBERATE contract change (Stage 2 Wave 1 T3, see
-        // docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md):
-        // "untouched" now means untouched by PLUGINS. Named entry plugins stay
-        // opt-in per entry, but the shortcode expander is a platform feature
-        // that runs unconditionally -- shortcode-free text like this still
-        // comes back verbatim, while shortcodesExpandEvenWhenTheEntryNamesNoPlugins
-        // below covers the unconditional half of the contract.
-        installPlugins(Map.of("Shout", shouting()));
+    void noRegisteredPluginsMeansTheTextIsUntouched() throws Exception {
+        // DELIBERATE contract (Stage 2 Wave 1 T3, see
+        // docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md, and V021
+        // which removed the last per-entry opt-in): "untouched" means untouched
+        // by PLUGINS. A site with no registered plugins -- the only case left
+        // in production -- leaves entry text alone, while the shortcode
+        // expander is a platform feature that runs unconditionally regardless;
+        // shortcodesExpandWhenNoPluginsAreRegistered below covers that half.
+        installPlugins(Map.of());
         entry.setText("hello");
-        entry.setPlugins(null);
 
         assertEquals("<p>hello</p>\n", withWeblogger(entry::getTransformedText),
-                "An entry that opted into no plugins must not have one applied anyway; "
-                        + "the plugin list is per-entry precisely so authors can choose. "
-                        + "The paragraph is markdown, which every entry now goes through.");
+                "An empty plugin registry must leave the text alone; the paragraph is "
+                        + "markdown, which every entry now goes through.");
     }
 
     @Test
-    void shortcodesExpandEvenWhenTheEntryNamesNoPlugins() throws Exception {
-        // The other half of the deliberate contract change documented above:
-        // shortcodes are NOT opt-in. An entry that names no plugins still gets
-        // [image] expanded, in this render seam, before sanitization.
-        installPlugins(Map.of("Shout", shouting()));
+    void shortcodesExpandWhenNoPluginsAreRegistered() throws Exception {
+        // The other half of the contract documented above: shortcodes are NOT
+        // opt-in. A site with no registered plugins still gets [image]
+        // expanded, in this render seam, before sanitization.
+        installPlugins(Map.of());
         installMediaFile();
 
         entry.setText("look: [image id=mf-1]");
-        entry.setPlugins(null);
 
         String rendered = withWeblogger(entry::getTransformedText);
 
         assertTrue(rendered.contains("<figure class=\"shortcode-image\">") && rendered.contains("look:"),
-                "the [image] shortcode must expand without the entry opting in: " + rendered);
+                "the [image] shortcode must expand with no plugins registered: " + rendered);
         // The sanitizer entity-encodes "=" inside attribute values; a browser
         // decodes it before parsing the srcset, so compare the decoded form.
         String plain = org.apache.commons.text.StringEscapeUtils.unescapeHtml4(rendered);
@@ -159,11 +153,10 @@ class WeblogEntryRenderingTest {
     @Test
     void theBusinessPluginSeamExpandsShortcodesUnconditionallyToo() throws Exception {
         // Same contract, second render call-site: PluginManagerImpl's
-        // applyWeblogEntryPlugins (used with an explicit plugin map) must also
-        // expand shortcodes even when the entry names no plugins.
+        // applyWeblogEntryPlugins (used with an explicit, empty plugin map)
+        // must also expand shortcodes with no plugins registered.
         installMediaFile();
         entry.setText("irrelevant");
-        entry.setPlugins(null);
 
         String rendered = withWeblogger(() -> new PluginManagerImpl()
                 .applyWeblogEntryPlugins(Map.of(), entry, "see [image id=mf-1] here"));
@@ -199,7 +192,6 @@ class WeblogEntryRenderingTest {
         installPlugins(Map.of("Broken", broken));
 
         entry.setText("hello");
-        entry.setPlugins("Broken");
 
         assertEquals("<p>hello</p>\n", withWeblogger(entry::getTransformedText),
                 "A failing plugin must leave the text as it found it rather than taking "
@@ -211,7 +203,6 @@ class WeblogEntryRenderingTest {
     void anEntryWithNoTextRendersAsNothingRatherThanThrowing() throws Exception {
         installPlugins(Map.of("Shout", shouting()));
         entry.setText(null);
-        entry.setPlugins("Shout");
 
         assertNull(withWeblogger(entry::getTransformedText),
                 "An entry with no body must render as nothing; passing null into the "

@@ -210,23 +210,6 @@
     </div>
 
 
-    <%-- ***** Plugins "formatting" settings ***** --%>
-
-    <h3 class="section-head"><spring:message code="websiteSettings.formatting"/></h3>
-
-    <c:choose>
-<c:when test="${not empty pluginsList}">
-
-        <c:forEach items="${pluginsList}" var="opt">
-<div class="form-check"><label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.defaultPluginsArray" value="${opt.name}"/> ${opt.name}</label></div>
-</c:forEach>
-
-    </c:when>
-<c:otherwise>
-        <input type="hidden" name="defaultPlugins" value="${defaultPlugins}"/>
-    </c:otherwise>
-</c:choose>
-
     <%-- ***** Web analytics settings ***** --%>
 
     <c:if test="${rc:getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted}">

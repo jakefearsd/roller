@@ -18,7 +18,6 @@
 
 package org.apache.roller.weblogger.ui.controllers.editor;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,9 +29,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -181,10 +178,6 @@ public class WeblogConfigController extends BaseController {
             WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             model.addAttribute("weblogCategories", wmgr.getWeblogCategories(getActionWeblog(request)));
 
-            PluginManager ppmgr = weblogger.getPluginManager();
-            Map<String, WeblogEntryPlugin> pluginsMap = ppmgr.getWeblogEntryPlugins(getActionWeblog(request));
-            model.addAttribute("pluginsList", new ArrayList<>(pluginsMap.values()));
-
         } catch (Exception ex) {
             log.error("Error preparing weblog config action", ex);
         }
@@ -195,7 +188,6 @@ public class WeblogConfigController extends BaseController {
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
         model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
         model.addAttribute("commentDaysList", getCommentDaysList(request));
-        model.addAttribute("defaultPlugins", getActionWeblog(request).getDefaultPlugins());
     }
 
     private Map<Integer, String> getCommentDaysList(HttpServletRequest request) {

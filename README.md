@@ -19,7 +19,6 @@
 - Schedule entries for future publication
 - Organize content with categories and tags
 - Upload and manage media files (images, podcasts, attachments) in folder hierarchies (`MediaFileManager`)
-- Entry plugins for automatic formatting: line-break conversion (`ConvertLineBreaksPlugin`)
 
 ### Comments and Community
 - Visitor comments with moderation and approval workflows (pending, approved, disapproved)
