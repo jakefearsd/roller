@@ -158,7 +158,7 @@
 
                                 <div class="mediaObject" onclick="onClickEdit(
                                         '${mediaFile.id}',
-                                        '${mediaFile.name}' )">
+                                        '${fn:escapeXml(mediaFile.name)}' )">
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
@@ -211,7 +211,7 @@
 
                                 <div class="mediaObject" onclick="onClickEdit(
                                         '${mediaFile.id}',
-                                        '${mediaFile.name}' )">
+                                        '${fn:escapeXml(mediaFile.name)}' )">
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">

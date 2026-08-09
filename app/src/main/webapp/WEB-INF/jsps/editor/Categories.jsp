@@ -52,7 +52,7 @@
                     <td align="center">
 
                         <c:set var="categoryId" value="${category.id}"/>
-                        <c:set var="categoryName" value="${category.name}"/>
+                        <c:set var="categoryName" value="${fn:escapeXml(category.name)}"/>
                         <c:set var="categoryDesc" value="${category.description}"/>
                         <c:set var="categoryImage" value="${category.image}"/>
                         <a href="#" onclick="showCategoryEditModal(
@@ -341,14 +341,18 @@
     }
 
     function populateCategorySelect(removeId) {
-        const allCategories = [];
-
-        <c:forEach items="${allCategories}" var="category">
-        allCategories.push({
-            id: '${category.id}',
-            name: '${category.name}'
-        });
-        </c:forEach>
+        // Read the category list back out of the DOM (the data-category-id/
+        // data-category-name attributes every row already carries,
+        // fn:escapeXml-escaped -- see the table above) instead of templating
+        // category.name straight into this script block. A category named
+        // to break out of a JS string literal used to execute for every
+        // viewer of this page on load, no click required.
+        const allCategories = $("#category-table tr[data-category-id]").map(function () {
+            return {
+                id: $(this).attr('data-category-id'),
+                name: $(this).attr('data-category-name')
+            };
+        }).get();
 
         // The select is rendered server-side holding every category, this
         // filter drops the one being deleted. It targeted a non-existent id,
