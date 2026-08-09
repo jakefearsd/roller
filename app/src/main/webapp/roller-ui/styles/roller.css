@@ -81,9 +81,33 @@ p {
    `.btn-success` -- the success class survives because browser ITs pin it
    on submit buttons, but it renders identically to primary), destructive
    (`.btn-danger`/`.btn-outline-danger`), and everything else -- including a
-   bare `.btn` with no variant class -- as the quiet secondary treatment. */
+   bare `.btn` with no variant class -- as the quiet secondary treatment.
+
+   Bootstrap 5 themes every button state through `--bs-btn-*` custom
+   properties -- `.btn:hover`, the `:active`/`.active`/`.show` chain (which
+   reaches (0,3,0) specificity, beating any plain classed color override
+   here), and `.btn:disabled` all just read `var(--bs-btn-hover-bg)` /
+   `var(--bs-btn-active-bg)` / `var(--bs-btn-disabled-bg)` etc. Fighting
+   that with literal `:hover`/`:active` rules of our own is a losing
+   specificity war (stock Bootstrap green/blue briefly flashes on
+   `:active` otherwise); redefining the variables per bucket instead makes
+   every one of Bootstrap's own selectors resolve to a token color, hover
+   through active through disabled, in one place. */
 
 .btn {
+    --bs-btn-color: var(--ink);
+    --bs-btn-bg: var(--surface);
+    --bs-btn-border-color: var(--line);
+    --bs-btn-hover-color: var(--ink);
+    --bs-btn-hover-bg: var(--accent-quiet);
+    --bs-btn-hover-border-color: var(--line);
+    --bs-btn-active-color: var(--ink);
+    --bs-btn-active-bg: var(--accent-quiet);
+    --bs-btn-active-border-color: var(--line);
+    --bs-btn-disabled-color: var(--ink);
+    --bs-btn-disabled-bg: var(--surface);
+    --bs-btn-disabled-border-color: var(--line);
+
     font-family: var(--font-ui);
     font-size: 14.5px;
     font-weight: 600;
@@ -97,70 +121,51 @@ p {
     font-size: 13px;
 }
 
-.btn,
-.btn-secondary,
-.btn-outline-secondary,
-.btn-warning,
-.btn-info {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    color: var(--ink);
-}
-
-.btn:hover,
-.btn-secondary:hover,
-.btn-outline-secondary:hover,
-.btn-warning:hover,
-.btn-info:hover,
-.btn:focus,
-.btn-secondary:focus,
-.btn-outline-secondary:focus,
-.btn-warning:focus,
-.btn-info:focus {
-    background: var(--accent-quiet);
-    border-color: var(--line);
-    color: var(--ink);
-}
-
 .btn-primary,
 .btn-success {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--surface);
-}
-
-.btn-primary:hover,
-.btn-success:hover,
-.btn-primary:focus,
-.btn-success:focus {
-    background: color-mix(in srgb, var(--accent) 82%, black);
-    border-color: color-mix(in srgb, var(--accent) 82%, black);
-    color: var(--surface);
+    --bs-btn-color: var(--surface);
+    --bs-btn-bg: var(--accent);
+    --bs-btn-border-color: var(--accent);
+    --bs-btn-hover-color: var(--surface);
+    --bs-btn-hover-bg: color-mix(in srgb, var(--accent) 88%, black);
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--accent) 88%, black);
+    --bs-btn-active-color: var(--surface);
+    --bs-btn-active-bg: color-mix(in srgb, var(--accent) 80%, black);
+    --bs-btn-active-border-color: color-mix(in srgb, var(--accent) 80%, black);
+    --bs-btn-disabled-color: var(--surface);
+    --bs-btn-disabled-bg: var(--accent);
+    --bs-btn-disabled-border-color: var(--accent);
 }
 
 .btn-danger,
 .btn-outline-danger {
-    background: transparent;
-    border: 1px solid var(--bad);
-    color: var(--bad);
-}
-
-.btn-danger:hover,
-.btn-outline-danger:hover,
-.btn-danger:focus,
-.btn-outline-danger:focus {
-    background: var(--bad);
-    border-color: var(--bad);
-    color: var(--surface);
+    --bs-btn-color: var(--bad);
+    --bs-btn-bg: transparent;
+    --bs-btn-border-color: var(--bad);
+    --bs-btn-hover-color: var(--surface);
+    --bs-btn-hover-bg: var(--bad);
+    --bs-btn-hover-border-color: var(--bad);
+    --bs-btn-active-color: var(--surface);
+    --bs-btn-active-bg: color-mix(in srgb, var(--bad) 85%, black);
+    --bs-btn-active-border-color: color-mix(in srgb, var(--bad) 85%, black);
+    --bs-btn-disabled-color: var(--bad);
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: var(--bad);
 }
 
 .btn-link {
-    color: var(--accent);
-}
-
-.btn-link:hover,
-.btn-link:focus {
-    color: var(--accent);
+    --bs-btn-color: var(--accent);
+    --bs-btn-bg: transparent;
+    --bs-btn-border-color: transparent;
+    --bs-btn-hover-color: var(--accent);
+    --bs-btn-hover-bg: transparent;
+    --bs-btn-hover-border-color: transparent;
+    --bs-btn-active-color: var(--accent);
+    --bs-btn-active-bg: transparent;
+    --bs-btn-active-border-color: transparent;
+    --bs-btn-disabled-color: var(--ink-soft);
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: transparent;
 }
 
 .btn:disabled,
@@ -173,7 +178,10 @@ fieldset:disabled .btn {
 
 /* Bootstrap's own `.btn:focus-visible` sets `outline: 0` with higher
    specificity than the global `:focus-visible` rule in roller-tokens.css,
-   so buttons need their own ring restored here. */
+   so buttons need their own ring restored here. Color/background on this
+   state still come from the `--bs-btn-hover-*` vars above (Bootstrap's
+   `.btn:focus-visible` rule reuses them), so only the ring itself needs
+   restating. */
 .btn:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
@@ -288,6 +296,21 @@ label,
     border-color: var(--line);
     font-family: var(--font-ui);
     font-size: 15px;
+}
+
+/* easymde.min.css hardcodes the caret at #000 and selection at #d9d9d9 --
+   both effectively invisible/wrong against a dark --surface. Token them;
+   `.EasyMDEContainer .CodeMirror-focused .CodeMirror-selected` is the
+   highest-specificity of the three selection rules the stylesheet
+   declares, so it needs its own override alongside the unfocused one. */
+.CodeMirror-cursor {
+    border-left-color: var(--ink);
+}
+
+.CodeMirror-selected,
+.CodeMirror-focused .CodeMirror-selected,
+.EasyMDEContainer .CodeMirror-focused .CodeMirror-selected {
+    background: var(--accent-quiet);
 }
 
 .editor-preview {
@@ -528,16 +551,20 @@ td.scheduledentry, tr.scheduledentry {
 
 /* comments */
 
+/* Quiet Instrument: same pill/tint system as the entry status boxes above
+   -- approved reads as the "good" outcome, pending as the "needs
+   attention" warn tint (matching pendingCommentBox's original yellow). */
+
 td.pendingcomment {
-    background: #ffffcc;
+    background: color-mix(in srgb, var(--warn) 10%, var(--surface));
 }
 .approvedCommentBox {
-    background: #ffffff;
-    border: 1px gray solid;
+    background: color-mix(in srgb, var(--good) 12%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--good) 45%, var(--surface));
 }
 .pendingCommentBox {
-    background: #ffffcc;
-    border: 1px gray solid;
+    background: color-mix(in srgb, var(--warn) 20%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--surface));
 }
 table.innertable {
     border-collapse: collapse;
