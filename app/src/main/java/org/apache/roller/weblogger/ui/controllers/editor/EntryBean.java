@@ -507,7 +507,7 @@ public class EntryBean {
     public String toString() {
         StringBuilder buf = new StringBuilder();
         
-        //title,locale,catId,tags,text,summary,pubTimeLocal,status,comments,plugins
+        //title,locale,catId,tags,text,summary,pubTimeLocal,status,comments
         buf.append("title = ").append(getTitle()).append("\n");
         buf.append("locale = ").append(getLocale()).append("\n");
         buf.append("status = ").append(getStatus()).append("\n");

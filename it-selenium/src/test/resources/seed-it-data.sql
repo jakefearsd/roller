@@ -86,7 +86,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- A published entry so anonymous-surface tests have real content to render.
 INSERT INTO weblogentry (id, anchor, creator, title, text, pubtime, updatetime,
-                         websiteid, categoryid, publishentry, link, plugins,
+                         websiteid, categoryid, publishentry, link,
                          allowcomments, commentdays, righttoleft, pinnedtomain,
                          locale, status, summary, search_description)
 VALUES ('it-entry-0000-0000-0000-000000000001', 'it-seeded-entry', 'it_admin',
@@ -94,6 +94,6 @@ VALUES ('it-entry-0000-0000-0000-000000000001', 'it-seeded-entry', 'it_admin',
         now() - interval '1 hour', now() - interval '1 hour',
         'it-weblog-0000-0000-0000-00000000001',
         'it-cat-0000-0000-0000-000000000001',
-        true, NULL, NULL, true, 7, false, false,
+        true, NULL, true, 7, false, false,
         'en_US', 'PUBLISHED', NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
