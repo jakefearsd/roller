@@ -55,6 +55,8 @@ public class WeblogConfigBean {
     private String about = null;
 
     private String analyticsCode = null;
+    private String analyticsSiteId = null;
+    private String analyticsShareUrl = null;
     private String newsletterListUuid = null;
 
     private String bloggerCategoryId = null;
@@ -245,6 +247,22 @@ public class WeblogConfigBean {
         this.analyticsCode = analyticsCode;
     }
 
+    public String getAnalyticsSiteId() {
+        return analyticsSiteId;
+    }
+
+    public void setAnalyticsSiteId(String analyticsSiteId) {
+        this.analyticsSiteId = analyticsSiteId;
+    }
+
+    public String getAnalyticsShareUrl() {
+        return analyticsShareUrl;
+    }
+
+    public void setAnalyticsShareUrl(String analyticsShareUrl) {
+        this.analyticsShareUrl = analyticsShareUrl;
+    }
+
     public String getNewsletterListUuid() {
         return newsletterListUuid;
     }
@@ -274,6 +292,8 @@ public class WeblogConfigBean {
         this.enableMultiLang = dataHolder.isEnableMultiLang();
         this.showAllLangs = dataHolder.isShowAllLangs();
         this.analyticsCode = dataHolder.getAnalyticsCode();
+        this.analyticsSiteId = dataHolder.getAnalyticsSiteId();
+        this.analyticsShareUrl = dataHolder.getAnalyticsShareUrl();
         this.newsletterListUuid = dataHolder.getNewsletterListUuid();
         setIcon(dataHolder.getIconPath());
         setAbout(dataHolder.getAbout());
@@ -306,6 +326,8 @@ public class WeblogConfigBean {
         dataHolder.setIconPath(getIcon());
         dataHolder.setAbout(getAbout());
         dataHolder.setAnalyticsCode(this.analyticsCode);
+        dataHolder.setAnalyticsSiteId(StringUtils.trimToNull(this.analyticsSiteId));
+        dataHolder.setAnalyticsShareUrl(StringUtils.trimToNull(this.analyticsShareUrl));
         dataHolder.setNewsletterListUuid(StringUtils.trimToNull(this.newsletterListUuid));
         dataHolder.setDefaultCommentDays(Integer.parseInt(this.defaultCommentDays));
     }

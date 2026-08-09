@@ -82,6 +82,8 @@ public class Weblog implements Serializable {
     private String  about            = null;
     private String  creator          = null;
     private String  analyticsCode    = null;
+    private String  analyticsSiteId  = null;
+    private String  analyticsShareUrl = null;
     private String  newsletterListUuid = null;
 
     // Associated objects
@@ -546,6 +548,31 @@ public class Weblog implements Serializable {
 
     public void setAnalyticsCode(String analyticsCode) {
         this.analyticsCode = analyticsCode;
+    }
+
+    /**
+     * The Umami website UUID the theme macro builds this weblog's tracker
+     * tag from. Null or blank disables analytics for this weblog.
+     */
+    public String getAnalyticsSiteId() {
+        return analyticsSiteId;
+    }
+
+    public void setAnalyticsSiteId(String analyticsSiteId) {
+        this.analyticsSiteId = analyticsSiteId;
+    }
+
+    /**
+     * The operator's saved link to the Umami share dashboard for this
+     * weblog's site. Display-only convenience; never used to build the
+     * tracker tag.
+     */
+    public String getAnalyticsShareUrl() {
+        return analyticsShareUrl;
+    }
+
+    public void setAnalyticsShareUrl(String analyticsShareUrl) {
+        this.analyticsShareUrl = analyticsShareUrl;
     }
 
     /**

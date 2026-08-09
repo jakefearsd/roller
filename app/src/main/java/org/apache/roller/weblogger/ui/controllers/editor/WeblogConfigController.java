@@ -164,6 +164,16 @@ public class WeblogConfigController extends BaseController {
         if (newsletterListUuid != null && !UUID_PATTERN.matcher(newsletterListUuid).matches()) {
             addError(model, "websiteSettings.newsletterListUuid.invalid", request);
         }
+
+        String analyticsSiteId = StringUtils.trimToNull(bean.getAnalyticsSiteId());
+        if (analyticsSiteId != null && !UUID_PATTERN.matcher(analyticsSiteId).matches()) {
+            addError(model, "websiteSettings.analyticsSiteId.invalid", request);
+        }
+
+        String analyticsShareUrl = StringUtils.trimToNull(bean.getAnalyticsShareUrl());
+        if (analyticsShareUrl != null && !analyticsShareUrl.matches("^https?://.*")) {
+            addError(model, "websiteSettings.analyticsShareUrl.invalid", request);
+        }
     }
 
     private void loadFormData(HttpServletRequest request, Model model) {

@@ -240,6 +240,29 @@
         </div>
     </c:if>
 
+    <%-- ***** Analytics settings ***** --%>
+
+    <h3><spring:message code="websiteSettings.analyticsSettings"/></h3>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsSiteId"/></label>
+        <div class="col-sm-9">
+            <input type="text" name="bean.analyticsSiteId" value="${fn:escapeXml(bean.analyticsSiteId)}" size="40" maxlength="64" class="form-control"/>
+            <div class="form-text"><spring:message code="websiteSettings.analyticsSiteId.tip"/></div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsShareUrl"/></label>
+        <div class="col-sm-9">
+            <input type="text" name="bean.analyticsShareUrl" value="${fn:escapeXml(bean.analyticsShareUrl)}" size="40" maxlength="255" class="form-control"/>
+            <div class="form-text"><spring:message code="websiteSettings.analyticsShareUrl.tip"/></div>
+            <c:if test="${not empty bean.analyticsShareUrl}">
+                <div class="form-text"><a href="${fn:escapeXml(bean.analyticsShareUrl)}" target="_blank" rel="noopener">${fn:escapeXml(bean.analyticsShareUrl)}</a></div>
+            </c:if>
+        </div>
+    </div>
+
     <%-- ***** Newsletter settings ***** --%>
 
     <h3><spring:message code="websiteSettings.newsletterSettings"/></h3>

@@ -62,7 +62,9 @@ class WeblogWrapperTest {
         weblog.setEntryDisplayCount(37);
         weblog.setDefaultCommentDays(9);
         weblog.setAnalyticsCode("analytics-snippet");
-        weblog.setNewsletterListUuid("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+        weblog.setAnalyticsSiteId("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+        weblog.setAnalyticsShareUrl("https://analytics.example.com/share/abc123");
+        weblog.setNewsletterListUuid("94b12e10-1234-4321-aaaa-2c963f66afa6");
         weblog.setDefaultPlugins("ConvertLineBreaks");
         weblog.setDateCreated(new Date(1_700_000_000_000L));
         weblog.setEnableMultiLang(true);
@@ -96,7 +98,9 @@ class WeblogWrapperTest {
         assertEquals(new Date(1_700_000_000_000L), wrapper.getDateCreated());
         assertEquals("analytics-snippet", wrapper.getAnalyticsCode(),
                 "Text with nothing to sanitise must reach the page unchanged");
-        assertEquals("3fa85f64-5717-4562-b3fc-2c963f66afa6", wrapper.getNewsletterListUuid());
+        assertEquals("3fa85f64-5717-4562-b3fc-2c963f66afa6", wrapper.getAnalyticsSiteId());
+        assertEquals("https://analytics.example.com/share/abc123", wrapper.getAnalyticsShareUrl());
+        assertEquals("94b12e10-1234-4321-aaaa-2c963f66afa6", wrapper.getNewsletterListUuid());
         assertEquals(Locale.US, wrapper.getLocaleInstance());
         assertEquals(TimeZone.getTimeZone("America/New_York"), wrapper.getTimeZoneInstance());
     }
