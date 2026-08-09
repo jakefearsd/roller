@@ -23,6 +23,11 @@ mismatch 404s the asset on every page that includes this file.
 
 <script src="<c:url value='/webjars/clipboard.js/2.0.11/clipboard.min.js'/>"></script>
 
+<%-- EasyMDE's toolbar icons are Font Awesome 4 glyph classes; self-hosted
+     here (autoDownloadFontAwesome:false in EntryEditor.jsp/PageEdit.jsp
+     skips EasyMDE's own CDN <link>) rather than fetched from a CDN. --%>
+<link href="<c:url value='/webjars/font-awesome/4.7.0/css/font-awesome.min.css'/>" rel="stylesheet" />
+
 <script src="<c:url value='/webjars/easymde/2.21.0/dist/easymde.min.js'/>"></script>
 <link href="<c:url value='/webjars/easymde/2.21.0/dist/easymde.min.css'/>" rel="stylesheet" />
 

@@ -295,6 +295,21 @@ limitations under the License.
             <version>1.13.1</version>
         </dependency>
 
+        <!-- EasyMDE's toolbar buttons (bold/italic/heading/etc, in the entry
+             and page editors) carry "fa fa-*" icon-font classes: its own
+             CSS ships no glyphs, just the class names, and EasyMDE is
+             configured with autoDownloadFontAwesome:false (see EntryEditor.jsp
+             /PageEdit.jsp) so it never injects a CDN link for the font.
+             Without a locally-hosted Font Awesome the classes have no font
+             backing them and every toolbar icon renders as an empty box.
+             4.7.0 (not 5/6) because the class names EasyMDE emits,
+             fa-check-square-o and fa-arrows-alt, are Font Awesome 4 names. -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>font-awesome</artifactId>
+            <version>4.7.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>clipboard.js</artifactId>
