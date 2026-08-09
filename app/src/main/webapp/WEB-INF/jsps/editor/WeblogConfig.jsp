@@ -257,7 +257,14 @@
         <div class="col-sm-9">
             <input type="text" name="bean.analyticsShareUrl" value="${fn:escapeXml(bean.analyticsShareUrl)}" size="40" maxlength="255" class="form-control"/>
             <div class="form-text"><spring:message code="websiteSettings.analyticsShareUrl.tip"/></div>
-            <c:if test="${not empty bean.analyticsShareUrl}">
+            <%-- A rejected save re-renders this page with the raw submitted bean, so
+                 "not empty" alone would echo an unvalidated value (e.g. javascript:...)
+                 as a live link. The prefix check below is the scheme allowlist for the
+                 echoed link, case-insensitively mirroring myValidate's own check; "not
+                 empty" short-circuits first so fn:toLowerCase never sees a null value. --%>
+            <c:if test="${not empty bean.analyticsShareUrl
+                    and (fn:startsWith(fn:toLowerCase(bean.analyticsShareUrl), 'https://')
+                    or fn:startsWith(fn:toLowerCase(bean.analyticsShareUrl), 'http://'))}">
                 <div class="form-text"><a href="${fn:escapeXml(bean.analyticsShareUrl)}" target="_blank" rel="noopener">${fn:escapeXml(bean.analyticsShareUrl)}</a></div>
             </c:if>
         </div>

@@ -104,6 +104,21 @@ class WeblogConfigAnalyticsTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void savingAnUppercaseSchemeShareUrlPersistsAsTyped() throws Exception {
+        // RFC 3986 schemes are case-insensitive (and CtaShortcode already treats
+        // its own scheme check that way), but validation accepting the value must
+        // not rewrite what the operator typed.
+        bean.setAnalyticsShareUrl("HTTPS://EXAMPLE.COM/share/x");
+
+        controller.save(request, model, bean);
+
+        assertEquals("HTTPS://EXAMPLE.COM/share/x", weblog.getAnalyticsShareUrl(),
+                "Case-insensitive validation must not normalise the stored value");
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+    }
+
+    @Test
     void savingBlankShareUrlClearsIt() throws Exception {
         weblog.setAnalyticsShareUrl("https://analytics.example.com/share/abc123");
         bean.setAnalyticsShareUrl("   ");

@@ -171,7 +171,7 @@ public class WeblogConfigController extends BaseController {
         }
 
         String analyticsShareUrl = StringUtils.trimToNull(bean.getAnalyticsShareUrl());
-        if (analyticsShareUrl != null && !analyticsShareUrl.matches("^https?://.*")) {
+        if (analyticsShareUrl != null && !analyticsShareUrl.matches("(?i)^https?://.*")) {
             addError(model, "websiteSettings.analyticsShareUrl.invalid", request);
         }
     }
