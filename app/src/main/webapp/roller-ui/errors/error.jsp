@@ -15,48 +15,64 @@
   copyright in this work, please see the NOTICE file in the top level
   directory of this distribution.
 --%>
+<%-- Container-level error page (registered on Exception.class/
+     HttpStatus.INTERNAL_SERVER_ERROR in boot/WebContainerConfig.java). See
+     404.jsp's comment for why this is hardcoded English with inline CSS
+     rather than <fmt:message>/<spring:message> and an external stylesheet.
+     No exception detail is rendered here on purpose: this is the page shown
+     for an *unexpected* server error, and neither the exception message nor
+     its class name is for a reader to see -- the real detail goes to the
+     server log (see RollerHandlerInterceptor / the container's own error
+     logging), not the response body. --%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt"  prefix="fmt" %>
-<fmt:setBundle basename="ApplicationResources" />
 <!doctype html>
-<html>
+<html lang="en">
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title><fmt:message key="errorPage.title" /></title>
-
-        <link rel="stylesheet" media="all" href='<c:url value="/roller-ui/styles/roller.css"/>' />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Something went wrong</title>
+        <style>
+            :root { color-scheme: light dark; }
+            body {
+                margin: 0;
+                padding: 4rem 1.5rem;
+                background: #f5f5f5;
+                color: #222;
+                font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                text-align: center;
+            }
+            .box {
+                max-width: 32rem;
+                margin: 0 auto;
+            }
+            .code {
+                font-size: 0.9rem;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: #888;
+                margin: 0 0 0.5rem;
+            }
+            h1 {
+                font-size: 1.6rem;
+                margin: 0 0 0.75rem;
+            }
+            p {
+                color: #555;
+                line-height: 1.5;
+            }
+            a {
+                color: #06c;
+            }
+        </style>
     </head>
     <body>
-        <div style="padding: 15px 25px 25px 25px">
-            <h2 class="error"><fmt:message key="errorPage.title" /></h2>
-            
-            <c:set var="status_code" value="${requestScope['jakarta.servlet.error.status_code']}" />
-            <c:set var="message"     value="${requestScope['jakarta.servlet.error.message']}" />
-            <c:set var="type"        value="${requestScope['jakarta.servlet.error.type']}" />
-            <c:set var="exception"   value="${requestScope['jakarta.servlet.error.exception']}" />
-            
-            <table width="80%" border="1px" style="border-collapse: collapse;">
-                <tr>
-                    <td width="20%">Status Code</td>
-                    <td><c:out value="${status_code}" /></td>
-                </tr>
-                <tr>
-                    <td width="20%">Message</td>
-                    <td><c:out value="${message}" /></td>
-                </tr>
-                <tr>
-                    <td width="20%">Type</td>
-                    <td><c:out value="${type}" /></td>
-                </tr>
-                <tr>
-                    <td width="20%">Exception</td>
-                    <td><fmt:message key="errorPage.message" /></td>
-                </tr>
-            </table>
+        <div class="box">
+            <p class="code">500</p>
+            <h1>Something went wrong</h1>
+            <p>Roller has encountered an unexpected error and logged it. Please try again, and
+               contact your site administrator if the problem continues.</p>
+            <p><a href="<c:url value="/"/>">Return to the home page</a></p>
         </div>
-        
-        <br />
-        <br />
     </body>
 </html>
