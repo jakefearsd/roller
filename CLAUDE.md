@@ -316,6 +316,17 @@ Key domain entities:
   whatever the setting said — a one-way conversion behind a hidden menu entry.
   A weblog already on a custom theme is grandfathered (turning the option off
   stops new customisations; it must not strand a weblog that has no way back).
+- `travel` and `portfolio` each ship a `_page` template
+  (`themes/<id>/page.vm`) the same way `_popupcomments` is overridden — a
+  `WeblogPage` falls back to it through the same `StaticThemeTemplate` path
+  as any other unthemed content, so a static page renders in the theme's own
+  identity (travel's `tg-header` chrome, portfolio's dark frame) instead of
+  the naked fallback template's bare `<h1>`. `TravelThemeRenderingTest`/
+  `PortfolioThemeRenderingTest` pin this end to end: a page carrying
+  `[contact]` must render through the theme's header/prose classes *and*
+  ship the audience assets (contact form script/style) in the head, with an
+  explicit `assertFalse` that the fallback template's unstyled `<h1>` is not
+  what rendered.
 
 ## Configuration scope
 Three scopes, and which one a property lives in decides whether it can be
@@ -425,6 +436,56 @@ excused whatever its type.
   no CacheHandler and expires lazily).
 
 ## Admin UI
+- **Design system**: `docs/design/design-system.md` is the committed spec
+  ("Quiet Instrument" — tokens, type, spacing, and the three "signature
+  moves": the rail spine, empty-states-as-invitations, the button
+  hierarchy). Tokens live in `roller-ui/styles/roller-tokens.css` (light
+  palette under `:root`, dark under `@media (prefers-color-scheme: dark)`,
+  self-hosted IBM Plex `@font-face`), linked in `head.jsp` *after*
+  `bootstrap.min.css` (so its custom properties are there to override) and
+  *before* `roller.css` (so `roller.css` can override the tokens) — that
+  ordering, every hex literal tracing to the spec's 21 values, and light/dark
+  defining the same token names are all enforced by `DesignTokenTest`, not
+  just convention.
+- **Never restyle by renaming a selector.** Every admin route's content tile
+  must keep emitting the CSS marker `Routes` pins for it in
+  `it-selenium/.../support/Routes.java` — `RouteSweepIT` visits every route
+  and asserts that marker, because Roller's layout renders full site chrome
+  (banner, nav, footer, `<h2 class="roller-page-title">`) regardless of
+  whether the content tile is wired up at all (the `categoryEdit.rol`
+  failure mode: a healthy 200 with no actual form on it). A class rename
+  that isn't also updated in `Routes` fails the sweep on purpose — the CSS
+  change and the marker update belong in the same commit, not a silent
+  drift.
+- **The tiles system** is homegrown, not Apache Tiles: `ViewDefinition`
+  (layout JSP + named attribute JSPs, e.g. `content`, `menu`) is resolved by
+  `RollerViewResolver`. `tiles-tabbedpage.jsp`/`tiles-mainmenupage.jsp` are
+  the two layouts; both render `#adminRail` (weblog context block, then tool
+  groups from the `navMenu` model under caps-labels, with `.rail-active` —
+  a 2px inset accent rule — on the current tab) in place of the old
+  "Powered by Apache Roller" card and the header dropdown menus.
+  `RouteSweepIT.adminRailIsPresentWithAnActiveSpineOnATabbedPage` is a smoke
+  test riding an already-covered route (Entries), not a new fixture.
+- **Buttons theme through Bootstrap's `--bs-btn-*` custom properties**
+  (`--bs-btn-hover-bg`, `--bs-btn-active-bg`, `--bs-btn-disabled-bg`, …),
+  never literal `:hover`/`:active` rules of our own — Bootstrap's own
+  `:active`/`.active`/`.show` chain reaches `(0,3,0)` specificity and beats a
+  plain classed color override, so stock Bootstrap blue/green would flash on
+  click otherwise. Redefining the variables per bucket (primary/secondary/
+  destructive) makes every one of Bootstrap's *own* selectors resolve to a
+  token color across the whole hover→active→disabled chain, in one place.
+- **`.form-stacked`** on a `<form>` converts Bootstrap's
+  `row.mb-3 > label.col-sm-3 + div.col-sm-9` grid to labels-above block flow
+  without touching individual fields — used on `WeblogConfig.jsp`/
+  `GlobalConfig.jsp` plus nine more forms in the Task 7 sweep.
+- **`.empty-state`/`.empty-state-title`/`.empty-state-body`** are the
+  "invitations, not shrugs" signature (one 600/16px title, one `--ink-soft`
+  sentence, at most one primary-button action, icon-free) on Entries/Pages/
+  Submissions/Comments/MediaFileView. `Pages.jsp`/`Submissions.jsp` render it
+  as the lone `<tr>` in an otherwise-empty table body, which makes its `<td>`
+  the tbody's first-child — the same structural hook the table header's
+  caps-label rule keys off — so `.empty-state` resets those inherited
+  properties rather than trusting every future caller to remember.
 - `roller-ui/scripts/ajax-user.js` is pulled in with `<%@ include %>` (a
   translation-time include), so JSP scriptlets inside it **are** interpolated —
   it is not a static resource despite the `.js` extension. Shared by
