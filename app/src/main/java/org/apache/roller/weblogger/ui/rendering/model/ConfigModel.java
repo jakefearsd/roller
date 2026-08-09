@@ -142,6 +142,30 @@ public class ConfigModel implements Model {
         return WebloggerConfig.getProperty("travel.map.tileUrl");
     }
 
+    /**
+     * Where the reverse proxy mounts the Umami tracker on the blog's own
+     * origin, e.g. {@code /analytics}. {@code #showAnalyticsTrackingCode}
+     * builds the {@code <script src>} and {@code data-host-url} from this.
+     *
+     * <p>Same static-config precedent as {@link #getMapTileUrl}: this
+     * describes the reverse proxy in front of the JVM, which does not change
+     * while the JVM runs, so it is read from roller.properties /
+     * roller-custom.properties rather than the hot runtime properties table.
+     */
+    public String getAnalyticsBasePath() {
+        return WebloggerConfig.getProperty("analytics.umami.basePath");
+    }
+
+    /**
+     * The tracker script's filename under {@link #getAnalyticsBasePath}, e.g.
+     * {@code script.js}. Overridable for installations that renamed the
+     * tracker (Umami's {@code UMAMI_SCRIPT_NAME}) to dodge content blockers.
+     * Startup-scoped for the same reason as {@link #getAnalyticsBasePath}.
+     */
+    public String getAnalyticsScriptName() {
+        return WebloggerConfig.getProperty("analytics.umami.scriptName");
+    }
+
     private String getProperty(String name) {
         return WebloggerRuntimeConfig.getProperty(name);
     }

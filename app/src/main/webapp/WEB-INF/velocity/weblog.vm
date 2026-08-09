@@ -380,12 +380,17 @@ will be created.
 #end
 
 #**
-Adds a tracking code for website analytics (e.g. Google Analytics). Will use the blog-defined
-tracking code if defined and permitted by the installation, else the server-defined tracking
-code if defined will be used.
+Analytics for a weblog. The structured path: a validated Umami website id
+plus startup config builds the script tag HERE, so no admin-typed markup
+ever reaches the head -- which is what lets per-weblog analytics coexist
+with weblogAdminsUntrusted. Same-origin via Caddy's /analytics handle, so
+the pinned theme CSPs are untouched. The legacy raw-snippet branches remain
+for installations that used them.
 *#
 #macro(showAnalyticsTrackingCode $weblog)
-    #if ($config.analyticsOverrideAllowed && $utils.isNotEmpty($weblog.analyticsCode))
+    #if ($utils.isNotEmpty($weblog.analyticsSiteId))
+<script defer src="$config.analyticsBasePath/$config.analyticsScriptName" data-website-id="$utils.escapeHTML($weblog.analyticsSiteId)" data-host-url="$config.analyticsBasePath"></script>
+    #elseif ($config.analyticsOverrideAllowed && $utils.isNotEmpty($weblog.analyticsCode))
         $weblog.analyticsCode
     #elseif ($utils.isNotEmpty($config.defaultAnalyticsTrackingCode))
         $config.defaultAnalyticsTrackingCode

@@ -290,6 +290,20 @@ class ConfigModelTest {
                 "Tiles must be fetched over https or a secure page blocks them.");
     }
 
+    @Test
+    void analyticsBasePathAndScriptNameComeFromTheStaticConfigNotTheRuntimeTable() {
+        // No stubbing: like getMapTileUrl, these describe the reverse proxy in
+        // front of the JVM and must answer from roller.properties even when
+        // the runtime table (an administrator-editable DB row) knows nothing.
+        assertEquals("/analytics", model.getAnalyticsBasePath(),
+                "$config.analyticsBasePath reads analytics.umami.basePath out of "
+                        + "roller.properties; #showAnalyticsTrackingCode builds the "
+                        + "script src and data-host-url from it.");
+        assertEquals("script.js", model.getAnalyticsScriptName(),
+                "$config.analyticsScriptName reads analytics.umami.scriptName out "
+                        + "of roller.properties.");
+    }
+
     // --------------------------------------------------------- build details
 
     @Test
