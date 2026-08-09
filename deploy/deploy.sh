@@ -125,7 +125,7 @@ echo "==> Applying database migrations..."
 # fresh files in, and (2) register the same cleanup as an EXIT trap so it
 # also runs after this run, on failure, or on interruption (Ctrl-C).
 cleanup_migration_staging() {
-    "${COMPOSE[@]}" exec -T postgres rm -rf /tmp/migrate.sh /tmp/migrations >/dev/null 2>&1 || true
+    "${COMPOSE[@]}" exec -T postgres rm -rf /tmp/migrate.sh /tmp/migrations /tmp/umami-views.sql >/dev/null 2>&1 || true
 }
 trap cleanup_migration_staging EXIT
 cleanup_migration_staging
@@ -139,6 +139,48 @@ cleanup_migration_staging
     export PGPASSWORD="${POSTGRES_PASSWORD}"
     export DB_NAME="${POSTGRES_DB}"
     bash /tmp/migrate.sh
+'
+cleanup_migration_staging
+
+echo "==> Applying analytics views (Umami database)..."
+
+# analytics_traffic (deploy/analytics/umami-views.sql) lives in the umami
+# database, not the rollerdb migration chain -- PostgreSQL has no
+# cross-database queries, so V017__analytics_contract.sql could not create
+# it even though it owns the rest of the analytics contract. Applied here,
+# after migrate (grafana_ro must already exist) and after the
+# ensure-service-databases step above (the umami database must already
+# exist). CREATE OR REPLACE + GRANT are idempotent, so re-running this on
+# every deploy is a no-op, same as migrate.sh's contract.
+#
+# GRANT CONNECT ON DATABASE for BOTH databases is deliberately issued here
+# and not inside a migration or umami-views.sql: neither can portably learn
+# its own database's name (current_database() needs dynamic SQL to use
+# inside a GRANT), but the real names are already known here as env vars.
+# V017 and umami-views.sql therefore only carry schema/table-level grants.
+"${COMPOSE[@]}" exec -T \
+    -e UMAMI_DB="${UMAMI_DB:-umami}" \
+    postgres bash -c '
+    set -euo pipefail
+    export PGHOST=localhost
+    export PGUSER="${POSTGRES_USER}"
+    export PGPASSWORD="${POSTGRES_PASSWORD}"
+    psql -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+        "GRANT CONNECT ON DATABASE \"${POSTGRES_DB}\" TO grafana_ro;"
+    psql -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+        "GRANT CONNECT ON DATABASE \"${UMAMI_DB}\" TO grafana_ro;"
+'
+
+cleanup_migration_staging
+"${COMPOSE[@]}" cp deploy/analytics/umami-views.sql postgres:/tmp/umami-views.sql
+"${COMPOSE[@]}" exec -T \
+    -e UMAMI_DB="${UMAMI_DB:-umami}" \
+    postgres bash -c '
+    set -euo pipefail
+    export PGHOST=localhost
+    export PGUSER="${POSTGRES_USER}"
+    export PGPASSWORD="${POSTGRES_PASSWORD}"
+    psql -d "${UMAMI_DB}" --single-transaction -v ON_ERROR_STOP=1 -f /tmp/umami-views.sql
 '
 cleanup_migration_staging
 
