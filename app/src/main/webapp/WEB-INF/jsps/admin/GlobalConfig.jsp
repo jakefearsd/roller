@@ -21,7 +21,7 @@
 <p><spring:message code="configForm.prompt"/></p>
 
 
-<form method="post" action="<c:url value='/roller-ui/admin/globalConfig!save.rol'/>">
+<form method="post" action="<c:url value='/roller-ui/admin/globalConfig!save.rol'/>" class="form-stacked">
     <sec:csrfInput/>
 
     <c:forEach var="dg" items="${globalConfigDef.displayGroups}">

@@ -21,7 +21,7 @@
     <spring:message code="websiteSettings.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig!save.rol" method="post">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig!save.rol" method="post" class="form-stacked">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- ***** General settings ***** --%>

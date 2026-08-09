@@ -73,6 +73,233 @@ p {
     border-radius: var(--radius);
 }
 
+/* ---- Buttons: one hierarchy ----
+   `.btn` carries the shared type/radius/padding for every button in the
+   admin UI, no matter which Bootstrap color-variant class rides along.
+   Visual treatment then narrows Bootstrap's whole rainbow of variants down
+   to the three the design actually uses: primary (`.btn-primary` AND
+   `.btn-success` -- the success class survives because browser ITs pin it
+   on submit buttons, but it renders identically to primary), destructive
+   (`.btn-danger`/`.btn-outline-danger`), and everything else -- including a
+   bare `.btn` with no variant class -- as the quiet secondary treatment. */
+
+.btn {
+    font-family: var(--font-ui);
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    border-radius: var(--radius);
+    padding: 8px 16px;
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 13px;
+}
+
+.btn,
+.btn-secondary,
+.btn-outline-secondary,
+.btn-warning,
+.btn-info {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+}
+
+.btn:hover,
+.btn-secondary:hover,
+.btn-outline-secondary:hover,
+.btn-warning:hover,
+.btn-info:hover,
+.btn:focus,
+.btn-secondary:focus,
+.btn-outline-secondary:focus,
+.btn-warning:focus,
+.btn-info:focus {
+    background: var(--accent-quiet);
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+.btn-primary,
+.btn-success {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--surface);
+}
+
+.btn-primary:hover,
+.btn-success:hover,
+.btn-primary:focus,
+.btn-success:focus {
+    background: color-mix(in srgb, var(--accent) 82%, black);
+    border-color: color-mix(in srgb, var(--accent) 82%, black);
+    color: var(--surface);
+}
+
+.btn-danger,
+.btn-outline-danger {
+    background: transparent;
+    border: 1px solid var(--bad);
+    color: var(--bad);
+}
+
+.btn-danger:hover,
+.btn-outline-danger:hover,
+.btn-danger:focus,
+.btn-outline-danger:focus {
+    background: var(--bad);
+    border-color: var(--bad);
+    color: var(--surface);
+}
+
+.btn-link {
+    color: var(--accent);
+}
+
+.btn-link:hover,
+.btn-link:focus {
+    color: var(--accent);
+}
+
+.btn:disabled,
+.btn.disabled,
+fieldset:disabled .btn {
+    opacity: .5;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* Bootstrap's own `.btn:focus-visible` sets `outline: 0` with higher
+   specificity than the global `:focus-visible` rule in roller-tokens.css,
+   so buttons need their own ring restored here. */
+.btn:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+/* ---- Forms ---- */
+
+label,
+.form-label,
+.col-form-label {
+    font-family: var(--font-ui);
+    color: var(--ink);
+}
+
+.form-label,
+.col-form-label {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.form-control,
+.form-select {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--ink);
+    font-family: var(--font-ui);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background: var(--surface);
+    border-color: var(--focus);
+    color: var(--ink);
+    box-shadow: none;
+}
+
+.form-text {
+    color: var(--ink-soft);
+    font-size: 13px;
+}
+
+.text-danger {
+    color: var(--bad) !important;
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid,
+.is-invalid {
+    border-color: var(--bad);
+    background-image: none;
+}
+
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    border-color: var(--bad);
+    box-shadow: none;
+}
+
+/* Quiet Instrument: labels-above layout for the two long settings forms
+   (WeblogConfig.jsp, GlobalConfig.jsp). Both use Bootstrap's
+   `row mb-3 > label.col-sm-3 + div.col-sm-9` grid for every field; adding
+   `.form-stacked` to the <form> element converts those rows to block flow
+   without touching a single field. */
+.form-stacked .row.mb-3 {
+    display: block;
+    margin-right: 0;
+    margin-left: 0;
+}
+
+.form-stacked .row.mb-3 > label.col-sm-3,
+.form-stacked .row.mb-3 > .col-sm-9,
+.form-stacked .row.mb-3 > .offset-sm-3 {
+    display: block;
+    width: auto;
+    max-width: none;
+    flex: none;
+    margin-left: 0;
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.form-stacked .row.mb-3 > label.col-sm-3 {
+    padding-top: 0;
+    margin-bottom: 4px;
+}
+
+/* ---- EasyMDE (Markdown editor) ---- */
+
+.editor-toolbar {
+    background: var(--surface);
+    border-color: var(--line);
+}
+
+.editor-toolbar .easymde-dropdown,
+.editor-toolbar button {
+    color: var(--ink);
+}
+
+.editor-toolbar button.active,
+.editor-toolbar button:hover {
+    background: var(--accent-quiet);
+    border-color: var(--accent);
+    color: var(--ink);
+}
+
+.CodeMirror,
+.EasyMDEContainer .CodeMirror {
+    background: var(--surface);
+    color: var(--ink);
+    border-color: var(--line);
+    font-family: var(--font-ui);
+    font-size: 15px;
+}
+
+.editor-preview {
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-ui);
+}
+
+.editor-preview pre {
+    background: var(--paper);
+}
+
 /* ---- Top bar ---- */
 
 .roller-topbar {
@@ -259,29 +486,40 @@ table.mm_table_actions td {
 
 /* entries page */
 
-.scheduledEntryBox {
-    background: #EEEEE0;
-    border: 1px gray solid;
-}
+/* Quiet Instrument: status pills/tints. Draft -> warn tint, Pending ->
+   accent-quiet, Scheduled -> line tint, matching the components-pills card.
+   Class names survive unchanged; only the colors move onto tokens. */
 
-.pendingEntryBox {
-    background: #ffcccc;
-    border: 1px gray solid;
+.draftEntryBox,
+.pendingEntryBox,
+.scheduledEntryBox {
+    display: inline-block;
+    border-radius: 4px;
 }
 
 .draftEntryBox {
-    background: #ffffcc;
-    border: 1px gray solid;
+    background: color-mix(in srgb, var(--warn) 20%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--surface));
+}
+
+.pendingEntryBox {
+    background: var(--accent-quiet);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--surface));
+}
+
+.scheduledEntryBox {
+    background: var(--paper);
+    border: 1px solid var(--line);
 }
 
 td.pendingentry, tr.pendingentry {
-    background: #ffcccc;
+    background: var(--accent-quiet);
 }
 td.draftentry, tr.draftentry {
-    background: #ffffcc;
+    background: color-mix(in srgb, var(--warn) 10%, var(--surface));
 }
 td.scheduledentry, tr.scheduledentry {
-    background: #EEEEE0;
+    background: var(--paper);
 }
 
 .entryEditSidebarLink > a {
