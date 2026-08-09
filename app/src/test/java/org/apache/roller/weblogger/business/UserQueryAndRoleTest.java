@@ -255,6 +255,38 @@ class UserQueryAndRoleTest {
                 "an offset must move the window, not repeat it");
     }
 
+    /**
+     * Pins the id tiebreak on every dateCreated-ordered user query at the
+     * SOURCE level. A runtime version of this pin (forced same-timestamp
+     * users walked one page at a time) was tried first and passed with the
+     * tiebreak reverted -- a small fixture gets a stable order from the
+     * database by luck, so the runtime shape cannot discriminate. The
+     * original defect only surfaced under the full suite's accumulated
+     * users: ORDER BY dateCreated alone leaves same-timestamp rows in
+     * undefined order, and adjacent one-row pages repeated a row roughly
+     * every other run. Asserting the query text is the deterministic pin.
+     */
+    @Test
+    void dateCreatedOrderedUserQueriesCarryTheIdTiebreak() throws Exception {
+        String orm = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/resources/org/apache/roller/weblogger/pojos/User.orm.xml"));
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("ORDER BY u\\.dateCreated DESC([^<]*)").matcher(orm);
+        int found = 0;
+        while (m.find()) {
+            found++;
+            assertTrue(m.group(1).contains(", u.id"),
+                    "every dateCreated-ordered user query needs the id "
+                            + "tiebreak -- without it, same-timestamp rows "
+                            + "have no defined order and pagination can "
+                            + "repeat or skip a row. Offender: ORDER BY "
+                            + "u.dateCreated DESC" + m.group(1));
+        }
+        assertEquals(4, found,
+                "the four dateCreated-ordered queries moved or changed count "
+                        + "-- update this pin alongside them");
+    }
+
     // ------------------------------------------------------ prefix searching
 
     @Test
