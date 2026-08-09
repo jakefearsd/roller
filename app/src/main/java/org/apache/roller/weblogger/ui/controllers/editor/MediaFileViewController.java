@@ -122,11 +122,7 @@ public class MediaFileViewController extends MediaFileBase {
             }
         }
 
-        if (dirCreated) {
-            model.addAttribute("allDirectories", refreshAllDirectories(request));
-        } else {
-            model.addAttribute("allDirectories", refreshAllDirectories(request));
-        }
+        model.addAttribute("allDirectories", refreshAllDirectories(request));
         loadDropdowns(request, model);
         loadDirectory(request, model, directoryId, null, sortBy);
         return ".MediaFileView";

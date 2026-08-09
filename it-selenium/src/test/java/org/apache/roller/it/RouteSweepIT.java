@@ -135,11 +135,12 @@ class RouteSweepIT extends RollerIT {
     }
 
     /**
-     * Asserts the six routes in {@link Routes#broken()} are still broken.
+     * Asserts every route in {@link Routes#broken()} is still broken -- the
+     * list is EMPTY today (its former residents were all fixed or deleted),
+     * and this test exists for the next one.
      *
-     * <p>Deliberately inverted. If somebody registers the {@code .EntryRemove}
-     * view, fixes the double-prefixed MediaFileViewLight path, or writes the
-     * missing CategoryEdit.jsp, this test fails and tells them to move the route
+     * <p>Deliberately inverted. If somebody parks a broken route there and
+     * later fixes it, this test fails and tells them to move the route
      * into the normal sweep with a real marker. Without that, a fixed page would
      * simply stay untested forever.
      *
