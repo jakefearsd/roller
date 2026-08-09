@@ -206,6 +206,17 @@ class JournalThemeRenderingTest {
         assertTrue(body.contains(CSP_JOURNAL),
                 "the permalink template must carry the same CSP as every other "
                         + "journal template:\n" + body);
+        // qj-crumb/qj-h1/qj-byline/qj-prose all come from _day.vm's
+        // $model.permalink branch, which fires the same way regardless of
+        // which theme.xml template action renders it -- they do NOT pin the
+        // permalink.vm repoint itself. <main class="qj-main qj-main-entry">
+        // does: only permalink.vm emits that combined class (weblog.vm's
+        // <main> carries just "qj-main"), so if theme.xml's permalink action
+        // ever regresses back to weblog.vm this assertion catches it even
+        // though the _day.vm markup below would still render identically.
+        assertTrue(body.contains("<main class=\"qj-main qj-main-entry\">"),
+                "the permalink must render through permalink.vm's own main "
+                        + "shell, not weblog.vm's:\n" + body);
         assertTrue(body.contains("class=\"qj-crumb\""),
                 "the weblog/category crumb must be present:\n" + body);
         assertTrue(body.contains("<h1 class=\"qj-h1\">"),
@@ -215,7 +226,14 @@ class JournalThemeRenderingTest {
         assertTrue(body.contains("class=\"qj-prose\""),
                 "the entry content must render inside the qj-prose reading column:\n" + body);
         assertTrue(body.contains("field-notes-from-the-coast"),
-                "the entry's own body content must render:\n" + body);
+                "the entry's own anchor/title must render:\n" + body);
+        // TestUtils.setupWeblogEntry (called by entryWithSummary) always sets
+        // the entry body text to "blah blah entry" -- assert that literal
+        // text, not just the title/anchor/canonical, so this proves the
+        // rendered body actually made it into the page (PortfolioThemeRenderingTest
+        // pins the same literal for the same reason).
+        assertTrue(body.contains("blah blah entry"),
+                "the entry's rendered body content must appear inside qj-prose:\n" + body);
         assertFalse(body.contains("class=\"qj-entry\""),
                 "the permalink must not fall back to the entry-list row markup:\n" + body);
     }
