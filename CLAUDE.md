@@ -459,8 +459,11 @@ excused whatever its type.
   drift.
 - **The tiles system** is homegrown, not Apache Tiles: `ViewDefinition`
   (layout JSP + named attribute JSPs, e.g. `content`, `menu`) is resolved by
-  `RollerViewResolver`. `tiles-tabbedpage.jsp`/`tiles-mainmenupage.jsp` are
-  the two layouts; both render `#adminRail` (weblog context block, then tool
+  `RollerViewResolver`, which registers seven base layouts
+  (`.tiles-mainmenupage`, `.tiles-tabbedpage`, `.tiles-simplepage`,
+  `.tiles-loginpage`, `.tiles-installpage`, `.tiles-errorpage`,
+  `.tiles-popuppage`) in `init()`. `tiles-tabbedpage.jsp`/
+  `tiles-mainmenupage.jsp` are the two that render `#adminRail` (weblog context block, then tool
   groups from the `navMenu` model under caps-labels, with `.rail-active` —
   a 2px inset accent rule — on the current tab) in place of the old
   "Powered by Apache Roller" card and the header dropdown menus.
@@ -477,7 +480,7 @@ excused whatever its type.
 - **`.form-stacked`** on a `<form>` converts Bootstrap's
   `row.mb-3 > label.col-sm-3 + div.col-sm-9` grid to labels-above block flow
   without touching individual fields — used on `WeblogConfig.jsp`/
-  `GlobalConfig.jsp` plus nine more forms in the Task 7 sweep.
+  `GlobalConfig.jsp` plus ten more forms in the Task 7 sweep.
 - **`.empty-state`/`.empty-state-title`/`.empty-state-body`** are the
   "invitations, not shrugs" signature (one 600/16px title, one `--ink-soft`
   sentence, at most one primary-button action, icon-free) on Entries/Pages/
