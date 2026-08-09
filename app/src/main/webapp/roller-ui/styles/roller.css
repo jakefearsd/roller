@@ -253,20 +253,32 @@ label,
 }
 
 .form-control.is-invalid,
-.is-invalid {
+.is-invalid:not(.form-select) {
     border-color: var(--bad);
     background-image: none;
 }
 
-/* Bootstrap composites background-image from two layers:
+/* Bootstrap composites a select's background-image from two layers:
    var(--bs-form-select-bg-img) (the caret) and var(--bs-form-select-bg-icon)
-   (a warning icon, set only on .is-invalid). Blanking background-image here
-   -- as .form-control.is-invalid does above -- would erase the caret too,
-   the same bug just fixed globally for plain selects. Suppressing only the
-   icon variable keeps the caret while still killing the icon, matching this
-   design's quiet style. */
+   (a warning icon, set only on .is-invalid). Blanking background-image
+   outright -- as the rule above does for text inputs -- would erase the
+   caret too, the same bug just fixed globally for plain selects, so
+   .form-select is excluded from that bare .is-invalid selector above and
+   handled here instead. */
 .form-select.is-invalid {
     border-color: var(--bad);
+}
+
+/* Suppress only the icon variable, keeping the caret. Bootstrap sets
+   --bs-form-select-bg-icon at specificity (0,4,0) via
+   ".form-select.is-invalid:not([multiple]):not([size])" (plus a
+   [size="1"] sibling selector for an explicit single-row select) --
+   matching that specificity exactly here means roller.css's later position
+   in the cascade decides the winner. Verified empirically against the real
+   bootstrap.css in headless Chrome: computed background-image keeps the
+   caret url and drops the icon. */
+.form-select.is-invalid:not([multiple]):not([size]),
+.form-select.is-invalid:not([multiple])[size="1"] {
     --bs-form-select-bg-icon: none;
 }
 
