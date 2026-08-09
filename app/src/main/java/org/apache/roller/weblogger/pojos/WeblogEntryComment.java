@@ -47,7 +47,6 @@ public class WeblogEntryComment implements Serializable {
     private String    id = UUIDGenerator.generateUUID();
     private String    name = null;
     private String    email = null;
-    private String    url = null;
     private String    content = null;
     private Timestamp postTime = null;
     private ApprovalStatus status = ApprovalStatus.APPROVED;
@@ -123,23 +122,8 @@ public class WeblogEntryComment implements Serializable {
     public void setEmail(String email) {
         this.email = email;
     }
-    
-    
-    /**
-     * URL of person who wrote comment.
-     */
-    public String getUrl() {
-        return this.url;
-    }
-    
-    /**
-     * URL of person who wrote comment.
-     */
-    public void setUrl(String url) {
-        this.url = url;
-    }
-    
-    
+
+
     /**
      * Content of comment.
      */

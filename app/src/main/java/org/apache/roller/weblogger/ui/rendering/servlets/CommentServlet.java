@@ -31,7 +31,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -221,7 +220,7 @@ public class CommentServlet extends HttpServlet {
         log.debug("Doing comment posting for entry = " + entry.getPermalink());
 
         // collect input from request params and construct new comment object
-        // fields: name, email, url, content, notify
+        // fields: name, email, content, notify
         // TODO: data validation on collected comment data
         // If the weblog only takes comments from signed-in users, the account
         // is the identity: whatever the form posted for name and email is
@@ -241,22 +240,6 @@ public class CommentServlet extends HttpServlet {
             comment.setEmail(commentRequest.getEmail());
         }
 
-        // Validate url
-        if (StringUtils.isNotEmpty(commentRequest.getUrl())) {
-            String theUrl = commentRequest.getUrl().trim().toLowerCase();
-            StringBuilder url = new StringBuilder();
-            if (theUrl.startsWith("http://")) {
-                url.append(theUrl);
-            } else if (theUrl.startsWith("https://")) {
-                url.append(theUrl);
-            } else {
-                url.append("http://").append(theUrl);
-            }
-            comment.setUrl(url.toString());
-        } else {
-            comment.setUrl("");
-        }
-        
         comment.setContent(commentRequest.getContent());
         comment.setNotify(commentRequest.isNotify());
         comment.setWeblogEntry(entry);
@@ -304,12 +287,6 @@ public class CommentServlet extends HttpServlet {
             error = messageUtils
                     .getString("error.commentPostFailedEmailAddress");
             log.debug("Email Adddress is invalid : " + comment.getEmail());
-            // if there is an URL it must be valid
-        } else if (StringUtils.isNotEmpty(comment.getUrl())
-                && !new UrlValidator(new String[] { "http", "https" })
-                        .isValid(comment.getUrl())) {
-                error = messageUtils.getString("error.commentPostFailedURL");
-                log.debug("URL is invalid : " + comment.getUrl());
             // if this is a real comment post then authenticate request
         } else if (!preview && !this.authenticator.authenticate(request)) {
             error = messageUtils.getString("error.commentAuthFailed");

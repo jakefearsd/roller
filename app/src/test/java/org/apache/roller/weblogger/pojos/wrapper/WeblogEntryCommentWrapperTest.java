@@ -70,7 +70,6 @@ class WeblogEntryCommentWrapperTest {
         comment.setWeblogEntry(entry);
         comment.setName("Alice");
         comment.setEmail("alice@example.com");
-        comment.setUrl("http://alice.example.com/");
         comment.setContent("Nice post");
         comment.setContentType("text/plain");
         comment.setPostTime(Timestamp.valueOf("2024-03-09 15:30:00"));
@@ -89,7 +88,6 @@ class WeblogEntryCommentWrapperTest {
         assertEquals(comment.getId(), wrapper.getId());
         assertEquals("Alice", wrapper.getName());
         assertEquals("alice@example.com", wrapper.getEmail());
-        assertEquals("http://alice.example.com/", wrapper.getUrl());
         assertEquals(Timestamp.valueOf("2024-03-09 15:30:00"), wrapper.getPostTime());
         assertEquals(ApprovalStatus.APPROVED, wrapper.getStatus());
         assertEquals(Boolean.TRUE, wrapper.getNotify());
@@ -138,14 +136,11 @@ class WeblogEntryCommentWrapperTest {
         // the surrounding tag and injecting markup.
         comment.setName("<script>alert(1)</script>");
         comment.setEmail("<b>a</b>@example.com");
-        comment.setUrl("\"onmouseover=\"alert(1)");
         comment.setReferrer("<img src=x onerror=alert(1)>");
 
         assertEquals("&lt;script&gt;alert(1)&lt;/script&gt;", wrapper.getName(),
                 "A commenter's name must reach the page as entities, never as markup");
         assertFalse(wrapper.getEmail().contains("<b>"));
-        assertFalse(wrapper.getUrl().contains("\""),
-                "An unescaped quote in the URL would break out of the href attribute");
         assertFalse(wrapper.getReferrer().contains("<img"));
     }
 

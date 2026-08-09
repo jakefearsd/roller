@@ -92,7 +92,6 @@ public class CommentTest  {
         WeblogEntryComment comment = new WeblogEntryComment();
         comment.setName("test");
         comment.setEmail("test");
-        comment.setUrl("test");
         comment.setRemoteHost("foofoo");
         comment.setContent("this is a test comment");
         comment.setPostTime(new java.sql.Timestamp(new java.util.Date().getTime()));

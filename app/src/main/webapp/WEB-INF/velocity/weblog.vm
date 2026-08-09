@@ -1013,9 +1013,7 @@ Show comments for weblog entry according to Roller configuration.
 
                 <p class="comment-details">
                 $text.get("macro.weblog.postedby")
-                #if (!$utils.isEmpty($comment.name) && !$utils.isEmpty($comment.url))
-                    <a rel="nofollow" href="$comment.url"><b>$comment.name</b></a>
-                #elseif (!$utils.isEmpty($comment.name))
+                #if (!$utils.isEmpty($comment.name))
                     <b>$comment.name</b>
                 #elseif ($comment.remoteHost)
                     <b>$comment.remoteHost</b>
@@ -1062,9 +1060,7 @@ Show comments for weblog entry according to Roller configuration.
               </p>
               <p class="ui-li-desc content-textbox">
                 $text.get("macro.weblog.postedby")
-                #if (!$utils.isEmpty($comment.name) && !$utils.isEmpty($comment.url))
-                   <a rel="nofollow" href="$comment.url"><b>$comment.name</b></a>
-                #elseif (!$utils.isEmpty($comment.name))
+                #if (!$utils.isEmpty($comment.name))
                    <b>$comment.name</b>
                 #elseif ($comment.remoteHost)
                    <b>$comment.remoteHost</b>
@@ -1141,10 +1137,6 @@ Show comments form for weblog entry.
             </li>
         #end
 
-            <li><label class="desc">$text.get( "macro.weblog.url" )</label>
-                <input type="text" name="url" class="text large" value="$cform.url" size="50" maxlength="255" />
-            </li>
-
             #if ($config.commentEmailNotify)
                 <li><input type="checkbox" class="checkbox" id="notify" name="notify" #if($cform.notify)CHECKED #end/>
                     <label for="notify" class="choice">$text.get( "macro.weblog.notifyMeOfComments" )</label>
@@ -1209,8 +1201,7 @@ Show comments form for weblog entry.
 
         var remembered = {
             name: getCookie("commentAuthor"),
-            email: getCookie("commentEmail"),
-            url: getCookie("commentUrl")
+            email: getCookie("commentEmail")
         };
         var restoredAny = false;
         Object.keys(remembered).forEach(function (fieldName) {

@@ -88,16 +88,6 @@ public final class WeblogEntryCommentWrapper {
     
     
     /**
-     * Get the url of the comment writer, if specified.
-     *
-     * Value is always html escaped.
-     */
-    public String getUrl() {
-        return StringEscapeUtils.escapeHtml4(this.pojo.getUrl());
-    }
-    
-    
-    /**
      * Get the comment contents.
      *
      * Any configured comment plugins are applied first, then the value is 

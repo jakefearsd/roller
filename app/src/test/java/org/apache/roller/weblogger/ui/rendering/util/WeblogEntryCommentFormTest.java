@@ -46,7 +46,6 @@ class WeblogEntryCommentFormTest {
 
         assertEquals("", form.getName(), "A fresh form must render empty inputs, not \"null\"");
         assertEquals("", form.getEmail());
-        assertEquals("", form.getUrl());
         assertEquals("", form.getContent());
         assertFalse(form.isNotify());
         assertFalse(form.isError());
@@ -59,15 +58,12 @@ class WeblogEntryCommentFormTest {
         WeblogEntryCommentForm form = new WeblogEntryCommentForm();
         form.setName(SCRIPT);
         form.setEmail(SCRIPT);
-        form.setUrl(SCRIPT);
         form.setContent(SCRIPT);
 
         assertEquals("&lt;script&gt;alert('xss')&lt;/script&gt;", form.getName(),
                 "The author name is echoed into the form and must be escaped");
         assertEquals("&lt;script&gt;alert('xss')&lt;/script&gt;", form.getEmail(),
                 "The email is echoed into the form and must be escaped");
-        assertEquals("&lt;script&gt;alert('xss')&lt;/script&gt;", form.getUrl(),
-                "The url is echoed into the form and must be escaped");
         assertEquals("&lt;script&gt;alert('xss')&lt;/script&gt;", form.getContent(),
                 "The comment body is echoed into the textarea and must be escaped");
     }
@@ -92,7 +88,6 @@ class WeblogEntryCommentFormTest {
 
         assertEquals("Ada", form.getName());
         assertEquals("ada@example.com", form.getEmail());
-        assertEquals("http://example.com", form.getUrl());
         assertEquals("hello", form.getContent());
         assertTrue(form.isNotify(),
                 "The notify choice must survive the round trip or the commenter "
@@ -149,7 +144,6 @@ class WeblogEntryCommentFormTest {
         WeblogEntryComment comment = new WeblogEntryComment();
         comment.setName("Ada");
         comment.setEmail("ada@example.com");
-        comment.setUrl("http://example.com");
         comment.setContent("hello");
         comment.setNotify(Boolean.TRUE);
         return comment;

@@ -68,9 +68,6 @@
             <basic name="email">
                 <column name="email" insertable="true" updatable="true" unique="false"/>
             </basic>
-            <basic name="url">
-                <column name="url" insertable="true" updatable="true" unique="false"/>
-            </basic>
             <basic name="content">
                 <column name="content" insertable="true" updatable="true" unique="false"/>
             </basic>

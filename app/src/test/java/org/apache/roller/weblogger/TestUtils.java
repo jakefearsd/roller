@@ -351,7 +351,6 @@ public final class TestUtils {
         WeblogEntryComment testComment = new WeblogEntryComment();
         testComment.setName("test");
         testComment.setEmail("test");
-        testComment.setUrl("test");
         testComment.setRemoteHost("foofoo");
         testComment.setContent("this is a test comment");
         testComment.setPostTime(new java.sql.Timestamp(new java.util.Date()

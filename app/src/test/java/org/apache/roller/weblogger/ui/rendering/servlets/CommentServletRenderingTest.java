@@ -71,7 +71,6 @@ class CommentServletRenderingTest {
         request.setParameter("method", "post");
         request.setParameter("name", "Anonymous Reader");
         request.setParameter("email", email);
-        request.setParameter("url", "");
         request.setParameter("content", content);
         return request;
     }
@@ -273,7 +272,6 @@ class CommentServletRenderingTest {
         request.setParameter("method", "post");
         request.setParameter("name", "Anonymous Reader");
         request.setParameter("email", "reader@example.com");
-        request.setParameter("url", "");
         request.setParameter("content", "a comment with a name behind it");
 
         RenderingTestSupport.execute(RenderingTestSupport.commentServlet(), request);
@@ -298,7 +296,6 @@ class CommentServletRenderingTest {
         request.setParameter("method", "post");
         request.setParameter("name", "Somebody Else Entirely");
         request.setParameter("email", "victim@example.com");
-        request.setParameter("url", "");
         request.setParameter("content", "signed in somebody else's name");
 
         RenderingTestSupport.execute(RenderingTestSupport.commentServlet(), request);

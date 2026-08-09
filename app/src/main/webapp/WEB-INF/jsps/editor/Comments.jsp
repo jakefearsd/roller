@@ -270,22 +270,6 @@
                                             </c:choose>
                                         </div>
 
-                                        <c:if test="${not empty comment.url}">
-                                            <div class="details">
-                                                <spring:message code="commentManagement.commentByURL"/>&nbsp;:&nbsp;
-                                                <a href='${fn:escapeXml(comment.url)}'>
-                                                    <c:choose>
-                                                        <c:when test="${fn:length(comment.url) > 60}">
-                                                            ${fn:escapeXml(fn:substring(comment.url, 0, 60))}...
-                                                        </c:when>
-                                                        <c:otherwise>
-                                                            ${fn:escapeXml(comment.url)}
-                                                        </c:otherwise>
-                                                    </c:choose>
-                                                </a>
-                                            </div>
-                                        </c:if>
-
                                         <div class="details">
                                             <spring:message code="commentManagement.postTime"/>&nbsp;:&nbsp;
                                             <fmt:formatDate value="${comment.postTime}" type="both" dateStyle="short" timeStyle="short"/>

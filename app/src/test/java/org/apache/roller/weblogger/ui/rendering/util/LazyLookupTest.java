@@ -733,13 +733,11 @@ class LazyLookupTest {
         WeblogCommentRequest comment = new WeblogCommentRequest();
         comment.setName("Ada");
         comment.setEmail("ada@example.com");
-        comment.setUrl("http://example.com");
         comment.setContent("hello");
         comment.setNotify(true);
         comment.setWeblogAnchor("hello");
         assertEquals("Ada", comment.getName());
         assertEquals("ada@example.com", comment.getEmail());
-        assertEquals("http://example.com", comment.getUrl());
         assertEquals("hello", comment.getContent());
         assertEquals(true, comment.isNotify());
         assertEquals("hello", comment.getWeblogAnchor());

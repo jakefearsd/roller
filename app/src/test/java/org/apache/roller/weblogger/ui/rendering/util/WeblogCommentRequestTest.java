@@ -106,13 +106,12 @@ class WeblogCommentRequestTest {
 
     @Test
     void authorSuppliedFieldsHaveHtmlStripped() throws Exception {
-        // These three land in the comment record and are rendered back on the
+        // These two land in the comment record and are rendered back on the
         // permalink page. Stripping here is the first of the defences against
         // stored XSS.
         WeblogCommentRequest request = parse("/myblog/entry/hello",
                 "name", "<script>alert(1)</script>Bob",
-                "email", "<b>bob</b>@example.com",
-                "url", "<i>http://example.com</i>");
+                "email", "<b>bob</b>@example.com");
 
         assertFalse(request.getName().contains("<"),
                 "Markup must not survive in the comment author name; got: " + request.getName());
@@ -120,8 +119,6 @@ class WeblogCommentRequestTest {
                 "Stripping must keep the actual text");
         assertFalse(request.getEmail().contains("<"),
                 "Markup must not survive in the comment email; got: " + request.getEmail());
-        assertFalse(request.getUrl().contains("<"),
-                "Markup must not survive in the comment url; got: " + request.getUrl());
     }
 
     @Test
@@ -156,7 +153,6 @@ class WeblogCommentRequestTest {
 
         assertNull(request.getName());
         assertNull(request.getEmail());
-        assertNull(request.getUrl());
         assertNull(request.getContent());
     }
 

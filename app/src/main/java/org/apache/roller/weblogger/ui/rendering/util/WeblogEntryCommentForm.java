@@ -34,7 +34,6 @@ public class WeblogEntryCommentForm {
     
     private String name = "";
     private String email = "";
-    private String url = "";
     private String content = "";
     private boolean notify = false;
     
@@ -52,7 +51,6 @@ public class WeblogEntryCommentForm {
     public void setData(WeblogEntryComment comment) {
         this.name = comment.getName();
         this.email = comment.getEmail();
-        this.url = comment.getUrl();
         this.content = comment.getContent();
         this.notify = comment.getNotify();
     }
@@ -85,14 +83,6 @@ public class WeblogEntryCommentForm {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getUrl() {
-        return StringEscapeUtils.escapeHtml4(url);
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
     }
 
     public String getContent() {

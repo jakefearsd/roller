@@ -40,7 +40,6 @@ public class WeblogCommentRequest extends WeblogRequest {
     // lightweight attributes
     private String name = null;
     private String email = null;
-    private String url = null;
     private String content = null;
     private boolean notify = false;
     private String weblogAnchor = null;
@@ -108,7 +107,6 @@ public class WeblogCommentRequest extends WeblogRequest {
          * the only params we currently care about are:
          *   name - comment author
          *   email - comment email
-         *   url - comment referring url
          *   content - comment contents
          *   notify - if commenter wants to receive notifications
          */
@@ -118,10 +116,6 @@ public class WeblogCommentRequest extends WeblogRequest {
         
         if(request.getParameter("email") != null) {
             this.email = Utilities.removeHTML(request.getParameter("email"));
-        }
-        
-        if(request.getParameter("url") != null) {
-            this.url = Utilities.removeHTML(request.getParameter("url"));
         }
         
         if(request.getParameter("content") != null) {
@@ -135,7 +129,6 @@ public class WeblogCommentRequest extends WeblogRequest {
         if(log.isDebugEnabled()) {
             log.debug("name = "+this.name);
             log.debug("email = "+this.email);
-            log.debug("url = "+this.url);
             log.debug("content = "+this.content);
             log.debug("notify = "+this.notify);
             log.debug("weblogAnchor = "+this.weblogAnchor);
@@ -156,14 +149,6 @@ public class WeblogCommentRequest extends WeblogRequest {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
     }
 
     public String getContent() {

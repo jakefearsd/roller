@@ -1,0 +1,27 @@
+-- Licensed to the Apache Software Foundation (ASF) under one or more
+-- contributor license agreements.  The ASF licenses this file to You
+-- under the Apache License, Version 2.0 (the "License"); you may not
+-- use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+--
+-- Migration: drop roller_comment.url
+--
+-- The commenter website field is a blogosphere fossil and a spam-link
+-- vector: a free-text URL with no verification behind it, rendered as a
+-- clickable link around the commenter's name. This fork's comments are
+-- signed-in only (Weblog.requireAuthenticatedComments, V013) -- the name and
+-- email a comment carries come off the account, and the posted fields are
+-- discarded. The URL never had that backing; it was always just whatever
+-- text a poster typed.
+--
+-- Prerequisites: V002__baseline_schema.
+
+ALTER TABLE roller_comment DROP COLUMN IF EXISTS url;

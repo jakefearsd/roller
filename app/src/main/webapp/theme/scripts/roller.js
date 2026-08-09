@@ -68,13 +68,11 @@ function rememberUser(theForm) {
     // sets it for entire domain, so freeroller will remember for all users
     setCookie("commentAuthor",value("name"),expires,"/");
     setCookie("commentEmail",value("email"),expires,"/");
-    setCookie("commentUrl",value("url"),expires,"/");
 }
 
 function forgetUser(theForm) {
     deleteCookie("commentAuthor","/");
     deleteCookie("commentEmail","/");
-    deleteCookie("commentUrl","/");
 }
 
 /* This function is used to show/hide elements with a display:none style attribute */

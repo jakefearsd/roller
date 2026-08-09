@@ -594,6 +594,13 @@ excused whatever its type.
   `weblog.lastModified`, which `saveComment`/`removeComment` bump via
   `saveWeblog`. That is why a comment change is visible without an explicit
   cache eviction.
+- **There is no commenter URL field** (`roller_comment.url`, dropped V019).
+  It was a blogosphere fossil and a spam-link vector — a free-text website
+  link rendered as a clickable wrapper around the commenter's name, with no
+  verification behind it. Signed-in-only commenting made it doubly pointless:
+  name and email already come off the account, and the URL never had that
+  backing to begin with. The comment name now renders as plain bold text,
+  always.
 
 ## Entry editing
 - **Editor**: EasyMDE (Markdown + server-rendered preview). The page exposes
