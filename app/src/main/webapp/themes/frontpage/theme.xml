@@ -64,30 +64,6 @@
     </template>
     
     <template action="custom">
-        <name>_blogprofile</name>
-        <description>_blogprofile</description>
-        <navbar>false</navbar>
-        <hidden>true</hidden>
-        <contentType>text/html</contentType>
-        <rendition>
-            <contentsFile>_blogprofile.vm</contentsFile>
-            <templateLanguage>velocity</templateLanguage>
-        </rendition>
-    </template>
-    
-    <template action="custom">
-        <name>_blogs</name>
-        <description>_blogs</description>
-        <navbar>false</navbar>
-        <hidden>true</hidden>
-        <contentType>text/html</contentType>
-        <rendition>
-            <contentsFile>_blogs.vm</contentsFile>
-            <templateLanguage>velocity</templateLanguage>
-        </rendition>
-    </template>
-    
-    <template action="custom">
         <name>_day</name>
         <description>_day</description>
         <navbar>false</navbar>

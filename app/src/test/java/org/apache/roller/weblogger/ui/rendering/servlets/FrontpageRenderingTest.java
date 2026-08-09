@@ -290,16 +290,23 @@ class FrontpageRenderingTest {
 
         // Weblog.setName/setTagline already strip markup via
         // Utilities.removeHTML before a template ever sees the value, so a
-        // bare "&" is the one character that survives to prove THIS
-        // template's own escaping calls are doing real work, not just
-        // riding on the upstream stripper.
+        // bare "&" is the one character that survives to be observable here.
+        // The name assertion below exercises WeblogWrapper#getName's own
+        // built-in StringEscapeUtils.escapeHtml4 -- the template renders
+        // $blog.name/$entry.website.name bare, deliberately NOT wrapped in
+        // another $utils.escapeHTML (that would double-encode, see weblog.vm's
+        // fd-dir comment). $blog.tagline is NOT pre-escaped by its wrapper
+        // (WeblogWrapper#getTagline only sanitizes/strips markup), so the
+        // tagline assertion is the one that actually proves THIS template's
+        // own $utils.escapeHTML($blog.tagline) call is doing real work.
         assertFalse(body.contains("Harbor & Cove Notes"),
                 "the fd-post credit / fd-blog card must not carry a raw ampersand:\n" + body);
         assertTrue(body.contains("Harbor &amp; Cove Notes"),
-                "the contributing weblog's name must render HTML-escaped:\n" + body);
+                "the contributing weblog's name must render HTML-escaped "
+                        + "(WeblogWrapper#getName's own escaping):\n" + body);
         assertTrue(body.contains("Guides &amp; notes for the coast"),
-                "the contributing weblog's tagline must render HTML-escaped in the "
-                        + "fd-blog directory card:\n" + body);
+                "the contributing weblog's tagline must render HTML-escaped by this "
+                        + "template's own $utils.escapeHTML call:\n" + body);
     }
 
     // ------------------------------------------------------------------- CSP

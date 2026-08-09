@@ -1,16 +1,13 @@
 #includeTemplate($model.weblog "_header")
 
 #set($maxResults = 25)
-#set($since = 365)
 
-#if($model.getRequestParameter("weblog"))
-    #set($handle = $model.getRequestParameter("weblog"))
-    <p class="fd-crumb"><a href="?letter=$utils.left($handle,1)">&larr; Back to weblog directory</a></p>
-    #set($profileWeblog = $site.getWeblog($handle))
-    #includeTemplate($model.weblog "_blogprofile")
-#else
-    #set($pageLength = $maxResults)
-    #includeTemplate($model.weblog "_blogdirectory")
-#end
+## The portal-era single-weblog profile view (?weblog=<handle>, once rendered
+## by the now-deleted _blogprofile.vm) is retired: the approved front-door design
+## (docs/design/journal/frontpage-front-door.html) links directory cards straight to the weblogs themselves
+## ($blog.absoluteURL, see weblog.vm/_blogdirectory.vm), so there is no
+## in-design door back into a per-weblog profile page.
+#set($pageLength = $maxResults)
+#includeTemplate($model.weblog "_blogdirectory")
 
 #includeTemplate($model.weblog "_footer")
