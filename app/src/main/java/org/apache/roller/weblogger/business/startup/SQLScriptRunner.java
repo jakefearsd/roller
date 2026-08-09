@@ -68,6 +68,18 @@ public class SQLScriptRunner {
                         // trim comment off end of line
                         line = line.substring(0, line.indexOf("--")).trim();
                     }
+                    // NOTE: this only looks at the INCOMING dollar-quote state (before
+                    // this line's own delimiters take effect), not the state as of the
+                    // "--" itself. So a delimiter that CLOSES on this same line, followed
+                    // by a real "--" comment (e.g. "END $$; -- done"), is not stripped:
+                    // "-- done" becomes part of the accumulated command text. Because
+                    // lines are joined with a single space rather than a real newline,
+                    // Postgres then reads that "--" as a comment running to the end of
+                    // the (single-line) command string -- which silently swallows
+                    // everything appended after it, including the next statement, rather
+                    // than raising an error. This is not merely cosmetic: keep dollar-quote
+                    // delimiters, and any trailing comment, off the same physical line as
+                    // a terminating ";".
 
                     // add line to current command
                     command += line.trim();

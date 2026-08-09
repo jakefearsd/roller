@@ -67,4 +67,20 @@ class SQLScriptRunnerTest {
         assertEquals(2, runner.getCommands().size(),
                 "got: " + runner.getCommands());
     }
+
+    /**
+     * A single, unpaired "$" -- as in a price literal -- must never be mistaken
+     * for a dollar-quote delimiter: the delimiter regex requires a MATCHING pair
+     * of "$"s, so one lone "$" can never open a quote and strand every statement
+     * after it as "still inside a block".
+     */
+    @Test
+    void aLoneDollarInAStringLiteralDoesNotOpenAQuote() throws Exception {
+        String sql = "INSERT INTO price (amount) VALUES ('$5');\nSELECT 1;";
+        SQLScriptRunner runner = new SQLScriptRunner(
+                new ByteArrayInputStream(sql.getBytes(StandardCharsets.UTF_8)));
+
+        assertEquals(2, runner.getCommands().size(),
+                "got: " + runner.getCommands());
+    }
 }
