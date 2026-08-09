@@ -30,9 +30,6 @@
         <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/maintenance!index.rol"><spring:message code="maintenance.button.index"/></button>
     </c:if>
 
-    <p><spring:message code="maintenance.prompt.reset"/></p>
-    <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/maintenance!reset.rol"><spring:message code="maintenance.button.reset"/></button>
-
     <p><spring:message code="maintenance.prompt.regenerateRenditions"/></p>
     <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/maintenance!regenerateRenditions.rol"><spring:message code="maintenance.button.regenerateRenditions"/></button>
 

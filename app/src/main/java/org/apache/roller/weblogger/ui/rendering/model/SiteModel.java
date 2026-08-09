@@ -35,7 +35,6 @@ import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.jpa.JPAWeblogEntryManagerImpl;
 import org.apache.roller.weblogger.pojos.TagStat;
-import org.apache.roller.weblogger.pojos.WeblogHitCount;
 import org.apache.roller.weblogger.pojos.StatCount;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
 import org.apache.roller.weblogger.pojos.User;
@@ -424,37 +423,6 @@ public class SiteModel implements Model {
         }
         return results;
     }   
-    
-    
-    /**
-     * Get list of WebsiteDisplay objects, ordered by number of hits.
-     * @param sinceDays Only consider weblogs updated in the last sinceDays
-     * @param length      Max number of results to return
-     */
-    public List<StatCount> getHotWeblogs(int sinceDays, int length) {
-        
-        List<StatCount> results = new ArrayList<>();
-        try {
-            WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-            List<WeblogHitCount> hotBlogs = mgr.getHotWeblogs(sinceDays, 0, length);
-            
-            for (WeblogHitCount hitCount : hotBlogs) {
-                StatCount statCount = new StatCount(
-                    hitCount.getWeblog().getId(),
-                    hitCount.getWeblog().getHandle(),
-                    hitCount.getWeblog().getName(),
-                    "statCount.weblogDayHits",
-                    hitCount.getDailyHits());
-                statCount.setWeblogHandle(hitCount.getWeblog().getHandle());
-                results.add(statCount);              
-            }
-            
-        } catch (Exception e) {
-            log.error("ERROR: fetching hot weblog list", e);
-        }
-        
-        return results;
-    }
     
     
     /**

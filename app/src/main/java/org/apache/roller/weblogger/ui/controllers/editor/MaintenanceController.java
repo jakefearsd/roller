@@ -25,7 +25,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.search.IndexManager;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.util.cache.CacheManager;
@@ -113,27 +112,6 @@ public class MaintenanceController extends BaseController {
         } catch (Exception ex) {
             log.error("Error regenerating renditions - " + weblog.getHandle(), ex);
             addError(model, "maintenance.message.renditionsRegenerated.failure", request);
-        }
-
-        return ".Maintenance";
-    }
-
-    @PostMapping("/maintenance!reset.rol")
-    public String reset(HttpServletRequest request, Model model) {
-        populateCommonModel(request, model);
-
-        try {
-            Weblog weblog = getActionWeblog(request);
-            WeblogEntryManager mgr = weblogger.getWeblogEntryManager();
-            mgr.resetHitCount(weblog);
-            weblog.setLastModified(new Date());
-            weblogger.getWeblogManager().saveWeblog(weblog);
-            weblogger.flush();
-            CacheManager.invalidate(weblog);
-            addMessage(model, "maintenance.message.reset", request);
-        } catch (Exception ex) {
-            log.error("Error saving weblog - " + getActionWeblog(request).getHandle(), ex);
-            addError(model, "Error flushing page cache", request);
         }
 
         return ".Maintenance";

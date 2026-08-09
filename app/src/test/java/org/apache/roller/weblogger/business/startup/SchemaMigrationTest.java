@@ -56,7 +56,7 @@ public class SchemaMigrationTest {
      */
     private static final List<String> EXPECTED_TABLES = List.of(
             "custom_template_rendition", "entryattribute", "newsfeed",
-            "roller_audit_log", "roller_comment", "roller_hitcounts",
+            "roller_audit_log", "roller_comment",
             "roller_mediafile", "roller_mediafiledir", "roller_mediafiletag",
             "roller_permission", "roller_properties", "roller_share_link",
             "roller_tasklock",
@@ -72,7 +72,9 @@ public class SchemaMigrationTest {
     private static final List<String> REMOVED_FEATURE_TABLES = List.of(
             "rag_entry", "rag_group", "rag_group_subscription", "rag_planet",
             "rag_properties", "rag_subscription", "bookmark", "bookmark_folder",
-            "autoping", "pingtarget", "pingqueueentry");
+            "autoping", "pingtarget", "pingqueueentry",
+            // V017: hitcount subsystem replaced by Umami traffic counting.
+            "roller_hitcounts");
 
     @Test
     public void migrationsAreDiscoverableOnTheClasspath() {

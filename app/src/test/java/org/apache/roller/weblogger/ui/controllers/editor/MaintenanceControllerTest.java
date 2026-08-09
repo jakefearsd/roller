@@ -26,16 +26,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link MaintenanceController}.
  *
- * <p>Each operation here (flush the page cache, rebuild the search index, reset
- * hit counts) is destructive or expensive enough that the admin only reaches
- * for it occasionally, so a silent failure that still shows a success message
+ * <p>Each operation here (flush the page cache, rebuild the search index,
+ * regenerate renditions) is destructive or expensive enough that the admin
+ * only reaches for it occasionally, so a silent failure that still shows a success message
  * would go unnoticed for a long time. The interesting behaviour is therefore
  * just that: success is only reported when the manager call actually
  * succeeded, and a failure short-circuits before the confirmation.
@@ -103,30 +102,6 @@ class MaintenanceControllerTest extends EditorControllerTestSupport {
         assertTrue(errors(model).contains("maintenance.message.indexed.failure"),
                 "Expected an index-failure error, got: " + errors(model));
         assertTrue(messages(model).isEmpty(), "A failed rebuild must not also report success");
-    }
-
-    @Test
-    void resettingHitCountsSavesTheWeblogAndConfirms() throws Exception {
-        String view = controller.reset(request, model);
-
-        assertEquals(".Maintenance", view);
-        verify(weblogger.getWeblogEntryManager()).resetHitCount(weblog);
-        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
-        assertTrue(messages(model).contains("maintenance.message.reset"),
-                "Expected a reset confirmation, got: " + messages(model));
-    }
-
-    @Test
-    void aFailedResetIsReported() throws Exception {
-        doThrow(new WebloggerException("database down"))
-                .when(weblogger.getWeblogEntryManager()).resetHitCount(any());
-
-        String view = controller.reset(request, model);
-
-        assertEquals(".Maintenance", view);
-        assertTrue(errors(model).contains("Error flushing page cache"),
-                "Expected a reset error, got: " + errors(model));
-        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
     }
 
     @Test

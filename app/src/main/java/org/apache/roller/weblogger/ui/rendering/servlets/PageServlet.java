@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.HitCountQueue;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
@@ -201,12 +200,8 @@ public class PageServlet extends HttpServlet {
             if (cachedContent != null) {
                 log.debug("HIT " + cacheKey);
 
-                // allow for hit counting
-                if (!isSiteWide
-                        && (pageRequest.isWebsitePageHit() || pageRequest
-                                .isOtherPageHit())) {
-                    this.processHit(weblog);
-                }
+                // hit counting used to gate on isWebsitePageHit()/isOtherPageHit()
+                // here; Umami owns traffic counting now (see WeblogPageRequest).
 
                 response.setContentLength(cachedContent.getContent().length);
                 response.setContentType(cachedContent.getContentType());
@@ -241,12 +236,8 @@ public class PageServlet extends HttpServlet {
             pageRequest.setLocale(weblog.getLocale());
         }
 
-        // allow for hit counting
-        if (!isSiteWide
-                && (pageRequest.isWebsitePageHit() || pageRequest
-                        .isOtherPageHit())) {
-            this.processHit(weblog);
-        }
+        // hit counting used to gate on isWebsitePageHit()/isOtherPageHit()
+        // here; Umami owns traffic counting now (see WeblogPageRequest).
 
         // looks like we need to render content
         // set the content deviceType
@@ -551,14 +542,5 @@ public class PageServlet extends HttpServlet {
 
         // handle just like a GET request
         this.doGet(request, response);
-    }
-
-    /**
-     * Notify the hit tracker that it has an incoming page hit.
-     */
-    private void processHit(Weblog weblog) {
-
-        HitCountQueue counter = HitCountQueue.getInstance();
-        counter.processHit(weblog);
     }
 }

@@ -341,7 +341,6 @@ public abstract class WebloggerImpl implements Weblogger {
     @Override
     public void shutdown() {
         try {
-            HitCountQueue.getInstance().shutdown();
             if (indexManager != null) {
                 indexManager.shutdown();
             }

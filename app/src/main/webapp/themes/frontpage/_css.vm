@@ -168,11 +168,6 @@ div.entry {
     overflow: hidden;
 }
 
-span.hotBlogs, a.hotBlogs, a:active.hotBlogs, a:visited.hotBlogs, ul.hotBlogs {
-   font-size: small;
-   padding-left: 0px;
-   list-style-type: none
-}
 input.searchButton {
     cursor: hand;
     font-family: lucida,arial,sans-serif;

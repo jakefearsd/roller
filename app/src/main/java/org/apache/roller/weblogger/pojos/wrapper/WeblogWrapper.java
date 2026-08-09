@@ -318,11 +318,7 @@ public final class WeblogWrapper {
                 .collect(Collectors.toList());
     }
     
-    
-    public int getTodaysHits() {
-        return this.pojo.getTodaysHits();
-    }
-    
+
     public List<TagStat> getPopularTags(int sinceDays,int length) {
         return this.pojo.getPopularTags(sinceDays,length);
     }

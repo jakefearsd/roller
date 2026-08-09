@@ -131,7 +131,6 @@
 			<transient name="absoluteURL"/>
 			<transient name="commentCount"/>
 			<transient name="commentModerationRequired"/>
-			<transient name="todaysHits"/>
 			<transient name="URL"/>
 			<transient name="entryCount"/>
             <transient name="initializedPlugins"/>

@@ -32,7 +32,6 @@ import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
-import org.apache.roller.weblogger.pojos.WeblogHitCount;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
@@ -484,37 +483,6 @@ class SiteModelTest {
     }
 
     // ------------------------------------------------------------ statistics
-
-    @Test
-    void hotWeblogsAreTurnedIntoStatCountsCarryingTheirDailyHits() throws Exception {
-        Weblog hot = otherWeblog("hotblog", "Hot Blog");
-        hot.setId("weblog-id-1");
-        WeblogHitCount hitCount = new WeblogHitCount();
-        hitCount.setWeblog(hot);
-        hitCount.setDailyHits(42);
-        when(entryManager.getHotWeblogs(7, 0, 5)).thenReturn(List.of(hitCount));
-
-        List<StatCount> stats = model().getHotWeblogs(7, 5);
-
-        assertEquals(1, stats.size(), "One hot weblog was returned.");
-        StatCount stat = stats.get(0);
-        assertEquals(42L, stat.getCount(), "The hit count must survive the conversion.");
-        assertEquals("hotblog", stat.getSubjectNameShort(), "Short name is the handle.");
-        assertEquals("Hot Blog", stat.getSubjectNameLong(), "Long name is the blog title.");
-        assertEquals("hotblog", stat.getWeblogHandle(),
-                "The handle is set separately and is what the theme links with.");
-        assertEquals("statCount.weblogDayHits", stat.getTypeKey(),
-                "The type key selects the i18n label rendered next to the number.");
-    }
-
-    @Test
-    void aFailureGatheringHotWeblogsLeavesAnEmptyList() throws Exception {
-        when(entryManager.getHotWeblogs(anyInt(), anyInt(), anyInt()))
-                .thenThrow(new WebloggerException("database is down"));
-
-        assertEquals(List.of(), model().getHotWeblogs(7, 5),
-                "A failure must leave the section empty.");
-    }
 
     @Test
     void mostCommentedListsComeStraightFromTheManagers() throws Exception {

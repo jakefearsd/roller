@@ -138,26 +138,7 @@
                 #showWeblogSearchForm($model.weblog false)
             </div>
 
-            <br />
-            <div class="sidebarBodyHead">
-                <div class="menu-tr">
-                    <div class="menu-tl">
-                       <h3>Hot blogs (today's hits)</h3>		
-                    </div>
-                </div>
-            </div>	
-
-            <div class="sidebarBody">  
-                #set($hotblogs = $site.getHotWeblogs($since, $maxResults))
-                <ul>
-                   #foreach($blog in $hotblogs)
-                   <li><a href="$url.site/$blog.subjectNameShort">$blog.subjectNameShort</a> | $blog.count</li>
-                   #end
-                </ul>   
-                <br />		
-            </div>
-            
-            #* TODO does not work on frontpage as $url.tag($tag.name) returns the url 
+            #* TODO does not work on frontpage as $url.tag($tag.name) returns the url
                of this weblog eg frontpage/tags/$tag.name and there is no page for this.
             <br />
             <div class="sidebarBodyHead">

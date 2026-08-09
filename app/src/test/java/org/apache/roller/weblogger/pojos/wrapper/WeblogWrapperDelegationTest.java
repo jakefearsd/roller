@@ -30,7 +30,6 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
-import org.apache.roller.weblogger.pojos.WeblogHitCount;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.junit.jupiter.api.BeforeEach;
@@ -108,16 +107,12 @@ class WeblogWrapperDelegationTest {
     }
 
     @Test
-    void countsAndHitsComeFromTheEntryManager() throws Exception {
-        WeblogHitCount hits = new WeblogHitCount();
-        hits.setDailyHits(5);
-        when(entries.getHitCountByWeblog(weblog)).thenReturn(hits);
+    void countsComeFromTheEntryManager() throws Exception {
         when(entries.getCommentCount(weblog)).thenReturn(7L);
         when(entries.getEntryCount(weblog)).thenReturn(13L);
 
-        // Three different numbers, so an accessor wired to the wrong count is
+        // Two different numbers, so an accessor wired to the wrong count is
         // visible rather than coincidentally right.
-        assertEquals(5, withWeblogger(wrapper::getTodaysHits));
         assertEquals(7L, withWeblogger(wrapper::getCommentCount));
         assertEquals(13L, withWeblogger(wrapper::getEntryCount));
     }

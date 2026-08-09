@@ -504,27 +504,6 @@ class WeblogLogicTest {
     // -------------------------------------------------------- counts, tags
 
     @Test
-    void todaysHitsReadsZeroWhenNothingHasBeenCountedYet() throws Exception {
-        WeblogEntryManager entries = mock(WeblogEntryManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            when(entries.getHitCountByWeblog(weblog)).thenReturn(null);
-            assertEquals(0, weblog.getTodaysHits(),
-                    "A blog with no hit count row yet must report zero rather than NPE on "
-                            + "the sidebar that renders it");
-
-            WeblogHitCount counted = new WeblogHitCount();
-            counted.setDailyHits(42);
-            when(entries.getHitCountByWeblog(weblog)).thenReturn(counted);
-            assertEquals(42, weblog.getTodaysHits());
-        }
-    }
-
-    @Test
     void countsFailSoftWhenThePersistenceLayerErrors() throws Exception {
         // These are called from templates. An exception escaping here takes out
         // the whole page, so the accessors swallow it and report nothing.
@@ -533,14 +512,12 @@ class WeblogLogicTest {
         when(weblogger.getWeblogEntryManager()).thenReturn(entries);
         when(entries.getCommentCount(weblog)).thenThrow(new WebloggerException("boom"));
         when(entries.getEntryCount(weblog)).thenThrow(new WebloggerException("boom"));
-        when(entries.getHitCountByWeblog(weblog)).thenThrow(new WebloggerException("boom"));
 
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
             factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
 
             assertEquals(0L, weblog.getCommentCount());
             assertEquals(0L, weblog.getEntryCount());
-            assertEquals(0, weblog.getTodaysHits());
         }
     }
 

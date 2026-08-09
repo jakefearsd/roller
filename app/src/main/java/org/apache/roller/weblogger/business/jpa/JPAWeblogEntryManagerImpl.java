@@ -37,7 +37,6 @@ import org.apache.roller.weblogger.pojos.RollerEvent;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
-import org.apache.roller.weblogger.pojos.WeblogHitCount;
 import org.apache.roller.weblogger.pojos.StatCount;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.TagStatComparator;
@@ -1280,51 +1279,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         }
     }
     
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public WeblogHitCount getHitCount(String id) throws WebloggerException {
-        
-        // do lookup
-        return (WeblogHitCount) strategy.load(WeblogHitCount.class, id);
-    }
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public WeblogHitCount getHitCountByWeblog(Weblog weblog)
-    throws WebloggerException {
-        TypedQuery<WeblogHitCount> q = strategy.getNamedQuery("WeblogHitCount.getByWeblog", WeblogHitCount.class);
-        q.setParameter(1, weblog);
-        try {
-            return q.getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
-    }
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public List<WeblogHitCount> getHotWeblogs(int sinceDays, int offset, int length)
-    throws WebloggerException {
-        
-        // figure out start date
-        Date startDate = getStartDateNow(sinceDays);
-
-        TypedQuery<WeblogHitCount> query;
-        query = strategy.getNamedQuery(
-                "WeblogHitCount.getByWeblogEnabledTrueAndActiveTrue&DailyHitsGreaterThenZero&WeblogLastModifiedGreaterOrderByDailyHitsDesc",
-                WeblogHitCount.class);
-        query.setParameter(1, startDate);
-        setFirstMax( query, offset, length );
-        return query.getResultList();
-    }
-
-
     private static void setFirstMax( Query query, int offset, int length )  {
         if (offset != 0) {
             query.setFirstResult(offset);
@@ -1349,87 +1303,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     }
 
 
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public void saveHitCount(WeblogHitCount hitCount) throws WebloggerException {
-        this.strategy.store(hitCount);
-    }
-    
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public void removeHitCount(WeblogHitCount hitCount) throws WebloggerException {
-        this.strategy.remove(hitCount);
-    }
-    
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public void incrementHitCount(Weblog weblog, int amount)
-    throws WebloggerException {
-        
-        if(amount == 0) {
-            throw new WebloggerException("Tag increment amount cannot be zero.");
-        }
-        
-        if(weblog == null) {
-            throw new WebloggerException("Website cannot be NULL.");
-        }
-
-        TypedQuery<WeblogHitCount> q = strategy.getNamedQuery("WeblogHitCount.getByWeblog", WeblogHitCount.class);
-        q.setParameter(1, weblog);
-        WeblogHitCount hitCount;
-        try {
-            hitCount = q.getSingleResult();
-        } catch (NoResultException e) {
-            hitCount = null;
-        }
-        
-        // create it if it doesn't exist
-        if(hitCount == null && amount > 0) {
-            hitCount = new WeblogHitCount();
-            hitCount.setWeblog(weblog);
-            hitCount.setDailyHits(amount);
-            strategy.store(hitCount);
-        } else if(hitCount != null) {
-            hitCount.setDailyHits(hitCount.getDailyHits() + amount);
-            strategy.store(hitCount);
-        }
-    }
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public void resetAllHitCounts() throws WebloggerException {       
-        Query q = strategy.getNamedUpdate("WeblogHitCount.updateDailyHitCountZero");
-        q.executeUpdate();
-    }
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public void resetHitCount(Weblog weblog) throws WebloggerException {
-        TypedQuery<WeblogHitCount> q = strategy.getNamedQuery("WeblogHitCount.getByWeblog", WeblogHitCount.class);
-        q.setParameter(1, weblog);
-        WeblogHitCount hitCount;
-        try {
-            hitCount = q.getSingleResult();
-            hitCount.setDailyHits(0);
-            strategy.store(hitCount);
-        } catch (NoResultException e) {
-            // ignore: no hit count for weblog
-        }       
-
-    }
-    
     /**
      * @inheritDoc
      */

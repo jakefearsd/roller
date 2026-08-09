@@ -146,9 +146,6 @@ class EqualsContractTest {
                         template("Weblog", blogA), template("Weblog", blogA),
                         template("Weblog", blogB)),
 
-                new Specimen("WeblogHitCount (keyed on weblog)",
-                        hitCount(blogA), hitCount(blogA), hitCount(blogB)),
-
                 new Specimen("User (keyed on userName)",
                         user("alice"), user("alice"), user("bob")),
 
@@ -179,7 +176,7 @@ class EqualsContractTest {
 
                 new Specimen("TaskLock (keyed on name)",
                         taskLock("ScheduledEntriesTask"), taskLock("ScheduledEntriesTask"),
-                        taskLock("ResetHitCountsTask")),
+                        taskLock("OtherTask")),
 
                 new Specimen("RuntimeConfigProperty (keyed on name)",
                         new RuntimeConfigProperty("site.name", "Roller"),
@@ -307,12 +304,6 @@ class EqualsContractTest {
         category.setName(name);
         category.setWeblog(weblog);
         return category;
-    }
-
-    private static WeblogHitCount hitCount(Weblog weblog) {
-        WeblogHitCount count = new WeblogHitCount();
-        count.setWeblog(weblog);
-        return count;
     }
 
     private static User user(String userName) {

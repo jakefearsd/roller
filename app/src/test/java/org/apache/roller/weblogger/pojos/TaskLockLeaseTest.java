@@ -74,7 +74,7 @@ class TaskLockLeaseTest {
     @Test
     void aLockThatWasNeverAcquiredExpiredAtTheEpoch() {
         TaskLock lock = new TaskLock();
-        lock.setName("ResetHitCountsTask");
+        lock.setName("OtherTask");
         lock.setTimeAcquired(null);
         lock.setTimeLeased(5);
 
@@ -91,7 +91,7 @@ class TaskLockLeaseTest {
     @Test
     void theLeaseExpiresTheLeaseTimeAfterAcquisition() {
         TaskLock lock = new TaskLock();
-        lock.setName("ResetHitCountsTask");
+        lock.setName("OtherTask");
         lock.setTimeAcquired(at("2024-03-09 10:00"));
         lock.setTimeLeased(90);
 
@@ -104,7 +104,7 @@ class TaskLockLeaseTest {
     @Test
     void aZeroLengthLeaseExpiresTheInstantItIsTaken() {
         TaskLock lock = new TaskLock();
-        lock.setName("ResetHitCountsTask");
+        lock.setName("OtherTask");
         lock.setTimeAcquired(at("2024-03-09 10:00"));
         lock.setTimeLeased(0);
 

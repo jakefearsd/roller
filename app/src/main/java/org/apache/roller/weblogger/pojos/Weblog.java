@@ -718,23 +718,6 @@ public class Weblog implements Serializable {
         return Collections.emptyList();
     }
 
-    
-    /**
-     * Get number of hits counted today.
-     */
-    public int getTodaysHits() {
-        try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
-            WeblogEntryManager mgr = roller.getWeblogEntryManager();
-            WeblogHitCount hitCount = mgr.getHitCountByWeblog(this);
-            
-            return (hitCount != null) ? hitCount.getDailyHits() : 0;
-            
-        } catch (WebloggerException e) {
-            log.error("Error getting weblog hit count", e);
-        }
-        return 0;
-    }
 
     /**
      * Get a list of TagStats objects for the most popular tags
