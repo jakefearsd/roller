@@ -118,20 +118,27 @@ public class UmamiViewScriptTest {
             assertTrue(viewExists(con), "analytics_traffic did not survive re-application");
 
             UUID websiteId = UUID.randomUUID();
+            UUID sharedSessionId = UUID.randomUUID();
             try (var ps = con.prepareStatement("""
                     INSERT INTO website_event (website_id, session_id, created_at, url_path, event_type)
                     VALUES (?, ?, now(), ?, ?)
                     """)) {
-                // Two pageviews (event_type = 1) in the same session on the same
-                // path, plus one non-pageview event, all on one day.
+                // Two pageviews (event_type = 1) in the SAME session on the same
+                // path, plus one non-pageview event in a different session, all on
+                // one day. Reusing sharedSessionId across the two pageview rows is
+                // what makes `sessions` (count(DISTINCT session_id) = 2) actually
+                // differ from `views` (count(*) FILTER (event_type = 1) = 2) here
+                // -- distinct rows but the same set of session ids -- so a
+                // regression from DISTINCT to a plain count(*) would fail this
+                // assertion instead of passing by coincidence.
                 ps.setObject(1, websiteId);
-                ps.setObject(2, UUID.randomUUID());
+                ps.setObject(2, sharedSessionId);
                 ps.setString(3, "/weblog/handle/entry/my-post");
                 ps.setInt(4, 1);
                 ps.addBatch();
 
                 ps.setObject(1, websiteId);
-                ps.setObject(2, UUID.randomUUID());
+                ps.setObject(2, sharedSessionId);
                 ps.setString(3, "/weblog/handle/entry/my-post");
                 ps.setInt(4, 1);
                 ps.addBatch();
@@ -153,7 +160,8 @@ public class UmamiViewScriptTest {
                 assertTrue(rs.next(), "analytics_traffic returned no rows for the seeded event");
                 assertEquals("/weblog/handle/entry/my-post", rs.getString("path"));
                 assertEquals("my-post", rs.getString("entry_anchor"));
-                assertEquals(3, rs.getInt("sessions"), "each inserted row used a distinct session_id");
+                assertEquals(2, rs.getInt("sessions"),
+                        "sessions must be DISTINCT session_id (2 sessions across 3 rows), not row count");
                 assertEquals(2, rs.getInt("views"), "only event_type = 1 rows count as views");
             }
         } finally {

@@ -158,6 +158,11 @@ echo "==> Applying analytics views (Umami database)..."
 # its own database's name (current_database() needs dynamic SQL to use
 # inside a GRANT), but the real names are already known here as env vars.
 # V017 and umami-views.sql therefore only carry schema/table-level grants.
+#
+# Manual double-quoting (\"${...}\") rather than the ensure-databases step's
+# ${db@Q} above: @Q quotes for a shell-style string LITERAL (used there in
+# `datname = ${db@Q}`), but a database name after GRANT ... ON DATABASE is an
+# SQL IDENTIFIER, which takes double quotes, not single-quoted @Q output.
 "${COMPOSE[@]}" exec -T \
     -e UMAMI_DB="${UMAMI_DB:-umami}" \
     postgres bash -c '
