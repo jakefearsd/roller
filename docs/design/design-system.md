@@ -27,6 +27,7 @@ Radius: 6px (cards/inputs), 99px (pills). Shadows: none in light except overlay 
 - UI + headings: "IBM Plex Sans", system-ui fallback. Weights: 450 body, 600 headings/labels.
 - Data (slugs, dates, counts, ids): "IBM Plex Mono", ui-monospace fallback, font-variant-numeric: tabular-nums.
 - Scale: 12px caps-labels (letter-spacing .08em, uppercase, --ink-soft), 14.5px/1.55 body, 16px section heads, 20px page titles (600), 28px reserved.
+- Card/section headers (`.card-header`, `.section-head` — accordion panel titles, settings-form "display group" headers) use the caps-label role, not an h3/h4's own default size — a heading label, not a second page title.
 - Preview cards may load Plex from Google Fonts <link> ONLY IF the design pane allows external fetches — safer: use font-family:"IBM Plex Sans", system-ui and accept fallback rendering in cards; note in the tokens card that the implementation self-hosts Plex as a webjar.
 
 ## Signature moves

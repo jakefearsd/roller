@@ -26,7 +26,7 @@
 
     <%-- ***** General settings ***** --%>
 
-    <h3><spring:message code="websiteSettings.generalSettings"/></h3>
+    <h3 class="section-head"><spring:message code="websiteSettings.generalSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.websiteTitle"/></label>
@@ -80,7 +80,7 @@
 
     <%-- ***** Language/i18n settings ***** --%>
 
-    <h3><spring:message code="websiteSettings.languageSettings"/></h3>
+    <h3 class="section-head"><spring:message code="websiteSettings.languageSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="createWebsite.locale"/></label>
@@ -122,7 +122,7 @@
 
     <%-- ***** Comment settings ***** --%>
 
-    <h3><spring:message code="websiteSettings.commentSettings"/></h3>
+    <h3 class="section-head"><spring:message code="websiteSettings.commentSettings"/></h3>
 
     <div class="row mb-3">
         <div class="offset-sm-3 col-sm-9">
@@ -165,7 +165,7 @@
 
     <%-- ***** Default entry comment settings ***** --%>
 
-    <h3><spring:message code="websiteSettings.defaultCommentSettings"/></h3>
+    <h3 class="section-head"><spring:message code="websiteSettings.defaultCommentSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.applyCommentDefaults"/></label>
@@ -196,7 +196,7 @@
 
     <%-- ***** Blogger API setting settings ***** --%>
 
-    <h3><spring:message code="websiteSettings.bloggerApi"/></h3>
+    <h3 class="section-head"><spring:message code="websiteSettings.bloggerApi"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.bloggerApiCategory"/></label>
@@ -212,7 +212,7 @@
 
     <%-- ***** Plugins "formatting" settings ***** --%>
 
-    <h3><spring:message code="websiteSettings.formatting"/></h3>
+    <h3 class="section-head"><spring:message code="websiteSettings.formatting"/></h3>
 
     <c:choose>
 <c:when test="${not empty pluginsList}">
@@ -230,7 +230,7 @@
     <%-- ***** Web analytics settings ***** --%>
 
     <c:if test="${rc:getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted}">
-        <h3><spring:message code="configForm.webAnalytics"/></h3>
+        <h3 class="section-head"><spring:message code="configForm.webAnalytics"/></h3>
 
         <div class="row mb-3">
             <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsTrackingCode"/></label>
@@ -242,7 +242,7 @@
 
     <%-- ***** Analytics settings ***** --%>
 
-    <h3><spring:message code="websiteSettings.analyticsSettings"/></h3>
+    <h3 class="section-head"><spring:message code="websiteSettings.analyticsSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsSiteId"/></label>
@@ -272,7 +272,7 @@
 
     <%-- ***** Newsletter settings ***** --%>
 
-    <h3><spring:message code="websiteSettings.newsletterSettings"/></h3>
+    <h3 class="section-head"><spring:message code="websiteSettings.newsletterSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.newsletterListUuid"/></label>
@@ -293,7 +293,7 @@
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogRemove.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
-    <h3><spring:message code="websiteSettings.removeWebsiteHeading"/></h3>
+    <h3 class="section-head"><spring:message code="websiteSettings.removeWebsiteHeading"/></h3>
     <spring:message code="websiteSettings.removeWebsite"/><br/><br/>
     <div class="alert alert-danger" role="alert">
         <spring:message code="websiteSettings.removeWebsiteWarning"/>

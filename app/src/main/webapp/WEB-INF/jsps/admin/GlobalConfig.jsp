@@ -26,7 +26,7 @@
 
     <c:forEach var="dg" items="${globalConfigDef.displayGroups}">
 
-        <h3><spring:message code="${dg.key}"/></h3>
+        <h3 class="section-head"><spring:message code="${dg.key}"/></h3>
 
         <c:forEach var="pd" items="${dg.propertyDefs}">
 
