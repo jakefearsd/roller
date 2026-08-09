@@ -54,7 +54,7 @@
                         <div class="col-md-9">
                             <p>
                                 <b><spring:message code="mediaFileSuccess.name"/></b>
-                                ${newImage.name}
+                                ${fn:escapeXml(newImage.name)}
                             </p>
 
                             <p>
@@ -105,7 +105,7 @@
                         <div class="col-md-11">
                             <p>
                                 <b><spring:message code="mediaFileSuccess.name"/></b>
-                                ${newFile.name}
+                                ${fn:escapeXml(newFile.name)}
                             </p>
 
                             <p>

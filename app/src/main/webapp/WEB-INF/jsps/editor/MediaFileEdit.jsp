@@ -128,7 +128,7 @@
         <div class="col-sm-9">
             <select name="bean.directoryId" class="form-select" tabindex="5">
                 <c:forEach items="${allDirectories}" var="opt">
-                    <option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
+                    <option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${fn:escapeXml(opt.name)}</option>
                 </c:forEach>
             </select>
         </div>

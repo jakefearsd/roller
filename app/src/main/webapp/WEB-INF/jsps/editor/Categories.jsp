@@ -53,8 +53,8 @@
 
                         <c:set var="categoryId" value="${category.id}"/>
                         <c:set var="categoryName" value="${fn:escapeXml(category.name)}"/>
-                        <c:set var="categoryDesc" value="${category.description}"/>
-                        <c:set var="categoryImage" value="${category.image}"/>
+                        <c:set var="categoryDesc" value="${fn:escapeXml(category.description)}"/>
+                        <c:set var="categoryImage" value="${fn:escapeXml(category.image)}"/>
                         <a href="#" onclick="showCategoryEditModal(
                                 '${categoryId}',
                                 '${categoryName}',

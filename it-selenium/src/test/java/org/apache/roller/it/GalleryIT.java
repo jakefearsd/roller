@@ -169,6 +169,11 @@ class GalleryIT extends RollerIT {
      */
     private void renameAndDescribe(String mediaFileId, String name, String caption) {
         openPath(MEDIA_VIEW);
+        // Marker for the re-submit dance below: onEditSuccess re-submits the
+        // view form, replacing this document with a new one that lacks the
+        // marker -- which is the only reliable arrival signal, since the URL
+        // does not change.
+        executeJavaScript("window.__renameMarker = true;");
         // the page's own tile-click handler: fills the modal's iframe and shows it
         executeJavaScript("onClickEdit(arguments[0], arguments[1]);", mediaFileId, name);
         $("#mediafile_edit_lightbox").shouldBe(visible);
@@ -183,6 +188,12 @@ class GalleryIT extends RollerIT {
 
         $("input[name='bean.name']").setValue(name);
         $("textarea[name='bean.description']").setValue(caption);
+        // The iframe's document declares the same Plex webfonts as every admin
+        // page; submitting the form navigates the IFRAME while its font fetch
+        // can still be in flight, and Chrome reports that abort against the
+        // top-level page. Wait out the iframe's fonts first (we are still
+        // switched into the frame, so document.fonts here is the iframe's).
+        waitForFontsReady();
         $("input[name='submit']").click();
         switchTo().defaultContent();
 
@@ -196,10 +207,41 @@ class GalleryIT extends RollerIT {
 
         // onEditSuccess also re-submits the view form. That navigation is
         // still in flight and racing anything asserted against the current
-        // page, so load the view ourselves and assert on that instead.
+        // page. Wait for the NEW document to arrive (the marker planted above
+        // vanishes with the old one -- same URL, so nothing else signals it)
+        // and for ITS fonts to finish, before navigating again: polling
+        // document.fonts on the OLD document reports 'loaded' and would let
+        // openPath cancel the incoming page's font requests, which is exactly
+        // the ERR_ABORTED flake this dance exists to close.
+        Selenide.Wait().withTimeout(Duration.ofSeconds(30)).until(d ->
+                Boolean.TRUE.equals(executeJavaScript("return window.__renameMarker === undefined;")));
+        waitForFontsReady();
         openPath(MEDIA_VIEW);
         BrowserHealth.current().settle();
         $("img[alt='" + name + "']").should(exist);
+
+        // Flake: mediaFileView.rol's own stylesheet pulls in the Plex webfont,
+        // but @font-face only triggers the woff2 fetch once the browser lays
+        // out text that uses it -- which can still be in flight after
+        // settle()'s quiet period (a network event, not a DOM/layout one) has
+        // already elapsed. The caller navigates away from this page right
+        // after returning, and Chrome reports that as ERR_ABORTED on the font
+        // request, which BrowserHealth.assertNoFailedRequests() rightly does
+        // not excuse (fonts are declared by the document, not cancellable by
+        // page script -- see BrowserHealth.ABORT_IS_EXPECTED_FOR). Wait for
+        // the font to actually settle before leaving this page, rather than
+        // widen that doctrine or the shared settle() every test pays for.
+        waitForFontsReady();
+    }
+
+    /**
+     * Blocks until every webfont the current page requested has finished
+     * loading (or failed on its own, not by cancellation). Local to this test
+     * on purpose -- see the flake comment at its one call site above.
+     */
+    private void waitForFontsReady() {
+        Selenide.Wait().withTimeout(Duration.ofSeconds(10)).until(d ->
+                Boolean.TRUE.equals(executeJavaScript("return document.fonts.status === 'loaded';")));
     }
 
     private File testImage() {

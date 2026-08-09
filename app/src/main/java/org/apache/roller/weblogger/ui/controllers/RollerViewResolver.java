@@ -167,6 +167,10 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "content",  "${content}"
                 ));
 
+        addDefinition(".tiles-barepage",
+                "/WEB-INF/jsps/tiles/tiles-barepage.jsp",
+                Map.of("content", "${content}"));
+
         // ---- extended base definition ----
 
         addExtendedDefinition(".tiles-popuppage-only-content", ".tiles-popuppage",
@@ -308,11 +312,13 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "content", "/WEB-INF/jsps/editor/MediaFileAddSuccessInclude.jsp"
                 ));
 
-        addExtendedDefinition(".MediaFileEditSuccess", ".tiles-popuppage",
-                Map.of(
-                        "head",    "/WEB-INF/jsps/tiles/head.jsp",
-                        "content", "/WEB-INF/jsps/editor/MediaFileEditSuccess.jsp"
-                ));
+        // Bare layout, not popuppage: this document exists only to call
+        // parent.onEditSuccess() and is destroyed by the parent's re-submit
+        // milliseconds later. Rendering it with the full admin head made the
+        // browser abort its webfont fetch mid-flight on every media rename --
+        // the GalleryIT "font ERR_ABORTED" flake.
+        addExtendedDefinition(".MediaFileEditSuccess", ".tiles-barepage",
+                Map.of("content", "/WEB-INF/jsps/editor/MediaFileEditSuccess.jsp"));
 
         addExtendedDefinition(".MediaFileView", ".tiles-tabbedpage",
                 Map.of(

@@ -49,7 +49,7 @@
             <select name="directoryId" class="form-select" onchange="onView()">
 <option value=""></option>
 <c:forEach items="${allDirectories}" var="opt">
-<option value="${opt.id}" ${opt.id == directoryId ? 'selected' : ''}>${opt.name}</option>
+<option value="${opt.id}" ${opt.id == directoryId ? 'selected' : ''}>${fn:escapeXml(opt.name)}</option>
 </c:forEach>
 </select>
         </c:if>
@@ -77,7 +77,7 @@
                                 onmouseover="highlight(this, true)" onmouseout="highlight(this, false)">
 
                                 <div class="mediaObject"
-                                     onclick="onSelectMediaFile('${mediaFile.name}',
+                                     onclick="onSelectMediaFile('${fn:escapeXml(mediaFile.name)}',
                                              '${mediaFileURL}',
                                              '${mediaFile.isImageFile()}',
                                              '${mediaFile.id}')">
@@ -87,7 +87,7 @@
                                         <img border="0" src='${mediaFileThumbnailURL}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
-                                             alt='${mediaFile.name}'/>
+                                             alt='${fn:escapeXml(mediaFile.name)}'/>
                                     </c:when>
 <c:otherwise>
                                         <span class="bi bi-file-earmark"></span>
@@ -97,7 +97,7 @@
 
                                 <div class="mediaObjectInfo">
                                     <str:truncateNicely upper="60">
-                                        ${mediaFile.name}
+                                        ${fn:escapeXml(mediaFile.name)}
                                     </str:truncateNicely>
                                 </div>
 
