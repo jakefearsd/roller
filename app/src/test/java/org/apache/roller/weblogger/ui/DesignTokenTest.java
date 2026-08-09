@@ -80,8 +80,17 @@ public class DesignTokenTest {
     private static final Pattern COLOR_TOKEN_DECL =
             Pattern.compile("(--[a-z-]+)\\s*:\\s*(#[0-9A-Fa-f]{6})\\s*;");
 
+    /**
+     * Matches specifically {@code @media (prefers-color-scheme: dark) { :root {
+     * ... } }} and captures only the {@code :root} body. Anchored to
+     * {@code :root} right after the media query (not just "the next {"), and
+     * the body capture is reluctant ({@code .*?}) so it stops at the first
+     * {@code }} -- i.e. :root's own close -- rather than greedily running to
+     * the last {@code }\s*}} in the file. A second, unrelated @media block
+     * added later (e.g. a print query) cannot widen or shift this match.
+     */
     private static final Pattern DARK_MEDIA_BLOCK = Pattern.compile(
-            "@media\\s*\\(prefers-color-scheme:\\s*dark\\)\\s*\\{(.*)\\}\\s*\\}",
+            "@media\\s*\\(prefers-color-scheme:\\s*dark\\)\\s*\\{\\s*:root\\s*\\{(.*?)\\}\\s*\\}",
             Pattern.DOTALL);
 
     @Test
