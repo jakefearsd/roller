@@ -45,9 +45,9 @@
                      onclick attributes that drive the modals. --%>
                 <tr data-category-id="${fn:escapeXml(category.id)}"
                     data-category-name="${fn:escapeXml(category.name)}">
-                    <td>${category.name}</td>
+                    <td>${fn:escapeXml(category.name)}</td>
 
-                    <td>${category.description}</td>
+                    <td>${fn:escapeXml(category.description)}</td>
 
                     <td align="center">
 
@@ -294,7 +294,7 @@
                         <spring:message code="categoryDeleteOK.moveToWhere"/>
                         <select name="targetCategoryId" class="form-select">
 <c:forEach items="${allCategories}" var="opt">
-<option value="${opt.id}" ${opt.id == targetCategoryId ? 'selected' : ''}>${opt.name}</option>
+<option value="${opt.id}" ${opt.id == targetCategoryId ? 'selected' : ''}>${fn:escapeXml(opt.name)}</option>
 </c:forEach>
 </select>
                     </div>
