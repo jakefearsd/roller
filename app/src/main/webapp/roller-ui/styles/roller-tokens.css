@@ -1,0 +1,88 @@
+/*
+ * Roller design tokens -- "Quiet Instrument".
+ *
+ * Full spec: docs/design/design-system.md. Every hex literal below is one of
+ * the spec's 21 values (11 light + 10 more for dark; --focus is shared) --
+ * DesignTokenTest audits that literally, so a color a later screen needs
+ * belongs in the spec first, this file second.
+ *
+ * Fonts are IBM Plex Sans (UI/headings) and IBM Plex Mono (data), self-hosted
+ * via the org.webjars.npm:ibm__plex-sans / ibm__plex-mono dependencies in
+ * app/pom.xml -- see the comment there for why that coordinate and not the
+ * unscoped org.webjars.npm:ibm-plex (which does not exist). Paths below are
+ * relative to this file's own URL (roller-ui/styles/), so they resolve
+ * whatever the app's context path is: ../../webjars/... reaches
+ * <context>/webjars/... the same way <c:url value='/webjars/...'/> does in
+ * JSPs. Only the weights the spec actually uses are declared -- Sans 450
+ * (body) and 600 (headings/labels), Mono 400 (data) -- the webjar ships far
+ * more (100-700, italics, per-script subsets) that nothing here needs.
+ */
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 450;
+  src: url("../../webjars/ibm__plex-sans/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSans-Text.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 600;
+  src: url("../../webjars/ibm__plex-sans/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSans-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  src: url("../../webjars/ibm__plex-mono/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexMono-Regular.woff2") format("woff2");
+}
+
+:root {
+  /* Quiet Instrument -- light palette (default) */
+  --paper: #F7F9F9;
+  --surface: #FFFFFF;
+  --ink: #17262A;
+  --ink-soft: #5A6E72;
+  --line: #DCE4E4;
+  --accent: #0F6E68;
+  --accent-quiet: #E3F0EE;
+  --good: #2F7D4F;
+  --warn: #9A6A1F;
+  --bad: #A33B2E;
+  --focus: #2AA198;
+
+  --radius: 6px;
+
+  --font-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Quiet Instrument -- dark palette */
+    --paper: #131C1C;
+    --surface: #1A2626;
+    --ink: #DCE7E5;
+    --ink-soft: #8FA5A2;
+    --line: #2A3838;
+    --accent: #4FB3AA;
+    --accent-quiet: #1E3230;
+    --good: #6FBF8F;
+    --warn: #D0A45C;
+    --bad: #D0705F;
+    --focus: #2AA198;
+  }
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

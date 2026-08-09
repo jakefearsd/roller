@@ -31,6 +31,11 @@ mismatch 404s the asset on every page that includes this file.
 <script src="<c:url value='/webjars/easymde/2.21.0/dist/easymde.min.js'/>"></script>
 <link href="<c:url value='/webjars/easymde/2.21.0/dist/easymde.min.css'/>" rel="stylesheet" />
 
+<%-- "Quiet Instrument" design tokens (docs/design/design-system.md). Loads
+     after Bootstrap so its custom properties are available, and before
+     roller.css so roller.css can override on top of it. --%>
+<link rel="stylesheet" media="all" href='<c:url value="/roller-ui/styles/roller-tokens.css"/>' />
+
 <link rel="stylesheet" media="all" href='<c:url value="/roller-ui/styles/roller.css"/>' />
 
 <script src="<c:url value="/theme/scripts/roller.js"/>"></script>
