@@ -1,24 +1,16 @@
-<div class="entry">
-    ## featured thumb, floated beside the card text when the entry has one
-    #if ($entry.featuredImage)
-        <a href="$utils.escapeHTML($entry.permalink)">#showResponsiveImage($entry.featuredImage $utils.removeHTML($entry.title) "160px" "entry-thumb")</a>
-    #end
-    <a class="entryTitle" href="$utils.escapeHTML($entry.permalink)">
-        $utils.truncateNicely($utils.removeHTML($entry.title), 50, 50, "...")
-    </a><br /> 
-    <p class="entryDetails">
-        <a href="$utils.escapeHTML($entry.website.URL)">$entry.website.name</a>
-        #if($entry.tags.size() > 0) $entry.getTagsAsString() |#end
-        #if($entry.category.name)$entry.category.name |#end
-        #if($entry.pubTime) $utils.formatDate($entry.pubTime, $text.get("macro.weblog.date.toStringFormat")) |#end
-        #if($entry.creator.screenName) By $entry.creator.screenName #end
-        <br/> 
-    </p>
-    <p class="entryDescription">                    
-        #if($entry.displayContent)
-             $utils.truncateNicely($utils.removeHTML($entry.displayContent), 240, 260, "...")
-        #else ## planet entries don't have displayContent
-             $utils.truncateNicely($utils.removeHTML($entry.text), 240, 260, "...")
-        #end
-    </p>
+## $entry here is a WeblogEntryWrapper (either from the site-wide entries
+## pager or a pinned entry -- weblog.vm #sets $entry to each before including
+## this fragment). Renders one row of "Latest across the site": mono date,
+## serif-weight title linking to the entry's OWN weblog (frontpage has no
+## permalink template of its own -- $entry.permalink already resolves to the
+## contributing weblog's URL), and a "from <weblog>" credit.
+## Per docs/design/journal/frontpage-front-door.html's .fd-post.
+<div class="fd-post">
+    <span class="d">$utils.formatDate($entry.pubTime, "MMM dd")</span>
+    <div>
+        <p class="t"><a href="$utils.escapeHTML($entry.permalink)">$utils.truncateNicely($utils.removeHTML($entry.title), 50, 50, "...")</a></p>
+        ## $entry.website.name is a WeblogWrapper property, already escaped
+        ## by WeblogWrapper#getName -- see weblog.vm's fd-dir comment.
+        <p class="from">from <a href="$utils.escapeHTML($entry.website.URL)"><b>$entry.website.name</b></a></p>
+    </div>
 </div>

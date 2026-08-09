@@ -1,11 +1,8 @@
-<div id="footer">
+</main>
 
-Powered by <a href="http://roller.apache.org">Apache Roller</a> $config.rollerVersion
+<footer class="fd-footer">
+    <p class="fd-credit">Powered by <a href="http://roller.apache.org">Apache Roller</a> $config.rollerVersion</p>
+</footer>
 
-</div>
-       
-<div id="datetagdiv" 
-   style="position:absolute;visibility:hidden;background-color:white;layer-background-color:white;">
-</div>
 </body>
 </html>

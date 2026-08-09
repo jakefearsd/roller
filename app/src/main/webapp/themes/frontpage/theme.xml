@@ -25,7 +25,19 @@
 
     <!-- theme preview image -->
     <preview-image path="frontpage-preview.png" />
-    
+
+    <!-- stylesheet -->
+    <stylesheet>
+        <name>frontpage-custom.css</name>
+        <description>Stylesheet for Frontpage theme</description>
+        <link>frontpage-custom.css</link>
+        <contentType>text/html</contentType>
+        <rendition>
+            <contentsFile>frontpage-custom.css</contentsFile>
+            <templateLanguage>velocity</templateLanguage>
+        </rendition>
+    </stylesheet>
+
     <!-- templates -->
     <template action="weblog">
         <name>Weblog</name>
@@ -71,18 +83,6 @@
         <contentType>text/html</contentType>
         <rendition>
             <contentsFile>_blogs.vm</contentsFile>
-            <templateLanguage>velocity</templateLanguage>
-        </rendition>
-    </template>
-    
-    <template action="custom">
-        <name>_css</name>
-        <description>_css</description>
-        <navbar>false</navbar>
-        <hidden>true</hidden>
-        <contentType>text/html</contentType>
-        <rendition>
-            <contentsFile>_css.vm</contentsFile>
             <templateLanguage>velocity</templateLanguage>
         </rendition>
     </template>

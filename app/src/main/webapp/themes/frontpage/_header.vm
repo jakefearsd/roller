@@ -1,50 +1,40 @@
 <!doctype html>
 <html>
-  <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
-  <title>$model.weblog.name</title>
-  <link href="$url.absoluteSite/favicon.svg" rel="shortcut icon" type="image/x-icon" />
-  #showAutodiscoveryLinks($model.weblog)
-  #showSeoHead()
-  #showGalleryGridStyles()
-  #showGalleryAssets()
-  #showMapAssets()
-  <style>
-  #includeTemplate($model.weblog "_css")
-  </style>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; font-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
+    <title>$utils.escapeHTML($config.siteName)</title>
+    <link href="$url.absoluteSite/favicon.svg" rel="shortcut icon" type="image/x-icon" />
+    #showAutodiscoveryLinks($model.weblog)
+    #showSeoHead()
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+    #showMapAssets()
 </head>
-<body class="view" bgcolor="#FFFFFF">
+<body class="fd">
 
-<div id="banner">
-        <div class="bannerBox">
-           <img class="bannerlogo" 
-              src='$url.resource("roller-tan-logo.gif")' />
-        </div>
+<header class="fd-topbar">
+    <a class="fd-topbar-brand" href="$url.absoluteSite">$utils.escapeHTML($config.siteName)</a>
+    <nav class="fd-topbar-links">
+        <a href="$url.absoluteSite/roller-ui/menu.rol">Main Menu</a>
+        #if(!$utils.isUserAuthenticated())
+        <a href="$url.login">Login</a>
+        #else
+        <a href="$url.logout">Logout</a>
+        #end
+    </nav>
+</header>
 
-    <div id="bannerStatusBox">
-        <table class="bannerStatusBox" cellpadding="0" cellspacing="0">
-            <tr>
-                <td class="bannerLeft"></td>
-                <td class="bannerRight">
-                   <a href="$url.absoluteSite">$config.siteName</a> |
-                   <a href="$url.absoluteSite/roller-ui/menu.rol">Main Menu</a> |
-                   #if(!$utils.isUserAuthenticated())
-                      <a href="$url.login">Login</a>
-                   #else
-                     <a href="$url.logout">Logout</a>
-                   #end
-                </td>
-            </tr>
-        </table>
-    </div>
-</div>
-
-<div id="wrapper"> 
-
-    <div id="leftcontent_wrap">
-        <div id="leftcontent"> 
-        </div>
-    </div>
-    
+<main class="fd-main">
+  <div class="fd-hero">
+      <p class="fd-site"><a href="$url.home">$utils.escapeHTML($config.siteName)</a></p>
+      #if($utils.isNotEmpty($config.siteDescription))
+      <p class="fd-tag">$utils.escapeHTML($config.siteDescription)</p>
+      #end
+  </div>
+  <nav class="fd-tabs">
+      <a href="$url.home">Recent Entries</a>
+      <a href="$url.page("directory")">Weblog Directory</a>
+  </nav>

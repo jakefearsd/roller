@@ -1,76 +1,51 @@
+## $site here is the SiteModel; $pageLength was set by directory.vm.
+## Restyled A-Z weblog directory: the same fd-dir/fd-blog grid weblog.vm
+## uses for its "Weblogs" preview, plus the letter index and paging that
+## make this the FULL directory (weblog.vm only ever shows a handful of
+## recently-created weblogs).
 #if($model.getRequestParameter("letter"))
-        #set($chosenLetter = $model.getRequestParameter("letter"))
-    #end
+    #set($chosenLetter = $model.getRequestParameter("letter"))
+#end
 
-    #set($weblogLetterMap = $site.getWeblogHandleLetterMap())
-    <div class="letterMap">
-    <p>
-    #set($firstLetterDone = 0)
-    #foreach($letter in $weblogLetterMap.keySet())
-        #if($firstLetterDone == 1) - #end
-        #set($firstLetterDone = 1)
-        #set($letterCount = $weblogLetterMap.get($letter))
-        #if($letter == $chosenLetter)<span style="font-size:120%; font-weight:bold">#end
-        #if($letterCount > 0)
-           <a href="?letter=$letter" title="$letterCount weblogs">$letter</a>         
-        #else
-           $letter
-        #end
-        #if($letter == $chosenLetter)</span>#end
-    #end
-    </p>
-    </div>
-
-    #if($chosenLetter)
-       <h2 class="pageTitle">Weblogs starting with $chosenLetter</h2>
+#set($weblogLetterMap = $site.getWeblogHandleLetterMap())
+<p class="fd-letters">
+#set($firstLetterDone = 0)
+#foreach($letter in $weblogLetterMap.keySet())
+    #if($firstLetterDone == 1) &middot; #end
+    #set($firstLetterDone = 1)
+    #set($letterCount = $weblogLetterMap.get($letter))
+    #if($letterCount > 0)
+       <a class="#if($letter == $chosenLetter)current#end" href="?letter=$letter" title="$letterCount weblogs">$letter</a>
     #else
-       <h2 class="pageTitle">All weblogs</h2>
+       <span>$letter</span>
     #end
+#end
+</p>
 
-    #set($weblogsPager = $site.getWeblogsByLetterPager($chosenLetter, -1, $pageLength))
-    <table class="blogdirectory data">
-        <thead>
-            <tr>
-               <th scope="col" class="name">Blog Name</th>
-               <th scope="col" class="description">Description</th>
-            </tr>
-        </thead>
-       <tbody>
-          #foreach($loopblog in $weblogsPager.items)
-           <tr>
-              <th scope="row" class="name"><a href="$url.absoluteSite/$loopblog.handle">$loopblog.handle</a></th>
-              <td class="description">$loopblog.name</td>
-           </tr>
-          #end 
-       </tbody>
-        <tfoot>
-           <tr class="pagingcontrols">
-             <td class="pagingtext"></td>
-             <td class="paginglinks">
+#if($chosenLetter)
+   <p class="fd-label">Weblogs starting with $utils.escapeHTML($chosenLetter)</p>
+#else
+   <p class="fd-label">All weblogs</p>
+#end
 
-             #if($chosenLetter)
-                #if($weblogsPager.prevLink)
-                   <a href="$weblogsPager.prevLink">&lt;$weblogsPager.prevName</a>
-                #end
-                #if($weblogsPager.nextLink && $weblogsPager.prevLink())
-                   &nbsp;|&nbsp;
-                #end
-                #if($weblogsPager.nextLink)
-                   <a href="$weblogsPager.nextLink">$weblogsPager.nextName &gt;</a>
-                #end
-            #else
-                #if($weblogsPager.prevLink)
-                   <a href="$weblogsPager.prevLink">&lt;$weblogsPager.prevName</a>
-                #end
-                #if($weblogsPager.nextLink && $weblogsPager.prevLink())
-                   &nbsp;|&nbsp;
-                #end
-                #if($weblogsPager.nextLink)
-                   <a href="$weblogsPager.nextLink">$weblogsPager.nextName &gt;</a>
-                #end
-            #end
+#set($weblogsPager = $site.getWeblogsByLetterPager($chosenLetter, -1, $pageLength))
+<div class="fd-dir">
+#foreach($loopblog in $weblogsPager.items)
+    <a class="fd-blog" href="$url.absoluteSite/$loopblog.handle">
+        <p class="n">$loopblog.name</p>
+        <p class="h"><span class="live"></span>$utils.escapeHTML($loopblog.handle)</p>
+    </a>
+#end
+</div>
 
-             </td>
-          </tr>
-       </tfoot>
-    </table> 
+<nav class="fd-pager">
+#if($weblogsPager.prevLink)
+   <a href="$weblogsPager.prevLink">&lt; $weblogsPager.prevName</a>
+#end
+#if($weblogsPager.nextLink && $weblogsPager.prevLink)
+   &nbsp;|&nbsp;
+#end
+#if($weblogsPager.nextLink)
+   <a href="$weblogsPager.nextLink">$weblogsPager.nextName &gt;</a>
+#end
+</nav>

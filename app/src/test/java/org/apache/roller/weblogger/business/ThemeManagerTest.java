@@ -28,7 +28,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ThemeManagerTest  {
     public static Log log = LogFactory.getLog(ThemeManagerTest.class);
@@ -50,7 +49,10 @@ public class ThemeManagerTest  {
 
         assertNotNull( themeManager.getTheme("journal") );
         assertNotNull( themeManager.getTheme("journal").getStylesheet() );
-        assertNull( themeManager.getTheme("frontpage").getStylesheet() );
+        // Frontpage front-door restyle (Theme Wave Task 5): frontpage now
+        // ships its own stylesheet (frontpage-custom.css) the same way
+        // journal/travel/portfolio do, so per-weblog overrides work here too.
+        assertNotNull( themeManager.getTheme("frontpage").getStylesheet() );
     }
         
 }
