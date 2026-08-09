@@ -69,7 +69,7 @@
                         <c:if test="${fn:length(allCategories) > 1}">
 
                             <c:set var="categoryId" value="${category.id}"/>
-                            <c:set var="categoryName" value="${category.name}"/>
+                            <c:set var="categoryName" value="${fn:escapeXml(category.name)}"/>
                             <c:set var="categoryInUse" value="${category.inUse}"/>
                             <a href="#" onclick="showCategoryDeleteModal(
                                     '${categoryId}',
@@ -328,7 +328,7 @@
         // nothing. (It also set the *edit* form's name field, from the delete
         // dialog, which never meant anything.)
         $("#categoryRemoveForm [name='removeId']").val(id);
-        $('#category-name').html(name);
+        $('#category-name').text(name);
         if ( inUse ) {
             $('#category-in-use').css('display','block');
             $('#category-empty').css('display', 'none');

@@ -181,7 +181,7 @@
 
     <td>
         <c:set var="postId" value="${post.id}"/>
-        <c:set var="postTitle" value="${post.title}"/>
+        <c:set var="postTitle" value="${fn:escapeXml(post.title)}"/>
         <a href="#"
             onclick="showDeleteModal('${postId}', '${postTitle}' )">
             <span class="bi bi-trash"
@@ -355,7 +355,7 @@
 <script>
     function showDeleteModal( postId, postTitle ) {
         $('#postIdLabel').html(postId);
-        $('#postTitleLabel').html(postTitle);
+        $('#postTitleLabel').text(postTitle);
         $('#removeId').val(postId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-entry-modal')).show();
     }

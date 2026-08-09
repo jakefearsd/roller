@@ -375,7 +375,7 @@
 
     function showPageDeleteModal(pageId, pageTitle) {
         $('#page-delete-id').val(pageId);
-        $('#page-delete-title').html(pageTitle);
+        $('#page-delete-title').text(pageTitle);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-page-modal')).show();
     }
 

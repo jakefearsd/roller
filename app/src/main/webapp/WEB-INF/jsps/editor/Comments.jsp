@@ -406,15 +406,20 @@
         // make sure we have the full comment
         if ($("#link-" + id).length > 0) readMoreComment(id, editComment);
 
-        // save the original comment value
-        comments[id] = $("#comment-" + id).html();
+        // save the original comment value. .text() reads the decoded
+        // characters (never HTML markup), matching how the span was
+        // populated server-side via fn:escapeXml.
+        comments[id] = $("#comment-" + id).text();
 
         $("#editlink-" + id).hide();
         $("#savelink-" + id).show();
         $("#cancellink-" + id).show();
 
-        // put comment in a textarea for editing
-        $("#comment-" + id).html("<textarea style='width:100%' rows='10'>" + comments[id] + "</textarea>");
+        // put comment in a textarea for editing. Built via element+.val(),
+        // not string-concatenated markup passed to .html() -- comments[id]
+        // is reader-supplied content and must never be parsed as HTML.
+        var editArea = $("<textarea>", {style: "width:100%", rows: 10}).val(comments[id]);
+        $("#comment-" + id).empty().append(editArea);
     }
 
     function saveComment(id) {
@@ -432,6 +437,12 @@
                     $("#editlink-" + id).show();
                     $("#savelink-" + id).hide();
                     $("#cancellink-" + id).hide();
+                    // .html() is safe here: CommentDataServlet#doPut runs
+                    // Utilities.escapeHTML then StringEscapeUtils.escapeEcmaScript
+                    // on c.getContent() before writing the JSON response, so
+                    // cdata.content is HTML-entity-escaped text -- .html()
+                    // renders it back to readable characters as inert text,
+                    // never as live markup.
                     $("#comment-" + id).html(cdata.content);
                 } else {
                     alert('<spring:message code="commentManagement.saveError" javaScriptEscape="true"/>');
@@ -445,7 +456,7 @@
         $("#savelink-" + id).hide();
         $("#cancellink-" + id).hide();
         if (comments[id]) {
-            $("#comment-" + id).html(comments[id]);
+            $("#comment-" + id).text(comments[id]);
             comments[id] = null;
         }
     }
@@ -456,6 +467,9 @@
             url: '<%= request.getContextPath()%>/roller-ui/authoring/commentdata?id=' + id,
             success: function (data) {
                 var cdata = eval("(" + data + ")");
+                // .html() is safe here: CommentDataServlet#doGet runs the same
+                // Utilities.escapeHTML + StringEscapeUtils.escapeEcmaScript
+                // pipeline as doPut before writing the response.
                 $("#comment-" + cdata.id).html(cdata.content);
                 $("#link-" + id).detach();
                 if (callback) callback(id);

@@ -513,7 +513,7 @@
         <span style="float:right">
             <input class="btn btn-danger" type="button"
                    value="<spring:message code="weblogEdit.deleteEntry"/>"
-                   onclick="showDeleteModal('${entry.id}', '${entry.title}' )">
+                   onclick="showDeleteModal('${entry.id}', '${fn:escapeXml(entry.title)}' )">
         </span>
     </c:if>
 
@@ -835,7 +835,7 @@
 
     function showDeleteModal(postId, postTitle) {
         $('#postIdLabel').html(postId);
-        $('#postTitleLabel').html(postTitle);
+        $('#postTitleLabel').text(postTitle);
         $('#removeId').val(postId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-entry-modal')).show();
     }

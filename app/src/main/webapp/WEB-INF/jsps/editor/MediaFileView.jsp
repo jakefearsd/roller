@@ -432,7 +432,7 @@
         <c:url var="mediaFileEditURL" value="/roller-ui/authoring/mediaFileEdit.rol">
         <c:param name="weblog" value="${actionWeblog.handle}"/>
         </c:url>
-        $('#edit-subtitle').html(mediaFileName);
+        $('#edit-subtitle').text(mediaFileName);
         $('#mediaFileEditor').attr('src', '${mediaFileEditURL}' + '&mediaFileId=' + mediaFileId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).show();
     }
