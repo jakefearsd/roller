@@ -51,7 +51,7 @@ limitations under the License.
              these floors are measured minus a 0.01 margin, and later stages only
              ever raise them, never lower them. Targets are documented in
              CLAUDE.md. -->
-        <jacoco.line.minimum>0.8600</jacoco.line.minimum>
+        <jacoco.line.minimum>0.8700</jacoco.line.minimum>
         <jacoco.branch.minimum>0.7800</jacoco.branch.minimum>
         <jacoco.check.skip>false</jacoco.check.skip>
     </properties>

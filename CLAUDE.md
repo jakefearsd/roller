@@ -543,6 +543,93 @@ answering to.
   test reads `PageEdit.jsp` directly to pin the marker's actual name rather
   than hardcoding it.
 
+## Audience
+Contact forms, newsletter subscribe, and account tokens (Stage 2 Wave B). No
+CAPTCHA anywhere; no CSP change anywhere — every endpoint is same-origin.
+
+- **Placeholder-div + `#showAudienceAssets` injection, and WHY.** `[contact]`/
+  `[subscribe]` (below) emit an inert `<div class="...-slot" data-*="...">`,
+  never a `<form>`, because `HTMLSanitizer` strips `<form>` from authored
+  content on purpose — an authored form is a phishing kit waiting to happen.
+  `#showAudienceAssets` (`weblog.vm`, the audience twin of `#showEmbedAssets`)
+  finds those slots client-side and builds the real forms. No theme CSP
+  changes for this: both endpoints are same-origin, and `connect-src 'self'`
+  already allows the fetch. The contact endpoint is built **server-side** —
+  `ContactShortcode.render()` emits `WebloggerRuntimeConfig
+  .getRelativeContextURL() + "/roller-ui/rendering/contact.rol"` into
+  `data-endpoint` — because a client-side heuristic (scanning the page for a
+  stylesheet `<link>` containing `/roller-ui/`) silently posted to the site
+  root under a context path: a browser IT caught it when the only stylesheet
+  on the page was the weblog's own theme CSS. The subscribe form's fetch
+  still posts to `/newsletter/subscribe` absolute-root, not context-relative
+  — a known, documented follow-up, not yet fixed the same way.
+- **Persist-first, then notify.** `ContactController` writes the
+  `roller_form_submission` row before attempting any notification email —
+  if SMTP is down the lead survives, which for a business running on leads is
+  the failure that matters. Layered defences run in order: a per-IP throttle
+  refuses abusive clients (429); an unknown weblog handle 404s; **a filled
+  honeypot field or a too-fast submit answers 204, identically to a genuine
+  success, and stores nothing** — the silent drop is deliberate, so
+  automation learns nothing from being detected. The newsletter subscribe
+  endpoint mirrors the same ordering and the same honeypot-answers-like-
+  success contract.
+- **`/newsletter/subscribe` is served by the app, not Caddy.** Throttle and
+  `roller_event` recording both live in `NewsletterController`; the old Caddy
+  `handle /newsletter/subscribe { rewrite ... reverse_proxy listmonk }` block
+  is gone and **must never come back** — a path-specific rewrite in front of
+  the app would silently bypass both the throttle and the event write. See
+  `docker_deployment.md`. **Roller stores no subscriber data at all** —
+  Listmonk owns the list, double opt-in, sending and unsubscribe; the only
+  newsletter state Roller itself holds is `weblog.newsletter_list_uuid`
+  (configuration, not a subscriber) and `weblogentry.newsletter_sent_at`.
+  Newsletter list uuids are **not** required to be unique across weblogs —
+  `getWeblogByNewsletterListUuid`'s named query orders by handle, so a shared
+  uuid always credits the same (first-by-handle) weblog rather than throwing
+  `NonUniqueResultException`.
+- **`roller_event`** (V015) is written across Wave B — `FORM_SUBMITTED`
+  (`ContactController`), `NEWSLETTER_SUBSCRIBED` (`NewsletterController`,
+  only on a genuinely new subscription, not an already-subscribed 409), and
+  `ENTRY_PUBLISHED` (`JPAWeblogEntryManagerImpl.saveWeblogEntry`, gated on
+  `entry.getLoadedStatus() != PubStatus.PUBLISHED` — the same post-load
+  snapshot mechanism entry revisions use, see Entry editing). One consequence
+  worth knowing: unpublishing an entry and republishing it records a
+  **second** `ENTRY_PUBLISHED` event, because the reload between the two
+  saves resets `loadedStatus` away from `PUBLISHED`. Every write is
+  best-effort (caught, logged, never fails the request that produced it).
+  Wave C's SQL views read this table; the `metadata` jsonb column exists but
+  is deliberately unmapped in JPA until something writes it.
+- **`roller_user_token`** (V015) stores a SHA-256 digest only, never the raw
+  token — a database read must not yield working reset links. Single-use
+  (`consume` is an atomic rows-affected `UPDATE ... WHERE used_at IS NULL AND
+  ...`, not validate-then-mark, closing the double-redemption race a
+  read-then-write would leave open) and expires after
+  `UserTokenManager.TOKEN_TTL_MS` (1 hour). Serves both the forgot-password
+  flow and the admin "send set-password link" action
+  (`PasswordLinkMailer.sendLink`, shared by both so the emailed URL shape
+  cannot drift between them).
+- **Forgot-password is enumeration-proof by construction.**
+  `PasswordLinkMailer.isReady()` requires BOTH a configured mail transport
+  (`MailUtil.isMailConfigured()`) AND a non-blank `site.adminemail` — checking
+  only the transport half would leave a server that has SMTP but no site
+  email looking ready while every send silently went nowhere. The flow's
+  actual work (token issuance + email) runs off-thread via
+  `ThreadManager.executeInBackground`, with `weblogger.release()` in a
+  `finally` on that worker thread — the same convention `AddEntryOperation`
+  established: background JPA work that never releases its `EntityManager`
+  leaks a connection. Running the found-user and not-found paths through the
+  same background/timing shape is what keeps the response identical either
+  way; the form answers with the same confirmation message regardless of
+  whether the submitted address matches an account, on purpose.
+- **"Send as newsletter" is manual, synchronous, and stamped-on-success** —
+  a deliberate deviation from a queued/retried send. `EntryEditController`
+  calls `ListmonkClient.sendCampaign` in-request and stamps
+  `weblogentry.newsletter_sent_at` only after it returns without throwing, so
+  a failed send never marks the entry sent; the human who clicked the button
+  IS the retry mechanism (no queue exists). If the campaign send succeeds but
+  the stamp-save itself fails, the entry shows a distinct
+  `newsletter.sentButNotRecorded` message rather than the generic error, so
+  an editor isn't invited to click Send again and double-mail the list.
+
 ## Plugin System
 Roller supports plugins for:
 - **Entry Plugins**: Content processing and formatting
@@ -574,7 +661,14 @@ YouTube's `i.ytimg.com`, does load from the provider's CDN at render time).
 The theme
 CSPs each carry a `frame-src` naming the provider's embed origin, pinned
 byte-for-byte by three rendering tests the same way the Leaflet `img-src *
-data:` addition is.
+data:` addition is;
+`[contact]` and `[subscribe]` (Stage 2 Wave B) are the third and fourth uses
+of the same placeholder-div pattern: each emits an inert `<div class="...-
+slot" data-*="...">` (never a `<form>` — the sanitizer strips those), and
+`#showAudienceAssets` injects the real form client-side. `[contact]` carries
+a server-built `data-endpoint` (see Audience above for why); `[subscribe]`
+carries `data-list-uuid` and renders nothing at all when the weblog has no
+newsletter list configured or the stored uuid doesn't have a uuid's shape.
 `[[name ...]]` / `[[/name]]` escape a registered shortcode to literal text;
 unknown names and malformed input pass through byte-for-byte. New handlers
 implement `ShortcodeHandler` and register in `defaultExpander()`; the interface

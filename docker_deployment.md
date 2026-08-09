@@ -333,24 +333,60 @@ what keeps consent and retention obligations out of the blog software.
    credentials live in listmonk's own database, not in `.env`.
 5. Create a list, set it to **double opt-in**, and copy its UUID.
 
+`deploy/config/roller-production.properties.example` already sets
+`newsletter.listmonk.baseurl=http://listmonk:9000` — that's the compose
+**service name**, reached over the internal Docker network, not
+`LISTMONK_DOMAIN` (which is for a browser reaching the opt-in/unsubscribe
+pages, not for Roller reaching the API). You normally don't need to touch it;
+blank (the `roller.properties` built-in default, what you'd have if you typed
+this key out by hand instead of copying the example) is what makes
+`/newsletter/subscribe` return 503 in local dev, where no listmonk service
+exists — that's the intended fallback, not a bug.
+
 ### Putting a subscribe form on a blog
 
-The shared template library has a macro for it. In the theme, wherever the
-form belongs:
+Two ways, both feeding the same weblog field (Weblog Settings → Newsletter
+list UUID) and the same client-side injection
+(`#showAudienceAssets`/`data-list-uuid`):
 
-```velocity
-#showSubscribeForm("2f0f1b0c-0000-0000-0000-000000000000" "Get new guides by email")
-```
+- The `[subscribe]` shortcode, dropped into any entry or page body.
+- The shared template library's macro, for a fixed spot in a theme (a
+  sidebar, a footer):
 
-The first argument is the list UUID from step 5; the second is the label.
+  ```velocity
+  #showSubscribeForm($model.weblog "Get new guides by email")
+  ```
 
-The form submits to `/newsletter/subscribe` on the **blog's own domain**,
-which Caddy forwards to listmonk's public subscription API. That is required,
-not decorative: every bundled theme sends `connect-src 'self'`, so a form
-posting to `newsletter.example.com` would be blocked by the reader's browser
-and nothing would happen. Only that one endpoint is routed this way — the
-opt-in and unsubscribe pages stay on `LISTMONK_DOMAIN`, because they are
-followed from an email client where no theme CSP applies.
+  It takes the weblog, not a raw UUID — the macro reads
+  `$weblog.newsletterListUuid` itself and renders nothing at all when that
+  field is blank, so a theme can call it unconditionally on every page.
+
+The form posts to `/newsletter/subscribe` **on the blog's own domain**, which
+is required, not decorative: every bundled theme sends `connect-src 'self'`,
+so a form posting to `newsletter.example.com` would be blocked by the
+reader's browser and nothing would happen. **Roller itself serves that
+endpoint** — `NewsletterController` throttles it, checks the honeypot,
+refuses to forward a list uuid this install never configured, records a
+first-party `NEWSLETTER_SUBSCRIBED` event on success, and only then forwards
+to listmonk over the Docker network using `newsletter.listmonk.baseurl` from
+above. This used to be a Caddy `rewrite` straight to listmonk's public API;
+it is not anymore — `deploy/caddy/Caddyfile` now carries only a comment where
+that rewrite used to be (`/newsletter/subscribe is served by the app itself
+(throttle + events); do not re-add a rewrite here.`), because a path-specific
+proxy rule in front of the app would silently skip both the throttle and the
+event write with no error anywhere. The opt-in and unsubscribe pages still
+stay on `LISTMONK_DOMAIN` — those are followed from an email client, where no
+theme CSP applies, so routing them through the app buys nothing.
+
+> **Deployments running an older Caddyfile:** you must redeploy to pick up
+> the current one. `./deploy/deploy.sh` reconciles the `caddy` service
+> against whatever `deploy/caddy/Caddyfile` is checked out on every run (see
+> [Upgrades](#upgrades)), so `git pull` followed by `deploy/deploy.sh` is
+> enough. Until you do, the old rewrite keeps forwarding subscribe requests
+> straight to listmonk — Roller's own `/newsletter/subscribe` route is
+> registered and correct underneath, but Caddy never lets a request reach
+> it, so the throttle and the `roller_event` write are silently bypassed the
+> whole time the stale Caddyfile is running.
 
 A subscriber who is already on the list gets the same "check your email"
 message as a new one. That is deliberate: a different message would let anyone
@@ -358,15 +394,42 @@ use the form to test whether a given address is subscribed.
 
 ### Sending
 
-Compose and send campaigns from listmonk's own console. Roller does not have a
-"send this post as email" button — see the note below.
+Compose and send one-off campaigns from listmonk's own console, or use the
+entry editor's **"Send as newsletter"** button — a synchronous, one-shot send
+to the weblog's configured list, stamping `newsletterSentAt` on the entry so
+it cannot be sent twice. The button needs a *second*, higher-privilege
+credential than the public subscribe endpoint above: a listmonk **API user**.
 
-> **Not built:** triggering a campaign automatically when a post is published.
-> It needs a per-blog list mapping stored in Roller, an API client with
-> credentials, a retry queue, and a hook on *both* publish paths (the editor's
-> and the scheduler's — a hook on only the first silently skips every
-> scheduled post). Until that exists, publishing a post and emailing it are two
-> deliberate acts.
+1. In the listmonk console: **Admin → Users → + New**.
+2. Give it the **Super Admin** role (or a custom role with campaign
+   create/manage permissions) and set **Type** to *API*.
+3. Generate a token and copy both the username and the token immediately —
+   listmonk shows the token exactly once.
+4. Put both in `deploy/config/roller-production.properties`:
+
+   ```properties
+   newsletter.listmonk.apiuser=your-api-username
+   newsletter.listmonk.apitoken=the-generated-token
+   ```
+
+5. Redeploy. Leaving either blank disables only the "Send as newsletter"
+   button (`newsletter.notConfigured`) — the public subscribe form keeps
+   working regardless, since `ListmonkClient` checks the two credential tiers
+   (`isUnconfigured()` for subscribe, `isCampaignConfigured()` for sending)
+   independently.
+
+Sending is deliberately manual and synchronous, not queued: an editor clicks
+the button, the campaign sends in that same request, and
+`weblogentry.newsletter_sent_at` is stamped only once listmonk confirms — the
+editor who clicked IS the retry mechanism, since there is no background queue
+to retry on their behalf.
+
+> **Not built:** triggering a campaign automatically when a post is
+> published. The per-blog list mapping and the API client both exist now
+> (above); what's still missing is a retry queue and a hook on *both* publish
+> paths (the editor's and the scheduler's — a hook on only the first silently
+> skips every scheduled post). Until that exists, publishing a post and
+> sending it as a newsletter stay two deliberate, separate acts.
 
 ## Backup and restore
 
