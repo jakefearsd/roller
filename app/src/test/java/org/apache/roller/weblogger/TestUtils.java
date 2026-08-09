@@ -412,8 +412,8 @@ public final class TestUtils {
     /**
      * Variant of {@link #setupImageMediaFile(Weblog, String)} that stores the
      * image in a named (non-default) directory, creating the directory when
-     * it does not exist yet. Used by the share-link and private-directory
-     * tests, which need files outside the default directory.
+     * it does not exist yet. Used by the private-directory tests, which need
+     * files outside the default directory.
      */
     public static MediaFile setupImageMediaFile(Weblog weblog, String name,
             String directoryName) throws Exception {

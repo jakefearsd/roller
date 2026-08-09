@@ -156,11 +156,6 @@ public class JPAWeblogManagerImpl implements WeblogManager {
             this.strategy.remove(template);
         }
         
-        // remove share links (they FK the weblog; targets are gone or going anyway)
-        Query removeShareLinks = strategy.getNamedUpdate("ShareLink.removeByWeblog");
-        removeShareLinks.setParameter(1, weblog);
-        removeShareLinks.executeUpdate();
-
         // remove static pages
         Query removePages = strategy.getNamedUpdate("WeblogPage.removeByWeblog");
         removePages.setParameter(1, weblog);

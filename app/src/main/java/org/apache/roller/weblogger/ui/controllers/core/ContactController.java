@@ -48,8 +48,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * {@code #showAudienceAssets} injects onto every rendered page.
  *
  * <p><b>Routing.</b> {@code *.rol} is already dispatcher-mapped as a suffix
- * pattern, so the full path is the lookup path -- no ambiguity with
- * {@code /share/*}'s prefix-stripped patterns. {@code /roller-ui/rendering/*}
+ * pattern, so the full path is the lookup path. {@code /roller-ui/rendering/*}
  * is where the public comment servlet already lives, and reaches this
  * endpoint {@code permitAll} via {@code SecurityConfig}'s catch-all.
  *
@@ -78,9 +77,9 @@ public class ContactController extends BaseController {
     /**
      * Throttle for contact submissions, keyed by client address.
      *
-     * <p>Built lazily on first use rather than in a constructor, exactly as
-     * {@code ShareController.passwordThrottle} is: {@code WebloggerConfig} is
-     * not necessarily loaded when Spring instantiates controllers.
+     * <p>Built lazily on first use rather than in a constructor:
+     * {@code WebloggerConfig} is not necessarily loaded when Spring
+     * instantiates controllers.
      */
     private volatile GenericThrottle throttle;
 
@@ -88,7 +87,7 @@ public class ContactController extends BaseController {
     //
     // The contact form is for anonymous readers; the interceptor must not
     // send them to the login page. requiredGlobalPermissionActions() is
-    // overridden too, matching ShareController's belt-and-braces shape.
+    // overridden too, belt and braces.
 
     @Override
     public boolean isUserRequired() {
@@ -301,9 +300,8 @@ public class ContactController extends BaseController {
     // ------------------------------------------------------------ throttle
 
     /**
-     * Whether the throttle applies. Unlike the share-link password throttle
-     * this is a startup property, not a runtime one: sizing and the on/off
-     * switch both need a restart to change.
+     * Whether the throttle applies. A startup property, not a runtime one:
+     * sizing and the on/off switch both need a restart to change.
      */
     private static boolean throttlingEnabled() {
         return WebloggerConfig.getBooleanProperty("contact.throttle.enabled", true);

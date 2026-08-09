@@ -201,8 +201,8 @@ state lives in the `caddy-data` named volume, so it survives
 
 The app honors `X-Forwarded-Proto`/`X-Forwarded-For` from the reverse proxy
 (`server.forward-headers-strategy=framework` in `application.properties`), so
-absolute URLs the app generates — redirects, share links, sitemap entries —
-use `https://` even though Caddy talks plain HTTP to the container. Caddy
+absolute URLs the app generates — redirects, sitemap entries — use `https://`
+even though Caddy talks plain HTTP to the container. Caddy
 sets these headers automatically for proxied requests; there is nothing to
 configure, and existing deployments pick this up on their next image update
 with no action needed.

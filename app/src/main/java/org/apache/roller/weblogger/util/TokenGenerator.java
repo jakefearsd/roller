@@ -24,7 +24,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * Generates URL-safe secret tokens for share links.
+ * Generates URL-safe secret tokens, e.g. for password-reset links.
  *
  * <p>256 bits from a {@link SecureRandom}, encoded as unpadded URL-safe
  * Base64: 43 characters of {@code [A-Za-z0-9_-]}, safe to embed in a path or

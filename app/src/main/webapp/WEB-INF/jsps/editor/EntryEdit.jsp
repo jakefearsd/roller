@@ -524,80 +524,10 @@
 
 <%-- ========================================================================================== --%>
 
-<%-- per-entry share link: create (optional password), copy URL, revoke.
-     Outside the main entry form -- these are separate POST actions with
-     their own CSRF inputs, and forms must not nest. Only a saved entry can
-     be shared, so the card renders for entryEdit only. --%>
-
-<c:if test="${actionName == 'entryEdit'}">
-    <div id="entryShareCard" class="card mt-3">
-        <div class="card-header"><spring:message code="shareLink.title"/></div>
-        <div class="card-body">
-            <c:choose>
-                <c:when test="${not empty entryShareLink}">
-                    <div class="input-group mb-2" style="max-width: 44em">
-                        <input type="text" readonly id="entryShareLinkUrl" class="form-control"
-                               value="${entryShareURL}"/>
-                        <button type="button" class="btn btn-secondary" id="copyEntryShareLinkButton"
-                                onclick="copyEntryShareLink()"><spring:message code="shareLink.copy"/></button>
-                    </div>
-                    <form method="post" style="display:inline"
-                          action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!revokeShareLink.rol">
-                        <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-                        <input type="hidden" name="entryId" value="${entry.id}"/>
-                        <button type="submit" id="revokeEntryShareLinkButton" class="btn btn-danger btn-sm"><spring:message
-                                code="shareLink.revoke"/></button>
-                        <c:if test="${not empty entryShareLink.expires}">
-                            <span class="pagetip ms-2" id="entryShareLinkExpires">
-                                <spring:message code="shareLink.expiresOn"
-                                                arguments="${entryShareLink.expires}"/>
-                            </span>
-                        </c:if>
-                        <sec:csrfInput/>
-                    </form>
-                </c:when>
-                <c:otherwise>
-                    <p class="pagetip"><spring:message code="shareLink.none"/></p>
-                    <form method="post"
-                          action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!createShareLink.rol">
-                        <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-                        <input type="hidden" name="entryId" value="${entry.id}"/>
-                        <div class="input-group" style="max-width: 44em">
-                            <input type="password" name="sharePassword" id="entryShareLinkPassword"
-                                   class="form-control" autocomplete="new-password"
-                                   placeholder="<spring:message code="shareLink.passwordOptional"/>"/>
-                            <input type="number" name="shareExpiryDays" id="entryShareLinkExpiryDays"
-                                   class="form-control" min="1" max="3650" style="max-width: 10em"
-                                   placeholder="<spring:message code="shareLink.expiryOptional"/>"/>
-                            <button type="submit" id="createEntryShareLinkButton" class="btn btn-primary"><spring:message
-                                    code="shareLink.create"/></button>
-                        </div>
-                        <sec:csrfInput/>
-                    </form>
-                </c:otherwise>
-            </c:choose>
-        </div>
-    </div>
-    <script>
-        function copyEntryShareLink() {
-            var input = document.getElementById('entryShareLinkUrl');
-            input.select();
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(input.value);
-            } else {
-                document.execCommand('copy');
-            }
-        }
-    </script>
-</c:if>
-
-
-<%-- ========================================================================================== --%>
-
 <%-- "Send as newsletter": a manual, synchronous, cannot-double-send action.
      Shown for published entries only -- an unpublished draft has no rendered
      content to mail out. Outside the main entry form, its own POST with its
-     own CSRF input, exactly like the share-link card above. --%>
+     own CSRF input. --%>
 
 <c:if test="${actionName == 'entryEdit' && entry.published}">
     <div id="newsletterCard" class="card mt-3">
@@ -671,8 +601,8 @@
 <%-- ========================================================================================== --%>
 
 <%-- entry revisions: every content-changing save leaves one. Outside the main
-     entry form for the same reason the share card is: restore is its own POST
-     with its own CSRF token, and forms must not nest. --%>
+     entry form for the same reason the newsletter card is: restore is its own
+     POST with its own CSRF token, and forms must not nest. --%>
 
 <c:if test="${actionName == 'entryEdit' && not empty entryRevisions}">
     <div id="entryRevisionsCard" class="card mt-3">

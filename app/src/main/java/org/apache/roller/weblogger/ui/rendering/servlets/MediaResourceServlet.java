@@ -124,11 +124,8 @@ public class MediaResourceServlet extends HttpServlet {
             return;
         }
 
-        // A private directory's files are reachable only through their share
-        // link's /share/<token>/media/<id> route (ShareController). Serving
-        // them here would let anyone who learns a media id bypass the share
-        // gate, so for the public the base path answers exactly as for an
-        // unknown id. The one exception is the owning weblog's own editors:
+        // A private directory's files are not served publicly at all. The
+        // one exception is the owning weblog's own editors:
         // the media-library screens render their thumbnails through this
         // path, and an author must be able to see the photos they just
         // marked private. Those responses are marked private/no-store so no

@@ -1,0 +1,29 @@
+-- Licensed to the Apache Software Foundation (ASF) under one or more
+-- contributor license agreements.  The ASF licenses this file to You
+-- under the Apache License, Version 2.0 (the "License"); you may not
+-- use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+--
+-- Migration: drop roller_share_link
+--
+-- The share-link feature (tokened, optionally password-protected public URLs
+-- for one entry or one media directory) is removed entirely -- not deprecated,
+-- not hidden behind a flag. It is not coming back, so its table goes rather
+-- than sitting unused the way a soft-disable would leave it.
+--
+-- roller_mediafiledir.is_private (V007) is NOT touched here: it stays as a
+-- pure privacy flag -- 404 on the public media path, excluded from the
+-- sitemap, refused by [gallery] -- with no share-token backdoor. Only the
+-- token table itself goes.
+--
+-- Prerequisites: V007__share_links_and_gallery_metadata.
+
+DROP TABLE IF EXISTS roller_share_link;

@@ -458,9 +458,9 @@ legacy popup-comments template does), so rules there would never load.
 ## The rules are generated in GalleryMarkup.gridStyles() from the same
 ## constants that produce the figures' ar-NNN classes, so a class the emitter
 ## can produce and the stylesheet has no rule for cannot exist. They used to be
-## written out by hand here AND inlined in ShareController for share pages, and
-## the two drifted: when the emitter moved to classes, only this copy was
-## updated and every share-page gallery quietly fell back to a uniform 3:2.
+## written out by hand here, kept in sync with the emitter only by care; when
+## the emitter moved to classes that hand-written copy could just as easily
+## have gone stale unnoticed.
 ##
 <style>
 $utils.galleryGridStyles

@@ -209,9 +209,6 @@ class EqualsContractTest {
                         weblogPermission("alice", "blog-a", "post"),
                         weblogPermission("alice", "blog-a", "admin")),
 
-                new Specimen("ShareLink (keyed on token)",
-                        shareLink("token-a"), shareLink("token-a"), shareLink("token-b")),
-
                 new Specimen("WeblogEntryRevision (keyed on id)",
                         revision("revision-a"), revision("revision-a"), revision("revision-b")),
 
@@ -262,12 +259,6 @@ class EqualsContractTest {
         WeblogEntryRevision revision = new WeblogEntryRevision();
         revision.setId(id);
         return revision;
-    }
-
-    private static ShareLink shareLink(String token) {
-        ShareLink link = new ShareLink();
-        link.setToken(token);
-        return link;
     }
 
     private static WeblogEntryComment comment(String name, Timestamp postTime, WeblogEntry entry) {

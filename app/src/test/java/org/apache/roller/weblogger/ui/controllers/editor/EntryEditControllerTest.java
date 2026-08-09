@@ -29,7 +29,6 @@ import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.JsonLdType;
-import org.apache.roller.weblogger.pojos.ShareLink;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntryRevision;
@@ -291,28 +290,19 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
 
     @Test
     void openingAnEntryFromAnotherWeblogBouncesToTheMenu() throws Exception {
-        // getWeblogEntry is a global by-id lookup. The editor's share card
-        // hangs the entry's full share URL -- a durable credential for an
-        // unpublished draft -- off whatever it resolves, so an unchecked id
-        // hands a foreign weblog's token to any editor who knows the id.
+        // getWeblogEntry is a global by-id lookup, so an unchecked id would
+        // hand a foreign weblog's draft content to any editor who knows it.
         WeblogEntry foreign = existingEntry(PubStatus.DRAFT);
         org.apache.roller.weblogger.pojos.Weblog other =
                 new org.apache.roller.weblogger.pojos.Weblog();
         other.setId("weblog-2");
         other.setHandle("otherblog");
         foreign.setWebsite(other);
-        ShareLink theirLink = new ShareLink();
-        theirLink.setTargetType(ShareLink.TYPE_ENTRY);
-        theirLink.setTargetId("entry-1");
-        theirLink.setToken("their-secret-token");
-        when(weblogger.getShareLinkManager()
-                .getShareLinkForTarget(ShareLink.TYPE_ENTRY, "entry-1")).thenReturn(theirLink);
 
         String view = controller.entryEditExecute(request, model, bean);
 
         assertEquals("redirect:/roller-ui/menu.rol", view,
                 "an entryId from another weblog must bounce, exactly like an unknown one");
-        assertNull(model.getAttribute("entryShareURL"));
         assertNull(model.getAttribute("entry"));
         assertFalse("Stored title".equals(bean.getTitle()),
                 "the foreign entry's content must not reach this weblog's form");
@@ -329,7 +319,6 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
 
         assertEquals("redirect:/roller-ui/menu.rol",
                 controller.entryEditFirstSave(request, model, bean));
-        assertNull(model.getAttribute("entryShareURL"));
     }
 
     @Test
@@ -869,167 +858,6 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         when(weblogger.getMediaFileManager().getMediaFile(id)).thenReturn(mediaFile);
         when(weblogger.getUrlStrategy().getMediaFileThumbnailURL(weblog, id, true))
                 .thenReturn("http://media/" + id + "?t=true");
-    }
-
-    // --- per-entry share links ---
-
-    @org.junit.jupiter.api.Nested
-    class ShareLinks {
-
-        @org.junit.jupiter.api.BeforeEach
-        void installPasswordEncoder() {
-            if (org.apache.roller.weblogger.ui.core.RollerContext.getPasswordEncoder() == null) {
-                org.apache.roller.weblogger.ui.core.RollerContext.setPasswordEncoder(
-                        org.apache.roller.weblogger.ui.core.RollerContext.createPasswordEncoder());
-            }
-        }
-
-        /**
-         * The expiry column has existed since share links shipped, with
-         * nothing in the UI able to set it -- so every link ever created was
-         * permanent. For a client gallery that is the wrong default to be
-         * stuck with.
-         */
-        @Test
-        void anExpiryTypedByTheAuthorIsStoredOnTheLink() throws Exception {
-            existingEntry(PubStatus.PUBLISHED);
-
-            controller.entryEditCreateShareLink(
-                    request, newRedirectAttributes(), "entry-1", null, "7");
-
-            ArgumentCaptor<ShareLink> captor = ArgumentCaptor.forClass(ShareLink.class);
-            verify(weblogger.getShareLinkManager()).createShareLink(captor.capture());
-            assertNotNull(captor.getValue().getExpires(),
-                    "the link must carry the expiry the author asked for");
-            assertTrue(captor.getValue().getExpires().after(new java.util.Date()),
-                    "a freshly created link must not already be expired");
-        }
-
-        @Test
-        void noExpiryTypedMeansTheLinkNeverExpires() throws Exception {
-            existingEntry(PubStatus.PUBLISHED);
-
-            controller.entryEditCreateShareLink(
-                    request, newRedirectAttributes(), "entry-1", null, "");
-
-            ArgumentCaptor<ShareLink> captor = ArgumentCaptor.forClass(ShareLink.class);
-            verify(weblogger.getShareLinkManager()).createShareLink(captor.capture());
-            assertNull(captor.getValue().getExpires(),
-                    "an empty box must leave the link permanent, not expire it immediately");
-        }
-
-        @Test
-        void creatingAShareLinkStoresAHashedPasswordAndRedirectsBack() throws Exception {
-            existingEntry(PubStatus.PUBLISHED);
-            var redirectAttributes = newRedirectAttributes();
-
-            String view = controller.entryEditCreateShareLink(
-                    request, redirectAttributes, "entry-1", "entry-pw", null);
-
-            assertEquals("redirect:/roller-ui/authoring/entryEdit.rol?weblog="
-                    + WEBLOG_HANDLE + "&bean.id=entry-1", view);
-            ArgumentCaptor<ShareLink> captor = ArgumentCaptor.forClass(ShareLink.class);
-            verify(weblogger.getShareLinkManager()).createShareLink(captor.capture());
-            ShareLink stored = captor.getValue();
-            assertEquals(ShareLink.TYPE_ENTRY, stored.getTargetType());
-            assertEquals("entry-1", stored.getTargetId());
-            assertEquals(43, stored.getToken().length());
-            assertNotNull(stored.getPasswordHash());
-            assertTrue(stored.getPasswordHash().startsWith("{"),
-                    "the value must be DelegatingPasswordEncoder output, not "
-                            + "plaintext: " + stored.getPasswordHash());
-            assertTrue(org.apache.roller.weblogger.ui.core.RollerContext.getPasswordEncoder()
-                    .matches("entry-pw", stored.getPasswordHash()));
-            assertTrue(flashMessages(redirectAttributes).contains("shareLink.created"));
-        }
-
-        @Test
-        void anEntryFromAnotherWeblogCannotBeShared() throws Exception {
-            WeblogEntry foreign = existingEntry(PubStatus.PUBLISHED);
-            org.apache.roller.weblogger.pojos.Weblog other =
-                    new org.apache.roller.weblogger.pojos.Weblog();
-            other.setId("weblog-2");
-            other.setHandle("otherblog");
-            foreign.setWebsite(other);
-
-            String view = controller.entryEditCreateShareLink(
-                    request, newRedirectAttributes(), "entry-1", null, null);
-
-            assertEquals("redirect:/roller-ui/menu.rol", view,
-                    "an entryId from another weblog must bounce, exactly like "
-                            + "an unknown one");
-            verify(weblogger.getShareLinkManager(), never()).createShareLink(any());
-        }
-
-        @Test
-        void revokingRemovesTheLinkAndRedirectsBack() throws Exception {
-            existingEntry(PubStatus.PUBLISHED);
-            ShareLink link = new ShareLink();
-            link.setTargetType(ShareLink.TYPE_ENTRY);
-            link.setTargetId("entry-1");
-            link.setToken("entry-share-token");
-            when(weblogger.getShareLinkManager()
-                    .getShareLinkForTarget(ShareLink.TYPE_ENTRY, "entry-1")).thenReturn(link);
-            var redirectAttributes = newRedirectAttributes();
-
-            String view = controller.entryEditRevokeShareLink(
-                    request, redirectAttributes, "entry-1");
-
-            assertEquals("redirect:/roller-ui/authoring/entryEdit.rol?weblog="
-                    + WEBLOG_HANDLE + "&bean.id=entry-1", view);
-            verify(weblogger.getShareLinkManager()).removeShareLink(link);
-            assertTrue(flashMessages(redirectAttributes).contains("shareLink.revoked"));
-        }
-
-        @Test
-        void revokingWithNoLinkReportsAnError() throws Exception {
-            existingEntry(PubStatus.PUBLISHED);
-            var redirectAttributes = newRedirectAttributes();
-
-            String view = controller.entryEditRevokeShareLink(
-                    request, redirectAttributes, "entry-1");
-
-            assertEquals("redirect:/roller-ui/authoring/entryEdit.rol?weblog="
-                    + WEBLOG_HANDLE + "&bean.id=entry-1", view);
-            verify(weblogger.getShareLinkManager(), never()).removeShareLink(any());
-            assertTrue(flashErrors(redirectAttributes).contains("shareLink.error"));
-        }
-
-        @Test
-        void anEntryFromAnotherWeblogCannotBeRevoked() throws Exception {
-            WeblogEntry foreign = existingEntry(PubStatus.PUBLISHED);
-            org.apache.roller.weblogger.pojos.Weblog other =
-                    new org.apache.roller.weblogger.pojos.Weblog();
-            other.setId("weblog-2");
-            other.setHandle("otherblog");
-            foreign.setWebsite(other);
-
-            String view = controller.entryEditRevokeShareLink(
-                    request, newRedirectAttributes(), "entry-1");
-
-            assertEquals("redirect:/roller-ui/menu.rol", view);
-            verify(weblogger.getShareLinkManager(), never()).removeShareLink(any());
-        }
-
-        @Test
-        void theEditFormExposesTheShareUrl() throws Exception {
-            org.apache.roller.weblogger.config.WebloggerRuntimeConfig
-                    .setAbsoluteContextURL("http://localhost:8080/roller");
-            existingEntry(PubStatus.PUBLISHED);
-            ShareLink link = new ShareLink();
-            link.setTargetType(ShareLink.TYPE_ENTRY);
-            link.setTargetId("entry-1");
-            link.setToken("entry-view-token");
-            when(weblogger.getShareLinkManager()
-                    .getShareLinkForTarget(ShareLink.TYPE_ENTRY, "entry-1")).thenReturn(link);
-
-            controller.entryEditExecute(request, model, bean);
-
-            assertEquals(link, model.getAttribute("entryShareLink"));
-            assertEquals("http://localhost:8080/roller/share/entry-view-token",
-                    model.getAttribute("entryShareURL"),
-                    "the JSP copies this URL verbatim; it must be absolute");
-        }
     }
 
     private WeblogEntry existingEntry(PubStatus status) throws WebloggerException {

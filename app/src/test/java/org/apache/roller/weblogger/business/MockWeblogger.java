@@ -70,7 +70,6 @@ public final class MockWeblogger {
     private final PluginManager pluginManager = mock(PluginManager.class);
     private final MediaFileManager mediaFileManager = mock(MediaFileManager.class);
     private final FileContentManager fileContentManager = mock(FileContentManager.class);
-    private final ShareLinkManager shareLinkManager = mock(ShareLinkManager.class);
     private final WeblogPageManager weblogPageManager = mock(WeblogPageManager.class);
     private final URLStrategy urlStrategy = mock(URLStrategy.class);
     private final FormSubmissionManager formSubmissionManager = mock(FormSubmissionManager.class);
@@ -90,7 +89,6 @@ public final class MockWeblogger {
         when(weblogger.getPluginManager()).thenReturn(pluginManager);
         when(weblogger.getMediaFileManager()).thenReturn(mediaFileManager);
         when(weblogger.getFileContentManager()).thenReturn(fileContentManager);
-        when(weblogger.getShareLinkManager()).thenReturn(shareLinkManager);
         when(weblogger.getWeblogPageManager()).thenReturn(weblogPageManager);
         when(weblogger.getUrlStrategy()).thenReturn(urlStrategy);
         when(weblogger.getFormSubmissionManager()).thenReturn(formSubmissionManager);
@@ -221,10 +219,6 @@ public final class MockWeblogger {
         return fileContentManager;
     }
 
-    public ShareLinkManager getShareLinkManager() {
-        return shareLinkManager;
-    }
-
     public WeblogPageManager getWeblogPageManager() {
         return weblogPageManager;
     }
@@ -279,10 +273,6 @@ public final class MockWeblogger {
 
     public FileContentManager fileContentManager() {
         return fileContentManager;
-    }
-
-    public ShareLinkManager shareLinkManager() {
-        return shareLinkManager;
     }
 
     public WeblogPageManager weblogPageManager() {

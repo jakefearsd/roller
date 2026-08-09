@@ -262,8 +262,8 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
      *   <li>the publication time and status -- a copy starts as a DRAFT that
      *       has never been published, so it cannot appear on the blog before
      *       its author has looked at it;</li>
-     *   <li>comments and the share link, which belong to the published post
-     *       and not to its text.</li>
+     *   <li>comments, which belong to the published post and not to its
+     *       text.</li>
      * </ul>
      *
      * <p>Tags are re-added by name rather than shared, so the copy owns its own

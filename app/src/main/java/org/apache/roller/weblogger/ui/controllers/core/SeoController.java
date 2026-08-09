@@ -247,9 +247,9 @@ public class SeoController extends BaseController {
         if (image == null) {
             return;
         }
-        // A private directory's files 404 on the public media path (they are
-        // served only through their share link), so advertising them to
-        // crawlers would leak the URL and then dead-link it.
+        // A private directory's files 404 on the public media path and are
+        // not served publicly at all, so advertising them to crawlers would
+        // just dead-link.
         if (image.getDirectory() != null && image.getDirectory().isPrivate()) {
             return;
         }

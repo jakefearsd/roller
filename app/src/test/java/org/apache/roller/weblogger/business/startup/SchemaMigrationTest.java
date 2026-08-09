@@ -58,7 +58,7 @@ public class SchemaMigrationTest {
             "custom_template_rendition", "entryattribute", "newsfeed",
             "roller_audit_log", "roller_comment",
             "roller_mediafile", "roller_mediafiledir", "roller_mediafiletag",
-            "roller_permission", "roller_properties", "roller_share_link",
+            "roller_permission", "roller_properties",
             "roller_tasklock",
             "roller_user", "roller_weblogentrytag", "roller_weblogentrytagagg",
             "userrole", "weblog", "weblog_custom_template", "weblogcategory",
@@ -74,7 +74,9 @@ public class SchemaMigrationTest {
             "rag_properties", "rag_subscription", "bookmark", "bookmark_folder",
             "autoping", "pingtarget", "pingqueueentry",
             // V017: hitcount subsystem replaced by Umami traffic counting.
-            "roller_hitcounts");
+            "roller_hitcounts",
+            // V020: share-link feature removed entirely, not coming back.
+            "roller_share_link");
 
     @Test
     public void migrationsAreDiscoverableOnTheClasspath() {

@@ -59,11 +59,8 @@ class GalleryMarkupTest {
 
     @Test
     void theStylesheetHasARuleForEveryClassTheEmitterCanProduce() {
-        // Now a property of one generator rather than a coupling between two
-        // hand-written copies: the same loop writes the class and the rule.
-        // The old version of this test read weblog.vm and said nothing about
-        // ShareController's separate inlined copy, which is precisely where
-        // the rules went missing.
+        // Now a property of one generator rather than a hand-written copy
+        // kept in sync by care: the same loop writes the class and the rule.
         String css = GalleryMarkup.gridStyles();
 
         for (int h = GalleryMarkup.MIN_AR_CLASS; h <= GalleryMarkup.MAX_AR_CLASS;
@@ -78,25 +75,17 @@ class GalleryMarkupTest {
     }
 
     /**
-     * The two places that ship this stylesheet -- the theme macro and the
-     * share page -- must both take it from the generator rather than keeping
-     * their own copy. That is the failure this whole change is about.
+     * The theme macro that ships this stylesheet must take it from the
+     * generator rather than keeping its own copy. That is the failure this
+     * whole change is about.
      */
     @Test
-    void neitherConsumerKeepsItsOwnCopyOfTheRules() throws IOException {
+    void theMacroDoesNotKeepItsOwnCopyOfTheRules() throws IOException {
         String macro = Files.readString(
                 Paths.get("src/main/webapp/WEB-INF/velocity/weblog.vm"), StandardCharsets.UTF_8);
         assertTrue(macro.contains("$utils.galleryGridStyles"),
                 "the theme macro must emit the generated stylesheet");
         assertFalse(macro.contains(".jgrid figure.ar-"),
                 "the theme macro has grown its own ar-NNN table again");
-
-        String shareController = Files.readString(
-                Paths.get("src/main/java/org/apache/roller/weblogger/ui/controllers"
-                        + "/core/ShareController.java"), StandardCharsets.UTF_8);
-        assertTrue(shareController.contains("GalleryMarkup.gridStyles()"),
-                "share pages must emit the generated stylesheet");
-        assertFalse(shareController.contains(".jgrid figure {"),
-                "ShareController has grown its own copy of the grid rules again");
     }
 }

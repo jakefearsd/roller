@@ -49,19 +49,10 @@ import org.springframework.web.bind.annotation.RequestBody;
  * by the standalone {@code #showSubscribeForm} macro).
  *
  * <p><b>Routing.</b> {@code /newsletter/*} is a dispatcher prefix mapping
- * ({@code ServletRegistrationConfig.NEWSLETTER_URL_PATTERNS}, added the same
- * way {@code SHARE_URL_PATTERNS} is), so the lookup path has {@code /newsletter}
- * stripped and this controller carries no class-level {@code @RequestMapping}
- * -- the handler below is written relative to the prefix, {@code /subscribe}.
- * There is no ambiguity with {@code ShareController}'s {@code /{token:...}}
- * template mapped under {@code /share/*}: the two prefixes are disjoint
- * dispatcher registrations, and even a hypothetical collision would resolve
- * to this controller's exact-literal {@code /subscribe} over a template
- * pattern (Spring's handler-mapping precedence prefers an exact match) --
- * {@code ShareController}'s unlock endpoint is POST too, so it is precedence,
- * not HTTP method, that decides it here. {@code NewsletterRoutingTest} pins
- * this claim against a real {@code RequestMappingHandlerMapping} rather than
- * trusting this prose.
+ * ({@code ServletRegistrationConfig.NEWSLETTER_URL_PATTERNS}), so the lookup
+ * path has {@code /newsletter} stripped and this controller carries no
+ * class-level {@code @RequestMapping} -- the handler below is written
+ * relative to the prefix, {@code /subscribe}.
  *
  * <p><b>The open-relay guard.</b> The posted {@code list_uuids[0]} is looked
  * up against {@code WeblogManager.getWeblogByNewsletterListUuid} BEFORE

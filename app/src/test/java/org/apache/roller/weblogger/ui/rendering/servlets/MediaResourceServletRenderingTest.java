@@ -153,10 +153,10 @@ class MediaResourceServletRenderingTest {
 
     // ------------------------------------------------- private directories
     //
-    // A file in a directory marked private (Wave 2 share links) must not be
-    // reachable through the public media path at all -- its bytes are served
-    // only through the tokened /share/<token>/media/<id> route. The base path
-    // must 404 exactly like an unknown id, on every serving variant.
+    // A file in a directory marked private must not be reachable through the
+    // public media path at all -- it is not served publicly by any route.
+    // The base path must 404 exactly like an unknown id, on every serving
+    // variant.
 
     @Test
     void aFileInAPrivateDirectoryIsNotServedThroughTheBaseMediaPath() throws Exception {

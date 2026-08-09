@@ -43,10 +43,8 @@ import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
-import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.MediaFile;
-import org.apache.roller.weblogger.pojos.ShareLink;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -55,10 +53,8 @@ import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
-import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.apache.roller.weblogger.util.TextDiff;
-import org.apache.roller.weblogger.util.TokenGenerator;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.util.MailUtil;
 import org.apache.roller.weblogger.util.MediacastException;
@@ -399,73 +395,6 @@ public class EntryEditController extends BaseController {
     }
 
     /**
-     * Creates (or replaces) the entry's share link, hashing the optional
-     * password here -- the manager tier stores hashes as given and never sees
-     * plaintext. Redirects back to the editor, which shows the new URL in the
-     * share card.
-     */
-    @PostMapping("/entryEdit!createShareLink.rol")
-    public String entryEditCreateShareLink(HttpServletRequest request,
-                                           RedirectAttributes redirectAttributes,
-                                           @RequestParam(value = "entryId", required = false) String entryId,
-                                           @RequestParam(value = "sharePassword", required = false) String sharePassword,
-                                           @RequestParam(value = "shareExpiryDays", required = false) String shareExpiryDays) {
-        WeblogEntry entry = lookupEntry(entryId, request);
-        if (entry == null) {
-            return "redirect:/roller-ui/menu.rol";
-        }
-        try {
-            ShareLink existing = weblogger.getShareLinkManager()
-                    .getShareLinkForTarget(ShareLink.TYPE_ENTRY, entry.getId());
-            if (existing != null) {
-                weblogger.getShareLinkManager().removeShareLink(existing);
-            }
-            ShareLink link = new ShareLink();
-            link.setWeblog(getActionWeblog(request));
-            link.setTargetType(ShareLink.TYPE_ENTRY);
-            link.setTargetId(entry.getId());
-            link.setToken(TokenGenerator.newToken());
-            if (StringUtils.isNotBlank(sharePassword)) {
-                link.setPasswordHash(RollerContext.getPasswordEncoder().encode(sharePassword));
-            }
-            link.setExpires(ShareLink.expiryFromDays(shareExpiryDays));
-            weblogger.getShareLinkManager().createShareLink(link);
-            weblogger.flush();
-            addFlashMessage(redirectAttributes, "shareLink.created", request);
-        } catch (WebloggerException e) {
-            log.error("Error creating share link for entry " + entryId, e);
-            addFlashError(redirectAttributes, "shareLink.error", request);
-        }
-        return redirectToEntryEdit(request, entry);
-    }
-
-    /** Revokes the entry's share link; the entry itself is untouched. */
-    @PostMapping("/entryEdit!revokeShareLink.rol")
-    public String entryEditRevokeShareLink(HttpServletRequest request,
-                                           RedirectAttributes redirectAttributes,
-                                           @RequestParam(value = "entryId", required = false) String entryId) {
-        WeblogEntry entry = lookupEntry(entryId, request);
-        if (entry == null) {
-            return "redirect:/roller-ui/menu.rol";
-        }
-        try {
-            ShareLink link = weblogger.getShareLinkManager()
-                    .getShareLinkForTarget(ShareLink.TYPE_ENTRY, entry.getId());
-            if (link == null) {
-                addFlashError(redirectAttributes, "shareLink.error", request);
-            } else {
-                weblogger.getShareLinkManager().removeShareLink(link);
-                weblogger.flush();
-                addFlashMessage(redirectAttributes, "shareLink.revoked", request);
-            }
-        } catch (WebloggerException e) {
-            log.error("Error revoking share link for entry " + entryId, e);
-            addFlashError(redirectAttributes, "shareLink.error", request);
-        }
-        return redirectToEntryEdit(request, entry);
-    }
-
-    /**
      * Sends the entry as a Listmonk newsletter campaign to the weblog's
      * configured list -- SYNCHRONOUSLY, in the POST itself. This is a
      * deliberate spec deviation from a background job: there is no retry
@@ -776,20 +705,6 @@ public class EntryEditController extends BaseController {
             model.addAttribute("previewURL", weblogger.getUrlStrategy()
                     .getPreviewURLStrategy(null)
                     .getWeblogEntryURL(getActionWeblog(request), null, entry.getAnchor(), true));
-
-            // share-link card state for this entry (sidebar on EntryEdit.jsp)
-            try {
-                ShareLink shareLink = weblogger.getShareLinkManager()
-                        .getShareLinkForTarget(ShareLink.TYPE_ENTRY, entry.getId());
-                if (shareLink != null) {
-                    model.addAttribute("entryShareLink", shareLink);
-                    model.addAttribute("entryShareURL",
-                            WebloggerRuntimeConfig.getAbsoluteContextURL()
-                                    + "/share/" + shareLink.getToken());
-                }
-            } catch (WebloggerException e) {
-                log.error("Error loading share link for entry " + entry.getId(), e);
-            }
         }
 
         // Hour/minute/second lists for pub time selectors

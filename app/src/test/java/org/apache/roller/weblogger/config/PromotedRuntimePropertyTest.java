@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
  * The properties promoted from startup-only to runtime-settable.
  *
- * <p>These five used to be readable only from {@code roller.properties}, which
+ * <p>These four used to be readable only from {@code roller.properties}, which
  * meant the only way to exercise the other branch of any of them was to restart
  * the server with a different file. They now live in
  * {@code runtimeConfigDefs.xml} as well, so one running instance can be
@@ -74,7 +74,6 @@ class PromotedRuntimePropertyTest {
             "groupblogging.enabled",
             "user.hideUserNames",
             "comment.throttle.enabled",
-            "share.password.throttle.enabled",
             "weblogentry.title.useUnderscoreSeparator");
 
     /**

@@ -44,7 +44,6 @@ public abstract class WebloggerImpl implements Weblogger {
     private final IndexManager         indexManager;
     private final MediaFileManager     mediaFileManager;
     private final FileContentManager   fileContentManager;
-    private final ShareLinkManager     shareLinkManager;
     private final WeblogPageManager    weblogPageManager;
     private final EventManager         eventManager;
     private final FormSubmissionManager formSubmissionManager;
@@ -71,7 +70,6 @@ public abstract class WebloggerImpl implements Weblogger {
         IndexManager         indexManager,
         MediaFileManager     mediaFileManager,
         FileContentManager   fileContentManager,
-        ShareLinkManager     shareLinkManager,
         WeblogPageManager    weblogPageManager,
         EventManager         eventManager,
         FormSubmissionManager formSubmissionManager,
@@ -88,7 +86,6 @@ public abstract class WebloggerImpl implements Weblogger {
         this.indexManager        = indexManager;
         this.mediaFileManager    = mediaFileManager;
         this.fileContentManager  = fileContentManager;
-        this.shareLinkManager    = shareLinkManager;
         this.weblogPageManager   = weblogPageManager;
         this.eventManager        = eventManager;
         this.formSubmissionManager = formSubmissionManager;
@@ -178,17 +175,6 @@ public abstract class WebloggerImpl implements Weblogger {
     @Override
     public FileContentManager getFileContentManager() {
         return fileContentManager;
-    }
-
-
-    /**
-     *
-     *
-     * @see org.apache.roller.weblogger.business.Weblogger#getShareLinkManager()
-     */
-    @Override
-    public ShareLinkManager getShareLinkManager() {
-        return shareLinkManager;
     }
 
 
@@ -296,7 +282,6 @@ public abstract class WebloggerImpl implements Weblogger {
         try {
             mediaFileManager.release();
             fileContentManager.release();
-            shareLinkManager.release();
             pluginManager.release();
             threadManager.release();
             userManager.release();

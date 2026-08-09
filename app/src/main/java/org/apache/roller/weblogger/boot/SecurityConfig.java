@@ -258,11 +258,10 @@ public class SecurityConfig {
             // than a token.
             //
             // isPublicCommentPost is deliberately narrow: POST to a weblog
-            // permalink, which is the only shape a comment takes. It does not
-            // cover /share/<token>, whose password form is rendered from a
-            // JSP and does carry a token. isPublicAudiencePost is the second,
-            // separate exemption for the contact/subscribe endpoints below --
-            // see its own comment for why the same reasoning applies there.
+            // permalink, which is the only shape a comment takes.
+            // isPublicAudiencePost is the second, separate exemption for the
+            // contact/subscribe endpoints below -- see its own comment for
+            // why the same reasoning applies there.
             .csrf(csrf -> csrf.ignoringRequestMatchers(
                     SecurityConfig::isPublicCommentPost,
                     SecurityConfig::isPublicAudiencePost))

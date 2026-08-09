@@ -85,14 +85,11 @@ public class RouteCoverageTest {
      * anchored on the {@code .rol} suffix so that prose in the skip reasons --
      * which mentions things like {@code /WEB-INF/jsps/editor/MediaFileViewLight}
      * -- cannot be mistaken for coverage. The extra alternatives are the
-     * handler paths that live outside {@code /roller-ui/*.rol}: the
-     * crawler-facing SEO routes (SeoController) and the share-link routes
-     * (ShareController, whose mapping literals start with {@code "{token:}
-     * because the dispatcher's {@code /share/*} prefix is stripped from the
-     * lookup path).
+     * crawler-facing SEO routes (SeoController), which live outside
+     * {@code /roller-ui/*.rol}.
      */
     private static final Pattern CATALOGUED_ROUTE = Pattern.compile(
-            "\"(/roller-ui/[^\"\\s]*\\.rol|/sitemap[^\"\\s]*\\.xml|/robots\\.txt|/\\{token[^\"\\s]*)\"");
+            "\"(/roller-ui/[^\"\\s]*\\.rol|/sitemap[^\"\\s]*\\.xml|/robots\\.txt)\"");
 
     @Test
     public void everyGetRouteAppearsInTheSweepCatalogue() throws IOException {

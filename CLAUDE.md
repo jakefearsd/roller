@@ -257,6 +257,14 @@ IndexManager getIndexManager()
   blurhash; stored EXIF fields are kept. Focal point (`MediaFile.focalX/Y`,
   set on MediaFileEdit) emits `object-position` via `#showResponsiveImage`
   only — never into entry content.
+- Private directories (`MediaFileDirectory.isPrivate()`, toggled on
+  MediaFileView): 404 on the base media path (except logged-in editors of the
+  owning weblog), excluded from sitemaps, refused by the `[gallery]`
+  shortcode. This is a pure visibility flag with no bypass of any kind — a
+  private directory is simply not served publicly, by anyone, ever. (The
+  share-link feature that once punched a tokened public hole through it —
+  `ShareController`, `roller_share_link` — was removed entirely and is not
+  coming back.)
 
 ### SEO (Stage 2 Wave 1)
 - Per-entry SEO fields on `WeblogEntry` (metaTitle, searchDescription,
@@ -269,17 +277,6 @@ IndexManager getIndexManager()
 - `SeoController` serves `/robots.txt`, `/sitemap.xml` (index), and
   `/sitemap-<handle>.xml` (mapped via `*.xml`; a middle-wildcard servlet
   pattern is illegal).
-
-### Share Links (Stage 2 Wave 2)
-- `ShareController` serves `/share/<token>` — a tokened public view of one
-  entry (drafts included) or one media directory, optional password with
-  session unlock, never cached. Directory media is served share-scoped at
-  `/share/<token>/media/<id>`. Editor UI: cards on MediaFileView (per
-  directory, plus the `is_private` toggle) and EntryEdit.
-- Private directories (`MediaFileDirectory.isPrivate()`): 404 on the base
-  media path (except logged-in editors of the owning weblog), excluded from
-  sitemaps, refused by the `[gallery]` shortcode — reachable only via the
-  share link.
 
 ### Travel (Stage 2 Wave 3)
 - Three shortcodes in `business/shortcodes`, registered in
@@ -408,14 +405,14 @@ switching the call site to `WebloggerRuntimeConfig`. Three traps, all pinned by
    upgrade silently discards what the deployer set.
 3. The call site must genuinely re-read it. A `static final` (as
    `WeblogEntry`'s anchor separator was) or a value latched in `init()` (as the
-   comment and share throttles were) keeps the old value until a restart, so
-   promoting it buys nothing.
+   comment throttle was) keeps the old value until a restart, so promoting it
+   buys nothing.
 
 Promoted so far: `groupblogging.enabled`, `user.hideUserNames`,
-`comment.throttle.enabled`, `share.password.throttle.enabled`,
-`weblogentry.title.useUnderscoreSeparator`. Throttle *sizing*
-(threshold/interval/maxentries) stays startup-scoped — it dimensions a fixed
-cache that cannot be resized under live callers; only the on/off switch is hot.
+`comment.throttle.enabled`, `weblogentry.title.useUnderscoreSeparator`.
+Throttle *sizing* (threshold/interval/maxentries) stays startup-scoped — it
+dimensions a fixed cache that cannot be resized under live callers; only the
+on/off switch is hot.
 
 **Deliberately NOT promoted**, and not to be promoted without a decision:
 - `weblogAdminsUntrusted` and `passwds.encryption.enabled` — promoting these

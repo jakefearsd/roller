@@ -28,11 +28,12 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link TokenGenerator} produces the secrets behind share links, so these
- * tests pin every observable property of the format: exact length (kills
- * mutations of the byte count and of {@code withoutPadding()}), exact
- * alphabet (kills a swap to the standard, non-URL-safe encoder), decoded
- * size, and uniqueness (kills a defanged random source).
+ * {@link TokenGenerator} produces durable secrets such as password-reset
+ * tokens, so these tests pin every observable property of the format: exact
+ * length (kills mutations of the byte count and of
+ * {@code withoutPadding()}), exact alphabet (kills a swap to the standard,
+ * non-URL-safe encoder), decoded size, and uniqueness (kills a defanged
+ * random source).
  */
 class TokenGeneratorTest {
 

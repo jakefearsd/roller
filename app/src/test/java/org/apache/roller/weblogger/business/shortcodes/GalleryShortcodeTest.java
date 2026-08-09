@@ -328,8 +328,8 @@ class GalleryShortcodeTest {
 
     @Test
     void aPrivateDirectoryIsLeftAsWritten() {
-        // private directories render only through their share link (T5);
-        // the normal entry render path must not leak their contents.
+        // private directories are never rendered inline; the normal entry
+        // render path must not leak their contents.
         image("mf-1", "hawk.jpg", 100, 100);
         directory.setPrivate(true);
         assertNull(render(Map.of("dir", "album")));

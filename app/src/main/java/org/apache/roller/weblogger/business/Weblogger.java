@@ -92,11 +92,6 @@ public interface Weblogger {
     FileContentManager getFileContentManager();
 
     /**
-     * Get ShareLinkManager associated with this Weblogger instance.
-     */
-    ShareLinkManager getShareLinkManager();
-
-    /**
      * Get the WeblogPageManager, which handles static pages.
      */
     WeblogPageManager getWeblogPageManager();

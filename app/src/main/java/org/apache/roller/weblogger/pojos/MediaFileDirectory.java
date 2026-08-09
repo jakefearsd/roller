@@ -122,9 +122,10 @@ public class MediaFileDirectory {
     }
 
     /**
-     * True when this directory is only reachable through a share link or by
-     * the blog's own members, never listed publicly. Defaults to false, so
-     * existing directories are unaffected.
+     * True when this directory is hidden from every public surface (the base
+     * media path, inline galleries, the sitemap) and reachable only by the
+     * blog's own members. Defaults to false, so existing directories are
+     * unaffected.
      */
     public boolean isPrivate() {
         return isPrivate;

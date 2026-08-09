@@ -78,13 +78,6 @@
          <type>string</type>
          <default-value></default-value>
       </property-def>
-      <!-- Promoted from roller.properties so it can be changed without a
-           restart; ShareController reads it per request. Default matches the
-           startup file. -->
-      <property-def  name="share.password.throttle.enabled"  key="configForm.sharePasswordThrottle">
-         <type>boolean</type>
-         <default-value>true</default-value>
-      </property-def>
    </display-group >
 
    <!-- User Settings Group -->

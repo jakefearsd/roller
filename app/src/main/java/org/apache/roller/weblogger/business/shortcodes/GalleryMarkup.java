@@ -31,11 +31,8 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  * The single emitter of justified-grid gallery markup: a {@code <div
  * class="jgrid">} of {@code <figure>}s carrying the aspect-ratio custom
  * property, the lightbox anchor with its {@code data-*} payload, and the
- * responsive {@code <img>}. Two callers share it so their output cannot
- * drift: the inline {@link GalleryShortcode} (public directories, media URLs
- * from {@link MediaFileWrapper#getPermalink()}) and the share-page renderer
- * ({@code ShareController}, private directories, media URLs scoped to the
- * share token so the bytes stay behind the share gate).
+ * responsive {@code <img>}, used by the inline {@link GalleryShortcode}
+ * (public directories, media URLs from {@link MediaFileWrapper#getPermalink()}).
  *
  * <p>The markup contract -- what each attribute is for, and why every value
  * is double-quoted and null-skipped -- is documented on
@@ -248,14 +245,12 @@ public final class GalleryMarkup {
      * The justified-grid stylesheet, generated from the very constants that
      * produce the classes it targets.
      *
-     * <p>This exists because there were two hand-maintained copies of these
-     * rules -- the {@code showGalleryGridStyles} theme macro and an inlined
-     * copy in {@code ShareController}, share pages rendering outside any theme
-     * -- and they drifted. When the emitter moved from an inline custom
-     * property to {@code ar-NNN} classes (the sanitizer cannot carry
-     * {@code --ar}), only the macro was updated, so every share-page gallery
-     * silently fell back to a uniform 3:2 and cropped its portraits. Nothing
-     * failed; the pictures were just wrong.
+     * <p>This exists because the rules used to be a hand-maintained copy in
+     * the {@code showGalleryGridStyles} theme macro, kept in sync with the
+     * emitter by hand. When the emitter moved from an inline custom property
+     * to {@code ar-NNN} classes (the sanitizer cannot carry {@code --ar}),
+     * the hand-written copy could just as easily have been missed -- nothing
+     * would have failed, the pictures would just have been wrong.
      *
      * <p>Generating the table removes the possibility rather than testing for
      * it: a class the emitter can produce and this stylesheet has no rule for

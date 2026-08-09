@@ -58,12 +58,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * digest; the raw value handed back by {@code issueToken} exists only in this
  * request and in the URL emailed to the account holder. {@code resetForm} and
  * {@code resetSave} mark their responses {@code Cache-Control: private,
- * no-store}, the same precedent {@code ShareController} sets for tokened
- * pages -- a shared cache or browser history entry must never replay a
+ * no-store} -- a shared cache or browser history entry must never replay a
  * reset-password page for someone else.
  *
- * <p><b>Throttle.</b> Unlike the share-link password throttle (wrong
- * passwords only) this one counts every submission, keyed both by remote
+ * <p><b>Throttle.</b> This one counts every submission, keyed both by remote
  * address and by the lowercased identifier -- so hammering many identifiers
  * from one address, or one identifier from many addresses, both trip it. A
  * throttled submission still returns the generic confirmation: a distinct
@@ -93,9 +91,8 @@ public class PasswordResetController extends BaseController {
 
     /**
      * Built lazily on first use rather than in a constructor, exactly as
-     * {@code ShareController.passwordThrottle} and {@code ContactController.throttle}
-     * are: {@code WebloggerConfig} is not necessarily loaded when Spring
-     * instantiates controllers.
+     * {@code ContactController.throttle} is: {@code WebloggerConfig} is not
+     * necessarily loaded when Spring instantiates controllers.
      */
     private volatile GenericThrottle throttle;
 
