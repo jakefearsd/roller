@@ -1,0 +1,162 @@
+<!-- @dsCard group="Editor" name="Entry editor — Writing surface & publish rail" subtitle="Title + editor lead; scheduling, organize and SEO move to a quiet right rail" -->
+<style>
+  .ed-card * { margin: 0; padding: 0; box-sizing: border-box; }
+  .ed-card { display: flex; flex-direction: column; gap: 24px; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+  .ed-panel { border-radius: 6px; padding: 24px 28px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink); }
+  .ed-light { --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --bad:#A33B2E; --focus:#2AA198; }
+  .ed-dark  { --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --bad:#D0705F; --focus:#2AA198; }
+  .ed-mode { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft);
+    font-weight: 600; margin-bottom: 18px; }
+  .ed-grid { display: grid; grid-template-columns: 1fr 252px; gap: 26px; }
+  .ed-title { font-family: "IBM Plex Serif", Georgia, serif; font-size: 26px; font-weight: 600;
+    color: var(--ink); border: none; background: transparent; width: 100%; line-height: 1.25; }
+  .ed-title::placeholder { color: var(--ink-soft); opacity: .5; }
+  .ed-perma { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px;
+    color: var(--ink-soft); margin: 6px 0 16px; }
+  .ed-perma b { color: var(--accent); font-weight: 400; cursor: pointer; }
+  .ed-toolbar { display: flex; gap: 2px; border: 1px solid var(--line); border-bottom: none;
+    border-radius: 6px 6px 0 0; background: var(--surface); padding: 6px 8px; }
+  .ed-tool { width: 26px; height: 24px; border-radius: 4px; display: grid; place-items: center;
+    color: var(--ink-soft); font-size: 12.5px; font-weight: 600; }
+  .ed-tool.on { background: var(--accent-quiet); color: var(--accent); }
+  .ed-tool.sep { width: 10px; }
+  .ed-body { border: 1px solid var(--line); border-radius: 0 0 6px 6px; background: var(--surface);
+    padding: 16px 18px; min-height: 190px; font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 13px; line-height: 1.7; color: var(--ink); }
+  .ed-body .md { color: var(--accent); }
+  .ed-body .dim { color: var(--ink-soft); }
+  .ed-rail { display: flex; flex-direction: column; gap: 14px; }
+  .ed-box { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+  .ed-boxlabel { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600;
+    color: var(--ink-soft); margin-bottom: 10px; }
+  .ed-statusrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+  .ed-pill { font-size: 11.5px; font-weight: 600; padding: 2px 10px; border-radius: 99px;
+    color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .ed-when { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; color: var(--ink-soft); }
+  .ed-dt { width: 100%; font: inherit; font-size: 12.5px; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; margin-bottom: 10px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .ed-btnrow { display: flex; gap: 8px; }
+  .ed-publish { flex: 1; font: inherit; font-size: 13.5px; font-weight: 600; color: #FFFFFF;
+    background: var(--accent); border: 1px solid var(--accent); border-radius: 6px; padding: 7px 0; }
+  .ed-save { flex: 1; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 0; }
+  .ed-preview { width: 100%; margin-top: 8px; font: inherit; font-size: 12.5px; color: var(--ink-soft);
+    background: transparent; border: none; text-decoration: underline; cursor: pointer; }
+  .ed-field label { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    font-weight: 600; color: var(--ink-soft); margin: 8px 0 4px; }
+  .ed-field:first-of-type label { margin-top: 0; }
+  .ed-in { width: 100%; font: inherit; font-size: 13px; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; }
+  .ed-drawer { font-size: 13px; color: var(--accent); font-weight: 600; text-decoration: none; }
+  .ed-drawer small { display: block; font-weight: 400; color: var(--ink-soft); margin-top: 2px; }
+  .ed-danger { font-size: 12.5px; color: var(--ink-soft); background: none; border: none;
+    text-decoration: underline; cursor: pointer; }
+  .ed-danger:hover { color: var(--bad); }
+  .ed-note { margin-top: 18px; padding: 12px 16px; background: var(--accent-quiet); border-radius: 6px;
+    font-size: 13px; color: var(--ink); max-width: 62ch; }
+  @media (max-width: 760px) { .ed-grid { grid-template-columns: 1fr; } }
+</style>
+<div class="ed-card">
+  <div class="ed-panel ed-light">
+    <p class="ed-mode">Light</p>
+    <div class="ed-grid">
+      <div>
+        <input class="ed-title" value="Field Notes from the Coast">
+        <p class="ed-perma">coastal-guides.example/harbor-notes/entry/field-notes-from-the-coast · <b>copy</b></p>
+        <div class="ed-toolbar">
+          <span class="ed-tool on">B</span><span class="ed-tool"><i>I</i></span><span class="ed-tool">H</span>
+          <span class="ed-tool sep"></span>
+          <span class="ed-tool">“”</span><span class="ed-tool">•</span><span class="ed-tool">⛓</span>
+          <span class="ed-tool">▣</span><span class="ed-tool sep"></span><span class="ed-tool">[+]</span>
+        </div>
+        <div class="ed-body">
+          <p>The fog burned off at seven, which the forecast promised and the</p>
+          <p>harbor ignored. By the time the first ferry crossed, the light on</p>
+          <p>the cottage roofs was the flat silver that makes every listing</p>
+          <p>photo look honest.</p>
+          <p>&nbsp;</p>
+          <p><span class="md">## </span>What the tide left</p>
+          <p>&nbsp;</p>
+          <p><span class="md">[gallery </span><span class="dim">dir="harbor-cottage" row="3"</span><span class="md">]</span></p>
+        </div>
+      </div>
+      <div class="ed-rail">
+        <div class="ed-box">
+          <p class="ed-boxlabel">Publish</p>
+          <div class="ed-statusrow"><span class="ed-pill">Published</span>
+            <span class="ed-when">Aug 9, 07:14</span></div>
+          <input class="ed-dt" value="2026-08-09  07:14">
+          <div class="ed-btnrow"><button class="ed-publish">Update</button><button class="ed-save">Save draft</button></div>
+          <button class="ed-preview">Preview</button>
+        </div>
+        <div class="ed-box">
+          <p class="ed-boxlabel">Organize</p>
+          <div class="ed-field"><label>Category</label><input class="ed-in" value="General"></div>
+          <div class="ed-field"><label>Tags</label><input class="ed-in" value="fog, harbor-cottage"></div>
+        </div>
+        <div class="ed-box">
+          <a class="ed-drawer" href="#">SEO &amp; Social ›<small>description, images, structured data</small></a>
+        </div>
+        <div class="ed-box">
+          <a class="ed-drawer" href="#">Comments &amp; sharing ›<small>open · share link active</small></a>
+        </div>
+        <button class="ed-danger">Delete this entry</button>
+      </div>
+    </div>
+    <p class="ed-note">Everything cut, not hidden: the three-select time picker (one field now),
+      enclosure URL, per-entry right-to-left, and the plugins drawer. The SEO card's content
+      survives intact behind its drawer; scheduling is one visible field, not a "Misc settings"
+      secret.</p>
+  </div>
+  <div class="ed-panel ed-dark">
+    <p class="ed-mode">Dark</p>
+    <div class="ed-grid">
+      <div>
+        <input class="ed-title" value="Field Notes from the Coast">
+        <p class="ed-perma">coastal-guides.example/harbor-notes/entry/field-notes-from-the-coast · <b>copy</b></p>
+        <div class="ed-toolbar">
+          <span class="ed-tool on">B</span><span class="ed-tool"><i>I</i></span><span class="ed-tool">H</span>
+          <span class="ed-tool sep"></span>
+          <span class="ed-tool">“”</span><span class="ed-tool">•</span><span class="ed-tool">⛓</span>
+          <span class="ed-tool">▣</span><span class="ed-tool sep"></span><span class="ed-tool">[+]</span>
+        </div>
+        <div class="ed-body">
+          <p>The fog burned off at seven, which the forecast promised and the</p>
+          <p>harbor ignored. By the time the first ferry crossed, the light on</p>
+          <p>the cottage roofs was the flat silver that makes every listing</p>
+          <p>photo look honest.</p>
+          <p>&nbsp;</p>
+          <p><span class="md">## </span>What the tide left</p>
+          <p>&nbsp;</p>
+          <p><span class="md">[gallery </span><span class="dim">dir="harbor-cottage" row="3"</span><span class="md">]</span></p>
+        </div>
+      </div>
+      <div class="ed-rail">
+        <div class="ed-box">
+          <p class="ed-boxlabel">Publish</p>
+          <div class="ed-statusrow"><span class="ed-pill">Published</span>
+            <span class="ed-when">Aug 9, 07:14</span></div>
+          <input class="ed-dt" value="2026-08-09  07:14">
+          <div class="ed-btnrow"><button class="ed-publish">Update</button><button class="ed-save">Save draft</button></div>
+          <button class="ed-preview">Preview</button>
+        </div>
+        <div class="ed-box">
+          <p class="ed-boxlabel">Organize</p>
+          <div class="ed-field"><label>Category</label><input class="ed-in" value="General"></div>
+          <div class="ed-field"><label>Tags</label><input class="ed-in" value="fog, harbor-cottage"></div>
+        </div>
+        <div class="ed-box">
+          <a class="ed-drawer" href="#">SEO &amp; Social ›<small>description, images, structured data</small></a>
+        </div>
+        <div class="ed-box">
+          <a class="ed-drawer" href="#">Comments &amp; sharing ›<small>open · share link active</small></a>
+        </div>
+        <button class="ed-danger">Delete this entry</button>
+      </div>
+    </div>
+  </div>
+</div>

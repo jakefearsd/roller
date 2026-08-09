@@ -48,7 +48,6 @@ import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntryRevision;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
-import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
@@ -711,15 +710,6 @@ public class EntryEditController extends BaseController {
         // Comment days options
         model.addAttribute("commentDaysList", getCommentDaysList(request));
 
-        model.addAttribute("recentPublishedEntries",
-                getRecentEntries(request, PubStatus.PUBLISHED, WeblogEntrySearchCriteria.SortBy.PUBLICATION_TIME));
-        model.addAttribute("recentScheduledEntries",
-                getRecentEntries(request, PubStatus.SCHEDULED, WeblogEntrySearchCriteria.SortBy.PUBLICATION_TIME));
-        model.addAttribute("recentDraftEntries",
-                getRecentEntries(request, PubStatus.DRAFT, WeblogEntrySearchCriteria.SortBy.UPDATE_TIME));
-        model.addAttribute("recentPendingEntries",
-                getRecentEntries(request, PubStatus.PENDING, WeblogEntrySearchCriteria.SortBy.UPDATE_TIME));
-
         // Thumbnail previews for the SEO panel's featured/social image pickers.
         // Read off the bean rather than the entry so a save that failed
         // validation still shows the image the author picked in the form.
@@ -774,21 +764,6 @@ public class EntryEditController extends BaseController {
             log.error("Error getting category list", ex);
             return Collections.emptyList();
         }
-    }
-
-    private List<WeblogEntry> getRecentEntries(HttpServletRequest request, PubStatus pubStatus,
-                                               WeblogEntrySearchCriteria.SortBy sortBy) {
-        try {
-            WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
-            wesc.setWeblog(getActionWeblog(request));
-            wesc.setMaxResults(20);
-            wesc.setStatus(pubStatus);
-            wesc.setSortBy(sortBy);
-            return weblogger.getWeblogEntryManager().getWeblogEntries(wesc);
-        } catch (WebloggerException ex) {
-            log.error("Error getting entries list", ex);
-        }
-        return Collections.emptyList();
     }
 
     @ModelAttribute("bean")

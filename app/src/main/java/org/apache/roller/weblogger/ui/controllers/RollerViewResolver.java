@@ -340,7 +340,7 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                 Map.of(
                         "head",    "/WEB-INF/jsps/tiles/head.jsp",
                         "content", "/WEB-INF/jsps/editor/EntryEdit.jsp",
-                        "sidebar", "/WEB-INF/jsps/editor/EntrySidebar.jsp",
+                        "sidebar", "/WEB-INF/jsps/tiles/empty.jsp",
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
 

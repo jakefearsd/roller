@@ -683,8 +683,248 @@ table.mm_table_actions td {
     transform: rotate(-90deg);
 }
 
-#panel-plugins {      /* Kludge for EntryEditor.jsp */
-    margin-top: 6px;  /* Without this there no space between Summary and Plugins to Apply panels */
+/* ---- Entry editor: writing surface + publish rail ----
+   The approved card is docs/design/editor/editor-writing-surface.html. The
+   main column carries title/permalink/editor; a 252px rail carries Publish,
+   Organize, the SEO and Comments drawers, and (below the form, but in the
+   same grid column) the newsletter and revisions cards. The form itself is
+   display:contents so those cards -- which hold their own <form>s and
+   cannot nest inside #entry -- still place into the rail's column. */
+
+.editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 252px;
+    gap: 26px;
+    align-items: start;
+}
+
+.editor-form {
+    display: contents;
+}
+
+.editor-main {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    min-width: 0;
+}
+
+.editor-rail {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.editor-rail-extra {
+    grid-column: 2;
+    margin: 0;
+}
+
+@media (max-width: 760px) {
+    .editor-grid {
+        grid-template-columns: 1fr;
+    }
+    .editor-main {
+        grid-column: 1;
+        grid-row: auto;
+    }
+    .editor-rail,
+    .editor-rail-extra {
+        grid-column: 1;
+    }
+}
+
+/* The title is layout hierarchy, not emphasis: the one large element on the
+   page, capped at the card's 26px serif. Everything else stays on the type
+   scale -- emphasis is weight, never size. */
+.editor-title {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--ink);
+}
+
+.editor-title::placeholder {
+    color: var(--ink-soft);
+    opacity: .5;
+}
+
+.editor-permalink {
+    margin: 6px 0 16px;
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+}
+
+.editor-permalink a {
+    color: var(--ink-soft);
+    text-decoration: none;
+}
+
+.editor-permalink a:hover {
+    color: var(--accent);
+}
+
+.editor-permalink-copy {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.editor-permalink-copy.copied {
+    color: var(--good);
+}
+
+.editor-box {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+}
+
+.editor-box .rail-group-label {
+    padding: 0 0 10px;
+}
+
+.editor-statusrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.editor-when {
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+}
+
+.editor-dt {
+    width: 100%;
+    padding: 6px 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    font-family: var(--font-data);
+    font-size: 12.5px;
+    color: var(--ink);
+}
+
+.editor-tz {
+    margin: 4px 0 12px;
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+}
+
+.editor-btnrow {
+    display: flex;
+    gap: 8px;
+}
+
+.editor-btnrow .btn {
+    flex: 1;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.editor-preview-link {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.editor-preview-link:hover {
+    color: var(--accent);
+}
+
+.editor-quiet-check {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--ink-soft);
+}
+
+.editor-field-label {
+    display: block;
+    margin: 10px 0 4px;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* Drawer toggles: accent 600 with a caret that turns when open. Same
+   collapse mechanics as the old accordion cards, quieter dress. */
+.editor-drawer {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.editor-drawer::after {
+    content: "\203A";
+    float: right;
+    transition: transform 0.2s ease-in-out;
+}
+
+.editor-drawer:not(.collapsed)::after {
+    transform: rotate(90deg);
+}
+
+.editor-drawer-body {
+    padding-top: 10px;
+}
+
+.editor-comment-count {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--ink-soft);
+}
+
+.editor-delete-link {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.editor-delete-link:hover {
+    color: var(--bad);
+}
+
+/* Anything image-shaped inside the rail (SEO thumbnails) stays inside the
+   252px column. */
+.editor-rail img {
+    max-width: 100%;
 }
 
 /* keep jQuery UI datepicker in front of other elements */
@@ -825,10 +1065,6 @@ td.draftentry, tr.draftentry {
 }
 td.scheduledentry, tr.scheduledentry {
     background: var(--paper);
-}
-
-.entryEditSidebarLink > a {
-    font-size: 10pt;
 }
 
 /* comments */

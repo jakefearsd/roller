@@ -40,7 +40,16 @@
     <spring:message code="${subtitleKey}" arguments="${actionWeblog.handle}"/>
 </p>
 
-<form id="entry" method="post" class="form-stacked">
+<%-- The editor is a writing surface with a publish rail (see
+     docs/design/editor/editor-writing-surface.html, the approved card):
+     the main column carries title, permalink and the Markdown editor;
+     everything about *managing* the entry lives in a 252px rail. The form
+     is display:contents so the newsletter/revisions cards -- which carry
+     their own <form>s and therefore cannot nest inside #entry -- can still
+     join the rail's grid column below it. --%>
+<div class="editor-grid">
+
+<form id="entry" method="post" class="form-stacked editor-form">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.status" value="${bean.status}"/>
     <c:choose>
@@ -50,213 +59,145 @@
 </c:choose>
 
     <%-- ================================================================== --%>
-    <%-- Title, category, dates and other metadata --%>
+    <%-- The writing surface: title, permalink, editor --%>
 
-    <%-- title --%>
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.title"/></label>
-        <div class="col-sm-9">
-            <input type="text" name="bean.title" value="${bean.title}" maxlength="255" tabindex="1" class="form-control"/>
-        </div>
-    </div>
+    <div class="editor-main">
 
-    <%-- permalink --%>
-    <c:if test="${actionName == 'entryEdit'}">
-        <div class="row mb-3">
+        <%-- title: the page's one piece of layout hierarchy. Large serif,
+             borderless -- emphasis elsewhere is weight, never size. --%>
+        <input type="text" name="bean.title" value="${bean.title}" maxlength="255" tabindex="1"
+               class="editor-title"
+               placeholder="<spring:message code="weblogEdit.title"/>"
+               aria-label="<spring:message code="weblogEdit.title"/>"/>
 
-            <label class="col-sm-3 col-form-label" for="entry_bean_permalink">
-                <spring:message code="weblogEdit.permaLink"/>
-            </label>
-
-            <div class="col-sm-9">
-                <p class="form-control-plaintext">
-                    <c:choose>
+        <%-- permalink: small mono line with a copy control --%>
+        <c:if test="${actionName == 'entryEdit'}">
+            <p class="editor-permalink" title="<spring:message code="weblogEdit.permaLink"/>">
+                <c:choose>
 <c:when test="${bean.published}">
-                        <a id="entry_bean_permalink" href='${entry.permalink}'>
-                            ${entry.permalink}
-                        </a>
-                        <img src='<c:url value="/images/launch-link.png"/>'/>
-                    </c:when>
+                    <a id="entry_bean_permalink" href='${entry.permalink}'>${entry.permalink}</a>
+                </c:when>
 <c:otherwise>
-                        ${entry.permalink}
-                    </c:otherwise>
-</c:choose></p>
-            </div>
+                    ${entry.permalink}
+                </c:otherwise>
+</c:choose>
+                &#183;
+                <button type="button" class="editor-permalink-copy"
+                        data-permalink="${entry.permalink}"
+                        onclick="copyPermalink(this)"><spring:message code="weblogEdit.copyPermalink"/></button>
+            </p>
+        </c:if>
 
-        </div>
-    </c:if>
+        <%-- Weblog editor --%>
+        <jsp:include page="/WEB-INF/jsps/editor/EntryEditor.jsp"/>
 
-    <%-- tags --%>
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.tags"/></label>
-        <div class="col-sm-9">
-            <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" id="entry_bean_tagsAsString" maxlength="255" tabindex="2" class="form-control"/>
-        </div>
     </div>
 
-    <%-- category --%>
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.category"/></label>
-        <div class="col-sm-9">
-            <select name="bean.categoryId" class="form-select" tabindex="3">
-<c:forEach items="${categories}" var="opt">
-<option value="${opt.id}" ${opt.id == bean.categoryId ? 'selected' : ''}>${opt.name}</option>
-</c:forEach>
-</select>
-        </div>
-    </div>
+    <%-- ================================================================== --%>
+    <%-- The publish rail --%>
 
-    <c:choose>
-<c:when test="${actionWeblog.enableMultiLang}">
-        <%-- language / locale --%>
-        <div class="row mb-3">
-            <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.locale"/></label>
-            <div class="col-sm-9">
-                <select name="bean.locale" class="form-select" tabindex="4">
-<c:forEach items="${localesList}" var="opt">
-<option value="${opt}" ${opt == bean.locale ? 'selected' : ''}>${opt}</option>
-</c:forEach>
-</select>
-            </div>
-        </div>
-    </c:when>
-<c:otherwise>
-        <input type="hidden" name="bean.locale" value="${bean.locale}"/>
-    </c:otherwise>
-</c:choose><%-- status --%>
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label" for="weblogEdit.status"><spring:message code="weblogEdit.status"/></label>
+    <div class="editor-rail">
 
-        <div class="col-sm-9">
+        <%-- Publish: status, one visible time field, the submit buttons --%>
+        <div class="editor-box">
+            <p class="rail-group-label"><spring:message code="weblogEdit.publishGroup"/></p>
 
-            <p class="form-control-plaintext">
+            <div class="editor-statusrow">
                 <c:choose>
                 <c:when test="${bean.published}">
-                    <span class="badge bg-success">
-                        <spring:message code="weblogEdit.published"/>
-                        (<spring:message code="weblogEdit.updateTime"/>
-                        <fmt:formatDate value="${entry.updateTime}"/>)
-                    </span>
+                    <span class="badge bg-success"><spring:message code="weblogEdit.published"/></span>
+                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
                 </c:when>
                 <c:when test="${bean.draft}">
-                    <span class="badge bg-info">
-                        <spring:message code="weblogEdit.draft"/>
-                        (<spring:message code="weblogEdit.updateTime"/>
-                        <fmt:formatDate value="${entry.updateTime}"/>)
-                    </span>
+                    <span class="badge bg-info"><spring:message code="weblogEdit.draft"/></span>
+                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
                 </c:when>
                 <c:when test="${bean.pending}">
-                    <span class="badge bg-warning">
-                        <spring:message code="weblogEdit.pending"/>
-                        (<spring:message code="weblogEdit.updateTime"/>
-                        <fmt:formatDate value="${entry.updateTime}"/>)
-                    </span>
+                    <span class="badge bg-warning"><spring:message code="weblogEdit.pending"/></span>
+                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
                 </c:when>
                 <c:when test="${bean.scheduled}">
-                    <span class="badge bg-info">
-                        <spring:message code="weblogEdit.scheduled"/>
-                        (<spring:message code="weblogEdit.updateTime"/>
-                        <fmt:formatDate value="${entry.updateTime}"/>)
-                    </span>
+                    <span class="badge bg-info"><spring:message code="weblogEdit.scheduled"/></span>
+                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
                 </c:when>
                 <c:otherwise>
                     <span class="badge bg-danger"><spring:message code="weblogEdit.unsaved"/></span>
                 </c:otherwise>
                 </c:choose>
-            </p>
+            </div>
 
+            <label class="editor-field-label" for="entry_bean_pubTimeLocal"><spring:message code="weblogEdit.pubTime"/></label>
+            <input type="datetime-local" name="bean.pubTimeLocal" id="entry_bean_pubTimeLocal"
+                   value="${bean.pubTimeLocal}" class="editor-dt"/>
+            <div class="editor-tz">${actionWeblog.timeZone}</div>
+
+            <div class="editor-btnrow">
+                <c:choose>
+<c:when test="${userAnAuthor}">
+                    <%-- publish --%>
+                    <button type="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.post"/></button>
+                </c:when>
+<c:otherwise>
+                    <%-- submit for review --%>
+                    <button type="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.submitForReview"/></button>
+                </c:otherwise>
+</c:choose>
+                <%-- save draft --%>
+                <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!saveDraft.rol"><spring:message code="weblogEdit.save"/></button>
+            </div>
+
+            <c:if test="${actionName == 'entryEdit'}">
+                <%-- preview mode --%>
+                <button type="button" name="fullPreview" class="editor-preview-link"
+                        onclick="fullPreviewMode()"><spring:message code="weblogEdit.fullPreviewMode"/></button>
+            </c:if>
+
+            <%-- global admin can pin items to front page weblog --%>
+            <c:if test="${authenticatedUser.hasGlobalPermission('admin')}">
+                <div class="form-check editor-quiet-check">
+                    <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.pinnedToMain" value="true" ${bean.pinnedToMain ? 'checked' : ''}/> <spring:message code="weblogEdit.pinnedToMain"/></label>
+                </div>
+            </c:if>
         </div>
 
-    </div>
+        <%-- Organize: category, tags, language --%>
+        <div class="editor-box">
+            <p class="rail-group-label"><spring:message code="weblogEdit.organizeGroup"/></p>
 
-
-    <div id="accordion">
-
-            <%-- Weblog editor --%>
-
-        <jsp:include page="/WEB-INF/jsps/editor/EntryEditor.jsp"/>
-
-            <%-- Advanced settings --%>
-
-        <div class="card" id="panel-settings">
-            <div class="card-header">
-
-                <h4 class="card-title">
-                    <a class="collapsed" data-bs-toggle="collapse" data-bs-parent="#collapseAdvanced"
-                       href="#collapseAdvanced">
-                        <spring:message code="weblogEdit.miscSettings"/> </a>
-                </h4>
-
-            </div>
-            <div id="collapseAdvanced" class="collapse">
-                <div class="card-body">
-
-                    <div class="row mb-3">
-
-                        <label class="col-form-label col-sm-3"><spring:message code="weblogEdit.pubTime"/></label>
-
-                        <div class="col-sm-9">
-                            <input type="datetime-local" name="bean.pubTimeLocal" value="${bean.pubTimeLocal}" class="form-control"/>
-                            <div class="form-text">${actionWeblog.timeZone}</div>
-                        </div>
-
-                    </div>
-
-                    <%-- Allow comments. This control was missing entirely, and
-                         EntryBean.allowComments is a primitive defaulting to
-                         false -- so every entry saved through this editor had
-                         comments switched off no matter what the weblog's
-                         default said, and editing a post silently closed
-                         comments that were open. --%>
-                    <div class="row mb-3">
-                        <div class="offset-sm-3 col-sm-9">
-                            <div class="form-check">
-                                <label class="form-check-label"><input type="checkbox" class="form-check-input" id="entry_bean_allowComments" name="bean.allowComments" value="true" ${bean.allowComments ? 'checked' : ''}/> <spring:message code="weblogEdit.allowComments"/></label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.commentDays"/></label>
-                        <div class="col-sm-9">
-                            <select name="bean.commentDays" class="form-select">
-<c:forEach items="${commentDaysList}" var="opt">
-<option value="${opt.key}" ${opt.key == bean.commentDays ? 'selected' : ''}>${opt.value}</option>
+            <label class="editor-field-label" for="entry_bean_categoryId"><spring:message code="weblogEdit.category"/></label>
+            <select name="bean.categoryId" id="entry_bean_categoryId" class="form-select">
+<c:forEach items="${categories}" var="opt">
+<option value="${opt.id}" ${opt.id == bean.categoryId ? 'selected' : ''}>${opt.name}</option>
 </c:forEach>
 </select>
-                        </div>
-                    </div>
 
-                        <%-- global admin can pin items to front page weblog --%>
-                    <c:if test="${authenticatedUser.hasGlobalPermission('admin')}">
-                        <div class="row mb-3">
-                            <div class="offset-sm-3 col-sm-9">
-                                <div class="form-check">
-                                    <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.pinnedToMain" value="true" ${bean.pinnedToMain ? 'checked' : ''}/> <spring:message code="weblogEdit.pinnedToMain"/></label>
-                                </div>
-                            </div>
-                        </div>
-                    </c:if>
+            <label class="editor-field-label" for="entry_bean_tagsAsString"><spring:message code="weblogEdit.tags"/></label>
+            <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" id="entry_bean_tagsAsString" maxlength="255" class="form-control"/>
 
-                </div>
-
-            </div>
-
+            <c:choose>
+<c:when test="${actionWeblog.enableMultiLang}">
+                <label class="editor-field-label" for="entry_bean_locale"><spring:message code="weblogEdit.locale"/></label>
+                <select name="bean.locale" id="entry_bean_locale" class="form-select">
+<c:forEach items="${localesList}" var="opt">
+<option value="${opt}" ${opt == bean.locale ? 'selected' : ''}>${opt}</option>
+</c:forEach>
+</select>
+            </c:when>
+<c:otherwise>
+                <input type="hidden" name="bean.locale" value="${bean.locale}"/>
+            </c:otherwise>
+</c:choose>
         </div>
 
-            <%-- SEO and social sharing --%>
-
-        <div class="card" id="panel-seo">
-            <div class="card-header">
-
-                <h4 class="card-title">
-                    <a class="collapsed" data-bs-toggle="collapse" data-bs-target="#collapseSeo" href="#">
-                        <spring:message code="weblogEdit.seoSettings"/> </a>
-                </h4>
-
-            </div>
+        <%-- SEO and social sharing: the whole card survives intact behind a
+             quiet drawer. Field ids/names and the picker/snippet JS below are
+             a browser-test contract -- do not rename. --%>
+        <div class="editor-box">
+            <a class="editor-drawer collapsed" data-bs-toggle="collapse" data-bs-target="#collapseSeo" href="#">
+                <spring:message code="weblogEdit.seoSettings"/>
+            </a>
             <div id="collapseSeo" class="collapse">
-                <div class="card-body">
+                <div class="editor-drawer-body">
 
                     <%-- meta title (falls back to the entry title on the public page) --%>
                     <div class="row mb-3">
@@ -279,9 +220,9 @@
                         <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.snippetPreview"/></label>
                         <div class="col-sm-9">
                             <div id="seo_snippet_preview" class="border rounded p-2 bg-body">
-                                <div id="seo_snippet_title" style="color:#1a0dab; font-size:1.15em;"></div>
-                                <div id="seo_snippet_url" style="color:#006621; font-size:0.85em;"><c:if test="${actionName == 'entryEdit'}">${entry.permalink}</c:if></div>
-                                <div id="seo_snippet_description" style="color:#545454; font-size:0.9em;"></div>
+                                <div id="seo_snippet_title" style="color:var(--accent); font-size:1.15em;"></div>
+                                <div id="seo_snippet_url" style="color:var(--ink-soft); font-size:0.85em;"><c:if test="${actionName == 'entryEdit'}">${entry.permalink}</c:if></div>
+                                <div id="seo_snippet_description" style="color:var(--ink-soft); font-size:0.9em;"></div>
                             </div>
                         </div>
                     </div>
@@ -401,57 +342,77 @@
             </div>
         </div>
 
-    </div>
+        <%-- Comments: settings plus the count line the retired sidebar used to
+             carry. The collapse keeps the id the Advanced-settings drawer had
+             because CommentIT opens it via a[href='#collapseAdvanced'] to
+             reach the allow-comments checkbox -- a pinned selector, not a
+             description of what is inside. --%>
+        <div class="editor-box">
+            <a class="editor-drawer collapsed" data-bs-toggle="collapse" href="#collapseAdvanced">
+                <spring:message code="weblogEdit.comments"/>
+            </a>
+            <div id="collapseAdvanced" class="collapse">
+                <div class="editor-drawer-body">
 
+                    <%-- Allow comments. This control was missing entirely, and
+                         EntryBean.allowComments is a primitive defaulting to
+                         false -- so every entry saved through this editor had
+                         comments switched off no matter what the weblog's
+                         default said, and editing a post silently closed
+                         comments that were open. --%>
+                    <div class="form-check editor-quiet-check">
+                        <label class="form-check-label"><input type="checkbox" class="form-check-input" id="entry_bean_allowComments" name="bean.allowComments" value="true" ${bean.allowComments ? 'checked' : ''}/> <spring:message code="weblogEdit.allowComments"/></label>
+                    </div>
 
-    <%-- ================================================================== --%>
-    <%-- The button box --%>
+                    <label class="editor-field-label" for="entry_bean_commentDays"><spring:message code="weblogEdit.commentDays"/></label>
+                    <select name="bean.commentDays" id="entry_bean_commentDays" class="form-select">
+<c:forEach items="${commentDaysList}" var="opt">
+<option value="${opt.key}" ${opt.key == bean.commentDays ? 'selected' : ''}>${opt.value}</option>
+</c:forEach>
+</select>
 
-    <%-- save draft --%>
-    <button type="submit" class="btn btn-warning" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!saveDraft.rol"><spring:message code="weblogEdit.save"/></button>
-
-    <c:if test="${actionName == 'entryEdit'}">
-
-        <%-- preview mode --%>
-        <input class="btn btn-secondary" type="button" name="fullPreview"
-               value="<spring:message code="weblogEdit.fullPreviewMode"/>"
-               onclick="fullPreviewMode()"/>
-    </c:if>
-    <c:choose>
-<c:when test="${userAnAuthor}">
-
-        <%-- publish --%>
-        <button type="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.post"/></button>
-    </c:when>
+                    <%-- comments on this entry (absorbed from the retired sidebar) --%>
+                    <c:if test="${actionName == 'entryEdit'}">
+                        <p class="editor-comment-count">
+                            <c:choose>
+<c:when test="${bean.commentCount > 0}">
+                                <c:url var="commentsURL" value="/roller-ui/authoring/comments.rol">
+                                    <c:param name="bean.entryId" value="${bean.id}"/>
+                                    <c:param name="weblog" value="${actionWeblog.handle}"/>
+                                </c:url>
+                                <spring:message code="weblogEdit.hasComments" arguments="${commentsURL},${bean.commentCount}"/>
+                            </c:when>
 <c:otherwise>
+                                <spring:message code="generic.none"/>
+                            </c:otherwise>
+</c:choose>
+                        </p>
+                    </c:if>
 
-        <%-- submit for review --%>
-        <button type="submit" class="btn btn-info" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.submitForReview"/></button>
-    </c:otherwise>
-</c:choose><c:if test="${actionName == 'entryEdit'}">
+                </div>
+            </div>
+        </div>
 
-        <%-- delete --%>
-        <span style="float:right">
-            <input class="btn btn-danger" type="button"
-                   value="<spring:message code="weblogEdit.deleteEntry"/>"
-                   onclick="showDeleteModal('${entry.id}', '${fn:escapeXml(entry.title)}' )">
-        </span>
-    </c:if>
+        <c:if test="${actionName == 'entryEdit'}">
+            <%-- delete: a quiet text link, not a red button --%>
+            <button type="button" class="editor-delete-link"
+                    onclick="showDeleteModal('${entry.id}', '${fn:escapeXml(entry.title)}' )"><spring:message code="weblogEdit.deleteEntry"/></button>
+        </c:if>
 
+    </div>
 
 <sec:csrfInput/>
 </form>
 
 
-<%-- ========================================================================================== --%>
-
 <%-- "Send as newsletter": a manual, synchronous, cannot-double-send action.
      Shown for published entries only -- an unpublished draft has no rendered
-     content to mail out. Outside the main entry form, its own POST with its
-     own CSRF input. --%>
+     content to mail out. Outside the main entry form (its modal is its own
+     POST with its own CSRF input), but placed in the rail's grid column so it
+     reads as one more quiet box below the rail. --%>
 
 <c:if test="${actionName == 'entryEdit' && entry.published}">
-    <div id="newsletterCard" class="card mt-3">
+    <div id="newsletterCard" class="card editor-rail-extra">
         <div class="card-header"><spring:message code="newsletter.cardTitle"/></div>
         <div class="card-body">
             <c:choose>
@@ -478,7 +439,58 @@
             </c:choose>
         </div>
     </div>
+</c:if>
 
+<%-- entry revisions: every content-changing save leaves one. Outside the main
+     entry form for the same reason the newsletter card is: restore is its own
+     POST with its own CSRF token, and forms must not nest. --%>
+
+<c:if test="${actionName == 'entryEdit' && not empty entryRevisions}">
+    <div id="entryRevisionsCard" class="card editor-rail-extra">
+        <div class="card-header"><spring:message code="weblogEdit.revisions"/></div>
+        <div class="card-body">
+            <p class="pagetip"><spring:message code="weblogEdit.revisionsTip"/></p>
+            <table class="table table-sm" id="entryRevisionsTable">
+                <c:forEach items="${entryRevisions}" var="revision">
+                    <tr>
+                        <td>
+                            <spring:message code="weblogEntryQuery.date.toStringFormat"
+                                            arguments="${revision.created}"/>
+                        </td>
+                        <td><c:out value="${revision.creator}"/></td>
+                        <td>
+                            <button type="button" class="btn btn-link btn-sm revision-diff-button"
+                                    data-revision-id="${revision.id}">
+                                <spring:message code="weblogEdit.revisionCompare"/>
+                            </button>
+                        </td>
+                        <td>
+                            <form method="post" style="display:inline"
+                                  action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!restoreRevision.rol">
+                                <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+                                <input type="hidden" name="bean.id" value="${entry.id}"/>
+                                <input type="hidden" name="revisionId" value="${revision.id}"/>
+                                <sec:csrfInput/>
+                                <button type="submit" class="btn btn-outline-secondary btn-sm revision-restore-button">
+                                    <spring:message code="weblogEdit.revisionRestore"/>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </c:forEach>
+            </table>
+        </div>
+    </div>
+</c:if>
+
+</div><%-- /editor-grid --%>
+
+
+<%-- ========================================================================================== --%>
+
+<%-- newsletter confirmation modal + script (the card lives in the rail above) --%>
+
+<c:if test="${actionName == 'entryEdit' && entry.published}">
     <div id="newsletter-confirm-modal" class="modal" tabindex="-1" role="dialog">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -521,47 +533,9 @@
 
 <%-- ========================================================================================== --%>
 
-<%-- entry revisions: every content-changing save leaves one. Outside the main
-     entry form for the same reason the newsletter card is: restore is its own
-     POST with its own CSRF token, and forms must not nest. --%>
+<%-- revision diff modal + script (the card lives in the rail above) --%>
 
 <c:if test="${actionName == 'entryEdit' && not empty entryRevisions}">
-    <div id="entryRevisionsCard" class="card mt-3">
-        <div class="card-header"><spring:message code="weblogEdit.revisions"/></div>
-        <div class="card-body">
-            <p class="pagetip"><spring:message code="weblogEdit.revisionsTip"/></p>
-            <table class="table table-sm" id="entryRevisionsTable">
-                <c:forEach items="${entryRevisions}" var="revision">
-                    <tr>
-                        <td>
-                            <spring:message code="weblogEntryQuery.date.toStringFormat"
-                                            arguments="${revision.created}"/>
-                        </td>
-                        <td><c:out value="${revision.creator}"/></td>
-                        <td>
-                            <button type="button" class="btn btn-link btn-sm revision-diff-button"
-                                    data-revision-id="${revision.id}">
-                                <spring:message code="weblogEdit.revisionCompare"/>
-                            </button>
-                        </td>
-                        <td>
-                            <form method="post" style="display:inline"
-                                  action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!restoreRevision.rol">
-                                <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-                                <input type="hidden" name="bean.id" value="${entry.id}"/>
-                                <input type="hidden" name="revisionId" value="${revision.id}"/>
-                                <sec:csrfInput/>
-                                <button type="submit" class="btn btn-outline-secondary btn-sm revision-restore-button">
-                                    <spring:message code="weblogEdit.revisionRestore"/>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                </c:forEach>
-            </table>
-        </div>
-    </div>
-
     <div id="revision-diff-modal" class="modal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -612,7 +586,7 @@
 
 <%-- ========================================================================================== --%>
 
-<%-- delete blogroll confirmation modal --%>
+<%-- delete entry confirmation modal --%>
 
 <div id="delete-entry-modal" class="modal delete-entry-modal" tabindex="-1" role="dialog">
 
@@ -685,6 +659,15 @@
         $('#postTitleLabel').text(postTitle);
         $('#removeId').val(postId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-entry-modal')).show();
+    }
+
+    <%-- permalink copy control --%>
+
+    function copyPermalink(el) {
+        navigator.clipboard.writeText(el.dataset.permalink).then(function () {
+            el.classList.add('copied');
+            setTimeout(function () { el.classList.remove('copied'); }, 1500);
+        });
     }
 
     <%-- SEO panel: search-snippet preview fed from the title/description fields --%>
