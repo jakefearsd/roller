@@ -237,7 +237,7 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         pathinfo.append(getWeblogURL(weblog, locale, absolute));
         
         if(pageLink != null) {
-            pathinfo.append("page/").append(pageLink);
+            pathinfo.append("page/").append(URLUtilities.encode(pageLink));
             
             // for custom pages we only allow query params
             if(dateString != null) {

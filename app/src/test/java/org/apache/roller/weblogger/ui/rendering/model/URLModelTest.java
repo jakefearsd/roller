@@ -30,6 +30,7 @@ import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
+import org.apache.roller.weblogger.util.URLUtilities;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -383,6 +384,16 @@ class URLModelTest {
         assertEquals(Map.of("date", "20240115", "cat", "Java", "page", "2"),
                 queryParams(url),
                 "Custom pages only support query-parameter filters.");
+    }
+
+    @Test
+    void pageLinksEncodeSpecialCharacters() {
+        // Page links come from user input and can contain special characters
+        // like spaces and ampersands. Leaving them raw would break the URL
+        // at the first space or ampersand, just as with entry anchors.
+        String encodedLink = URLUtilities.encode("notes & maps");
+        assertEquals(ABSOLUTE_SITE + "/testblog/page/" + encodedLink, model.page("notes & maps"),
+                "The page link must be URL-encoded into the path.");
     }
 
     @Test

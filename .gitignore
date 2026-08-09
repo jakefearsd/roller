@@ -44,3 +44,4 @@ it-selenium/build/
 deploy/.env.test
 deploy/config/roller-production.properties
 
+.superpowers/
