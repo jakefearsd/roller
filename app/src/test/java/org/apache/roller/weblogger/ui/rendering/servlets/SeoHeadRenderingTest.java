@@ -463,6 +463,42 @@ class SeoHeadRenderingTest {
     }
 
     @Test
+    void aCanonicalUrlWithAnAmpersandIsEscapedInAttributesEverywhereItAppears() throws Exception {
+        // Pin: UrlValidator(["http","https"]) ACCEPTS this URL (commons-validator
+        // 1.11.0, harness-checked) -- unlike the quote and javascript: cases
+        // above, this value survives PageModel#getCanonicalUrl's emission-time
+        // filter and reaches the template unchanged. That makes this the only
+        // test proving $utils.escapeHTML/escapeJson still run on whatever the
+        // validator lets through, rather than the filter alone being what
+        // keeps the page safe.
+        WeblogEntry entry = TestUtils.setupWeblogEntry("ampersand-entry", weblog, user);
+        updateEntry(entry, e -> e.setCanonicalUrl("https://example.com/x?a=1&b=2"));
+
+        String body = render("/" + HANDLE + "/entry/ampersand-entry");
+
+        assertTrue(body.contains(
+                "<link rel=\"canonical\" href=\"https://example.com/x?a=1&amp;b=2\">"),
+                "the ampersand must be HTML-attribute-escaped in the canonical link:\n" + body);
+        assertTrue(body.contains(
+                "<meta property=\"og:url\" content=\"https://example.com/x?a=1&amp;b=2\">"),
+                "the ampersand must be HTML-attribute-escaped in og:url:\n" + body);
+        assertFalse(body.contains("href=\"https://example.com/x?a=1&b=2\""),
+                "a raw unescaped ampersand must never reach an HTML attribute:\n" + body);
+
+        // JSON has no need to escape '&', but commons-text's escapeJson does
+        // escape '/' to "\/" -- the raw ld+json source must carry exactly
+        // that: '&' untouched, '/' escaped.
+        List<String> ldSources = ldJsonSources(body);
+        assertTrue(ldSources.stream().anyMatch(src -> src.contains(
+                "\"mainEntityOfPage\": \"https:\\/\\/example.com\\/x?a=1&b=2\",")),
+                "mainEntityOfPage must carry the correctly JSON-escaped value:\n" + ldSources);
+        JsonNode posting = singleLdJson(body, "BlogPosting");
+        assertEquals("https://example.com/x?a=1&b=2",
+                posting.path("mainEntityOfPage").asString(),
+                "the JSON-LD value must still parse and round-trip to the exact original URL");
+    }
+
+    @Test
     void aMetaTitleContainingAQuoteIsEscapedEverywhereItAppears() throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry("titled-entry", weblog, user);
         updateEntry(entry, e -> e.setMetaTitle("Sneaky \"quoted\" title"));
