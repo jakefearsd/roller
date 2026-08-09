@@ -18,21 +18,30 @@
 
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<c:if test="${authenticatedUser != null}">
-    <p>
-    <spring:message code="mainPage.loggedInAs"/>:
-    <a href="<c:url value="/roller-ui/profile.rol"/>">
-        ${authenticatedUser.userName}
-    </a>
-    </p>
-</c:if>
+<%-- The rail's context header: which weblog you are working in (falls back
+     to the signed-in user when there is no weblog in play, e.g. the main
+     menu / global admin screens). The "Logged in as" / "Editing weblog"
+     labels stay for assistive tech only -- the visible rail is just the
+     name, the mono handle, and (for a weblog) a status dot. --%>
 
-<c:if test="${actionWeblog != null}">
-    <p>
-    <spring:message code="mainPage.currentWebsite"/>:
-    <a href='${actionWeblog.absoluteURL}'>
-        ${actionWeblog.handle}
-    </a>
-    </p>
-</c:if>
-    
+<c:choose>
+    <c:when test="${actionWeblog != null}">
+        <span class="visually-hidden"><spring:message code="mainPage.currentWebsite"/>:</span>
+        <div class="rail-context-name">
+            <a href="${actionWeblog.absoluteURL}">${actionWeblog.name}</a>
+        </div>
+        <div class="rail-context-handle">
+            <c:if test="${actionWeblog.visible}">
+                <span class="rail-status-dot" aria-hidden="true"></span>
+            </c:if>
+            ${actionWeblog.handle}
+        </div>
+    </c:when>
+
+    <c:when test="${authenticatedUser != null}">
+        <span class="visually-hidden"><spring:message code="mainPage.loggedInAs"/>:</span>
+        <div class="rail-context-name">
+            <a href="<c:url value="/roller-ui/profile.rol"/>">${authenticatedUser.userName}</a>
+        </div>
+    </c:when>
+</c:choose>

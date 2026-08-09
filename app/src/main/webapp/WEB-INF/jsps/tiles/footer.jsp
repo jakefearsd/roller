@@ -23,7 +23,8 @@
 <% request.setAttribute("rollerRevision",
       org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger().getRevision()); %>
 
-<img src='<c:url value="/images/tinyfeather.png"/>' alt="ASF logo" style="vertical-align:middle" />
+<span class="roller-footer">
+<img src='<c:url value="/images/tinyfeather.png"/>' alt="ASF logo" class="roller-footer-mark" />
 <%-- "${request.rollerVersion}" would be wrong here: inside JSP EL, the bare
      identifier "request" is the *implicit* HttpServletRequest object, not a
      shorthand for requestScope -- ".rollerVersion" would try (and fail) to
@@ -44,4 +45,5 @@
 <spring:message code="footer.productNameNoVersion"/>
 </c:otherwise>
 </c:choose>
-      
+</span>
+

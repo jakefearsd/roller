@@ -30,9 +30,28 @@ p {
     margin: 1em;
 }
 
+/* Quiet Instrument: page title row -- 20px/600 with a bottom rule; a
+   primary action nested inside the same <h2>/<h1>.roller-page-title (a
+   future content wave's job, none exist yet) lands on the right for free
+   because the title itself is the flex container -- no JSP change needed
+   when one shows up. */
 .roller-page-title {
-    margin-top: 0px;
-    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 0;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-ui);
+    font-size: 20px;
+    font-weight: 600;
+    text-wrap: balance;
+}
+
+.roller-content-body {
+    min-height: 30em;
 }
 
 .roller-column-right {
@@ -43,6 +62,138 @@ p {
 .roller-column-left{
     padding-left: 2em;
     padding-right: 1em;
+}
+
+/* Quiet Instrument: every .card (rail's filter/action card, the content
+   card, and the ad-hoc cards elsewhere in the admin UI) gets the same
+   surface/line/radius treatment instead of Bootstrap's defaults. */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+}
+
+/* ---- Top bar ---- */
+
+.roller-topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+}
+
+.roller-topbar .navbar-brand,
+.roller-topbar .nav-link {
+    color: var(--ink);
+}
+
+.roller-topbar .nav-link:hover,
+.roller-topbar .nav-link:focus {
+    color: var(--accent);
+}
+
+.roller-topbar .navbar-toggler {
+    border-color: var(--line);
+}
+
+/* ---- The rail: context header + tool groups ---- */
+
+.rail {
+    display: block;
+    width: 232px;
+    max-width: 100%;
+    margin-bottom: 16px;
+}
+
+.rail-context {
+    padding: 4px 4px 16px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+}
+
+.rail-context-name {
+    font-family: var(--font-ui);
+    font-size: 14.5px;
+    font-weight: 600;
+}
+
+.rail-context-name a {
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.rail-context-name a:hover {
+    color: var(--accent);
+}
+
+.rail-context-handle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-family: var(--font-data);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+}
+
+.rail-status-dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--good);
+}
+
+.rail-group {
+    margin-bottom: 16px;
+}
+
+.rail-group-label {
+    padding: 0 4px 4px;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+.rail-link {
+    display: block;
+    padding: 6px 10px;
+    margin: 0 -4px;
+    border-left: 2px solid transparent;
+    border-radius: var(--radius);
+    font-family: var(--font-ui);
+    font-size: 14.5px;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.rail-link:hover {
+    background: var(--accent-quiet);
+    color: var(--ink);
+}
+
+.rail-active {
+    border-left: 2px solid var(--accent);
+    background: var(--accent-quiet);
+    font-weight: 600;
+}
+
+/* ---- Footer: one quiet attribution line ---- */
+
+.roller-footer {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.roller-footer-mark {
+    vertical-align: middle;
+    opacity: .7;
 }
 
 .date-form {
@@ -224,7 +375,8 @@ body {
     bottom: 0;
     width: 100%;
     height: 60px;
-    background-color: #f5f5f5;
+    background-color: var(--paper);
+    border-top: 1px solid var(--line);
     padding: 1.5em;
     text-align: center;
 }

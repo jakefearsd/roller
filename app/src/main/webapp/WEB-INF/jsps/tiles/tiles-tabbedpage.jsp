@@ -16,6 +16,15 @@
   directory of this distribution.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
+<%@ page import="org.apache.roller.weblogger.ui.core.util.menu.Menu" %>
+
+<%-- Extract the menu from the request. The model attribute "menu" may collide
+     with other attributes during request dispatching, so we safely cast it. --%>
+<%
+    Object menuObj = request.getAttribute("menu");
+    Menu navMenu = (menuObj instanceof Menu) ? (Menu) menuObj : null;
+    request.setAttribute("navMenu", navMenu);
+%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -39,19 +48,40 @@
 
         <div class="col-md-3 roller-column-left">
 
-            <div class="card">
-                <div class="card-body" style="text-align: center">
+            <nav class="rail" id="adminRail">
 
-                    <img src='<c:url value="/roller-ui/images/feather.svg" />'
-                         alt="ASF feat" height="100" align="center"/>
-                    <h4><spring:message code="generic.poweredBy" /></h4>
-
-                    <c:if test="${not empty authenticatedUser or not empty actionWeblog}">
+                <c:if test="${not empty authenticatedUser or not empty actionWeblog}">
+                    <div class="rail-context">
                         <jsp:include page="${tile_userStatus}"/>
-                    </c:if>
+                    </div>
+                </c:if>
 
-                </div>
-            </div>
+                <c:if test="${navMenu != null}">
+                    <c:forEach items="${navMenu.tabs}" var="tab">
+                        <div class="rail-group">
+                            <div class="rail-group-label"><spring:message code="${tab.key}"/></div>
+                            <c:forEach items="${tab.items}" var="tabItem">
+                                <c:choose>
+                                    <c:when test="${actionWeblog != null}">
+                                        <a class="rail-link${tabItem.selected ? ' rail-active' : ''}"
+                                           href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol">
+                                               <c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
+                                            <spring:message code="${tabItem.key}"/>
+                                        </a>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <a class="rail-link${tabItem.selected ? ' rail-active' : ''}"
+                                           href="<c:url value='/roller-ui/admin/${tabItem.action}.rol'/>">
+                                            <spring:message code="${tabItem.key}"/>
+                                        </a>
+                                    </c:otherwise>
+                                </c:choose>
+                            </c:forEach>
+                        </div>
+                    </c:forEach>
+                </c:if>
+
+            </nav>
 
             <c:if test="${tile_sidebar != '/WEB-INF/jsps/tiles/empty.jsp'}">
                 <div class="card">
@@ -65,7 +95,7 @@
 
         <div class="col-md-9 roller-column-right">
             <div class="card">
-                <div class="card-body" style="min-height: 30em">
+                <div class="card-body roller-content-body">
 
                     <jsp:include page="${tile_messages}"/>
 

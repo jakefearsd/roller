@@ -16,17 +16,12 @@
   directory of this distribution.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
-<%@ page import="org.apache.roller.weblogger.ui.core.util.menu.Menu" %>
 
-<%-- Extract the menu from the request. The model attribute "menu" may collide
-     with other attributes during request dispatching, so we safely cast it. --%>
-<%
-    Object menuObj = request.getAttribute("menu");
-    Menu navMenu = (menuObj instanceof Menu) ? (Menu) menuObj : null;
-    request.setAttribute("navMenu", navMenu);
-%>
+<%-- The tabbed-menu items themselves now render in the context rail
+     (tiles-tabbedpage.jsp / tiles-mainmenupage.jsp), not here -- this bar
+     only keeps the pinned, always-present links. --%>
 
-<nav class="navbar navbar-expand-md navbar-dark bg-dark">
+<nav class="navbar navbar-expand-md roller-topbar">
     <div class="container-fluid">
 
         <a class="navbar-brand" href="#">${rc:getProp('site.name')}</a>
@@ -39,40 +34,6 @@
         </button>
 
         <div id="navbar" class="navbar-collapse collapse">
-
-            <ul class="navbar-nav">
-
-                <c:if test="${navMenu != null}">
-                    <c:forEach items="${navMenu.tabs}" var="tab">
-                        <li class="nav-item dropdown">
-                            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button"
-                               aria-haspopup="true" aria-expanded="false">
-                                <spring:message code="${tab.key}"/>
-                            </a>
-                            <ul class="dropdown-menu">
-                                <c:forEach items="${tab.items}" var="tabItem" varStatus="stat">
-                                    <li>
-                                        <c:choose>
-                                            <c:when test="${actionWeblog != null}">
-                                                <a class="dropdown-item" href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol">
-                                                    <c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
-                                                    <spring:message code="${tabItem.key}"/>
-                                                </a>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <a class="dropdown-item" href="<c:url value='/roller-ui/admin/${tabItem.action}.rol'/>">
-                                                    <spring:message code="${tabItem.key}"/>
-                                                </a>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </li>
-                                </c:forEach>
-                            </ul>
-                        </li>
-                    </c:forEach>
-                </c:if>
-
-            </ul>
 
             <ul class="navbar-nav ms-auto">
 
