@@ -285,6 +285,39 @@ class TravelThemeRenderingTest {
                 "the stored-escaped title must not be double-encoded:\n" + permalinkBody);
     }
 
+    /**
+     * {@code $model.weblog.name} comes back from {@code WeblogWrapper#getName}
+     * already {@code escapeHtml4}'d (see {@code WeblogWrapper.java:95}); the
+     * template used to wrap it in {@code $utils.escapeHTML} too, double-
+     * encoding ('&' became {@code &amp;amp;}). Pins the fix (bare {@code
+     * $model.weblog.name}) on the front page's tg-name and the permalink's.
+     * {@code Weblog.setName} does not escape, so the '&' below is stored raw.
+     */
+    @Test
+    void theWeblogNameEscapesExactlyOnce() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setName("Fjord & Field Guides");
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.endSession(true);
+        TestUtils.setupWeblogEntry("sound-and-stone", weblog, user);
+        TestUtils.endSession(true);
+
+        String frontBody = render("/" + HANDLE + "/");
+        assertTrue(frontBody.contains("Fjord &amp; Field Guides"),
+                "the weblog name must render escaped exactly once:\n" + frontBody);
+        assertFalse(frontBody.contains("&amp;amp;"),
+                "no reference may double-encode a value that is already "
+                        + "wrapper-escaped:\n" + frontBody);
+
+        String permalinkBody = render("/" + HANDLE + "/entry/sound-and-stone");
+        assertTrue(permalinkBody.contains("Fjord &amp; Field Guides"),
+                "the permalink's weblog name must render escaped exactly once:\n"
+                        + permalinkBody);
+        assertFalse(permalinkBody.contains("&amp;amp;"),
+                "no reference may double-encode a value that is already "
+                        + "wrapper-escaped:\n" + permalinkBody);
+    }
+
     // -------------------------------------------------------------- _page
 
     private void savePage(String slug, String title, String content) throws Exception {

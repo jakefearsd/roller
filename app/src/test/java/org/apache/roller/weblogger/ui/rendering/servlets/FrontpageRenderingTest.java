@@ -80,6 +80,20 @@ class FrontpageRenderingTest {
     private static final String DANGEROUS_SITE_NAME = "Coastal Guides <script>alert(1)</script>";
     private static final String DANGEROUS_SITE_DESCRIPTION = "Notes & guides for the coast";
 
+    private static final String ANALYTICS_SITE_ID = "11111111-2222-3333-4444-555555555555";
+
+    /**
+     * What {@code #showAnalyticsTrackingCode} builds when analyticsSiteId is
+     * set -- same shape {@code AnalyticsInjectionRenderingTest} pins for the
+     * other three bundled themes' home pages. Frontpage's head never called
+     * the macro at all (pre-existing gap: front-door traffic was invisible to
+     * Umami), so this class is the only coverage for it.
+     */
+    private static final String EXPECTED_ANALYTICS_SCRIPT_TAG =
+            "<script defer src=\"/analytics/script.js\" "
+                    + "data-website-id=\"" + ANALYTICS_SITE_ID + "\" "
+                    + "data-host-url=\"/analytics\"></script>";
+
     /**
      * Frontpage self-hosts Plex Serif/Sans/Mono via webjar (fd-site/fd-post
      * .t/fd-blog .n need the serif, fd-post .d/fd-blog .h need the mono),
@@ -317,5 +331,31 @@ class FrontpageRenderingTest {
                 "the home page must carry the CSP with font-src for self-hosted webfonts");
         assertTrue(render("/" + SITE_HANDLE + "/page/directory").contains(CSP_FRONTPAGE),
                 "the directory page must carry the same CSP as the home page");
+    }
+
+    // ------------------------------------------------------------ analytics
+
+    @Test
+    void theFrontDoorInjectsTheUmamiScriptTagWhenASiteIdIsSet() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(siteWeblog);
+        managed.setAnalyticsSiteId(ANALYTICS_SITE_ID);
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.endSession(true);
+
+        String body = render("/" + SITE_HANDLE + "/");
+
+        assertTrue(body.contains(EXPECTED_ANALYTICS_SCRIPT_TAG),
+                "the front page must inject the Umami script tag for the front "
+                        + "weblog's analyticsSiteId:\n" + body);
+        assertTrue(body.contains(CSP_FRONTPAGE),
+                "wiring analytics into the head must not touch the CSP:\n" + body);
+    }
+
+    @Test
+    void theFrontDoorInjectsNoAnalyticsScriptWithoutASiteId() throws Exception {
+        String body = render("/" + SITE_HANDLE + "/");
+
+        assertFalse(body.contains("/analytics/"),
+                "no site id means no Umami script must be injected:\n" + body);
     }
 }
