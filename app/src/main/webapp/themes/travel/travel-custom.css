@@ -167,3 +167,71 @@ body.tg .cta-card .cta-note { display: block; margin-top: .2rem; opacity: .85; f
 body.tg .shortcode-image { margin: 1.75rem 0; }
 body.tg .shortcode-image img { border-radius: var(--tg-radius); }
 body.tg .jgrid { margin: 1.75rem 0; }
+
+/* ---- contact form & newsletter subscribe ----
+ * #showAudienceAssets/#showSubscribeForm inject these forms unscoped
+ * (form.className = 'contact-form' / 'newsletter-subscribe'); the body.tg
+ * prefix here outranks that head-level style block by specificity so the
+ * theme's own card treatment wins without touching the shared macro. */
+body.tg .contact-form,
+body.tg .newsletter-subscribe {
+    max-width: var(--tg-measure);
+    margin: 1.75rem 0;
+    padding: 1.1rem 1.25rem 1.25rem;
+    background: #fff;
+    border: 1px solid var(--tg-line);
+    border-radius: var(--tg-radius);
+}
+body.tg .contact-form label,
+body.tg .newsletter-subscribe label {
+    display: block;
+    margin-top: .85rem;
+    font-weight: 600;
+    font-size: .9375rem;
+}
+body.tg .contact-form label:first-child,
+body.tg .newsletter-subscribe label:first-child {
+    margin-top: 0;
+}
+body.tg .contact-form input,
+body.tg .contact-form textarea,
+body.tg .newsletter-subscribe input[type=email] {
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin-top: .3rem;
+    padding: .5rem .65rem;
+    box-sizing: border-box;
+    font: inherit;
+    color: var(--tg-ink);
+    background: var(--tg-paper);
+    border: 1px solid var(--tg-line);
+    border-radius: var(--tg-radius);
+}
+body.tg .contact-form input:focus,
+body.tg .contact-form textarea:focus,
+body.tg .newsletter-subscribe input[type=email]:focus {
+    outline: 2px solid var(--tg-accent);
+    outline-offset: 1px;
+    border-color: var(--tg-accent);
+}
+body.tg .contact-form textarea { min-height: 8em; resize: vertical; }
+body.tg .contact-form .audience-hp,
+body.tg .newsletter-subscribe .audience-hp { position: absolute; left: -9999px; top: -9999px; }
+body.tg .contact-form button,
+body.tg .newsletter-subscribe button {
+    margin-top: 1rem;
+    padding: .55rem 1.35rem;
+    font: inherit;
+    font-weight: 600;
+    color: #fff;
+    background: var(--tg-accent);
+    border: none;
+    border-radius: var(--tg-radius);
+    cursor: pointer;
+}
+body.tg .contact-form button:hover,
+body.tg .newsletter-subscribe button:hover {
+    background: var(--tg-accent-dark);
+}
+body.tg .audience-message { margin-top: .75rem; color: var(--tg-muted); }

@@ -25,6 +25,7 @@ import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -247,5 +248,38 @@ class TravelThemeRenderingTest {
                 "the theme CSP declares no font-src, so web fonts must not appear:\n" + css);
         assertFalse(css.contains("http://"),
                 "no remote CSS references -- script/style-src are 'self':\n" + css);
+    }
+
+    // -------------------------------------------------------------- _page
+
+    private void savePage(String slug, String title, String content) throws Exception {
+        WeblogPage page = new WeblogPage();
+        page.setWeblog(TestUtils.getManagedWebsite(weblog));
+        page.setSlug(slug);
+        page.setTitle(title);
+        page.setContent(content);
+        page.setStatus(WeblogPage.PubStatus.PUBLISHED);
+        WebloggerFactory.getWeblogger().getWeblogPageManager().savePage(page);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+    }
+
+    @Test
+    void aPageRendersThroughTheTravelThemeInsteadOfTheFallback() throws Exception {
+        savePage("about", "About This Guide", "Some guide content. [contact]");
+
+        String body = render("/" + HANDLE + "/about");
+
+        assertTravelHead(body);
+        assertTrue(body.contains("class=\"tg-header\""),
+                "the page must wear the travel header chrome:\n" + body);
+        assertTrue(body.contains("<h1 class=\"tg-entry-title\">About This Guide</h1>"),
+                "the page title must render as the entry title:\n" + body);
+        assertTrue(body.contains("<div class=\"tg-entry-content\">"),
+                "the page content must open the measured column:\n" + body);
+        assertTrue(body.contains("audience-hp"),
+                "the audience assets (contact form script/style) must be in the head:\n" + body);
+        assertFalse(body.contains("<h1>About This Guide</h1>"),
+                "the naked fallback template's unstyled h1 must not be what renders:\n" + body);
     }
 }
