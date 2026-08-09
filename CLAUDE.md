@@ -624,9 +624,14 @@ CAPTCHA anywhere; no CSP change anywhere — every endpoint is same-origin.
   `data-endpoint` — because a client-side heuristic (scanning the page for a
   stylesheet `<link>` containing `/roller-ui/`) silently posted to the site
   root under a context path: a browser IT caught it when the only stylesheet
-  on the page was the weblog's own theme CSS. The subscribe form's fetch
-  still posts to `/newsletter/subscribe` absolute-root, not context-relative
-  — a known, documented follow-up, not yet fixed the same way.
+  on the page was the weblog's own theme CSS. The subscribe form's fetch is
+  fixed the same way: both `SubscribeShortcode.render()` and the
+  `#showSubscribeForm` macro emit a server-built `data-endpoint`
+  (`WebloggerRuntimeConfig.getRelativeContextURL()` / `$url.site` — the same
+  value, two call sites) instead of a client-guessed absolute-root
+  `/newsletter/subscribe`, and `#showAudienceAssets`' injector reads
+  `data-endpoint` off the slot for both forms rather than hardcoding either
+  path.
 - **Persist-first, then notify.** `ContactController` writes the
   `roller_form_submission` row before attempting any notification email —
   if SMTP is down the lead survives, which for a business running on leads is

@@ -48,6 +48,7 @@
     <figure class="pf-card pf-card-text">
         <a class="pf-card-link" href="$url.entry($entry.anchor)">
             <span class="pf-card-title">$utils.escapeHTML($entry.title)</span>
+            <span class="pf-card-date">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</span>
         </a>
     </figure>
         #end

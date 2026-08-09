@@ -52,11 +52,18 @@ class RedirectControllerTest {
     }
 
     @Test
-    void accessDeniedForwardsToTheDeniedPage() {
+    void accessDeniedResolvesThroughTheDeniedTilesView() {
         // The interceptor sends every permission failure here. Before this
         // handler existed the target had no .rol suffix, the dispatcher never
         // saw it, and every denial showed a bare 404 instead of this page.
-        assertForwardsToExistingJsp("/roller-ui/errors/denied.jsp", controller.accessDenied());
+        // Returning the ".denied" view name (rather than forwarding straight
+        // to the raw JSP) is what gives denied.jsp the .tiles-errorpage
+        // layout's head/banner/footer chrome and design-system CSS -- see
+        // RollerViewResolverTest for the view registration, and denied.jsp
+        // still exists on disk as the content that view forwards to.
+        assertEquals(".denied", controller.accessDenied());
+        assertTrue(Files.exists(WEBAPP.resolve("roller-ui/errors/denied.jsp")),
+                ".denied's tiles content target is missing");
     }
 
     @Test

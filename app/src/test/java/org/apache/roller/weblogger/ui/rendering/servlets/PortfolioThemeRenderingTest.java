@@ -32,6 +32,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
+import java.util.regex.Pattern;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -212,7 +214,15 @@ class PortfolioThemeRenderingTest {
         assertTrue(body.contains("<span class=\"pf-card-title\">bare-entry</span>"), body);
         assertFalse(body.contains("<picture>"),
                 "no responsive image may be emitted without a featured image:\n" + body);
+        // The no-image card trades its former bare title for title + mono
+        // date, the same $utils.formatDate idiom the permalink's
+        // .pf-entry-meta already uses ("MMMM d, yyyy").
+        assertTrue(DATE_SPAN.matcher(body).find(),
+                "the no-image card must carry a formatted pf-card-date span:\n" + body);
     }
+
+    private static final Pattern DATE_SPAN =
+            Pattern.compile("<span class=\"pf-card-date\">[A-Za-z]+ \\d{1,2}, \\d{4}</span>");
 
     // ------------------------------------------------------------- permalink
 

@@ -169,10 +169,12 @@ body.pf a:hover {
 
 .pf-card-text .pf-card-link {
     display: flex;
-    align-items: flex-end;
-    justify-content: flex-start;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
     height: 100%;
     padding: 1.25rem;
+    gap: 0.4rem;
 }
 
 .pf-card-text .pf-card-title {
@@ -190,6 +192,16 @@ body.pf a:hover {
 
 .pf-card-text:hover .pf-card-title {
     color: var(--pf-fg);
+}
+
+/* Mono face for the no-image card's date, quiet over the teal wash --
+   system monospace only: the theme CSP has no font-src, so no webfont can
+   load here (see the file header). */
+.pf-card-date {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: var(--pf-muted);
 }
 
 /* permalink: hero image first, then a narrow reading column */

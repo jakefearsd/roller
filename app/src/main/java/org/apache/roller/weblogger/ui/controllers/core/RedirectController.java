@@ -51,9 +51,16 @@ public class RedirectController extends BaseController {
      * previously had no handler and no {@code .rol} suffix, so the DispatcherServlet
      * never saw it and every denial produced a bare 404 instead of the
      * denied page that has existed all along.
+     *
+     * <p>Returns the {@code .denied} view name -- resolved by
+     * {@link org.apache.roller.weblogger.ui.controllers.RollerViewResolver}
+     * to the {@code .tiles-errorpage} layout with {@code denied.jsp} as its
+     * content -- rather than forwarding to the raw JSP fragment directly.
+     * The raw forward used to skip that layout entirely, serving denied.jsp
+     * with no head/banner/footer chrome and no design-system CSS at all.
      */
     @GetMapping("/access-denied.rol")
     public String accessDenied() {
-        return "forward:/roller-ui/errors/denied.jsp";
+        return ".denied";
     }
 }

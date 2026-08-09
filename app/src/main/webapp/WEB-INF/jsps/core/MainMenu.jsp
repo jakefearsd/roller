@@ -71,10 +71,17 @@
 
             <p><c:out value="${perms.weblog.about}" escapeXml="false"/></p>
 
+            <%-- Humanized, localized labels -- this used to print the raw
+                 WeblogPermission action constants (ADMIN/POST/EDIT_DRAFT) in
+                 upper case. inviteMember.administrator/.author/.limited
+                 already exist (and are already translated in every locale
+                 bundle) because InviteMember.jsp uses them for the same
+                 three actions; reused here rather than adding new keys. --%>
+            <c:set var="permLabels" value="false"/>
             <p>You have
-            <c:if test='${perms.hasAction("admin")}'>ADMIN </c:if>
-            <c:if test='${perms.hasAction("post")}'>AUTHOR </c:if>
-            <c:if test='${perms.hasAction("edit_draft")}'>LIMITED </c:if>
+            <c:if test='${perms.hasAction("admin")}'><spring:message code="inviteMember.administrator"/><c:set var="permLabels" value="true"/></c:if>
+            <c:if test='${perms.hasAction("post")}'><c:if test="${permLabels}">, </c:if><spring:message code="inviteMember.author"/><c:set var="permLabels" value="true"/></c:if>
+            <c:if test='${perms.hasAction("edit_draft")}'><c:if test="${permLabels}">, </c:if><spring:message code="inviteMember.limited"/><c:set var="permLabels" value="true"/></c:if>
             <spring:message code='yourWebsites.permission'/></p>
 
             <div class="btn-group" role="group" aria-label="...">
