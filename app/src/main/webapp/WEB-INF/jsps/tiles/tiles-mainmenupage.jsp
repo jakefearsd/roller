@@ -65,6 +65,7 @@
                                 <c:choose>
                                     <c:when test="${actionWeblog != null}">
                                         <a class="rail-link${tabItem.selected ? ' rail-active' : ''}"
+                                           ${tabItem.selected ? 'aria-current="page"' : ''}
                                            href="<c:url value="/roller-ui/authoring/${tabItem.action}.rol">
                                                <c:param name="weblog" value="${actionWeblog.handle}"/></c:url>">
                                             <spring:message code="${tabItem.key}"/>
@@ -72,6 +73,7 @@
                                     </c:when>
                                     <c:otherwise>
                                         <a class="rail-link${tabItem.selected ? ' rail-active' : ''}"
+                                           ${tabItem.selected ? 'aria-current="page"' : ''}
                                            href="<c:url value='/roller-ui/admin/${tabItem.action}.rol'/>">
                                             <spring:message code="${tabItem.key}"/>
                                         </a>
