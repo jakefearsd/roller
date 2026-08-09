@@ -45,12 +45,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * keeps map-less pages from downloading any of it.
  *
  * <p>Missing one call site is a silent failure: the {@code [map]} div still
- * renders and simply never becomes a map. journal actually has FOUR
- * top-level templates ({@code page.vm} included, alongside {@code weblog.vm}/
- * {@code permalink.vm}/{@code searchresults.vm}); this file exercises the
- * other three for both journal and portfolio, and journal's {@code page.vm}
- * head coverage lives in {@code JournalThemeRenderingTest} instead.
- * frontpage has its own {@code _header}.
+ * renders and simply never becomes a map. journal AND portfolio each have
+ * FOUR top-level templates ({@code page.vm} included, alongside
+ * {@code weblog.vm}/{@code permalink.vm}/{@code searchresults.vm}); this
+ * file exercises the other three for both, and each theme's {@code page.vm}
+ * head coverage lives in its own rendering test instead
+ * ({@code JournalThemeRenderingTest}; {@code PortfolioThemeRenderingTest}'s
+ * shared {@code assertPortfolioHead} carries the Leaflet check for all its
+ * templates including the page). frontpage has its own {@code _header}.
  *
  * <p>This file also owns the CSP half of the change: Leaflet paints aborted
  * and out-of-range tiles with a {@code data:} GIF placeholder, and per CSP3

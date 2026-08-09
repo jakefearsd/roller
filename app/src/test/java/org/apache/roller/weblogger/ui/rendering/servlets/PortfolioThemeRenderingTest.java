@@ -147,6 +147,10 @@ class PortfolioThemeRenderingTest {
                 "#showGalleryGridStyles must be in the head:\n" + body);
         assertTrue(body.contains("/webjars/photoswipe/"),
                 "#showGalleryAssets must ship the lightbox:\n" + body);
+        assertTrue(body.contains("/webjars/leaflet/"),
+                "#showMapAssets must be in the head -- all four portfolio "
+                        + "templates (page.vm included) call it, and this shared "
+                        + "assert is the page template's only Leaflet coverage:\n" + body);
         assertTrue(body.contains("portfolio-custom.css"),
                 "the head must link the theme stylesheet override:\n" + body);
         // a Velocity error would leak the raw directive or reference text
