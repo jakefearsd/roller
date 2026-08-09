@@ -558,7 +558,7 @@
         </div>
     </div>
 
-    <div id="newsletter-confirm-modal" class="modal fade" tabindex="-1" role="dialog">
+    <div id="newsletter-confirm-modal" class="modal" tabindex="-1" role="dialog">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!sendNewsletter.rol"
@@ -641,7 +641,7 @@
         </div>
     </div>
 
-    <div id="revision-diff-modal" class="modal fade" tabindex="-1" role="dialog">
+    <div id="revision-diff-modal" class="modal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -693,7 +693,7 @@
 
 <%-- delete blogroll confirmation modal --%>
 
-<div id="delete-entry-modal" class="modal fade delete-entry-modal" tabindex="-1" role="dialog">
+<div id="delete-entry-modal" class="modal delete-entry-modal" tabindex="-1" role="dialog">
 
     <div class="modal-dialog modal-lg">
 

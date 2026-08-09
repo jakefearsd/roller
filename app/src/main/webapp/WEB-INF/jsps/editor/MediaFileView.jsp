@@ -348,7 +348,7 @@
 
 <%-- view image modal --%>
 
-<div id="mediafile_edit_lightbox" class="modal fade" tabindex="-1" role="dialog">
+<div id="mediafile_edit_lightbox" class="modal" tabindex="-1" role="dialog">
 
     <div class="modal-dialog modal-lg">
 

@@ -76,7 +76,7 @@
 
 <%-- Media File Insert for plain textarea editor --%>
 
-<div id="mediafile_edit_lightbox" class="modal fade" role="dialog">
+<div id="mediafile_edit_lightbox" class="modal" role="dialog">
 
     <div class="modal-dialog modal-lg">
 

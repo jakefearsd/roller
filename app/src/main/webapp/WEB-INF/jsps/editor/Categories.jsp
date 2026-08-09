@@ -96,7 +96,7 @@
 <%-- ============================================================= --%>
 <%-- add/edit category modal --%>
 
-<div id="category-edit-modal" class="modal fade category-edit-modal" tabindex="-1" role="dialog">
+<div id="category-edit-modal" class="modal category-edit-modal" tabindex="-1" role="dialog">
 
     <div class="modal-dialog modal-lg">
 
@@ -267,7 +267,7 @@
 <%-- ============================================================= --%>
 <%-- delete confirmation modal --%>
 
-<div id="delete-category-modal" class="modal fade delete-category-modal" tabindex="-1" role="dialog">
+<div id="delete-category-modal" class="modal delete-category-modal" tabindex="-1" role="dialog">
 
     <div class="modal-dialog modal-lg">
 

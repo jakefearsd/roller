@@ -264,7 +264,7 @@
 </div>
 
 
-<div id="delete-entry-modal" class="modal fade delete-entry-modal" tabindex="-1" role="dialog">
+<div id="delete-entry-modal" class="modal delete-entry-modal" tabindex="-1" role="dialog">
 
     <div class="modal-dialog modal-lg">
 
@@ -324,7 +324,7 @@
 <%-- Confirmation for the bulk delete. A modal rather than window.confirm:
      the native dialog blocks the page for automated tests and cannot say
      how many entries are about to go. --%>
-<div id="bulk-delete-modal" class="modal fade" tabindex="-1" role="dialog">
+<div id="bulk-delete-modal" class="modal" tabindex="-1" role="dialog">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">

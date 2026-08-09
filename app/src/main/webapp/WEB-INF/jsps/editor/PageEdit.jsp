@@ -226,7 +226,7 @@
 <%-- ====================================================================== --%>
 <%-- Delete confirmation --%>
 
-<div id="delete-page-modal" class="modal fade" tabindex="-1" role="dialog">
+<div id="delete-page-modal" class="modal" tabindex="-1" role="dialog">
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="${pageContext.request.contextPath}/roller-ui/authoring/pageRemove.rol" method="post">
@@ -250,7 +250,7 @@
      og:image picker. Its own ids so this JSP never collides with the entry
      editor's copy of the same modal. --%>
 
-<div id="page_mediafile_edit_lightbox" class="modal fade" role="dialog">
+<div id="page_mediafile_edit_lightbox" class="modal" role="dialog">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
