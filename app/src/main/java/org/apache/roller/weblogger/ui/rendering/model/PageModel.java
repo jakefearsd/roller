@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -55,7 +56,18 @@ import org.apache.roller.weblogger.util.URLUtilities;
 public class PageModel implements Model {
     
     private static final Log log = LogFactory.getLog(PageModel.class);
-    
+
+    /**
+     * Same allowlist as {@code CtaShortcode}: a stored canonical-URL override
+     * is emitted straight into {@code <link rel="canonical">}, {@code og:url}
+     * and the JSON-LD {@code mainEntityOfPage} -- so a {@code javascript:}/
+     * {@code data:}/{@code file:} value must never reach any of those sites.
+     * Save-time validation (EntryEditController/PageEditController) rejects
+     * new ones; this catches rows written before that validation existed.
+     */
+    private static final UrlValidator CANONICAL_URL_VALIDATOR =
+            new UrlValidator(new String[] {"http", "https"});
+
     private WeblogPageRequest pageRequest = null;
     private URLStrategy urlStrategy = null;
     private WeblogEntryCommentForm commentForm = null;
@@ -176,7 +188,7 @@ public class PageModel implements Model {
         }
         if (isPermalink()) {
             WeblogEntry entry = pageRequest.getWeblogEntry();
-            if (entry != null && StringUtils.isNotBlank(entry.getCanonicalUrl())) {
+            if (entry != null && isHttpOrHttps(entry.getCanonicalUrl())) {
                 return entry.getCanonicalUrl();
             }
             return urlStrategy.getWeblogEntryURL(weblog,
@@ -185,7 +197,7 @@ public class PageModel implements Model {
         if (pageRequest.getPageSlug() != null) {
             WeblogPage page = pageRequest.getWeblogPageContent();
             if (page != null) {
-                if (StringUtils.isNotBlank(page.getCanonicalUrl())) {
+                if (isHttpOrHttps(page.getCanonicalUrl())) {
                     return page.getCanonicalUrl();
                 }
                 // Mirrors URLModel#staticPage's URL shape (no locale segment,
@@ -204,6 +216,16 @@ public class PageModel implements Model {
         return urlStrategy.getWeblogCollectionURL(weblog, pageRequest.getLocale(),
                 pageRequest.getWeblogCategoryName(), pageRequest.getWeblogDate(),
                 pageRequest.getTags(), pageRequest.getPageNum(), true);
+    }
+
+    /**
+     * Whether a stored canonical-URL override is non-blank AND an absolute
+     * http(s) URL -- rows written before save-time validation existed may
+     * carry a {@code javascript:}/{@code data:}/{@code file:} value, and
+     * this is what keeps it out of the rendered head.
+     */
+    private static boolean isHttpOrHttps(String canonicalUrl) {
+        return StringUtils.isNotBlank(canonicalUrl) && CANONICAL_URL_VALIDATOR.isValid(canonicalUrl);
     }
 
 

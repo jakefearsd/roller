@@ -409,19 +409,57 @@ class SeoHeadRenderingTest {
     // ------------------------------------------------------ escaping (carry-forward)
 
     @Test
-    void aCanonicalUrlContainingAQuoteCannotBreakOutOfItsAttribute() throws Exception {
+    void aCanonicalUrlContainingAQuoteFailsValidationAndFallsBackToTheNaturalPermalink()
+            throws Exception {
+        // Before the canonical-URL http(s) allowlist (see
+        // aNonHttpCanonicalUrlIsIgnoredAtEmissionRatherThanShipped below) this
+        // value reached the page verbatim, relying on template-level escaping
+        // to keep the quote from breaking out of the attribute. A literal
+        // quote is not a well-formed URI character -- UrlValidator, the same
+        // one CtaShortcode's href check uses, rejects it (see
+        // CtaShortcodeTest#aQuoteSmuggledIntoTheHrefCannotBreakOutOfTheAttribute) --
+        // so PageModel#getCanonicalUrl's emission-time filter now catches this
+        // exactly like a javascript: URL and falls back to the entry's
+        // natural permalink instead of emitting anything derived from the
+        // stored value.
         WeblogEntry entry = TestUtils.setupWeblogEntry("escape-entry", weblog, user);
         updateEntry(entry, e -> e.setCanonicalUrl("https://example.com/pa\"th"));
 
         String body = render("/" + HANDLE + "/entry/escape-entry");
 
-        assertTrue(body.contains(
-                "<link rel=\"canonical\" href=\"https://example.com/pa&quot;th\">"),
-                "the quote must be attribute-escaped:\n" + body);
         assertFalse(body.contains("https://example.com/pa\"th"),
                 "the raw quote must never reach the page, in any context:\n" + body);
-        // and the JSON-LD block that carries the same URL must still parse
+        assertFalse(body.contains("pa&quot;th"),
+                "the malformed URL must not be emitted at all, escaped or otherwise:\n" + body);
+        String naturalUrl = BASE + "/entry/escape-entry";
+        assertTrue(body.contains("<link rel=\"canonical\" href=\"" + naturalUrl + "\">"),
+                "a malformed canonical URL must fall back to the natural permalink:\n" + body);
+        // and the JSON-LD block that carries the fallback URL must still parse
         singleLdJson(body, "BlogPosting");
+    }
+
+    @Test
+    void aNonHttpCanonicalUrlIsIgnoredAtEmissionRatherThanShipped() throws Exception {
+        // Save-time validation (EntryEditController) is the front door, but
+        // this covers the back door: a row written before that validation
+        // existed. PageModel#getCanonicalUrl must fall back to the entry's
+        // natural permalink rather than emit the stored scheme anywhere.
+        WeblogEntry entry = TestUtils.setupWeblogEntry("javascript-entry", weblog, user);
+        updateEntry(entry, e -> e.setCanonicalUrl("javascript:alert(1)"));
+
+        String body = render("/" + HANDLE + "/entry/javascript-entry");
+
+        assertFalse(body.contains("javascript:alert(1)"),
+                "a javascript: canonical URL must never reach the rendered page, "
+                        + "in any context:\n" + body);
+        String naturalUrl = BASE + "/entry/javascript-entry";
+        assertTrue(body.contains("<link rel=\"canonical\" href=\"" + naturalUrl + "\">"),
+                "the canonical link must fall back to the entry's natural permalink:\n" + body);
+        assertTrue(body.contains("<meta property=\"og:url\" content=\"" + naturalUrl + "\">"),
+                "og:url must fall back the same way:\n" + body);
+        JsonNode posting = singleLdJson(body, "BlogPosting");
+        assertEquals(naturalUrl, posting.path("mainEntityOfPage").asString(),
+                "mainEntityOfPage must fall back the same way, not carry the javascript: URL");
     }
 
     @Test

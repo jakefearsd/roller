@@ -758,6 +758,43 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void aNonHttpCanonicalUrlIsRejectedAndNothingIsSaved() throws Exception {
+        // A stored javascript:/data:/file: URL would be emitted straight into
+        // <link rel="canonical">, og:url and JSON-LD mainEntityOfPage -- this
+        // is the front door that keeps one from ever being saved in the
+        // first place (PageModel#getCanonicalUrl is the back door, for rows
+        // that predate this check).
+        bean.setCanonicalUrl("data:text/html,x");
+
+        String view = controller.entryAddSaveDraft(request, model, bean);
+
+        assertEquals(".EntryEdit", view, "a rejected canonical URL must redisplay the form");
+        assertTrue(errors(model).contains("entryEdit.canonicalUrlInvalid"),
+                "Expected a canonicalUrlInvalid error, got: " + errors(model));
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    @Test
+    void anHttpsCanonicalUrlIsAccepted() throws Exception {
+        bean.setCanonicalUrl("https://example.com/x");
+
+        controller.entryAddSaveDraft(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no error, got: " + errors(model));
+        assertEquals("https://example.com/x", captureSavedEntry().getCanonicalUrl());
+    }
+
+    @Test
+    void aBlankCanonicalUrlIsAccepted() throws Exception {
+        bean.setCanonicalUrl("");
+
+        controller.entryAddSaveDraft(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no error, got: " + errors(model));
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(any());
+    }
+
+    @Test
     void openingAnExistingEntryLoadsTheSeoFieldsIntoTheForm() throws Exception {
         WeblogEntry existing = existingEntry(PubStatus.PUBLISHED);
         existing.setMetaTitle("Stored meta title");

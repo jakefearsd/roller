@@ -33,6 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
@@ -83,6 +84,16 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class EntryEditController extends BaseController {
 
     private static final Log log = LogFactory.getLog(EntryEditController.class);
+
+    /**
+     * Same allowlist as {@code CtaShortcode}'s href check: the SEO card's
+     * canonical-URL override is emitted straight into
+     * {@code <link rel="canonical">}, {@code og:url} and JSON-LD
+     * {@code mainEntityOfPage}, so it must be an absolute http(s) URL or
+     * blank -- never a {@code javascript:}/{@code data:}/{@code file:} value.
+     */
+    private static final UrlValidator CANONICAL_URL_VALIDATOR =
+            new UrlValidator(new String[] {"http", "https"});
 
     /**
      * The Listmonk client used by {@link #entryEditSendNewsletter}, built
@@ -642,6 +653,10 @@ public class EntryEditController extends BaseController {
 
     private String doSave(HttpServletRequest request, Model model, EntryBean bean,
                           WeblogEntry entry, String actionName) {
+        if (StringUtils.isNotBlank(bean.getCanonicalUrl())
+                && !CANONICAL_URL_VALIDATOR.isValid(bean.getCanonicalUrl())) {
+            addError(model, "entryEdit.canonicalUrlInvalid", request);
+        }
         if (!hasErrors(model)) {
             try {
                 WeblogEntryManager weblogEntryManager = weblogger.getWeblogEntryManager();

@@ -26,6 +26,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -53,6 +54,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class PageEditController extends BaseController {
 
     private static final Log log = LogFactory.getLog(PageEditController.class);
+
+    /**
+     * Same allowlist as {@code CtaShortcode}'s href check and
+     * {@code EntryEditController}'s: the SEO card's canonical-URL override is
+     * emitted straight into {@code <link rel="canonical">}, {@code og:url}
+     * and JSON-LD {@code mainEntityOfPage}, so it must be an absolute http(s)
+     * URL or blank -- never a {@code javascript:}/{@code data:}/{@code file:}
+     * value.
+     */
+    private static final UrlValidator CANONICAL_URL_VALIDATOR =
+            new UrlValidator(new String[] {"http", "https"});
 
     @Override
     public List<String> requiredWeblogPermissionActions() {
@@ -130,40 +142,53 @@ public class PageEditController extends BaseController {
             }
         }
 
-        // copyTo is inside the try, not before it, the same shape as
-        // EntryEditController#doSave -- it is defensive against a garbage
-        // status (see PageBean#parseStatus) but is still ordinary application
-        // code reachable from a crafted POST, and nothing here may 500.
-        try {
-            bean.copyTo(page);
-            weblogger.getWeblogPageManager().savePage(page);
-            weblogger.flush();
-            bean.copyFrom(page);
-            model.addAttribute("page", page);
-            addMessage(model, "pageEdit.saved", request);
-        } catch (WebloggerException ex) {
-            // A reserved or malformed slug is the one expected failure mode
-            // here (see WeblogPageManager#savePage), and it must surface as a
-            // field error the author can fix, not a 500.
-            String message = ex.getMessage() == null ? "" : ex.getMessage();
-            if (message.contains("reserved")) {
-                addError(model, "pageEdit.error.slugReserved", request);
-            } else if (message.contains("slug")) {
-                addError(model, "pageEdit.error.slugInvalid", request);
-            } else {
+        // Same allowlist as EntryEditController#doSave / CtaShortcode: the SEO
+        // card's canonical-URL override is emitted straight into the rendered
+        // head, so it must be checked before anything is persisted -- a field
+        // error the author can fix, not a 500 and not a silently-stored
+        // javascript:/data:/file: value.
+        if (StringUtils.isNotBlank(bean.getCanonicalUrl())
+                && !CANONICAL_URL_VALIDATOR.isValid(bean.getCanonicalUrl())) {
+            addError(model, "entryEdit.canonicalUrlInvalid", request);
+            if (!isNew) {
+                model.addAttribute("page", page);
+            }
+        } else {
+            // copyTo is inside the try, not before it, the same shape as
+            // EntryEditController#doSave -- it is defensive against a garbage
+            // status (see PageBean#parseStatus) but is still ordinary application
+            // code reachable from a crafted POST, and nothing here may 500.
+            try {
+                bean.copyTo(page);
+                weblogger.getWeblogPageManager().savePage(page);
+                weblogger.flush();
+                bean.copyFrom(page);
+                model.addAttribute("page", page);
+                addMessage(model, "pageEdit.saved", request);
+            } catch (WebloggerException ex) {
+                // A reserved or malformed slug is the one expected failure mode
+                // here (see WeblogPageManager#savePage), and it must surface as a
+                // field error the author can fix, not a 500.
+                String message = ex.getMessage() == null ? "" : ex.getMessage();
+                if (message.contains("reserved")) {
+                    addError(model, "pageEdit.error.slugReserved", request);
+                } else if (message.contains("slug")) {
+                    addError(model, "pageEdit.error.slugInvalid", request);
+                } else {
+                    log.error("Error saving page " + bean.getId(), ex);
+                    addError(model, "generic.error.check.logs", request);
+                }
+                if (!isNew) {
+                    model.addAttribute("page", page);
+                }
+            } catch (Exception ex) {
+                // Catch-all, matching EntryEditController#doSave's shape: nothing
+                // in this method may turn a bad POST into a 500.
                 log.error("Error saving page " + bean.getId(), ex);
                 addError(model, "generic.error.check.logs", request);
-            }
-            if (!isNew) {
-                model.addAttribute("page", page);
-            }
-        } catch (Exception ex) {
-            // Catch-all, matching EntryEditController#doSave's shape: nothing
-            // in this method may turn a bad POST into a 500.
-            log.error("Error saving page " + bean.getId(), ex);
-            addError(model, "generic.error.check.logs", request);
-            if (!isNew) {
-                model.addAttribute("page", page);
+                if (!isNew) {
+                    model.addAttribute("page", page);
+                }
             }
         }
 

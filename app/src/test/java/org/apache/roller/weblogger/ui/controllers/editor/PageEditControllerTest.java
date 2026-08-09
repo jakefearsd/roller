@@ -402,6 +402,54 @@ class PageEditControllerTest extends EditorControllerTestSupport {
                 "the looked-up page must still be on the model after the catch-all path too");
     }
 
+    // --- SEO card's canonical URL ---
+
+    @Test
+    void aNonHttpCanonicalUrlIsRejectedAndNothingIsSaved() throws Exception {
+        // A stored javascript:/data:/file: URL would be emitted straight into
+        // <link rel="canonical">, og:url and JSON-LD mainEntityOfPage -- this
+        // is the front door that keeps one from ever being saved in the
+        // first place (PageModel#getCanonicalUrl is the back door, for rows
+        // that predate this check).
+        PageBean bean = new PageBean();
+        bean.setSlug("about");
+        bean.setTitle("About");
+        bean.setCanonicalUrl("data:text/html,x");
+
+        String view = controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals(".PageEdit", view, "a rejected canonical URL must redisplay the form");
+        assertTrue(errors(model).contains("entryEdit.canonicalUrlInvalid"),
+                "Expected a canonicalUrlInvalid error, got: " + errors(model));
+        verify(weblogger.getWeblogPageManager(), never()).savePage(any());
+    }
+
+    @Test
+    void anHttpsCanonicalUrlIsAccepted() throws Exception {
+        PageBean bean = new PageBean();
+        bean.setSlug("about");
+        bean.setTitle("About");
+        bean.setCanonicalUrl("https://example.com/x");
+
+        controller.save(requestFor(weblogA), model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no error, got: " + errors(model));
+        verify(weblogger.getWeblogPageManager()).savePage(any());
+    }
+
+    @Test
+    void aBlankCanonicalUrlIsAccepted() throws Exception {
+        PageBean bean = new PageBean();
+        bean.setSlug("about");
+        bean.setTitle("About");
+        bean.setCanonicalUrl("");
+
+        controller.save(requestFor(weblogA), model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no error, got: " + errors(model));
+        verify(weblogger.getWeblogPageManager()).savePage(any());
+    }
+
     // --- SEO card's social-image thumbnail preview ---
 
     @Test
