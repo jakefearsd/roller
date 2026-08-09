@@ -43,18 +43,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code #showAnalyticsTrackingCode} building the Umami script tag from
  * {@code $weblog.analyticsSiteId} plus the startup-scoped
  * {@code $config.analyticsBasePath}/{@code analyticsScriptName} -- across all
- * five bundled themes' home pages AND the theme-independent {@code page.vm}
- * (the shared template every {@code [page]} view renders through), plus one
- * pinned case each for the "no id configured" and legacy-fallback branches
- * that sit below the structured one in the macro.
+ * three bundled themes' home pages AND the {@code [page]} view (journal's own
+ * {@code _page} override), plus one pinned case each for the "no id
+ * configured" and legacy-fallback branches that sit below the structured one
+ * in the macro.
  *
- * <p>One test looping the five themes rather than one method per theme --
+ * <p>One test looping the themes rather than one method per theme --
  * same economical fixture pattern as {@code PageNavRenderingTest}.
  */
 class AnalyticsInjectionRenderingTest {
 
     private static final List<String> THEMES =
-            List.of("basic", "fauxcoly", "gaurav", "portfolio", "travel");
+            List.of("journal", "portfolio", "travel");
 
     private static final String HANDLE = "analyticsrenderblog";
 
@@ -67,11 +67,12 @@ class AnalyticsInjectionRenderingTest {
                     + "data-host-url=\"/analytics\"></script>";
 
     /**
-     * The CSP meta every bundled theme's home page carries (gaurav's shared
-     * head adds font-src; see {@link #CSP_GAURAV}). Pinned byte-for-byte, the
-     * same convention {@code PortfolioThemeRenderingTest}/
-     * {@code TravelThemeRenderingTest} use for their own CSP directives --
-     * proof that wiring analytics into the head touched none of it.
+     * The CSP meta every bundled theme's home page carries (journal's head
+     * adds font-src for its self-hosted Plex webfonts; see
+     * {@link #CSP_JOURNAL}). Pinned byte-for-byte, the same convention
+     * {@code PortfolioThemeRenderingTest}/{@code TravelThemeRenderingTest}
+     * use for their own CSP directives -- proof that wiring analytics into
+     * the head touched none of it.
      */
     private static final String CSP_STANDARD =
             "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; "
@@ -80,7 +81,7 @@ class AnalyticsInjectionRenderingTest {
                     + "https://player.vimeo.com; base-uri 'self'; connect-src 'self'; "
                     + "form-action 'self'; frame-ancestors 'none'\">";
 
-    private static final String CSP_GAURAV =
+    private static final String CSP_JOURNAL =
             "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; "
                     + "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
                     + "img-src * data:; frame-src https://www.youtube-nocookie.com "
@@ -195,8 +196,8 @@ class AnalyticsInjectionRenderingTest {
         assertTrue(body.contains(EXPECTED_SCRIPT_TAG),
                 "page.vm must inject the same Umami script tag as the theme home "
                         + "pages:\n" + body);
-        assertTrue(body.contains(CSP_STANDARD),
-                "page.vm's CSP meta must be byte-unchanged:\n" + body);
+        assertTrue(body.contains(CSP_JOURNAL),
+                "journal page.vm's CSP meta must be byte-unchanged:\n" + body);
     }
 
     @Test
@@ -240,7 +241,7 @@ class AnalyticsInjectionRenderingTest {
             WebloggerFactory.getWeblogger().flush();
             TestUtils.endSession(true);
 
-            switchTheme("basic");
+            switchTheme("journal");
             RenderingTestSupport.clearRenderCaches();
             String body = renderHomePage();
 
@@ -260,6 +261,6 @@ class AnalyticsInjectionRenderingTest {
     }
 
     private static String expectedCsp(String theme) {
-        return "gaurav".equals(theme) ? CSP_GAURAV : CSP_STANDARD;
+        return "journal".equals(theme) ? CSP_JOURNAL : CSP_STANDARD;
     }
 }

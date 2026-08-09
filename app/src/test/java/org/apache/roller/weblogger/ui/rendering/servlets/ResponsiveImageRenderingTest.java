@@ -49,9 +49,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Renders real themes through the real PageServlet and asserts on the
  * {@code #showResponsiveImage} macro: the featured image becomes a
  * {@code <picture>} whose srcset climbs the rendition ladder, a hero on the
- * permalink page and a linked thumb on entry-list pages; formats outside the
- * ladder (gif) degrade to a plain honest {@code <img>}; and entries without
- * a featured image render exactly as they always did.
+ * permalink page and a linked card image on entry-list pages; formats outside
+ * the ladder (gif) degrade to a plain honest {@code <img>}; and entries
+ * without a featured image render exactly as they always did.
+ *
+ * <p>Runs on the travel theme: journal (the default fixture theme) is a
+ * reading-first design that never renders featured images, so these macro
+ * assertions need a theme whose day template actually calls the macro --
+ * travel's hero/card slots are that theme-side wiring.
  */
 class ResponsiveImageRenderingTest {
 
@@ -67,6 +72,9 @@ class ResponsiveImageRenderingTest {
         RenderingTestSupport.clearRenderCaches();
         user = TestUtils.setupUser("responsiverenderuser");
         weblog = TestUtils.setupWeblog(HANDLE, user);
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setEditorTheme("travel");
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 
@@ -156,7 +164,7 @@ class ResponsiveImageRenderingTest {
         assertTrue(body.contains(" width=\"500\" height=\"373\""),
                 "intrinsic dimensions must be declared to prevent layout shift:\n" + body);
         assertTrue(body.contains(" loading=\"lazy\" decoding=\"async\""), body);
-        assertTrue(body.contains(" class=\"entry-hero\""),
+        assertTrue(body.contains(" class=\"tg-hero-img\""),
                 "the permalink slot is the full-width hero:\n" + body);
         assertTrue(body.contains(" data-blurhash=\""),
                 "fresh uploads carry a blurhash for client-side blur-up:\n" + body);
@@ -173,14 +181,15 @@ class ResponsiveImageRenderingTest {
 
         String body = render("/" + HANDLE);
 
-        assertTrue(body.contains(" class=\"entry-thumb\""),
-                "list pages show the card thumb, not the hero:\n" + body);
-        assertFalse(body.contains("entry-hero"), body);
-        assertTrue(body.contains(" sizes=\"240px\""),
-                "the thumb declares its rendered width so the browser picks a small rung:\n"
-                        + body);
-        assertTrue(body.contains("<a href=\"" + BASE + "/entry/thumb-entry\"><picture>"),
-                "the thumb must link to the entry:\n" + body);
+        assertTrue(body.contains(" class=\"tg-card-img\""),
+                "list pages show the card image, not the hero:\n" + body);
+        assertFalse(body.contains("tg-hero-img"), body);
+        assertTrue(body.contains(" sizes=\"(max-width: 700px) 100vw, 33vw\""),
+                "the card image declares its rendered width so the browser picks a "
+                        + "small rung:\n" + body);
+        assertTrue(body.contains(
+                "<a class=\"tg-card-media\" href=\"" + BASE + "/entry/thumb-entry\">"),
+                "the card image must link to the entry:\n" + body);
     }
 
     // ------------------------------------------------- honest degradation
@@ -211,8 +220,8 @@ class ResponsiveImageRenderingTest {
         String body = render("/" + HANDLE + "/entry/bare-entry");
 
         assertFalse(body.contains("<picture>"), body);
-        assertFalse(body.contains("entry-hero"), body);
-        assertFalse(body.contains("entry-thumb"), body);
+        assertFalse(body.contains("tg-hero-img"), body);
+        assertFalse(body.contains("tg-card-img"), body);
     }
 
     // ---------------------------------------------------------- focal point

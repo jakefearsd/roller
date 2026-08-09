@@ -128,8 +128,9 @@ class SearchIT extends RollerIT {
      * <p>Matches on the entry TITLE rather than the search term: the results
      * page echoes the query back in its heading and its search-again box, so
      * looking for the term itself reports a hit even when there are none. The
-     * basic theme's sidebar carries a calendar, feed links and a search box --
-     * no entry titles -- so a title on this page means a result.
+     * journal theme's search page carries only the site header, nav links and
+     * a search-again box -- no entry titles -- so a title on this page means
+     * a result.
      */
     private boolean searchFinds(String term, String title) {
         String results = getAnonymously(baseUrl() + "/" + WEBLOG_HANDLE + "/search?q=" + term);

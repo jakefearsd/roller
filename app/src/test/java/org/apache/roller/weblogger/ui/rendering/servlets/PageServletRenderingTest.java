@@ -57,8 +57,12 @@ class PageServletRenderingTest {
         String body = response.getContentAsString();
         assertTrue(body.contains("smoke-entry"),
                 "entry title must appear on the front page:\n" + body);
-        assertTrue(body.contains("blah blah entry"),
-                "entry text must appear on the front page:\n" + body);
+        // journal's front page is a reading list -- title, date marginalia and
+        // an optional summary, never the entry body (that is the permalink's
+        // job, covered by permalinkRendersEntryContent). The link is what
+        // proves the entry row rendered.
+        assertTrue(body.contains("/entry/smoke-entry\""),
+                "the entry row must link to its permalink:\n" + body);
     }
 
     @Test

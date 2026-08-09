@@ -1,9 +1,0 @@
-<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-#showSeoHead()
-#showGalleryGridStyles()
-#showGalleryAssets()
-#showEmbedAssets()
-#showAudienceAssets()
-#showMapAssets()
-<link rel="stylesheet" href="$url.resource('css/cssgrids-min.css')" />
-<link rel="stylesheet" href="$url.page('style.css')" />

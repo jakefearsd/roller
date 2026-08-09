@@ -109,14 +109,14 @@ class CreateWeblogControllerTest {
         org.apache.roller.weblogger.business.themes.SharedTheme frontpage =
                 org.mockito.Mockito.mock(org.apache.roller.weblogger.business.themes.SharedTheme.class);
         when(frontpage.getId()).thenReturn("frontpage");
-        org.apache.roller.weblogger.business.themes.SharedTheme basic =
+        org.apache.roller.weblogger.business.themes.SharedTheme journal =
                 org.mockito.Mockito.mock(org.apache.roller.weblogger.business.themes.SharedTheme.class);
-        when(basic.getId()).thenReturn("basic");
-        when(weblogger.themeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, basic));
+        when(journal.getId()).thenReturn("journal");
+        when(weblogger.themeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, journal));
 
         controller.execute(ControllerTestFixture.requestFor(user("jake")), model, new CreateWeblogBean());
 
-        assertEquals(List.of(basic), model.getAttribute("themes"));
+        assertEquals(List.of(journal), model.getAttribute("themes"));
     }
 
     @Test
@@ -213,7 +213,7 @@ class CreateWeblogControllerTest {
         bean.setName("Travel Guide");
         bean.setDescription("Where to go");
         bean.setEmailAddress("jake@example.com");
-        bean.setTheme("basic");
+        bean.setTheme("journal");
         bean.setLocale("en_US");
         bean.setTimeZone("America/New_York");
 
@@ -227,7 +227,7 @@ class CreateWeblogControllerTest {
         assertEquals("Travel Guide", weblog.getName());
         assertEquals("Where to go", weblog.getTagline());
         assertEquals("jake@example.com", weblog.getEmailAddress());
-        assertEquals("basic", weblog.getEditorTheme());
+        assertEquals("journal", weblog.getEditorTheme());
         assertEquals("en_US", weblog.getLocale());
         assertEquals("America/New_York", weblog.getTimeZone());
         assertEquals("jake", weblog.getCreatorUserName(), "the signed-in user owns what they create");

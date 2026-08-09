@@ -90,7 +90,7 @@ class MenuHelperTest {
 
         weblog = new Weblog();
         weblog.setHandle(WEBLOG_HANDLE);
-        weblog.setEditorTheme("basic");
+        weblog.setEditorTheme("journal");
 
         userManager = mock(UserManager.class);
         // A permission is granted when the user holds every action it asks for.
@@ -535,7 +535,7 @@ class MenuHelperTest {
     @Test
     void theDesignTabOpensOnThemeSelectionForABlogWithASharedTheme() throws Exception {
         beAWeblogAdministrator();
-        weblog.setEditorTheme("basic");
+        weblog.setEditorTheme("journal");
 
         Menu menu = build("editor", MenuHelper.getParsedMenu("editor"), null);
 

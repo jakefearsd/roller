@@ -266,7 +266,7 @@ class GlobalConfigMatrixIT extends RollerIT {
         $("#name").should(visible).setValue("Global Config " + handle);
         $("#handle").setValue(handle);
         $("#emailAddress").setValue(handle + "@example.invalid");
-        $("select[name='theme']").selectOptionByValue("basic");
+        $("select[name='theme']").selectOptionByValue("journal");
         $("button[type='submit']").click();
 
         $("#messages").should(exist);

@@ -93,7 +93,7 @@ class URLModelTest {
         WebloggerRuntimeConfig.setAbsoluteContextURL(ABSOLUTE_SITE);
 
         weblog = new Weblog("testblog", "testuser", "Test Blog", "a test blog",
-                "blog@example.com", "basic", "en_US", "UTC");
+                "blog@example.com", "journal", "en_US", "UTC");
 
         model = modelFor(weblog, null, new MultiWeblogURLStrategy());
     }
@@ -247,14 +247,14 @@ class URLModelTest {
                 model.getCommentAuthenticator(),
                 "The comment authenticator servlet needs the weblog handle to pick "
                         + "the right blog's settings.");
-        assertEquals(SITE + "/themes/basic/style.css",
-                model.themeResource("basic", "style.css"),
+        assertEquals(SITE + "/themes/journal/style.css",
+                model.themeResource("journal", "style.css"),
                 "Theme resources are served straight off the site root.");
-        assertEquals(ABSOLUTE_SITE + "/themes/basic/style.css",
-                model.themeResource("basic", "style.css", true),
+        assertEquals(ABSOLUTE_SITE + "/themes/journal/style.css",
+                model.themeResource("journal", "style.css", true),
                 "The absolute form is needed inside feeds.");
-        assertEquals(SITE + "/themes/basic/style.css",
-                model.themeResource("basic", "style.css", false),
+        assertEquals(SITE + "/themes/journal/style.css",
+                model.themeResource("journal", "style.css", false),
                 "absolute=false must behave like the two-argument form.");
     }
 
@@ -584,7 +584,7 @@ class URLModelTest {
     @Test
     void theWeblogHandleAppearsVerbatimInEveryUrlFamily() throws Exception {
         Weblog other = new Weblog("myBlog2024", "testuser", "Other", "d",
-                "e@example.com", "basic", "en_US", "UTC");
+                "e@example.com", "journal", "en_US", "UTC");
         URLModel otherModel = modelFor(other, null, new MultiWeblogURLStrategy());
 
         assertEquals(ABSOLUTE_SITE + "/myBlog2024/", otherModel.getHome(),

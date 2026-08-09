@@ -71,7 +71,7 @@ class UtilitiesModelTest {
     /** Weblog constructor args are handle/creator/name/desc/email/theme/locale/timeZone. */
     private static Weblog weblog(String locale, String timeZone) {
         return new Weblog("testblog", "testuser", "Test Blog", "a test blog",
-                "blog@example.com", "basic", locale, timeZone);
+                "blog@example.com", "journal", locale, timeZone);
     }
 
     private static UtilitiesModel modelFor(Weblog weblog) {

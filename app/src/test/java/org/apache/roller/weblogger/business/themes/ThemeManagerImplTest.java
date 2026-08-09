@@ -76,7 +76,7 @@ class ThemeManagerImplTest {
         weblog = new Weblog();
         weblog.setHandle("themeblog");
         weblog.setName("Theme Blog");
-        weblog.setEditorTheme("basic");
+        weblog.setEditorTheme("journal");
 
         when(weblogger.mediaFileManager().getDefaultMediaFileDirectory(weblog))
                 .thenReturn(new MediaFileDirectory());
@@ -91,10 +91,10 @@ class ThemeManagerImplTest {
 
     @Test
     void aBundledThemeIsFoundById() throws Exception {
-        SharedTheme theme = themeManager.getTheme("basic");
+        SharedTheme theme = themeManager.getTheme("journal");
 
         assertNotNull(theme);
-        assertEquals("basic", theme.getId());
+        assertEquals("journal", theme.getId());
     }
 
     /**
@@ -112,7 +112,7 @@ class ThemeManagerImplTest {
         List<SharedTheme> themes = themeManager.getEnabledThemesList();
 
         List<String> ids = themes.stream().map(SharedTheme::getId).toList();
-        assertTrue(ids.containsAll(List.of("basic", "portfolio", "travel", "gaurav", "fauxcoly")),
+        assertTrue(ids.containsAll(List.of("journal", "portfolio", "travel", "frontpage")),
                 "every theme shipped in the themes directory must be offered: " + ids);
 
         List<String> names = themes.stream().map(SharedTheme::getName).toList();
@@ -168,15 +168,15 @@ class ThemeManagerImplTest {
 
     @Test
     void importingCopiesEveryThemeTemplateOntoTheWeblog() throws Exception {
-        SharedTheme basic = themeManager.getTheme("basic");
+        SharedTheme journal = themeManager.getTheme("journal");
 
-        themeManager.importTheme(weblog, basic, false);
+        themeManager.importTheme(weblog, journal, false);
 
         ArgumentCaptor<WeblogTemplate> saved = ArgumentCaptor.forClass(WeblogTemplate.class);
         verify(weblogger.weblogManager(), atLeastOnce()).saveTemplate(saved.capture());
 
         List<String> names = saved.getAllValues().stream().map(WeblogTemplate::getName).toList();
-        List<String> expected = basic.getTemplates().stream()
+        List<String> expected = journal.getTemplates().stream()
                 .map(org.apache.roller.weblogger.pojos.ThemeTemplate::getName).toList();
         assertTrue(names.containsAll(expected),
                 "every template the theme defines must be written to the weblog. expected "
@@ -193,7 +193,7 @@ class ThemeManagerImplTest {
      */
     @Test
     void importingSwitchesTheWeblogToCustomAndSavesIt() throws Exception {
-        themeManager.importTheme(weblog, themeManager.getTheme("basic"), false);
+        themeManager.importTheme(weblog, themeManager.getTheme("journal"), false);
 
         assertEquals(WeblogTheme.CUSTOM, weblog.getEditorTheme());
         verify(weblogger.weblogManager()).saveWeblog(weblog);
@@ -212,7 +212,7 @@ class ThemeManagerImplTest {
         when(weblogger.weblogManager().getTemplateByAction(weblog, ComponentType.WEBLOG))
                 .thenReturn(existing);
 
-        themeManager.importTheme(weblog, themeManager.getTheme("basic"), false);
+        themeManager.importTheme(weblog, themeManager.getTheme("journal"), false);
 
         ArgumentCaptor<WeblogTemplate> saved = ArgumentCaptor.forClass(WeblogTemplate.class);
         verify(weblogger.weblogManager(), atLeastOnce()).saveTemplate(saved.capture());
@@ -238,7 +238,7 @@ class ThemeManagerImplTest {
         when(weblogger.weblogManager().getTemplateByAction(weblog, ComponentType.TAGSINDEX))
                 .thenReturn(stale);
 
-        themeManager.importTheme(weblog, themeManager.getTheme("basic"), false);
+        themeManager.importTheme(weblog, themeManager.getTheme("journal"), false);
 
         verify(weblogger.weblogManager()).removeTemplate(stale);
     }
@@ -250,7 +250,7 @@ class ThemeManagerImplTest {
      */
     @Test
     void customTemplatesAreNeverDeletedByAnImport() throws Exception {
-        themeManager.importTheme(weblog, themeManager.getTheme("basic"), false);
+        themeManager.importTheme(weblog, themeManager.getTheme("journal"), false);
 
         verify(weblogger.weblogManager(), never())
                 .getTemplateByAction(any(), eq(ComponentType.CUSTOM));
@@ -264,9 +264,9 @@ class ThemeManagerImplTest {
      */
     @Test
     void skipStylesheetLeavesAnExistingStylesheetUntouched() throws Exception {
-        SharedTheme basic = themeManager.getTheme("basic");
-        org.apache.roller.weblogger.pojos.ThemeTemplate themeStylesheet = basic.getStylesheet();
-        assertNotNull(themeStylesheet, "the basic theme is expected to ship a stylesheet");
+        SharedTheme journal = themeManager.getTheme("journal");
+        org.apache.roller.weblogger.pojos.ThemeTemplate themeStylesheet = journal.getStylesheet();
+        assertNotNull(themeStylesheet, "the journal theme is expected to ship a stylesheet");
 
         WeblogTemplate customised = new WeblogTemplate();
         customised.setWeblog(weblog);
@@ -276,7 +276,7 @@ class ThemeManagerImplTest {
         when(weblogger.weblogManager().getTemplateByAction(weblog, ComponentType.STYLESHEET))
                 .thenReturn(customised);
 
-        themeManager.importTheme(weblog, basic, true);
+        themeManager.importTheme(weblog, journal, true);
 
         assertEquals("edited by the author", customised.getDescription(),
                 "the author's stylesheet must survive a re-import");
@@ -290,16 +290,16 @@ class ThemeManagerImplTest {
     /** Without the flag, the same re-import does overwrite the stylesheet. */
     @Test
     void withoutSkipStylesheetTheStylesheetIsOverwritten() throws Exception {
-        SharedTheme basic = themeManager.getTheme("basic");
+        SharedTheme journal = themeManager.getTheme("journal");
         WeblogTemplate customised = new WeblogTemplate();
         customised.setWeblog(weblog);
-        customised.setName(basic.getStylesheet().getName());
+        customised.setName(journal.getStylesheet().getName());
         customised.setAction(ComponentType.STYLESHEET);
         customised.setDescription("edited by the author");
         when(weblogger.weblogManager().getTemplateByAction(weblog, ComponentType.STYLESHEET))
                 .thenReturn(customised);
 
-        themeManager.importTheme(weblog, basic, false);
+        themeManager.importTheme(weblog, journal, false);
 
         ArgumentCaptor<WeblogTemplate> saved = ArgumentCaptor.forClass(WeblogTemplate.class);
         verify(weblogger.weblogManager(), atLeastOnce()).saveTemplate(saved.capture());
@@ -316,7 +316,7 @@ class ThemeManagerImplTest {
     void importingSurvivesAWeblogWithNoMediaDirectory() throws Exception {
         when(weblogger.mediaFileManager().getDefaultMediaFileDirectory(weblog)).thenReturn(null);
 
-        themeManager.importTheme(weblog, themeManager.getTheme("basic"), false);
+        themeManager.importTheme(weblog, themeManager.getTheme("journal"), false);
 
         assertEquals(WeblogTheme.CUSTOM, weblog.getEditorTheme());
     }

@@ -127,22 +127,22 @@ class ThemeEditControllerTest extends EditorControllerTestSupport {
 
     @Test
     void executeExcludesTheFrontpageThemeWhenItIsNotTheCurrentTheme() throws Exception {
-        weblog.setEditorTheme("basic");
+        weblog.setEditorTheme("journal");
         WeblogTheme currentTheme = mock(WeblogTheme.class);
-        when(currentTheme.getId()).thenReturn("basic");
+        when(currentTheme.getId()).thenReturn("journal");
         when(weblogger.getThemeManager().getTheme(weblog)).thenReturn(currentTheme);
 
         SharedTheme frontpage = mock(SharedTheme.class);
         when(frontpage.getId()).thenReturn("frontpage");
-        SharedTheme basic = mock(SharedTheme.class);
-        when(basic.getId()).thenReturn("basic");
-        when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, basic));
+        SharedTheme journal = mock(SharedTheme.class);
+        when(journal.getId()).thenReturn("journal");
+        when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, journal));
 
         controller.execute(request, model);
 
         @SuppressWarnings("unchecked")
         List<SharedTheme> themes = (List<SharedTheme>) model.getAttribute("themes");
-        assertEquals(List.of(basic), themes,
+        assertEquals(List.of(journal), themes,
                 "frontpage must not be offered to a weblog that is not already using it");
     }
 
@@ -155,15 +155,15 @@ class ThemeEditControllerTest extends EditorControllerTestSupport {
 
         SharedTheme frontpage = mock(SharedTheme.class);
         when(frontpage.getId()).thenReturn("frontpage");
-        SharedTheme basic = mock(SharedTheme.class);
-        when(basic.getId()).thenReturn("basic");
-        when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, basic));
+        SharedTheme journal = mock(SharedTheme.class);
+        when(journal.getId()).thenReturn("journal");
+        when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, journal));
 
         controller.execute(request, model);
 
         @SuppressWarnings("unchecked")
         List<SharedTheme> themes = (List<SharedTheme>) model.getAttribute("themes");
-        assertEquals(List.of(frontpage, basic), themes,
+        assertEquals(List.of(frontpage, journal), themes,
                 "a weblog already on frontpage must not be stranded with no way to keep or "
                         + "leave it");
     }
@@ -174,15 +174,15 @@ class ThemeEditControllerTest extends EditorControllerTestSupport {
 
         SharedTheme frontpage = mock(SharedTheme.class);
         when(frontpage.getId()).thenReturn("frontpage");
-        SharedTheme basic = mock(SharedTheme.class);
-        when(basic.getId()).thenReturn("basic");
-        when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, basic));
+        SharedTheme journal = mock(SharedTheme.class);
+        when(journal.getId()).thenReturn("journal");
+        when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, journal));
 
         controller.execute(request, model);
 
         @SuppressWarnings("unchecked")
         List<SharedTheme> themes = (List<SharedTheme>) model.getAttribute("themes");
-        assertEquals(List.of(basic), themes,
+        assertEquals(List.of(journal), themes,
                 "a weblog on a custom theme has no current SHARED theme id to grandfather "
                         + "frontpage against");
     }

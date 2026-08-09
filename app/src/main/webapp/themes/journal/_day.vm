@@ -13,7 +13,7 @@
     #foreach($entry in $entries)
     <article class="qj-reading">
         <p class="qj-crumb"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a> &middot; $utils.escapeHTML($entry.category.name)</p>
-        <h1 class="qj-h1">$utils.escapeHTML($entry.title)</h1>
+        <h1 class="qj-h1">$entry.title</h1>
         <p class="qj-byline">
             <span>By $utils.escapeHTML($entry.creator.screenName)</span>
             <span class="d">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</span>
@@ -26,7 +26,7 @@
 <article class="qj-entry">
     <p class="qj-date">$utils.formatDate($entry.pubTime, "MMM dd")<br>$utils.formatDate($entry.pubTime, "yyyy")</p>
     <div>
-        <h3 class="qj-title"><a href="$url.entry($entry.anchor)">$utils.escapeHTML($entry.title)</a></h3>
+        <h3 class="qj-title"><a href="$url.entry($entry.anchor)">$entry.title</a></h3>
         #if($utils.isNotEmpty($entry.searchDescription))
         <p class="qj-sum">$utils.escapeHTML($entry.searchDescription)</p>
         #end

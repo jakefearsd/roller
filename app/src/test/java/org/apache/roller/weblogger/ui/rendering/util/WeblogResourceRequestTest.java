@@ -222,11 +222,11 @@ class WeblogResourceRequestTest {
     void previewResourceCarriesTheThemeBeingPreviewed() throws Exception {
         HttpServletRequest servletRequest =
                 MockRequest.with(RESOURCE_SERVLET, "/myblog/images/header.png",
-                        "theme", "basic");
+                        "theme", "journal");
 
         WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(servletRequest);
 
-        assertEquals("basic", request.getThemeName());
+        assertEquals("journal", request.getThemeName());
         assertEquals("images/header.png", request.getResourcePath(),
                 "The preview variant must still parse the resource path");
     }

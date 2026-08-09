@@ -55,8 +55,8 @@ class JournalThemeRenderingTest {
      * Journal self-hosts Plex Serif/Sans/Mono via webjar, unlike travel and
      * portfolio (system fonts only, no font-src). CSP_STANDARD's
      * default-src 'none' blocks any directive it does not name, so a webfont
-     * theme needs its own font-src -- the same shape gaurav's CSP already
-     * carries (CSP_GAURAV in AnalyticsInjectionRenderingTest), added at the
+     * theme needs its own font-src (CSP_JOURNAL in
+     * AnalyticsInjectionRenderingTest pins the same string), added at the
      * same position. ThemeCspCoverageTest#everyFontAThemeAsksForIsShippedAndAllowedByItsPolicy
      * enforces this for every theme's CSS, not just this one.
      */

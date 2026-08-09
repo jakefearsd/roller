@@ -532,17 +532,17 @@ class LazyLookupTest {
         Weblogger weblogger = mock(Weblogger.class);
         SharedTheme theme = mock(SharedTheme.class);
         when(weblogger.getThemeManager()).thenReturn(themeManager);
-        when(themeManager.getTheme("basic")).thenReturn(theme);
+        when(themeManager.getTheme("journal")).thenReturn(theme);
 
         WeblogPreviewRequest request = new WeblogPreviewRequest(
-                MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "basic"));
+                MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "journal"));
 
         withWeblogger(weblogger, () -> {
             assertSame(theme, request.getTheme());
             assertSame(theme, request.getTheme());
         });
 
-        verify(themeManager, times(1)).getTheme("basic");
+        verify(themeManager, times(1)).getTheme("journal");
     }
 
     @Test
@@ -572,7 +572,7 @@ class LazyLookupTest {
                 .thenThrow(new WebloggerException("theme store unreadable"));
 
         WeblogPreviewRequest request = new WeblogPreviewRequest(
-                MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "basic"));
+                MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "journal"));
 
         withWeblogger(weblogger, () -> assertNull(request.getTheme()));
     }
@@ -635,18 +635,18 @@ class LazyLookupTest {
         Weblogger weblogger = mock(Weblogger.class);
         SharedTheme theme = mock(SharedTheme.class);
         when(weblogger.getThemeManager()).thenReturn(themeManager);
-        when(themeManager.getTheme("basic")).thenReturn(theme);
+        when(themeManager.getTheme("journal")).thenReturn(theme);
 
         WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(
                 MockRequest.with("/roller-ui/rendering/resources", "/myblog/logo.png",
-                        "theme", "basic"));
+                        "theme", "journal"));
 
         withWeblogger(weblogger, () -> {
             assertSame(theme, request.getTheme());
             assertSame(theme, request.getTheme());
         });
 
-        verify(themeManager, times(1)).getTheme("basic");
+        verify(themeManager, times(1)).getTheme("journal");
     }
 
     @Test
@@ -674,7 +674,7 @@ class LazyLookupTest {
 
         WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(
                 MockRequest.with("/roller-ui/rendering/resources", "/myblog/logo.png",
-                        "theme", "basic"));
+                        "theme", "journal"));
 
         withWeblogger(weblogger, () -> assertNull(request.getTheme()));
     }

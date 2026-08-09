@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>The travel and portfolio themes already have rendering tests that pin the
  * exact policy string. Those tests say nothing about the other themes, and
- * that gap was real: {@code basic}'s permalink and search pages rendered with
+ * that gap was real: the retired {@code basic} theme's permalink and search pages rendered with
  * no CSP at all while its front page had one, so a reader following a link to
  * a post silently lost the protection they had a moment earlier. Nothing
  * failed, because nothing looked.
@@ -54,7 +54,7 @@ class ThemeCspCoverageTest {
 
     /**
      * A page whose head is assembled from a shared template cannot carry the
-     * literal itself; it delegates. Themes doing that (gaurav, fauxcoly) keep
+     * literal itself; it delegates. Themes doing that (frontpage) keep
      * the policy in the included template.
      *
      * <p>The delegation only counts INSIDE the head. Nearly every page
@@ -184,7 +184,7 @@ class ThemeCspCoverageTest {
     /**
      * A theme that asks for a webfont must ship it and must allow it.
      *
-     * <p>Both halves were broken in {@code gaurav} and neither was visible.
+     * <p>Both halves were broken in the retired {@code gaurav} theme and neither was visible.
      * The policies here start from {@code default-src 'none'} and none of them
      * named {@code font-src}, so every webfont the theme asked for was refused
      * by the browser -- its icons simply did not draw. Behind that, its
@@ -238,7 +238,7 @@ class ThemeCspCoverageTest {
      * Whether a font a theme's CSS references actually ships somewhere.
      *
      * <p>A theme font comes from one of two places. Most take the {@code
-     * gaurav} shape this test was written for: a file vendored inside the
+     * gaurav} (retired) shape this test was written for: a file vendored inside the
      * theme's own directory, addressed by a path relative to the CSS file --
      * checked by resolving that path on disk, same as the original check.
      * {@code journal} takes the {@code roller-tokens.css} shape instead: IBM

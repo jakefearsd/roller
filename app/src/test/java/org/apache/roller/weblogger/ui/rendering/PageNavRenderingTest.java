@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code #showPageLinks} rendering a weblog's published pages into every
  * bundled theme's navigation, on the theme's own home page template.
  *
- * <p>One test looping the five themes rather than one method per theme --
+ * <p>One test looping the themes rather than one method per theme --
  * same economical fixture pattern as {@code PortfolioThemeRenderingTest} and
  * the browser suite's {@code ThemeMatrixIT}: the pages are created once and
  * only the theme switch (and re-render) repeats per iteration. Failures are
@@ -53,7 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PageNavRenderingTest {
 
     private static final List<String> THEMES =
-            List.of("basic", "fauxcoly", "gaurav", "portfolio", "travel");
+            List.of("journal", "portfolio", "travel");
 
     private static final String HANDLE = "pagenavrenderblog";
     private static final String BASE = "/roller/" + HANDLE;
@@ -206,7 +206,7 @@ class PageNavRenderingTest {
     void aNavLinkForASlugWithSpacesAndAnAmpersandRoundTripsToTheRealPage() throws Exception {
         savePage("space & page", "Roundtrip Page", WeblogPage.PubStatus.PUBLISHED, true, 1);
 
-        switchTheme("basic");
+        switchTheme("journal");
         RenderingTestSupport.clearRenderCaches();
         String body = renderHomePage();
 
@@ -236,7 +236,7 @@ class PageNavRenderingTest {
                 "clicking the rendered nav link must resolve the real page, not "
                         + "404 -- rendered href was " + href + ", decoded pathInfo was "
                         + pathInfo);
-        assertTrue(response.getContentAsString().contains("<h1>Roundtrip Page</h1>"),
+        assertTrue(response.getContentAsString().contains(">Roundtrip Page</h1>"),
                 "the resolved page must be the one the slug names:\n"
                         + response.getContentAsString());
     }

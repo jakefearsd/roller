@@ -56,7 +56,7 @@ class WeblogWrapperTest {
         weblog.setTagline("A tagline");
         weblog.setAbout("All about me");
         weblog.setEmailAddress("owner@example.com");
-        weblog.setEditorTheme("basic");
+        weblog.setEditorTheme("journal");
         weblog.setLocale("en_US");
         weblog.setTimeZone("America/New_York");
         weblog.setEntryDisplayCount(37);
@@ -89,7 +89,7 @@ class WeblogWrapperTest {
         assertEquals("A tagline", wrapper.getTagline());
         assertEquals("All about me", wrapper.getAbout());
         assertEquals("owner@example.com", wrapper.getEmailAddress());
-        assertEquals("basic", wrapper.getEditorTheme());
+        assertEquals("journal", wrapper.getEditorTheme());
         assertEquals("en_US", wrapper.getLocale());
         assertEquals("America/New_York", wrapper.getTimeZone());
         assertEquals(37, wrapper.getEntryDisplayCount());

@@ -81,7 +81,7 @@ class WeblogPreviewRequestTest {
 
     @Test
     void themeParameterNamesTheThemeBeingPreviewed() throws Exception {
-        assertEquals("basic", parse("/myblog", "theme", "basic").getThemeName());
+        assertEquals("journal", parse("/myblog", "theme", "journal").getThemeName());
         assertNull(parse("/myblog").getThemeName(),
                 "With no ?theme= the weblog's current theme is previewed");
     }

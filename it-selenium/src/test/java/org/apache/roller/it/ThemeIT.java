@@ -49,11 +49,11 @@ class ThemeIT extends RollerIT {
     /** Site-wide switch for whether a weblog may adopt a custom theme. */
     private static final String CUSTOM_THEMES_ALLOWED = "themes.customtheme.allowed";
 
-    /** Distinctive markup from the basic theme's weblog.vm. */
-    private static final String BASIC_MARKER = "id_weblog";
+    /** Distinctive markup from the journal theme's weblog.vm. */
+    private static final String JOURNAL_MARKER = "qj-entries";
 
-    /** Distinctive markup from the gaurav theme's weblog.vm. */
-    private static final String GAURAV_MARKER = "page-header";
+    /** Distinctive markup from the travel theme's weblog.vm. */
+    private static final String TRAVEL_MARKER = "tg-header";
 
     /**
      * The reader's view has to follow the switch.
@@ -67,19 +67,19 @@ class ThemeIT extends RollerIT {
      */
     @Test
     void switchingSharedThemesChangesWhatReadersSee() {
-        String handle = createWeblogWithTheme("basic");
+        String handle = createWeblogWithTheme("journal");
 
         String before = readerView(handle);
-        assertTrue(before.contains(BASIC_MARKER),
+        assertTrue(before.contains(JOURNAL_MARKER),
                 "the new weblog must render with the theme it was created with, got: "
                         + snippet(before));
 
-        switchToSharedTheme("gaurav", handle);
+        switchToSharedTheme("travel", handle);
 
         String after = readerView(handle);
-        assertTrue(after.contains(GAURAV_MARKER),
+        assertTrue(after.contains(TRAVEL_MARKER),
                 "a reader must get the newly chosen theme's markup, got: " + snippet(after));
-        assertFalse(after.contains(BASIC_MARKER),
+        assertFalse(after.contains(JOURNAL_MARKER),
                 "and must not still be getting the old theme's");
         logout();
     }
@@ -95,7 +95,7 @@ class ThemeIT extends RollerIT {
      */
     @Test
     void switchingToACustomThemeCopiesTheSharedTemplatesIntoTheWeblog() {
-        String handle = createWeblogWithTheme("basic");
+        String handle = createWeblogWithTheme("journal");
 
         openPath(templatesPath(handle));
         assertTrue(templateNames().isEmpty(),
@@ -115,7 +115,7 @@ class ThemeIT extends RollerIT {
             // And the blog still renders -- a copied theme that does not serve
             // is worse than no copy at all.
             String rendered = readerView(handle);
-            assertTrue(rendered.contains(BASIC_MARKER),
+            assertTrue(rendered.contains(JOURNAL_MARKER),
                     "the weblog must still render after being customised, got: "
                             + snippet(rendered));
         } finally {
@@ -131,12 +131,12 @@ class ThemeIT extends RollerIT {
      */
     @Test
     void theThemeEditorComesBackShowingTheThemeInForce() {
-        String handle = createWeblogWithTheme("basic");
+        String handle = createWeblogWithTheme("journal");
 
-        switchToSharedTheme("gaurav", handle);
+        switchToSharedTheme("travel", handle);
 
         openPath(themeEditPath(handle));
-        $("#themeSelector").shouldHave(value("gaurav"));
+        $("#themeSelector").shouldHave(value("travel"));
         $("#sharedRadio").shouldBe(checked);
 
         boolean wasAllowed = setGlobalFlag(CUSTOM_THEMES_ALLOWED, true);
@@ -164,7 +164,7 @@ class ThemeIT extends RollerIT {
      */
     @Test
     void aCustomThemeIsRefusedWhenTheSiteHasThemTurnedOff() {
-        String handle = createWeblogWithTheme("basic");
+        String handle = createWeblogWithTheme("journal");
 
         boolean wasAllowed = setGlobalFlag(CUSTOM_THEMES_ALLOWED, false);
         try {

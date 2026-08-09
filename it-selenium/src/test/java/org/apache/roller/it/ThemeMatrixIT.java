@@ -40,12 +40,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Every bundled theme rendering one rich entry, in a real browser.
  *
- * <p>Only {@code basic} had ever been through a browser. {@code portfolio} and
- * {@code travel} — the two themes this fork exists for — had unit rendering
- * tests pinning their markup and CSP strings, and nothing else. Those tests
- * compare strings; they cannot see a stylesheet that 404s, a webjar path that
- * moved, or a script that throws on load. {@link BrowserHealth} can, and does
- * so for every page this test opens.
+ * <p>The bundled themes have unit rendering tests pinning their markup and
+ * CSP strings, and nothing else. Those tests compare strings; they cannot see
+ * a stylesheet that 404s, a webjar path that moved, or a script that throws
+ * on load. {@link BrowserHealth} can, and does so for every page this test
+ * opens.
  *
  * <p>The fixture entry carries {@code [image]}, {@code [gallery]}, {@code [map]}
  * and {@code [faq]}, so each theme has to cope with a responsive picture, a
@@ -54,7 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p><b>One test, not one per theme.</b> The fixture costs roughly nine seconds
  * to build (log in, enable uploads, upload an image, create a weblog, publish);
- * five test methods would pay that five times over for a few seconds of
+ * one test method per theme would pay that repeatedly for a few seconds of
  * assertion each. Failures are collected per theme and reported together, so a
  * theme that breaks does not hide the state of the ones after it.
  *
@@ -68,12 +67,10 @@ class ThemeMatrixIT extends RollerIT {
      *
      * <p>Separate selectors because a theme renders its home page and its
      * permalink through different templates ({@code weblog.vm} vs
-     * {@code permalink.vm}/{@code entry.vm}), and only asserting on shared
-     * page furniture would let a broken permalink template pass. Where a theme
-     * marks its entry page distinctly ({@code basic}, {@code portfolio},
-     * {@code travel}) the permalink selector says so; {@code fauxcoly} and
-     * {@code gaurav} identify both pages by the same header, which is all the
-     * theme-side markup they have that is unique to them.
+     * {@code permalink.vm}), and only asserting on shared page furniture
+     * would let a broken permalink template pass. Every bundled theme marks
+     * its entry page distinctly, so each permalink selector names markup the
+     * home page does not carry.
      *
      * @param home      matches something only this theme's home page emits
      * @param permalink matches something only this theme's entry page emits
@@ -91,9 +88,7 @@ class ThemeMatrixIT extends RollerIT {
      * wear.
      */
     private static final List<BundledTheme> THEMES = List.of(
-            new BundledTheme("basic", "#id_weblog", "#id_permalink"),
-            new BundledTheme("fauxcoly", "#header_content", "#header_content"),
-            new BundledTheme("gaurav", ".page-header", ".page-header"),
+            new BundledTheme("journal", "body.qj .qj-entries", "body.qj main.qj-main-entry"),
             new BundledTheme("portfolio", "body.pf .pf-header", "body.pf main.pf-main-entry"),
             new BundledTheme("travel", "body.tg .tg-header", "body.tg main.tg-main-entry"));
 

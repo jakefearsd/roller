@@ -65,7 +65,7 @@ class PreviewServletRenderingTest {
 
         MockHttpServletRequest request = RenderingTestSupport
                 .anonymousGet("/roller-ui/authoring/preview", "/previewblog");
-        request.setParameter("theme", "gaurav");
+        request.setParameter("theme", "portfolio");
         MockHttpServletResponse response = RenderingTestSupport
                 .execute(RenderingTestSupport.previewServlet(), request);
 

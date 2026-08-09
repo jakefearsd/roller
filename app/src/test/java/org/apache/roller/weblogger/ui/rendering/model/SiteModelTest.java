@@ -103,7 +103,7 @@ class SiteModelTest {
         WebloggerRuntimeConfig.setAbsoluteContextURL("http://blogs.example.com/roller");
 
         weblog = new Weblog("frontpage", "testuser", "Front Page", "the site blog",
-                "blog@example.com", "basic", "en_US", "UTC");
+                "blog@example.com", "journal", "en_US", "UTC");
     }
 
     @AfterEach
@@ -135,7 +135,7 @@ class SiteModelTest {
 
     private static Weblog otherWeblog(String handle, String name) {
         return new Weblog(handle, "someone", name, "d", "e@example.com",
-                "basic", "en_US", "UTC");
+                "journal", "en_US", "UTC");
     }
 
     // ------------------------------------------------------------------ init

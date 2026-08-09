@@ -33,19 +33,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Renders every one of the six theme heads through the real PageServlet /
- * SearchServlet and asserts that {@code #showGalleryAssets} ships the
- * PhotoSwipe lightbox assets <em>exactly once</em> per page: the webjar
- * stylesheet link, the two ESM module references (the lightbox controller,
- * and the lazily-imported core), and the {@code .jgrid} presence guard that
- * keeps gallery-less pages from downloading any of the JS.
+ * Renders the theme heads through the real PageServlet / SearchServlet and
+ * asserts that {@code #showGalleryAssets} ships the PhotoSwipe lightbox
+ * assets <em>exactly once</em> per page: the webjar stylesheet link, the two
+ * ESM module references (the lightbox controller, and the lazily-imported
+ * core), and the {@code .jgrid} presence guard that keeps gallery-less pages
+ * from downloading any of the JS.
  *
- * <p>gaurav and fauxcoly share one head fragment across their five page
- * types, so a single render each covers them; basic repeats its head in
- * three top-level templates, so all three are rendered; frontpage has its
- * own shared {@code _header}. A theme head that called the macro twice (or
- * a shared fragment included twice) would double-initialize the lightbox,
- * which is why these are exact-count assertions rather than "contains".
+ * <p>journal repeats its head in three top-level templates, so all three are
+ * rendered; frontpage has its own shared {@code _header}. A theme head that
+ * called the macro twice (or a shared fragment included twice) would
+ * double-initialize the lightbox, which is why these are exact-count
+ * assertions rather than "contains". portfolio and travel pin their own
+ * heads in their dedicated theme rendering tests.
  */
 class GalleryAssetsRenderingTest {
 
@@ -113,23 +113,23 @@ class GalleryAssetsRenderingTest {
                 head + " leaked the macro directive:\n" + body);
     }
 
-    // ------------------------------------------------------------- six heads
+    // ------------------------------------------------------------ theme heads
 
     @Test
-    void basicFrontPageShipsTheLightboxAssetsOnce() throws Exception {
-        assertAssetsExactlyOnce(render("/" + HANDLE), "basic weblog.vm");
+    void journalFrontPageShipsTheLightboxAssetsOnce() throws Exception {
+        assertAssetsExactlyOnce(render("/" + HANDLE), "journal weblog.vm");
     }
 
     @Test
-    void basicPermalinkShipsTheLightboxAssetsOnce() throws Exception {
+    void journalPermalinkShipsTheLightboxAssetsOnce() throws Exception {
         TestUtils.setupWeblogEntry("asset-entry", weblog, user);
         TestUtils.endSession(true);
         assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/asset-entry"),
-                "basic permalink.vm");
+                "journal permalink.vm");
     }
 
     @Test
-    void basicSearchResultsShipTheLightboxAssetsOnce() throws Exception {
+    void journalSearchResultsShipTheLightboxAssetsOnce() throws Exception {
         MockHttpServletRequest request = RenderingTestSupport
                 .anonymousGet("/roller-ui/rendering/search", "/" + HANDLE);
         request.setParameter("q", "anything");
@@ -137,50 +137,13 @@ class GalleryAssetsRenderingTest {
                 .execute(RenderingTestSupport.searchServlet(), request);
         assertEquals(200, response.getStatus());
         assertAssetsExactlyOnce(response.getContentAsString(),
-                "basic searchresults.vm");
+                "journal searchresults.vm");
     }
 
     @Test
     void frontpageThemeShipsTheLightboxAssetsOnce() throws Exception {
         switchTheme("frontpage");
         assertAssetsExactlyOnce(render("/" + HANDLE), "frontpage _header.vm");
-    }
-
-    @Test
-    void gauravSharedHeadShipsTheLightboxAssetsOnce() throws Exception {
-        switchTheme("gaurav");
-        assertAssetsExactlyOnce(render("/" + HANDLE), "gaurav std_head.vm");
-    }
-
-    @Test
-    void fauxcolySharedHeadShipsTheLightboxAssetsOnce() throws Exception {
-        switchTheme("fauxcoly");
-        assertAssetsExactlyOnce(render("/" + HANDLE), "fauxcoly std_head.vm");
-    }
-
-    // ------------------------------------------------- gaurav/fauxcoly permalinks
-
-    /**
-     * The shared-head themes' permalink templates pull the same fragment in
-     * through {@code #includeTemplate}; prove the include path does not emit
-     * the assets a second time on the page type T4 actually targets.
-     */
-    @Test
-    void gauravPermalinkDoesNotDoubleEmitTheAssets() throws Exception {
-        switchTheme("gaurav");
-        TestUtils.setupWeblogEntry("gaurav-asset-entry", weblog, user);
-        TestUtils.endSession(true);
-        assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/gaurav-asset-entry"),
-                "gaurav permalink");
-    }
-
-    @Test
-    void fauxcolyPermalinkDoesNotDoubleEmitTheAssets() throws Exception {
-        switchTheme("fauxcoly");
-        TestUtils.setupWeblogEntry("fauxcoly-asset-entry", weblog, user);
-        TestUtils.endSession(true);
-        assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/fauxcoly-asset-entry"),
-                "fauxcoly permalink");
     }
 
     /**

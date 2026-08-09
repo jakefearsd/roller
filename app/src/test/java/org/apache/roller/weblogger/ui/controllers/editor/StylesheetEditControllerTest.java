@@ -65,7 +65,7 @@ class StylesheetEditControllerTest extends EditorControllerTestSupport {
     void setUp() throws Exception {
         controller = prepare(new StylesheetEditController());
         model = newModel();
-        weblog.setEditorTheme("basic");
+        weblog.setEditorTheme("journal");
 
         sharedStylesheet = mock(ThemeTemplate.class);
         when(sharedStylesheet.getLink()).thenReturn(STYLESHEET_LINK);
@@ -74,7 +74,7 @@ class StylesheetEditControllerTest extends EditorControllerTestSupport {
 
         sharedTheme = mock(SharedTheme.class);
         when(sharedTheme.getStylesheet()).thenReturn(sharedStylesheet);
-        when(weblogger.getThemeManager().getTheme("basic")).thenReturn(sharedTheme);
+        when(weblogger.getThemeManager().getTheme("journal")).thenReturn(sharedTheme);
 
         template = new WeblogTemplate();
         template.setId("tmpl-1");

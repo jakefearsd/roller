@@ -56,7 +56,7 @@ INSERT INTO weblog (id, name, handle, tagline, creator,
                     displaycnt, enablemultilang, showalllangs)
 VALUES ('it-weblog-0000-0000-0000-00000000001',
         'IT Weblog', 'it_weblog', 'Integration test weblog', 'it_admin',
-        true, false, 'it-admin@example.invalid', 'basic',
+        true, false, 'it-admin@example.invalid', 'journal',
         'en_US', 'UTC', true, true, NOW(),
         true, 7, false, 15, false, true)
 ON CONFLICT (handle) DO NOTHING;

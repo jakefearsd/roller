@@ -99,7 +99,7 @@ public class WeblogTest  {
             testWeblog.setTagline("Test Weblog");
             testWeblog.setHandle("testweblog");
             testWeblog.setEmailAddress("testweblog@dev.null");
-            testWeblog.setEditorTheme("basic");
+            testWeblog.setEditorTheme("journal");
             testWeblog.setLocale("en_US");
             testWeblog.setTimeZone("America/Los_Angeles");
             testWeblog.setDateCreated(new java.util.Date());

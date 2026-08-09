@@ -45,11 +45,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * rendering, and the "show in navigation" toggle.
  *
  * <p>This owns its own weblog on the {@code portfolio} shared theme rather
- * than using the seeded {@code it_weblog}: {@code basic} (the seeded
- * weblog's theme) never calls {@code #showPageLinks} in any of its
- * templates, so nav-link coverage needs a theme that actually renders one --
- * {@code portfolio} and {@code travel} are the two that do. Never switching
- * the seeded weblog's theme is the rule this sidesteps by not needing to.
+ * than using the seeded {@code it_weblog}: nav-link coverage needs a theme
+ * that renders {@code #showPageLinks}, and owning the weblog keeps this
+ * suite honest about the rule that the seeded weblog's theme is never
+ * switched -- sidestepped here by not needing to.
  *
  * <p>The draft-is-invisible assertion is a plain anonymous HTTP status check
  * rather than a browser navigation, the same choice {@code AuthoringJourneyIT}
@@ -139,7 +138,7 @@ class PageIT extends RollerIT {
 
     /**
      * Creates a weblog owned by the seeded admin on the {@code portfolio}
-     * theme -- see the class comment for why {@code basic} will not do.
+     * theme -- see the class comment for why it owns a weblog at all.
      */
     private String createWeblog() {
         String handle = "pageit" + nonce();

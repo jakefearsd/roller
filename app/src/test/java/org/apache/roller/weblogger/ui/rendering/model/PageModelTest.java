@@ -96,7 +96,7 @@ class PageModelTest {
         WebloggerRuntimeConfig.setAbsoluteContextURL("http://localhost:8080/roller");
 
         weblog = new Weblog("testblog", "testuser", "Test Blog", "a test blog",
-                "blog@example.com", "basic", "en_US", "UTC");
+                "blog@example.com", "journal", "en_US", "UTC");
     }
 
     @AfterEach

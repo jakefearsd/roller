@@ -48,8 +48,8 @@ public class ThemeManagerTest  {
         ThemeManager themeManager = WebloggerFactory.getWeblogger().getThemeManager();
         themeManager.initialize();
 
-        assertNotNull( themeManager.getTheme("basic") );
-        assertNotNull( themeManager.getTheme("basic").getStylesheet() );
+        assertNotNull( themeManager.getTheme("journal") );
+        assertNotNull( themeManager.getTheme("journal").getStylesheet() );
         assertNull( themeManager.getTheme("frontpage").getStylesheet() );
     }
         

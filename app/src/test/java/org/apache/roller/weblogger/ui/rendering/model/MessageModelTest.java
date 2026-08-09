@@ -46,7 +46,7 @@ class MessageModelTest {
     private static MessageModel modelFor(String locale) throws WebloggerException {
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(new Weblog("testblog", "testuser", "Test Blog", "d",
-                "e@example.com", "basic", "en_US", "UTC"));
+                "e@example.com", "journal", "en_US", "UTC"));
         request.setLocale(locale);
 
         Map<String, Object> initData = new HashMap<>();

@@ -70,7 +70,7 @@ class ThemeDataServletTest {
     void askingForEverythingReturnsAJsonArrayOfEveryEnabledTheme() throws Exception {
         // Built before the stubbing call, not inside thenReturn: Mockito treats a
         // mock() created mid-when() as an unfinished stubbing and fails.
-        List<SharedTheme> all = List.of(theme("basic", "Basic"), theme("travel", "Travel"));
+        List<SharedTheme> all = List.of(theme("journal", "Journal"), theme("travel", "Travel"));
         when(weblogger.themeManager().getEnabledThemesList()).thenReturn(all);
 
         servlet.doGet(request, response);
@@ -78,7 +78,7 @@ class ThemeDataServletTest {
         String body = response.getContentAsString();
         assertTrue(body.trim().startsWith("["),
                 "the chooser parses this as an array: " + body);
-        assertTrue(body.contains("\"basic\"") && body.contains("\"travel\""),
+        assertTrue(body.contains("\"journal\"") && body.contains("\"travel\""),
                 "every enabled theme must be listed: " + body);
         assertTrue(response.getContentType().startsWith("application/json"),
                 "got: " + response.getContentType());
@@ -121,14 +121,14 @@ class ThemeDataServletTest {
     /** The chooser posts on some paths; both verbs must answer alike. */
     @Test
     void postIsAnAliasForGet() throws Exception {
-        SharedTheme basic = theme("basic", "Basic");
-        when(weblogger.themeManager().getTheme("basic")).thenReturn(basic);
+        SharedTheme journal = theme("journal", "Journal");
+        when(weblogger.themeManager().getTheme("journal")).thenReturn(journal);
         request.setMethod("POST");
-        request.setParameter("theme", "basic");
+        request.setParameter("theme", "journal");
 
         servlet.doPost(request, response);
 
-        assertTrue(response.getContentAsString().contains("\"basic\""),
+        assertTrue(response.getContentAsString().contains("\"journal\""),
                 "got: " + response.getContentAsString());
     }
 

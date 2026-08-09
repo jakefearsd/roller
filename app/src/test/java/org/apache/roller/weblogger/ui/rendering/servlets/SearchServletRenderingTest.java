@@ -44,8 +44,9 @@ class SearchServletRenderingTest {
         assertEquals(200, response.getStatus());
         assertTrue(response.getContentType().startsWith("text/html"));
         String body = response.getContentAsString();
-        assertTrue(body.contains("Search Results for"),
-                "search results template must render:\n" + body);
+        assertTrue(body.contains("Entries found for"),
+                "search results template must render the search-again form's "
+                        + "hit count (macro.weblog.searchhits):\n" + body);
         assertTrue(body.contains("Test Weblog"),
                 "weblog name must appear on the search page:\n" + body);
     }

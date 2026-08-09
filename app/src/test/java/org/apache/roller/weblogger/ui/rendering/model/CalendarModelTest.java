@@ -92,7 +92,7 @@ class CalendarModelTest {
         WebloggerRuntimeConfig.setRelativeContextURL("/roller");
 
         weblog = new Weblog("testblog", "testuser", "Test Blog", "a test blog",
-                "blog@example.com", "basic", "en_US", "UTC");
+                "blog@example.com", "journal", "en_US", "UTC");
 
         // CalendarTag reads its model back out of the page context, so the mock
         // has to behave like real page scope rather than swallowing writes —
@@ -210,7 +210,7 @@ class CalendarModelTest {
                 .showWeblogEntryCalendar(wrappedWeblog(), "nil");
 
         weblog = new Weblog("frblog", "testuser", "Blog FR", "d", "e@example.com",
-                "basic", "fr", "UTC");
+                "journal", "fr", "UTC");
         pageScope.clear();
         String french = modelFor(pageRequest())
                 .showWeblogEntryCalendar(wrappedWeblog(), "nil");

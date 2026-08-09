@@ -40,12 +40,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * theme's footer: it renders the {@code subscribe-form-slot} placeholder
  * (plus the {@code #showAudienceAssets} injector marker) only when the
  * weblog has a newsletter list configured, and renders nothing at all
- * otherwise. Modeled on {@code PageNavRenderingTest}'s five-theme loop.
+ * otherwise. Modeled on {@code PageNavRenderingTest}'s theme loop.
  */
 class SubscribeFormRenderingTest {
 
     private static final List<String> THEMES =
-            List.of("basic", "fauxcoly", "gaurav", "portfolio", "travel");
+            List.of("journal", "portfolio", "travel");
 
     private static final String HANDLE = "subscribeformrenderblog";
     private static final String LIST_UUID = "2f0f1b0c-1111-2222-3333-444455556666";

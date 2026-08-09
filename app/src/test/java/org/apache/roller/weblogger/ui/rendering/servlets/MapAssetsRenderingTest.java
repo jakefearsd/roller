@@ -36,19 +36,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Renders all <em>nine</em> {@code #showSeoHead} call sites across the five
- * bundled themes and asserts that {@code #showMapAssets} ships the Leaflet
- * assets <em>exactly once</em> per page: the webjar stylesheet, the webjar
+ * Renders the {@code #showSeoHead} call sites across the bundled themes and
+ * asserts that {@code #showMapAssets} ships the Leaflet assets
+ * <em>exactly once</em> per page: the webjar stylesheet, the webjar
  * script URL the bootstrap injects, the three marker images pinned onto
  * {@code L.Icon.Default}, the configured tile template, the OSM attribution
  * the tile policy requires, and the {@code .travel-map} presence guard that
  * keeps map-less pages from downloading any of it.
  *
  * <p>Missing one call site is a silent failure: the {@code [map]} div still
- * renders and simply never becomes a map. gaurav and fauxcoly share one head
- * fragment across their page types, so a front page each covers them (their
- * permalinks are separately proved not to double-emit); basic and portfolio
- * repeat the head in three top-level templates apiece; frontpage has its own
+ * renders and simply never becomes a map. journal and portfolio repeat the
+ * head in three top-level templates apiece; frontpage has its own
  * {@code _header}.
  *
  * <p>This file also owns the CSP half of the change: Leaflet paints aborted
@@ -85,7 +83,7 @@ class MapAssetsRenderingTest {
      * <p>Was the whole policy string, verbatim, which pinned far more than the
      * subject: it made every theme's policy identical by assertion, so a theme
      * could not name a directive its own assets need without failing a map
-     * test. {@code gaurav} needs {@code font-src} for its icon font and this
+     * test. {@code journal} needs {@code font-src} for its webfonts and this
      * check was what stood in the way. What matters here is only that
      * {@code data:} images are allowed; the directives every theme genuinely
      * shares ({@code script-src}, {@code connect-src}, and having a policy at
@@ -186,23 +184,23 @@ class MapAssetsRenderingTest {
                 head + " leaked the tile-URL reference; $config is not in scope:\n" + body);
     }
 
-    // ------------------------------------------------------------- nine heads
+    // ------------------------------------------------------------ theme heads
 
     @Test
-    void basicFrontPageShipsTheMapAssetsOnce() throws Exception {
-        assertAssetsExactlyOnce(render("/" + HANDLE), "basic weblog.vm");
+    void journalFrontPageShipsTheMapAssetsOnce() throws Exception {
+        assertAssetsExactlyOnce(render("/" + HANDLE), "journal weblog.vm");
     }
 
     @Test
-    void basicPermalinkShipsTheMapAssetsOnce() throws Exception {
+    void journalPermalinkShipsTheMapAssetsOnce() throws Exception {
         entryWithText("map-asset-entry", "<p>nothing to see</p>");
         assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/map-asset-entry"),
-                "basic permalink.vm");
+                "journal permalink.vm");
     }
 
     @Test
-    void basicSearchResultsShipTheMapAssetsOnce() throws Exception {
-        assertAssetsExactlyOnce(search(), "basic searchresults.vm");
+    void journalSearchResultsShipTheMapAssetsOnce() throws Exception {
+        assertAssetsExactlyOnce(search(), "journal searchresults.vm");
     }
 
     @Test
@@ -229,36 +227,6 @@ class MapAssetsRenderingTest {
     void frontpageThemeShipsTheMapAssetsOnce() throws Exception {
         switchTheme("frontpage");
         assertAssetsExactlyOnce(render("/" + HANDLE), "frontpage _header.vm");
-    }
-
-    @Test
-    void gauravSharedHeadShipsTheMapAssetsOnce() throws Exception {
-        switchTheme("gaurav");
-        assertAssetsExactlyOnce(render("/" + HANDLE), "gaurav std_head.vm");
-    }
-
-    @Test
-    void fauxcolySharedHeadShipsTheMapAssetsOnce() throws Exception {
-        switchTheme("fauxcoly");
-        assertAssetsExactlyOnce(render("/" + HANDLE), "fauxcoly std_head.vm");
-    }
-
-    // ------------------------------------------- shared-head double emission
-
-    @Test
-    void gauravPermalinkDoesNotDoubleEmitTheAssets() throws Exception {
-        switchTheme("gaurav");
-        entryWithText("gaurav-map-entry", "<p>nothing to see</p>");
-        assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/gaurav-map-entry"),
-                "gaurav permalink");
-    }
-
-    @Test
-    void fauxcolyPermalinkDoesNotDoubleEmitTheAssets() throws Exception {
-        switchTheme("fauxcoly");
-        entryWithText("fauxcoly-map-entry", "<p>nothing to see</p>");
-        assertAssetsExactlyOnce(render("/" + HANDLE + "/entry/fauxcoly-map-entry"),
-                "fauxcoly permalink");
     }
 
     // -------------------------------------------------------------- the guard
@@ -293,7 +261,7 @@ class MapAssetsRenderingTest {
                 "the [map] shortcode must survive the sanitizer:\n" + body);
         assertTrue(body.contains("data-pins="),
                 "the pin payload must reach the reader:\n" + body);
-        assertAssetsExactlyOnce(body, "basic permalink with a map");
+        assertAssetsExactlyOnce(body, "journal permalink with a map");
     }
 
     // ----------------------------------------------------------------- CSP
@@ -306,11 +274,11 @@ class MapAssetsRenderingTest {
      */
     @Test
     void everyDeclaringHeadAllowsDataUrisForImages() throws Exception {
-        String basicBody = render("/" + HANDLE);
-        assertTrue(basicBody.contains(CSP_DATA_IMAGES),
-                "basic weblog.vm must allow data: images");
-        assertTrue(basicBody.contains(CSP_VIDEO_FRAMES),
-                "basic weblog.vm must allow the video providers' frames");
+        String journalBody = render("/" + HANDLE);
+        assertTrue(journalBody.contains(CSP_DATA_IMAGES),
+                "journal weblog.vm must allow data: images");
+        assertTrue(journalBody.contains(CSP_VIDEO_FRAMES),
+                "journal weblog.vm must allow the video providers' frames");
 
         // frontpage is out of scope for the [video] CSP widening -- it renders
         // through $site, a different model, and #showEmbedAssets was not added
@@ -318,20 +286,6 @@ class MapAssetsRenderingTest {
         switchTheme("frontpage");
         assertTrue(render("/" + HANDLE).contains(CSP_DATA_IMAGES),
                 "frontpage _header.vm must allow data: images");
-
-        switchTheme("gaurav");
-        String gauravBody = render("/" + HANDLE);
-        assertTrue(gauravBody.contains(CSP_DATA_IMAGES),
-                "gaurav std_head.vm must allow data: images");
-        assertTrue(gauravBody.contains(CSP_VIDEO_FRAMES),
-                "gaurav std_head.vm must allow the video providers' frames");
-
-        switchTheme("fauxcoly");
-        String fauxcolyBody = render("/" + HANDLE);
-        assertTrue(fauxcolyBody.contains(CSP_DATA_IMAGES),
-                "fauxcoly weblog.vm must allow data: images");
-        assertTrue(fauxcolyBody.contains(CSP_VIDEO_FRAMES),
-                "fauxcoly weblog.vm must allow the video providers' frames");
 
         switchTheme("portfolio");
         String portfolioBody = render("/" + HANDLE);
@@ -353,7 +307,7 @@ class MapAssetsRenderingTest {
     }
 
     /**
-     * Guards the guard above: the seven declaring files must not have drifted
+     * Guards the guard above: the declaring files must not have drifted
      * back to a bare {@code img-src *}, which would still contain the rest of
      * the policy and pass a naive substring check elsewhere.
      */

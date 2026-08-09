@@ -155,7 +155,7 @@ class ScheduledEntryIT extends RollerIT {
         $("#name").should(visible).setValue("Scheduled " + handle);
         $("#handle").setValue(handle);
         $("#emailAddress").setValue(handle + "@example.invalid");
-        $("select[name='theme']").selectOptionByValue("basic");
+        $("select[name='theme']").selectOptionByValue("journal");
         $("button[type='submit']").click();
 
         $("#messages").should(exist);

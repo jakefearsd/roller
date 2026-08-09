@@ -40,12 +40,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * bundled theme, BOTH the placeholder ({@code contact-form-slot}) AND the
  * {@code #showAudienceAssets} injector marker ({@code audience-hp}) -- proving
  * the shortcode and its client-side macro ship together. Modeled on
- * {@code PageNavRenderingTest}'s five-theme loop.
+ * {@code PageNavRenderingTest}'s theme loop.
  */
 class AudienceAssetsRenderingTest {
 
     private static final List<String> THEMES =
-            List.of("basic", "fauxcoly", "gaurav", "portfolio", "travel");
+            List.of("journal", "portfolio", "travel");
 
     private static final String HANDLE = "audienceassetsblog";
 

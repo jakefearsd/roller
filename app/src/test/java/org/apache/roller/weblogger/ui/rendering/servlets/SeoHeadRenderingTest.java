@@ -215,7 +215,7 @@ class SeoHeadRenderingTest {
         return typed;
     }
 
-    // ----------------------------------------------------------------- basic
+    // --------------------------------------------------------------- journal
 
     @Test
     void permalinkEmitsTheFullSeoBaseline() throws Exception {
@@ -370,7 +370,7 @@ class SeoHeadRenderingTest {
         assertTrue(body.contains("<title>SEO Title Override : Test Weblog</title>"),
                 "the meta title must replace the page title in <title>:\n" + body);
         assertTrue(body.contains("<meta property=\"og:title\" content=\"SEO Title Override\">"));
-        assertTrue(body.contains("<h1>Real Page Title</h1>"),
+        assertTrue(body.contains(">Real Page Title</h1>"),
                 "the meta title must not leak into the page's own heading:\n" + body);
     }
 
@@ -870,41 +870,6 @@ class SeoHeadRenderingTest {
     // ---------------------------------------------------------- other themes
 
     @Test
-    void gauravThemeEmitsTheSeoBaseline() throws Exception {
-        switchTheme("gaurav");
-        WeblogEntry entry = TestUtils.setupWeblogEntry("gaurav-entry", weblog, user);
-        updateEntry(entry, e -> e.setMetaTitle("Gaurav meta title"));
-
-        String body = render("/" + HANDLE + "/entry/gaurav-entry");
-
-        assertTrue(body.contains("<link rel=\"canonical\" href=\""
-                        + BASE + "/entry/gaurav-entry\">"),
-                "gaurav permalinks must carry the canonical link:\n" + body);
-        assertTrue(body.contains("<meta property=\"og:type\" content=\"article\">"));
-        assertTrue(body.contains("<title>Test Weblog: Gaurav meta title</title>"),
-                "gaurav's entry <title> must honour the meta title override:\n" + body);
-        singleLdJson(body, "BlogPosting");
-        assertFalse(body.contains("<meta name=\"Description\""),
-                "the theme's old hand-rolled Description meta must be gone:\n" + body);
-    }
-
-    @Test
-    void fauxcolyThemeEmitsTheSeoBaselineForTheFirstTime() throws Exception {
-        switchTheme("fauxcoly");
-        WeblogEntry entry = TestUtils.setupWeblogEntry("fauxcoly-entry", weblog, user);
-        updateEntry(entry, e -> e.setSearchDescription("Fauxcoly gets metas now"));
-
-        String body = render("/" + HANDLE + "/entry/fauxcoly-entry");
-
-        assertTrue(body.contains(
-                "<meta name=\"description\" content=\"Fauxcoly gets metas now\">"),
-                "fauxcoly historically had no meta description at all:\n" + body);
-        assertTrue(body.contains("<link rel=\"canonical\" href=\""
-                        + BASE + "/entry/fauxcoly-entry\">"));
-        singleLdJson(body, "BlogPosting");
-    }
-
-    @Test
     void frontpageThemeEmitsTheSeoBaseline() throws Exception {
         switchTheme("frontpage");
 
@@ -918,7 +883,7 @@ class SeoHeadRenderingTest {
     }
 
     @Test
-    void basicSearchResultsPageClaimsNoCanonicalUrl() throws Exception {
+    void searchResultsPageClaimsNoCanonicalUrl() throws Exception {
         TestUtils.setupWeblogEntry("searchable-entry", weblog, user);
         TestUtils.endSession(true);
 

@@ -191,7 +191,7 @@ class WeblogLogicTest {
         source.setAllowComments(Boolean.FALSE);
         source.setEmailComments(Boolean.TRUE);
         source.setEmailAddress("owner@example.com");
-        source.setEditorTheme("basic");
+        source.setEditorTheme("journal");
         source.setLocale("fr_FR");
         source.setTimeZone("America/New_York");
         source.setVisible(Boolean.FALSE);
@@ -212,7 +212,7 @@ class WeblogLogicTest {
         assertEquals(Boolean.FALSE, weblog.getAllowComments());
         assertEquals(Boolean.TRUE, weblog.getEmailComments());
         assertEquals("owner@example.com", weblog.getEmailAddress());
-        assertEquals("basic", weblog.getEditorTheme());
+        assertEquals("journal", weblog.getEditorTheme());
         assertEquals("fr_FR", weblog.getLocale());
         assertEquals("America/New_York", weblog.getTimeZone());
         assertEquals(Boolean.FALSE, weblog.getVisible());
