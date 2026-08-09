@@ -1,0 +1,98 @@
+<!-- @dsCard group="Frontpage" name="Front door" subtitle="Aggregator: recent posts across weblogs plus the weblog directory" -->
+<style>
+  .fd-card * { margin: 0; padding: 0; box-sizing: border-box; }
+  .fd-card { display: flex; gap: 24px; flex-wrap: wrap; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+  .fd-panel { flex: 1 1 460px; border-radius: 6px; padding: 28px 32px 36px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink); }
+  .fd-light { --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --focus:#2AA198; }
+  .fd-dark  { --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --focus:#2AA198; }
+  .fd-mode { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft);
+    font-weight: 600; margin-bottom: 20px; }
+  .fd-hero { padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+  .fd-site { font-family: "IBM Plex Serif", Georgia, serif; font-size: 28px; font-weight: 600;
+    letter-spacing: -.01em; }
+  .fd-tag { color: var(--ink-soft); font-size: 15px; margin-top: 4px; max-width: 46ch; }
+  .fd-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600;
+    color: var(--ink-soft); margin: 22px 0 12px; }
+  .fd-post { display: grid; grid-template-columns: 88px 1fr; gap: 0 18px; padding: 10px 0; }
+  .fd-post + .fd-post { border-top: 1px solid var(--line); }
+  .fd-post .d { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px;
+    color: var(--ink-soft); padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .fd-post .t { font-size: 15.5px; font-weight: 600; line-height: 1.35; }
+  .fd-post .t a { color: var(--ink); text-decoration: none; }
+  .fd-post .t a:hover { color: var(--accent); }
+  .fd-post .from { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+  .fd-post .from b { color: var(--accent); font-weight: 600; }
+  .fd-dir { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fd-blog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px;
+    background: linear-gradient(135deg, var(--accent-quiet), var(--surface) 65%); }
+  .fd-blog .n { font-family: "IBM Plex Serif", Georgia, serif; font-size: 16.5px; font-weight: 600; }
+  .fd-blog .h { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px;
+    color: var(--ink-soft); margin-top: 2px; }
+  .fd-blog .desc { font-size: 13px; color: var(--ink-soft); margin-top: 8px; line-height: 1.5; }
+  .fd-blog .live { display: inline-block; width: 7px; height: 7px; border-radius: 99px;
+    background: var(--good); margin-right: 6px; }
+  @media (max-width: 560px) { .fd-dir { grid-template-columns: 1fr; } .fd-post { grid-template-columns: 1fr; } }
+</style>
+<div class="fd-card">
+  <div class="fd-panel fd-light">
+    <p class="fd-mode">Light</p>
+    <div class="fd-hero">
+      <p class="fd-site">Coastal Guides</p>
+      <p class="fd-tag">Travel guides, rental notes, and photography from the coast — all of it,
+        in one place.</p>
+    </div>
+    <p class="fd-label">Latest across the site</p>
+    <div class="fd-post"><span class="d">Aug 09</span><div>
+      <p class="t"><a href="#">Field Notes from the Coast</a></p>
+      <p class="from">from <b>Harbor Notes</b></p></div></div>
+    <div class="fd-post"><span class="d">Aug 07</span><div>
+      <p class="t"><a href="#">Dune Light, First Frame</a></p>
+      <p class="from">from <b>Maiia — Photography</b></p></div></div>
+    <div class="fd-post"><span class="d">Aug 02</span><div>
+      <p class="t"><a href="#">Harbor Cottage Guide</a></p>
+      <p class="from">from <b>Harbor Notes</b></p></div></div>
+    <p class="fd-label">Weblogs</p>
+    <div class="fd-dir">
+      <div class="fd-blog">
+        <p class="n">Harbor Notes</p><p class="h"><span class="live"></span>harbor-notes</p>
+        <p class="desc">Guides and working notes for the rentals we love.</p>
+      </div>
+      <div class="fd-blog">
+        <p class="n">Maiia — Photography</p><p class="h"><span class="live"></span>maiia</p>
+        <p class="desc">Coastline portfolios, printed and otherwise.</p>
+      </div>
+    </div>
+  </div>
+  <div class="fd-panel fd-dark">
+    <p class="fd-mode">Dark</p>
+    <div class="fd-hero">
+      <p class="fd-site">Coastal Guides</p>
+      <p class="fd-tag">Travel guides, rental notes, and photography from the coast — all of it,
+        in one place.</p>
+    </div>
+    <p class="fd-label">Latest across the site</p>
+    <div class="fd-post"><span class="d">Aug 09</span><div>
+      <p class="t"><a href="#">Field Notes from the Coast</a></p>
+      <p class="from">from <b>Harbor Notes</b></p></div></div>
+    <div class="fd-post"><span class="d">Aug 07</span><div>
+      <p class="t"><a href="#">Dune Light, First Frame</a></p>
+      <p class="from">from <b>Maiia — Photography</b></p></div></div>
+    <div class="fd-post"><span class="d">Aug 02</span><div>
+      <p class="t"><a href="#">Harbor Cottage Guide</a></p>
+      <p class="from">from <b>Harbor Notes</b></p></div></div>
+    <p class="fd-label">Weblogs</p>
+    <div class="fd-dir">
+      <div class="fd-blog">
+        <p class="n">Harbor Notes</p><p class="h"><span class="live"></span>harbor-notes</p>
+        <p class="desc">Guides and working notes for the rentals we love.</p>
+      </div>
+      <div class="fd-blog">
+        <p class="n">Maiia — Photography</p><p class="h"><span class="live"></span>maiia</p>
+        <p class="desc">Coastline portfolios, printed and otherwise.</p>
+      </div>
+    </div>
+  </div>
+</div>

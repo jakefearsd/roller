@@ -1,0 +1,85 @@
+<!-- @dsCard group="Quiet Journal" name="Journal — Reading view" subtitle="Permalink: serif prose at reading measure, quiet comments" -->
+<style>
+  .qp-card * { margin: 0; padding: 0; box-sizing: border-box; }
+  .qp-card { display: flex; gap: 24px; flex-wrap: wrap; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+  .qp-panel { flex: 1 1 460px; border-radius: 6px; padding: 28px 32px 36px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink); }
+  .qp-light { --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --focus:#2AA198; }
+  .qp-dark  { --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --focus:#2AA198; }
+  .qp-mode { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft);
+    font-weight: 600; margin-bottom: 20px; }
+  .qp-crumb { font-size: 13px; color: var(--ink-soft); margin-bottom: 22px; }
+  .qp-crumb a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .qp-h1 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 27px; font-weight: 600;
+    line-height: 1.25; text-wrap: balance; max-width: 24ch; }
+  .qp-byline { display: flex; gap: 14px; align-items: baseline; margin: 12px 0 26px;
+    padding-bottom: 18px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  .qp-byline .d { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .qp-prose { font-family: "IBM Plex Serif", Georgia, serif; font-size: 16.5px; line-height: 1.68;
+    max-width: 58ch; }
+  .qp-prose p + p { margin-top: 14px; }
+  .qp-prose a { color: var(--accent); }
+  .qp-pull { border-left: 2px solid var(--accent); padding: 4px 0 4px 16px; margin: 18px 0;
+    color: var(--ink-soft); font-style: italic; }
+  .qp-comments { margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .qp-clabel { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600;
+    color: var(--ink-soft); margin-bottom: 14px; }
+  .qp-comment { background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 12px 16px; font-size: 14px; line-height: 1.55; }
+  .qp-comment .who { font-weight: 600; font-size: 13px; }
+  .qp-comment .when { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px;
+    color: var(--ink-soft); margin-left: 8px; }
+  .qp-comment p { margin-top: 6px; }
+  .qp-signin { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); }
+  .qp-signin a { color: var(--accent); font-weight: 600; text-decoration: none; }
+</style>
+<div class="qp-card">
+  <div class="qp-panel qp-light">
+    <p class="qp-mode">Light</p>
+    <p class="qp-crumb"><a href="#">Harbor Notes</a> · General</p>
+    <h1 class="qp-h1">Field Notes from the Coast</h1>
+    <p class="qp-byline"><span>By Maren Vole</span><span class="d">August 9, 2026</span></p>
+    <div class="qp-prose">
+      <p>The fog burned off at seven, which the forecast promised and the harbor ignored. By the time
+        the first ferry crossed, the light on the cottage roofs was the flat silver that makes every
+        listing photo look honest.</p>
+      <p class="qp-pull">The walk that beats the famous one starts behind the fish shed and asks
+        nothing of your knees.</p>
+      <p>Three guests asked about the stove this week. The <a href="#">Harbor Cottage guide</a> now
+        answers it before they do.</p>
+    </div>
+    <div class="qp-comments">
+      <p class="qp-clabel">2 comments</p>
+      <div class="qp-comment">
+        <span class="who">Jonas Reeve</span><span class="when">Aug 9, 09:14</span>
+        <p>That silver light is real — booked the cottage on the strength of photo #3.</p>
+      </div>
+      <p class="qp-signin"><a href="#">Sign in</a> to leave a comment.</p>
+    </div>
+  </div>
+  <div class="qp-panel qp-dark">
+    <p class="qp-mode">Dark</p>
+    <p class="qp-crumb"><a href="#">Harbor Notes</a> · General</p>
+    <h1 class="qp-h1">Field Notes from the Coast</h1>
+    <p class="qp-byline"><span>By Maren Vole</span><span class="d">August 9, 2026</span></p>
+    <div class="qp-prose">
+      <p>The fog burned off at seven, which the forecast promised and the harbor ignored. By the time
+        the first ferry crossed, the light on the cottage roofs was the flat silver that makes every
+        listing photo look honest.</p>
+      <p class="qp-pull">The walk that beats the famous one starts behind the fish shed and asks
+        nothing of your knees.</p>
+      <p>Three guests asked about the stove this week. The <a href="#">Harbor Cottage guide</a> now
+        answers it before they do.</p>
+    </div>
+    <div class="qp-comments">
+      <p class="qp-clabel">2 comments</p>
+      <div class="qp-comment">
+        <span class="who">Jonas Reeve</span><span class="when">Aug 9, 09:14</span>
+        <p>That silver light is real — booked the cottage on the strength of photo #3.</p>
+      </div>
+      <p class="qp-signin"><a href="#">Sign in</a> to leave a comment.</p>
+    </div>
+  </div>
+</div>

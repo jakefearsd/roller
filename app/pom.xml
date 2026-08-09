@@ -336,6 +336,20 @@ limitations under the License.
             <version>0.0.3-alpha.0</version>
         </dependency>
 
+        <!-- IBM Plex Serif, sibling of the two Plex webjars above: the
+             journal theme's serif titles/prose (docs/design/journal/,
+             Theme Wave Stage 2). Same coordinate shape and same
+             0.0.3-alpha.0 version (verified on Maven Central; it is, as with
+             Sans/Mono, the only version @ibm/plex-serif has ever published).
+             journal-custom.css declares @font-face for weights 400 (body)
+             and 600 (titles/headings), the way roller-tokens.css does for
+             Sans/Mono. -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>ibm__plex-serif</artifactId>
+            <version>0.0.3-alpha.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>clipboard.js</artifactId>

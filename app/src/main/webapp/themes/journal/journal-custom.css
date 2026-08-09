@@ -1,0 +1,223 @@
+/* Quiet Journal theme.
+ *
+ * Reading-first entry list with date marginalia -- the neutral default
+ * theme. Visual source of truth: docs/design/journal/journal-home.html (the
+ * "Journal -- Home" card), tokens from docs/design/design-system.md.
+ *
+ * Unlike travel/portfolio (system fonts only, no font-src), this theme
+ * self-hosts IBM Plex Serif/Sans/Mono the way roller-tokens.css does for the
+ * admin UI, via the org.webjars.npm:ibm__plex-serif/ibm__plex-sans/
+ * ibm__plex-mono dependencies in app/pom.xml. That is why weblog.vm's CSP
+ * carries a font-src 'self' the other two themes' policies do not --
+ * default-src 'none' refuses everything a policy does not name, so a theme
+ * that asks for a webfont must add the directive or the browser silently
+ * drops every face (ThemeCspCoverageTest#everyFontAThemeAsksForIsShippedAndAllowedByItsPolicy
+ * enforces this for every theme, not just this one). The url()s below use
+ * $url.site (this file is rendered through Velocity like every other theme
+ * template -- see basic-custom.css's own $url.absoluteSite precedent)
+ * rather than a hand-written ../.. relative path, so they resolve under
+ * whatever context path the app is deployed at. Only the weights this theme
+ * actually uses are declared -- Serif 400 (body/prose) and 600 (titles),
+ * Sans 450 (UI labels/nav) and 600 (nav/meta emphasis), Mono 400 (the date
+ * marginalia) -- the webjars ship far more that nothing here needs.
+ * WebjarReferenceTest verifies these url()s resolve on the classpath the
+ * same way it verifies JSP references.
+ */
+
+@font-face {
+    font-family: "IBM Plex Serif";
+    font-style: normal;
+    font-weight: 400;
+    src: url("$url.site/webjars/ibm__plex-serif/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSerif-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "IBM Plex Serif";
+    font-style: normal;
+    font-weight: 600;
+    src: url("$url.site/webjars/ibm__plex-serif/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSerif-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-style: normal;
+    font-weight: 450;
+    src: url("$url.site/webjars/ibm__plex-sans/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSans-Text.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-style: normal;
+    font-weight: 600;
+    src: url("$url.site/webjars/ibm__plex-sans/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSans-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    font-style: normal;
+    font-weight: 400;
+    src: url("$url.site/webjars/ibm__plex-mono/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexMono-Regular.woff2") format("woff2");
+}
+
+:root {
+    /* Quiet Instrument -- light palette (default). Values are exactly
+       docs/design/design-system.md's Light row / the .qj-light panel in
+       docs/design/journal/journal-home.html -- no other colors. */
+    --qj-paper: #F7F9F9;
+    --qj-surface: #FFFFFF;
+    --qj-ink: #17262A;
+    --qj-ink-soft: #5A6E72;
+    --qj-line: #DCE4E4;
+    --qj-accent: #0F6E68;
+    --qj-accent-quiet: #E3F0EE;
+    --qj-focus: #2AA198;
+    --qj-radius: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Quiet Instrument -- dark palette. */
+        --qj-paper: #131C1C;
+        --qj-surface: #1A2626;
+        --qj-ink: #DCE7E5;
+        --qj-ink-soft: #8FA5A2;
+        --qj-line: #2A3838;
+        --qj-accent: #4FB3AA;
+        --qj-accent-quiet: #1E3230;
+        --qj-focus: #2AA198;
+    }
+}
+
+body.qj * { box-sizing: border-box; }
+
+body.qj {
+    margin: 0;
+    background: var(--qj-paper);
+    color: var(--qj-ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+body.qj a { color: inherit; }
+body.qj img { max-width: 100%; height: auto; }
+body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px; }
+
+/* ---- chrome ---- */
+
+.qj-head {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 1.5rem;
+}
+.qj-site { margin: 0; }
+.qj-site a {
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    text-decoration: none;
+    color: var(--qj-ink);
+}
+.qj-tagline { margin: .2rem 0 0; color: var(--qj-ink-soft); font-size: .9rem; }
+
+.qj-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.1rem;
+    margin-top: .9rem;
+    padding-top: .75rem;
+    border-top: 1px solid var(--qj-line);
+    font-size: .85rem;
+    font-weight: 600;
+}
+.qj-nav ul.rCategory,
+.qj-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.1rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.qj-nav a { color: var(--qj-ink-soft); text-decoration: none; padding: .1rem 0; }
+.qj-nav li.selected a,
+.qj-nav a.active { color: var(--qj-accent); box-shadow: inset 0 -2px var(--qj-accent); }
+
+/* ---- entry list: date marginalia ---- */
+
+.qj-main { max-width: 46rem; margin: 0 auto; padding: .5rem 1.25rem 3rem; }
+
+.qj-entries { display: block; }
+
+.qj-entry {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: 0 1.25rem;
+    padding: 1.1rem 0;
+    border-left: 2px solid transparent;
+    padding-left: .75rem;
+    margin-left: -.75rem;
+    transition: border-color .12s ease;
+}
+.qj-entry + .qj-entry { border-top: 1px solid var(--qj-line); }
+.qj-entry:hover { border-left-color: var(--qj-accent); }
+.qj-entry:hover .qj-title a { color: var(--qj-accent); }
+
+.qj-date {
+    margin: 0;
+    padding-top: .3rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .75rem;
+    color: var(--qj-ink-soft);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+}
+
+.qj-title {
+    margin: 0;
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.3;
+    text-wrap: balance;
+}
+.qj-title a { color: var(--qj-ink); text-decoration: none; }
+
+.qj-sum {
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: .95rem;
+    line-height: 1.6;
+    color: var(--qj-ink-soft);
+    margin: .4rem 0 0;
+    max-width: 58ch;
+}
+
+.qj-meta { font-size: .8rem; color: var(--qj-ink-soft); margin: .5rem 0 0; }
+.qj-meta b { color: var(--qj-accent); font-weight: 600; }
+
+@media (max-width: 560px) {
+    .qj-entry { grid-template-columns: 1fr; }
+    .qj-date { padding: 0 0 .25rem; }
+}
+
+/* ---- pager / footer ---- */
+
+.qj-pager { max-width: 46rem; margin: 0 auto; padding: 0 1.25rem; }
+
+.qj-footer {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem 3rem;
+    border-top: 1px solid var(--qj-line);
+}
+.qj-search input {
+    width: 100%;
+    max-width: 22rem;
+    padding: .5rem .7rem;
+    border: 1px solid var(--qj-line);
+    border-radius: var(--qj-radius);
+    background: var(--qj-surface);
+    color: var(--qj-ink);
+    font: inherit;
+}

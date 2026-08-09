@@ -1,0 +1,65 @@
+<!-- @dsCard group="Quiet Journal" name="Journal — Page & Contact" subtitle="_page treatment: About prose plus the contact form in journal dress" -->
+<style>
+  .qg-card * { margin: 0; padding: 0; box-sizing: border-box; }
+  .qg-card { display: flex; gap: 24px; flex-wrap: wrap; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+  .qg-panel { flex: 1 1 460px; border-radius: 6px; padding: 28px 32px 36px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink); }
+  .qg-light { --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --bad:#A33B2E; --focus:#2AA198; }
+  .qg-dark  { --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --bad:#D0705F; --focus:#2AA198; }
+  .qg-mode { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft);
+    font-weight: 600; margin-bottom: 20px; }
+  .qg-h1 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 25px; font-weight: 600; line-height: 1.25; }
+  .qg-prose { font-family: "IBM Plex Serif", Georgia, serif; font-size: 16px; line-height: 1.65;
+    max-width: 58ch; color: var(--ink); margin: 14px 0 26px; }
+  .qg-form { background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 20px 22px; max-width: 30rem; }
+  .qg-form .lbl { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+    font-weight: 600; color: var(--ink-soft); margin: 14px 0 5px; }
+  .qg-form .lbl:first-child { margin-top: 0; }
+  .qg-in { width: 100%; font: inherit; font-size: 14.5px; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 11px; }
+  .qg-in:focus { outline: none; border-color: var(--focus); }
+  .qg-ta { min-height: 84px; resize: vertical; }
+  .qg-send { margin-top: 16px; font: inherit; font-size: 14px; font-weight: 600; color: #FFFFFF;
+    background: var(--accent); border: 1px solid var(--accent); border-radius: 6px; padding: 8px 22px;
+    cursor: pointer; }
+  .qg-sent { margin-top: 12px; font-size: 13.5px; color: var(--accent); }
+</style>
+<div class="qg-card">
+  <div class="qg-panel qg-light">
+    <p class="qg-mode">Light</p>
+    <h1 class="qg-h1">About</h1>
+    <div class="qg-prose">
+      <p>We photograph coastlines, write travel guides for the rentals we love, and occasionally
+        remember to answer email. The journal is where the working notes live before they become
+        guides.</p>
+    </div>
+    <div class="qg-form">
+      <label class="lbl">Name</label><input class="qg-in" value="Jonas Reeve">
+      <label class="lbl">Email</label><input class="qg-in" value="jonas@example.com">
+      <label class="lbl">Message</label>
+      <textarea class="qg-in qg-ta">Is Harbor Cottage free the last week of September?</textarea>
+      <button class="qg-send">Send</button>
+      <p class="qg-sent">Sent. We answer within a day or two.</p>
+    </div>
+  </div>
+  <div class="qg-panel qg-dark">
+    <p class="qg-mode">Dark</p>
+    <h1 class="qg-h1">About</h1>
+    <div class="qg-prose">
+      <p>We photograph coastlines, write travel guides for the rentals we love, and occasionally
+        remember to answer email. The journal is where the working notes live before they become
+        guides.</p>
+    </div>
+    <div class="qg-form">
+      <label class="lbl">Name</label><input class="qg-in" value="Jonas Reeve">
+      <label class="lbl">Email</label><input class="qg-in" value="jonas@example.com">
+      <label class="lbl">Message</label>
+      <textarea class="qg-in qg-ta">Is Harbor Cottage free the last week of September?</textarea>
+      <button class="qg-send">Send</button>
+      <p class="qg-sent">Sent. We answer within a day or two.</p>
+    </div>
+  </div>
+</div>

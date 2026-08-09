@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; font-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
+    <title>$utils.escapeHTML($model.weblog.name)</title>
+    #showAutodiscoveryLinks($model.weblog)
+    #showAnalyticsTrackingCode($model.weblog)
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    #showSeoHead()
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+    #showEmbedAssets()
+    #showAudienceAssets()
+    #showMapAssets()
+</head>
+<!-- weblog -->
+<body class="qj">
+
+<header class="qj-head">
+    <p class="qj-site"><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
+    #if($utils.isNotEmpty($model.weblog.tagline))
+    <p class="qj-tagline">$utils.escapeHTML($model.weblog.tagline)</p>
+    #end
+    <nav class="qj-nav">
+        #showWeblogCategoryLinksList()
+        <ul>
+        #showPageLinks($model.weblog)
+        </ul>
+    </nav>
+</header>
+
+<main class="qj-main">
+    #set($pager = $model.getWeblogEntriesPager())
+    <div class="qj-entries">
+        #showWeblogEntriesPager($pager)
+    </div>
+    <nav class="qj-pager">
+        #showNextPrevEntriesControl($pager)
+    </nav>
+</main>
+
+<footer class="qj-footer">
+    <form class="qj-search" method="get" action="$url.search">
+        <input type="search" name="q" placeholder="Search the journal" aria-label="Search">
+    </form>
+    #showSubscribeForm($model.weblog "Get new entries by email")
+</footer>
+
+</body>
+</html>

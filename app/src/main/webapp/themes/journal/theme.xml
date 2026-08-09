@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  The ASF licenses this file to You
+  under the Apache License, Version 2.0 (the "License"); you may not
+  use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.  For additional information regarding
+  copyright in this work, please see the NOTICE file in the top level
+  directory of this distribution.
+-->
+<weblogtheme>
+
+    <id>journal</id>
+    <name>Quiet Journal</name>
+    <description>Reading-first entry list with date marginalia; the neutral
+        default theme. Serif titles, a teal hover spine, and a quiet layout
+        for a working journal -- light and dark, self-hosted IBM Plex
+        Serif/Sans/Mono.</description>
+    <author>Roller Weblogger</author>
+
+    <!-- theme preview image -->
+    <preview-image path="journal-preview.png" />
+
+    <!-- stylesheet -->
+    <stylesheet>
+        <name>journal-custom.css</name>
+        <description>Stylesheet for Quiet Journal theme</description>
+        <link>journal-custom.css</link>
+        <contentType>text/html</contentType>
+        <rendition>
+            <contentsFile>journal-custom.css</contentsFile>
+            <templateLanguage>velocity</templateLanguage>
+        </rendition>
+    </stylesheet>
+
+    <!-- templates -->
+    <template action="weblog">
+        <name>Weblog</name>
+        <description>weblog</description>
+        <navbar>false</navbar>
+        <hidden>true</hidden>
+        <contentType>text/html</contentType>
+        <rendition>
+            <contentsFile>weblog.vm</contentsFile>
+            <templateLanguage>velocity</templateLanguage>
+        </rendition>
+    </template>
+
+    <!-- permalink points at weblog.vm until Task 2 ships a dedicated
+         reading view (permalink.vm) -->
+    <template action="permalink">
+        <name>permalink</name>
+        <description>permalink</description>
+        <navbar>false</navbar>
+        <hidden>true</hidden>
+        <contentType>text/html</contentType>
+        <rendition>
+            <contentsFile>weblog.vm</contentsFile>
+            <templateLanguage>velocity</templateLanguage>
+        </rendition>
+    </template>
+
+    <template action="custom">
+        <name>_day</name>
+        <description>_day</description>
+        <navbar>false</navbar>
+        <hidden>true</hidden>
+        <contentType>text/html</contentType>
+        <rendition>
+            <contentsFile>_day.vm</contentsFile>
+            <templateLanguage>velocity</templateLanguage>
+        </rendition>
+    </template>
+</weblogtheme>

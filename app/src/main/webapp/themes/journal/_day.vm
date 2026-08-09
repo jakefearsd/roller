@@ -1,0 +1,21 @@
+## $model here is a PageModel
+## $entry here is a WeblogEntryWrapper
+##
+## Quiet Journal day fragment -- the date-marginalia entry row. Task 1 keeps
+## this unified for both the entry list and (until Task 2's permalink.vm
+## ships) the permalink action, which currently also renders through
+## weblog.vm: a single qj-entry row is a reasonable degrade for one entry,
+## the same way the reading view will replace it wholesale in Task 2.
+<!-- _day -->
+#foreach($entry in $entries)
+<article class="qj-entry">
+    <p class="qj-date">$utils.formatDate($entry.pubTime, "MMM dd")<br>$utils.formatDate($entry.pubTime, "yyyy")</p>
+    <div>
+        <h3 class="qj-title"><a href="$url.entry($entry.anchor)">$utils.escapeHTML($entry.title)</a></h3>
+        #if($utils.isNotEmpty($entry.searchDescription))
+        <p class="qj-sum">$utils.escapeHTML($entry.searchDescription)</p>
+        #end
+        <p class="qj-meta">In <b>$utils.escapeHTML($entry.category.name)</b> &middot; $entry.commentCount comments</p>
+    </div>
+</article>
+#end

@@ -203,7 +203,7 @@ class ThemeCspCoverageTest {
 
         try (Stream<Path> themeDirs = Files.list(THEMES)) {
             for (Path theme : themeDirs.filter(Files::isDirectory).toList()) {
-                List<Path> missing = new ArrayList<>();
+                List<String> missing = new ArrayList<>();
                 boolean wantsFonts = false;
 
                 try (Stream<Path> files = Files.walk(theme)) {
@@ -211,15 +211,14 @@ class ThemeCspCoverageTest {
                             .filter(f -> f.toString().endsWith(".css")).toList()) {
                         for (String reference : fontReferences(read(css))) {
                             wantsFonts = true;
-                            Path resolved = css.getParent().resolve(reference).normalize();
-                            if (!Files.exists(resolved)) {
-                                missing.add(resolved);
+                            if (!fontIsShipped(css, reference)) {
+                                missing.add(reference);
                             }
                         }
                     }
                 }
 
-                for (Path gone : missing) {
+                for (String gone : missing) {
                     problems.add(theme.getFileName() + " asks for a font it does not ship: " + gone);
                 }
                 if (wantsFonts && !policyOf(theme).contains("font-src")) {
@@ -233,6 +232,35 @@ class ThemeCspCoverageTest {
                 "Themes whose webfonts cannot load. Neither symptom is visible in the "
                         + "rendered markup -- the icons just do not draw:\n  "
                         + String.join("\n  ", problems));
+    }
+
+    /**
+     * Whether a font a theme's CSS references actually ships somewhere.
+     *
+     * <p>A theme font comes from one of two places. Most take the {@code
+     * gaurav} shape this test was written for: a file vendored inside the
+     * theme's own directory, addressed by a path relative to the CSS file --
+     * checked by resolving that path on disk, same as the original check.
+     * {@code journal} takes the {@code roller-tokens.css} shape instead: IBM
+     * Plex self-hosted from the {@code org.webjars.npm:ibm__plex-*}
+     * dependencies (app/pom.xml), served at runtime from the classpath
+     * (Spring Boot's static-resource merge of {@code classpath:/META-INF/
+     * resources/}) rather than unpacked anywhere under {@code src/main/
+     * webapp/} -- there is no on-disk path for a {@code /webjars/} reference
+     * to resolve against, by design, the same reason {@code
+     * WebjarReferenceTest} checks those against the classpath instead of the
+     * filesystem. A reference containing {@code /webjars/} is checked the
+     * same way that test checks it; anything else keeps the original
+     * disk-relative check.
+     */
+    private static boolean fontIsShipped(Path css, String reference) {
+        int at = reference.indexOf("/webjars/");
+        if (at >= 0) {
+            String webjarResource = reference.substring(at + "/webjars/".length());
+            return ThemeCspCoverageTest.class.getClassLoader()
+                    .getResource("META-INF/resources/webjars/" + webjarResource) != null;
+        }
+        return Files.exists(css.getParent().resolve(reference).normalize());
     }
 
     /**
