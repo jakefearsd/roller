@@ -117,6 +117,76 @@ class ThemeEditControllerTest extends EditorControllerTestSupport {
         assertEquals(List.of(theme), model.getAttribute("themes"));
     }
 
+    // --- frontpage exclusion (Bug 8) ---
+    //
+    // "frontpage" is the $site-wide aggregator theme (renders the multi-blog
+    // directory named by site.frontpage.weblog.handle, not an individual
+    // weblog) and breaks a normal weblog that adopts it, so the picker must
+    // not offer it -- except to a weblog that is already on it, which must
+    // not be stranded with no way to keep (or leave) its current theme.
+
+    @Test
+    void executeExcludesTheFrontpageThemeWhenItIsNotTheCurrentTheme() throws Exception {
+        weblog.setEditorTheme("basic");
+        WeblogTheme currentTheme = mock(WeblogTheme.class);
+        when(currentTheme.getId()).thenReturn("basic");
+        when(weblogger.getThemeManager().getTheme(weblog)).thenReturn(currentTheme);
+
+        SharedTheme frontpage = mock(SharedTheme.class);
+        when(frontpage.getId()).thenReturn("frontpage");
+        SharedTheme basic = mock(SharedTheme.class);
+        when(basic.getId()).thenReturn("basic");
+        when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, basic));
+
+        controller.execute(request, model);
+
+        @SuppressWarnings("unchecked")
+        List<SharedTheme> themes = (List<SharedTheme>) model.getAttribute("themes");
+        assertEquals(List.of(basic), themes,
+                "frontpage must not be offered to a weblog that is not already using it");
+    }
+
+    @Test
+    void executeKeepsTheFrontpageThemeWhenItIsTheWeblogsCurrentTheme() throws Exception {
+        weblog.setEditorTheme("frontpage");
+        WeblogTheme currentTheme = mock(WeblogTheme.class);
+        when(currentTheme.getId()).thenReturn("frontpage");
+        when(weblogger.getThemeManager().getTheme(weblog)).thenReturn(currentTheme);
+
+        SharedTheme frontpage = mock(SharedTheme.class);
+        when(frontpage.getId()).thenReturn("frontpage");
+        SharedTheme basic = mock(SharedTheme.class);
+        when(basic.getId()).thenReturn("basic");
+        when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, basic));
+
+        controller.execute(request, model);
+
+        @SuppressWarnings("unchecked")
+        List<SharedTheme> themes = (List<SharedTheme>) model.getAttribute("themes");
+        assertEquals(List.of(frontpage, basic), themes,
+                "a weblog already on frontpage must not be stranded with no way to keep or "
+                        + "leave it");
+    }
+
+    @Test
+    void executeExcludesTheFrontpageThemeWhenTheWeblogIsOnACustomTheme() throws Exception {
+        weblog.setEditorTheme(WeblogTheme.CUSTOM);
+
+        SharedTheme frontpage = mock(SharedTheme.class);
+        when(frontpage.getId()).thenReturn("frontpage");
+        SharedTheme basic = mock(SharedTheme.class);
+        when(basic.getId()).thenReturn("basic");
+        when(weblogger.getThemeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, basic));
+
+        controller.execute(request, model);
+
+        @SuppressWarnings("unchecked")
+        List<SharedTheme> themes = (List<SharedTheme>) model.getAttribute("themes");
+        assertEquals(List.of(basic), themes,
+                "a weblog on a custom theme has no current SHARED theme id to grandfather "
+                        + "frontpage against");
+    }
+
     @Test
     void executeFlagsFirstCustomizationWhenNoWeblogTemplateExistsYet() throws Exception {
         weblog.setEditorTheme(WeblogTheme.CUSTOM);

@@ -200,12 +200,24 @@ public class CreateWeblogController extends BaseController {
         }
     }
 
+    /**
+     * The {@code frontpage} theme is the {@code $site}-wide aggregator theme
+     * (see the matching constant/comment on {@code ThemeEditController}) and
+     * breaks any weblog that adopts it. A brand-new weblog can never
+     * already be on it, so -- unlike {@code ThemeEditController}'s picker --
+     * there is no grandfathering case to preserve here; it is excluded
+     * unconditionally.
+     */
+    private static final String SITEWIDE_ONLY_THEME_ID = "frontpage";
+
     private void addListsToModel(Model model) {
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
         model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
 
         ThemeManager themeMgr = weblogger.getThemeManager();
-        List<SharedTheme> themes = themeMgr.getEnabledThemesList();
+        List<SharedTheme> themes = themeMgr.getEnabledThemesList().stream()
+                .filter(t -> !SITEWIDE_ONLY_THEME_ID.equals(t.getId()))
+                .toList();
         model.addAttribute("themes", themes);
     }
 }

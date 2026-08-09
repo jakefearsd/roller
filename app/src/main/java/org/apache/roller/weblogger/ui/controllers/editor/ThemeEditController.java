@@ -204,9 +204,27 @@ public class ThemeEditController extends BaseController {
                 || WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme());
     }
 
+    /**
+     * Themes not meant to be picked from this page: {@code frontpage} is the
+     * {@code $site}-wide aggregator theme (its templates render the
+     * multi-blog directory named by {@code site.frontpage.weblog.handle},
+     * not an individual weblog -- see {@code SiteModel}/{@code
+     * ThemeMatrixIT}'s exclusion of it for the same reason) and breaks a
+     * normal weblog that adopts it. {@code theme.xml} has no theme-level
+     * "hidden"/"sitewide" flag to key off of (only per-template {@code
+     * <hidden>}), so this is a hardcoded id rather than metadata-driven;
+     * revisit if that descriptor ever grows one.
+     */
+    private static final String SITEWIDE_ONLY_THEME_ID = "frontpage";
+
     private void loadThemeData(HttpServletRequest request, Model model) {
         ThemeManager themeMgr = weblogger.getThemeManager();
-        model.addAttribute("themes", themeMgr.getEnabledThemesList());
+        String currentThemeId = WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme())
+                ? null : getActionWeblog(request).getTheme().getId();
+        List<SharedTheme> selectable = themeMgr.getEnabledThemesList().stream()
+                .filter(t -> !SITEWIDE_ONLY_THEME_ID.equals(t.getId()) || SITEWIDE_ONLY_THEME_ID.equals(currentThemeId))
+                .toList();
+        model.addAttribute("themes", selectable);
         model.addAttribute("customTheme", WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme()));
         model.addAttribute("customThemeAllowed", customThemeAllowed(request));
         model.addAttribute("sharedThemeCustomStylesheet", isSharedThemeCustomStylesheet(request));

@@ -100,6 +100,26 @@ class CreateWeblogControllerTest {
     }
 
     @Test
+    void theThemeListExcludesTheFrontpageTheme() {
+        // "frontpage" is the $site-wide aggregator theme (see the matching
+        // exclusion -- and its grandfathering case -- on ThemeEditController)
+        // and breaks any weblog that adopts it. A brand-new weblog can never
+        // already be on it, so unlike ThemeEditController's picker there is
+        // no grandfathering case here: it is always excluded.
+        org.apache.roller.weblogger.business.themes.SharedTheme frontpage =
+                org.mockito.Mockito.mock(org.apache.roller.weblogger.business.themes.SharedTheme.class);
+        when(frontpage.getId()).thenReturn("frontpage");
+        org.apache.roller.weblogger.business.themes.SharedTheme basic =
+                org.mockito.Mockito.mock(org.apache.roller.weblogger.business.themes.SharedTheme.class);
+        when(basic.getId()).thenReturn("basic");
+        when(weblogger.themeManager().getEnabledThemesList()).thenReturn(List.of(frontpage, basic));
+
+        controller.execute(ControllerTestFixture.requestFor(user("jake")), model, new CreateWeblogBean());
+
+        assertEquals(List.of(basic), model.getAttribute("themes"));
+    }
+
+    @Test
     void creatingAWeblogNeedsNoWeblogAndSuppliesItsOwnFormBean() {
         // The page exists for users who have no weblog yet, so requiring one
         // would put it out of reach of everybody who needs it.
