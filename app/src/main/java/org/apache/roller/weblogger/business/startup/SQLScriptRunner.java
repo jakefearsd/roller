@@ -26,41 +26,57 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
- * SQL script runner, parses script and allows you to run it. 
+ * SQL script runner, parses script and allows you to run it.
  * You can run the script multiple times if necessary.
- * Assumes that anything on an input line after "--" or ";" can be ignored.
+ * Assumes that anything on an input line after "--" or ";" can be ignored,
+ * except inside a dollar-quoted block ({@code $$ ... $$} or {@code $tag$ ... $tag$}),
+ * where semicolons and "--" are ordinary content, not statement/comment syntax.
  */
 public class SQLScriptRunner {
-    
+
+    /** Matches a dollar-quote delimiter: {@code $$} or {@code $tag$}. */
+    private static final Pattern DOLLAR_QUOTE = Pattern.compile("\\$[A-Za-z0-9_]*\\$");
+
     private List<String> commands = new ArrayList<>();
     private List<String> messages = new ArrayList<>();
     private boolean      failed = false;
     private boolean      errors = false;
-        
-    
+
+
     /** Creates a new instance of SQLScriptRunner */
     public SQLScriptRunner(InputStream is) throws IOException {
-        
+
         try (BufferedReader in = new BufferedReader(new InputStreamReader(is))) {
             String command = "";
             String line;
+            // Tag of the currently open dollar-quote (may be the empty string for
+            // "$$"), or null when not inside one.
+            String openTag = null;
             while ((line = in.readLine()) != null) {
                 line = line.trim();
-                
-                // ignore lines starting with "--"
-                if (!line.startsWith("--")) {
-                    
-                    if (line.indexOf("--") > 0) {
+
+                // ignore lines starting with "--", unless we're inside an open
+                // dollar-quote, where "--" is just content
+                if (openTag != null || !line.startsWith("--")) {
+
+                    if (openTag == null && line.indexOf("--") > 0) {
                         // trim comment off end of line
                         line = line.substring(0, line.indexOf("--")).trim();
                     }
-                    
+
                     // add line to current command
                     command += line.trim();
-                    if (command.endsWith(";")) {
+
+                    // scan the newly appended line for dollar-quote delimiters,
+                    // toggling openTag as they're found
+                    openTag = scanDollarQuotes(line, openTag);
+
+                    if (openTag == null && command.endsWith(";")) {
                         // ";" is end of command, so add completed command to list
                         String cmd = command.substring(0, command.length() - 1);
                         String[] cmdArray = StringUtils.split(cmd);
@@ -72,8 +88,32 @@ public class SQLScriptRunner {
                         command += " ";
                     }
                 }
-            } 
+            }
         }
+    }
+
+    /**
+     * Scans {@code line} left to right for {@code $tag$} delimiters, toggling
+     * dollar-quote state as it goes. Returns the tag of the dollar-quote left
+     * open at the end of the line, or {@code null} if none is open.
+     *
+     * @param currentTag the tag already open before this line, or {@code null}
+     */
+    private static String scanDollarQuotes(String line, String currentTag) {
+        Matcher m = DOLLAR_QUOTE.matcher(line);
+        while (m.find()) {
+            String tag = m.group().substring(1, m.group().length() - 1);
+            if (currentTag == null) {
+                // not inside a dollar-quote: this delimiter opens one
+                currentTag = tag;
+            } else if (tag.equals(currentTag)) {
+                // matches the open delimiter's tag: this closes it
+                currentTag = null;
+            }
+            // any other delimiter found while a different one is open is just
+            // content (e.g. a "$foo$" literal inside a "$$ ... $$" body)
+        }
+        return currentTag;
     }
     
     
