@@ -18,11 +18,30 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
-<% request.setAttribute("version",
+<% request.setAttribute("rollerVersion",
       org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger().getVersion()); %>
-<% request.setAttribute("revision",
+<% request.setAttribute("rollerRevision",
       org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger().getRevision()); %>
 
 <img src='<c:url value="/images/tinyfeather.png"/>' alt="ASF logo" style="vertical-align:middle" />
-<spring:message code="footer.productName" arguments="${request.version},${request.revision}"/>
+<%-- "${request.rollerVersion}" would be wrong here: inside JSP EL, the bare
+     identifier "request" is the *implicit* HttpServletRequest object, not a
+     shorthand for requestScope -- ".rollerVersion" would try (and fail) to
+     call a getRollerVersion() bean-property getter on the servlet request
+     itself, not read the attribute set above. That mistake ("${request.version}"
+     /"${request.revision}") is exactly what rendered every footer as
+     "Version  ()": both resolved to null, and spring:message dutifully
+     formatted the two blanks into the pattern. Bare "${rollerVersion}" lets
+     EL's normal scope search (page/request/session/application) find the
+     request attribute directly. When it is somehow still empty (a version
+     resource that failed to load), skip the "Version" clause instead of
+     rendering empty parens. --%>
+<c:choose>
+<c:when test="${not empty rollerVersion}">
+<spring:message code="footer.productName" arguments="${rollerVersion},${rollerRevision}"/>
+</c:when>
+<c:otherwise>
+<spring:message code="footer.productNameNoVersion"/>
+</c:otherwise>
+</c:choose>
       
