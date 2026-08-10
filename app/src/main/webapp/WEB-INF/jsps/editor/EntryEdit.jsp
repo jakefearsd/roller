@@ -409,7 +409,7 @@
 
         <c:if test="${actionName == 'entryEdit'}">
             <%-- delete: a quiet text link, not a red button --%>
-            <button type="button" class="editor-delete-link"
+            <button type="button" class="delete-link"
                     onclick="showDeleteModal('${entry.id}', '${fn:escapeXml(entry.title)}' )"><spring:message code="weblogEdit.deleteEntry"/></button>
         </c:if>
 

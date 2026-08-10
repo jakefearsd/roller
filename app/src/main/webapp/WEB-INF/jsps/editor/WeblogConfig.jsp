@@ -21,12 +21,38 @@
     <spring:message code="websiteSettings.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig!save.rol" method="post" class="form-stacked">
+<%-- The legacy free-text analytics textarea and its entry in the section index
+     are the SAME branch, held in one variable so the two can never disagree
+     about whether that group is on the page. It renders only when the site
+     allows an analytics-code override AND weblog admins are trusted; this fork
+     keeps weblogAdminsUntrusted on, so in practice it never renders -- the
+     structured, validated bean.analyticsSiteId field below is what a weblog
+     owner uses instead. --%>
+<c:set var="showAnalyticsCodeOverride"
+       value="${rc:getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted}"/>
+
+<c:url var="weblogRemoveUrl" value="/roller-ui/authoring/weblogRemove.rol">
+    <c:param name="weblog" value="${actionWeblog.handle}"/>
+</c:url>
+
+<%-- Settings is a long form with a rail (see
+     docs/design/forms/settings-with-rail.html, the approved card): the field
+     groups on the left, and a 252px rail holding a section index -- the spine
+     marks where you are, exactly as the nav rail does -- plus a Save that is
+     reachable without scrolling past nine groups to find it.
+
+     The <form> IS the grid container, so the rail sits in its second column
+     without a display:contents indirection and the Save button stays a plain
+     descendant of the form it submits. Hidden inputs are display:none and so
+     never become grid items. --%>
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig!save.rol" method="post" class="settings-grid form-stacked">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+
+<div>
 
     <%-- ***** General settings ***** --%>
 
-    <h3 class="section-head"><spring:message code="websiteSettings.generalSettings"/></h3>
+    <h3 class="section-head" id="settings-general"><spring:message code="websiteSettings.generalSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.websiteTitle"/></label>
@@ -80,7 +106,7 @@
 
     <%-- ***** Language/i18n settings ***** --%>
 
-    <h3 class="section-head"><spring:message code="websiteSettings.languageSettings"/></h3>
+    <h3 class="section-head" id="settings-language"><spring:message code="websiteSettings.languageSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="createWebsite.locale"/></label>
@@ -122,7 +148,7 @@
 
     <%-- ***** Comment settings ***** --%>
 
-    <h3 class="section-head"><spring:message code="websiteSettings.commentSettings"/></h3>
+    <h3 class="section-head" id="settings-comments"><spring:message code="websiteSettings.commentSettings"/></h3>
 
     <div class="row mb-3">
         <div class="offset-sm-3 col-sm-9">
@@ -165,7 +191,7 @@
 
     <%-- ***** Default entry comment settings ***** --%>
 
-    <h3 class="section-head"><spring:message code="websiteSettings.defaultCommentSettings"/></h3>
+    <h3 class="section-head" id="settings-comment-defaults"><spring:message code="websiteSettings.defaultCommentSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.applyCommentDefaults"/></label>
@@ -196,7 +222,7 @@
 
     <%-- ***** Blogger API setting settings ***** --%>
 
-    <h3 class="section-head"><spring:message code="websiteSettings.bloggerApi"/></h3>
+    <h3 class="section-head" id="settings-blogger-api"><spring:message code="websiteSettings.bloggerApi"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.bloggerApiCategory"/></label>
@@ -212,8 +238,8 @@
 
     <%-- ***** Web analytics settings ***** --%>
 
-    <c:if test="${rc:getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted}">
-        <h3 class="section-head"><spring:message code="configForm.webAnalytics"/></h3>
+    <c:if test="${showAnalyticsCodeOverride}">
+        <h3 class="section-head" id="settings-web-analytics"><spring:message code="configForm.webAnalytics"/></h3>
 
         <div class="row mb-3">
             <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsTrackingCode"/></label>
@@ -225,7 +251,7 @@
 
     <%-- ***** Analytics settings ***** --%>
 
-    <h3 class="section-head"><spring:message code="websiteSettings.analyticsSettings"/></h3>
+    <h3 class="section-head" id="settings-analytics"><spring:message code="websiteSettings.analyticsSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsSiteId"/></label>
@@ -255,7 +281,7 @@
 
     <%-- ***** Newsletter settings ***** --%>
 
-    <h3 class="section-head"><spring:message code="websiteSettings.newsletterSettings"/></h3>
+    <h3 class="section-head" id="settings-newsletter"><spring:message code="websiteSettings.newsletterSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.newsletterListUuid"/></label>
@@ -265,23 +291,102 @@
         </div>
     </div>
 
-    <div class="control" style="margin-bottom:5em">
-        <button type="submit" class="btn btn-success"><spring:message code="websiteSettings.button.update"/></button>
+</div>
+
+<%-- ====================================================================== --%>
+<%-- The rail: where you are, Save, and the quiet way out. --%>
+
+<aside class="settings-rail">
+
+    <div class="rail-box">
+        <h3 class="section-head"><spring:message code="websiteSettings.sections"/></h3>
+        <nav class="section-index" id="settingsSectionIndex"
+             aria-label="<spring:message code="websiteSettings.sections"/>">
+            <a href="#settings-general" class="is-current"><spring:message code="websiteSettings.generalSettings"/></a>
+            <a href="#settings-language"><spring:message code="websiteSettings.languageSettings"/></a>
+            <a href="#settings-comments"><spring:message code="websiteSettings.commentSettings"/></a>
+            <a href="#settings-comment-defaults"><spring:message code="websiteSettings.defaultCommentSettings"/></a>
+            <a href="#settings-blogger-api"><spring:message code="websiteSettings.bloggerApi"/></a>
+            <c:if test="${showAnalyticsCodeOverride}">
+                <a href="#settings-web-analytics"><spring:message code="configForm.webAnalytics"/></a>
+            </c:if>
+            <a href="#settings-analytics"><spring:message code="websiteSettings.analyticsSettings"/></a>
+            <a href="#settings-newsletter"><spring:message code="websiteSettings.newsletterSettings"/></a>
+        </nav>
     </div>
+
+    <div class="rail-box">
+        <button type="submit" class="btn btn-success w-100"><spring:message code="websiteSettings.button.update"/></button>
+    </div>
+
+    <%-- Removal is a quiet text link, matching the editor's delete: it opens
+         weblogRemove.rol, the confirmation page that carries the irreversible-
+         removal warning and the CSRF-protected POST that actually removes the
+         weblog. It was a second <form> below this one, POSTing to that same
+         address -- which has only a GET mapping, so the button answered 405.
+         A link is both what the card asks for and the working form of it.
+
+         The rail's one caps label belongs on the section index, per the
+         card; the delete box is a single quiet link and needs none. --%>
+    <div class="rail-box">
+        <a class="delete-link" href="${weblogRemoveUrl}"><spring:message code="websiteSettings.button.remove"/></a>
+    </div>
+
+</aside>
 
 <sec:csrfInput/>
 </form>
 
+<%-- The index marks where you are while scrolling. IntersectionObserver only,
+     guarded: without it the index is still a working list of anchor links and
+     the server-rendered .is-current simply stays on the first group. The links
+     are plain anchors, so scrolling is the browser's own -- no smooth-scroll
+     behaviour to withhold from a reader who asked for reduced motion. --%>
+<script>
+(function () {
+    var index = document.getElementById('settingsSectionIndex');
+    if (!index || !('IntersectionObserver' in window)) {
+        return;
+    }
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogRemove.rol" method="post">
-<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+    var links = {};
+    var heads = [];
+    Array.prototype.forEach.call(index.querySelectorAll('a[href^="#"]'), function (link) {
+        var head = document.getElementById(link.getAttribute('href').substring(1));
+        if (head) {
+            links[head.id] = link;
+            heads.push(head);
+        }
+    });
+    if (heads.length === 0) {
+        return;
+    }
 
-    <h3 class="section-head"><spring:message code="websiteSettings.removeWebsiteHeading"/></h3>
-    <spring:message code="websiteSettings.removeWebsite"/><br/><br/>
-    <div class="alert alert-danger" role="alert">
-        <spring:message code="websiteSettings.removeWebsiteWarning"/>
-    </div>
-    <button type="submit" class="btn btn-danger"><spring:message code="websiteSettings.button.remove"/></button>
+    var inBand = {};
 
-<sec:csrfInput/>
-</form>
+    function mark(id) {
+        heads.forEach(function (head) {
+            links[head.id].classList.toggle('is-current', head.id === id);
+        });
+    }
+
+    // The band is the top 30% of the viewport: the heading in it is the group
+    // you are reading. When a long group has scrolled past its own heading
+    // nothing is in the band, and the previous mark deliberately stays put.
+    var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            inBand[entry.target.id] = entry.isIntersecting;
+        });
+        for (var i = 0; i < heads.length; i++) {
+            if (inBand[heads[i].id]) {
+                mark(heads[i].id);
+                return;
+            }
+        }
+    }, { rootMargin: '0px 0px -70% 0px' });
+
+    heads.forEach(function (head) {
+        observer.observe(head);
+    });
+}());
+</script>

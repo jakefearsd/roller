@@ -17,6 +17,28 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
+<%-- Built to docs/design/tables/comments-moderation.html. One comment is one
+     .comment-row on one surface: a metadata line, the entry it is about, then
+     the body as prose. It replaces a nested <table class="innertable"> inside
+     a <td> and a fake <tr class="actionrow"> of link cells.
+
+     This one JSP serves BOTH /roller-ui/authoring/comments.rol and
+     /roller-ui/admin/globalCommentManagement.rol (see RollerViewResolver's
+     .Comments and .GlobalCommentManagement definitions) -- there is no
+     GlobalCommentManagement.jsp. Everything gated on
+     ${actionName == 'comments'} is per-weblog only: GlobalCommentManagementBean
+     has no ids and no approvedComments property at all, so emitting either on
+     the global screen reads a property that does not exist.
+
+     Two contracts ride on this markup and must not move:
+       - Routes.java pins the marker p.subtitle for BOTH routes, because the
+         comment list itself renders only when comments exist and none are
+         seeded.
+       - CommentIT drives input[name='bean.deleteComments'][value],
+         input[type='submit'].btn-primary, and reads a comment id off
+         span[id^='comment-'] -- so the body text stays inside a <span> whose
+         id is comment-<id>, in both the short and the truncated branch. --%>
+
 <%-- are we on a blog's comment management page or the global admin's comment management page? --%>
 <c:choose>
     <c:when test="${actionName == 'comments'}">
@@ -48,6 +70,8 @@
 
 <c:choose>
 <c:when test="${empty pager.items}">
+    <%-- An invitation, not a shrug: no action button, because there is nothing
+         for the owner to do here but wait for a reader. --%>
     <div class="empty-state">
         <p class="empty-state-title"><spring:message code="commentManagement.noCommentsFound"/></p>
         <p class="empty-state-body"><spring:message code="empty.comments.body"/></p>
@@ -64,9 +88,6 @@
             </c:otherwise>
         </c:choose>
     </p>
-
-    <%-- ============================================================= --%>
-    <%-- Comment table / form with checkboxes --%>
 
     <c:choose>
         <c:when test="${actionName == 'comments'}">
@@ -103,50 +124,10 @@
 
 
         <%-- ============================================================= --%>
-        <%-- Number of comments and date message --%>
-
-        <div class="tablenav">
-
-            <div style="float:left;">
-                <spring:message code="commentManagement.nowShowing" arguments="${fn:length(pager.items)}"/>
-            </div>
-            <div style="float:right;">
-                <c:if test="${firstComment.postTime != null}">
-                    <fmt:formatDate value="${firstComment.postTime}" type="both" dateStyle="short" timeStyle="short"/>
-                </c:if>
-                ---
-                <c:if test="${lastComment.postTime != null}">
-                    <fmt:formatDate value="${lastComment.postTime}" type="both" dateStyle="short" timeStyle="short"/>
-                </c:if>
-            </div>
-            <br/>
-
-
-                <%-- ============================================================= --%>
-                <%-- Next / previous links --%>
-
-            <nav>
-                <div class="d-flex justify-content-between">
-                    <c:if test="${pager.prevLink != null}">
-                        <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
-                            <span aria-hidden="true">&larr;</span>Newer</a>
-                    </c:if>
-                    <c:if test="${pager.nextLink != null}">
-                        <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto">Older
-                            <span aria-hidden="true">&rarr;</span></a>
-                    </c:if>
-                </div>
-            </nav>
-
-        </div> <%-- class="tablenav" --%>
-
-
-        <%-- ============================================================= --%>
         <%-- Bulk comment delete link --%>
-        <%-- ============================================================= --%>
 
         <c:if test="${bulkDeleteCount > 0}">
-            <p>
+            <p class="pagetip">
                 <spring:message code="commentManagement.bulkDeletePrompt1" arguments="${bulkDeleteCount}"/>
                 <a href="#" onclick="bulkDelete()">
                     <spring:message code="commentManagement.bulkDeletePrompt2"/>
@@ -154,177 +135,180 @@
             </p>
         </c:if>
 
-        <table class="rollertable table table-striped" width="100%">
 
-                <%-- ======================================================== --%>
-                <%-- Comment table header --%>
+        <%-- ============================================================= --%>
+        <%-- Selection bar: the bulk controls, above the list.
 
-            <tr>
-                <c:if test="${actionName == 'comments'}">
-                    <th class="rollertable" width="5%">
-                        <spring:message code="commentManagement.columnApproved"/>
-                    </th>
-                </c:if>
-                <th class="rollertable" width="5%">
-                    <spring:message code="generic.delete"/>
-                </th>
-                <th class="rollertable">
-                    <spring:message code="commentManagement.columnComment"/>
-                </th>
-            </tr>
+             There is no separate "approve selected" / "delete selected" verb
+             here the way the design card sketches one, because the controller
+             does not have those verbs: approval and deletion are two checkbox
+             sets (bean.approvedComments / bean.deleteComments) applied by a
+             single POST to !update.rol. So the bar carries the all/none
+             toggles for each set plus the one submit that applies them.
 
-                <%-- ======================================================== --%>
-                <%-- Select ALL and NONE buttons --%>
+             Delete wins over approve in CommentsController.update (an id in
+             the delete list is skipped by the approval sweep), which is what
+             stops a pre-ticked "approved" box from re-saving a comment you
+             meant to delete. --%>
 
-            <tr class="actionrow">
-                <c:if test="${actionName == 'comments'}">
-                    <td align="center">
-                        <spring:message code="commentManagement.select"/><br/>
+        <div class="selection-bar">
+            <span><spring:message code="commentManagement.nowShowing" arguments="${fn:length(pager.items)}"/></span>
 
-                        <span id="checkallapproved"><a href="#"><spring:message code="generic.all"/></a></span><br/>
-                        <span id="clearallapproved"><a href="#"><spring:message code="generic.none"/></a></span>
-                    </td>
-                </c:if>
-                <td align="center">
-                    <spring:message code="commentManagement.select"/><br/>
+            <c:if test="${actionName == 'comments'}">
+                <%-- only blog admins (not the global admin) can approve blog comments --%>
+                <span>
+                    <spring:message code="commentManagement.columnApproved"/>:
+                    <a href="#" id="checkallapproved"><spring:message code="generic.all"/></a>
+                    /
+                    <a href="#" id="clearallapproved"><spring:message code="generic.none"/></a>
+                </span>
+            </c:if>
 
-                    <span id="checkalldelete"><a href="#"><spring:message code="generic.all"/></a></span><br/>
-                    <span id="clearalldelete"><a href="#"><spring:message code="generic.none"/></a></span>
-                </td>
-                <td align="right">
-                    <br/>
-                    <span class="pendingCommentBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                    <spring:message code="commentManagement.pending"/>&nbsp;&nbsp;
-                </td>
-            </tr>
+            <span>
+                <spring:message code="generic.delete"/>:
+                <a href="#" id="checkalldelete"><spring:message code="generic.all"/></a>
+                /
+                <a href="#" id="clearalldelete"><spring:message code="generic.none"/></a>
+            </span>
+
+            <spring:message code="commentManagement.update" var="updateLabel"/>
+            <input type="submit" class="btn btn-primary ms-auto" value="${updateLabel}"/>
+        </div>
 
 
-                <%-- ========================================================= --%>
-                <%-- Loop through comments --%>
+        <%-- ============================================================= --%>
+        <%-- The comments themselves --%>
 
-            <c:forEach var="comment" items="${pager.items}" varStatus="rowstatus">
-                <tr>
-                    <c:if test="${actionName == 'comments'}">
-                        <%-- only blog admins (not the global admin) can approve blog comments --%>
-                        <td>
-                            <c:set var="approvedChecked" value=""/>
-                            <c:forEach var="ac" items="${bean.approvedComments}">
-                                <c:if test="${ac == comment.id}"><c:set var="approvedChecked" value="checked='checked'"/></c:if>
-                            </c:forEach>
-                            <input type="checkbox" name="bean.approvedComments" class="comment-select"
-                                   value="${fn:escapeXml(comment.id)}" ${approvedChecked}/>
-                        </td>
-                    </c:if>
-                    <td>
-                        <c:set var="deleteChecked" value=""/>
-                        <c:forEach var="dc" items="${bean.deleteComments}">
-                            <c:if test="${dc == comment.id}"><c:set var="deleteChecked" value="checked='checked'"/></c:if>
-                        </c:forEach>
-                        <input type="checkbox" name="bean.deleteComments" class="comment-select"
-                               value="${fn:escapeXml(comment.id)}" ${deleteChecked}/>
-                    </td>
+        <div class="comment-list">
+            <c:forEach var="comment" items="${pager.items}">
 
-                        <%-- ======================================================== --%>
-                        <%-- Display comment details and text --%>
+                <c:set var="deleteChecked" value=""/>
+                <c:forEach var="dc" items="${bean.deleteComments}">
+                    <c:if test="${dc == comment.id}"><c:set var="deleteChecked" value="checked='checked'"/></c:if>
+                </c:forEach>
 
-                        <%-- <td> with style if comment is spam or pending --%>
-                    <c:choose>
-                        <c:when test="${comment.status == 'PENDING'}">
-                    <td class="pendingcomment">
-                        </c:when>
-                        <c:otherwise>
-                    <td>
-                        </c:otherwise>
-                    </c:choose>
+                <c:choose>
+                    <c:when test="${comment.status == 'PENDING'}">
+                        <c:set var="rowClass" value="comment-row is-pending"/>
+                    </c:when>
+                    <c:otherwise>
+                        <c:set var="rowClass" value="comment-row"/>
+                    </c:otherwise>
+                </c:choose>
 
-                            <%-- comment details table in table --%>
-                        <table class="innertable">
-                            <tr>
-                                <td class="viewbody">
+                <div class="${rowClass}">
 
-                                    <div class="viewdetails bot">
+                    <%-- The row's own selection box is the delete box: it is
+                         the action both screens have, and the one CommentIT
+                         drives. Approval, where it exists, is a labelled
+                         control down in .comment-actions. --%>
+                    <spring:message code="generic.delete" var="deleteLabel"/>
+                    <input type="checkbox" class="form-check-input"
+                           name="bean.deleteComments"
+                           id="delete-${fn:escapeXml(comment.id)}"
+                           value="${fn:escapeXml(comment.id)}"
+                           title="${deleteLabel}" aria-label="${deleteLabel}" ${deleteChecked}/>
 
-                                        <div class="details">
-                                            <spring:message code="commentManagement.entryTitled"/>&nbsp;:&nbsp;
-                                            <a href='${comment.weblogEntry.permalink}'>
-                                                ${fn:escapeXml(comment.weblogEntry.title)}</a>
-                                        </div>
+                    <div class="comment-body">
 
-                                        <div class="details">
-                                            <spring:message code="commentManagement.commentBy"/>&nbsp;:&nbsp;
-                                            <c:choose>
-                                                <c:when test="${comment.email != null && comment.name != null}">
-                                                    <spring:message code="commentManagement.commentByBoth"
-                                                        arguments="${fn:escapeXml(comment.name)},${fn:escapeXml(comment.email)},${fn:escapeXml(comment.email)},${fn:escapeXml(comment.remoteHost)}"
-                                                        argumentSeparator=","/>
-                                                </c:when>
-                                                <c:when test="${comment.email == null && comment.name == null}">
-                                                    <spring:message code="commentManagement.commentByIP"
-                                                        arguments="${fn:escapeXml(comment.remoteHost)}"/>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <spring:message code="commentManagement.commentByName"
-                                                        arguments="${fn:escapeXml(comment.name)},${fn:escapeXml(comment.remoteHost)}"
-                                                        argumentSeparator=","/>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </div>
+                        <div class="comment-meta">
+                            <%-- Plain bold text, never a link: there is no
+                                 commenter URL field (dropped in V019) and
+                                 nothing verifies the name. --%>
+                            <c:choose>
+                                <c:when test="${not empty comment.name}">
+                                    <c:set var="who" value="${fn:escapeXml(comment.name)}"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <spring:message var="who" code="commentManagement.commentByIP"
+                                                    arguments="${fn:escapeXml(comment.remoteHost)}"/>
+                                </c:otherwise>
+                            </c:choose>
+                            <span class="comment-who">${who}</span>
 
-                                        <div class="details">
-                                            <spring:message code="commentManagement.postTime"/>&nbsp;:&nbsp;
-                                            <fmt:formatDate value="${comment.postTime}" type="both" dateStyle="short" timeStyle="short"/>
-                                        </div>
+                            <c:if test="${not empty comment.email}"><span class="comment-contact">${fn:escapeXml(comment.email)}</span></c:if>
+                            <c:if test="${not empty comment.name and not empty comment.remoteHost}"><span class="comment-contact">${fn:escapeXml(comment.remoteHost)}</span></c:if>
 
-                                    </div>
-                                    <div class="viewdetails bot">
+                            <span class="comment-when"><fmt:formatDate value="${comment.postTime}" type="both" dateStyle="short" timeStyle="short"/></span>
 
-                                        <div class="details bot">
+                            <c:choose>
+                                <c:when test="${comment.status == 'APPROVED'}">
+                                    <spring:message var="statusLabel" code="commentManagement.columnApproved"/>
+                                    <span class="badge bg-success">${statusLabel}</span>
+                                </c:when>
+                                <c:when test="${comment.status == 'PENDING'}">
+                                    <spring:message var="statusLabel" code="commentManagement.pending"/>
+                                    <span class="badge bg-warning">${statusLabel}</span>
+                                </c:when>
+                                <%-- DISAPPROVED carries no pill: there is no
+                                     message key for it, and the absence of an
+                                     "Approved" pill beside an unticked approve
+                                     box already says it. --%>
+                            </c:choose>
+                        </div>
 
-                                            <c:choose>
-                                                <c:when test="${fn:length(comment.content) > 1000}">
-                                                    <div class="bot" id="comment-${comment.id}">
-                                                        ${fn:escapeXml(fn:substring(comment.content, 0, 1000))}...
-                                                    </div>
-                                                    <div id="link-${comment.id}">
-                                                        <a onclick='readMoreComment("${comment.id}")'><spring:message
-                                                                code="commentManagement.readmore"/></a>
-                                                    </div>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span width="200px"
-                                                          id="comment-${comment.id}">${fn:escapeXml(comment.content)}</span>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </div>
+                        <div class="comment-on">
+                            <spring:message code="commentManagement.entryTitled"/>
+                            <a href="${fn:escapeXml(comment.weblogEntry.permalink)}">${fn:escapeXml(comment.weblogEntry.title)}</a>
+                        </div>
 
-                                        <c:if test="${actionName == 'comments'}">
-                                            <div class="details">
-                                                <a id="editlink-${comment.id}"
-                                                   onclick='editComment("${comment.id}")'>
-                                                    <spring:message code="generic.edit"/>
-                                                </a>
-                                            </div>
-                                            <div class="details">
-                                              <span id="savelink-${comment.id}"
-                                                    style="display: none">
-                                                   <a onclick='saveComment("${comment.id}")'><spring:message
-                                                           code="generic.save"/></a> &nbsp;|&nbsp;
-                                              </span>
-                                                <span id="cancellink-${comment.id}"
-                                                      style="display: none">
-                                                   <a onclick='editCommentCancel("${comment.id}")'><spring:message code="generic.cancel"/></a>
-                                              </span>
-                                            </div>
-                                        </c:if>
+                        <p class="comment-text">
+                            <c:choose>
+                                <c:when test="${fn:length(comment.content) > 1000}">
+                                    <span id="comment-${comment.id}">${fn:escapeXml(fn:substring(comment.content, 0, 1000))}...</span>
+                                    <span id="link-${comment.id}">
+                                        <a onclick='readMoreComment("${comment.id}")'><spring:message
+                                                code="commentManagement.readmore"/></a>
+                                    </span>
+                                </c:when>
+                                <c:otherwise>
+                                    <span id="comment-${comment.id}">${fn:escapeXml(comment.content)}</span>
+                                </c:otherwise>
+                            </c:choose>
+                        </p>
 
-                                    </div>
-                            </tr>
-                        </table>
-                            <%-- end comment details table in table --%>
-                    </td>
-                </tr>
+                        <c:if test="${actionName == 'comments'}">
+                            <div class="comment-actions">
+
+                                <c:set var="approvedChecked" value=""/>
+                                <c:forEach var="ac" items="${bean.approvedComments}">
+                                    <c:if test="${ac == comment.id}"><c:set var="approvedChecked" value="checked='checked'"/></c:if>
+                                </c:forEach>
+
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input"
+                                           name="bean.approvedComments"
+                                           id="approve-${fn:escapeXml(comment.id)}"
+                                           value="${fn:escapeXml(comment.id)}" ${approvedChecked}/>
+                                    <label class="form-check-label" for="approve-${fn:escapeXml(comment.id)}">
+                                        <spring:message code="commentManagement.columnApproved"/>
+                                    </label>
+                                </div>
+
+                                <span id="editlink-${comment.id}">
+                                    <a onclick='editComment("${comment.id}")'>
+                                        <spring:message code="generic.edit"/>
+                                    </a>
+                                </span>
+                                <%-- style="display:none" rather than hidden="hidden": Bootstrap's
+                                     reboot ships [hidden]{display:none!important}, which jQuery's
+                                     .show() (an inline display, no !important) cannot beat -- the
+                                     save/cancel links would never come back. --%>
+                                <span id="savelink-${comment.id}" style="display: none">
+                                    <a onclick='saveComment("${comment.id}")'><spring:message code="generic.save"/></a>
+                                </span>
+                                <span id="cancellink-${comment.id}" style="display: none">
+                                    <a onclick='editCommentCancel("${comment.id}")'><spring:message code="generic.cancel"/></a>
+                                </span>
+
+                            </div>
+                        </c:if>
+
+                    </div> <%-- class="comment-body" --%>
+                </div> <%-- class="comment-row" --%>
             </c:forEach>
-        </table>
+        </div> <%-- class="comment-list" --%>
+
 
         <%-- ============================================================= --%>
         <%-- Next / previous links --%>
@@ -341,13 +325,6 @@
                 </c:if>
             </div>
         </nav>
-
-        <%-- ========================================================= --%>
-        <%-- Save changes and cancel buttons --%>
-
-        <hr size="1" noshade="noshade"/>
-        <spring:message code="commentManagement.update" var="updateLabel"/>
-        <input type="submit" class="btn btn-primary" value="${updateLabel}"/>
 
     </form>
 
@@ -402,7 +379,7 @@
         // put comment in a textarea for editing. Built via element+.val(),
         // not string-concatenated markup passed to .html() -- comments[id]
         // is reader-supplied content and must never be parsed as HTML.
-        var editArea = $("<textarea>", {style: "width:100%", rows: 10}).val(comments[id]);
+        var editArea = $("<textarea>", {rows: 10}).addClass("form-control").val(comments[id]);
         $("#comment-" + id).empty().append(editArea);
     }
 

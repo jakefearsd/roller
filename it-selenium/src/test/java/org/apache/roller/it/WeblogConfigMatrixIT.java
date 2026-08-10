@@ -369,10 +369,15 @@ class WeblogConfigMatrixIT extends RollerIT {
         openPath("/roller-ui/authoring/comments.rol?weblog=" + handle);
         $("input[name='bean.approvedComments']").should(exist);
 
+        // .comment-row, not tr: the moderation page stopped being a table in the
+        // 2026-08-10 consistency pass, when each comment became one row on one
+        // surface (docs/design/tables/comments-moderation.html). Deliberately
+        // NOT tolerant of both -- a selector that silently accepts the old
+        // structure would stop telling us which one actually shipped.
         String commentId = executeJavaScript(
                 "var boxes = document.querySelectorAll(\"input[name='bean.approvedComments']\");"
                         + "for (var i = 0; i < boxes.length; i++) {"
-                        + "  var row = boxes[i].closest('tr');"
+                        + "  var row = boxes[i].closest('.comment-row');"
                         + "  if (row && row.textContent.indexOf(arguments[0]) >= 0) {"
                         + "    return boxes[i].value; } }"
                         + "return null;",
