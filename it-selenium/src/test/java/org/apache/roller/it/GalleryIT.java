@@ -218,7 +218,14 @@ class GalleryIT extends RollerIT {
         waitForFontsReady();
         openPath(MEDIA_VIEW);
         BrowserHealth.current().settle();
-        $("img[alt='" + name + "']").should(exist);
+        // Explicit timeout, not Selenide's 4s default: every other wait in
+        // this method is already 30s because a loaded runner stretches the
+        // POST-then-reload dance above, and this assertion is the one that
+        // reads the result of it. It has failed in CI ("Element not found
+        // {img[alt=...]}") on a run where the write itself demonstrably
+        // succeeded -- the modal disappearing, waited for above, IS that
+        // evidence -- so the listing simply had not painted yet.
+        $("img[alt='" + name + "']").should(exist, Duration.ofSeconds(30));
 
         // Flake: mediaFileView.rol's own stylesheet pulls in the Plex webfont,
         // but @font-face only triggers the woff2 fetch once the browser lays

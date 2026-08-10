@@ -82,14 +82,16 @@ Edit `.env`:
   auto-TLS, or `:80` for a domain-less LAN/testing deployment with plain
   HTTP only (see [TLS](#tls)).
 - `ROLLER_IMAGE` — defaults to `ghcr.io/jakefearsd/roller:latest`, published
-  by CI on every push to master (`.github/workflows/main.yml`, job
-  `publish-image`). Pin to a `:<git-sha>` tag for a reproducible deploy
-  instead of floating on `:latest`, or point it at your own fork's GHCR
-  path if you cloned a fork. This value is ignored if you deploy with
-  `deploy/deploy.sh --build` (build locally instead of pulling).
+  by `.github/workflows/release.yml` when a `v*.*.*` tag is pushed — and
+  only then. `:latest` therefore means "the last tagged release", not "the
+  last commit on master"; pushing to master publishes nothing. Pin to a
+  `:<version>` tag for a reproducible deploy instead of floating on
+  `:latest`, or point it at your own fork's GHCR path if you cloned a fork.
+  This value is ignored if you deploy with `deploy/deploy.sh --build`, which
+  is how you deploy an untagged tree.
 
-  **After the first CI publish:** GHCR packages are private by default the
-  first time they're published, so an anonymous `docker pull` of
+  **After the first tagged release:** GHCR packages are private by default
+  the first time they're published, so an anonymous `docker pull` of
   `ROLLER_IMAGE` will fail with "denied"/"unauthorized" until you do one of
   the following: on GitHub, go to the package's own page (under your
   account/org's Packages tab) → Package settings → Change visibility →

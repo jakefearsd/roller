@@ -73,7 +73,34 @@ touching the rendering path call `CacheManager.clear()` in `@BeforeEach`
 - Changed lines need ~90% coverage: `bin/check-diff-coverage.sh [base-ref]`
   (default `HEAD~1`; needs `pip install diff_cover` and a fresh
   `mvn -pl app jacoco:report`). CI enforces this on every push/PR.
-- Browser ITs run in CI (`mvn verify -Pit`) — see `it-selenium/`.
+- Browser ITs run in CI (`mvn verify -Pit`) — see `it-selenium/`, and CI
+  below for *when*.
+
+### CI: three tiers, and nothing publishes on a push
+
+`.github/workflows/main.yml` is split by cost, not by topic.
+
+- **Every push and PR** runs `build-test` only: the unit suite plus the
+  diff-coverage gate. ~3 minutes.
+- **Nightly (04:00 UTC), on a PR, or on demand** runs `integration-test`:
+  the browser ITs, ~16 minutes. They are deliberately *not* on the push
+  path — paying 16 minutes per commit turned a re-runnable flake (the
+  GalleryIT upload race) into a red mail on work that was fine. Run them
+  yourself before cutting a release: `mvn verify -Pit`.
+- **CodeQL** (`codeql-analysis.yml`) is weekly + `workflow_dispatch`, not
+  per push.
+
+**Publishing happens only on a `v*.*.*` tag** (`release.yml`): it builds the
+WAR, pushes `ghcr.io/jakefearsd/roller:<version>` **and** `:latest`, and
+cuts a GitHub Release with the WAR attached. Pushing to master publishes
+nothing. That matters because `docker-compose.prod.yml` defaults the app to
+`:latest` and `deploy/deploy.sh` pulls it — under the old publish-on-push
+setup, every commit silently became the image the next deploy would take.
+`deploy.sh --build` is how you deploy an untagged tree.
+
+A stale `roller-it-postgres` container from a killed IT run makes
+`mvn verify -Pit` fail at `docker-maven-plugin:start` with a 409 name
+conflict, not a test failure. `docker rm -f roller-it-postgres` and re-run.
 
 ### Database
 
@@ -343,8 +370,9 @@ Key domain entities:
   app runs via `./roller dev` / `spring-boot:run`, not in a container),
   theme reload enabled, caching disabled.
 - **Production**: containerized end-to-end via `docker-compose.prod.yml` —
-  `app` (image built from `Dockerfile`, published to GHCR by CI on every
-  push to master), `postgres:16`, `caddy` (auto-TLS reverse proxy, the only
+  `app` (image built from `Dockerfile`, published to GHCR by CI only when a
+  `v*.*.*` tag is pushed — see CI below), `postgres:16`, `caddy` (auto-TLS
+  reverse proxy, the only
   published ports), and `backup` (nightly `pg_dump` + volume snapshots,
   atomic writes, rotation). One-command deploy/upgrade via
   `deploy/deploy.sh` (pulls or builds the image, applies pending migrations

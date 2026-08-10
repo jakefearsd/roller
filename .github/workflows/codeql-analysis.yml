@@ -6,12 +6,12 @@
 #
 name: "CodeQL"
 
+# Weekly and on demand, not per push. A CodeQL run costs ~3 minutes and its
+# findings do not change commit to commit, so gating every push bought
+# nothing but mail. Run it from the Actions tab before a release, or when
+# touching anything that handles untrusted input.
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ master ]
+  workflow_dispatch:
   schedule:
     - cron: '39 16 * * 1'
 
@@ -35,19 +35,20 @@ jobs:
         # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed
 
     steps:
-      # Must be >= the maven-compiler-plugin <release> setting (25).
-      - name: Set up JDK 25
-        uses: actions/setup-java@v4
-        with:
-          java-version: 25
-          distribution: 'zulu'
-  
       - name: Checkout Project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           submodules: false
-  
+
+      # Must be >= the maven-compiler-plugin <release> setting (25).
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: 25
+          distribution: 'zulu'
+          cache: maven
+
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3

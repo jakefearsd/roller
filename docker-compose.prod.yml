@@ -36,8 +36,11 @@
 services:
 
   app:
-    # Built by CI and published to GHCR on every push to master (Stage 1C
-    # Task 4). ROLLER_IMAGE lets an operator pin a specific sha tag; the
+    # Built by CI and published to GHCR when a v*.*.* tag is pushed, and
+    # only then (.github/workflows/release.yml) -- so :latest is the last
+    # tagged release, not the last commit on master. An untagged tree is
+    # deployed by building locally, not by pulling.
+    # ROLLER_IMAGE lets an operator pin a specific version tag; the
     # `build:` section below lets this same file build from the local tree
     # instead (`docker compose -f docker-compose.prod.yml build app`),
     # which is what local verification and deploy.sh's --build flag use.

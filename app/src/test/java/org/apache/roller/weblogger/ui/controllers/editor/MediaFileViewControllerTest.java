@@ -513,6 +513,19 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
                 "the refusal must be visible rather than silent: " + errors(model));
     }
 
+    @Test
+    void aPrivacyToggleThatBlowsUpReportsRatherThanClaimingSuccess() throws Exception {
+        when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-2"))
+                .thenThrow(new WebloggerException("directory read failed"));
+
+        controller.togglePrivate(request, model, "dir-2", null);
+
+        assertTrue(errors(model).contains("mediaFile.privacy.error"),
+                "a failed toggle must surface an error: " + errors(model));
+        assertTrue(!messages(model).contains("mediaFile.privacy.updated"),
+                "a failed toggle must not also confirm success: " + messages(model));
+    }
+
     // --- cross-weblog ids ---
     //
     // Every id on this screen arrives from the client and every lookup behind
