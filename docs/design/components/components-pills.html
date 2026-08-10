@@ -1,0 +1,102 @@
+<!-- @dsCard group="Components" name="Status Pills" subtitle="Published / Draft / Pending / Scheduled + counts" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Status Pills</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #131C1C;
+    color: #DCE7E5;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc-head { margin-bottom: 28px; max-width: 900px; }
+  .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0; }
+
+  .t-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E; --focus:#2AA198;
+  }
+  .t-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F; --focus:#2AA198;
+  }
+
+  .panels { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    border-radius: 6px; padding: 24px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+    flex: 1 1 440px; min-width: 320px;
+  }
+  .panel-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; margin: 0 0 16px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .row-label { font-size: 11px; color: var(--ink-soft); margin: 0 0 8px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 12px; border-radius: 99px; }
+  .pill.good { background: color-mix(in srgb, var(--good) 16%, var(--paper)); color: var(--good); }
+  .pill.warn { background: color-mix(in srgb, var(--warn) 16%, var(--paper)); color: var(--warn); }
+  .pill.pending { background: var(--accent-quiet); color: var(--accent); }
+  .pill.scheduled { background: var(--line); color: var(--ink); }
+  .pill.scheduled .mono { font-size: 11px; }
+
+  .count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 99px; border: 1px solid var(--line); font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+  .count.accent { border-color: var(--accent); color: var(--accent); background: var(--accent-quiet); }
+</style>
+</head>
+<body>
+  <div class="doc-head">
+    <p class="doc-title">Status Pills</p>
+    <p class="doc-subtitle">Four states an entry can be in, plus the count badge used next to nav items and section heads.</p>
+  </div>
+
+  <div class="panels">
+    <section class="panel t-light">
+      <p class="panel-label">Light</p>
+
+      <p class="row-label">Entry status</p>
+      <div class="row">
+        <span class="pill good">Published</span>
+        <span class="pill warn">Draft</span>
+        <span class="pill pending">Pending</span>
+        <span class="pill scheduled">Scheduled <span class="mono">· 2026-08-14</span></span>
+      </div>
+
+      <p class="row-label">Counts</p>
+      <div class="row">
+        <span>Entries</span><span class="count mono">42</span>
+        <span style="margin-left:16px;">Inquiries</span><span class="count accent mono">3</span>
+        <span style="margin-left:16px;">Media</span><span class="count mono">118</span>
+      </div>
+    </section>
+
+    <section class="panel t-dark">
+      <p class="panel-label">Dark</p>
+
+      <p class="row-label">Entry status</p>
+      <div class="row">
+        <span class="pill good">Published</span>
+        <span class="pill warn">Draft</span>
+        <span class="pill pending">Pending</span>
+        <span class="pill scheduled">Scheduled <span class="mono">· 2026-08-14</span></span>
+      </div>
+
+      <p class="row-label">Counts</p>
+      <div class="row">
+        <span>Entries</span><span class="count mono">42</span>
+        <span style="margin-left:16px;">Inquiries</span><span class="count accent mono">3</span>
+        <span style="margin-left:16px;">Media</span><span class="count mono">118</span>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

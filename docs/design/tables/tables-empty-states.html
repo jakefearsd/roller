@@ -1,0 +1,106 @@
+<!-- @dsCard group="Tables" name="Empty States" subtitle="Entries / Inquiries / Media — invitations, not bare strips" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Empty States</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #131C1C;
+    color: #DCE7E5;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc-head { margin-bottom: 28px; max-width: 900px; }
+  .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0; }
+
+  .t-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E; --focus:#2AA198;
+  }
+  .t-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F; --focus:#2AA198;
+  }
+
+  .panels { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    border-radius: 6px; padding: 24px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+    flex: 1 1 420px; min-width: 320px;
+  }
+  .panel-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; margin: 0 0 16px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .empty {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 32px 24px; text-align: center;
+  }
+  .empty + .empty { margin-top: 16px; }
+  .empty-title { font-size: 16px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .empty-sub { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 18px; line-height: 1.5; }
+  .empty-sub:last-child { margin-bottom: 0; }
+  .btn-primary {
+    font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 6px;
+    background: var(--accent); color: var(--surface); border: none; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="doc-head">
+    <p class="doc-title">Empty States</p>
+    <p class="doc-subtitle">Icon-free by rule: a 600-weight line, one soft sentence, and — only when there is an action worth taking — a single primary button.</p>
+  </div>
+
+  <div class="panels">
+    <section class="panel t-light">
+      <p class="panel-label">Light</p>
+
+      <div class="empty">
+        <p class="empty-title">No entries yet.</p>
+        <p class="empty-sub">Your first post starts the archive.</p>
+        <button class="btn-primary">Write an entry</button>
+      </div>
+
+      <div class="empty">
+        <p class="empty-title">No inquiries yet.</p>
+        <p class="empty-sub">Messages from your contact form land here.</p>
+      </div>
+
+      <div class="empty">
+        <p class="empty-title">No photos yet.</p>
+        <p class="empty-sub">Upload images to use in entries and galleries.</p>
+        <button class="btn-primary">Add a photo</button>
+      </div>
+    </section>
+
+    <section class="panel t-dark">
+      <p class="panel-label">Dark</p>
+
+      <div class="empty">
+        <p class="empty-title">No entries yet.</p>
+        <p class="empty-sub">Your first post starts the archive.</p>
+        <button class="btn-primary">Write an entry</button>
+      </div>
+
+      <div class="empty">
+        <p class="empty-title">No inquiries yet.</p>
+        <p class="empty-sub">Messages from your contact form land here.</p>
+      </div>
+
+      <div class="empty">
+        <p class="empty-title">No photos yet.</p>
+        <p class="empty-sub">Upload images to use in entries and galleries.</p>
+        <button class="btn-primary">Add a photo</button>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

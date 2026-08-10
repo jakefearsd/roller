@@ -1,0 +1,130 @@
+<!-- @dsCard group="Foundations" name="Typography" subtitle="IBM Plex Sans + IBM Plex Mono, self-hosted webjar" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Typography</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #131C1C;
+    color: #DCE7E5;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc-head { margin-bottom: 28px; max-width: 900px; }
+  .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0; }
+
+  .t-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E; --focus:#2AA198;
+  }
+  .t-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F; --focus:#2AA198;
+  }
+
+  .panels { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    border-radius: 6px; padding: 24px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+    flex: 1 1 440px; min-width: 320px;
+  }
+  .panel-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; margin: 0 0 16px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .spec-row + .spec-row { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .spec-tag { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 8px; }
+
+  .caps-sample { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+  .body-sample { font-size: 14.5px; line-height: 1.55; font-weight: 450; max-width: 46ch; }
+  .head-sample { font-size: 16px; font-weight: 600; text-wrap: balance; }
+  .title-sample { font-size: 20px; font-weight: 600; text-wrap: balance; }
+
+  .mono-row {
+    display: flex; gap: 20px; align-items: baseline; font-size: 13px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px;
+  }
+  .mono-row span { white-space: nowrap; }
+
+  .note {
+    margin-top: 20px; font-size: 12.5px; line-height: 1.55; color: var(--ink-soft);
+    border-top: 1px solid var(--line); padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+  <div class="doc-head">
+    <p class="doc-title">Typography</p>
+    <p class="doc-subtitle">Two families: IBM Plex Sans for UI and headings, IBM Plex Mono for anything that is data — slugs, dates, ids, counts.</p>
+  </div>
+
+  <div class="panels">
+    <section class="panel t-light">
+      <p class="panel-label">Light</p>
+
+      <div class="spec-row">
+        <p class="spec-tag">Caps-label · 12px / .08em / uppercase / 600 / ink-soft</p>
+        <p class="caps-sample">Content · Design · Settings</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Body · 14.5px / 1.55 / weight 450</p>
+        <p class="body-sample">Coastal Guides publishes one field note a week — tide charts, harbor walks, and the odd cottage review from Maren, who has stayed in most of them.</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Section head · 16px / 600</p>
+        <p class="head-sample">Recent entries</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Page title · 20px / 600</p>
+        <p class="title-sample">Field Notes from the Coast</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Mono data row · tabular-nums</p>
+        <div class="mono-row">
+          <span class="mono">harbor-cottage-guide</span>
+          <span class="mono">2026-08-04</span>
+          <span class="mono">1,204 views</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel t-dark">
+      <p class="panel-label">Dark</p>
+
+      <div class="spec-row">
+        <p class="spec-tag">Caps-label · 12px / .08em / uppercase / 600 / ink-soft</p>
+        <p class="caps-sample">Content · Design · Settings</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Body · 14.5px / 1.55 / weight 450</p>
+        <p class="body-sample">Coastal Guides publishes one field note a week — tide charts, harbor walks, and the odd cottage review from Maren, who has stayed in most of them.</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Section head · 16px / 600</p>
+        <p class="head-sample">Recent entries</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Page title · 20px / 600</p>
+        <p class="title-sample">Field Notes from the Coast</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Mono data row · tabular-nums</p>
+        <div class="mono-row">
+          <span class="mono">harbor-cottage-guide</span>
+          <span class="mono">2026-08-04</span>
+          <span class="mono">1,204 views</span>
+        </div>
+      </div>
+
+      <p class="note">Self-hosting note: the implementation ships IBM Plex Sans and IBM Plex Mono as a webjar (no Google Fonts request at runtime). These preview cards intentionally skip the &lt;link&gt; fetch and fall back to the system stack — production renders the real Plex.</p>
+    </section>
+  </div>
+</body>
+</html>

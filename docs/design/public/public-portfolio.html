@@ -1,0 +1,142 @@
+<!-- @dsCard group="Public themes" name="Portfolio — Page &amp; Card" subtitle="Dark-only identity: page treatment + before/after entry card" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Portfolio — Page &amp; Card</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #131C1C;
+    color: #DCE7E5;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc-head { margin-bottom: 28px; max-width: 900px; }
+  .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0 0 6px; }
+  .doc-note { font-size: 12.5px; line-height: 1.5; color: #8FA5A2; max-width: 640px; }
+
+  .t-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F; --focus:#2AA198;
+  }
+
+  .panel {
+    border-radius: 6px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+    width: 800px; max-width: 100%; overflow: hidden;
+  }
+  .panel-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; margin: 0; padding: 16px 24px 0;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .section { padding: 24px 32px 32px; }
+  .section + .section { border-top: 1px solid var(--line); }
+  .section-tag { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; margin: 0 0 14px; }
+
+  /* (a) page treatment */
+  .site-title { font-size: 20px; font-weight: 600; margin: 0 0 4px; letter-spacing: .02em; }
+  .site-nav { display: flex; gap: 18px; margin-bottom: 22px; }
+  .site-nav a { color: var(--accent); text-decoration: none; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; }
+  .page-title { font-size: 20px; font-weight: 600; margin: 0 0 14px; text-wrap: balance; }
+  .prose { font-size: 14.5px; line-height: 1.6; color: var(--ink); max-width: 60ch; }
+
+  .contact-card {
+    margin-top: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 22px;
+  }
+  .contact-title { font-size: 16px; font-weight: 600; margin: 0 0 16px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; margin-bottom: 6px; }
+  .field input, .field textarea {
+    width: 100%; font-size: 14px; font-family: inherit; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+  }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .btn-primary {
+    font-size: 13.5px; font-weight: 600; padding: 9px 20px; border-radius: 6px;
+    background: var(--accent); color: var(--paper); border: none; cursor: pointer;
+  }
+
+  /* (b) before/after card */
+  .ba-row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .ba-col { flex: 1 1 260px; }
+  .ba-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; margin: 0 0 8px; }
+  .grid-card {
+    border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--surface);
+    aspect-ratio: 4 / 3; position: relative; display: flex; align-items: flex-end;
+  }
+  .grid-card.wash {
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 35%, transparent), transparent 70%),
+      var(--surface);
+  }
+  .grid-card.empty-box {
+    background: repeating-linear-gradient(45deg, var(--line), var(--line) 1px, transparent 1px, transparent 10px), var(--surface);
+  }
+  .grid-card-caption { padding: 16px; }
+  .grid-card-title { font-size: 17px; font-weight: 600; margin: 0 0 4px; color: var(--ink); text-wrap: balance; }
+  .grid-card-date { font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+  <div class="doc-head">
+    <p class="doc-title">Portfolio — Page &amp; Card</p>
+    <p class="doc-subtitle">Portfolio's page treatment on near-black, plus how an entry card reads when it has no photo.</p>
+    <p class="doc-note">Single panel: portfolio is a dark-only theme by design (justified photography grid) — there is no light variant to show.</p>
+  </div>
+
+  <section class="panel t-dark">
+    <p class="panel-label">Dark</p>
+
+    <div class="section">
+      <p class="section-tag">Page treatment</p>
+      <p class="site-title">Maiia Chen — Photography</p>
+      <nav class="site-nav">
+        <a href="#">Work</a>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </nav>
+      <h1 class="page-title">About</h1>
+      <p class="prose">Maiia shoots along the same coastline Coastal Guides writes about — low tide, long light, a 35mm most days. Prints and licensing on request.</p>
+
+      <div class="contact-card">
+        <p class="contact-title">Inquire</p>
+        <div class="field">
+          <label>Name</label>
+          <input type="text" placeholder="Maren Vole">
+        </div>
+        <div class="field">
+          <label>Message</label>
+          <textarea placeholder="Interested in a print of the harbor at dawn."></textarea>
+        </div>
+        <button class="btn-primary">Send</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-tag">No-image entry card — before / after</p>
+      <div class="ba-row">
+        <div class="ba-col">
+          <p class="ba-label">Before</p>
+          <div class="grid-card empty-box"></div>
+        </div>
+        <div class="ba-col">
+          <p class="ba-label">After</p>
+          <div class="grid-card wash">
+            <div class="grid-card-caption">
+              <p class="grid-card-title">Low Tide, North Jetty</p>
+              <span class="grid-card-date mono">2026-08-02</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

@@ -1,11 +1,20 @@
 # Roller Design System — "Quiet Instrument"
 
-This is the committed reference copy of the design spec used to build the
-admin UI's preview cards and, from there, the shipped tokens/components. The
-visual source of truth is the companion claude.ai/design project ("Quiet
-Instrument") where the preview cards themselves live and render; this file is
-the spec text that project and this repository both build from, kept here so
-implementation tasks have something to diff against without leaving the repo.
+This is the design spec used to build the admin UI's preview cards and, from
+there, the shipped tokens/components.
+
+**This repository is the source of record.** All seventeen preview cards are
+committed under this directory (see [The cards](#the-cards-17) below) — spec
+text and rendered cards travel together, so a checkout is enough to see the
+whole system and nothing can drift somewhere the repo cannot see. The
+companion claude.ai/design project "Roller Design System"
+(`a80e9dad-2900-4ed8-a00f-c0331e247434`) renders the same files and is where
+it is convenient to *iterate* a card visually; when it and this directory
+disagree, this directory wins, and a card iterated there is not done until it
+lands here.
+
+Card files are self-contained HTML — inline `<style>`, no external requests —
+so opening one in a browser needs no build step and no server.
 
 ---
 
@@ -45,28 +54,32 @@ Radius: 6px (cards/inputs), 99px (pills). Shadows: none in light except overlay 
 - Each panel labeled "Light" / "Dark" in caps-label style.
 - Realistic Roller content ONLY (weblog "Coastal Guides", handle coastal-guides; entries like "Field Notes from the Coast", "Harbor Cottage Guide"; pages About/Contact; inquiry from "Maren Vole <maren@example.com>"). No lorem.
 
-## Files to produce in this directory (12)
+## The cards (17)
 
-1. tokens-colors.html      group="Foundations" — both palettes as labeled swatch grids (name, hex, usage note per token).
-2. tokens-type.html        group="Foundations" — type specimen: caps-label, body para, section head, page title, mono data row; the self-hosting note.
-3. tokens-spacing.html     group="Foundations" — spacing/radius demo: a card anatomy diagram with measurements.
-4. shell-admin.html        group="Shell" — FULL admin frame at ~1100px wide per panel (allowed to stack panels vertically for room): top bar (product name left tiny; weblog switcher center-left; user right), the RAIL with spine on "Entries", content area with page header ("Entries" title + "Write an entry" primary button right) over a table placeholder. This is the hero card.
-5. components-buttons.html group="Components" — primary (accent bg), secondary (line border, ink text), destructive (bad, outline until hover), disabled, small size; focus ring state shown on one.
-6. components-pills.html   group="Components" — status pills: Published(good tint)/Draft(warn tint)/Pending(accent-quiet)/Scheduled(line tint + mono date); plus counts style.
-7. components-nav-rail.html group="Components" — the rail alone, all three groups, spine on Pages, hover state on one item.
-8. forms-sections.html     group="Forms" — a Weblog Settings excerpt: two grouped sections ("General", "Newsletter") each with 2-3 fields; labels ABOVE inputs (kill the label-column gutter), help text under, one field showing an inline validation error (bad text + border, message "That is not a list UUID. Copy it exactly from Listmonk.").
-9. tables-list.html        group="Tables" — entries table: checkbox col, title (link, 600) + mono slug under, status pill, category, mono date, row hover; header row caps-labels; selection bar variant shown above (2 selected · Delete).
-10. tables-empty-states.html group="Tables" — three empty states per the signature: Entries, Inquiries ("No inquiries yet." / "Messages from your contact form land here." / no button), Media ("Add a photo" button).
-11. public-travel-page.html  group="Public themes" — travel-theme _page treatment: teal guide-card header (site title, nav All/General/About), page title, prose, and the CONTACT FORM styled to travel's identity (teal accents, card fields). Single light panel only (travel is a light theme) — note says so.
-12. public-portfolio.html    group="Public themes" — two stacked sections, dark only (portfolio is dark by identity): (a) _page treatment: header + prose + contact form on near-black; (b) the no-image entry card: grid card with generated placeholder (title set large in Plex over a subtle teal-to-transparent linear-gradient wash + mono date) next to the current empty-box for contrast, labeled "before / after".
+All committed in this directory. The twelve below are the foundational set
+(built before the JSPs, as the spec for them); the five listed under *Shipped
+reference cards* further down were built alongside their templates. Paths are
+grouped to match each card's `@dsCard group=`.
+
+1. `foundations/`tokens-colors.html      group="Foundations" — both palettes as labeled swatch grids (name, hex, usage note per token).
+2. `foundations/`tokens-type.html        group="Foundations" — type specimen: caps-label, body para, section head, page title, mono data row; the self-hosting note.
+3. `foundations/`tokens-spacing.html     group="Foundations" — spacing/radius demo: a card anatomy diagram with measurements.
+4. `shell/`shell-admin.html        group="Shell" — FULL admin frame at ~1100px wide per panel (allowed to stack panels vertically for room): top bar (product name left tiny; weblog switcher center-left; user right), the RAIL with spine on "Entries", content area with page header ("Entries" title + "Write an entry" primary button right) over a table placeholder. This is the hero card.
+5. `components/`components-buttons.html group="Components" — primary (accent bg), secondary (line border, ink text), destructive (bad, outline until hover), disabled, small size; focus ring state shown on one.
+6. `components/`components-pills.html   group="Components" — status pills: Published(good tint)/Draft(warn tint)/Pending(accent-quiet)/Scheduled(line tint + mono date); plus counts style.
+7. `components/`components-nav-rail.html group="Components" — the rail alone, all three groups, spine on Pages, hover state on one item.
+8. `forms/`forms-sections.html     group="Forms" — a Weblog Settings excerpt: two grouped sections ("General", "Newsletter") each with 2-3 fields; labels ABOVE inputs (kill the label-column gutter), help text under, one field showing an inline validation error (bad text + border, message "That is not a list UUID. Copy it exactly from Listmonk.").
+9. `tables/`tables-list.html        group="Tables" — entries table: checkbox col, title (link, 600) + mono slug under, status pill, category, mono date, row hover; header row caps-labels; selection bar variant shown above (2 selected · Delete).
+10. `tables/`tables-empty-states.html group="Tables" — three empty states per the signature: Entries, Inquiries ("No inquiries yet." / "Messages from your contact form land here." / no button), Media ("Add a photo" button).
+11. `public/`public-travel-page.html  group="Public themes" — travel-theme _page treatment: teal guide-card header (site title, nav All/General/About), page title, prose, and the CONTACT FORM styled to travel's identity (teal accents, card fields). Single light panel only (travel is a light theme) — note says so.
+12. `public/`public-portfolio.html    group="Public themes" — two stacked sections, dark only (portfolio is dark by identity): (a) _page treatment: header + prose + contact form on near-black; (b) the no-image entry card: grid card with generated placeholder (title set large in Plex over a subtle teal-to-transparent linear-gradient wash + mono date) next to the current empty-box for contrast, labeled "before / after".
 
 ## Shipped reference cards: journal + front door (Theme Wave)
 
-Unlike the twelve preview cards above (which live in the companion design
-project / `.superpowers/design`, not committed), the `journal` theme and the
-`frontpage` restyle shipped their reference cards into the repo, under
-`docs/design/journal/`, because they were built to spec alongside the theme
-templates rather than before them:
+The `journal` theme and the `frontpage` restyle carry reference cards under
+`docs/design/journal/`. They differ from the twelve above only in *when* they
+were drawn — alongside their theme templates rather than before them, since
+a theme's identity is not derivable from the admin token set alone:
 
 - `journal-home.html` — group="Quiet Journal" — the reading-first entry
   list: date marginalia, serif `qj-title`s, teal hover spine.
@@ -78,16 +91,15 @@ templates rather than before them:
   posts across weblogs plus the teal-wash weblog directory.
 
 Same `@dsCard` header convention and token/type rules as the cards above;
-treat these as the worked examples for any future theme's reference cards
-that need to live in-repo rather than in the design project.
+treat these as the worked examples for any future theme's reference card.
 
 ## Shipped reference card: the editor (Editor Rebuild)
 
 `docs/design/editor/editor-writing-surface.html` is the approved card the
-admin-side `EntryEdit.jsp` rebuild was built against — same in-repo pattern
-as the journal/frontpage cards above (built to spec alongside the JSP rather
-than only living in the companion design project), because the editor is
-admin chrome, not a public theme, and its rail is a shape ("writing surface
+admin-side `EntryEdit.jsp` rebuild was built against — drawn alongside the
+JSP like the journal/frontpage cards above rather than ahead of it, because
+the editor is admin chrome, not a public theme, and its rail is a shape
+("writing surface
 + 252px publish rail": Publish/Organize boxes, SEO/Comments drawers, quiet
 newsletter/revisions boxes, a text-link delete) other admin edit screens with
 a lot of secondary metadata may want to reuse. Same `@dsCard` header

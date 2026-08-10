@@ -1,0 +1,164 @@
+<!-- @dsCard group="Foundations" name="Color Tokens" subtitle="Light &amp; dark palettes — quiet instrument, teal accent" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Color Tokens</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #131C1C;
+    color: #DCE7E5;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc-head { margin-bottom: 28px; max-width: 900px; }
+  .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0; }
+
+  .t-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E; --focus:#2AA198;
+  }
+  .t-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F; --focus:#2AA198;
+  }
+
+  .panels { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    border-radius: 6px; padding: 24px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+    flex: 1 1 440px; min-width: 320px;
+  }
+  .panel-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; margin: 0 0 16px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .swatch-grid { display: grid; grid-template-columns: 56px 1fr; gap: 12px 16px; }
+  .swatch {
+    width: 56px; height: 56px; border-radius: 6px; border: 1px solid var(--line);
+  }
+  .swatch-meta { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 2px 0; }
+  .swatch-name { font-size: 14.5px; font-weight: 600; }
+  .swatch-hex { font-size: 12.5px; color: var(--ink-soft); }
+  .swatch-note { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
+  .swatch-row + .swatch-row { border-top: 1px solid var(--line); }
+  .swatch-row { display: contents; }
+  .swatch-row .swatch-meta { padding-top: 12px; padding-bottom: 12px; }
+  .swatch-row:first-child .swatch-meta { padding-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="doc-head">
+    <p class="doc-title">Color Tokens</p>
+    <p class="doc-subtitle">Every color used anywhere in the admin comes from this set — eleven names, two palettes. No one-off hex values.</p>
+  </div>
+
+  <div class="panels">
+    <section class="panel t-light">
+      <p class="panel-label">Light</p>
+      <div class="swatch-grid">
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--paper)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--paper</span><span class="swatch-hex mono">#F7F9F9</span><span class="swatch-note">Page background, behind every panel</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--surface)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--surface</span><span class="swatch-hex mono">#FFFFFF</span><span class="swatch-note">Cards, table rows, input fields</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--ink)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--ink</span><span class="swatch-hex mono">#17262A</span><span class="swatch-note">Primary text, headings</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--ink-soft)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--ink-soft</span><span class="swatch-hex mono">#5A6E72</span><span class="swatch-note">Secondary text, caps-labels, help text</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--line)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--line</span><span class="swatch-hex mono">#DCE4E4</span><span class="swatch-note">Borders, dividers, table rules</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--accent)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--accent</span><span class="swatch-hex mono">#0F6E68</span><span class="swatch-note">Primary buttons, links, active spine</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--accent-quiet)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--accent-quiet</span><span class="swatch-hex mono">#E3F0EE</span><span class="swatch-note">Active nav fill, Pending pill tint</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--good)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--good</span><span class="swatch-hex mono">#2F7D4F</span><span class="swatch-note">Published status, success</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--warn)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--warn</span><span class="swatch-hex mono">#9A6A1F</span><span class="swatch-note">Draft status, caution</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--bad)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--bad</span><span class="swatch-hex mono">#A33B2E</span><span class="swatch-note">Destructive actions, validation errors</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--focus)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--focus</span><span class="swatch-hex mono">#2AA198</span><span class="swatch-note">Focus ring only — same value both themes</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel t-dark">
+      <p class="panel-label">Dark</p>
+      <div class="swatch-grid">
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--paper)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--paper</span><span class="swatch-hex mono">#131C1C</span><span class="swatch-note">Page background, behind every panel</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--surface)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--surface</span><span class="swatch-hex mono">#1A2626</span><span class="swatch-note">Cards, table rows, input fields</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--ink)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--ink</span><span class="swatch-hex mono">#DCE7E5</span><span class="swatch-note">Primary text, headings</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--ink-soft)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--ink-soft</span><span class="swatch-hex mono">#8FA5A2</span><span class="swatch-note">Secondary text, caps-labels, help text</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--line)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--line</span><span class="swatch-hex mono">#2A3838</span><span class="swatch-note">Borders, dividers, table rules</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--accent)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--accent</span><span class="swatch-hex mono">#4FB3AA</span><span class="swatch-note">Primary buttons, links, active spine</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--accent-quiet)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--accent-quiet</span><span class="swatch-hex mono">#1E3230</span><span class="swatch-note">Active nav fill, Pending pill tint</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--good)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--good</span><span class="swatch-hex mono">#6FBF8F</span><span class="swatch-note">Published status, success</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--warn)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--warn</span><span class="swatch-hex mono">#D0A45C</span><span class="swatch-note">Draft status, caution</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--bad)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--bad</span><span class="swatch-hex mono">#D0705F</span><span class="swatch-note">Destructive actions, validation errors</span></div>
+        </div>
+        <div class="swatch-row">
+          <div class="swatch" style="background:var(--focus)"></div>
+          <div class="swatch-meta"><span class="swatch-name">--focus</span><span class="swatch-hex mono">#2AA198</span><span class="swatch-note">Focus ring only — same value both themes</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!-- @dsCard group="Shell" name="Admin Shell" subtitle="Full frame: top bar + rail + content — the hero" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Shell</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #131C1C;
+    color: #DCE7E5;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc-head { margin-bottom: 28px; max-width: 900px; }
+  .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0; }
+
+  .t-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E; --focus:#2AA198;
+  }
+  .t-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F; --focus:#2AA198;
+  }
+
+  .panels { display: flex; flex-direction: column; gap: 32px; align-items: flex-start; }
+  .panel {
+    border-radius: 6px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+    width: 1100px; max-width: 100%; overflow: hidden;
+  }
+  .panel-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; margin: 0 0 12px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* top bar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .topbar-brand { font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--ink-soft); }
+  .topbar-switcher {
+    display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600;
+    padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--paper);
+  }
+  .topbar-switcher .caret { color: var(--ink-soft); font-weight: 400; }
+  .topbar-user { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); }
+  .avatar {
+    width: 24px; height: 24px; border-radius: 99px; background: var(--accent-quiet); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;
+  }
+
+  /* frame */
+  .frame { display: flex; min-height: 480px; }
+
+  /* rail */
+  .rail { width: 232px; flex: 0 0 232px; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: space-between; background: var(--paper); }
+  .rail-top { padding: 20px 16px; border-bottom: 1px solid var(--line); }
+  .rail-weblog-name { font-size: 14.5px; font-weight: 600; margin: 0 0 3px; }
+  .rail-weblog-handle { font-size: 12px; color: var(--ink-soft); margin: 0 0 8px; }
+  .rail-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
+  .status-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--good); }
+
+  .rail-groups { padding: 16px 0; flex: 1; }
+  .rail-group { margin-bottom: 20px; }
+  .rail-group-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; padding: 0 16px; margin: 0 0 6px; }
+  .rail-item {
+    display: block; padding: 7px 16px 7px 14px; font-size: 13.5px; color: var(--ink);
+    border-left: 2px solid transparent; text-decoration: none;
+  }
+  .rail-item.active {
+    border-left-color: var(--accent); background: var(--accent-quiet); font-weight: 600; color: var(--ink);
+  }
+
+  .rail-footer { padding: 14px 16px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+  .rail-footer-user { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-soft); }
+  .rail-signout { font-size: 12.5px; color: var(--ink-soft); text-decoration: none; }
+
+  /* content */
+  .content { flex: 1; padding: 24px 28px; min-width: 0; }
+  .content-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .content-title { font-size: 20px; font-weight: 600; margin: 0; text-wrap: balance; }
+  .btn-primary {
+    font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 6px;
+    background: var(--accent); color: var(--surface); border: none; cursor: pointer;
+  }
+
+  table.entries { width: 100%; border-collapse: collapse; }
+  table.entries th {
+    text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; padding: 0 12px 10px; border-bottom: 1px solid var(--line);
+  }
+  table.entries td { padding: 12px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: middle; }
+  table.entries tr:hover td { background: var(--accent-quiet); }
+  .entry-title { font-weight: 600; color: var(--ink); text-decoration: none; display: block; }
+  .entry-slug { font-size: 12px; color: var(--ink-soft); }
+  .pill { display: inline-flex; font-size: 11.5px; font-weight: 600; padding: 2px 10px; border-radius: 99px; }
+  .pill.good { background: color-mix(in srgb, var(--good) 16%, var(--paper)); color: var(--good); }
+  .pill.warn { background: color-mix(in srgb, var(--warn) 16%, var(--paper)); color: var(--warn); }
+</style>
+</head>
+<body>
+  <div class="doc-head">
+    <p class="doc-title">Admin Shell</p>
+    <p class="doc-subtitle">Top bar, nav rail with the spine, and a content page — assembled full-width, both themes stacked for room.</p>
+  </div>
+
+  <div class="panels">
+    <section class="panel t-light">
+      <p class="panel-label" style="padding:16px 20px 0;">Light</p>
+      <div class="topbar">
+        <span class="topbar-brand">ROLLER</span>
+        <span class="topbar-switcher">Coastal Guides <span class="caret">▾</span></span>
+        <span class="topbar-user"><span class="avatar">JF</span> Jake Fear</span>
+      </div>
+      <div class="frame">
+        <nav class="rail">
+          <div>
+            <div class="rail-top">
+              <p class="rail-weblog-name">Coastal Guides</p>
+              <p class="rail-weblog-handle mono">coastal-guides</p>
+              <div class="rail-status"><span class="status-dot"></span> Live</div>
+            </div>
+            <div class="rail-groups">
+              <div class="rail-group">
+                <p class="rail-group-label">Content</p>
+                <a class="rail-item active" href="#">Entries</a>
+                <a class="rail-item" href="#">Pages</a>
+                <a class="rail-item" href="#">Media</a>
+                <a class="rail-item" href="#">Comments</a>
+                <a class="rail-item" href="#">Inquiries</a>
+              </div>
+              <div class="rail-group">
+                <p class="rail-group-label">Design</p>
+                <a class="rail-item" href="#">Theme</a>
+                <a class="rail-item" href="#">Stylesheet</a>
+                <a class="rail-item" href="#">Templates</a>
+              </div>
+              <div class="rail-group">
+                <p class="rail-group-label">Settings</p>
+                <a class="rail-item" href="#">Weblog</a>
+                <a class="rail-item" href="#">Members</a>
+                <a class="rail-item" href="#">Maintenance</a>
+              </div>
+            </div>
+          </div>
+          <div class="rail-footer">
+            <span class="rail-footer-user"><span class="avatar">JF</span> jake</span>
+            <a class="rail-signout" href="#">Sign out</a>
+          </div>
+        </nav>
+        <main class="content">
+          <div class="content-header">
+            <h1 class="content-title">Entries</h1>
+            <button class="btn-primary">Write an entry</button>
+          </div>
+          <table class="entries">
+            <thead>
+              <tr><th></th><th>Title</th><th>Status</th><th>Category</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td><a class="entry-title" href="#">Field Notes from the Coast</a><span class="entry-slug mono">field-notes-from-the-coast</span></td>
+                <td><span class="pill good">Published</span></td>
+                <td>Coastal Living</td>
+                <td class="mono">2026-08-04</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td><a class="entry-title" href="#">Harbor Cottage Guide</a><span class="entry-slug mono">harbor-cottage-guide</span></td>
+                <td><span class="pill good">Published</span></td>
+                <td>Rentals</td>
+                <td class="mono">2026-07-28</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td><a class="entry-title" href="#">Tide Pools North of the Lighthouse</a><span class="entry-slug mono">tide-pools-north-lighthouse</span></td>
+                <td><span class="pill warn">Draft</span></td>
+                <td>Coastal Living</td>
+                <td class="mono">2026-08-09</td>
+              </tr>
+            </tbody>
+          </table>
+        </main>
+      </div>
+    </section>
+
+    <section class="panel t-dark">
+      <p class="panel-label" style="padding:16px 20px 0;">Dark</p>
+      <div class="topbar">
+        <span class="topbar-brand">ROLLER</span>
+        <span class="topbar-switcher">Coastal Guides <span class="caret">▾</span></span>
+        <span class="topbar-user"><span class="avatar">JF</span> Jake Fear</span>
+      </div>
+      <div class="frame">
+        <nav class="rail">
+          <div>
+            <div class="rail-top">
+              <p class="rail-weblog-name">Coastal Guides</p>
+              <p class="rail-weblog-handle mono">coastal-guides</p>
+              <div class="rail-status"><span class="status-dot"></span> Live</div>
+            </div>
+            <div class="rail-groups">
+              <div class="rail-group">
+                <p class="rail-group-label">Content</p>
+                <a class="rail-item active" href="#">Entries</a>
+                <a class="rail-item" href="#">Pages</a>
+                <a class="rail-item" href="#">Media</a>
+                <a class="rail-item" href="#">Comments</a>
+                <a class="rail-item" href="#">Inquiries</a>
+              </div>
+              <div class="rail-group">
+                <p class="rail-group-label">Design</p>
+                <a class="rail-item" href="#">Theme</a>
+                <a class="rail-item" href="#">Stylesheet</a>
+                <a class="rail-item" href="#">Templates</a>
+              </div>
+              <div class="rail-group">
+                <p class="rail-group-label">Settings</p>
+                <a class="rail-item" href="#">Weblog</a>
+                <a class="rail-item" href="#">Members</a>
+                <a class="rail-item" href="#">Maintenance</a>
+              </div>
+            </div>
+          </div>
+          <div class="rail-footer">
+            <span class="rail-footer-user"><span class="avatar">JF</span> jake</span>
+            <a class="rail-signout" href="#">Sign out</a>
+          </div>
+        </nav>
+        <main class="content">
+          <div class="content-header">
+            <h1 class="content-title">Entries</h1>
+            <button class="btn-primary">Write an entry</button>
+          </div>
+          <table class="entries">
+            <thead>
+              <tr><th></th><th>Title</th><th>Status</th><th>Category</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td><a class="entry-title" href="#">Field Notes from the Coast</a><span class="entry-slug mono">field-notes-from-the-coast</span></td>
+                <td><span class="pill good">Published</span></td>
+                <td>Coastal Living</td>
+                <td class="mono">2026-08-04</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td><a class="entry-title" href="#">Harbor Cottage Guide</a><span class="entry-slug mono">harbor-cottage-guide</span></td>
+                <td><span class="pill good">Published</span></td>
+                <td>Rentals</td>
+                <td class="mono">2026-07-28</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td><a class="entry-title" href="#">Tide Pools North of the Lighthouse</a><span class="entry-slug mono">tide-pools-north-lighthouse</span></td>
+                <td><span class="pill warn">Draft</span></td>
+                <td>Coastal Living</td>
+                <td class="mono">2026-08-09</td>
+              </tr>
+            </tbody>
+          </table>
+        </main>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

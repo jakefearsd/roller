@@ -1,0 +1,152 @@
+<!-- @dsCard group="Components" name="Navigation Rail" subtitle="All three groups; spine on Pages; hover state shown" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Navigation Rail</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #131C1C;
+    color: #DCE7E5;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc-head { margin-bottom: 28px; max-width: 900px; }
+  .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0; }
+
+  .t-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E; --focus:#2AA198;
+  }
+  .t-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F; --focus:#2AA198;
+  }
+
+  .panels { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    border-radius: 6px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+    flex: 0 0 auto;
+  }
+  .panel-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; margin: 0; padding: 16px 16px 0;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .rail { width: 232px; }
+  .rail-top { padding: 20px 16px; border-bottom: 1px solid var(--line); margin-top: 12px; }
+  .rail-weblog-name { font-size: 14.5px; font-weight: 600; margin: 0 0 3px; }
+  .rail-weblog-handle { font-size: 12px; color: var(--ink-soft); margin: 0 0 8px; }
+  .rail-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
+  .status-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--good); }
+
+  .rail-groups { padding: 16px 0; }
+  .rail-group { margin-bottom: 20px; }
+  .rail-group-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; padding: 0 16px; margin: 0 0 6px; }
+  .rail-item {
+    display: block; padding: 7px 16px 7px 14px; font-size: 13.5px; color: var(--ink);
+    border-left: 2px solid transparent; text-decoration: none;
+  }
+  .rail-item.active {
+    border-left-color: var(--accent); background: var(--accent-quiet); font-weight: 600;
+  }
+  .rail-item.is-hover { background: color-mix(in srgb, var(--line) 55%, transparent); }
+
+  .rail-footer { padding: 14px 16px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+  .rail-footer-user { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-soft); }
+  .avatar {
+    width: 22px; height: 22px; border-radius: 99px; background: var(--accent-quiet); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600;
+  }
+  .rail-signout { font-size: 12.5px; color: var(--ink-soft); text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="doc-head">
+    <p class="doc-title">Navigation Rail</p>
+    <p class="doc-subtitle">The signature spine: 2px inset-left rule in accent, a tinted background, 600 weight — nothing else in the rail is colored. Shown here with the spine on Pages and a hover state on Media.</p>
+  </div>
+
+  <div class="panels">
+    <section class="panel t-light">
+      <p class="panel-label">Light</p>
+      <nav class="rail">
+        <div class="rail-top">
+          <p class="rail-weblog-name">Coastal Guides</p>
+          <p class="rail-weblog-handle mono">coastal-guides</p>
+          <div class="rail-status"><span class="status-dot"></span> Live</div>
+        </div>
+        <div class="rail-groups">
+          <div class="rail-group">
+            <p class="rail-group-label">Content</p>
+            <a class="rail-item" href="#">Entries</a>
+            <a class="rail-item active" href="#">Pages</a>
+            <a class="rail-item is-hover" href="#">Media</a>
+            <a class="rail-item" href="#">Comments</a>
+            <a class="rail-item" href="#">Inquiries</a>
+          </div>
+          <div class="rail-group">
+            <p class="rail-group-label">Design</p>
+            <a class="rail-item" href="#">Theme</a>
+            <a class="rail-item" href="#">Stylesheet</a>
+            <a class="rail-item" href="#">Templates</a>
+          </div>
+          <div class="rail-group">
+            <p class="rail-group-label">Settings</p>
+            <a class="rail-item" href="#">Weblog</a>
+            <a class="rail-item" href="#">Members</a>
+            <a class="rail-item" href="#">Maintenance</a>
+          </div>
+        </div>
+        <div class="rail-footer">
+          <span class="rail-footer-user"><span class="avatar">JF</span> jake</span>
+          <a class="rail-signout" href="#">Sign out</a>
+        </div>
+      </nav>
+    </section>
+
+    <section class="panel t-dark">
+      <p class="panel-label">Dark</p>
+      <nav class="rail">
+        <div class="rail-top">
+          <p class="rail-weblog-name">Coastal Guides</p>
+          <p class="rail-weblog-handle mono">coastal-guides</p>
+          <div class="rail-status"><span class="status-dot"></span> Live</div>
+        </div>
+        <div class="rail-groups">
+          <div class="rail-group">
+            <p class="rail-group-label">Content</p>
+            <a class="rail-item" href="#">Entries</a>
+            <a class="rail-item active" href="#">Pages</a>
+            <a class="rail-item is-hover" href="#">Media</a>
+            <a class="rail-item" href="#">Comments</a>
+            <a class="rail-item" href="#">Inquiries</a>
+          </div>
+          <div class="rail-group">
+            <p class="rail-group-label">Design</p>
+            <a class="rail-item" href="#">Theme</a>
+            <a class="rail-item" href="#">Stylesheet</a>
+            <a class="rail-item" href="#">Templates</a>
+          </div>
+          <div class="rail-group">
+            <p class="rail-group-label">Settings</p>
+            <a class="rail-item" href="#">Weblog</a>
+            <a class="rail-item" href="#">Members</a>
+            <a class="rail-item" href="#">Maintenance</a>
+          </div>
+        </div>
+        <div class="rail-footer">
+          <span class="rail-footer-user"><span class="avatar">JF</span> jake</span>
+          <a class="rail-signout" href="#">Sign out</a>
+        </div>
+      </nav>
+    </section>
+  </div>
+</body>
+</html>

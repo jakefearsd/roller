@@ -1,0 +1,140 @@
+<!-- @dsCard group="Foundations" name="Spacing &amp; Radius" subtitle="4/8/12/16/24/32 scale; 6px cards, 99px pills" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Spacing &amp; Radius</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #131C1C;
+    color: #DCE7E5;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc-head { margin-bottom: 28px; max-width: 900px; }
+  .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0; }
+
+  .t-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E; --focus:#2AA198;
+  }
+  .t-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F; --focus:#2AA198;
+  }
+
+  .panels { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    border-radius: 6px; padding: 24px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+    flex: 1 1 440px; min-width: 320px;
+  }
+  .panel-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; margin: 0 0 16px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  /* scale ruler */
+  .ruler { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 24px; }
+  .ruler-step { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .ruler-bar { width: 20px; background: var(--accent); border-radius: 2px; }
+  .ruler-label { font-size: 11px; color: var(--ink-soft); }
+
+  /* card anatomy diagram */
+  .anatomy-wrap { position: relative; }
+  .anatomy-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 24px; position: relative;
+  }
+  .anatomy-title { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+  .anatomy-body { font-size: 14.5px; line-height: 1.55; color: var(--ink-soft); margin: 0 0 16px; }
+  .anatomy-actions { display: flex; gap: 12px; }
+  .anatomy-btn {
+    font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 6px;
+    background: var(--accent); color: var(--surface); border: none;
+  }
+  .anatomy-btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+
+  .measure { position: absolute; font-size: 10.5px; color: var(--accent); font-weight: 600; }
+  .m-radius { top: -18px; right: 0; color: var(--ink-soft); }
+
+  .pill-demo {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; padding: 3px 12px; border-radius: 99px;
+    background: var(--accent-quiet); color: var(--accent); margin-top: 20px;
+  }
+  .pill-caption { font-size: 11px; color: var(--ink-soft); margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="doc-head">
+    <p class="doc-title">Spacing &amp; Radius</p>
+    <p class="doc-subtitle">One scale, used consistently: 4 · 8 · 12 · 16 · 24 · 32. Cards and inputs round to 6px; pills round to 99px (fully stadium).</p>
+  </div>
+
+  <div class="panels">
+    <section class="panel t-light">
+      <p class="panel-label">Light</p>
+
+      <div class="ruler">
+        <div class="ruler-step"><div class="ruler-bar" style="height:4px"></div><span class="ruler-label mono">4</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:8px"></div><span class="ruler-label mono">8</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:12px"></div><span class="ruler-label mono">12</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:16px"></div><span class="ruler-label mono">16</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:24px"></div><span class="ruler-label mono">24</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:32px"></div><span class="ruler-label mono">32</span></div>
+      </div>
+
+      <div class="anatomy-wrap">
+        <span class="measure m-radius mono">radius 6px</span>
+        <div class="anatomy-card">
+          <p class="anatomy-title">Harbor Cottage Guide</p>
+          <p class="anatomy-body">Published Aug 4 · Coastal Living</p>
+          <div class="anatomy-actions">
+            <span class="anatomy-btn">Edit</span>
+            <span class="anatomy-btn ghost">Preview</span>
+          </div>
+        </div>
+      </div>
+      <p class="pill-caption mono">padding 24px on all sides · 16px between title and body · 12px between body and actions · 12px between actions</p>
+
+      <span class="pill-demo">Published</span>
+      <p class="pill-caption">Pill radius 99px — always fully rounded regardless of height</p>
+    </section>
+
+    <section class="panel t-dark">
+      <p class="panel-label">Dark</p>
+
+      <div class="ruler">
+        <div class="ruler-step"><div class="ruler-bar" style="height:4px"></div><span class="ruler-label mono">4</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:8px"></div><span class="ruler-label mono">8</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:12px"></div><span class="ruler-label mono">12</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:16px"></div><span class="ruler-label mono">16</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:24px"></div><span class="ruler-label mono">24</span></div>
+        <div class="ruler-step"><div class="ruler-bar" style="height:32px"></div><span class="ruler-label mono">32</span></div>
+      </div>
+
+      <div class="anatomy-wrap">
+        <span class="measure m-radius mono">radius 6px</span>
+        <div class="anatomy-card">
+          <p class="anatomy-title">Harbor Cottage Guide</p>
+          <p class="anatomy-body">Published Aug 4 · Coastal Living</p>
+          <div class="anatomy-actions">
+            <span class="anatomy-btn">Edit</span>
+            <span class="anatomy-btn ghost">Preview</span>
+          </div>
+        </div>
+      </div>
+      <p class="pill-caption mono">padding 24px on all sides · 16px between title and body · 12px between body and actions · 12px between actions</p>
+
+      <span class="pill-demo">Published</span>
+      <p class="pill-caption">Pill radius 99px — always fully rounded regardless of height</p>
+    </section>
+  </div>
+</body>
+</html>

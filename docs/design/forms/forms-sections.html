@@ -1,0 +1,138 @@
+<!-- @dsCard group="Forms" name="Settings Form" subtitle="Weblog Settings excerpt — General &amp; Newsletter" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Settings Form</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #131C1C;
+    color: #DCE7E5;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc-head { margin-bottom: 28px; max-width: 900px; }
+  .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0; }
+
+  .t-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E; --focus:#2AA198;
+  }
+  .t-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F; --focus:#2AA198;
+  }
+
+  .panels { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    border-radius: 6px; padding: 24px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+    flex: 1 1 440px; min-width: 340px;
+  }
+  .panel-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600; margin: 0 0 16px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .fieldset { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px; }
+  .fieldset + .fieldset { margin-top: 20px; }
+  .fieldset-title { font-size: 16px; font-weight: 600; margin: 0 0 16px; }
+
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label { display: block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; margin-bottom: 6px; }
+  .field-input {
+    width: 100%; font-size: 14px; font-family: inherit; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+  }
+  .field-input:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 30%, transparent); }
+  .field-help { font-size: 12px; color: var(--ink-soft); margin: 6px 0 0; }
+
+  .field.has-error .field-input { border-color: var(--bad); }
+  .field-error { font-size: 12px; color: var(--bad); margin: 6px 0 0; font-weight: 450; }
+</style>
+</head>
+<body>
+  <div class="doc-head">
+    <p class="doc-title">Settings Form</p>
+    <p class="doc-subtitle">Labels sit above their input — no label-column gutter. Help text lives directly under the field it describes.</p>
+  </div>
+
+  <div class="panels">
+    <section class="panel t-light">
+      <p class="panel-label">Light</p>
+
+      <div class="fieldset">
+        <p class="fieldset-title">General</p>
+        <div class="field">
+          <label class="field-label">Weblog name</label>
+          <input class="field-input" type="text" value="Coastal Guides">
+        </div>
+        <div class="field">
+          <label class="field-label">Tagline</label>
+          <input class="field-input" type="text" value="Tide charts, harbor walks, and cottage reviews">
+          <p class="field-help">Shown under the site title on the home page and in feeds.</p>
+        </div>
+        <div class="field">
+          <label class="field-label">Handle</label>
+          <input class="field-input mono" type="text" value="coastal-guides" disabled>
+          <p class="field-help">The URL segment for this weblog. Contact an admin to change it.</p>
+        </div>
+      </div>
+
+      <div class="fieldset">
+        <p class="fieldset-title">Newsletter</p>
+        <div class="field">
+          <label class="field-label">Sender name</label>
+          <input class="field-input" type="text" value="Coastal Guides">
+        </div>
+        <div class="field has-error">
+          <label class="field-label">Listmonk list UUID</label>
+          <input class="field-input mono" type="text" value="a91f-guides-weekly">
+          <p class="field-error">That is not a list UUID. Copy it exactly from Listmonk.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel t-dark">
+      <p class="panel-label">Dark</p>
+
+      <div class="fieldset">
+        <p class="fieldset-title">General</p>
+        <div class="field">
+          <label class="field-label">Weblog name</label>
+          <input class="field-input" type="text" value="Coastal Guides">
+        </div>
+        <div class="field">
+          <label class="field-label">Tagline</label>
+          <input class="field-input" type="text" value="Tide charts, harbor walks, and cottage reviews">
+          <p class="field-help">Shown under the site title on the home page and in feeds.</p>
+        </div>
+        <div class="field">
+          <label class="field-label">Handle</label>
+          <input class="field-input mono" type="text" value="coastal-guides" disabled>
+          <p class="field-help">The URL segment for this weblog. Contact an admin to change it.</p>
+        </div>
+      </div>
+
+      <div class="fieldset">
+        <p class="fieldset-title">Newsletter</p>
+        <div class="field">
+          <label class="field-label">Sender name</label>
+          <input class="field-input" type="text" value="Coastal Guides">
+        </div>
+        <div class="field has-error">
+          <label class="field-label">Listmonk list UUID</label>
+          <input class="field-input mono" type="text" value="a91f-guides-weekly">
+          <p class="field-error">That is not a list UUID. Copy it exactly from Listmonk.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
