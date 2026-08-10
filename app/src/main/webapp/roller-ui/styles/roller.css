@@ -136,20 +136,27 @@ p {
 
 .btn-sm {
     padding: 4px 10px;
-    font-size: 13px;
+    font-size: 12px;
 }
 
+/* Hover/active shade toward --ink, NOT toward black. In light mode --ink is
+   near-black so this is the conventional "darken on hover"; in dark mode the
+   accent is already the LIGHT element sitting on a near-black surface, and
+   darkening it reads as the button dimming out rather than responding. Mixing
+   toward --ink flips the polarity with the theme for free, which a literal
+   `black` -- a light-mode assumption wearing a token expression's clothes --
+   cannot do. */
 .btn-primary,
 .btn-success {
     --bs-btn-color: var(--surface);
     --bs-btn-bg: var(--accent);
     --bs-btn-border-color: var(--accent);
     --bs-btn-hover-color: var(--surface);
-    --bs-btn-hover-bg: color-mix(in srgb, var(--accent) 88%, black);
-    --bs-btn-hover-border-color: color-mix(in srgb, var(--accent) 88%, black);
+    --bs-btn-hover-bg: color-mix(in srgb, var(--accent) 88%, var(--ink));
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--accent) 88%, var(--ink));
     --bs-btn-active-color: var(--surface);
-    --bs-btn-active-bg: color-mix(in srgb, var(--accent) 80%, black);
-    --bs-btn-active-border-color: color-mix(in srgb, var(--accent) 80%, black);
+    --bs-btn-active-bg: color-mix(in srgb, var(--accent) 80%, var(--ink));
+    --bs-btn-active-border-color: color-mix(in srgb, var(--accent) 80%, var(--ink));
     --bs-btn-disabled-color: var(--surface);
     --bs-btn-disabled-bg: var(--accent);
     --bs-btn-disabled-border-color: var(--accent);
@@ -164,8 +171,8 @@ p {
     --bs-btn-hover-bg: var(--bad);
     --bs-btn-hover-border-color: var(--bad);
     --bs-btn-active-color: var(--surface);
-    --bs-btn-active-bg: color-mix(in srgb, var(--bad) 85%, black);
-    --bs-btn-active-border-color: color-mix(in srgb, var(--bad) 85%, black);
+    --bs-btn-active-bg: color-mix(in srgb, var(--bad) 85%, var(--ink));
+    --bs-btn-active-border-color: color-mix(in srgb, var(--bad) 85%, var(--ink));
     --bs-btn-disabled-color: var(--bad);
     --bs-btn-disabled-bg: transparent;
     --bs-btn-disabled-border-color: var(--bad);
@@ -217,7 +224,7 @@ label,
 
 .form-label,
 .col-form-label {
-    font-size: 14px;
+    font-size: 14.5px;
     font-weight: 600;
 }
 
@@ -245,7 +252,22 @@ label,
 
 .form-text {
     color: var(--ink-soft);
-    font-size: 13px;
+    font-size: 12px;
+}
+
+/* A readonly field is still a field, but it is not somewhere you can type:
+   dropping it to --paper (the page ground) rather than --surface says so
+   without a disabled look. Four JSPs were carrying this as an inline style
+   apiece before the consistency pass. */
+.form-control[readonly] {
+    background: var(--paper);
+}
+
+/* .control is the wrapper the older forms put round a button row. It had no
+   rule at all -- the same silent no-op `formrow` was -- so every caller was
+   padding it with a Bootstrap utility instead. */
+.control {
+    margin-top: 12px;
 }
 
 .text-danger {
@@ -370,7 +392,7 @@ label,
     color: var(--ink);
     border-color: var(--line);
     font-family: var(--font-ui);
-    font-size: 15px;
+    font-size: 14.5px;
 }
 
 /* easymde.min.css hardcodes the caret at #000 and selection at #d9d9d9 --
@@ -584,7 +606,7 @@ label,
 
 p.pagetip {
     color: var(--ink-soft);
-    font-size: 0.9em;
+    font-size: 14.5px;
     margin-top: 0;
     margin-bottom: 1em;
 }
@@ -620,8 +642,9 @@ table.mm_table_actions td {
    of Bootstrap's/the browser's oversized h3/h4 defaults. This targets the
    header text itself regardless of what markup rides inside a
    .card-header: plain text (the newsletter and entry-revisions cards),
-   h4.card-title (EntryEdit's Plugins/Advanced/SEO panels, EntryEditor's
-   Summary panel, MediaFileAdd, TemplateEdit, PageEdit), or
+   h4.card-title (EntryEditor's Summary panel, MediaFileAdd, TemplateEdit,
+   PageEdit -- EntryEdit's own panels are .editor-drawer now, and its
+   Plugins card was deleted with the plugin it held), or
    h3.setup-section-title (Setup.jsp) -- so any heading dropped into a
    card header inherits the quiet treatment instead of reintroducing its
    element's own default size. .section-head is the same role applied to
@@ -665,6 +688,43 @@ table.mm_table_actions td {
     margin-top: 0;
 }
 
+/* The same demotion, for the two places headings still arrived at their
+   element's own size. roller.css deliberately has no global h1-h6 reset --
+   .roller-page-title owns 20px and everything else was expected to opt in --
+   but "opt in" only ever happened inside .card-header, so every bare <h3>/<h4>
+   elsewhere rendered at Bootstrap's fluid default: 24-28px, i.e. LARGER than
+   the page title it sits beneath.
+   1. The sidebar tiles (EntriesSidebar, CommentsSidebar, MediaFileSidebar,
+      MainMenuSidebar, CategoriesSidebar, TemplatesSidebar, MembersSidebar) --
+      ten headings, and the worst offenders because they sit in the left column
+      directly beside #adminRail's 12px caps-labels and shout over them.
+   2. Modal titles -- BS5 emits h4.modal-title/h3 inside .modal-header, which is
+      not a .card-header, so all eleven admin dialogs opened at 24-28px.
+   Both are the type role, not new design: same six declarations as above. */
+.roller-column-left .card-body > h3,
+.roller-column-left .card-body > h4,
+.modal-header h3,
+.modal-header .modal-title {
+    margin: 0 0 8px;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* The sidebar tiles separate their sections with <hr size="1" noshade>, whose
+   presentational attributes do nothing in HTML5 and whose default border is
+   not a token. One rule beats editing seven JSPs. */
+.roller-column-left .card-body hr {
+    height: 0;
+    margin: 12px 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    opacity: 1;
+}
+
 /* Collapse-toggle chevron: BS3's Glyphicons Halflings font is gone, so this is a
    pure-CSS caret that flips with BS5's .collapsed class on the trigger link. */
 .card-header a:after {
@@ -674,7 +734,7 @@ table.mm_table_actions td {
     /* Vertically centred against the caps-label line the header now is --
        the old fixed 6px offset was tuned for the un-styled h4 line box. */
     margin-top: 4px;
-    border-top: 5px solid grey;
+    border-top: 5px solid var(--ink-soft);
     border-right: 5px solid transparent;
     border-left: 5px solid transparent;
     transition: transform 0.2s ease-in-out;
@@ -758,7 +818,7 @@ table.mm_table_actions td {
 .editor-permalink {
     margin: 6px 0 16px;
     font-family: var(--font-data);
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--ink-soft);
     overflow-wrap: anywhere;
 }
@@ -805,7 +865,7 @@ table.mm_table_actions td {
 
 .editor-when {
     font-family: var(--font-data);
-    font-size: 11.5px;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
     color: var(--ink-soft);
 }
@@ -817,14 +877,14 @@ table.mm_table_actions td {
     border-radius: var(--radius);
     background: var(--paper);
     font-family: var(--font-data);
-    font-size: 12.5px;
+    font-size: 14.5px;
     color: var(--ink);
 }
 
 .editor-tz {
     margin: 4px 0 12px;
     font-family: var(--font-data);
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--ink-soft);
 }
 
@@ -847,7 +907,7 @@ table.mm_table_actions td {
     border: none;
     background: transparent;
     font-family: var(--font-ui);
-    font-size: 12.5px;
+    font-size: 14.5px;
     color: var(--ink-soft);
     text-decoration: underline;
     cursor: pointer;
@@ -859,7 +919,7 @@ table.mm_table_actions td {
 
 .editor-quiet-check {
     margin-top: 10px;
-    font-size: 13px;
+    font-size: 14.5px;
     color: var(--ink-soft);
 }
 
@@ -867,10 +927,34 @@ table.mm_table_actions td {
     display: block;
     margin: 10px 0 4px;
     font-family: var(--font-ui);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: .06em;
+    letter-spacing: .08em;
     text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* The SEO card's Google-result preview. These lived in a page-local <style>
+   in EntryEdit.jsp until the consistency pass; they are on the scale (16 /
+   12 mono / 14.5) rather than the shrunken proportions of a real SERP,
+   because the hierarchy reads perfectly well from weight and color and a
+   support tier below 12px is exactly what the scale refuses to have. */
+.seo-snippet-title {
+    font-family: var(--font-ui);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.seo-snippet-url {
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.seo-snippet-description {
+    font-family: var(--font-ui);
+    font-size: 14.5px;
     color: var(--ink-soft);
 }
 
@@ -879,7 +963,7 @@ table.mm_table_actions td {
 .editor-drawer {
     display: block;
     font-family: var(--font-ui);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--accent);
     text-decoration: none;
@@ -901,7 +985,7 @@ table.mm_table_actions td {
 
 .editor-comment-count {
     margin: 10px 0 0;
-    font-size: 13px;
+    font-size: 14.5px;
     color: var(--ink-soft);
 }
 
@@ -911,7 +995,7 @@ table.mm_table_actions td {
     border: none;
     background: none;
     font-family: var(--font-ui);
-    font-size: 12.5px;
+    font-size: 14.5px;
     color: var(--ink-soft);
     text-decoration: underline;
     cursor: pointer;
@@ -927,10 +1011,103 @@ table.mm_table_actions td {
     max-width: 100%;
 }
 
-/* keep jQuery UI datepicker in front of other elements */
-.ui-datepicker { 
-    position: relative; 
+/* ---- jQuery UI datepicker ----
+   head.jsp loads the full stock jquery-ui theme, which carries its own
+   white/grey/blue palette and no dark mode. Until this block the only rule
+   here was the z-index below, so the picker opened as a bright white calendar
+   over a near-black page -- the most visible light/dark break left in the
+   admin UI, and one the token-parity test could not see because the colors
+   live in a third-party file it does not read.
+   Everything below is the token set applied to jQuery UI's own class names;
+   no new design, and a no-op in light mode where the tokens equal what the
+   stock theme was already painting. !important is needed throughout: the
+   vendor stylesheet loads after this one and its selectors are equally
+   specific. */
+.ui-datepicker {
+    position: relative;
+    /* keep the picker in front of other elements */
     z-index: 10000 !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius) !important;
+    color: var(--ink) !important;
+    font-family: var(--font-ui) !important;
+    font-size: 14.5px !important;
+}
+
+.ui-datepicker .ui-datepicker-header {
+    background: var(--surface) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--line) !important;
+    border-radius: 0 !important;
+    color: var(--ink) !important;
+}
+
+.ui-datepicker .ui-datepicker-title {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+    color: var(--ink-soft) !important;
+}
+
+/* The prev/next arrows are sprite-based in the stock theme; the sprite is a
+   dark PNG that vanishes on a dark surface. Hide it and use text carets. */
+.ui-datepicker .ui-datepicker-prev,
+.ui-datepicker .ui-datepicker-next {
+    background: none !important;
+    border: 0 !important;
+    cursor: pointer;
+}
+
+.ui-datepicker .ui-datepicker-prev .ui-icon,
+.ui-datepicker .ui-datepicker-next .ui-icon {
+    background: none !important;
+    text-indent: 0 !important;
+    overflow: visible !important;
+    color: var(--ink-soft);
+}
+
+.ui-datepicker .ui-datepicker-prev .ui-icon:before { content: "\2039"; }
+.ui-datepicker .ui-datepicker-next .ui-icon:before { content: "\203A"; }
+
+.ui-datepicker th {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+    color: var(--ink-soft) !important;
+}
+
+.ui-datepicker td a,
+.ui-datepicker td span {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: var(--radius) !important;
+    color: var(--ink) !important;
+    text-align: center;
+}
+
+.ui-datepicker td a:hover {
+    background: var(--accent-quiet) !important;
+    color: var(--ink) !important;
+}
+
+.ui-datepicker td a.ui-state-active {
+    background: var(--accent) !important;
+    color: var(--surface) !important;
+}
+
+/* "today" is a highlight, not a selection: the accent's own quiet tint plus a
+   line, so it never competes with the selected day above. */
+.ui-datepicker td.ui-datepicker-today a {
+    background: var(--accent-quiet) !important;
+    border-color: var(--accent) !important;
+}
+
+.ui-datepicker td.ui-datepicker-unselectable span {
+    color: var(--ink-soft) !important;
+    opacity: .6;
 }
 
 /* ---- Tables: table.rollertable ----
@@ -1200,7 +1377,7 @@ body {
 }
 
 .mediaObjectInfo {
-    font-size:11px;
+    font-size: 12px;
 }
 
 .highlight {

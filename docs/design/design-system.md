@@ -31,11 +31,34 @@ Dark:  --paper:#131C1C --surface:#1A2626 --ink:#DCE7E5 --ink-soft:#8FA5A2 --line
 
 Radius: 6px (cards/inputs), 99px (pills). Shadows: none in light except overlay contexts; rely on --line borders. Spacing scale: 4/8/12/16/24/32.
 
+**Documented divergences — deliberate, do not "fix" them.** A public theme may
+hold its own identity on *neutrals* provided it keeps the family accent; the
+test of whether a difference is identity or drift is whether someone can say
+why. Two are on the record:
+
+- `travel` keeps `--tg-paper: #fcfbf7` (warm cream, against the cool `#F7F9F9`)
+  and `--tg-radius: 10px` (against 6px). Both belong to its guide-book
+  character. Its accent and remaining neutrals were repointed to exact tokens
+  in the 2026-08-10 pass — `--tg-accent` had drifted to `#0f6f63`, one hex
+  digit off the very token it originated, which is what drift looks like next
+  to identity.
+- `portfolio` keeps its own near-black neutrals and takes the spec's *dark*
+  `--accent` (`#4FB3AA`) verbatim. Dark is its identity; the accent is the
+  family tie.
+
 ## Type
 
 - UI + headings: "IBM Plex Sans", system-ui fallback. Weights: 450 body, 600 headings/labels.
 - Data (slugs, dates, counts, ids): "IBM Plex Mono", ui-monospace fallback, font-variant-numeric: tabular-nums.
-- Scale: 12px caps-labels (letter-spacing .08em, uppercase, --ink-soft), 14.5px/1.55 body, 16px section heads, 20px page titles (600), 28px reserved.
+- Scale: 12px caps-labels (letter-spacing .08em, uppercase, --ink-soft), 14.5px/1.55 body, 16px section heads, 20px page titles (600), 26px the one oversized element, 28px reserved.
+- **These six values are the whole scale. There is no support tier below 12px.**
+  The editor rail originally shipped its own 11 / 11.5 / 12.5 / 13px micro-scale
+  — and so did its approved card, which is how it survived review — and both were
+  collapsed onto this scale in the 2026-08-10 consistency pass. The rule that
+  settles any future case: a **label or help text is 12px**, a **value, control or
+  body text is 14.5px**, and *quiet is expressed by color and weight, never by
+  going smaller* (that is signature move 4 read in the other direction). Shrinking
+  below 12px to make something recede is the mistake this line exists to block.
 - Card/section headers (`.card-header`, `.section-head` — accordion panel titles, settings-form "display group" headers) use the caps-label role, not an h3/h4's own default size — a heading label, not a second page title.
 - Preview cards may load Plex from Google Fonts <link> ONLY IF the design pane allows external fetches — safer: use font-family:"IBM Plex Sans", system-ui and accept fallback rendering in cards; note in the tokens card that the implementation self-hosts Plex as a webjar.
 
@@ -54,7 +77,7 @@ Radius: 6px (cards/inputs), 99px (pills). Shadows: none in light except overlay 
 - Each panel labeled "Light" / "Dark" in caps-label style.
 - Realistic Roller content ONLY (weblog "Coastal Guides", handle coastal-guides; entries like "Field Notes from the Coast", "Harbor Cottage Guide"; pages About/Contact; inquiry from "Maren Vole <maren@example.com>"). No lorem.
 
-## The cards (17)
+## The cards (19)
 
 All committed in this directory. The twelve below are the foundational set
 (built before the JSPs, as the spec for them); the five listed under *Shipped
@@ -106,6 +129,29 @@ a lot of secondary metadata may want to reuse. Same `@dsCard` header
 convention as the twelve preview cards; treat it as the worked example for
 "one writing surface, many settings" admin layouts, and see signature move 4
 (WEIGHT, NOT SIZE) above for the rule its title field demonstrates.
+
+## Cards drawn ahead of a rebuild (Consistency Pass, 2026-08-10)
+
+Two screens were too far off-spec to fix by restyling, and the repo's rule is
+that a card comes first. These are those cards; the JSPs are rebuilt against
+them, not the other way round.
+
+- `tables/`comments-moderation.html — group="Tables" — `Comments.jsp` today
+  renders each comment as a **nested `<table class="innertable">` inside a
+  `<td>`**, using four classes (`details`, `viewdetails`, `actionrow`,
+  `tablenav`) that have no CSS rules at all. The card replaces that with one
+  comment per row on one surface: a single metadata line (name in 600 — plain
+  text, since there is no commenter URL field and never will be again), mono
+  email and date, the entry it belongs to, a status pill, and the body as
+  prose. Selection bar per `tables/`tables-list.html so bulk actions read the
+  same here as on entries. Pending rows carry a `--warn` wash; there is no
+  spam state, because marking spam means deleting.
+- `forms/`settings-with-rail.html — group="Forms" — `WeblogConfig.jsp` is 23
+  fields across 9 groups with a single Save buried at the bottom. The card
+  applies the editor's two-column shape to a settings form: the fields on the
+  left, and a 252px rail holding a section index (the spine marks where you
+  are, exactly as the nav rail does) plus a Save that is always reachable. The
+  delete action is a quiet text link, matching the editor.
 
 ## Quality bar
 

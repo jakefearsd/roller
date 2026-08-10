@@ -1,4 +1,4 @@
-<!-- @dsCard group="Foundations" name="Typography" subtitle="IBM Plex Sans + IBM Plex Mono, self-hosted webjar" -->
+<!-- @dsCard group="Foundations" name="Typography" subtitle="Six sizes and no seventh; Plex Sans, Mono and Serif, self-hosted" -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,7 +16,8 @@
   }
   .doc-head { margin-bottom: 28px; max-width: 900px; }
   .doc-title { font-size: 20px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
-  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0; }
+  .doc-subtitle { font-size: 14.5px; line-height: 1.55; color: #8FA5A2; margin: 0 0 10px; }
+  .doc-subtitle:last-child { margin-bottom: 0; }
 
   .t-light {
     --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
@@ -40,21 +41,39 @@
   .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
 
   .spec-row + .spec-row { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
-  .spec-tag { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 8px; }
+
+  /* The annotation above each specimen is a data readout of that row's spec,
+     so it takes the mono/data role rather than the caps-label role. It cannot
+     be a caps-label: the first specimen below IS a caps-label, and at the same
+     12px the annotation and the thing it annotates would be indistinguishable.
+     Mono separates them without reaching for a seventh size. */
+  .spec-tag {
+    font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px; color: var(--ink-soft); margin: 0 0 8px;
+  }
 
   .caps-sample { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
   .body-sample { font-size: 14.5px; line-height: 1.55; font-weight: 450; max-width: 46ch; }
   .head-sample { font-size: 16px; font-weight: 600; text-wrap: balance; }
   .title-sample { font-size: 20px; font-weight: 600; text-wrap: balance; }
+  /* The one element per page allowed outside the scale's UI range: the
+     editor's title field. Serif, because that is what the writing surface
+     uses; capped at 26px on purpose (signature move 4). */
+  .oversize-sample {
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: 26px; font-weight: 600; line-height: 1.25; text-wrap: balance;
+  }
+  .reserved-sample { font-size: 28px; font-weight: 600; line-height: 1.2; color: var(--ink-soft); text-wrap: balance; }
 
   .mono-row {
-    display: flex; gap: 20px; align-items: baseline; font-size: 13px;
+    display: flex; gap: 20px; align-items: baseline; font-size: 12px;
     background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px;
   }
   .mono-row span { white-space: nowrap; }
 
   .note {
-    margin-top: 20px; font-size: 12.5px; line-height: 1.55; color: var(--ink-soft);
+    margin-top: 20px; font-size: 12px; line-height: 1.55; color: var(--ink-soft);
     border-top: 1px solid var(--line); padding-top: 16px;
   }
 </style>
@@ -62,7 +81,8 @@
 <body>
   <div class="doc-head">
     <p class="doc-title">Typography</p>
-    <p class="doc-subtitle">Two families: IBM Plex Sans for UI and headings, IBM Plex Mono for anything that is data — slugs, dates, ids, counts.</p>
+    <p class="doc-subtitle">Two families carry the interface: IBM Plex Sans for UI and headings, IBM Plex Mono for anything that is data — slugs, dates, ids, counts. IBM Plex Serif appears in exactly one place, the editor's title field.</p>
+    <p class="doc-subtitle">Six sizes, and no seventh: <span class="mono">12 · 14.5 · 16 · 20 · 26 · 28</span>. There is no support tier below 12px. A label, caption or help line is 12px; a value, control or body text is 14.5px; quiet is expressed by color and weight, never by going smaller.</p>
   </div>
 
   <div class="panels">
@@ -86,7 +106,15 @@
         <p class="title-sample">Field Notes from the Coast</p>
       </div>
       <div class="spec-row">
-        <p class="spec-tag">Mono data row · tabular-nums</p>
+        <p class="spec-tag">Oversized · 26px / 600 / Plex Serif — at most one per page</p>
+        <p class="oversize-sample">Field Notes from the Coast</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Reserved · 28px / 600 — the scale's top stop, unused today</p>
+        <p class="reserved-sample">Reserved</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Mono data · 12px / tabular-nums</p>
         <div class="mono-row">
           <span class="mono">harbor-cottage-guide</span>
           <span class="mono">2026-08-04</span>
@@ -115,7 +143,15 @@
         <p class="title-sample">Field Notes from the Coast</p>
       </div>
       <div class="spec-row">
-        <p class="spec-tag">Mono data row · tabular-nums</p>
+        <p class="spec-tag">Oversized · 26px / 600 / Plex Serif — at most one per page</p>
+        <p class="oversize-sample">Field Notes from the Coast</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Reserved · 28px / 600 — the scale's top stop, unused today</p>
+        <p class="reserved-sample">Reserved</p>
+      </div>
+      <div class="spec-row">
+        <p class="spec-tag">Mono data · 12px / tabular-nums</p>
         <div class="mono-row">
           <span class="mono">harbor-cottage-guide</span>
           <span class="mono">2026-08-04</span>
@@ -123,7 +159,7 @@
         </div>
       </div>
 
-      <p class="note">Self-hosting note: the implementation ships IBM Plex Sans and IBM Plex Mono as a webjar (no Google Fonts request at runtime). These preview cards intentionally skip the &lt;link&gt; fetch and fall back to the system stack — production renders the real Plex.</p>
+      <p class="note">Self-hosting note: the implementation ships IBM Plex Sans, Mono and Serif as webjars (no Google Fonts request at runtime). These preview cards intentionally skip the &lt;link&gt; fetch and fall back to the system stack — production renders the real Plex.</p>
     </section>
   </div>
 </body>

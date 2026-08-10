@@ -39,7 +39,7 @@
   }
   .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
 
-  .row-label { font-size: 11px; color: var(--ink-soft); margin: 0 0 8px; }
+  .row-label { font-size: 12px; color: var(--ink-soft); margin: 0 0 8px; }
   .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
 
   .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 12px; border-radius: 99px; }
@@ -47,9 +47,11 @@
   .pill.warn { background: color-mix(in srgb, var(--warn) 16%, var(--paper)); color: var(--warn); }
   .pill.pending { background: var(--accent-quiet); color: var(--accent); }
   .pill.scheduled { background: var(--line); color: var(--ink); }
-  .pill.scheduled .mono { font-size: 11px; }
+  /* The scheduled date rides at the pill's own 12px -- it used to be shrunk to
+     11px to read quieter, which the scale no longer allows. Mono + tabular-nums
+     is what separates the date from the label; there is no smaller tier. */
 
-  .count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 99px; border: 1px solid var(--line); font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+  .count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 99px; border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--ink-soft); }
   .count.accent { border-color: var(--accent); color: var(--accent); background: var(--accent-quiet); }
 </style>
 </head>

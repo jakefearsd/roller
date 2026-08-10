@@ -24,11 +24,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -39,8 +42,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * tokens (see {@code docs/design/design-system.md}) -- stays in sync with
  * its spec and stays wired into the page.
  *
- * <p>Three failure modes this guards, modeled on {@link MessageKeyTest}'s
- * webapp-source scanning:
+ * <p>Four failure modes this guards, modeled on {@link MessageKeyTest}'s
+ * webapp-source scanning (the last one added after a file-scoped check let an
+ * entire off-spec palette sit unnoticed in the directory it was policing):
  * <ul>
  *   <li>a color slips in that is not one of the spec's 21 hex values --
  *       the whole point of a token file is that every color traces back to
@@ -51,7 +55,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       unreadable-page bug: half the UI keeps its light-mode color on a
  *       dark background;</li>
  *   <li>{@code head.jsp} stops referencing the stylesheet, silently
- *       reverting every admin page to unstyled tokens.</li>
+ *       reverting every admin page to unstyled tokens;</li>
+ *   <li>any OTHER stylesheet in the same directory carries its own palette --
+ *       the failure that hid {@code atom.xsl}/{@code rss.xsl}'s red/tan
+ *       scheme, which escaped only because the check above names one file.</li>
  * </ul>
  */
 public class DesignTokenTest {
@@ -140,10 +147,13 @@ public class DesignTokenTest {
      * does -- a bare {@code #RRGGBB} outside a comment -- but expects ZERO
      * matches rather than checking against the spec set, since roller.css
      * is not supposed to declare any hex at all. Named CSS color keywords
-     * (e.g. {@code black}/{@code white} as {@code color-mix()} shading
-     * anchors, or {@code grey} on the collapse-chevron border) are
-     * deliberately out of scope: this locks down the specific regression
+     * are deliberately out of scope: this locks down the specific regression
      * class the design wave hit, not a general-purpose CSS color linter.
+     * (The named colors this exemption was written for are all gone as of the
+     * 2026-08-10 consistency pass -- {@code color-mix()} now shades toward
+     * {@code var(--ink)} so hover polarity follows the theme, and the
+     * collapse chevron takes {@code var(--ink-soft)} -- but the exemption
+     * stands, because a keyword is a different failure mode from a hex.)
      */
     @Test
     public void rollerCssHasNoHexColorLiteralsOutsideComments() throws IOException {
@@ -161,6 +171,79 @@ public class DesignTokenTest {
                 ROLLER_CSS + " must stay tokens-only -- found hex color literal(s) outside "
                         + "comments (should be var(--token) references instead): "
                         + String.join(", ", found));
+    }
+
+    /**
+     * Every OTHER stylesheet in the directory, not just the one named above.
+     *
+     * <p>{@link #rollerCssHasNoHexColorLiteralsOutsideComments()} names
+     * {@code roller.css} explicitly, which is exactly how {@code atom.xsl} and
+     * {@code rss.xsl} kept an entire off-spec red/tan palette
+     * ({@code #ad3537}, {@code #c6ab74}, {@code #f00}) sitting in the policed
+     * directory, on a public surface, with no dark mode -- they were never
+     * named, so they were never checked. A file-scoped linter only guards the
+     * files someone remembered to list; this one guards the directory, so a new
+     * stylesheet is covered the day it lands rather than the day someone audits
+     * it.
+     *
+     * <p>The assertion here is membership, not absence, and the distinction
+     * matters. {@code roller.css} may hold NO hex at all because
+     * {@code roller-tokens.css} loads alongside it and it can say
+     * {@code var(--accent)}. The feed stylesheets cannot: an XSL transform emits
+     * a standalone document with one inline {@code <style>} and no companion
+     * file to import, so it has to declare the palette it then references --
+     * the same job {@code roller-tokens.css} does, in a file that has to carry
+     * it itself. Demanding zero literals there would be demanding they render
+     * uncolored. So the rule is the one that actually expresses the intent:
+     * every color a stylesheet names must be one of the spec's 21 values.
+     * That still fails the red/tan palette this test was written for, and it
+     * fails a 3-digit {@code #f00} too, while letting a self-contained document
+     * define the tokens it needs.
+     *
+     * <p>{@code roller-tokens.css} itself is skipped -- it is the palette of
+     * record, and {@link #everyHexLiteralIsFromTheSpec()} already guards it.
+     */
+    @Test
+    public void everyStylesheetInTheDirectoryUsesOnlySpecColors() throws IOException {
+        Path dir = TOKENS_CSS.getParent();
+        assertTrue(Files.isDirectory(dir), "Expected a styles directory at " + dir.toAbsolutePath());
+
+        // 3- and 6-digit forms both: the feed stylesheets used #f00, which a
+        // 6-digit-only pattern reads straight past.
+        Pattern hex = Pattern.compile("#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})\\b");
+        // XSL carries its CSS inside XML, so strip XML comments as well.
+        Pattern xmlComment = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
+
+        Set<String> offenders = new TreeSet<>();
+        List<Path> checked = new ArrayList<>();
+        try (Stream<Path> files = Files.list(dir)) {
+            for (Path file : files.sorted().toList()) {
+                String name = file.getFileName().toString();
+                if (file.equals(TOKENS_CSS) || Files.isDirectory(file)) {
+                    continue;
+                }
+                if (!name.endsWith(".css") && !name.endsWith(".xsl")) {
+                    continue;
+                }
+                checked.add(file);
+                String body = Files.readString(file, StandardCharsets.UTF_8);
+                body = CSS_COMMENT.matcher(body).replaceAll(" ");
+                body = xmlComment.matcher(body).replaceAll(" ");
+                Matcher m = hex.matcher(body);
+                while (m.find()) {
+                    String value = m.group().toUpperCase(java.util.Locale.ROOT);
+                    if (!SPEC_HEX_VALUES.contains(value)) {
+                        offenders.add(name + ": " + m.group());
+                    }
+                }
+            }
+        }
+
+        assertFalse(checked.isEmpty(), "Found no stylesheets to check under " + dir.toAbsolutePath());
+        assertTrue(offenders.isEmpty(),
+                "Every color in " + dir + " must be one of the \"Quiet Instrument\" spec's 21 "
+                        + "values (docs/design/design-system.md). Off-spec color(s): "
+                        + String.join(", ", offenders));
     }
 
     @Test

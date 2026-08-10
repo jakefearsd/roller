@@ -1,0 +1,187 @@
+<!-- @dsCard group="Tables" name="Comments — Moderation" subtitle="Selection bar, pending vs approved, comment as a row not a nested table" -->
+<style>
+  .cm-card * { box-sizing: border-box; margin: 0; padding: 0; }
+  .cm-card {
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-weight: 450;
+    font-size: 14.5px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .cm-card .cm-mono {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cm-card .cm-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E;
+  }
+  .cm-card .cm-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F;
+  }
+
+  .cm-card .cm-panels { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .cm-card .cm-panel {
+    flex: 1 1 460px; min-width: 340px;
+    background: var(--paper); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 24px;
+  }
+  .cm-card .cm-caps {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    font-weight: 600; color: var(--ink-soft);
+  }
+  .cm-card .cm-panel > .cm-caps { display: block; margin-bottom: 16px; }
+
+  .cm-card .cm-title { font-size: 20px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+
+  /* Selection bar: same treatment as tables-list.html, so a bulk action reads
+     identically whether you are on entries or comments. */
+  .cm-card .cm-selbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin: 16px 0 0; padding: 8px 12px;
+    background: var(--accent-quiet); border: 1px solid var(--line);
+    border-radius: 6px; font-size: 14.5px;
+  }
+  .cm-card .cm-selbar .cm-selcount { font-weight: 600; }
+  .cm-card .cm-selbar .cm-sep { color: var(--ink-soft); }
+  .cm-card .cm-linkbtn {
+    background: none; border: 0; padding: 0; font: inherit;
+    color: var(--accent); text-decoration: underline; cursor: pointer;
+  }
+  .cm-card .cm-linkbtn.cm-danger { color: var(--bad); }
+
+  /* One comment = one row on one surface. No nested table: the metadata is a
+     single header line, the body is prose beneath it. */
+  .cm-card .cm-list { margin-top: 16px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .cm-card .cm-row { display: flex; gap: 12px; padding: 14px 16px; background: var(--surface); }
+  .cm-card .cm-row + .cm-row { border-top: 1px solid var(--line); }
+  .cm-card .cm-row.cm-pending { background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+
+  .cm-card .cm-check {
+    width: 14px; height: 14px; margin-top: 4px; flex: 0 0 auto;
+    border: 1px solid var(--ink-soft); border-radius: 3px; background: var(--surface);
+  }
+  .cm-card .cm-check.cm-on { background: var(--accent); border-color: var(--accent); }
+
+  .cm-card .cm-body { min-width: 0; flex: 1; }
+  .cm-card .cm-metaline {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 2px;
+  }
+  .cm-card .cm-who { font-weight: 600; }
+  .cm-card .cm-email, .cm-card .cm-when { font-size: 12px; color: var(--ink-soft); }
+  .cm-card .cm-on-entry { font-size: 12px; color: var(--ink-soft); }
+  .cm-card .cm-on-entry a { color: var(--accent); text-decoration: none; }
+  .cm-card .cm-text { margin-top: 6px; color: var(--ink); max-width: 62ch; }
+
+  .cm-card .cm-pill {
+    font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 99px;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .cm-card .cm-pill.cm-ok { background: color-mix(in srgb, var(--good) 16%, var(--surface)); color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, var(--surface)); }
+  .cm-card .cm-pill.cm-wait { background: color-mix(in srgb, var(--warn) 18%, var(--surface)); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--surface)); }
+
+  .cm-card .cm-actions { display: flex; gap: 12px; margin-top: 8px; }
+
+  /* Empty state, the invitation form: one 16px/600 line, one soft sentence,
+     no button (there is nothing for the owner to do but wait). */
+  .cm-card .cm-empty { padding: 32px 16px; text-align: center; background: var(--surface); }
+  .cm-card .cm-empty-title { font-size: 16px; font-weight: 600; }
+  .cm-card .cm-empty-body { color: var(--ink-soft); margin-top: 4px; }
+</style>
+
+<div class="cm-card">
+  <div class="cm-panels">
+
+    <section class="cm-panel cm-light">
+      <span class="cm-caps">Light</span>
+      <p class="cm-title">Comments</p>
+
+      <div class="cm-selbar">
+        <span class="cm-selcount">2 selected</span>
+        <span class="cm-sep">·</span>
+        <button type="button" class="cm-linkbtn">Approve</button>
+        <span class="cm-sep">·</span>
+        <button type="button" class="cm-linkbtn cm-danger">Delete</button>
+      </div>
+
+      <div class="cm-list">
+        <div class="cm-row cm-pending">
+          <span class="cm-check cm-on"></span>
+          <div class="cm-body">
+            <div class="cm-metaline">
+              <span class="cm-who">Maren Vole</span>
+              <span class="cm-email cm-mono">maren@example.com</span>
+              <span class="cm-pill cm-wait">Pending</span>
+            </div>
+            <div class="cm-on-entry">
+              <span class="cm-mono">2026-08-09</span> on <a href="#">Field Notes from the Coast</a>
+            </div>
+            <p class="cm-text">The tide table you linked is out of date — the harbour moved to the
+              2026 almanac in June. Happy to send the new one over.</p>
+            <div class="cm-actions">
+              <button type="button" class="cm-linkbtn">Approve</button>
+              <button type="button" class="cm-linkbtn cm-danger">Delete</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cm-row">
+          <span class="cm-check cm-on"></span>
+          <div class="cm-body">
+            <div class="cm-metaline">
+              <span class="cm-who">Iris Pell</span>
+              <span class="cm-email cm-mono">iris@example.com</span>
+              <span class="cm-pill cm-ok">Approved</span>
+            </div>
+            <div class="cm-on-entry">
+              <span class="cm-mono">2026-08-07</span> on <a href="#">Harbor Cottage Guide</a>
+            </div>
+            <p class="cm-text">Stayed here in March. The woodstove instructions in this post are
+              the only ones online that actually work.</p>
+            <div class="cm-actions">
+              <button type="button" class="cm-linkbtn cm-danger">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cm-panel cm-dark">
+      <span class="cm-caps">Dark</span>
+      <p class="cm-title">Comments</p>
+
+      <div class="cm-list" style="margin-top:16px">
+        <div class="cm-row cm-pending">
+          <span class="cm-check"></span>
+          <div class="cm-body">
+            <div class="cm-metaline">
+              <span class="cm-who">Tobias Ferrand</span>
+              <span class="cm-email cm-mono">tobias@example.com</span>
+              <span class="cm-pill cm-wait">Pending</span>
+            </div>
+            <div class="cm-on-entry">
+              <span class="cm-mono">2026-08-08</span> on <a href="#">Tide Pools North of the Lighthouse</a>
+            </div>
+            <p class="cm-text">Is the north path passable at high tide, or should we go round
+              by the road?</p>
+            <div class="cm-actions">
+              <button type="button" class="cm-linkbtn">Approve</button>
+              <button type="button" class="cm-linkbtn cm-danger">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <span class="cm-caps" style="display:block;margin:24px 0 8px">Empty</span>
+      <div class="cm-list">
+        <div class="cm-empty">
+          <p class="cm-empty-title">No comments yet.</p>
+          <p class="cm-empty-body">When a reader replies to one of your posts, it lands here first.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>

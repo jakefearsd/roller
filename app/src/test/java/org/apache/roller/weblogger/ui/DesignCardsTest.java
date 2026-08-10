@@ -80,7 +80,7 @@ public class DesignCardsTest {
     void thereAreCardsToCheckAtAll() throws IOException {
         // Without this, every other assertion here passes vacuously if the
         // directory is ever moved or emptied.
-        assertEquals(17, cards().size(),
+        assertEquals(19, cards().size(),
                 "expected the full committed card set; found: " + cards());
     }
 

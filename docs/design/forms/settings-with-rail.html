@@ -1,0 +1,206 @@
+<!-- @dsCard group="Forms" name="Weblog Settings — Section index &amp; save rail" subtitle="23 fields across 9 groups, with Save always reachable" -->
+<style>
+  .sr-card * { box-sizing: border-box; margin: 0; padding: 0; }
+  .sr-card {
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-weight: 450;
+    font-size: 14.5px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sr-card .sr-mono {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sr-card .sr-light {
+    --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --warn:#9A6A1F; --bad:#A33B2E;
+  }
+  .sr-card .sr-dark {
+    --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --warn:#D0A45C; --bad:#D0705F;
+  }
+
+  .sr-card .sr-panels { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .sr-card .sr-panel {
+    flex: 1 1 520px; min-width: 380px;
+    background: var(--paper); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 24px;
+  }
+  .sr-card .sr-caps {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    font-weight: 600; color: var(--ink-soft);
+  }
+  .sr-card .sr-panel > .sr-caps { display: block; margin-bottom: 16px; }
+
+  .sr-card .sr-title {
+    font-size: 20px; font-weight: 600;
+    padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 16px;
+  }
+
+  /* Same two-column shape the entry editor established: the thing you work on
+     on the left, everything about committing it in a 252px rail on the right. */
+  .sr-card .sr-grid { display: grid; grid-template-columns: minmax(0,1fr) 252px; gap: 24px; align-items: start; }
+
+  .sr-card .sr-section { margin-bottom: 24px; }
+  .sr-card .sr-section > .sr-caps { display: block; margin-bottom: 10px; }
+  .sr-card .sr-fields {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 6px; padding: 16px;
+  }
+
+  /* Labels above fields, help under. No label-column gutter. */
+  .sr-card .sr-field + .sr-field { margin-top: 16px; }
+  .sr-card .sr-field label { display: block; font-weight: 600; margin-bottom: 4px; }
+  .sr-card .sr-in {
+    width: 100%; font: inherit; font-size: 14.5px; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 10px;
+  }
+  .sr-card .sr-help { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+  .sr-card .sr-in.sr-bad { border-color: var(--bad); }
+  .sr-card .sr-err { font-size: 12px; color: var(--bad); margin-top: 4px; }
+
+  /* The rail. The index is the new part: nine groups is too many to hold in
+     your head while scrolling, and Save was previously below all of them. */
+  .sr-card .sr-rail { display: flex; flex-direction: column; gap: 16px; }
+  .sr-card .sr-box {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 6px; padding: 14px 16px;
+  }
+  .sr-card .sr-box > .sr-caps { display: block; margin-bottom: 10px; }
+
+  .sr-card .sr-idx { display: flex; flex-direction: column; }
+  .sr-card .sr-idx a {
+    padding: 5px 0 5px 10px; margin-left: -10px;
+    color: var(--ink); text-decoration: none;
+    border-left: 2px solid transparent;
+  }
+  /* The spine, exactly as the nav rail uses it — nothing else is colored. */
+  .sr-card .sr-idx a.sr-here {
+    border-left-color: var(--accent); background: var(--accent-quiet); font-weight: 600;
+  }
+
+  .sr-card .sr-btn {
+    width: 100%; font: inherit; font-size: 14.5px; font-weight: 600;
+    padding: 8px 16px; border-radius: 6px; cursor: pointer;
+    color: #FFFFFF; background: var(--accent); border: 1px solid var(--accent);
+  }
+  .sr-card .sr-saved { font-size: 12px; color: var(--good); margin-top: 8px; }
+  .sr-card .sr-dangerlink {
+    background: none; border: 0; padding: 0; font: inherit; font-size: 14.5px;
+    color: var(--ink-soft); text-decoration: underline; cursor: pointer;
+  }
+</style>
+
+<div class="sr-card">
+  <div class="sr-panels">
+
+    <section class="sr-panel sr-light">
+      <span class="sr-caps">Light</span>
+      <p class="sr-title">Weblog Settings</p>
+
+      <div class="sr-grid">
+        <div>
+          <div class="sr-section">
+            <span class="sr-caps">General</span>
+            <div class="sr-fields">
+              <div class="sr-field">
+                <label for="sr-n">Weblog name</label>
+                <input class="sr-in" id="sr-n" value="Coastal Guides">
+              </div>
+              <div class="sr-field">
+                <label for="sr-t">Tagline</label>
+                <input class="sr-in" id="sr-t" value="Field notes from the north shore">
+                <p class="sr-help">Shown under the weblog name on every page.</p>
+              </div>
+              <div class="sr-field">
+                <label for="sr-h">Handle</label>
+                <input class="sr-in sr-mono" id="sr-h" value="coastal-guides">
+                <p class="sr-help">The address readers see: <span class="sr-mono">/coastal-guides</span></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="sr-section">
+            <span class="sr-caps">Newsletter</span>
+            <div class="sr-fields">
+              <div class="sr-field">
+                <label for="sr-u">Listmonk list UUID</label>
+                <input class="sr-in sr-mono sr-bad" id="sr-u" value="coastal-guides-list">
+                <p class="sr-err">That is not a list UUID. Copy it exactly from Listmonk.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="sr-rail">
+          <div class="sr-box">
+            <span class="sr-caps">Sections</span>
+            <nav class="sr-idx">
+              <a href="#" class="sr-here">General</a>
+              <a href="#">Newsletter</a>
+              <a href="#">Comments</a>
+              <a href="#">Formatting</a>
+              <a href="#">Analytics</a>
+              <a href="#">Search</a>
+              <a href="#">Feeds</a>
+              <a href="#">Uploads</a>
+              <a href="#">Advanced</a>
+            </nav>
+          </div>
+          <div class="sr-box">
+            <button type="button" class="sr-btn">Save settings</button>
+            <p class="sr-saved">Saved 2 minutes ago</p>
+          </div>
+          <div class="sr-box">
+            <button type="button" class="sr-dangerlink">Delete this weblog</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="sr-panel sr-dark">
+      <span class="sr-caps">Dark</span>
+      <p class="sr-title">Weblog Settings</p>
+
+      <div class="sr-grid">
+        <div>
+          <div class="sr-section">
+            <span class="sr-caps">Comments</span>
+            <div class="sr-fields">
+              <div class="sr-field">
+                <label for="sr-d">Close comments after</label>
+                <input class="sr-in sr-mono" id="sr-d" value="30">
+                <p class="sr-help">Days. Leave blank to keep them open indefinitely.</p>
+              </div>
+              <div class="sr-field">
+                <label for="sr-m">Moderation</label>
+                <input class="sr-in" id="sr-m" value="Hold every comment for approval">
+                <p class="sr-help">Readers must be signed in to comment.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="sr-rail">
+          <div class="sr-box">
+            <span class="sr-caps">Sections</span>
+            <nav class="sr-idx">
+              <a href="#">General</a>
+              <a href="#">Newsletter</a>
+              <a href="#" class="sr-here">Comments</a>
+              <a href="#">Formatting</a>
+              <a href="#">Analytics</a>
+            </nav>
+          </div>
+          <div class="sr-box">
+            <button type="button" class="sr-btn">Save settings</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+  </div>
+</div>
