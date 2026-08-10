@@ -136,8 +136,9 @@
         </rendition>
     </template>
     
-    <!-- resources -->
-    <resource path="roller-tan-logo.gif" />
-    <resource path="tan-banner.gif" />
-    
+    <!-- resources: none. The two tan GIFs declared here were the last of the
+         pre-restyle raster assets; no template referenced them and the files
+         are deleted, so a declaration would only make ThemeManager try to
+         copy something that is not there. -->
+
 </weblogtheme>

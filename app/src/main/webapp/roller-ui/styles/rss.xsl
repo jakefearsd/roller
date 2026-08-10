@@ -26,40 +26,82 @@
 <head>
 <title><xsl:value-of select="rss/channel/title"/></title>
 <style>
+/*
+ * "Quiet Instrument" tokens -- docs/design/design-system.md. A browser
+ * pointed at a feed renders this stylesheet, so it is a public surface and
+ * carries the same palette as the themes and the admin UI. XSL has no
+ * external stylesheet to link (the transform's output never reaches a page
+ * that could have loaded one), so the tokens are inlined here; every hex
+ * below is one of the spec's values.
+ *
+ * Fonts are declared by family only. A relative @font-face url() in this
+ * block would resolve against the FEED document's URL, not this
+ * stylesheet's, so the self-hosted Plex webjar is unreachable from here --
+ * system-ui is the intended fallback, not an oversight.
+ *
+ * Rules for markup this transform does not emit (.bannerBox and its missing
+ * two-banner.gif, the search sidebar, table.rollertable, a.entryTitle) were
+ * dropped rather than re-tinted; they carried half the off-spec palette and
+ * styled nothing.
+ */
+:root {
+    --paper: #F7F9F9;
+    --surface: #FFFFFF;
+    --ink: #17262A;
+    --ink-soft: #5A6E72;
+    --line: #DCE4E4;
+    --accent: #0F6E68;
+    --accent-quiet: #E3F0EE;
+    --focus: #2AA198;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --paper: #131C1C;
+        --surface: #1A2626;
+        --ink: #DCE7E5;
+        --ink-soft: #8FA5A2;
+        --line: #2A3838;
+        --accent: #4FB3AA;
+        --accent-quiet: #1E3230;
+        --focus: #2AA198;
+    }
+}
 body {
-    background: white;
+    background: var(--paper);
+    color: var(--ink);
     margin: 0px;
     padding: 0px;
-    font: small Verdana,Arial,Sans-serif;
-    font: small/1.5em Verdana, Arial, Helvetica, sans-serif;
-    line-height: 1.2em;
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 14.5px;
+    font-weight: 450;
+    line-height: 1.55;
 }
 #banner {
     margin: 0px;
-    padding: 0px 0px 0px 0px;
-}
-.bannerBox {
-    width: 100%;
+    padding: 0px;
 }
 .bannerStatusBox {
     width: 100%;
+    background: var(--accent-quiet);
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
 }
-.sidebarBodyHead {
-    height: 25px;
+.bannerStatusBox a, .bannerStatusBox a:link, .bannerStatusBox a:visited {
+    color: var(--ink-soft);
+    font-weight: 600;
 }
-.searchSidebarHead {
-   height: 5px;
+.bannerLeft, .bannerRight {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
 }
-.searchSidebarBody {
-   margin: 0px 0px 0px 0px;
+.bannerLeft {
+    padding: 8px 16px 8px 12px;
 }
-.searchSidebarBody input {
-   margin: 5px;
-}
-#menu {
-    padding: 0px 10px 0px 10px;
-}
-#content {
+.bannerRight {
+    padding: 8px 12px 8px 16px;
+    text-align: right;
 }
 #centercontent_wrap {
     float: left;
@@ -67,89 +109,59 @@ body {
     width: 100%;
 }
 #centercontent {
-    margin: 10px;
+    margin: 24px;
 }
 #rightcontent_wrap {
     float: right;
     display: inline;
 }
 #rightcontent {
-    margin: 10px;
+    margin: 24px;
 }
 #footer {
     clear: both;
-    padding: 15px 0px 15px 0px;
-    font-size: smaller;
+    padding: 16px 0px;
+    color: var(--ink-soft);
+    font-size: 12px;
     text-align: center;
 }
-.prop {
-    height: 300px;
-    float: right;
-    width: 1px;
-}
-.clear {
-    clear: both;
-    height: 1px;
-    overflow: hidden;
-}
-.bannerStatusBox a, .bannerStatusBox a {
-    font-weight: bold;
-}
-.bannerLeft {
-    padding: 4px 15px 4px 10px;
-}
-.bannerRight {
-    padding: 4px 10px 4px 15px;
-    text-align: right;
-}
-.bannerBox {
-    width: 100%;
-    background: #f00;
-}
-.bannerBox {
-    background: url("two-banner.gif") repeat-x top;
-}
-.bannerStatusBox {
-    background: #ad3431;
-    color: white;
-}
-.bannerStatusBox a {
-    color: white;
-}
-.bannerStatusBox a:link {
-    color: white;
-}
-.bannerStatusBox a:visited {
-    color: white;
-}
 h1 {
-    color: #ad3537;
+    color: var(--ink);
+    font-size: 20px;
+    font-weight: 600;
 }
-h2 {
-    color: #ad3537;
+h2, h3 {
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
 }
-h3 {
-    background: transparent;
-    color: #ad3537;
-    font-weight: bold;
+p {
+    margin: 0px 0px 12px 0px;
 }
-a:link {
-    color: #ad3537;
+a, a:link, a:visited {
+    color: var(--accent);
 }
-a:visited {
-    color: #ad3537;
+a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
 }
-.subtitle span {
-    color: #ad3431;
+hr {
+    border: 0px;
+    border-top: 1px solid var(--line);
+    margin: 24px 0px;
 }
-table.rollertable th, table.rollertable th {
-    background: #c6ab74;
+ol {
+    padding-left: 24px;
 }
-table.rollertable td, table.rollertable tbody td {
-    border: 1px solid #c6ab74;
+ol li {
+    margin-bottom: 12px;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
 }
-a.entryTitle, a:active.entryTitle, a:visited.entryTitle {
-   color: #ad3537;
+ol li h4 {
+    margin: 0px 0px 4px 0px;
+    font-size: 16px;
+    font-weight: 600;
 }
 </style>
 </head>
