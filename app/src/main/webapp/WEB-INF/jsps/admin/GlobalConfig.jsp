@@ -145,11 +145,16 @@
 
         </c:forEach>
 
-        <img src="<c:url value='/roller-ui/images/spacer.png' />" alt="spacer" style="min-height: 1em"/>
+        <%-- The gap between one display group and the next used to be a
+             spacer.png with an inline min-height. It is margin, and
+             .section-head already carries 32px of top margin, so the group
+             heading below spaces the groups on its own -- nothing goes here.
+             The save button carries its own mt-3 for the same reason: the
+             last group has no heading after it to do the work. --%>
 
     </c:forEach>
 
-    <input id="saveButton" class="btn btn-secondary" type="submit" value="<spring:message code="generic.save"/>"/>
+    <input id="saveButton" class="btn btn-secondary mt-3" type="submit" value="<spring:message code="generic.save"/>"/>
 
 </form>
 

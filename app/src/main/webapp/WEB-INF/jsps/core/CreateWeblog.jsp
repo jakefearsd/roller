@@ -50,7 +50,9 @@
         <label class="col-sm-3"></label>
         <div class="col-sm-9">
             <spring:message code="createWebsite.weblogUrl" />:&nbsp;
-            ${absoluteSiteURL}/<span id="handlePreview" style="color:red"><c:choose><c:when test="${bean.handle != null}">${fn:escapeXml(bean.handle)}</c:when><c:otherwise>handle</c:otherwise></c:choose></span>
+            <%-- A live preview of the URL the handle will produce, not an
+                 error: --accent, not the red it used to be hardcoded to. --%>
+            ${absoluteSiteURL}/<span id="handlePreview" style="color:var(--accent)"><c:choose><c:when test="${bean.handle != null}">${fn:escapeXml(bean.handle)}</c:when><c:otherwise>handle</c:otherwise></c:choose></span>
             <br>
         </div>
     </div>

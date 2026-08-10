@@ -60,11 +60,22 @@
         <div id="imageGrid" class="card">
             <div class="card-body">
 
-                <ul>
+                <%-- Empty state sits OUTSIDE the <ul>: a <p> nested directly
+                     in a list is not valid HTML and the browser hoists it out
+                     of the list anyway. No action button either -- this page
+                     is the picker overlay opened from inside the entry
+                     editor, so an "upload" control here would have to navigate
+                     the overlay away from the flow that opened it. The
+                     sentence names the Media tab instead of shipping a
+                     control that cannot work where it is. --%>
+                <c:if test="${fn:length(childFiles) == 0}">
+                    <div class="empty-state">
+                        <p class="empty-state-title"><spring:message code="mediaFileView.noFiles"/></p>
+                        <p class="empty-state-body"><spring:message code="empty.mediaChooser.body"/></p>
+                    </div>
+                </c:if>
 
-                    <c:if test="${fn:length(childFiles) == 0}">
-                        <p style="text-align: center"><spring:message code="mediaFileView.noFiles"/></p>
-                    </c:if>
+                <ul>
 
                     <c:if test="${fn:length(childFiles) > 0}">
 

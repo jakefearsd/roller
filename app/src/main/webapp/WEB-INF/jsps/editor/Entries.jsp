@@ -272,7 +272,7 @@
 
             <c:set var="deleteAction">entryRemoveViaList!remove</c:set>
             
-            <form action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post">
+            <form class="form-stacked" action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
@@ -290,7 +290,7 @@
                             <spring:message code="weblogEntryRemove.entryTitle"/>
                         </label>
                         <div class="col-sm-9">
-                            <p class="form-control-plaintext" style="padding-top:0px" id="postTitleLabel"></p>
+                            <p class="form-control-plaintext" id="postTitleLabel"></p>
                         </div>
                     </div>
 
@@ -299,7 +299,7 @@
                             <spring:message code="weblogEntryRemove.entryId"/>
                         </label>
                         <div class="col-sm-9">
-                            <p class="form-control-plaintext" style="padding-top:0px" id="postIdLabel"></p>
+                            <p class="form-control-plaintext" id="postIdLabel"></p>
                         </div>
                     </div>
 

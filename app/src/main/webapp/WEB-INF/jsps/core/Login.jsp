@@ -25,7 +25,11 @@
         <form method="post" id="loginForm" class="form-signin"
               action="<c:url value='/roller_j_security_check'/>" onsubmit="saveUsername(this)">
 
-            <legend><spring:message code="loginPage.prompt"/></legend>
+            <%-- .section-head, not <legend>: a legend outside a fieldset is
+                 invalid anyway, and the browser's default sizing for it put a
+                 heading well above the 20px page title on the one page a
+                 first-time visitor sees. --%>
+            <h3 class="section-head"><spring:message code="loginPage.prompt"/></h3>
 
             <div class="mb-3">
                 <label for="j_username" class="form-label"> <spring:message code="loginPage.userName"/> </label>

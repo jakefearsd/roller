@@ -53,7 +53,7 @@
 
 <c:if test="${authMethod != 'LDAP'}"> <%-- if we're not doing LDAP we can create new users in Roller --%>
 
-    <h3><spring:message code="userAdmin.subtitle.userCreation" /></h3>
+    <h3 class="section-head"><spring:message code="userAdmin.subtitle.userCreation" /></h3>
     <spring:message code="userAdmin.prompt.orYouCan" />
     <c:url var="createUserUrl" value="/roller-ui/admin/createUser.rol" />
     <a href="${createUserUrl}">

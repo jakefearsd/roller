@@ -48,8 +48,9 @@
                          style="max-width:240px; max-height:240px; display:block"/>
                     <span id="focalMarker"
                           style="position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px;
-                                 border:2px solid #fff; border-radius:50%;
-                                 background:color-mix(in srgb, var(--bad) 85%, transparent); box-shadow:0 0 3px #000;
+                                 border:2px solid var(--surface); border-radius:50%;
+                                 background:color-mix(in srgb, var(--bad) 85%, transparent);
+                                 box-shadow:0 0 3px var(--ink);
                                  pointer-events:none; display:none"></span>
                 </div>
                 <div class="form-text"><spring:message code="mediaFileEdit.focalPoint.tip"/></div>
@@ -162,7 +163,8 @@
 
 <c:if test="${bean.croppable}">
     <hr/>
-    <h5 id="cropSectionTitle"><spring:message code="mediaFileEdit.crop.title"/></h5>
+    <%-- id kept: MediaCropIT identifies the crop section by #cropSectionTitle. --%>
+    <h5 id="cropSectionTitle" class="section-head"><spring:message code="mediaFileEdit.crop.title"/></h5>
     <p class="pagetip"><spring:message code="mediaFileEdit.crop.tip"/></p>
 
     <cropper-canvas id="cropCanvas" background style="width:100%; height:360px">

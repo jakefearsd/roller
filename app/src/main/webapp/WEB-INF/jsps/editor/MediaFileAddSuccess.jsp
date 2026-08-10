@@ -30,7 +30,7 @@
     <input type="hidden" name="bean.enclosureURL" value="" id="enclosureURL"/>
 
     <c:if test="${fn:length(newImages) > 0}">
-        <h4><spring:message code="mediaFileSuccess.selectImagesTitle"/></h4>
+        <h4 class="section-head"><spring:message code="mediaFileSuccess.selectImagesTitle"/></h4>
         <p><spring:message code="mediaFileSuccess.selectImages"/></p>
 
         <%-- select images via checkboxes --%>
@@ -88,7 +88,7 @@
 
         <%-- select enclosure file via radio boxes --%>
 
-        <h4><spring:message code="mediaFileSuccess.selectEnclosureTitle"/></h4>
+        <h4 class="section-head"><spring:message code="mediaFileSuccess.selectEnclosureTitle"/></h4>
         <p><spring:message code="mediaFileSuccess.selectEnclosure"/></p>
 
         <c:forEach items="${newFiles}" var="newFile">

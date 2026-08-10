@@ -42,11 +42,17 @@ function save() {
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     
+    <%-- Legend and table are gated on there being members to show; the <form>
+         itself stays unconditional because RouteSweepIT identifies this route
+         by "form[action$='/roller-ui/authoring/members!save.rol']"
+         (Routes.java). --%>
+    <c:if test="${not empty weblogPermissions}">
+
     <div style="text-align: right; padding-bottom: 6px;">
         <span class="pendingCommentBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
             <spring:message code="commentManagement.pending"/>&nbsp;
     </div>
-    
+
     <table class="rollertable table table-striped">
         <tr class="rHeaderTr">
            <th class="rollertable" width="20%">
@@ -103,10 +109,26 @@ function save() {
        </c:forEach>
     </table>
     <br />
-     
+
     <div class="control">
        <button type="submit" class="btn"><spring:message code="generic.save"/></button>
     </div>
-    
+
+    </c:if>
+
+    <c:if test="${empty weblogPermissions}">
+        <div class="empty-state">
+            <p class="empty-state-title"><spring:message code="empty.members.title"/></p>
+            <p class="empty-state-body"><spring:message code="empty.members.body"/></p>
+            <c:url var="emptyMembersInviteUrl" value="/roller-ui/authoring/invite.rol">
+                <c:param name="weblog" value="${actionWeblog.handle}"/>
+            </c:url>
+            <a href="${emptyMembersInviteUrl}" class="btn btn-primary">
+                <spring:message code="memberPermissions.inviteMember"/>
+            </a>
+        </div>
+    </c:if>
+
+
 <sec:csrfInput/>
 </form>

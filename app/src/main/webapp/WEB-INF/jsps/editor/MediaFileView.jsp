@@ -45,18 +45,18 @@
     <p class="subtitle">
         <spring:message code="mediaFileView.searchTitle"/>
     </p>
+    <%-- Result count and the criteria that produced it. A zero-result search
+         no longer says its piece here: it gets the .empty-state invitation
+         below the form instead, the same shape as the folder-empty path, so
+         the two ways this page can come back with nothing look alike. The
+         criteria list is a sibling of the paragraph, not a child -- a <ul>
+         inside a <p> closes the <p> in every browser anyway. --%>
     <p class="pagetip">
-
-            <%-- display summary of the search results and terms --%>
-
-        <c:choose>
-<c:when test="${fn:length(pager.items) > 0}">
-        <spring:message code="mediaFileView.matchingResults" arguments="${fn:length(pager.items)}"/>
-        </c:when>
-<c:otherwise>
-            <spring:message code="mediaFileView.noResults"/>
-        </c:otherwise>
-</c:choose><spring:message code="mediaFileView.searchInfo"/>
+        <c:if test="${fn:length(pager.items) > 0}">
+            <spring:message code="mediaFileView.matchingResults" arguments="${fn:length(pager.items)}"/>
+        </c:if>
+        <spring:message code="mediaFileView.searchInfo"/>
+    </p>
 
     <ul>
         <c:if test="${not empty bean.name}">
@@ -294,11 +294,28 @@
 
 </c:if>
 
+<%-- Empty state, search branch: a search ran and matched nothing. Same shape
+     as the folder-empty invitation below -- the two used to disagree, one an
+     .empty-state card and the other a half-sentence buried in the pagetip
+     paragraph. The action clears the search by reloading the page without
+     the query, which is the only way back to the whole library from here. --%>
+<c:if test="${not empty pager && fn:length(pager.items) == 0}">
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="empty.mediaSearch.title"/></p>
+        <p class="empty-state-body"><spring:message code="mediaFileView.noResults"/></p>
+        <c:url var="emptySearchResetUrl" value="/roller-ui/authoring/mediaFileView.rol">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+        </c:url>
+        <a href="${emptySearchResetUrl}" class="btn btn-primary">
+            <spring:message code="empty.mediaSearch.action"/>
+        </a>
+    </div>
+</c:if>
+
 <%-- Empty state: no search in progress (a zero-result search has its own
-     "no matching results" message above) and this directory has no files.
-     Kept as its own block rather than nested inside the guard above, which
-     only enters for a directory/search that already has something to
-     show. --%>
+     invitation just above) and this directory has no files. Kept as its own
+     block rather than nested inside the guard above, which only enters for a
+     directory/search that already has something to show. --%>
 <c:if test="${empty pager && empty childFiles}">
     <div class="empty-state">
         <p class="empty-state-title"><spring:message code="empty.media.title"/></p>

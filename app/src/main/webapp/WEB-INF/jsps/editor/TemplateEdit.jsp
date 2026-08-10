@@ -42,7 +42,7 @@
             <c:choose>
                 <c:when test="${template.required}">
                     <%-- Cannot edit name of a required template --%>
-                    <input type="text" name="bean.name" value="${bean.name}" size="50" readonly class="form-control" style="background: var(--paper)"/>
+                    <input type="text" name="bean.name" value="${bean.name}" size="50" readonly class="form-control"/>
                 </c:when>
                 <c:otherwise>
                     <input type="text" name="bean.name" value="${bean.name}" size="50" class="form-control"/>
@@ -54,7 +54,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="pageForm.action"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control" style="background: var(--paper)"/>
+            <input type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control"/>
         </div>
     </div>
 
@@ -94,10 +94,10 @@
             <c:choose>
                 <c:when test="${template.required}">
                     <%-- Required templates have a description--%>
-                    <textarea name="bean.description" rows="2" cols="50" readonly style="background: var(--paper)">${bean.description}</textarea>
+                    <textarea name="bean.description" rows="2" cols="50" readonly class="form-control">${bean.description}</textarea>
                 </c:when>
                 <c:otherwise>
-                    <textarea name="bean.description" rows="2" cols="50">${bean.description}</textarea>
+                    <textarea name="bean.description" rows="2" cols="50" class="form-control">${bean.description}</textarea>
                 </c:otherwise>
             </c:choose>
         </div>

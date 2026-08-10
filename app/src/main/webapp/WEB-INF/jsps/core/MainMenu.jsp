@@ -17,12 +17,22 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<%-- PROMPT: Welcome... you have no blog --%>
+<%-- PROMPT: Welcome... you have no blog.
+
+     This is the first screen a new account ever lands on, so it is the empty
+     state that most has to read as an invitation rather than a shrug: one
+     title line, one sentence, one primary action. #createWeblogLink moves onto
+     the button rather than being dropped -- nothing in the repo selects on it
+     today, but it is the only handle this action has ever had. --%>
 <c:if test="${empty existingPermissions && empty pendingPermissions}">
-    <p><spring:message code="yourWebsites.prompt.noBlog" />
-    <a id="createWeblogLink" href="<c:url value='/roller-ui/createWeblog.rol'/>">
-        <spring:message code="yourWebsites.createOne" />
-    </a></p>
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="empty.weblogs.title" /></p>
+        <p class="empty-state-body"><spring:message code="empty.weblogs.body" /></p>
+        <a id="createWeblogLink" class="btn btn-primary"
+           href="<c:url value='/roller-ui/createWeblog.rol'/>">
+            <spring:message code="empty.weblogs.action" />
+        </a>
+    </div>
 </c:if>
 
 <%-- PROMPT: You have invitation(s) --%>
@@ -61,7 +71,12 @@
 
         <div class="card card-body yourWeblogBox">
 
-            <h3 class="mm_weblog_name">
+            <%-- .section-head carries the caps-label type role; mm_weblog_name
+                 has no CSS of its own and stays only because RouteSweepIT
+                 identifies menu.rol by "h3.mm_weblog_name" (Routes.java).
+                 Rename neither the element nor the class without moving that
+                 marker in the same commit. --%>
+            <h3 class="mm_weblog_name section-head">
                 <span class="bi bi-folder2-open" aria-hidden="true"></span>
                 &nbsp;${fn:escapeXml(perms.weblog.name)}
             </h3>

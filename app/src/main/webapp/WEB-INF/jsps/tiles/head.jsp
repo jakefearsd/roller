@@ -25,8 +25,22 @@ mismatch 404s the asset on every page that includes this file.
 
 <%-- EasyMDE's toolbar icons are Font Awesome 4 glyph classes; self-hosted
      here (autoDownloadFontAwesome:false in EntryEditor.jsp/PageEdit.jsp
-     skips EasyMDE's own CDN <link>) rather than fetched from a CDN. --%>
+     skips EasyMDE's own CDN <link>) rather than fetched from a CDN.
+
+     Font Awesome is a SECOND icon webfont on top of bootstrap-icons, and
+     nothing in Roller's own markup uses an fa-* class -- it exists purely
+     for that toolbar. Only two content tiles instantiate an editor
+     (EntryEdit.jsp, which includes EntryEditor.jsp, and PageEdit.jsp), so
+     the font loads on those two screens instead of on every admin page.
+     Keyed off ${tile_content} -- the content-area JSP path
+     RollerViewResolver publishes as a request attribute for the layout --
+     rather than off the request URL, because that is the same value the
+     layout uses to decide what it is rendering, so the two cannot disagree.
+     If a third screen ever grows an EasyMDE instance, add it here; the
+     failure mode is visible (blank toolbar buttons), not silent. --%>
+<c:if test="${fn:contains(tile_content, 'EntryEdit.jsp') or fn:contains(tile_content, 'PageEdit.jsp')}">
 <link href="<c:url value='/webjars/font-awesome/4.7.0/css/font-awesome.min.css'/>" rel="stylesheet" />
+</c:if>
 
 <script src="<c:url value='/webjars/easymde/2.21.0/dist/easymde.min.js'/>"></script>
 <link href="<c:url value='/webjars/easymde/2.21.0/dist/easymde.min.css'/>" rel="stylesheet" />

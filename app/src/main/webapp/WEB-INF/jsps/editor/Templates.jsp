@@ -32,10 +32,14 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
-    <table class="table table-striped"> <%-- of weblog templates --%>
+    <%-- rollertable, not just table: it is the class that carries the token
+         palette and the caps-label header row every other admin list gets.
+         Its header rule keys off the first <tr> of the table, so the header
+         row has to stay the first thing inside -- which is why the empty
+         branch is a sibling of the table rather than a row in it. --%>
+    <table class="rollertable table table-striped"> <%-- of weblog templates --%>
 
-        <c:choose>
-            <c:when test="${not empty templates}">
+        <c:if test="${not empty templates}">
 
             <tr>
                 <th width="30%"><spring:message code="generic.name"/></th>
@@ -87,15 +91,20 @@
                 </tr>
             </c:forEach>
 
-        </c:when>
-<c:otherwise>
-            <tr class="rollertable_odd">
-                <td style="vertical-align:middle" colspan="5">
-                    <spring:message code="pageForm.notemplates"/>
-                </td>
-            </tr>
-        </c:otherwise>
-</c:choose></table>
+        </c:if>
+
+    </table>
+
+    <c:if test="${empty templates}">
+        <div class="empty-state">
+            <p class="empty-state-title"><spring:message code="empty.templates.title"/></p>
+            <%-- No action button: a template is created by the named form in
+                 the sidebar (templates!add.rol), not by a URL this button
+                 could point at, and shipping a dead control is worse than
+                 shipping none. --%>
+            <p class="empty-state-body"><spring:message code="empty.templates.body"/></p>
+        </div>
+    </c:if>
 
 <sec:csrfInput/>
 </form>

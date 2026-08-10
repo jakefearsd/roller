@@ -46,8 +46,11 @@
     </ul>
 </div>
 
-<a href="#" onClick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a><br/>
-<img src="<c:url value='/roller-ui/images/spacer.png'/>" alt="spacer" style="min-height: 2em"/>
+<%-- mb-4 rather than a spacer.png with an inline min-height: the gap before
+     the Summary card is margin, and margin is what should express it. --%>
+<div class="mb-4">
+    <a href="#" onClick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a>
+</div>
 
 <%-- summary --%>
 

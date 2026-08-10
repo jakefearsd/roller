@@ -63,7 +63,7 @@
                 <div class="col-sm-9">
                     <input type="text" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
                            size="30" maxlength="30" onkeyup="formChanged()"
-                           readonly="readonly" style="background: var(--paper)" class="form-control"
+                           readonly="readonly" class="form-control"
                            title="<spring:message code='userSettings.tip.username'/>"/>
                 </div>
             </div>
@@ -168,11 +168,21 @@
 
 
     <c:if test="${actionName == 'modifyUser'}">
-        <h2><spring:message code="userAdmin.userWeblogs" /></h2>
+        <h3 class="section-head"><spring:message code="userAdmin.userWeblogs" /></h3>
 
         <c:if test="${not empty permissions}">
             <p><spring:message code="userAdmin.userMemberOf" />:</p>
-            <table class="table" style="width: 80%">
+            <%-- rollertable for the token palette and the caps-label header
+                 row. That rule keys off the first <tr> of the table, so this
+                 table -- which had no header row at all -- needs one, or the
+                 first weblog's name would be rendered as the label. --%>
+            <table class="rollertable table" style="width: 80%">
+                <tr>
+                    <th width="55%"><spring:message code="generic.name"/></th>
+                    <th width="15%">&nbsp;</th>
+                    <th width="15%">&nbsp;</th>
+                    <th width="15%">&nbsp;</th>
+                </tr>
                 <c:forEach var="perms" items="${permissions}">
                     <tr>
                         <td width="%30">
@@ -208,8 +218,14 @@
                 </c:forEach>
             </table>
         </c:if>
+        <%-- No action button: an administrator cannot grant weblog membership
+             from this form -- that happens on the weblog's own Members page,
+             which is per-weblog and needs a weblog picked first. --%>
         <c:if test="${empty permissions}">
-            <spring:message code="userAdmin.userHasNoWeblogs" />
+            <div class="empty-state">
+                <p class="empty-state-title"><spring:message code="empty.userWeblogs.title" /></p>
+                <p class="empty-state-body"><spring:message code="userAdmin.userHasNoWeblogs" /></p>
+            </div>
         </c:if>
     </c:if>
 

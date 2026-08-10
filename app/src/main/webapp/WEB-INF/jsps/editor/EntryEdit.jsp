@@ -215,14 +215,28 @@
                         </div>
                     </div>
 
-                    <%-- lightweight search-snippet preview, fed by JS from the title/description fields --%>
+                    <%-- Lightweight search-snippet preview, fed by JS from the
+                         title/description fields.
+
+                         The three lines used to carry inline font-size bumps
+                         (1.15em / 0.85em / 0.9em) -- size-as-emphasis, on the
+                         one page whose borderless 26px title is the spec's
+                         canonical example of "emphasis is weight, never size".
+                         They are named classes now and sit on the 12 / 14.5 /
+                         16 scale: 16px title, 12px mono URL, 14.5px
+                         description. That still reads as a search result --
+                         the hierarchy is intact -- without inventing a support
+                         tier the scale does not have.
+
+                         The rules themselves live in roller.css beside the
+                         other .editor-* rules. --%>
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.snippetPreview"/></label>
                         <div class="col-sm-9">
                             <div id="seo_snippet_preview" class="border rounded p-2 bg-body">
-                                <div id="seo_snippet_title" style="color:var(--accent); font-size:1.15em;"></div>
-                                <div id="seo_snippet_url" style="color:var(--ink-soft); font-size:0.85em;"><c:if test="${actionName == 'entryEdit'}">${entry.permalink}</c:if></div>
-                                <div id="seo_snippet_description" style="color:var(--ink-soft); font-size:0.9em;"></div>
+                                <div id="seo_snippet_title" class="seo-snippet-title"></div>
+                                <div id="seo_snippet_url" class="seo-snippet-url"><c:if test="${actionName == 'entryEdit'}">${entry.permalink}</c:if></div>
+                                <div id="seo_snippet_description" class="seo-snippet-description"></div>
                             </div>
                         </div>
                     </div>
@@ -596,7 +610,7 @@
 
             <c:set var="deleteAction">entryRemoveViaList!remove</c:set>
 
-            <form action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post">
+            <form class="form-stacked" action="${pageContext.request.contextPath}/roller-ui/authoring/${deleteAction}.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
@@ -614,7 +628,7 @@
                             <spring:message code="weblogEntryRemove.entryTitle"/>
                         </label>
                         <div class="col-sm-9">
-                            <p class="form-control-plaintext" style="padding-top:0px" id="postTitleLabel"></p>
+                            <p class="form-control-plaintext" id="postTitleLabel"></p>
                         </div>
                     </div>
 
@@ -623,7 +637,7 @@
                             <spring:message code="weblogEntryRemove.entryId"/>
                         </label>
                         <div class="col-sm-9">
-                            <p class="form-control-plaintext" style="padding-top:0px" id="postIdLabel"></p>
+                            <p class="form-control-plaintext" id="postIdLabel"></p>
                         </div>
                     </div>
 

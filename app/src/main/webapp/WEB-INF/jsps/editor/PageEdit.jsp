@@ -137,8 +137,12 @@
             </ul>
         </div>
 
-        <a href="#" onclick="onClickPageMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a><br/>
-        <img src="<c:url value='/roller-ui/images/spacer.png'/>" alt="spacer" style="min-height: 2em"/>
+        <%-- mb-4 rather than a spacer.png with an inline min-height: the gap
+             before the SEO card is margin, and margin is what should express
+             it. Same change as EntryEditor.jsp, whose shape this mirrors. --%>
+        <div class="mb-4">
+            <a href="#" onclick="onClickPageMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a>
+        </div>
 
         <%-- ============================================================ --%>
         <%-- SEO and social sharing, matching EntryEdit.jsp's card --%>

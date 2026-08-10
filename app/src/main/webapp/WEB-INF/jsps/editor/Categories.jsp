@@ -27,18 +27,26 @@
 <%-- A plain table. It used to be wrapped in a form posting to
      categories!move.rol, left over from a bulk-move UI whose checkboxes and
      submit button are long gone -- so nothing could submit it, and the handler
-     only re-rendered this same list. --%>
+     only re-rendered this same list.
+
+     The <table id="category-table"> ELEMENT is unconditional even on a weblog
+     with no categories: RouteSweepIT identifies this route by
+     "table#category-table" (Routes.java) and CategoryIT waits on the same
+     selector after every save, so gating the table itself would leave both
+     with nothing to match. Only its CONTENTS are gated. The header row used to
+     sit outside the c:choose, so an empty weblog rendered a full four-column
+     header above a single colspan="6" strip -- on a four-column table. The
+     invitation below is a sibling of the table, not a row inside it. --%>
     <table id="category-table" class="rollertable table table-striped" width="100%">
 
-        <tr class="rollertable">
-            <th width="30%"><spring:message code="generic.name"/></th>
-            <th width="50%"><spring:message code="generic.description"/></th>
-            <th width="10%"><spring:message code="generic.edit"/></th>
-            <th width="10%"><spring:message code="categoriesForm.remove"/></th>
-        </tr>
+        <c:if test="${not empty allCategories}">
 
-        <c:choose>
-<c:when test="${not empty allCategories}">
+            <tr class="rollertable">
+                <th width="30%"><spring:message code="generic.name"/></th>
+                <th width="50%"><spring:message code="generic.description"/></th>
+                <th width="10%"><spring:message code="generic.edit"/></th>
+                <th width="10%"><spring:message code="categoriesForm.remove"/></th>
+            </tr>
 
             <c:forEach items="${allCategories}" var="category" varStatus="rowstatus">
                 <%-- data-category-* so a test can find a row without parsing the
@@ -84,13 +92,25 @@
                 </tr>
             </c:forEach>
 
-        </c:when>
-<c:otherwise>
-            <tr>
-                <td style="vertical-align:middle" colspan="6"><spring:message code="categoriesForm.noresults"/></td>
-            </tr>
-        </c:otherwise>
-</c:choose></table>
+        </c:if>
+
+    </table>
+
+<%-- Empty state: an invitation, not a strip of table. showCategoryAddModal()
+     is declared by CategoriesSidebar.jsp, which always renders alongside this
+     tile, and drives the same #category-edit-modal the sidebar link opens.
+     A <button>, deliberately not an <a>: CategoryIT reaches the sidebar link
+     by "a[onclick*='showCategoryAddModal']" and must keep matching exactly
+     one element. --%>
+<c:if test="${empty allCategories}">
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="empty.categories.title"/></p>
+        <p class="empty-state-body"><spring:message code="empty.categories.body"/></p>
+        <button type="button" class="btn btn-primary" onclick="showCategoryAddModal()">
+            <spring:message code="empty.categories.action"/>
+        </button>
+    </div>
+</c:if>
 
 
 <%-- ============================================================= --%>
