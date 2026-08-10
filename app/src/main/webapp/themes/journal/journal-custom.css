@@ -4,6 +4,11 @@
  * theme. Visual source of truth: docs/design/journal/journal-home.html (the
  * "Journal -- Home" card), tokens from docs/design/design-system.md.
  *
+ * Type: the Quiet Instrument scale only -- 12 / 14.5 / 16 / 20 / 26 / 28px
+ * (docs/design/design-system.md). Emphasis is font-weight (450 body, 600
+ * headings/labels), never an off-scale size; at most one element per page
+ * sits above the body tier (signature move 4).
+ *
  * Unlike travel/portfolio (system fonts only, no font-src), this theme
  * self-hosts IBM Plex Serif/Sans/Mono the way roller-tokens.css does for the
  * admin UI, via the org.webjars.npm:ibm__plex-serif/ibm__plex-sans/
@@ -71,6 +76,7 @@
     --qj-line: #DCE4E4;
     --qj-accent: #0F6E68;
     --qj-accent-quiet: #E3F0EE;
+    --qj-bad: #A33B2E;
     --qj-focus: #2AA198;
     --qj-radius: 6px;
 }
@@ -85,6 +91,7 @@
         --qj-line: #2A3838;
         --qj-accent: #4FB3AA;
         --qj-accent-quiet: #1E3230;
+        --qj-bad: #D0705F;
         --qj-focus: #2AA198;
     }
 }
@@ -114,13 +121,13 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 .qj-site { margin: 0; }
 .qj-site a {
     font-family: "IBM Plex Serif", Georgia, serif;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 600;
     letter-spacing: -.01em;
     text-decoration: none;
     color: var(--qj-ink);
 }
-.qj-tagline { margin: .2rem 0 0; color: var(--qj-ink-soft); font-size: .9rem; }
+.qj-tagline { margin: .2rem 0 0; color: var(--qj-ink-soft); font-size: .90625rem; }
 
 .qj-nav {
     display: flex;
@@ -129,7 +136,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
     margin-top: .9rem;
     padding-top: .75rem;
     border-top: 1px solid var(--qj-line);
-    font-size: .85rem;
+    font-size: .90625rem;
     font-weight: 600;
 }
 .qj-nav ul.rCategory,
@@ -178,7 +185,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 .qj-title {
     margin: 0;
     font-family: "IBM Plex Serif", Georgia, serif;
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 600;
     line-height: 1.3;
     text-wrap: balance;
@@ -187,14 +194,14 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 
 .qj-sum {
     font-family: "IBM Plex Serif", Georgia, serif;
-    font-size: .95rem;
+    font-size: .90625rem;
     line-height: 1.6;
     color: var(--qj-ink-soft);
     margin: .4rem 0 0;
     max-width: 58ch;
 }
 
-.qj-meta { font-size: .8rem; color: var(--qj-ink-soft); margin: .5rem 0 0; }
+.qj-meta { font-size: .75rem; color: var(--qj-ink-soft); margin: .5rem 0 0; }
 .qj-meta b { color: var(--qj-accent); font-weight: 600; }
 
 @media (max-width: 560px) {
@@ -241,7 +248,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 
 .qj-crumb {
     margin: 0 0 1.375rem;
-    font-size: .8125rem;
+    font-size: .75rem;
     color: var(--qj-ink-soft);
 }
 .qj-crumb a { color: var(--qj-accent); text-decoration: none; font-weight: 600; }
@@ -249,7 +256,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 .qj-h1 {
     margin: 0;
     font-family: "IBM Plex Serif", Georgia, serif;
-    font-size: 1.7rem;
+    font-size: 1.625rem;
     font-weight: 600;
     line-height: 1.25;
     text-wrap: balance;
@@ -263,7 +270,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
     margin: .75rem 0 1.625rem;
     padding-bottom: 1.125rem;
     border-bottom: 1px solid var(--qj-line);
-    font-size: .8125rem;
+    font-size: .75rem;
     color: var(--qj-ink-soft);
 }
 .qj-byline .d {
@@ -273,7 +280,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 
 .qj-prose {
     font-family: "IBM Plex Serif", Georgia, serif;
-    font-size: 1.03rem;
+    font-size: 1rem;
     line-height: 1.68;
     max-width: 58ch;
 }
@@ -315,20 +322,20 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
     border: 1px solid var(--qj-line);
     border-radius: var(--qj-radius);
     padding: .75rem 1rem;
-    font-size: .875rem;
+    font-size: .90625rem;
     line-height: 1.55;
 }
 .qj-comments .comment + .comment { margin-top: .75rem; }
-.qj-comments .comment-details { color: var(--qj-ink-soft); font-size: .8125rem; }
+.qj-comments .comment-details { color: var(--qj-ink-soft); font-size: .75rem; }
 .qj-comments .comment-details a { color: var(--qj-accent); }
 
 .qj-comments .status {
     display: block;
     margin-top: .75rem;
-    font-size: .84rem;
+    font-size: .90625rem;
     color: var(--qj-ink-soft);
 }
-.qj-comments .error { color: #b3261e; }
+.qj-comments .error { color: var(--qj-bad); }
 
 /* the sign-in prompt: the macro's bare <p><a> right after .status */
 .qj-comments .status + p a {
@@ -439,7 +446,7 @@ body.qj .newsletter-subscribe button {
     margin-top: 1rem;
     padding: .5rem 1.375rem;
     font: inherit;
-    font-size: .875rem;
+    font-size: .90625rem;
     font-weight: 600;
     color: #FFFFFF;
     background: var(--qj-accent);
@@ -451,4 +458,4 @@ body.qj .contact-form button:hover,
 body.qj .newsletter-subscribe button:hover {
     opacity: .9;
 }
-body.qj .audience-message { margin-top: .75rem; font-size: .84375rem; color: var(--qj-accent); }
+body.qj .audience-message { margin-top: .75rem; font-size: .90625rem; color: var(--qj-accent); }

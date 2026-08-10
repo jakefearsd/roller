@@ -4,6 +4,10 @@ Whitespace and images; system font stack (the theme CSP has no
 font-src, so webfonts cannot load). The front-page grid packs
 justified rows with the same flex-grow/--ar convention as the
 gallery shortcode's .jgrid.
+
+Type: the Quiet Instrument scale only -- 12 / 14.5 / 16 / 20 / 26 / 28px
+(docs/design/design-system.md). Emphasis is font-weight (450 body, 600
+headings/labels), never an off-scale size.
 --------------------------------------------------------------*/
 
 :root {
@@ -13,6 +17,7 @@ gallery shortcode's .jgrid.
     --pf-muted: #8f8f96;
     --pf-line: #26262a;
     --pf-accent: #4FB3AA;
+    --pf-bad: #D0705F;
     --pf-gap: 4px;
     --pf-row-h: 320px;
     --pf-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -51,7 +56,7 @@ body.pf a:hover {
 
 .pf-name {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 600;
     letter-spacing: 0.35em;
     text-transform: uppercase;
@@ -60,7 +65,7 @@ body.pf a:hover {
 .pf-tagline {
     margin: 0.75rem 0 0;
     color: var(--pf-muted);
-    font-size: 0.85rem;
+    font-size: .90625rem;
     letter-spacing: 0.08em;
 }
 
@@ -80,7 +85,7 @@ body.pf a:hover {
 
 .pf-nav ul.rCategory li {
     display: inline;
-    font-size: 0.78rem;
+    font-size: .75rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--pf-muted);
@@ -145,7 +150,7 @@ body.pf a:hover {
     padding: 2.25rem 1rem 0.85rem;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0));
     color: #ffffff;
-    font-size: 0.82rem;
+    font-size: .75rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     opacity: 0;
@@ -185,8 +190,8 @@ body.pf a:hover {
     text-align: left;
     text-transform: none;
     letter-spacing: 0.01em;
-    font-size: 1.2rem;
-    font-weight: 500;
+    font-size: 1.25rem;
+    font-weight: 600;
     color: var(--pf-fg);
 }
 
@@ -199,7 +204,7 @@ body.pf a:hover {
    load here (see the file header). */
 .pf-card-date {
     font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-    font-size: 0.72rem;
+    font-size: .75rem;
     letter-spacing: 0.04em;
     color: var(--pf-muted);
 }
@@ -230,8 +235,8 @@ body.pf a:hover {
 
 .pf-entry-title {
     margin: 0 0 1.25rem;
-    font-size: 1.35rem;
-    font-weight: 500;
+    font-size: 1.25rem;
+    font-weight: 600;
     letter-spacing: 0.05em;
 }
 
@@ -243,7 +248,7 @@ body.pf a:hover {
 .pf-entry-meta {
     margin-top: 2rem;
     color: var(--pf-muted);
-    font-size: 0.8rem;
+    font-size: .75rem;
     letter-spacing: 0.08em;
 }
 
@@ -258,7 +263,7 @@ body.pf a:hover {
     text-align: center;
     padding: 2rem 1rem;
     color: var(--pf-muted);
-    font-size: 0.8rem;
+    font-size: .75rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
@@ -285,7 +290,7 @@ body.pf a:hover {
     color: var(--pf-fg);
     padding: 0.5rem 0.9rem;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: .90625rem;
     border-radius: 2px;
     outline: none;
 }
@@ -300,7 +305,7 @@ body.pf a:hover {
     margin: 0 auto;
     padding: 0 1.25rem 2rem;
     color: var(--pf-muted);
-    font-size: 0.9rem;
+    font-size: .90625rem;
 }
 
 #searchAgain select,
@@ -310,7 +315,7 @@ body.pf a:hover {
     color: var(--pf-fg);
     padding: 0.45rem 0.9rem;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: .90625rem;
     border-radius: 2px;
 }
 
@@ -324,7 +329,7 @@ body.pf a:hover {
 
 .pf-comments .comments-head {
     color: var(--pf-muted);
-    font-size: 0.8rem;
+    font-size: .75rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     margin: 2rem 0 0.5rem;
@@ -335,12 +340,12 @@ body.pf a:hover {
 .pf-comments .comment {
     border-bottom: 1px solid var(--pf-line);
     padding: 1rem 0;
-    font-size: 0.95rem;
+    font-size: .90625rem;
 }
 
 .pf-comments .comment-details {
     color: var(--pf-muted);
-    font-size: 0.8rem;
+    font-size: .75rem;
 }
 
 .pf-comments .comments-form ul {
@@ -356,7 +361,7 @@ body.pf a:hover {
 .pf-comments label.desc {
     display: block;
     color: var(--pf-muted);
-    font-size: 0.8rem;
+    font-size: .75rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     margin-bottom: 0.25rem;
@@ -370,7 +375,7 @@ body.pf a:hover {
     color: var(--pf-fg);
     padding: 0.5rem 0.75rem;
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: .90625rem;
     border-radius: 2px;
     outline: none;
 }
@@ -386,7 +391,7 @@ body.pf a:hover {
     color: var(--pf-bg);
     padding: 0.55rem 1.4rem;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: .90625rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     border-radius: 2px;
@@ -396,11 +401,11 @@ body.pf a:hover {
 .pf-comments .info,
 .pf-comments .comments-syntax-indicator {
     color: var(--pf-muted);
-    font-size: 0.8rem;
+    font-size: .75rem;
 }
 
 .pf-comments .error {
-    color: #e08a8a;
+    color: var(--pf-bad);
 }
 
 .pf-comments .status {
@@ -449,7 +454,7 @@ body.pf .newsletter-subscribe input[type=email] {
     padding: 0.5rem 0.65rem;
     box-sizing: border-box;
     font: inherit;
-    font-size: 0.9rem;
+    font-size: .90625rem;
     color: var(--pf-fg);
     background: var(--pf-bg);
     border: 1px solid var(--pf-line);
@@ -482,7 +487,7 @@ body.pf .newsletter-subscribe button {
     padding: 0.55rem 1.35rem;
     font: inherit;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: .90625rem;
     letter-spacing: 0.04em;
     color: var(--pf-bg);
     background: var(--pf-accent);

@@ -7,6 +7,11 @@
  * site.frontpage.weblog.aggregated is also on (WebloggerRuntimeConfig
  * .isSiteWideWeblog) -- every other weblog never reaches this stylesheet.
  *
+ * Type: the Quiet Instrument scale only -- 12 / 14.5 / 16 / 20 / 26 / 28px
+ * (docs/design/design-system.md). Emphasis is font-weight (450 body, 600
+ * headings/labels), never an off-scale size; at most one element per page
+ * sits above the body tier (signature move 4).
+ *
  * Like journal (and unlike travel/portfolio, system fonts only), this theme
  * self-hosts IBM Plex Serif/Sans/Mono via the org.webjars.npm:ibm__plex-*
  * dependencies in app/pom.xml, so its CSP carries a font-src 'self' the
@@ -106,7 +111,7 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
     max-width: 46rem;
     margin: 0 auto;
     padding: 1rem 1.25rem 0;
-    font-size: .8125rem;
+    font-size: .75rem;
 }
 .fd-topbar-brand {
     font-family: "IBM Plex Sans", system-ui, sans-serif;
@@ -136,13 +141,13 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
     text-decoration: none;
     color: var(--fd-ink);
 }
-.fd-tag { margin: .25rem 0 0; color: var(--fd-ink-soft); font-size: .9375rem; max-width: 46ch; }
+.fd-tag { margin: .25rem 0 0; color: var(--fd-ink-soft); font-size: .90625rem; max-width: 46ch; }
 
 .fd-tabs {
     display: flex;
     gap: 1.25rem;
     margin: 0 0 1.75rem;
-    font-size: .85rem;
+    font-size: .90625rem;
     font-weight: 600;
 }
 .fd-tabs a { color: var(--fd-ink-soft); text-decoration: none; }
@@ -172,14 +177,14 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
     font-variant-numeric: tabular-nums;
 }
 
-.fd-post .t { margin: 0; font-size: .96875rem; font-weight: 600; line-height: 1.35; }
+.fd-post .t { margin: 0; font-size: 1rem; font-weight: 600; line-height: 1.35; }
 .fd-post .t a { color: var(--fd-ink); text-decoration: none; }
 .fd-post .t a:hover { color: var(--fd-accent); }
 
-.fd-post .from { margin: .125rem 0 0; font-size: .78125rem; color: var(--fd-ink-soft); }
+.fd-post .from { margin: .125rem 0 0; font-size: .75rem; color: var(--fd-ink-soft); }
 .fd-post .from b { color: var(--fd-accent); font-weight: 600; }
 
-.fd-pager { padding: .5rem 0 0; font-size: .85rem; }
+.fd-pager { padding: .5rem 0 0; font-size: .90625rem; }
 
 @media (max-width: 560px) {
     .fd-post { grid-template-columns: 1fr; }
@@ -201,17 +206,17 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
 .fd-blog .n {
     margin: 0;
     font-family: "IBM Plex Serif", Georgia, serif;
-    font-size: 1.03125rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--fd-ink);
 }
 .fd-blog .h {
     margin: .125rem 0 0;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: .71875rem;
+    font-size: .75rem;
     color: var(--fd-ink-soft);
 }
-.fd-blog .desc { margin: .5rem 0 0; font-size: .8125rem; color: var(--fd-ink-soft); line-height: 1.5; }
+.fd-blog .desc { margin: .5rem 0 0; font-size: .75rem; color: var(--fd-ink-soft); line-height: 1.5; }
 .fd-blog .live {
     display: inline-block;
     width: 7px;
@@ -227,14 +232,14 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
 
 /* ---- feed / search ---- */
 
-.fd-feed { margin-top: 1.75rem; font-size: .8125rem; }
+.fd-feed { margin-top: 1.75rem; font-size: .75rem; }
 .fd-feed a { color: var(--fd-accent); text-decoration: none; font-weight: 600; }
 
 .fd-search { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--fd-line); }
 .fd-search input.searchButton,
 .fd-search input.text {
     font: inherit;
-    font-size: .875rem;
+    font-size: .90625rem;
     padding: .5rem .7rem;
     border: 1px solid var(--fd-line);
     border-radius: var(--fd-radius);
@@ -252,14 +257,14 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
 
 /* ---- weblog directory page (letter index + profile) ---- */
 
-.fd-letters { margin: 0 0 1.25rem; font-size: .85rem; color: var(--fd-ink-soft); }
+.fd-letters { margin: 0 0 1.25rem; font-size: .90625rem; color: var(--fd-ink-soft); }
 .fd-letters a { color: var(--fd-ink-soft); text-decoration: none; padding: 0 .15rem; }
 .fd-letters a:hover, .fd-letters .current { color: var(--fd-accent); font-weight: 600; }
 
-.fd-crumb { margin: 0 0 1.25rem; font-size: .8125rem; }
+.fd-crumb { margin: 0 0 1.25rem; font-size: .75rem; }
 .fd-crumb a { color: var(--fd-accent); text-decoration: none; font-weight: 600; }
 
-table.fd-table { width: 100%; border-collapse: collapse; font-size: .875rem; margin-bottom: 1.25rem; }
+table.fd-table { width: 100%; border-collapse: collapse; font-size: .90625rem; margin-bottom: 1.25rem; }
 table.fd-table th, table.fd-table td {
     text-align: left;
     padding: .5rem .75rem .5rem 0;
@@ -275,7 +280,7 @@ table.fd-table a:hover { color: var(--fd-accent); }
     max-width: 46rem;
     margin: 0 auto;
     padding: 1.5rem 1.25rem 2.5rem;
-    font-size: .78125rem;
+    font-size: .75rem;
     color: var(--fd-ink-soft);
 }
 .fd-footer a { color: var(--fd-ink-soft); }
