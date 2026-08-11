@@ -240,10 +240,14 @@
                                     <spring:message var="statusLabel" code="commentManagement.pending"/>
                                     <span class="badge bg-warning">${statusLabel}</span>
                                 </c:when>
-                                <%-- DISAPPROVED carries no pill: there is no
-                                     message key for it, and the absence of an
-                                     "Approved" pill beside an unticked approve
-                                     box already says it. --%>
+                                <c:when test="${comment.status == 'DISAPPROVED'}">
+                                    <spring:message var="statusLabel" code="commentManagement.disapproved"/>
+                                    <span class="badge bg-danger">${statusLabel}</span>
+                                </c:when>
+                                <%-- ApprovalStatus has exactly these three
+                                     values -- there is no SPAM (marking spam
+                                     means deleting), so the choose is total and
+                                     needs no otherwise branch. --%>
                             </c:choose>
                         </div>
 

@@ -98,6 +98,16 @@ nothing. That matters because `docker-compose.prod.yml` defaults the app to
 setup, every commit silently became the image the next deploy would take.
 `deploy.sh --build` is how you deploy an untagged tree.
 
+**Known flake: `ReferenceError: EasyMDE is not defined`** on
+`entryEdit!firstSave.rol`, surfacing through `BrowserHealth`'s
+uncaught-exception check (seen in `MediaCropIT`). `head.jsp` loads
+`easymde.min.js` synchronously and unconditionally — line 45, *outside* the
+`<c:if>` that gates Font Awesome — so this is the page's inline initialiser
+racing a script that had not finished executing, not a missing include. Green
+on rerun. Before assuming flake, confirm the `<script>` is still unconditional:
+if someone widens that `<c:if>` to cover EasyMDE, the identical error becomes a
+real breakage on every screen the condition excludes.
+
 A stale `roller-it-postgres` container from a killed IT run makes
 `mvn verify -Pit` fail at `docker-maven-plugin:start` with a 409 name
 conflict, not a test failure. `docker rm -f roller-it-postgres` and re-run.
