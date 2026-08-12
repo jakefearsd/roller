@@ -36,10 +36,6 @@ These are the documented macros in order defined in this file:
     #showNextPrevEntriesControl($pager)
     #showMobileNextPrevEntriesControl($pager)
 
-    #showWeblogEntryComments($entry)
-    #showMobileWeblogEntryComments($entry)
-    #showWeblogEntryCommentForm($entry)
-
     #showWeblogEntryLinksList($entries)
     #showWeblogCategoryLinksList()
     #showMobileCategoryLinksList()
@@ -87,8 +83,6 @@ Show RSS and Atom auto-discovery links as HTML link elements.
     #if (!$model.searchResults)
     <link rel="alternate" type="application/atom+xml" title="Recent Entries (Atom)"  href="$url.feed.entries.atom" />
     <link rel="alternate" type="application/rss+xml"  title="Recent Entries (RSS)"   href="$url.feed.entries.rss" />
-    <link rel="alternate" type="application/atom+xml" title="Recent Comments (Atom)" href="$url.feed.comments.atom" />
-    <link rel="alternate" type="application/rss+xml"  title="Recent Comments (RSS)"  href="$url.feed.comments.rss" />
 
     #if ($model.tags)
       <link rel="alternate" type="application/atom+xml" title="Entries tagged $model.tags.toString() (Atom)"  href="$url.feed.entries.atomByTags($model.tags, false)" />
@@ -450,8 +444,8 @@ Call it from every theme head, next to #showSeoHead. The shortcode emits
 row height comes from --row-h (overridable per gallery through the
 shortcode's row attribute), and aspect-ratio reserves each box before the
 image loads, so there is no layout shift. NOTE: these rules deliberately
-live here, not in themes/base.css -- no theme head links base.css (only the
-legacy popup-comments template does), so rules there would never load.
+live here, not in a shared stylesheet -- no theme head links one, so rules
+there would never load.
 *#
 #macro(showGalleryGridStyles)
 ##
@@ -985,263 +979,6 @@ Shows weblog entries pager via default day template
     </div>
   #end
 
-#end
-
-
-#**
-Show comments for weblog entry according to Roller configuration.
-*#
-#macro(showWeblogEntryComments $entry)
-    <a name="comments"></a>
-    <div class="comments" id="comments">
-
-    #if($model.commentForm.preview)
-        #set($comments = [$model.commentForm.previewComment])
-        <div class="comments-head">$text.get( "macro.weblog.preview" ):</div>
-    #else
-        <div class="comments-head">$text.get( "macro.weblog.comments" ):</div>
-        #set($comments = $entry.getComments())
-    #end
-
-    <br/>
-    #foreach( $comment in $comments )
-        #if($comment.approved || $model.commentForm.preview)
-            <a name="comment-$comment.timestamp" id="comment-$comment.timestamp"></a>
-            <div class="comment#if(${foreach.index} % 2 == 0) even#else odd#end" id="comment${foreach.index}">
-
-                $comment.content
-
-                <p class="comment-details">
-                $text.get("macro.weblog.postedby")
-                #if (!$utils.isEmpty($comment.name))
-                    <b>$comment.name</b>
-                #elseif ($comment.remoteHost)
-                    <b>$comment.remoteHost</b>
-                #else
-                    <b>$text.get("macro.weblog.comment.unknown")</b>
-                #end
-
-                $text.get("macro.weblog.on") $utils.formatDate($comment.postTime, $text.get( "macro.weblog.datepattern" ))
-
-                <a href="$url.comment($entry.anchor, $comment.timestamp)"
-                   class="entrypermalink" title="$text.get( "macro.weblog.commentpermalink.title" )">#</a>
-                </p>
-
-            </div>
-
-        #end
-    #end
-    </div>
-#end
-## Mobile Version
-#macro(showMobileWeblogEntryComments $entry)
-    <!-- showMobileWeblogEntryComments -->
-    #if($model.commentForm.preview)
-      #set($comments = [$model.commentForm.previewComment])
-      #set( $heading = $text.get( "macro.weblog.preview" ))
-    #else
-      #set($comments = $entry.getComments())
-      #set( $heading = $text.get( "macro.weblog.comments" ))
-    #end
-    #if($comments.size() > 0)
-      <ul data-role="listview" data-divider-theme="b" data-inset="true">
-        <li data-role="list-divider">
-          $heading
-        </li>
-        #foreach( $comment in $comments )
-          #if($comment.approved || $model.commentForm.preview)
-            ##<li data-role="list-divider" data-theme="a">
-              ## TODO
-            ##<a name="comment-$comment.timestamp" id="comment-$comment.timestamp"></a>
-            ##</li>
-            <li data-theme="a">
-              <p class="ui-li-desc content-textbox">
-                 $comment.content
-              </p>
-              <p class="ui-li-desc content-textbox">
-                $text.get("macro.weblog.postedby")
-                #if (!$utils.isEmpty($comment.name))
-                   <b>$comment.name</b>
-                #elseif ($comment.remoteHost)
-                   <b>$comment.remoteHost</b>
-                #else
-                   <b>$text.get("macro.weblog.comment.unknown")</b>
-                #end
-
-                $text.get("macro.weblog.on") $utils.formatDate($comment.postTime, $text.get( "macro.weblog.datepattern" ))
-                ##<a href="$url.comment($entry.anchor, $comment.timestamp)" title="$text.get( "macro.weblog.commentpermalink.title" )" data-role="button" data-inline="true" data-mini="true">#</a>
-              </p>
-            </li>
-          #end
-        #end
-      </ul>
-    #end
-#end
-
-
-#**
-Show comments form for weblog entry.
-*#
-#macro(showWeblogEntryCommentForm $entry)
-    #set($cform = $model.getCommentForm())
-
-    <div class="comments-form">
-    <div class="comments-head">$text.get("macro.weblog.postcommentHeader")</div>
-    <a name="comment-form"></a>
-
-#if( $entry.commentsStillAllowed && $entry.website.requireAuthenticatedComments && !$utils.isUserAuthenticated() )
-
-    #**
-    The weblog only takes comments from signed-in readers. Show the way in
-    rather than a form that CommentServlet would refuse. This branch is safe to
-    cache: WeblogPageCache keys carry /user=<name> only when somebody is signed
-    in, so the anonymous rendering and a member's rendering are separate
-    entries.
-    *#
-    #if( $cform.error )
-        <span class="error">$cform.message</span>
-    #end
-    <span class="status">$text.get( "comments.loginRequired" )</span>
-    <p><a href="$url.login">$text.get( "comments.loginRequired.link" )</a></p>
-
-#elseif( $entry.commentsStillAllowed )
-
-    #if( $cform.error )
-        <span class="error">$cform.message</span>
-    #elseif( !$utils.isEmpty($cform.message) )
-        <span class="status">$cform.message</span>
-    #end
-
-    <form method="post" action="$url.entry($entry.anchor)" focus="name" name="commentForm" onsubmit="saveUserInformation(this); return validateComments(this)">
-        <input type="hidden" name="method" value="post" />
-
-        <ul>
-        #if( $entry.website.requireAuthenticatedComments )
-            #**
-            Signed-in commenting: the server takes the name and email off the
-            account and discards anything posted here, so showing editable
-            fields would be showing controls that do nothing.
-            *#
-            <li>
-                <label class="desc">$text.get( "macro.weblog.name" )</label>
-                <span class="comments-author">$utils.authenticatedUser.screenName</span>
-            </li>
-        #else
-            <li>
-                <label class="desc">$text.get( "macro.weblog.name" )</label>
-                <input type="text" name="name" class="text large" value="$cform.name" size="50" maxlength="255" />
-            </li>
-
-            <li><label class="desc">$text.get( "macro.weblog.email" )</label>
-                <input type="text" name="email" class="text large" value="$cform.email" size="50" maxlength="255" />
-            </li>
-        #end
-
-            #if ($config.commentEmailNotify)
-                <li><input type="checkbox" class="checkbox" id="notify" name="notify" #if($cform.notify)CHECKED #end/>
-                    <label for="notify" class="choice">$text.get( "macro.weblog.notifyMeOfComments" )</label>
-                </li>
-            #end
-        #if( !$entry.website.requireAuthenticatedComments )
-            <li>
-                <input type="checkbox" class="checkbox" id="rememberInfo" name="rememberInfo" />
-                <label for="rememberInfo" class="choice">$text.get( "macro.weblog.rememberinfo" )</label>
-            </li>
-        #end
-            <li>
-                <label class="desc">$text.get( "macro.weblog.yourcomment" )</label>
-                <textarea name="content" class="textarea large" cols="40" rows="10">$cform.content</textarea>
-            </li>
-            <li class="info">
-                <span class="comments-syntax-indicator">
-                $text.get( "macro.weblog.htmlsyntax" )
-                #if($config.commentEscapeHtml)
-                    <span class="disabled">$text.get( "macro.weblog.htmldisabled" )</span>
-                #else
-                    <span class="enabled">$text.get( "macro.weblog.htmlenabled" )</span>
-                #end
-                </span>
-            </li>
-            <li class="info">
-               <script src="$url.site/theme/scripts/clientSideInclude.js"></script>
-               <div id="commentAuthenticator"></div>
-            </li>
-            <li>
-               <input type="button" class="button" name="post" value="&nbsp;$text.get("macro.weblog.postpreview" )&nbsp;"
-                  onclick="this.form.method.value='preview';this.form.submit()" />
-               <input type="submit" class="button" name="post" value="&nbsp;$text.get( "macro.weblog.post" )&nbsp;" />
-            </li>
-        </ul>
-
-    </form>
-
-    <script src="$url.site/theme/scripts/roller.js"></script>
-    <script>
-    /* <![CDATA[ */
-    clientSideInclude('commentAuthenticator', '$url.commentAuthenticator');
-
-    // Reach fields through form.elements, never form.<name>: HTMLFormElement
-    // defines name, method and action itself, so form.name is the string
-    // "commentForm" and form.name.value is undefined. That is why "remember
-    // me" used to write a cookie reading "undefined" for the author and never
-    // restored one. Fields are also conditional now -- a weblog that requires
-    // a sign-in renders no name or email input at all -- so every lookup has
-    // to tolerate a missing element rather than throw.
-    function commentField(theForm, fieldName) {
-        return theForm ? theForm.elements[fieldName] : null;
-    }
-
-    (function restoreRememberedUser() {
-        var form = document.forms['commentForm'];
-        var remember = commentField(form, 'rememberInfo');
-        if (!remember) {
-            // Nothing to remember: the account supplies the identity.
-            return;
-        }
-
-        var remembered = {
-            name: getCookie("commentAuthor"),
-            email: getCookie("commentEmail")
-        };
-        var restoredAny = false;
-        Object.keys(remembered).forEach(function (fieldName) {
-            var field = commentField(form, fieldName);
-            // check each value - IE used to render "null"
-            if (field && remembered[fieldName]) {
-                field.value = remembered[fieldName];
-                restoredAny = true;
-            }
-        });
-        remember.checked = restoredAny;
-    })();
-
-    function saveUserInformation(theForm) {
-        var remember = commentField(theForm, 'rememberInfo');
-        if (!remember) {
-            return;
-        }
-        if (remember.checked) {
-            rememberUser(theForm);
-        } else {
-            forgetUser(theForm);
-        }
-    }
-
-    function validateComments(theForm) {
-        var content = commentField(theForm, 'content');
-        if (content && content.value === "") {
-            alert("$text.get( "macro.weblog.commentwarning" )");
-            content.focus();
-            return false;
-        }
-    }
-    /* ]]> */
-    </script>
-
-#else
-    <span class="status">$text.get( "comments.disabled" )</span>
-#end
-    </div>
 #end
 
 

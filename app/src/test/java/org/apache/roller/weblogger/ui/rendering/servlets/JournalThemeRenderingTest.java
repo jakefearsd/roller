@@ -238,28 +238,10 @@ class JournalThemeRenderingTest {
                 "the entry's rendered body content must appear inside qj-prose:\n" + body);
         assertFalse(body.contains("class=\"qj-entry\""),
                 "the permalink must not fall back to the entry-list row markup:\n" + body);
-    }
-
-    @Test
-    void thePermalinkShowsTheCommentAreaAndSignInPromptWhenAnonymous() throws Exception {
-        entryWithSummary("harbor-cottage-guide",
-                "Everything guests ask in the first hour.");
-
-        String body = render("/" + HANDLE + "/entry/harbor-cottage-guide");
-
-        assertJournalHead(body);
-        assertTrue(body.contains("class=\"qj-comments\""),
-                "the comment area must render below the entry:\n" + body);
-        // requireAuthenticatedComments defaults to true (see Weblog) and this
-        // request is anonymous, so the sign-in prompt -- not a postable form --
-        // must show (CommentServlet would refuse the post anyway).
-        assertTrue(body.contains("Please sign in to leave a comment on this blog."),
-                "an anonymous reader on an authenticated-only weblog must see the "
-                        + "sign-in prompt:\n" + body);
-        assertTrue(body.contains("/roller-ui/login-redirect.rol"),
-                "the sign-in prompt must link to the login page:\n" + body);
-        assertFalse(body.contains("name=\"commentForm\""),
-                "no postable comment form for a signed-out reader here:\n" + body);
+        assertFalse(body.contains("qj-comments"),
+                "the comments section must be gone from the permalink");
+        assertFalse(body.contains("commentForm"),
+                "no comment form may survive in rendered output");
     }
 
     // ---------------------------------------------------------------- search

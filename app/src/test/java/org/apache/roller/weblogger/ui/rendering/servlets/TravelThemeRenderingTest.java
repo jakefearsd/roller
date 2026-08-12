@@ -216,6 +216,10 @@ class TravelThemeRenderingTest {
                 "the entry title must be the page's h1:\n" + body);
         assertTrue(body.contains("<div class=\"tg-entry-content\">"),
                 "and the content must open the measured column:\n" + body);
+        assertFalse(body.contains("tg-comments"),
+                "the comments section must be gone from the permalink");
+        assertFalse(body.contains("commentForm"),
+                "no comment form may survive in rendered output");
     }
 
     @Test

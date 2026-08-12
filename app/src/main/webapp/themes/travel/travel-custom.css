@@ -131,8 +131,6 @@ body.tg img { max-width: 100%; height: auto; }
     border-left: 3px solid var(--tg-accent);
     color: var(--tg-muted);
 }
-.tg-comments { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--tg-line); }
-
 /* ---- shortcode blocks: itinerary map, FAQ, booking CTA ---- */
 
 /* [map] — the macro sizes the container; give it guide-book framing. */

@@ -236,11 +236,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
  * vocabulary is qj-*, so the mapping is qp-crumb->qj-crumb, qp-h1->qj-h1,
  * qp-byline->qj-byline, qp-prose->qj-prose (blockquote gets the pull-quote
  * treatment directly, since markdown output has no class to hang a qp-pull
- * equivalent on), qp-comments->qj-comments, qp-comment->the shared
- * #showWeblogEntryComments macro's own .comment/.comments-head/.status
- * classes, scoped under .qj-comments the same way portfolio scopes its
- * .pf-comments (see portfolio-custom.css) -- the macro markup is shared
- * across every theme and cannot carry theme-specific classes itself. */
+ * equivalent on). */
 
 .qj-main-entry { max-width: 40rem; }
 
@@ -298,83 +294,6 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
     font-style: italic;
 }
 .qj-prose blockquote p { margin: 0; }
-
-/* ---- comments (shared macro markup, scoped and quieted) ---- */
-
-.qj-comments {
-    margin-top: 2.125rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid var(--qj-line);
-    max-width: 58ch;
-}
-
-.qj-comments .comments-head {
-    margin: 0 0 .875rem;
-    font-size: .75rem;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    font-weight: 600;
-    color: var(--qj-ink-soft);
-}
-
-.qj-comments .comment {
-    background: var(--qj-surface);
-    border: 1px solid var(--qj-line);
-    border-radius: var(--qj-radius);
-    padding: .75rem 1rem;
-    font-size: .90625rem;
-    line-height: 1.55;
-}
-.qj-comments .comment + .comment { margin-top: .75rem; }
-.qj-comments .comment-details { color: var(--qj-ink-soft); font-size: .75rem; }
-.qj-comments .comment-details a { color: var(--qj-accent); }
-
-.qj-comments .status {
-    display: block;
-    margin-top: .75rem;
-    font-size: .90625rem;
-    color: var(--qj-ink-soft);
-}
-.qj-comments .error { color: var(--qj-bad); }
-
-/* the sign-in prompt: the macro's bare <p><a> right after .status */
-.qj-comments .status + p a {
-    color: var(--qj-accent);
-    font-weight: 600;
-    text-decoration: none;
-}
-
-.qj-comments .comments-form ul { list-style: none; margin: 1rem 0 0; padding: 0; }
-.qj-comments .comments-form li { margin: .6rem 0; }
-.qj-comments label.desc {
-    display: block;
-    font-size: .75rem;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    color: var(--qj-ink-soft);
-    margin-bottom: .25rem;
-}
-.qj-comments input.text,
-.qj-comments textarea.textarea {
-    width: 100%;
-    max-width: 30rem;
-    padding: .5rem .7rem;
-    border: 1px solid var(--qj-line);
-    border-radius: var(--qj-radius);
-    background: var(--qj-surface);
-    color: var(--qj-ink);
-    font: inherit;
-}
-.qj-comments input.button {
-    padding: .5rem 1.1rem;
-    border: 1px solid var(--qj-accent);
-    border-radius: var(--qj-radius);
-    background: var(--qj-accent);
-    color: var(--qj-surface);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-}
 
 /* ---- search results ---- */
 

@@ -38,11 +38,6 @@
     <nav class="qj-pager">
         #showNextPrevEntriesControl($pager)
     </nav>
-
-    <section class="qj-comments">
-        #showWeblogEntryComments($model.weblogEntry)
-        #showWeblogEntryCommentForm($model.weblogEntry)
-    </section>
 </main>
 
 <footer class="qj-footer">

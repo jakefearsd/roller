@@ -249,8 +249,10 @@ class PortfolioThemeRenderingTest {
         assertTrue(body.contains("<h1 class=\"pf-entry-title\">hero-entry</h1>"), body);
         assertTrue(body.contains("blah blah entry"),
                 "the entry content must render below the hero:\n" + body);
-        assertTrue(body.contains("class=\"pf-comments\""),
-                "comments stay available, just below the image and text:\n" + body);
+        assertFalse(body.contains("pf-comments"),
+                "the comments section must be gone from the permalink");
+        assertFalse(body.contains("commentForm"),
+                "no comment form may survive in rendered output");
     }
 
     @Test

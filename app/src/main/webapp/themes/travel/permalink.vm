@@ -38,11 +38,6 @@
     <nav class="tg-pager">
         #showNextPrevEntriesControl($pager)
     </nav>
-
-    <section class="tg-comments">
-        #showWeblogEntryComments($model.weblogEntry)
-        #showWeblogEntryCommentForm($model.weblogEntry)
-    </section>
 </main>
 
 <footer class="tg-footer">

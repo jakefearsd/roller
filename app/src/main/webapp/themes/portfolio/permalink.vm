@@ -37,11 +37,6 @@
     <nav class="pf-pager">
         #showNextPrevEntriesControl($pager)
     </nav>
-
-    <section class="pf-comments">
-        #showWeblogEntryComments($model.weblogEntry)
-        #showWeblogEntryCommentForm($model.weblogEntry)
-    </section>
 </main>
 
 <footer class="pf-footer">
