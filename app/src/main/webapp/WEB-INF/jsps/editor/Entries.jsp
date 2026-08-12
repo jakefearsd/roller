@@ -103,7 +103,6 @@
 </tr>
 
 <c:forEach items="${pager.items}" var="post">
-    <%-- <td> with style if comment is spam or pending --%>
     <c:choose>
     <c:when test="${post.status.name() == 'DRAFT'}">
         <tr class="draftentry">

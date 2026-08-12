@@ -176,26 +176,22 @@ Listing 1: a typical Weblog template
           #end
         </div>
         #showWeblogEntriesPager($pager) #9
-        #if ($model.permalink) #10
-          #showWeblogEntryComments($entry)
-          #showWeblogEntryCommentForm($entry)
-        #end
       </td>
       <td width="20%" valign="top">
         <h2>Calendar</h2>
-        #showWeblogEntryCalendar($model.weblog "nil") #11
+        #showWeblogEntryCalendar($model.weblog "nil") #10
         <h2>Feeds</h2>
-        #showAtomFeedsList($model.weblog) #12
+        #showAtomFeedsList($model.weblog) #11
         <h2>Search</h2>
-        #showWeblogSearchForm($model.weblog false) #13
+        #showWeblogSearchForm($model.weblog false) #12
         <h2>Links</h2>
-        #set($defaultFolder = $model.weblog.getBookmarkFolder("/")) #14
+        #set($defaultFolder = $model.weblog.getBookmarkFolder("/")) #13
         #showBookmarkLinksList($defaultFolder)
         <h2>Navigation</h2>
-        #showPageMenu($model.weblog) #15
-        #showAuthorMenu(true) #16
+        #showPageMenu($model.weblog) #14
+        #showAuthorMenu(true) #15
         <h2>Referrers</h2>
-        #set($refs = $model.weblog.getTodaysReferrers()) #17
+        #set($refs = $model.weblog.getTodaysReferrers()) #16
         #showReferrersList($refs 30 20)
       </td>
     </tr>
@@ -227,8 +223,6 @@ search in progress
 . *Show entries* Show current page’s worth of entries (or search
 results). Calls on *_day* template to do the display of each day’s worth
 of entries.
-. *Show comments?* If we’re on a permalink page, then show comments
-and comments form
 . *Show the calendar* Show the standard weblog calendar.
 . *Show feed links* Show links to all available Atom entry feeds, one
 per category.
@@ -278,12 +272,7 @@ Listing 2: a typical _day template
         <span class="category">$entry.category.name</span> &nbsp;|&nbsp; #7
         #if
           ($utils.isUserAuthorizedToAuthor($entry.website)) #8
-          <a href="$url.editEntry($entry.anchor)">Edit</a> &nbsp;|&nbsp;
-        #end
-        #if($entry.commentsStillAllowed || $entry.commentCount > 0) #9
-          #set($link = "$url.comments($entry.anchor)" )
-          <a href="$link" class="commentsLink">
-          Comments[$entry.commentCount]</a>
+          <a href="$url.editEntry($entry.anchor)">Edit</a>
         #end
       </p>
     </div>
@@ -310,8 +299,6 @@ entry.
 with the entry.
 . *Show edit link.* If user is authorized, display link to edit the
 entry.
-. *Show comments link.* If comments are available or are still allowed,
-display link to entry comments.
 
 Now you’ve seen the required templates and you’ve seen most of the
 commonly used macros in action, let’s discuss the mechanics of
@@ -465,8 +452,8 @@ separate the arguments.
 In page templates, you get data from objects and you use template code
 to display that data as HTML. To help you along, Roller includes some
 macros which can be used to generate commonly used HTML constructs on
-your weblog. There are macros for displaying your weblog entries,
-displaying your blogroll and displaying a comment form.
+your weblog. There are macros for displaying your weblog entries and
+displaying your blogroll.
 
 Calling a macro is a little different from calling a macro. A macro call
 starts with a # pound-sign, followed by the macro name and the macro
@@ -546,18 +533,6 @@ you’ll need in your weblog.
 |Boolean
 |True if individual bloggers are allowed to override the default tracking code (if any) provided by the blog administrator.
 
-|$config.commentAutoFormat
-|Boolean
-|True if comments should be formatted with added line feeds.
-
-|$config.commentEmailNotify
-|Boolean
-|True if notification of new comments via email is enabled.
-
-|$config.commentEscapeHtml
-|Boolean
-|True if all HTML will be stripped of comments before display.
-
 |$config.defaultAnalyticsTrackin gCode
 |String
 |Default tracking code for web analytics software, if configured by the blog administrator (See Roller User’s Guide, Roller Administration chapter.)
@@ -632,10 +607,6 @@ Now let’s the details of the $model object, starting with properties.
 
 |===
 |Name |Type |Description
-
-|$model.commentForm
-|CommentForm
-|On a comment-page, this object will be populated with the comment form values. Values available are $model.commentForm.name, $model.commentForm.url and $model.commenForm.content.
 
 |$model.locale
 |String
@@ -734,18 +705,6 @@ Every possible type of Roller URL is supported:
 |String
 |URL for one category within weblog, w/page.
 
-|$url.commentAuthenticator
-|String
-|URL of comment authenticator.
-
-|$url.comment(String anchor, String timeStamp)
-|String
-|URL of comment for entry specified by anchor.
-
-|$url.comments(String anchor)
-|String
-|URL of comments for entry specified by anchor.
-
 |$url.createEntry
 |String
 |URL for new-entry page in Roller UI.
@@ -777,14 +736,6 @@ Every possible type of Roller URL is supported:
 |$url.feed.entries.rss
 |String
 |URL of entries feed (RSS).
-
-|$url.feed.comments.atom
-|String
-|URL of comments feed (Atom).
-
-|$url.feed.comments.rss
-|String
-|URL of comments feed (RSS).
 
 |$url.home
 |String
@@ -897,7 +848,6 @@ Roller data objects. These are:
 * *Bookmark*: A single link within a weblog’s web bookmark collection,
 exists with a Folder
 * *Bookmark Folder*: A Folder containing Bookmarks, tied to a weblog.
-* *Comment*: A Comment associated with a specific Weblog Entry
 * *Page Template*: An individual page template within a Weblog.
 * *Referrer*: A Referrer represents an external site that links to the
 Weblog
@@ -960,56 +910,6 @@ are hierarchical
 |$folder.website
 |Weblog
 |Weblog in which folder is contained
-|===
-
-=== Comment
-
-|===
-|Name |Type |Description
-
-|$comment.approved
-|Boolean
-|True if comment has been approved for display
-
-|$comment.content
-|String
-|Content of the comment
-
-|$comment.email
-|String
-|Email address of the commenter
-
-|$comment.name
-|String
-|Name of the commenter
-
-|$comment.notify
-|Boolean
-|True if commenter choose the 'please notify me via email' option
-
-|$comment.pending
-|Boolean
-|True if comment is waiting for approval
-
-|$comment.postTime
-|Date
-|Time that comment was created
-
-|$comment.remoteHost
-|String
-|Host name or IP address of commenter
-
-|$comment.spam
-|Boolean
-|True if comment is marked as spam
-
-|$comment.url
-|String
-|URL of the commenter
-
-|$comment.weblogEntry
-|WeblogEntry
-|Weblog entry with which comment is associated
 |===
 
 === PageTemplate
@@ -1112,17 +1012,9 @@ are hierarchical
 |Boolean
 |True if weblog is considered active
 
-|$weblog.allowComments
-|Boolean
-|True if comments are allowed in weblog
-
 |$weblog.analyticsCode
 |String
 |Web analytics tracking code for the weblog. Will be null if not configured at the blog level, see $config.defaultAnalyticsTrackingCode for the global tracking code for blogs which do not have this value set. See Weblog Settings - Web Analytics section of Roller User’s Guide.
-
-|$weblog.commentCount
-|Long
-|Total number of comments of approved in weblog
 
 |$weblog.creator
 |User
@@ -1135,10 +1027,6 @@ are hierarchical
 |$weblog.emailAddress
 |String
 |Email address of weblog's managing editor
-
-|$weblog.emailComments
-|Boolean
-|True if email notification of comments is enabled
 
 |$weblog.emailFromAddress
 |String
@@ -1167,10 +1055,6 @@ are hierarchical
 |$weblog.locale
 |String
 |Default locale used by weblog
-
-|$weblog.moderateComments
-|True
-|True if comment moderation is enabled in weblog
 
 |$weblog.name
 |String
@@ -1209,8 +1093,6 @@ weblog entry by the entry’s anchor, which is unique within a weblog.
 WeblogEntries in the weblog up to the number max. You can specify a
 category name if you’d like only entries from one category (or "nil"
 for all categories).
-* *List getRecentComments(int max)* Get most recent Comments in the
-weblog up to the limit max.
 * *WeblogCategory getWeblogCategory(String name)* Get weblog category specified by name.
 * *PageTemplate getPageByName(String name)* Get page template specified
 by name.
@@ -1247,10 +1129,6 @@ by name.
 |===
 |Name |Type |Description
 
-|$entry.allowComments
-|Boolean
-|True if this weblog entry allows comments
-
 |$entry.anchor
 |String
 |Simple string that uniquely identifies post in weblog
@@ -1262,14 +1140,6 @@ by name.
 |$entry.category
 |WeblogCategory
 |Primary weblog category of this entry
-
-|$entry.commentDays
-|Integer
-|Number of days that comments are allowed
-
-|$entry.commentsStillAllowed
-|Boolean
-|True if comments are currently allowed
 
 |$entry.contentSrc
 |String
@@ -1442,94 +1312,6 @@ No CSS classes are used, only a series of links like so:
 ----
 <a href="…" rel="tag"> …tag name… </a>
 <a href="…" rel="tag"> …tag name… </a>
-----
-
-=== Comment macros
-
-`#showWeblogEntryComments($entry)`
-
-Arguments:
-
-*$entry:* WeblogEntry object
-
-Synopsis:
-
-Display the comments associated with the specified entry, not including
-those entries that are not approved for posting or that are marked as
-spam.
-
-Generated HTML and CSS classes used
-
-
-----
-<div class="comments" id="comments">
-  <div class="comments-head"> <!-- Comments title --> </div>
-  <div class="comment even" id="">
-  <!-- even like above or odd as below -->
-  <div class="comment odd" id="">
-    ...comment content...
-    <p class="comment-details">
-      ...comment details...
-      <a href="link to comment" class="entrypermalink" >#</a>
-    </p>
-  </div>
-</div>
-----
-
-`#showWeblogEntryCommentForm($entry)`
-
-Arguments:
-
-*$entry:* WeblogEntry object
-
-Synopsis:
-
-Display a comment form for adding a comment to the specified entry.
-
-Generated HTML and CSS classes used
-
-If comments are no longer allowed for the weblog entry in question, then
-only a status message is generated:
-
-----
-<span class="status"> …comments closed message… </span>
-----
-
-Otherwise we display the comment form.
-
-----
-<div class="comments-form">
-  <div class="comments-head"> ...comment form title...</div>
-  <span class="error"> ...error message... </span>
-  <span class="status"> ...status message... </span>
-  <form method="post" name="commentForm" ...>
-    <ul>
-      <li>
-        <label class="desc"> ...text field... </label>
-        <input type="text" name="name" class="text large" .../></li>
-      <li>
-        <input type="checkbox" class="checkbox" .../> <label class="choice"> ...checkbox field... </label>
-      </li>
-      <li>
-        <label class="desc"> ... </label>
-        <textarea name="content" class="textarea large" cols="" rows="">
-          <!-- Comment content -->
-        </textarea>
-      </li>
-      <li class="info">
-        <span class="comments-syntax-indicator">
-        <span class="disabled"> Disabled </span>
-          <!-- disabled as above or enabled as below --> <span class="enabled"> Enabled </span>
-        </span>
-      </li>
-      <li class="info">
-        <div id="commentAuthenticator"></div>
-      </li>
-      <li>
-        <input type="button" class="button" .../> <!-- preview button -->
-        <input type="submit" class="button" .../> <!-- preview button --> </li>
-    </ul>
-  </form>
 ----
 
 === List macros
@@ -1962,7 +1744,7 @@ weblogs by a site administrator: *$site*, for accessing site-wide data.
 === $site
 
 The *$site* model provides access to site-wide data: aggregations of
-webog entries from all weblogs, comments from all weblogs, lists of
+webog entries from all weblogs, lists of
 users, lists of weblogs, etc. – in short, everything you need to build
 an interesting community front page for Roller.
 
@@ -1972,10 +1754,6 @@ Site object
 
 |===
 |Name |Type |Description
-
-|$site.commentCount
-|Long
-|Total number of comments in entire site
 
 |$site.entryCount
 |Long
@@ -1990,7 +1768,7 @@ Site object
 |Total number of weblogs in entire site
 |===
 
-For some SiteModel methods (e.g. hot-blogs, most commented, etc.) return
+For some SiteModel methods (e.g. hot-blogs, etc.) return
 a special type of object use to expressing a count with a short name, a
 long name and an internationalized type:
 
@@ -2034,9 +1812,6 @@ and never more than max items.
 category, int sinceDays, int max)* Get pager that returns WeblogEntry
 objects from one specific weblog and category. Will only return entries
 created in last sinceDays number of days and never more than max items.
-* *Pager getCommentsPager(int sinceDays, int max)* Get pager that
-returns Comment objects. Will only return comments created in last
-sinceDays number of days and never more than max items.
 * *Pager getUsersByLetterPager(String letter, int sinceDays, int max)*
 Get pager that returns User objects. Will only return users whose names
 start with letter, created in last sinceDays number of days and never
@@ -2063,10 +1838,3 @@ i.e. only those created in last sinceDays number of days.
 * *List getHotWeblogs(int sinceDays, int max)* Get recent hot Weblogs in
 the form of StatCount objects, but only those updated in last sinceDays
 number of days.
-* *List getMostCommentedWeblogs(int sinceDays, int max)* Get most commented weblogs in the form of
-StatCount objects, but only those updated in last sinceDays number of
-days.
-* *List getMostCommentedWeblogEntries(List cats, int
-sinceDays, int max)* Get most commented WeblogEntries in the form of
-StatCount objects, but only those updated in last sinceDays number of
-days.

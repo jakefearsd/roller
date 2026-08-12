@@ -694,7 +694,7 @@ table.mm_table_actions td {
    but "opt in" only ever happened inside .card-header, so every bare <h3>/<h4>
    elsewhere rendered at Bootstrap's fluid default: 24-28px, i.e. LARGER than
    the page title it sits beneath.
-   1. The sidebar tiles (EntriesSidebar, CommentsSidebar, MediaFileSidebar,
+   1. The sidebar tiles (EntriesSidebar, MediaFileSidebar,
       MainMenuSidebar, CategoriesSidebar, TemplatesSidebar, MembersSidebar) --
       ten headings, and the worst offenders because they sit in the left column
       directly beside #adminRail's 12px caps-labels and shout over them.
@@ -746,7 +746,7 @@ table.mm_table_actions td {
 /* ---- Entry editor: writing surface + publish rail ----
    The approved card is docs/design/editor/editor-writing-surface.html. The
    main column carries title/permalink/editor; a 252px rail carries Publish,
-   Organize, the SEO and Comments drawers, and (below the form, but in the
+   Organize, the SEO drawer, and (below the form, but in the
    same grid column) the newsletter and revisions cards. The form itself is
    display:contents so those cards -- which hold their own <form>s and
    cannot nest inside #entry -- still place into the rail's column. */
@@ -1191,7 +1191,7 @@ table.rollertable {
 /* Header row: caps-label per the type scale (12px/600, .08em tracking,
    uppercase, --ink-soft). The literal class "rollertable" is reused
    inconsistently across these tables -- sometimes on the header <th>s
-   (Entries/Pages/Submissions/Comments/Members), sometimes on body <td>s
+   (Entries/Pages/Submissions/Members), sometimes on body <td>s
    (Members.jsp's data cells) -- so trusting the class would caps-label
    real data. None of these tables declare a <thead>, so the header row is
    always the first <tr> of the table's own (implicit) <tbody>; targeting

@@ -661,13 +661,16 @@ Two things a future sweep for "comment" will trip over and must leave alone:
   (`passwordreset.throttle.*`), and stays untouched.
 
 One operational note for whoever runs Maintenance next: `IndexOperation` used
-to index comment content/name/email into the Lucene index, and
-`SearchOperation.SEARCH_FIELDS` included the comment content field, so site
-search could match text a reader had posted in a comment. Both are gone from
-the code, but an index built before this wave still has the old fields on
-disk — stale comment text stays searchable until someone rebuilds the index
-from the Maintenance page. Not a bug, just something that will look like one
-until it's rebuilt.
+to write comment content into `C_CONTENT` with `Field.Store.NO` — indexed for
+matching but never stored — while `SearchOperation.SEARCH_FIELDS` only ever
+queried `CONTENT`/`TITLE`, never `C_CONTENT`. Comment text was therefore never
+actually searchable, before or after this wave; there is nothing to fix there.
+What an index built before this wave does still hold is commenter name and
+email, written to `C_NAME`/`C_EMAIL` with `Field.Store.YES` — those are
+physically present in the index files on disk until the affected entry's
+document is replaced, whether by a full rebuild from the Maintenance page or
+incidentally as entries get re-saved one at a time. That's a minor PII residue
+in a local index file worth clearing, not a search-correctness bug.
 
 ## Entry editing
 - **Layout**: `EntryEdit.jsp` (the approved card is committed at

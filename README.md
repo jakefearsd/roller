@@ -20,24 +20,18 @@
 - Organize content with categories and tags
 - Upload and manage media files (images, podcasts, attachments) in folder hierarchies (`MediaFileManager`)
 
-### Comments and Community
-- Visitor comments with moderation and approval workflows (pending, approved, disapproved)
-- Manual spam marking — moderators can flag a comment `SPAM` from the comment-management UI; there is no automated spam filter (`ApprovalStatus.SPAM`, `GlobalCommentManagementController`)
-- Comment formatting plugins run on submitted comment text: HTML-subset sanitization, link markup, and autoformatting (`HTMLSubsetPlugin`, `LinkMarkupPlugin`, `AutoformatPlugin`, all implementing `WeblogEntryCommentPlugin`)
-
 ### Themes and Templates
-- Four built-in shared themes: **basic**, **gaurav**, **fauxcoly**, and **frontpage** (`app/src/main/webapp/themes/`)
+- Three built-in shared themes — **journal**, **portfolio**, and **travel** — plus **frontpage**, the multi-weblog aggregator theme (`themes/`)
 - Apache Velocity template engine with a rich set of page models for full layout control
 - In-app template editor for per-weblog customization
 - Separate templates for main page, single-entry permalink, day archive, search results, and sidebar
 
 ### Search
 - Full-text search powered by Apache Lucene with background indexing
-- Search across entries and comments with category and locale filtering
-- OpenSearch description document for browser search-bar integration (`URLModel.getOpenSearchSite`/`getOpenSearchWeblog`)
+- Search across entries with category and locale filtering
 
 ### Feeds
-- RSS 2.0 and Atom 1.0 feeds for weblog entries, comments, and search results, hand-rendered by Velocity templates (`WEB-INF/velocity/templates/feeds/`)
+- RSS 2.0 and Atom 1.0 feeds for weblog entries and search results, hand-rendered by Velocity templates (`WEB-INF/velocity/templates/feeds/`)
 
 ### Security and Authentication
 - Database-backed authentication only; the enum kept for LDAP/OpenID/container-managed values now fails loudly at startup instead of silently degrading (`AuthMethod`)
@@ -47,7 +41,6 @@
 
 ### Administration
 - Global configuration dashboard for site-wide settings
-- Bulk comment management across all weblogs, including marking comments as spam
 - User administration: create, edit, disable, and assign global roles
 - Built-in installation wizard with automatic database schema creation and migration
 
@@ -131,7 +124,7 @@ and one-command upgrades — see the production stack
 Detailed guides are available in the [`docs/`](docs/) directory:
 
 - **[Install Guide](docs/roller-install-guide.adoc)** — Server setup, database configuration, and deployment
-- **[User Guide](docs/roller-user-guide.adoc)** — Blogging, media management, comments, and administration
+- **[User Guide](docs/roller-user-guide.adoc)** — Blogging, media management, and administration
 - **[Template Guide](docs/roller-template-guide.adoc)** — Theme creation, Velocity templates, and page models
 - **[Production Deployment Runbook](docker_deployment.md)** — Fresh-VPS Docker deployment, TLS, backups, upgrades
 

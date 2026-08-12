@@ -44,25 +44,20 @@ of jargon in weblogging. Here’s a list of some of the terms we use in
 this manual without a whole lot of background.
 
 * *Weblog*: A set of web pages and RSS/Atom feeds that display weblog
-entries written by one or more authors, uploaded images, bookmarks and
-comments posted by visitors. Weblog entries are displayed on the main
-page of the weblog and in the weblog’s feeds in reverse chronological
-order.
+entries written by one or more authors, uploaded images and bookmarks.
+Weblog entries are displayed on the main page of the weblog and in the
+weblog’s feeds in reverse chronological order.
 * *Weblog entry*. A single weblog entry with a title, publication
-timestamp, summary, content and some settings that indicate if and when
-comments are allowed.
-* *Comment*. A comment posted by a visitor to a weblog and regarding one
-specific weblog post. A comment has an email address, a publication
-timestamp and some content.
+timestamp, summary and content.
 * *Templates*. Each Roller weblog is defined by a set of HTML and CSS
 templates that provide the layout and styles for the weblog. Normally
 templates are authored using Velocity template language, but other
 languages are possible via plugins (i.e. Groovy Server Pages, JRuby,
 etc.)
-* *Feed*. A feed is an XML representation of the most recent entries,
-comments or other data. Folks can subscribe to your feed to be alerted
-of new weblog entries and comments posted. Roller supports both RSS and
-Atom formats for feeds.
+* *Feed*. A feed is an XML representation of the most recent entries or
+other data. Folks can subscribe to your feed to be alerted of new
+weblog entries posted. Roller supports both RSS and Atom formats for
+feeds.
 * *Feed reader*. Software that makes it easy to subscribe to and read
 feeds, e.g. Google Reader, Net News Wire, Feed Demon, etc.
 * *Blog client*. Software that makes it easy to post to your weblog,
@@ -220,7 +215,7 @@ and/or create new weblogs.
 image::user-guide-7-main-menu.png[]
 
 The main menu page lists all of your weblogs and for each, shows you
-links to its New Entry, Entries, Comments, Theme and Settings pages. You
+links to its New Entry, Entries, Theme and Settings pages. You
 can also create a new weblog, edit your user profile.
 
 If you are logged in as a Global Administrator, you will also see a
@@ -339,9 +334,6 @@ All of these are optional settings.
 * *Pub Time* – if you’d like to set the publication time of your weblog
 entry to a specific time, possibly one in the future, you can do so
 here.
-* *Allow comments for* – this setting allows you to turn comments on/off
-for your weblog entry and to limit the number of days that comments are
-allowed.
 * *Text reads left-to-right* – this settings allows you to set the reads
 left-to-right flag for a weblog entry. Currently, none of the stock
 Roller templates respect this setting.
@@ -961,130 +953,6 @@ software that is subscribed to your feed will pick it up automatically.
 
 type="audio/x-mpeg" length="3409127" />
 
-== Working with comments
-
-Readers can comment on your weblog entries. Comments are enabled by
-default; you can turn them off, for the whole weblog or for one entry, on
-the Weblog Settings page.
-
-=== Comment notification via email
-
-If you’re going to leave comments turn on then take the time to read
-them, to respond where appropriate and, when you receive spam or other
-forms of offensive comments, delete them from your weblog. You can’t
-respond to comments if you don’t know when you get one, so make sure you
-enable email notification of comments. You can do that on the Weblog
-Settings page.
-
-If you’ve got email turned on then you’ll receive an email every time
-you get a new comment and the email will include the text of the
-comment, a link to the entry that was commented upon and a link to the
-comment management page, shown below, where you may choose to approve,
-mark as spam or even delete the new comment.
-
-=== Comment management
-
-You can use the Comments page to manage your weblog comments. You can
-mark comments as spam or delete them entirely. You can search comments
-by keyword, date and status. If you’ve got comment moderation turned on,
-you will use the Comments page to approve new comments.
-
-image::user-guide-18-comments.png[]
-
-*A word about status*
-
-You can’t edit comments, but you can mark them as spam or dis-approve
-them. Someday, Roller may provide some spam filtering based on data
-collected from comments marked as spam but currently, marking as spam
-and dis-approving of a comment do the same thing – they prevent the
-comment from being displayed on your weblog.
-
-*How to get to the Comments page*
-
-There are a couple of ways to get to the Comments page. You can use
-Roller’s tabbed menu to go there and manage comment across your entire
-weblog. If you’ve got email notification of new comments turned on, the
-you might arrive at the Comments page via a link sent to you in your
-email.
-
-You can also manage comments for just one weblog. When you are editing a
-weblog entry with comments you’ll see a link in the top-right corner of
-the weblog editor page like the one below, which you can use to access
-the entry’s comments.
-
-=== Comment moderation
-
-If you’d like to preview and approve comments before they are displayed
-on your weblog, then you’ll want to turn on _comment moderation_ via
-Weblog Settings page. When comment moderation is enabled, then each new
-comment will be marked as pending and unapproved and will not appear on
-your weblog. To check for new comments, go to the Comments page to check
-for and either approve or delete new comments. If you’ve got comment
-notification enabled, make sure you also enable comment notification so
-you’ll know when new comments arrive. To moderate comments, use the
-comment management page, described below.
-
-How to moderate comments
-
-* Review each new comment and decide if it is to be approved for
-display, marked as spam and hidden or deleted entirely.
-* Only comments that are marked as approved and are not spam will be
-displayed on your weblog. So set (or unset) the corresponding checkboxes
-for each comment, or leave them the way they are.
-* When you are done. Click the save changes button at the bottom of the
-page. You’ll see that comments that were pending are no longer pending
-and those that you marked for delete will be gone.
-
-=== Global comment management
-
-If your user has global administration privileges, then you can manage
-comments across the entire Roller site, including every weblog. To do
-this, go to the *Server Administration:Comments* page and you’ll see a
-page that is almost identical to the weblog-specific comment management
-page.
-
-Limitations of global comment management
-
-You can use this page to mark as spam or delete any comment in the
-system, however you cannot change the approval status of comments
-through this interface. Approving comments for display is the duty and
-responsibility of the individual webloggers, so comment approval is only
-available in the context of a weblog.
-
-=== Keeping spam off your weblog
-
-**Read this before you turn comments on.** Roller ships with no spam
-filtering. There is no word list, no link or length check, and no
-third-party service such as Akismet — earlier versions had some of these
-and they have been removed. The comment authenticator that ships by
-default accepts every commenter without a challenge. So an open comment
-form on a public weblog will collect spam, and nothing will stop it
-arriving.
-
-What Roller does give you is control over what gets *published*:
-
-* *Comment moderation*. The one measure that actually works. With
-moderation on, a new comment is held as pending and appears on your
-weblog only after you approve it on the Comments page. If your weblog is
-public and you are not watching it closely, leave this on.
-* *Email notification*. Notification of each new comment, so moderation
-does not depend on you remembering to look. Both are on the Weblog
-Settings page.
-* *Marking spam*. Anything that does get through can be marked as spam
-from the Comments page, which hides it without deleting it.
-* *Comment throttling*. Your site administrator can limit how many
-comments one address may post in a given period. It is **off by
-default** and is configured in `roller.properties`
-(`comment.throttle.*`), not in the web interface.
-* *An IP ban list*. Site administrators can maintain a file of banned
-addresses, re-read automatically when it changes.
-* *Disallowing HTML in comments*. A site-wide setting. Comment text is
-sanitized regardless, but turning HTML off entirely is stricter.
-
-If you need real spam filtering, the honest options today are to keep
-comments moderated, or to turn comments off and invite replies by email
-instead.
-
 == Choosing your weblog theme
 
 A weblog theme is a set of templates, style-sheets and image that
@@ -1198,34 +1066,6 @@ languages. If you don’t check it, then readers will only see weblog
 entries from your default locale.
 * Locale set the default locale for your weblog.
 * Timezone: the timezone to be used in your weblog.
-
-==== Comments and default comment settings
-
-image::user-guide-comments.png[]
-
-* *Allow comments for your weblog?* – Check this box to allow visitors
-to leave comments on your weblog.
-* *Moderate comments* – Check this box to enable comment moderation
-(i.e. you must approve each comment before it is displayed).
-
-Note the next two options are visible only if the Roller Administrator
-has enabled email notifications for user blogs (See Section 9.2, Roller
-Administration):
-
-* *Email notification of comments?* – Check this box to receive an email
-notification of each new comments.
-* *Default from e-mail address for comments* – This will be used as the
-from address in comment emails sent by Roller.
-* *By default, allow comments for new entries* – Check this box to
-enable comments on your weblog. You can also control comments on each
-individual weblog entry.
-* Default time to allow comments for new entries – Choose the default
-amount of time to allow comments for new blog entries. This setting may
-also be overridden using the Comment Settings section of the New Entry
-page.
-* *Apply comment defaults to all existing entries? *- If you check this
-box, when you click the Save button the comment defaults you have set
-will be applied to all existing comments.
 
 ==== *Formatting*
 
@@ -1434,8 +1274,6 @@ all weblogs on the Roller site.
 URLs.
 * *Enable debug mode*: currently not used.
 
-image::user-guide-27-comments.png[]
-
 * *Allow New Users*: Set this to enable the _register as new user_ link
 on the main page. If you turnoff user creation, you’ll only be able to
 create new users via the *Global Admin->User Admin* page.
@@ -1443,18 +1281,6 @@ create new users via the *Global Admin->User Admin* page.
 * *External registration URL*: Controls the URL of Roller’s "Register
 as new users" link. If you use an external system to create Roller
 users and blogs, set the URL of that system here.
-
-* *Allow weblog comments*: By un-setting this you can turn off weblog
-comments on all weblogs in the system.
-* *Autoformat comments*: If this is on, Roller will auto-format comments
-by adding in line-breaks where appropriate.
-* *Escape comment HTML*: By setting this, you can disallow HTML in
-comments and thereby protect your site from malicious JavaScript and
-some forms of cross-site scripting.
-* *E-mail notification of comments*: set this to enable email
-notification of new comments. This won’t work unless you configured
-Roller properly for sending email as described in the Roller
-installation guide.
 
 image::user-guide-28-feed.png[]
 
