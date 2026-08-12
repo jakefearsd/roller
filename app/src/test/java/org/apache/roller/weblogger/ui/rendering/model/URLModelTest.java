@@ -282,19 +282,13 @@ class URLModelTest {
     }
 
     @Test
-    void entryAndCommentPermalinksEncodeTheAnchor() {
+    void entryPermalinksEncodeTheAnchor() {
         // The anchor comes from the entry title, so it can contain anything a
         // user can type. Leaving it raw would produce links that break at the
         // first space or ampersand.
         assertEquals(ABSOLUTE_SITE + "/testblog/entry/hello+%26+goodbye",
                 model.entry("hello & goodbye"),
                 "The anchor must be URL-encoded into the path.");
-        assertEquals(ABSOLUTE_SITE + "/testblog/entry/hello#comments",
-                model.comments("hello"),
-                "The comments link is the permalink plus the #comments fragment.");
-        assertEquals(ABSOLUTE_SITE + "/testblog/entry/hello#comment-1705320000000",
-                model.comment("hello", "1705320000000"),
-                "A single comment is addressed by its timestamp fragment.");
     }
 
     @Test

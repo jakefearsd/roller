@@ -124,21 +124,6 @@
 
                 </c:if>
 
-                <c:if test='${!perms.hasAction("edit_draft")}'>
-
-                    <%-- Show Comments button with count for users above LIMITED permission --%>
-                    <c:url value="/roller-ui/authoring/comments.rol" var="manageComments">
-                        <c:param name="weblog" value="${perms.weblog.handle}"/>
-                    </c:url>
-                    <a href="${manageComments}" class="btn btn-secondary">
-                        <span class="bi bi-chat" aria-hidden="true"></span>
-                        <spring:message code="yourWebsites.manageComments"/>
-                        <span class="badge bg-secondary">${perms.weblog.commentCount}</span>
-                    </a>
-
-                </c:if>
-
-
                 <%-- Only admins get access to theme and config settings --%>
                 <c:if test='${perms.hasAction("admin")}'>
 

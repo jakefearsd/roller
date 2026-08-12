@@ -112,25 +112,6 @@ public interface URLStrategy {
     
     
     /**
-     * Get url for a single weblog entry comments on a given weblog.
-     */
-    String getWeblogCommentsURL(Weblog weblog,
-                                                    String locale,
-                                                    String entryAnchor,
-                                                    boolean absolute);
-    
-    
-    /**
-     * Get url for a single weblog entry comment on a given weblog.
-     */
-    String getWeblogCommentURL(Weblog weblog,
-                                                   String locale,
-                                                   String entryAnchor,
-                                                   String timeStamp,
-                                                   boolean absolute);
-    
-    
-    /**
      * Get url for a single mediafile on a given weblog.
      */
     String getMediaFileURL(Weblog weblog, String fileAnchor,

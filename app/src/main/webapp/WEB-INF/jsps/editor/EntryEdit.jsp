@@ -356,57 +356,6 @@
             </div>
         </div>
 
-        <%-- Comments: settings plus the count line the retired sidebar used to
-             carry. The collapse keeps the id the Advanced-settings drawer had
-             because CommentIT opens it via a[href='#collapseAdvanced'] to
-             reach the allow-comments checkbox -- a pinned selector, not a
-             description of what is inside. --%>
-        <div class="editor-box">
-            <a class="editor-drawer collapsed" data-bs-toggle="collapse" href="#collapseAdvanced">
-                <spring:message code="weblogEdit.comments"/>
-            </a>
-            <div id="collapseAdvanced" class="collapse">
-                <div class="editor-drawer-body">
-
-                    <%-- Allow comments. This control was missing entirely, and
-                         EntryBean.allowComments is a primitive defaulting to
-                         false -- so every entry saved through this editor had
-                         comments switched off no matter what the weblog's
-                         default said, and editing a post silently closed
-                         comments that were open. --%>
-                    <div class="form-check editor-quiet-check">
-                        <label class="form-check-label"><input type="checkbox" class="form-check-input" id="entry_bean_allowComments" name="bean.allowComments" value="true" ${bean.allowComments ? 'checked' : ''}/> <spring:message code="weblogEdit.allowComments"/></label>
-                    </div>
-
-                    <label class="editor-field-label" for="entry_bean_commentDays"><spring:message code="weblogEdit.commentDays"/></label>
-                    <select name="bean.commentDays" id="entry_bean_commentDays" class="form-select">
-<c:forEach items="${commentDaysList}" var="opt">
-<option value="${opt.key}" ${opt.key == bean.commentDays ? 'selected' : ''}>${opt.value}</option>
-</c:forEach>
-</select>
-
-                    <%-- comments on this entry (absorbed from the retired sidebar) --%>
-                    <c:if test="${actionName == 'entryEdit'}">
-                        <p class="editor-comment-count">
-                            <c:choose>
-<c:when test="${bean.commentCount > 0}">
-                                <c:url var="commentsURL" value="/roller-ui/authoring/comments.rol">
-                                    <c:param name="bean.entryId" value="${bean.id}"/>
-                                    <c:param name="weblog" value="${actionWeblog.handle}"/>
-                                </c:url>
-                                <spring:message code="weblogEdit.hasComments" arguments="${commentsURL},${bean.commentCount}"/>
-                            </c:when>
-<c:otherwise>
-                                <spring:message code="generic.none"/>
-                            </c:otherwise>
-</c:choose>
-                        </p>
-                    </c:if>
-
-                </div>
-            </div>
-        </div>
-
         <c:if test="${actionName == 'entryEdit'}">
             <%-- delete: a quiet text link, not a red button --%>
             <button type="button" class="delete-link"

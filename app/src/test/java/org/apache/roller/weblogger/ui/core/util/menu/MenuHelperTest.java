@@ -113,7 +113,7 @@ class MenuHelperTest {
 
         assertEquals(List.of("tabbedmenu.admin"), tabKeys(menu),
                 "A server administrator must see the administration tab.");
-        assertEquals(List.of("globalConfig", "userAdmin", "globalCommentManagement"),
+        assertEquals(List.of("globalConfig", "userAdmin"),
                 itemActions(menu.getTabs().get(0)),
                 "A server administrator must see every administration screen.");
     }
@@ -160,7 +160,7 @@ class MenuHelperTest {
                 tabKeys(menu),
                 "A weblog administrator on an installation with custom themes enabled should "
                         + "see all three tabs.");
-        assertEquals(List.of("entryAdd", "entries", "comments", "submissions", "categories", "pages",
+        assertEquals(List.of("entryAdd", "entries", "submissions", "categories", "pages",
                         "mediaFileView"),
                 itemActions(menu.getTabs().get(0)),
                 "A weblog administrator should see every content screen.");

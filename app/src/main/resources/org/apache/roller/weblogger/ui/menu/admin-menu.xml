@@ -18,11 +18,7 @@ See comments in editor-menu.xml for info about attributes.
         <menu-item action="userAdmin"
                    name="tabbedmenu.admin.userAdmin"
                    subactions="createUser,modifyUser" />
-        
-        <!-- globalPerms="admin" -->
-        <menu-item action="globalCommentManagement" 
-                   name="tabbedmenu.admin.commentManagement" />
-        
+
     </menu>
 
 </menu-bar>

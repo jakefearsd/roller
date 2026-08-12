@@ -262,14 +262,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
         addExtendedDefinition(".UserEdit", ".tiles-tabbedpage",
                 Map.of("content", "/WEB-INF/jsps/admin/UserEdit.jsp"));
 
-        addExtendedDefinition(".GlobalCommentManagement", ".tiles-tabbedpage",
-                Map.of(
-                        "head",    "/WEB-INF/jsps/tiles/head.jsp",
-                        "content", "/WEB-INF/jsps/editor/Comments.jsp",
-                        "sidebar", "/WEB-INF/jsps/editor/CommentsSidebar.jsp",
-                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
-                ));
-
         // ---- weblog editor pages ----
 
         addExtendedDefinition(".MediaFileAdd", ".tiles-tabbedpage",
@@ -349,14 +341,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "head",    "/WEB-INF/jsps/tiles/head.jsp",
                         "content", "/WEB-INF/jsps/editor/Entries.jsp",
                         "sidebar", "/WEB-INF/jsps/editor/EntriesSidebar.jsp",
-                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
-                ));
-
-        addExtendedDefinition(".Comments", ".tiles-tabbedpage",
-                Map.of(
-                        "head",    "/WEB-INF/jsps/tiles/head.jsp",
-                        "content", "/WEB-INF/jsps/editor/Comments.jsp",
-                        "sidebar", "/WEB-INF/jsps/editor/CommentsSidebar.jsp",
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
 

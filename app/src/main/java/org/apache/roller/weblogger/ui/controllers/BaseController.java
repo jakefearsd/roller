@@ -40,7 +40,6 @@ import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
-import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
 import org.apache.roller.weblogger.ui.core.util.menu.MenuHelper;
 import org.apache.roller.weblogger.util.cache.CacheManager;
@@ -404,20 +403,6 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
             baseLog.error("Error looking up page by id - " + id, ex);
         }
         return null;
-    }
-
-    // --- Comment management helpers ---
-
-    /**
-     * Returns the list of comment status filter options for comment management pages.
-     */
-    protected List<KeyValueObject> getCommentStatusOptions(HttpServletRequest request) {
-        List<KeyValueObject> opts = new ArrayList<>();
-        opts.add(new KeyValueObject("ALL", getText("generic.all", request)));
-        opts.add(new KeyValueObject("ONLY_PENDING", getText("commentManagement.onlyPending", request)));
-        opts.add(new KeyValueObject("ONLY_APPROVED", getText("commentManagement.onlyApproved", request)));
-        opts.add(new KeyValueObject("ONLY_DISAPPROVED", getText("commentManagement.onlyDisapproved", request)));
-        return opts;
     }
 
     // --- Configuration property helpers ---

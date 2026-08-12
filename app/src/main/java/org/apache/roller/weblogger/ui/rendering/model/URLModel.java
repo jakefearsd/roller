@@ -163,17 +163,8 @@ public class URLModel implements Model {
     public String entry(String anchor) {
         return urlStrategy.getWeblogEntryURL(weblog, locale, anchor, true);
     }
-    
-    public String comment(String anchor, String timeStamp) {
-        return urlStrategy.getWeblogCommentURL(weblog, locale, anchor, timeStamp, true);
-    }
-    
-    
-    public String comments(String anchor) {
-        return urlStrategy.getWeblogCommentsURL(weblog, locale, anchor, true);
-    }
-    
-    
+
+
     public String date(String dateString) {
         return urlStrategy.getWeblogCollectionURL(weblog, locale, null, dateString, null, -1, true);
     }

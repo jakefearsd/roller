@@ -202,16 +202,6 @@ public final class Routes {
             new Route("/roller-ui/admin/createUser.rol", Role.ADMIN, "",
                     "input[name='bean.userName']"),
 
-            // Comments.jsp renders its table and bulk-action controls only when
-            // comments exist, and none are seeded. The subtitle paragraph is
-            // unconditional, and no file under WEB-INF/jsps/tiles emits
-            // class="subtitle", so it proves the content tile ran.
-            new Route("/roller-ui/admin/globalCommentManagement.rol", Role.ADMIN, "", "p.subtitle"),
-
-            // Reachable with no parameters: GlobalCommentManagementBean defaults
-            // approvedString to "ALL", which getStatus() maps to a null filter.
-            new Route("/roller-ui/admin/globalCommentManagement!query.rol", Role.ADMIN, "", "p.subtitle"),
-
             // SeoController's sitemap index. Not HTML: Chrome's built-in XML
             // viewer keeps the source document's elements in the DOM (inside
             // #webkit-xml-viewer-source-xml), so the root element works as a
@@ -241,9 +231,6 @@ public final class Routes {
             // could submit, which is a poor thing to prove a page rendered by.
             new Route("/roller-ui/authoring/categories.rol", Role.EDITOR, WEBLOG,
                     "table#category-table"),
-
-            // Same JSP as globalCommentManagement, same reason for the marker.
-            new Route("/roller-ui/authoring/comments.rol", Role.EDITOR, WEBLOG, "p.subtitle"),
 
             // The entry table is empty with no entries seeded; the delete-confirm
             // modal is emitted unconditionally.

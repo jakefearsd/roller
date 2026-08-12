@@ -129,8 +129,7 @@ public final class WeblogWrapper {
 
 
     /**
-     * Themes read this to decide whether to render the comment form or a
-     * prompt to sign in; see {@code #showWeblogEntryCommentForm} in weblog.vm.
+     * Whether an entry comment requires a signed-in commenter.
      */
     public Boolean getRequireAuthenticatedComments() {
         return this.pojo.getRequireAuthenticatedComments();

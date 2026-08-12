@@ -18,7 +18,6 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -28,8 +27,6 @@ import org.apache.roller.weblogger.pojos.MediaFileFilter;
 import org.apache.roller.weblogger.pojos.MediaFileFilter.MediaFileOrder;
 import org.apache.roller.weblogger.pojos.MediaFileFilter.SizeFilterType;
 import org.apache.roller.weblogger.pojos.MediaFileType;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -38,8 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests for the three search/filter beans behind the editor's list pages:
- * {@link EntriesBean}, {@link CommentsBean} and {@link MediaFileSearchBean}.
+ * Tests for the search/filter beans behind the editor's list pages:
+ * {@link EntriesBean} and {@link MediaFileSearchBean}.
  *
  * <p>These are pure translation layers from form fields to query criteria, with
  * no business tier behind them — which makes them cheap to test exhaustively
@@ -105,126 +102,6 @@ class QueryBeansTest {
             assertEquals(org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria.SortBy.UPDATE_TIME,
                     bean.getSortBy());
             assertEquals(0, bean.getPage());
-        }
-    }
-
-    @Nested
-    class CommentsBeanTest {
-
-        @Test
-        void eachFilterOptionMapsToItsApprovalStatus() {
-            assertEquals(ApprovalStatus.APPROVED, statusFor("ONLY_APPROVED"));
-            assertEquals(ApprovalStatus.DISAPPROVED, statusFor("ONLY_DISAPPROVED"));
-            assertEquals(ApprovalStatus.PENDING, statusFor("ONLY_PENDING"));
-        }
-
-        @Test
-        void theRetiredSpamFilterNoLongerMatchesAnything() {
-            // ONLY_SPAM was a filter option until spam became a deletion. An
-            // unknown filter must fall through to "everything" rather than
-            // throwing, since a stale bookmark can still carry it.
-            assertNull(statusFor("ONLY_SPAM"));
-        }
-
-        @Test
-        void theAllFilterMapsToNoStatusFilterAtAll() {
-            // null is what the search criteria read as "any status"; mapping
-            // "ALL" to a concrete status would hide most comments.
-            assertNull(statusFor("ALL"));
-            assertNull(new CommentsBean().getStatus(), "ALL must also be the default");
-        }
-
-        @Test
-        void anUnrecognisedFilterFallsBackToShowingEverything() {
-            assertNull(statusFor("nonsense"),
-                    "An unknown filter must not silently hide comments");
-        }
-
-        @Test
-        void theEndDateCoversTheWholeOfTheChosenDay() {
-            // Without this a comment posted at 09:00 on the end date would fall
-            // outside a range the moderator believes includes that day.
-            CommentsBean bean = new CommentsBean();
-            bean.setEndDateString("03/15/24");
-
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTime(bean.getEndDate());
-
-            assertEquals(23, calendar.get(Calendar.HOUR_OF_DAY));
-            assertEquals(59, calendar.get(Calendar.MINUTE));
-            assertEquals(59, calendar.get(Calendar.SECOND));
-        }
-
-        @Test
-        void theStartDateIsTheBeginningOfTheChosenDay() {
-            CommentsBean bean = new CommentsBean();
-            bean.setStartDateString("03/15/24");
-
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTime(bean.getStartDate());
-
-            assertEquals(0, calendar.get(Calendar.HOUR_OF_DAY));
-            assertEquals(0, calendar.get(Calendar.MINUTE));
-        }
-
-        @Test
-        void unparseableDatesBecomeNoBound() {
-            CommentsBean bean = new CommentsBean();
-            bean.setStartDateString("garbage");
-            bean.setEndDateString("garbage");
-
-            assertNull(bean.getStartDate());
-            assertNull(bean.getEndDate());
-        }
-
-        @Test
-        void loadingCheckboxesRecordsWhichCommentsAreCurrentlyApproved() {
-            // The moderation form submits the *new* state of every checkbox and
-            // diffs it against these, so a comment landing in the wrong bucket
-            // would be re-approved or hidden on the next save.
-            CommentsBean bean = new CommentsBean();
-            bean.loadCheckboxes(List.of(
-                    comment("c1", ApprovalStatus.APPROVED),
-                    comment("c2", ApprovalStatus.DISAPPROVED),
-                    comment("c3", ApprovalStatus.PENDING),
-                    comment("c4", ApprovalStatus.APPROVED)));
-
-            assertEquals("c1,c2,c3,c4", bean.getIds(),
-                    "Every comment on the page must be in the working set, or the ones left "
-                            + "out would be untouched by a bulk action");
-            assertArrayEqualsIgnoringOrder(new String[]{"c1", "c4"}, bean.getApprovedComments());
-        }
-
-        @Test
-        void loadingCheckboxesForAnEmptyPageClearsThePreviousSelection() {
-            CommentsBean bean = new CommentsBean();
-            bean.setApprovedComments(new String[]{"stale"});
-
-            bean.loadCheckboxes(List.of());
-
-            assertEquals(0, bean.getApprovedComments().length,
-                    "A stale selection would apply a bulk action to comments not on the page");
-        }
-
-        private ApprovalStatus statusFor(String filter) {
-            CommentsBean bean = new CommentsBean();
-            bean.setApprovedString(filter);
-            return bean.getStatus();
-        }
-
-        private WeblogEntryComment comment(String id, ApprovalStatus status) {
-            WeblogEntryComment comment = new WeblogEntryComment();
-            comment.setId(id);
-            comment.setStatus(status);
-            return comment;
-        }
-
-        private void assertArrayEqualsIgnoringOrder(String[] expected, String[] actual) {
-            String[] expectedSorted = expected.clone();
-            String[] actualSorted = actual.clone();
-            java.util.Arrays.sort(expectedSorted);
-            java.util.Arrays.sort(actualSorted);
-            org.junit.jupiter.api.Assertions.assertArrayEquals(expectedSorted, actualSorted);
         }
     }
 

@@ -21,12 +21,14 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -71,7 +73,7 @@ class MenuDefinitionTest {
     void theWeblogTabListsTheContentManagementActions() {
         ParsedTab weblogTab = tab("editor", "tabbedmenu.weblog");
 
-        assertEquals(List.of("entryAdd", "entries", "comments", "submissions", "categories", "pages",
+        assertEquals(List.of("entryAdd", "entries", "submissions", "categories", "pages",
                         "mediaFileView"),
                 actions(weblogTab),
                 "These are the actions the Weblog tab offers, in order. The first of them is "
@@ -118,10 +120,6 @@ class MenuDefinitionTest {
         assertEquals(List.of("edit_draft"),
                 item("editor", "tabbedmenu.weblog", "entryAdd").getWeblogPermissionActions(),
                 "Drafting a new entry needs only the draft permission.");
-        assertEquals(List.of("post"),
-                item("editor", "tabbedmenu.weblog", "comments").getWeblogPermissionActions(),
-                "Moderating comments needs full posting rights, not just drafting. If this "
-                        + "relaxes to edit_draft, draft-only contributors can moderate.");
     }
 
     @Test
@@ -150,12 +148,27 @@ class MenuDefinitionTest {
         assertEquals(List.of("admin"), adminMenu.getTabs().get(0).getGlobalPermissionActions(),
                 "The whole admin menu hangs off the global admin permission. If this is lost, "
                         + "every logged-in user gets the server administration menu.");
-        assertEquals(List.of("globalConfig", "userAdmin", "globalCommentManagement"),
+        assertEquals(List.of("globalConfig", "userAdmin"),
                 actions(adminMenu.getTabs().get(0)),
                 "The admin tab's screens come from admin-menu.xml.");
         assertEquals(Set.of("createUser", "modifyUser"),
                 item("admin", "tabbedmenu.admin", "userAdmin").getSubActions(),
                 "Creating and editing users must keep the User Admin item highlighted.");
+    }
+
+    /**
+     * Comment moderation was removed wholesale (W1): no editor tab offers
+     * per-weblog comment management, and no admin tab offers the global
+     * screen. A raw-text check on the XML itself, rather than the parsed
+     * menu, so this fails even if a stray {@code <menu-item>} is re-added
+     * under a different action name.
+     */
+    @Test
+    void noMenuOffersCommentModeration() {
+        assertFalse(menuXml().contains("\"comments\""),
+                "editor-menu.xml must not offer a comments tab");
+        assertFalse(adminMenuXml().contains("globalCommentManagement"),
+                "admin-menu.xml must not offer global comment management");
     }
 
     /**
@@ -280,6 +293,23 @@ class MenuDefinitionTest {
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
+
+    private static String menuXml() {
+        return resourceAsString("/org/apache/roller/weblogger/ui/menu/editor-menu.xml");
+    }
+
+    private static String adminMenuXml() {
+        return resourceAsString("/org/apache/roller/weblogger/ui/menu/admin-menu.xml");
+    }
+
+    private static String resourceAsString(String path) {
+        try (InputStream in = MenuDefinitionTest.class.getResourceAsStream(path)) {
+            assertTrue(in != null, "Expected classpath resource " + path);
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private static ParsedTab tab(String menuId, String tabName) {
         for (ParsedTab candidate : MenuHelper.getParsedMenu(menuId).getTabs()) {

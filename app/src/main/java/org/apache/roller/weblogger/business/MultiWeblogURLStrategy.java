@@ -134,33 +134,6 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
 
     
     /**
-     * Get url for a single weblog entry comments on a given weblog.
-     */
-    @Override
-    public String getWeblogCommentsURL(Weblog weblog,
-                                                    String locale,
-                                                    String entryAnchor,
-                                                    boolean absolute) {
-        
-        return getWeblogEntryURL(weblog, locale, entryAnchor, absolute)+"#comments";
-    }
-    
-    
-    /**
-     * Get url for a single weblog entry comment on a given weblog.
-     */
-    @Override
-    public String getWeblogCommentURL(Weblog weblog,
-                                                   String locale,
-                                                   String entryAnchor,
-                                                   String timeStamp,
-                                                   boolean absolute) {
-        
-        return getWeblogEntryURL(weblog, locale, entryAnchor, absolute)+"#comment-"+timeStamp;
-    }
-    
-    
-    /**
      * Get url for a collection of entries on a given weblog.
      */
     @Override
