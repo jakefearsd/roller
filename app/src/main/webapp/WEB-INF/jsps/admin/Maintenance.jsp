@@ -25,6 +25,21 @@
     <div class="mb-3">
         <label for="maintenanceWeblog"><spring:message code="maintenance.prompt.weblog"/></label>
         <select name="weblogId" id="maintenanceWeblog" class="form-select">
+            <%-- A <select> with no explicitly selected <option> defaults to
+                 its FIRST option per the HTML spec -- not "nothing chosen".
+                 Without this placeholder, an admin who opens the page and
+                 clicks an action button without touching the dropdown would
+                 silently submit whichever weblog getWeblogs() happens to
+                 list first (most-recently-created, per its ORDER BY), with
+                 no error and no visual cue a choice was ever made. Disabled
+                 so it can never be re-selected once a real weblog is picked;
+                 selected only while selectedWeblog is null, so exactly one
+                 <option> ever carries "selected". Submitting it posts
+                 weblogId="", which resolveWeblog() below already turns into
+                 maintenance.error.noSuchWeblog. --%>
+            <option value=""
+                <c:if test="${selectedWeblog == null}">selected="selected"</c:if>
+                disabled="disabled"><spring:message code="maintenance.select.placeholder"/></option>
             <c:forEach var="w" items="${weblogs}">
                 <option value="${fn:escapeXml(w.id)}"
                     <c:if test="${selectedWeblog != null && selectedWeblog.id == w.id}">selected="selected"</c:if>
