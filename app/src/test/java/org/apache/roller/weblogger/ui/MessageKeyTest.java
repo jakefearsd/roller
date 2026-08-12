@@ -134,15 +134,19 @@ public class MessageKeyTest {
      *       reconfigured across them -- {@code groupblogging.enabled},
      *       {@code user.hideUserNames}, {@code comment.throttle.enabled} and
      *       {@code weblogentry.title.useUnderscoreSeparator}).</li>
-     *   <li>18 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
+     *   <li>17 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
      *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
      *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
      *       {@code key}, which the JSPs render as {@code <spring:message
      *       code="${tab.key}">} -- see {@code tiles/bannerStatus.jsp} and
-     *       {@code admin/GlobalConfig.jsp}. Two more than the Stage 1E baseline
+     *       {@code admin/GlobalConfig.jsp}. One more than the Stage 1E baseline
      *       of 16: the Stage 2 Wave A {@code tabbedmenu.pages} menu item for the
-     *       static page editor, and the Wave B {@code tabbedmenu.submissions}
-     *       menu item for the contact-inquiries inbox.</li>
+     *       static page editor. The Wave B {@code tabbedmenu.submissions} menu
+     *       item for the contact-inquiries inbox brought it to 18 briefly, but
+     *       W1's comment-removal wave deleted the {@code globalCommentManagement}
+     *       and {@code comments} menu items that were the only readers of
+     *       {@code tabbedmenu.admin.commentManagement}, and that key was deleted
+     *       from the bundle along with them -- back down to 17.</li>
      * </ul>
      * If this count grows beyond that known set, either a new key just went
      * dynamic-only (extend the exclusion and document it here) or a genuine
@@ -171,10 +175,10 @@ public class MessageKeyTest {
     /**
      * Keys the text scan cannot see: {@code runtimeConfigDefs.xml} {@code key=}
      * attributes (37) + {@code admin-menu.xml}/{@code editor-menu.xml}
-     * {@code name=} attributes (18). See the javadoc on
+     * {@code name=} attributes (17). See the javadoc on
      * {@link #reportsBundleKeysNoJspOrControllerUses()}.
      */
-    private static final int KNOWN_DYNAMIC_KEY_COUNT = 55;
+    private static final int KNOWN_DYNAMIC_KEY_COUNT = 54;
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();
