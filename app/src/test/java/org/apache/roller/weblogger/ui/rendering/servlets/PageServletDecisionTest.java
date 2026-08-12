@@ -75,7 +75,6 @@ class PageServletDecisionTest {
 
         weblog = new Weblog();
         weblog.setHandle("decisionblog");
-        weblog.setEnableMultiLang(false);
 
         theme = mock(WeblogTheme.class);
         when(weblogger.themeManager().getTheme(weblog)).thenReturn(theme);
@@ -251,20 +250,16 @@ class PageServletDecisionTest {
                 PageServlet.rejectionReason(pageRequest, weblog, hidden, false));
     }
 
+    /**
+     * Multi-locale weblogs are gone: a request naming a locale is always
+     * rejected now, whatever the weblog. There is no longer a setting that
+     * can make this allowed.
+     */
     @Test
-    void aLocaleViewOfAWeblogThatDoesNotEnableThemIsRejected() throws Exception {
+    void aLocaleViewIsAlwaysRejected() throws Exception {
         when(pageRequest.getLocale()).thenReturn("fr");
-        weblog.setEnableMultiLang(false);
 
         assertNotNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false));
-    }
-
-    @Test
-    void aLocaleViewIsAllowedWhenTheWeblogEnablesMultipleLanguages() throws Exception {
-        when(pageRequest.getLocale()).thenReturn("fr");
-        weblog.setEnableMultiLang(true);
-
-        assertNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false));
     }
 
     // -- permalinks: the four ways one can fail to be servable ---------------
@@ -303,14 +298,19 @@ class PageServletDecisionTest {
                 PageServlet.rejectionReason(pageRequest, weblog, template(), false));
     }
 
+    /**
+     * The per-entry "wrong locale" check below this in {@code rejectionReason}
+     * is unreachable now: any request naming a locale is already rejected by
+     * {@link #aLocaleViewIsAlwaysRejected}'s check before it gets there. A
+     * permalink is rejected the same generic way once its request carries a
+     * locale at all.
+     */
     @Test
-    void aPermalinkInAnotherLocaleIsRejected() throws Exception {
-        weblog.setEnableMultiLang(true);
+    void aPermalinkRequestedWithALocaleIsRejected() throws Exception {
         givenPermalink(entry(PubStatus.PUBLISHED, Instant.now().minusSeconds(60), "fr_FR"));
         when(pageRequest.getLocale()).thenReturn("en");
 
-        assertEquals("entry is not in the requested locale",
-                PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+        assertNotNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false));
     }
 
     @Test

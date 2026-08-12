@@ -178,9 +178,11 @@ public class FeedServlet extends HttpServlet {
         }
 
         // validation. make sure that request input makes sense.
+        // multi-locale weblogs are gone: a feed request naming a locale is
+        // never servable, the same outcome this check already produced for
+        // every real weblog (the flag defaulted false).
         boolean invalid = false;
-        if (feedRequest.getLocale() != null
-                && !feedRequest.getWeblog().isEnableMultiLang()) {
+        if (feedRequest.getLocale() != null) {
             invalid = true;
         }
         if (feedRequest.getWeblogCategoryName() != null) {
@@ -208,10 +210,10 @@ public class FeedServlet extends HttpServlet {
             return;
         }
 
-        // do we need to force a specific locale for the request?
-        if (feedRequest.getLocale() == null && !weblog.isShowAllLangs()) {
-            feedRequest.setLocale(weblog.getLocale());
-        }
+        // Multi-locale weblogs are gone: a weblog's feed always shows every
+        // locale now, so forcing feedRequest.getLocale() to the weblog's own
+        // locale here -- the old showAllLangs=false behaviour -- no longer
+        // has anything to trigger it.
 
         // looks like we need to render content
         HashMap<String, Object> model = new HashMap<>();

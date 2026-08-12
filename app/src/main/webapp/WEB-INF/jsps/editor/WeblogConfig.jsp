@@ -130,22 +130,6 @@
         </div>
     </div>
 
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <div class="form-check">
-                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.enableMultiLang" value="true" ${bean.enableMultiLang ? 'checked' : ''}/> <spring:message code="websiteSettings.enableMultiLang"/></label>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <div class="form-check">
-                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.showAllLangs" value="true" ${bean.showAllLangs ? 'checked' : ''}/> <spring:message code="websiteSettings.showAllLangs"/></label>
-            </div>
-        </div>
-    </div>
-
     <%-- ***** Blogger API setting settings ***** --%>
 
     <h3 class="section-head" id="settings-blogger-api"><spring:message code="websiteSettings.bloggerApi"/></h3>

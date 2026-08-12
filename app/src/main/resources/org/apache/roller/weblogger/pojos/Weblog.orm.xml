@@ -90,12 +90,6 @@
 				<column name="lastmodified" insertable="true" updatable="true" unique="false"/>
 				<temporal>TIMESTAMP</temporal>
 			</basic>
-			<basic name="enableMultiLang">
-				<column name="enablemultilang" insertable="true" updatable="true" unique="false"/>
-			</basic>
-			<basic name="showAllLangs">
-				<column name="showalllangs" insertable="true" updatable="true" unique="false"/>
-			</basic>
 			<many-to-one name="bloggerCategory" target-entity="org.apache.roller.weblogger.pojos.WeblogCategory">
 				<join-column name="bloggercatid" insertable="true" updatable="true"/>
 			</many-to-one>

@@ -54,8 +54,8 @@ class WrapperSafetyTest {
     /** Read-only accessors whose names would otherwise look like mutators. */
     private static final List<String> ALLOWED_NON_GETTERS = List.of(
             "wrap", "findEntryAttribute", "displayContent", "formatPubTime", "formatUpdateTime",
-            "retrieveWeblogEntries", "isInUse", "isHidden", "isNavbar", "isEnableMultiLang",
-            "isShowAllLangs", "equals", "hashCode", "toString", "url", "webpUrl");
+            "retrieveWeblogEntries", "isInUse", "isHidden", "isNavbar",
+            "equals", "hashCode", "toString", "url", "webpUrl");
 
     private static List<Class<?>> wrapperClasses() {
         URL codeSource = WeblogWrapper.class.getProtectionDomain().getCodeSource().getLocation();

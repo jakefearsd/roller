@@ -230,10 +230,11 @@ public class PageServlet extends HttpServlet {
             return;
         }
 
-        // do we need to force a specific locale for the request?
-        if (pageRequest.getLocale() == null && !weblog.isShowAllLangs()) {
-            pageRequest.setLocale(weblog.getLocale());
-        }
+        // Multi-locale weblogs are gone (see Weblog.isEnableMultiLang's
+        // removal above): a weblog's default view always shows every
+        // locale now, so forcing pageRequest.getLocale() to the weblog's own
+        // locale here -- the old showAllLangs=false behaviour -- no longer
+        // has anything to trigger it.
 
         // hit counting used to gate on isWebsitePageHit()/isOtherPageHit()
         // here; Umami owns traffic counting now (see WeblogPageRequest).
@@ -427,8 +428,11 @@ public class PageServlet extends HttpServlet {
             return "template is hidden";
         }
 
-        // locale view allowed only if weblog has enabled it
-        if (pageRequest.getLocale() != null && !pageRequest.getWeblog().isEnableMultiLang()) {
+        // multi-locale weblogs are gone: a request naming a locale view is
+        // never servable, the same outcome this check already produced for
+        // every real weblog (the flag defaulted false and nothing could turn
+        // it on for a bundled theme).
+        if (pageRequest.getLocale() != null) {
             return "locale view requested but the weblog does not enable multiple languages";
         }
 

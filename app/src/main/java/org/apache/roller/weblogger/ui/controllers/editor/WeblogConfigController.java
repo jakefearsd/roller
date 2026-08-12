@@ -118,10 +118,6 @@ public class WeblogConfigController extends BaseController {
                     weblog.setBloggerCategory(newBloggerCategory);
                 }
 
-                if (!weblog.isShowAllLangs() && !weblog.isEnableMultiLang()) {
-                    weblog.setEnableMultiLang(true);
-                }
-
                 weblogger.getWeblogManager().saveWeblog(weblog);
 
                 weblogger.flush();

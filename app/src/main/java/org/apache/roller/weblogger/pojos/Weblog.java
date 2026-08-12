@@ -68,8 +68,6 @@ public class Weblog implements Serializable {
     private Date    dateCreated      = new java.util.Date();
     private int     entryDisplayCount = 15;
     private Date    lastModified     = new Date();
-    private boolean enableMultiLang  = false;
-    private boolean showAllLangs     = true;
     private String  iconPath         = null;
     private String  about            = null;
     private String  creator          = null;
@@ -402,36 +400,7 @@ public class Weblog implements Serializable {
     public void setLastModified(Date lastModified) {
         this.lastModified = lastModified;
     }
-  
-    
-    /**
-     * Is multi-language blog support enabled for this weblog?
-     *
-     * If false then urls with various locale restrictions should fail.
-     */
-    public boolean isEnableMultiLang() {
-        return enableMultiLang;
-    }
 
-    public void setEnableMultiLang(boolean enableMultiLang) {
-        this.enableMultiLang = enableMultiLang;
-    }
-    
-    
-    /**
-     * Should the default weblog view show entries from all languages?
-     *
-     * If false then the default weblog view only shows entry from the
-     * default locale chosen for this weblog.
-     */
-    public boolean isShowAllLangs() {
-        return showAllLangs;
-    }
-
-    public void setShowAllLangs(boolean showAllLangs) {
-        this.showAllLangs = showAllLangs;
-    }
-    
     public String getURL() {
         return WebloggerFactory.getWeblogger().getUrlStrategy().getWeblogURL(this, null, false);
     }

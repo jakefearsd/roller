@@ -129,11 +129,11 @@ public class PreviewServlet extends HttpServlet {
             previewRequest.setWeblog(tmpWebsite);
         }
         
-        // do we need to force a specific locale for the request?
-        if(previewRequest.getLocale() == null && !weblog.isShowAllLangs()) {
-            previewRequest.setLocale(weblog.getLocale());
-        }
-        
+        // Multi-locale weblogs are gone: a weblog's preview always covers
+        // every locale now, so forcing previewRequest.getLocale() to the
+        // weblog's own locale here -- the old showAllLangs=false behaviour --
+        // no longer has anything to trigger it.
+
         Template page = null;
         if("page".equals(previewRequest.getContext())) {
             page = previewRequest.getWeblogPage();

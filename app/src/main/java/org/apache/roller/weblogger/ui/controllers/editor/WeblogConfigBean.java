@@ -36,8 +36,6 @@ public class WeblogConfigBean {
     private String timeZone = null;
     private int entryDisplayCount = 15;
     private boolean active = false;
-    private boolean enableMultiLang = false;
-    private boolean showAllLangs = false;
     private String icon = null;
     private String about = null;
 
@@ -103,22 +101,6 @@ public class WeblogConfigBean {
     
     public void setEntryDisplayCount( int entryDisplayCount ) {
         this.entryDisplayCount = entryDisplayCount;
-    }
-    
-    public boolean isEnableMultiLang() {
-        return this.enableMultiLang;
-    }
-    
-    public void setEnableMultiLang( boolean enableMultiLang ) {
-        this.enableMultiLang = enableMultiLang;
-    }
-    
-    public boolean isShowAllLangs() {
-        return this.showAllLangs;
-    }
-    
-    public void setShowAllLangs( boolean showAllLangs ) {
-        this.showAllLangs = showAllLangs;
     }
     
     public String getIcon() {
@@ -195,8 +177,6 @@ public class WeblogConfigBean {
         this.timeZone = dataHolder.getTimeZone();
         this.entryDisplayCount = dataHolder.getEntryDisplayCount();
         setActive(dataHolder.getActive());
-        this.enableMultiLang = dataHolder.isEnableMultiLang();
-        this.showAllLangs = dataHolder.isShowAllLangs();
         this.analyticsCode = dataHolder.getAnalyticsCode();
         this.analyticsSiteId = dataHolder.getAnalyticsSiteId();
         this.analyticsShareUrl = dataHolder.getAnalyticsShareUrl();
@@ -217,8 +197,6 @@ public class WeblogConfigBean {
         dataHolder.setTimeZone(this.timeZone);
         dataHolder.setEntryDisplayCount(this.entryDisplayCount);
         dataHolder.setActive(this.getActive());
-        dataHolder.setEnableMultiLang(this.enableMultiLang);
-        dataHolder.setShowAllLangs(this.showAllLangs);
         dataHolder.setIconPath(getIcon());
         dataHolder.setAbout(getAbout());
         dataHolder.setAnalyticsCode(this.analyticsCode);

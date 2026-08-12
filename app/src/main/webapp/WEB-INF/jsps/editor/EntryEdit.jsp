@@ -174,19 +174,7 @@
             <label class="editor-field-label" for="entry_bean_tagsAsString"><spring:message code="weblogEdit.tags"/></label>
             <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" id="entry_bean_tagsAsString" maxlength="255" class="form-control"/>
 
-            <c:choose>
-<c:when test="${actionWeblog.enableMultiLang}">
-                <label class="editor-field-label" for="entry_bean_locale"><spring:message code="weblogEdit.locale"/></label>
-                <select name="bean.locale" id="entry_bean_locale" class="form-select">
-<c:forEach items="${localesList}" var="opt">
-<option value="${opt}" ${opt == bean.locale ? 'selected' : ''}>${opt}</option>
-</c:forEach>
-</select>
-            </c:when>
-<c:otherwise>
-                <input type="hidden" name="bean.locale" value="${bean.locale}"/>
-            </c:otherwise>
-</c:choose>
+            <input type="hidden" name="bean.locale" value="${bean.locale}"/>
         </div>
 
         <%-- SEO and social sharing: the whole card survives intact behind a

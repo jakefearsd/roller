@@ -126,10 +126,10 @@ public class SearchServlet extends HttpServlet {
             }
         }
 
-        // do we need to force a specific locale for the request?
-        if (searchRequest.getLocale() == null && !weblog.isShowAllLangs()) {
-            searchRequest.setLocale(weblog.getLocale());
-        }
+        // Multi-locale weblogs are gone: a weblog's search always covers
+        // every locale now, so forcing searchRequest.getLocale() to the
+        // weblog's own locale here -- the old showAllLangs=false behaviour --
+        // no longer has anything to trigger it.
 
         // lookup template to use for rendering
         ThemeTemplate page = null;

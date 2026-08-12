@@ -65,8 +65,6 @@ class WeblogWrapperTest {
         weblog.setAnalyticsShareUrl("https://analytics.example.com/share/abc123");
         weblog.setNewsletterListUuid("94b12e10-1234-4321-aaaa-2c963f66afa6");
         weblog.setDateCreated(new Date(1_700_000_000_000L));
-        weblog.setEnableMultiLang(true);
-        weblog.setShowAllLangs(false);
         weblog.setVisible(Boolean.FALSE);
         weblog.setActive(Boolean.TRUE);
 
@@ -107,8 +105,6 @@ class WeblogWrapperTest {
         setAllFlags(false);
         assertEquals(Boolean.FALSE, wrapper.getVisible());
         assertEquals(Boolean.FALSE, wrapper.getActive());
-        assertFalse(wrapper.isEnableMultiLang());
-        assertFalse(wrapper.isShowAllLangs());
         assertEquals(Boolean.FALSE, wrapper.getEnabled(),
                 "the deprecated alias follows visible in both states too");
 
@@ -118,16 +114,12 @@ class WeblogWrapperTest {
                         + "stuck at one answer either hides every blog or publishes every "
                         + "hidden one");
         assertEquals(Boolean.TRUE, wrapper.getActive());
-        assertTrue(wrapper.isEnableMultiLang());
-        assertTrue(wrapper.isShowAllLangs());
         assertEquals(Boolean.TRUE, wrapper.getEnabled());
     }
 
     private void setAllFlags(boolean value) {
         weblog.setVisible(value);
         weblog.setActive(value);
-        weblog.setEnableMultiLang(value);
-        weblog.setShowAllLangs(value);
     }
 
     @Test

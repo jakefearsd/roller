@@ -53,7 +53,6 @@ class WeblogConfigAnalyticsTest extends EditorControllerTestSupport {
         givenRuntimeProperty("site.pages.maxEntries", "30");
 
         weblog.setActive(Boolean.TRUE);
-        weblog.setShowAllLangs(true);
         bean.copyFrom(weblog);
     }
 

@@ -700,9 +700,6 @@ public class EntryEditController extends BaseController {
                     .getWeblogEntryURL(getActionWeblog(request), null, entry.getAnchor(), true));
         }
 
-        // Locale list for multi-language blogs
-        model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
-
         // Thumbnail previews for the SEO panel's featured/social image pickers.
         // Read off the bean rather than the entry so a save that failed
         // validation still shows the image the author picked in the form.

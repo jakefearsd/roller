@@ -199,18 +199,8 @@ public final class WeblogWrapper {
     public Date getLastModified() {
         return this.pojo.getLastModified();
     }
-    
-    
-    public boolean isEnableMultiLang() {
-        return this.pojo.isEnableMultiLang();
-    }
-    
-    
-    public boolean isShowAllLangs() {
-        return this.pojo.isShowAllLangs();
-    }
-    
-    
+
+
     public String getStylesheet() throws WebloggerException {
         // custom stylesheet comes from the weblog theme
         if(this.pojo.getTheme().getStylesheet() != null) {

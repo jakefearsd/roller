@@ -17,7 +17,10 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -64,7 +67,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         givenRuntimeProperty("site.pages.maxEntries", "30");
 
         weblog.setActive(Boolean.TRUE);
-        weblog.setShowAllLangs(true);
         bean.copyFrom(weblog);
     }
 
@@ -183,32 +185,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void turningOffBothLanguageOptionsIsNotAllowedToLeaveTheBlogShowingNothing() throws Exception {
-        // showAllLangs=false means "only show the weblog's own locale", which
-        // only makes sense when multi-language mode is on. With both off the
-        // blog would filter out every entry, so multi-language is forced on.
-        bean.setShowAllLangs(false);
-        bean.setEnableMultiLang(false);
-
-        controller.save(request, model, bean);
-
-        assertTrue(weblog.isEnableMultiLang(),
-                "With showAllLangs off, multi-language mode must be forced on so the blog "
-                        + "still renders entries");
-    }
-
-    @Test
-    void theUsualLanguageCombinationIsLeftAlone() throws Exception {
-        bean.setShowAllLangs(true);
-        bean.setEnableMultiLang(false);
-
-        controller.save(request, model, bean);
-
-        assertFalse(weblog.isEnableMultiLang(),
-                "The default single-language configuration must not be silently upgraded");
-    }
-
-    @Test
     void analyticsCodeIsTrimmedBeforeStorage() throws Exception {
         // The code is injected verbatim into every rendered page.
         bean.setAnalyticsCode("  <script>tracker()</script>  ");
@@ -267,6 +243,20 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
 
     // --- WeblogConfigBean ---
 
+    /**
+     * Multi-locale weblogs are gone: {@code WeblogConfigBean} must carry no
+     * field for either the "publish in multiple languages" toggle or the
+     * "show all languages" toggle that used to sit beside it.
+     */
+    @Test
+    void multiLocaleFieldsAreGone() {
+        List<String> offenders = Arrays.stream(WeblogConfigBean.class.getDeclaredFields())
+                .map(Field::getName)
+                .filter(n -> n.contains("MultiLang") || n.contains("AllLangs"))
+                .toList();
+        assertTrue(offenders.isEmpty(), "multi-locale fields survive: " + offenders);
+    }
+
     @Test
     void beanRoundTripsTheSettingsItOwns() {
         Weblog source = new Weblog();
@@ -280,8 +270,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         source.setAbout("About me");
         source.setIconPath("icon.png");
         source.setActive(Boolean.TRUE);
-        source.setEnableMultiLang(true);
-        source.setShowAllLangs(false);
 
         WeblogConfigBean copy = new WeblogConfigBean();
         copy.copyFrom(source);
