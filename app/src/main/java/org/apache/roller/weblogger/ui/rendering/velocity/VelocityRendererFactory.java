@@ -45,8 +45,8 @@ public class VelocityRendererFactory implements RendererFactory {
             return null;
         }
 
-        // A StaticThemeTemplate (e.g. the popup-comments or the static-page
-        // fallback shipped inside the WAR) is not persisted, so it has no
+        // A StaticThemeTemplate (e.g. the static-page fallback shipped
+        // inside the WAR) is not persisted, so it has no
         // rendition row to read a language from -- by design,
         // getTemplateRendition() always answers null for one. It carries its
         // language directly instead; read that rather than treating "no

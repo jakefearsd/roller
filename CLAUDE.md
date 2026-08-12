@@ -341,7 +341,6 @@ Key domain entities:
 - `WeblogEntry` - Individual blog posts with content and publishing status
 - `User` - User accounts with roles and permissions
 - `WeblogCategory` - Blog categorization
-- `WeblogEntryComment` - Comment system
 - `MediaFile` - File attachments and media
 - `WeblogTemplate` - Custom template definitions
 
@@ -402,7 +401,7 @@ Key domain entities:
   decides something changed, so anything driving that page must pick the theme
   (or the radio) first to reveal the right one.
 - A theme switch reaches readers via `saveWeblog` bumping `lastModified`, not
-  via `CacheManager.invalidate` — see Comments on `WeblogPageCache`.
+  via `CacheManager.invalidate` — see Templates on `WeblogPageCache`.
 - **`themes.customtheme.allowed` is enforced in `ThemeEditController`, not just
   in the menu.** `editor-menu.xml` gates the Design tab on it and that used to
   be the *only* check, so a POST to `themeEdit!save.rol` converted the weblog
@@ -410,10 +409,10 @@ Key domain entities:
   A weblog already on a custom theme is grandfathered (turning the option off
   stops new customisations; it must not strand a weblog that has no way back).
 - `travel` and `portfolio` each ship a `_page` template
-  (`themes/<id>/page.vm`) the same way `_popupcomments` is overridden — a
-  `WeblogPage` falls back to it through the same `StaticThemeTemplate` path
-  as any other unthemed content, so a static page renders in the theme's own
-  identity (travel's `tg-header` chrome, portfolio's dark frame) instead of
+  (`themes/<id>/page.vm`) — a `WeblogPage` falls back to it through the same
+  `StaticThemeTemplate` path as any other unthemed content, so a static page
+  renders in the theme's own identity (travel's `tg-header` chrome, portfolio's
+  dark frame) instead of
   the naked fallback template's bare `<h1>`. `TravelThemeRenderingTest`/
   `PortfolioThemeRenderingTest` pin this end to end: a page carrying
   `[contact]` must render through the theme's header/prose classes *and*
@@ -442,15 +441,16 @@ switching the call site to `WebloggerRuntimeConfig`. Three traps, all pinned by
    (`JPAPropertiesManagerImpl.initialValueFor`) or the first boot after an
    upgrade silently discards what the deployer set.
 3. The call site must genuinely re-read it. A `static final` (as
-   `WeblogEntry`'s anchor separator was) or a value latched in `init()` (as the
-   comment throttle was) keeps the old value until a restart, so promoting it
-   buys nothing.
+   `WeblogEntry`'s anchor separator was) or a value latched in `init()` keeps
+   the old value until a restart, so promoting it buys nothing.
 
 Promoted so far: `groupblogging.enabled`, `user.hideUserNames`,
-`comment.throttle.enabled`, `weblogentry.title.useUnderscoreSeparator`.
-Throttle *sizing* (threshold/interval/maxentries) stays startup-scoped — it
-dimensions a fixed cache that cannot be resized under live callers; only the
-on/off switch is hot.
+`weblogentry.title.useUnderscoreSeparator`. (The comment subsystem's
+`comment.throttle.enabled` was a fourth, promoted the same way — it was
+removed along with the rest of comments in W1, not demoted; see Comments
+below.) Other throttles' *sizing* (threshold/interval/maxentries) stays
+startup-scoped — it dimensions a fixed cache that cannot be resized under
+live callers; only the on/off switch is hot.
 
 **Deliberately NOT promoted**, and not to be promoted without a decision:
 - `weblogAdminsUntrusted` and `passwds.encryption.enabled` — promoting these
@@ -477,11 +477,23 @@ Four classes carry the configuration matrix. The split is deliberate:
   theme: the fixture costs ~9s and five methods would pay it five times.
   `frontpage` is excluded — it renders through `$site`, which exists only for
   the weblog named by `site.frontpage.weblog.handle`.
-- `WeblogConfigMatrixIT` — per-weblog settings. Each test owns its weblog and
-  touches no global state.
-- `GlobalConfigMatrixIT` — **the only class that mutates site-wide state.**
-  Kept to one on purpose: it is what would have to be serialised if the suite
-  ever runs classes in parallel, since everything else is per-weblog.
+- `WeblogConfigMatrixIT` — per-weblog settings: locale, `entryDisplayCount`,
+  and `active` (which also withdraws the weblog from the sitemap index). Each
+  test owns its weblog and touches no global state. It used to also cover the
+  per-weblog comment switches (moderation, allow/disallow); those tests and
+  their `postCommentDirectly`/`approveComment` helpers were deleted with the
+  rest of the comment subsystem in W1, not replaced — there is nothing left
+  in this class to cover them with.
+- `GlobalConfigMatrixIT` — **the only class that mutates site-wide state**:
+  the feature-refusal switch (uploads/weblog-creation/group-blogging off) and
+  the entry-URL word-separator setting. Kept to one on purpose: it is what
+  would have to be serialised if the suite ever runs classes in parallel,
+  since everything else is per-weblog. It used to carry three more tests
+  covering the site-wide comment switches (off-at-the-servlet, moderation,
+  HTML-escaping); those and the `postCommentDirectly` helper were deleted in
+  W1 along with the comment subsystem they exercised, leaving the two tests
+  above — the class still mutates global state, so the serialisation
+  rationale for keeping it to one class is unchanged.
 - `ScheduledEntryIT` — a future-dated entry is withheld from pages, feeds and
   the sitemap.
 
@@ -525,8 +537,23 @@ excused whatever its type.
   via `WeblogSharedTheme.getTemplateByLink`'s fallback to the weblog's own
   templates. `TemplateIT` asserts that end to end.
 - `saveTemplate`/`removeTemplate` bump `weblog.lastModified`, which is what
-  expires the rendered page in `WeblogPageCache` (see Comments — that cache has
-  no CacheHandler and expires lazily).
+  expires the rendered page in `WeblogPageCache` — that cache has no
+  CacheHandler, so `CacheManager.invalidate(...)` never reaches it, and a page
+  is only ever evicted lazily against `weblog.lastModified`.
+- **Velocity in this codebase is lenient, and that is a live hazard whenever
+  you delete a Java member.** `velocity.properties` sets no
+  `runtime.references.strict` and turns off `runtime.log.invalid.reference`.
+  A template reference to a deleted field or getter therefore does not throw
+  and does not log — it prints as literal text (e.g. `$entry.commentCount`)
+  into the rendered page, silently, with no failing test to catch it. This W1
+  comment-removal wave shipped two such bugs before they were caught by hand
+  (`journal/_day.vm`'s `$entry.commentCount`, and `feeds.vm`'s
+  `<comments>$url.comments(...)</comments>` in every RSS feed). The mitigation
+  is manual and has to stay manual: any change that deletes a Java member
+  reachable from a template must `grep` `app/src/main/webapp/themes` and
+  `app/src/main/webapp/WEB-INF/velocity` for it before calling the change
+  done. This is not comment-specific — it applies to every future deletion
+  that touches a pojo, wrapper, or model class a `.vm` file can reach.
 
 ## Admin UI
 - **Design system**: `docs/design/design-system.md` is the committed spec
@@ -577,7 +604,7 @@ excused whatever its type.
 - **`.empty-state`/`.empty-state-title`/`.empty-state-body`** are the
   "invitations, not shrugs" signature (one 600/16px title, one `--ink-soft`
   sentence, at most one primary-button action, icon-free) on Entries/Pages/
-  Submissions/Comments/MediaFileView. `Pages.jsp`/`Submissions.jsp` render it
+  Submissions/MediaFileView. `Pages.jsp`/`Submissions.jsp` render it
   as the lone `<tr>` in an otherwise-empty table body, which makes its `<td>`
   the tbody's first-child — the same structural hook the table header's
   caps-label rule keys off — so `.empty-state` resets those inherited
@@ -609,33 +636,38 @@ excused whatever its type.
   when that category is deleted. Anything reading it must cope.
 
 ## Comments
-- **Signed-in only, per weblog, on by default**
-  (`Weblog.requireAuthenticatedComments`, column `weblog.comment_auth_required`,
-  V013). Enforced in `CommentServlet` — the theme also swaps the form for a
-  sign-in prompt (`#showWeblogEntryCommentForm`), but hiding a form stops
-  nobody who posts directly, so the servlet check is the real one. When it is
-  on, the comment's name and email come off the **account**; the posted fields
-  are discarded, otherwise a signed-in commenter could still sign someone
-  else's name.
-- **There is no SPAM status.** `ApprovalStatus` is APPROVED/DISAPPROVED/PENDING;
-  marking a comment as spam means deleting it. The old flag fed nothing (no
-  filter exists) and was unreachable anyway: the moderation page pre-ticks
-  "approved" for approved comments and the update loop tested approved before
-  spam, so ticking spam re-saved the comment as APPROVED and it stayed on the
-  public page. Both moderation screens now delete; only the per-weblog one
-  changes approval.
-- **`WeblogPageCache` has no CacheHandler** — `CacheManager.invalidate(...)`
-  does not reach it. Rendered pages expire lazily against
-  `weblog.lastModified`, which `saveComment`/`removeComment` bump via
-  `saveWeblog`. That is why a comment change is visible without an explicit
-  cache eviction.
-- **There is no commenter URL field** (`roller_comment.url`, dropped V019).
-  It was a blogosphere fossil and a spam-link vector — a free-text website
-  link rendered as a clickable wrapper around the commenter's name, with no
-  verification behind it. Signed-in-only commenting made it doubly pointless:
-  name and email already come off the account, and the URL never had that
-  backing to begin with. The comment name now renders as plain bold text,
-  always.
+The comment subsystem — servlet, manager, moderation screens, pojos, schema,
+runtime properties, theme rendering — was removed outright in W1. It is not
+coming back.
+
+It was removed because it was unreachable **by design**, not because it was
+unused by accident. `requireAuthenticatedComments` defaulted true (V013 set
+`weblog.comment_auth_required` `DEFAULT true NOT NULL`), and this fork had
+already removed public self-registration, so the only account that could ever
+be signed in to post a comment was one an administrator had provisioned by
+hand. A feature no stranger can ever reach is not a moderation queue, it is
+dead weight with a bigger attack surface than the code that replaced it. The
+contact form and the newsletter (see Audience below) are the reader-facing
+channels now; neither needs an account.
+
+Two things a future sweep for "comment" will trip over and must leave alone:
+- **`roller_audit_log.comment_text`** is not a comment column. It is the audit
+  log's own change note (e.g. "changed password"), unrelated to the removed
+  feature by name collision only.
+- **`util/GenericThrottle`** is not comment infrastructure, even though
+  `CommentServlet` used to be its most visible caller. It also throttles
+  `ContactController` (`contact.throttle.*`), `NewsletterController`
+  (`newsletter.subscribe.throttle.*`) and `PasswordResetController`
+  (`passwordreset.throttle.*`), and stays untouched.
+
+One operational note for whoever runs Maintenance next: `IndexOperation` used
+to index comment content/name/email into the Lucene index, and
+`SearchOperation.SEARCH_FIELDS` included the comment content field, so site
+search could match text a reader had posted in a comment. Both are gone from
+the code, but an index built before this wave still has the old fields on
+disk — stale comment text stays searchable until someone rebuilds the index
+from the Maintenance page. Not a bug, just something that will look like one
+until it's rebuilt.
 
 ## Entry editing
 - **Layout**: `EntryEdit.jsp` (the approved card is committed at
@@ -647,8 +679,8 @@ excused whatever its type.
   about *managing* the entry — not writing it — lives in the rail: a Publish
   box (status pill, the one visible time field, the submit buttons), an
   Organize box (category/tags/locale), an SEO drawer (the SEO & Social
-  Sharing card, unchanged, just collapsed by default), a Comments drawer, and
-  the newsletter/revisions cards as quiet boxes below. Delete is a quiet text
+  Sharing card, unchanged, just collapsed by default), and the
+  newsletter/revisions cards as quiet boxes below. Delete is a quiet text
   link, not a red button. The `#entry` form is `display:contents` specifically
   so the newsletter/revisions cards — which carry their own `<form>`s (own
   CSRF token, own POST target) — can sit in the rail's grid column without
@@ -682,16 +714,7 @@ excused whatever its type.
   `"sidebar"` attribute to `tiles/empty.jsp` instead. The four recent-entries
   lists (published/scheduled/draft/pending, 20 each) it used to render are
   gone from `EntryEditController` too — nothing else consumed them; Entries.jsp
-  is where recent-entries lists live now. The one thing the sidebar carried
-  that readers still need — the "N comments" line — moved into the rail's
-  Comments drawer, fed by `bean.commentCount`.
-- **The Comments drawer keeps the legacy `collapseAdvanced` id on purpose.**
-  It used to be the "Advanced settings" collapse; `CommentIT` opens it via
-  `a[href='#collapseAdvanced']` to reach the allow-comments checkbox, and that
-  selector is a pinned test contract, not a description of what's inside the
-  drawer today. Documented in place in `EntryEdit.jsp` — do not rename the id
-  to something more sidebar-shaped without updating `CommentIT` in the same
-  commit.
+  is where recent-entries lists live now.
 - **Entry plugins are gone; the shortcode render seam stays.** The "Plugins to
   apply" checkbox card, `weblogentry.plugins`/`weblog.defaultplugins`
   (dropped V021, idempotent), and the sole registered plugin
@@ -758,12 +781,12 @@ answering to.
   `SiteWideCache` keys carry a `/pageslug/<slug>` segment so a page and a same-
   named context never share a cache entry.
 - **Rendering**: a theme may override the shipped page template with one
-  named `_page`, exactly as `_popupcomments` is overridden — same
-  `StaticThemeTemplate` fallback path through `VelocityRendererFactory`, so a
-  theme that has never heard of pages still renders them. `savePage`/
-  `removePage` bump `weblog.lastModified`, the same lazy-expiry contract
-  `WeblogPageCache` already relies on for templates and comments (see
-  Comments above) — there is no explicit cache eviction for a page edit.
+  named `_page` — same `StaticThemeTemplate` fallback path through
+  `VelocityRendererFactory` that any other unthemed content uses, so a theme
+  that has never heard of pages still renders them. `savePage`/`removePage`
+  bump `weblog.lastModified`, the same lazy-expiry contract `WeblogPageCache`
+  already relies on for templates (see Templates above) — there is no
+  explicit cache eviction for a page edit.
 - **Editor**: `PageEditController`/`PagesController` reuse the entry editor's
   shape (Markdown + shortcodes + SEO card) via `PageBean`. `lookupPage` joins
   `lookupEntry`/`lookupTemplate`/`lookupCategory` as the fourth
@@ -973,8 +996,6 @@ outcomes; nothing is emitted that an admin typed.
   per-entry name list that no longer exists — a future
   `WeblogEntryPlugin` registers into this seam and runs for every entry, no
   UI required.
-- **Comment plugins**: comment text formatting (`WeblogEntryCommentPlugin`) —
-  no spam filtering exists. See Comments above for what stands in for one.
 
 ## Shortcodes
 `org.apache.roller.weblogger.business.shortcodes` — `ShortcodeExpander`

@@ -156,8 +156,7 @@ class ErrorCasesIT extends RollerIT {
         for (String path : new String[] {
                 "/roller-ui/admin/globalConfig.rol",
                 "/roller-ui/admin/createUser.rol",
-                "/roller-ui/admin/userAdmin.rol",
-                "/roller-ui/admin/globalCommentManagement.rol"}) {
+                "/roller-ui/admin/userAdmin.rol"}) {
             int status = statusOf(baseUrl() + path);
             assertTrue(status == 401 || status == 403 || status == 302 || status == 200,
                     path + " answered " + status + " to an anonymous caller");

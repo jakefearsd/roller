@@ -284,7 +284,7 @@ public final class SiteWideCache implements CacheHandler {
      * examples ...
      *
      * cache.sitewide:feed/foo/entries/rss/en
-     * cache.sitewide:feed/foo/comments/rss/cat/MyCategory/en
+     * cache.sitewide:feed/foo/entries/rss/cat/MyCategory/en
      * cache.sitewide:feed/foo/entries/atom/en/excerpts
      *
      * Every segment built from request data is labelled and escaped: a search

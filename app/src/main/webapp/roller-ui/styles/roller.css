@@ -983,12 +983,6 @@ table.mm_table_actions td {
     padding-top: 10px;
 }
 
-.editor-comment-count {
-    margin: 10px 0 0;
-    font-size: 14.5px;
-    color: var(--ink-soft);
-}
-
 /* Quiet destructive action: a text link, not a red button. Shared -- the
    entry editor's rail and the weblog-settings rail both end with one, and
    naming it .editor-* while a settings page used it was the smell. */
@@ -1111,102 +1105,6 @@ table.mm_table_actions td {
 .ui-datepicker td.ui-datepicker-unselectable span {
     color: var(--ink-soft) !important;
     opacity: .6;
-}
-
-/* ---- Comments moderation ----
-   Built to docs/design/tables/comments-moderation.html. Replaces a layout
-   where each comment was a nested <table class="innertable"> inside a <td>,
-   dressed with four classes (details, viewdetails, actionrow, tablenav) that
-   had no rules in this file at all -- so the screen was rendering on browser
-   defaults. One comment is one row on one surface now: a metadata line, then
-   the body as prose. */
-.comment-list {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    overflow: hidden;
-}
-
-.comment-row {
-    display: flex;
-    gap: 12px;
-    padding: 14px 16px;
-    background: var(--surface);
-}
-
-.comment-row + .comment-row {
-    border-top: 1px solid var(--line);
-}
-
-/* Awaiting moderation reads as a state, not just a pill: the row itself is
-   tinted, so a queue of them is scannable without reading every pill. */
-.comment-row.is-pending {
-    background: color-mix(in srgb, var(--warn) 8%, var(--surface));
-}
-
-.comment-body {
-    flex: 1;
-    min-width: 0;
-}
-
-.comment-meta {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-/* Plain bold text, never a link: there is no commenter URL field (dropped in
-   V019) and the name is not verified against anything. */
-.comment-who {
-    font-weight: 600;
-}
-
-.comment-contact,
-.comment-when,
-.comment-on {
-    font-size: 12px;
-    color: var(--ink-soft);
-}
-
-/* Data, so mono with tabular figures -- a column of dates and addresses
-   should line up the way every other data column in the admin does. */
-.comment-contact,
-.comment-when {
-    font-family: var(--font-data);
-    font-variant-numeric: tabular-nums;
-}
-
-/* The row's select box is Bootstrap's, as on the entries table -- but the row
-   is a flex container, so it needs telling not to shrink, and nudging onto the
-   metadata line's baseline. */
-.comment-row > .form-check-input {
-    flex: 0 0 auto;
-    margin-top: 4px;
-}
-
-.comment-text {
-    margin-top: 6px;
-    max-width: 62ch;
-}
-
-.comment-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 8px;
-}
-
-/* Bulk-action bar, shared with the entries table so a bulk action reads the
-   same wherever you meet it. */
-.selection-bar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-    padding: 8px 12px;
-    background: var(--accent-quiet);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
 }
 
 /* ---- Settings with a rail ----

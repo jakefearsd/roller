@@ -163,7 +163,7 @@ public final class WeblogFeedCache {
      * examples ...
      *
      * cache.weblogfeed:foo/entries/rss/en
-     * cache.weblogfeed:foo/comments/rss/cat/MyCategory/en
+     * cache.weblogfeed:foo/entries/rss/cat/MyCategory/en
      * cache.weblogfeed:foo/entries/atom/en/excerpts
      *
      * Every segment built from request data is labelled and escaped: a search

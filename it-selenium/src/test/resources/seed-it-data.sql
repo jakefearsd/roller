@@ -50,15 +50,14 @@ ON CONFLICT (id) DO NOTHING;
 -- weblog= request parameter (see RollerHandlerInterceptor), so without this the
 -- reachability sweep could only reach the handful of global pages.
 INSERT INTO weblog (id, name, handle, tagline, creator,
-                    allowcomments, emailcomments, emailaddress, editortheme,
+                    emailaddress, editortheme,
                     locale, timezone, visible, isactive, datecreated,
-                    defaultallowcomments, defaultcommentdays, commentmod,
                     displaycnt, enablemultilang, showalllangs)
 VALUES ('it-weblog-0000-0000-0000-00000000001',
         'IT Weblog', 'it_weblog', 'Integration test weblog', 'it_admin',
-        true, false, 'it-admin@example.invalid', 'journal',
+        'it-admin@example.invalid', 'journal',
         'en_US', 'UTC', true, true, NOW(),
-        true, 7, false, 15, false, true)
+        15, false, true)
 ON CONFLICT (handle) DO NOTHING;
 
 -- Weblog ADMIN permission: the authoring routes check WeblogPermission, and
@@ -87,13 +86,13 @@ ON CONFLICT (id) DO NOTHING;
 -- A published entry so anonymous-surface tests have real content to render.
 INSERT INTO weblogentry (id, anchor, creator, title, text, pubtime, updatetime,
                          websiteid, categoryid, publishentry, link,
-                         allowcomments, commentdays, righttoleft, pinnedtomain,
+                         righttoleft, pinnedtomain,
                          locale, status, summary, search_description)
 VALUES ('it-entry-0000-0000-0000-000000000001', 'it-seeded-entry', 'it_admin',
         'IT Seeded Entry', 'Seeded entry body for public rendering checks.',
         now() - interval '1 hour', now() - interval '1 hour',
         'it-weblog-0000-0000-0000-00000000001',
         'it-cat-0000-0000-0000-000000000001',
-        true, NULL, true, 7, false, false,
+        true, NULL, false, false,
         'en_US', 'PUBLISHED', NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
