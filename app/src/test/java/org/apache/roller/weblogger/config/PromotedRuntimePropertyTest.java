@@ -19,6 +19,8 @@ package org.apache.roller.weblogger.config;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,12 +37,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * The properties promoted from startup-only to runtime-settable.
  *
- * <p>These four used to be readable only from {@code roller.properties}, which
+ * <p>These three used to be readable only from {@code roller.properties}, which
  * meant the only way to exercise the other branch of any of them was to restart
  * the server with a different file. They now live in
  * {@code runtimeConfigDefs.xml} as well, so one running instance can be
@@ -73,8 +76,25 @@ class PromotedRuntimePropertyTest {
     private static final List<String> PROMOTED = List.of(
             "groupblogging.enabled",
             "user.hideUserNames",
-            "comment.throttle.enabled",
             "weblogentry.title.useUnderscoreSeparator");
+
+    /**
+     * The comment subsystem's six runtime properties -- {@code
+     * users.comments.enabled}, {@code users.comments.htmlenabled}, {@code
+     * users.comments.plugins}, {@code users.comments.emailnotify}, {@code
+     * users.moderation.required} and {@code comment.throttle.enabled} -- are
+     * gone from {@code runtimeConfigDefs.xml} along with the feature they
+     * configured; this pins that none of them, nor the moderation namespace,
+     * crept back in.
+     */
+    @Test
+    void noCommentPropertiesRemainInRuntimeConfig() throws Exception {
+        String xml = Files.readString(Path.of(
+                "src/main/resources/org/apache/roller/weblogger/config/runtimeConfigDefs.xml"));
+        assertFalse(xml.contains("users.comments."), "comment runtime properties survive");
+        assertFalse(xml.contains("comment.throttle."), "comment throttle property survives");
+        assertFalse(xml.contains("users.moderation."), "moderation property survives");
+    }
 
     /**
      * Both files must agree. {@code roller.properties} is what a running

@@ -121,32 +121,37 @@ public class MessageKeyTest {
      *
      * <p>Ratchet: after the Stage 1D i18n sweep the true orphan count is 0. The
      * bundle still carries {@link #KNOWN_DYNAMIC_KEY_COUNT} keys this text scan
-     * cannot see because they are addressed dynamically rather than via a
-     * literal {@code <spring:message code="...">}:
+     * cannot see, split across three buckets. The count below is measured
+     * directly off {@code reportsBundleKeysNoJspOrControllerUses()}'s own
+     * output, not derived by arithmetic from an earlier baseline -- an earlier
+     * version of this javadoc tried to walk the count forward wave by wave and
+     * drifted out of sync with the actual {@code tabbedmenu.*} total, which is
+     * why this one states each bucket's current size plainly instead:
      * <ul>
-     *   <li>37 {@code configForm.*} keys read off {@code key="..."} attributes in
+     *   <li>30 {@code configForm.*} keys read off {@code key="..."} attributes in
      *       {@code runtimeConfigDefs.xml} (GlobalConfig.jsp renders display
      *       groups/properties generically via {@code ${dg.key}} / property
-     *       metadata, not a literal code; six more than the Stage 1E baseline
-     *       of 31: the Stage 2 Wave 1 {@code uploads.exif.stripGps}, the Wave 4
-     *       {@code entry.revisions.retention}, and the four properties promoted
-     *       from startup-only to runtime-settable so one running instance can be
-     *       reconfigured across them -- {@code groupblogging.enabled},
-     *       {@code user.hideUserNames}, {@code comment.throttle.enabled} and
-     *       {@code weblogentry.title.useUnderscoreSeparator}).</li>
-     *   <li>17 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
+     *       metadata, not a literal code). W1's comment-removal wave deleted
+     *       the {@code commentSettings} display group -- {@code
+     *       configForm.commentSettings}, {@code configForm.enableComments},
+     *       {@code configForm.commentHtmlAllowed}, {@code
+     *       configForm.commentPlugins}, {@code configForm.emailComments},
+     *       {@code configForm.moderationRequired} and {@code
+     *       configForm.commentThrottle} -- seven keys, taking this bucket from
+     *       37 down to 30.</li>
+     *   <li>15 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
      *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
      *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
      *       {@code key}, which the JSPs render as {@code <spring:message
      *       code="${tab.key}">} -- see {@code tiles/bannerStatus.jsp} and
-     *       {@code admin/GlobalConfig.jsp}. One more than the Stage 1E baseline
-     *       of 16: the Stage 2 Wave A {@code tabbedmenu.pages} menu item for the
-     *       static page editor. The Wave B {@code tabbedmenu.submissions} menu
-     *       item for the contact-inquiries inbox brought it to 18 briefly, but
-     *       W1's comment-removal wave deleted the {@code globalCommentManagement}
-     *       and {@code comments} menu items that were the only readers of
-     *       {@code tabbedmenu.admin.commentManagement}, and that key was deleted
-     *       from the bundle along with them -- back down to 17.</li>
+     *       {@code admin/GlobalConfig.jsp}.</li>
+     *   <li>2 keys -- {@code macro.weblog.datetime.toStringFormat} and
+     *       {@code macro.weblog.time.toStringFormat} -- that this scan cannot
+     *       find a literal reference to anywhere and that are <em>not</em>
+     *       addressed via either XML mechanism above. Pre-existing, unrelated
+     *       to comment removal, and left alone rather than investigated or
+     *       deleted as out of scope for this wave; flagged here for whoever
+     *       picks it up next; see W1 Task 6's report for the same.</li>
      * </ul>
      * If this count grows beyond that known set, either a new key just went
      * dynamic-only (extend the exclusion and document it here) or a genuine
@@ -174,11 +179,11 @@ public class MessageKeyTest {
 
     /**
      * Keys the text scan cannot see: {@code runtimeConfigDefs.xml} {@code key=}
-     * attributes (37) + {@code admin-menu.xml}/{@code editor-menu.xml}
-     * {@code name=} attributes (17). See the javadoc on
-     * {@link #reportsBundleKeysNoJspOrControllerUses()}.
+     * attributes (30) + {@code admin-menu.xml}/{@code editor-menu.xml}
+     * {@code name=} attributes (15) + 2 unexplained pre-existing orphans. See
+     * the javadoc on {@link #reportsBundleKeysNoJspOrControllerUses()}.
      */
-    private static final int KNOWN_DYNAMIC_KEY_COUNT = 54;
+    private static final int KNOWN_DYNAMIC_KEY_COUNT = 47;
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();

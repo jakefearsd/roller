@@ -76,22 +76,30 @@ public class ConfigModel implements Model {
         return getBooleanProperty("site.newsfeeds.styledFeeds");
     }
     
+    /** @deprecated The comment subsystem was removed. Always returns false,
+     *  the same way {@link #getCommentAutoFormat} and
+     *  {@link #getTrackbacksEnabled} already did for their own removed
+     *  features -- kept so a custom theme still referencing
+     *  {@code $config.commentHtmlAllowed} degrades quietly instead of
+     *  breaking. */
     public boolean getCommentHtmlAllowed() {
-        return getBooleanProperty("users.comments.htmlenabled");
-    }
-    
-    public boolean getCommentAutoFormat() {
-        // this prop was removed in 4.0
         return false;
     }
-    
+
+    /** @deprecated This prop was removed in 4.0. Always returns false. */
+    public boolean getCommentAutoFormat() {
+        return false;
+    }
+
+    /** @deprecated The comment subsystem was removed; there is no comment
+     *  HTML left to escape, so this stays permanently true. */
     public boolean getCommentEscapeHtml() {
-        // replaced by new htmlallowed property in 4.0
         return !getCommentHtmlAllowed();
     }
-    
+
+    /** @deprecated The comment subsystem was removed. Always returns false. */
     public boolean getCommentEmailNotify() {
-        return getBooleanProperty("users.comments.emailnotify");
+        return false;
     }
     
     /** @deprecated Trackbacks have been removed. Always returns false. */

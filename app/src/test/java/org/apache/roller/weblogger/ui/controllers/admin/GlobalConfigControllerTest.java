@@ -35,7 +35,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.ExtendedModelMap;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -123,27 +122,6 @@ class GlobalConfigControllerTest {
         assertTrue(((Map<?, ?>) model.getAttribute("properties")).isEmpty());
     }
 
-    @Test
-    void theEnabledCommentPluginsAreSplitOutOfTheStoredCsv() throws Exception {
-        when(weblogger.propertiesManager().getProperty("users.comments.plugins"))
-                .thenReturn(new RuntimeConfigProperty("users.comments.plugins", "ConvertLineBreaks,TextileFormatter"));
-
-        controller.execute(request(), model);
-
-        assertArrayEquals(new String[]{"ConvertLineBreaks", "TextileFormatter"},
-                (String[]) model.getAttribute("commentPlugins"));
-    }
-
-    @Test
-    void noCommentPluginsConfiguredMeansNoneAreTicked() throws Exception {
-        when(weblogger.propertiesManager().getProperty("users.comments.plugins"))
-                .thenReturn(new RuntimeConfigProperty("users.comments.plugins", ""));
-
-        controller.execute(request(), model);
-
-        assertArrayEquals(new String[0], (String[]) model.getAttribute("commentPlugins"));
-    }
-
     // --- saving ---
 
     @Test
@@ -169,25 +147,25 @@ class GlobalConfigControllerTest {
     void anUntickedCheckboxTurnsThePropertyOff() throws Exception {
         // Browsers send nothing at all for an unticked checkbox, so "absent"
         // has to mean false -- otherwise a setting could never be turned off.
-        Map<String, RuntimeConfigProperty> stored = properties("users.comments.enabled", "true");
+        Map<String, RuntimeConfigProperty> stored = properties("uploads.enabled", "true");
         when(weblogger.propertiesManager().getProperties()).thenReturn(stored);
 
         controller.save(request(), model);
 
-        assertEquals("false", stored.get("users.comments.enabled").getValue());
+        assertEquals("false", stored.get("uploads.enabled").getValue());
         verify(weblogger.propertiesManager()).saveProperties(stored);
     }
 
     @Test
     void aTickedCheckboxTurnsThePropertyOn() throws Exception {
-        Map<String, RuntimeConfigProperty> stored = properties("users.comments.enabled", "false");
+        Map<String, RuntimeConfigProperty> stored = properties("uploads.enabled", "false");
         when(weblogger.propertiesManager().getProperties()).thenReturn(stored);
         HttpServletRequest request = request();
-        when(request.getParameter("users.comments.enabled")).thenReturn("true");
+        when(request.getParameter("uploads.enabled")).thenReturn("true");
 
         controller.save(request, model);
 
-        assertEquals("true", stored.get("users.comments.enabled").getValue());
+        assertEquals("true", stored.get("uploads.enabled").getValue());
     }
 
     @Test
@@ -281,37 +259,15 @@ class GlobalConfigControllerTest {
     }
 
     @Test
-    void theTickedCommentPluginsAreStoredAsACsv() throws Exception {
-        Map<String, RuntimeConfigProperty> stored = properties("users.comments.plugins", "");
+    void aFailedWriteIsReportedInsteadOfBeingAnnouncedAsSaved() throws Exception {
+        Map<String, RuntimeConfigProperty> stored = properties("site.name", "My Site");
         when(weblogger.propertiesManager().getProperties()).thenReturn(stored);
         HttpServletRequest request = request();
-        when(request.getParameterValues("commentPlugins"))
-                .thenReturn(new String[]{"ConvertLineBreaks", "TextileFormatter"});
-
-        controller.save(request, model);
-
-        assertEquals("ConvertLineBreaks,TextileFormatter", stored.get("users.comments.plugins").getValue());
-        verify(weblogger.propertiesManager()).saveProperties(stored);
-    }
-
-    @Test
-    void untickingEveryCommentPluginClearsTheProperty() throws Exception {
-        Map<String, RuntimeConfigProperty> stored = properties("users.comments.plugins", "TextileFormatter");
-        when(weblogger.propertiesManager().getProperties()).thenReturn(stored);
-
-        controller.save(request(), model);
-
-        assertEquals("", stored.get("users.comments.plugins").getValue());
-    }
-
-    @Test
-    void aFailedWriteIsReportedInsteadOfBeingAnnouncedAsSaved() throws Exception {
-        Map<String, RuntimeConfigProperty> stored = properties("users.comments.plugins", "");
-        when(weblogger.propertiesManager().getProperties()).thenReturn(stored);
+        when(request.getParameter("site.name")).thenReturn("My Site");
         doThrow(new WebloggerException("database down"))
                 .when(weblogger.propertiesManager()).saveProperties(any());
 
-        String view = controller.save(request(), model);
+        String view = controller.save(request, model);
 
         assertEquals(".GlobalConfig", view);
         assertEquals(List.of("generic.error.check.logs"), ControllerTestFixture.errors(model));
@@ -324,10 +280,6 @@ class GlobalConfigControllerTest {
     private static Map<String, RuntimeConfigProperty> properties(String name, String value) {
         Map<String, RuntimeConfigProperty> props = new LinkedHashMap<>();
         props.put(name, new RuntimeConfigProperty(name, value));
-        if (!"users.comments.plugins".equals(name)) {
-            // save() always writes this one, so every fixture needs it present.
-            props.put("users.comments.plugins", new RuntimeConfigProperty("users.comments.plugins", ""));
-        }
         return props;
     }
 

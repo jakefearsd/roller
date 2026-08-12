@@ -292,8 +292,9 @@ public class MailUtil {
         // sends the message as it stands -- unlike the static Transport.send,
         // it does not do this for the caller -- so without it the Content-Type
         // header keeps its text/plain default however the body was built, and
-        // MIME-Version and Message-ID never appear at all. An HTML comment
-        // notification (users.comments.htmlenabled) arrived as visible markup.
+        // MIME-Version and Message-ID never appear at all. An HTML-bodied
+        // notification would have arrived as visible markup instead of being
+        // rendered.
         message.saveChanges();
         
         // First collect all the addresses together.

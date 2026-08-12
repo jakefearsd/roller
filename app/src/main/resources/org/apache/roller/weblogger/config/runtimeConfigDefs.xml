@@ -133,43 +133,8 @@
       </property-def>
 
    </display-group>
-   
-   
-   <!-- Comment Settings Group -->
-   <display-group name="commentSettings" key="configForm.commentSettings" >
-   
-      <property-def  name="users.comments.enabled"  key="configForm.enableComments">
-         <type>boolean</type>
-         <default-value>true</default-value>
-      </property-def>
-      <property-def  name="users.comments.htmlenabled"  key="configForm.commentHtmlAllowed">
-         <type>boolean</type>
-         <default-value>false</default-value>
-      </property-def>
-      <property-def  name="users.comments.plugins"  key="configForm.commentPlugins">
-         <type>string</type>
-         <default-value>HTMLSubset</default-value>
-      </property-def>
-      <property-def  name="users.comments.emailnotify"  key="configForm.emailComments">
-         <type>boolean</type>
-         <!-- defaults to false because we don't distribute mail jars -->
-         <default-value>false</default-value> 
-      </property-def>
-      <property-def  name="users.moderation.required"  key="configForm.moderationRequired">
-         <type>boolean</type>
-         <default-value>false</default-value>
-      </property-def>
-      <!-- Promoted from roller.properties. The throttle's threshold/interval/
-           maxentries stay startup-only: they size the tracking cache, which is
-           built once. This flag decides whether that cache is consulted, and
-           CommentServlet reads it per request. -->
-      <property-def  name="comment.throttle.enabled"  key="configForm.commentThrottle">
-         <type>boolean</type>
-         <default-value>false</default-value>
-      </property-def>
 
-   </display-group >
-   
+
    <!-- File Upload Settings Group -->
    <display-group name="uploadSettings" key="configForm.fileUploadSettings" >
    

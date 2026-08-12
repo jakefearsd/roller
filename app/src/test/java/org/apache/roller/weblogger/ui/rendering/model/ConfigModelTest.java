@@ -192,45 +192,20 @@ class ConfigModelTest {
     // -------------------------------------------------------------- comments
 
     @Test
-    void commentHtmlSettingsAreTwoViewsOfOneFlag() throws Exception {
-        givenProperty("users.comments.htmlenabled", "true");
-        assertTrue(model.getCommentHtmlAllowed(),
-                "$config.commentHtmlAllowed reads users.comments.htmlenabled");
-        assertFalse(model.getCommentEscapeHtml(),
-                "commentEscapeHtml is the inverse of commentHtmlAllowed: if HTML is "
-                        + "allowed it must not also be escaped.");
-    }
-
-    @Test
-    void commentsAreEscapedByDefaultWhenHtmlIsNotExplicitlyAllowed() {
-        // Fail-safe direction: an unconfigured site escapes comment HTML.
-        assertFalse(model.getCommentHtmlAllowed(),
-                "HTML in comments must be opt-in.");
-        assertTrue(model.getCommentEscapeHtml(),
-                "With HTML not allowed, comment markup must be escaped — this is what "
-                        + "keeps a commenter from injecting script into a post page.");
-    }
-
-    @Test
-    void commentEmailNotifyIsReadAsABoolean() throws Exception {
-        givenProperty("users.comments.emailnotify", "true");
-        assertTrue(model.getCommentEmailNotify(),
-                "$config.commentEmailNotify reads users.comments.emailnotify");
-    }
-
-    @Test
-    void commentEmailNotifySetToFalseReadsAsFalse() throws Exception {
-        // Blog owners turn this off to stop being mailed about every comment;
-        // an accessor that always said true would spam them.
-        givenProperty("users.comments.emailnotify", "false");
-        assertFalse(model.getCommentEmailNotify(),
-                "Turning comment notifications off must actually turn them off.");
-    }
-
-    @Test
     void removedFeaturesReportThemselvesAsOff() {
-        // Themes still reference these; they must answer false rather than
-        // failing, so old third-party themes keep rendering.
+        // The comment subsystem is gone entirely; these accessors are
+        // permanently-false compat shims (like getTrackbacksEnabled already
+        // was for trackbacks) so a custom theme still referencing them
+        // degrades quietly instead of breaking. No runtime property backs
+        // any of these any more.
+        assertFalse(model.getCommentHtmlAllowed(),
+                "The comment subsystem was removed; HTML-in-comments is permanently off.");
+        assertTrue(model.getCommentEscapeHtml(),
+                "commentEscapeHtml is the inverse of commentHtmlAllowed, so with that "
+                        + "permanently false this must be permanently true.");
+        assertFalse(model.getCommentEmailNotify(),
+                "The comment subsystem was removed; comment email notification is "
+                        + "permanently off.");
         assertFalse(model.getCommentAutoFormat(),
                 "Comment auto-format was removed in 4.0 and is permanently off.");
         assertFalse(model.getTrackbacksEnabled(),

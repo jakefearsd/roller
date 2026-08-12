@@ -30,24 +30,6 @@
 
         <c:forEach var="pd" items="${dg.propertyDefs}">
 
-            <%-- special case for comment plugins --%>
-            <c:if test="${pd.name == 'users.comments.plugins'}">
-                <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
-                    <div class="col-sm-9">
-                        <c:forEach var="plugin" items="${pluginsList}">
-                            <label class="form-check form-check-inline">
-                                <input type="checkbox" class="form-check-input" name="commentPlugins" value="${fn:escapeXml(plugin.id)}"
-                                    <c:forEach var="cp" items="${commentPlugins}">
-                                        <c:if test="${cp == plugin.id}">checked="checked"</c:if>
-                                    </c:forEach>
-                                /> ${fn:escapeXml(plugin.name)}
-                            </label>
-                        </c:forEach>
-                    </div>
-                </div>
-            </c:if>
-
             <%-- special case for front page blog --%>
             <c:if test="${pd.name == 'site.frontpage.weblog.handle'}">
                 <div class="row mb-3">
@@ -65,7 +47,7 @@
             </c:if>
 
             <%-- "string" type means use a simple textbox --%>
-            <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'string'}">
+            <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type == 'string'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9">
@@ -77,7 +59,7 @@
             </c:if>
 
             <%-- "text" type means use a full textarea --%>
-            <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'text'}">
+            <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type == 'text'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9">
@@ -88,7 +70,7 @@
             </c:if>
 
             <%-- "boolean" type means use a checkbox --%>
-            <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'boolean'}">
+            <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type == 'boolean'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9">
@@ -100,7 +82,7 @@
             </c:if>
 
             <%-- "integer" use input type number --%>
-            <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'integer'}">
+            <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type == 'integer'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"
                            for='globalConfig_${pd.nameWithUnderbars}'>
@@ -116,7 +98,7 @@
             </c:if>
 
             <%-- "float" use input type number --%>
-            <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type == 'float'}">
+            <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type == 'float'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"
                            for='globalConfig_${pd.nameWithUnderbars}'>
@@ -132,7 +114,7 @@
             </c:if>
 
             <%-- if it's something we don't understand then use textbox --%>
-            <c:if test="${pd.name != 'users.comments.plugins' && pd.name != 'site.frontpage.weblog.handle' && pd.type != 'string' && pd.type != 'text' && pd.type != 'boolean' && pd.type != 'integer' && pd.type != 'float'}">
+            <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type != 'string' && pd.type != 'text' && pd.type != 'boolean' && pd.type != 'integer' && pd.type != 'float'}">
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9">

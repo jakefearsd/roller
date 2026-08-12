@@ -30,10 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests the message collector passed through comment validation and mailing.
+ * Tests the message collector passed through validation and file-handling
+ * code, e.g. {@code ThemeManagerImpl}, {@code MediaFileManager} and
+ * {@code FileContentManager}.
  *
- * <p>Errors and status messages are kept in separate lists on purpose: the
- * comment pipeline decides whether to reject a comment by asking for the error
+ * <p>Errors and status messages are kept in separate lists on purpose: a
+ * caller decides whether to reject an operation by asking for the error
  * count, so a message landing in the wrong list changes behaviour rather than
  * just wording.
  */
@@ -51,8 +53,9 @@ public class RollerMessagesTest {
 
     @Test
     public void errorsAndMessagesAreCountedSeparately() {
-        // Comment moderation branches on getErrorCount(); a status message
-        // must never push a comment into the rejected pile.
+        // Callers branch on getErrorCount() to decide whether to reject an
+        // operation; a status message must never push it into the rejected
+        // pile.
         RollerMessages messages = new RollerMessages();
         messages.addError("error.one");
         messages.addMessage("status.one");
@@ -110,8 +113,8 @@ public class RollerMessagesTest {
 
     @Test
     public void toStringListsStatusMessagesBeforeErrors() {
-        // This string ends up in the log when a comment is rejected, so the
-        // keys have to all be there and in a predictable order.
+        // This string ends up in the log when an operation is rejected, so
+        // the keys have to all be there and in a predictable order.
         RollerMessages messages = new RollerMessages();
         messages.addError("error.one");
         messages.addMessage("status.one");

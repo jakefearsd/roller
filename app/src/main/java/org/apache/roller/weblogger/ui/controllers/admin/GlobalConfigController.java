@@ -22,7 +22,6 @@ import java.util.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -94,14 +93,6 @@ public class GlobalConfigController extends BaseController {
         model.addAttribute("globalConfigDef", globalConfigDef);
         model.addAttribute("weblogs", weblogs);
 
-        // setup array of configured plugins
-        String[] commentPlugins = new String[0];
-        if (!StringUtils.isEmpty(WebloggerRuntimeConfig.getProperty("users.comments.plugins"))) {
-            commentPlugins = StringUtils.split(
-                    WebloggerRuntimeConfig.getProperty("users.comments.plugins"), ",");
-        }
-        model.addAttribute("commentPlugins", commentPlugins);
-
         return ".GlobalConfig";
     }
 
@@ -119,13 +110,6 @@ public class GlobalConfigController extends BaseController {
         model.addAttribute("properties", properties);
         model.addAttribute("globalConfigDef", globalConfigDef);
         model.addAttribute("weblogs", weblogs);
-
-        // get comment plugins from request
-        String[] commentPlugins = request.getParameterValues("commentPlugins");
-        if (commentPlugins == null) {
-            commentPlugins = new String[0];
-        }
-        model.addAttribute("commentPlugins", commentPlugins);
 
         // only set values for properties that are already defined
         RuntimeConfigProperty updProp;
@@ -178,9 +162,6 @@ public class GlobalConfigController extends BaseController {
                 updProp.setValue(incomingProp.trim());
                 log.debug("Set something " + propName + " = " + incomingProp);
 
-            } else if (propertyDef.getName().equals("users.comments.plugins")) {
-                // not a problem
-
             } else {
                 addError(model, "ConfigForm.invalidProperty", propName, request);
             }
@@ -189,14 +170,6 @@ public class GlobalConfigController extends BaseController {
         if (hasErrors(model)) {
             return ".GlobalConfig";
         }
-
-        // special handling for comment plugins
-        String enabledPlugins = "";
-        if (commentPlugins.length > 0) {
-            enabledPlugins = StringUtils.join(commentPlugins, ",");
-        }
-        RuntimeConfigProperty prop = properties.get("users.comments.plugins");
-        prop.setValue(enabledPlugins);
 
         try {
             // save 'em and flush
