@@ -23,19 +23,15 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.ServletRegistration;
 
-import org.apache.roller.weblogger.ui.controllers.ajax.CommentDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.UserDataServlet;
 import org.apache.roller.weblogger.ui.core.RollerSession;
 import org.apache.roller.weblogger.ui.core.filters.BootstrapFilter;
 import org.apache.roller.weblogger.ui.core.filters.CharEncodingFilter;
-import org.apache.roller.weblogger.ui.core.filters.IPBanFilter;
 import org.apache.roller.weblogger.ui.core.filters.InitFilter;
 import org.apache.roller.weblogger.ui.core.filters.PersistenceSessionFilter;
 import org.apache.roller.weblogger.ui.core.filters.SpringFirewallExceptionFilter;
 import org.apache.roller.weblogger.ui.rendering.filters.RequestMappingFilter;
-import org.apache.roller.weblogger.ui.rendering.servlets.CommentAuthenticatorServlet;
-import org.apache.roller.weblogger.ui.rendering.servlets.CommentServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.FeedServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.MediaResourceServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.PageServlet;
@@ -120,22 +116,6 @@ public class ServletRegistrationConfig {
     }
 
     @Bean
-    public ServletRegistrationBean<CommentServlet> commentServletRegistration() {
-        ServletRegistrationBean<CommentServlet> registration =
-                new ServletRegistrationBean<>(new CommentServlet(), "/roller-ui/rendering/comment/*");
-        registration.setLoadOnStartup(7);
-        return registration;
-    }
-
-    @Bean
-    public ServletRegistrationBean<CommentAuthenticatorServlet> commentAuthenticatorServletRegistration() {
-        ServletRegistrationBean<CommentAuthenticatorServlet> registration =
-                new ServletRegistrationBean<>(new CommentAuthenticatorServlet(), "/CommentAuthenticatorServlet");
-        registration.setLoadOnStartup(7);
-        return registration;
-    }
-
-    @Bean
     public ServletRegistrationBean<PreviewServlet> previewServletRegistration() {
         ServletRegistrationBean<PreviewServlet> registration =
                 new ServletRegistrationBean<>(new PreviewServlet(), "/roller-ui/authoring/preview/*");
@@ -149,11 +129,6 @@ public class ServletRegistrationConfig {
                 new ServletRegistrationBean<>(new PreviewResourceServlet(), "/roller-ui/authoring/previewresource/*");
         registration.setLoadOnStartup(9);
         return registration;
-    }
-
-    @Bean
-    public ServletRegistrationBean<CommentDataServlet> commentDataServletRegistration() {
-        return new ServletRegistrationBean<>(new CommentDataServlet(), "/roller-ui/authoring/commentdata/*");
     }
 
     @Bean
@@ -265,15 +240,6 @@ public class ServletRegistrationConfig {
         registration.setOrder(10);
         registration.setUrlPatterns(List.of("/*"));
         registration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
-        return registration;
-    }
-
-    @Bean
-    public FilterRegistrationBean<IPBanFilter> ipBanFilterRegistration() {
-        FilterRegistrationBean<IPBanFilter> registration = new FilterRegistrationBean<>(new IPBanFilter());
-        registration.setOrder(20);
-        registration.setUrlPatterns(List.of("/roller-ui/rendering/comment/*"));
-        registration.setDispatcherTypes(EnumSet.of(DispatcherType.FORWARD));
         return registration;
     }
 

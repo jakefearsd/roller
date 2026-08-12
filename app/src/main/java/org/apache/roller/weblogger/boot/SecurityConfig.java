@@ -241,29 +241,15 @@ public class SecurityConfig {
                 // default. See security.xml's own comment on this same rule
                 // for why an implicit deny-by-default here would be wrong.
                 .anyRequest().permitAll())
-            // The CSRF exemptions in this application: anonymous readers
-            // posting a comment, or submitting the contact/subscribe forms.
+            // The CSRF exemption in this application: submitting the
+            // contact/subscribe forms.
             //
-            // The comment form is rendered by a Velocity theme macro onto a
-            // page held in the weblog page cache, so it cannot carry a
-            // per-session token -- caching one would hand every reader another
-            // reader's token. Without an exemption every comment POST is a
-            // 403, which is what it was.
-            //
-            // Exempting it costs nothing real. CSRF defends requests that
-            // carry ambient authority; posting a comment carries none, and an
-            // attacker who wants to submit one can POST from their own server
-            // today. That is why comment spam exists and why the defences here
-            // are moderation, the IP ban list and comment throttling rather
-            // than a token.
-            //
-            // isPublicCommentPost is deliberately narrow: POST to a weblog
-            // permalink, which is the only shape a comment takes.
-            // isPublicAudiencePost is the second, separate exemption for the
-            // contact/subscribe endpoints below -- see its own comment for
-            // why the same reasoning applies there.
+            // isPublicAudiencePost is deliberately narrow -- see its own
+            // comment below for what it matches and why the exemption is
+            // safe. A second exemption used to sit here for anonymous comment
+            // posting; it was removed with the comment subsystem, and
+            // isPublicAudiencePost is now the only entry in this list.
             .csrf(csrf -> csrf.ignoringRequestMatchers(
-                    SecurityConfig::isPublicCommentPost,
                     SecurityConfig::isPublicAudiencePost))
             .formLogin(form -> form
                 .loginPage("/roller-ui/login.rol")
@@ -294,27 +280,11 @@ public class SecurityConfig {
     }
 
     /**
-     * Whether this is an anonymous reader posting a comment to a weblog entry.
-     *
-     * <p>Matched on the public permalink shape ({@code /<handle>/entry/<anchor>})
-     * because that is where the theme's comment form posts;
-     * {@code WeblogRequestMapper} forwards it to the comment servlet afterwards,
-     * far too late for a security filter to have seen a different path.
-     */
-    private static boolean isPublicCommentPost(HttpServletRequest request) {
-        if (!"POST".equalsIgnoreCase(request.getMethod())) {
-            return false;
-        }
-        String path = request.getRequestURI().substring(request.getContextPath().length());
-        return !path.startsWith("/roller-ui/") && path.contains("/entry/");
-    }
-
-    /**
      * The audience endpoints: an anonymous reader submitting the contact
-     * form or the subscribe form. Same reasoning as the comment exemption
-     * above -- the forms are injected onto cached pages that cannot carry a
-     * per-session token, the requests carry no ambient authority, and the
-     * real defences are the honeypot, the timing check and the throttle.
+     * form or the subscribe form. The forms are injected onto cached pages
+     * that cannot carry a per-session token, the requests carry no ambient
+     * authority, and the real defences are the honeypot, the timing check
+     * and the throttle.
      */
     private static boolean isPublicAudiencePost(HttpServletRequest request) {
         if (!"POST".equalsIgnoreCase(request.getMethod())) {

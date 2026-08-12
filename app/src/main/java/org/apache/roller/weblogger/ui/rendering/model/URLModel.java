@@ -129,11 +129,6 @@ public class URLModel implements Model {
     }
     
     
-    public String getCommentAuthenticator() {
-        return getSite()+"/CommentAuthenticatorServlet?weblog="+weblog.getHandle();
-    }
-    
-    
     public String themeResource(String theme, String filePath) {
         return getSite()+"/themes/"+theme+"/"+filePath;
     }
@@ -316,10 +311,6 @@ public class URLModel implements Model {
         public EntryFeedURLS getEntries() {
             return new EntryFeedURLS();
         }
-        
-        public CommentFeedURLS getComments() {
-            return new CommentFeedURLS();
-        }
 
         public MediaFileFeedURLS getMediaFiles() {
             return new MediaFileFeedURLS();
@@ -355,26 +346,6 @@ public class URLModel implements Model {
         public String atomByTags(List<String> tags, boolean excerpts) {
             return urlStrategy.getWeblogFeedURL(weblog, locale, "entries", "atom", null, null, tags, excerpts, true);
         }
-    }
-    
-    public class CommentFeedURLS {
-        
-        public String getRss() {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "comments", "rss", null, null, null, false, true);
-        }
-        
-        public String rss(String catName, boolean excerpts) {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "comments", "rss", catName, null, null, excerpts, true);
-        }
-        
-        public String getAtom() {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "comments", "atom", null, null, null, false, true);
-        }
-        
-        public String atom(String catName, boolean excerpts) {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "comments", "atom", catName, null, null, excerpts, true);
-        }
-        
     }
     
     public class MediaFileFeedURLS {

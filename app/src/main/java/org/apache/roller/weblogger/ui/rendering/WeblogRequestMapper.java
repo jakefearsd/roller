@@ -54,9 +54,7 @@ public class WeblogRequestMapper implements RequestMapper {
     private static final String MEDIA_SERVLET = "/roller-ui/rendering/media-resources";
     private static final String SEARCH_SERVLET = "/roller-ui/rendering/search";
 
-    private static final String COMMENT_SERVLET = "/roller-ui/rendering/comment";
-    
-    
+
     // url patterns that are not allowed to be considered weblog handles
     Set<String> restricted = null;
     
@@ -256,41 +254,15 @@ public class WeblogRequestMapper implements RequestMapper {
         }
         
         StringBuilder forwardUrl = new StringBuilder(64);
-        
-        // POST urls, like comment servlet
-        if("POST".equals(request.getMethod())) {
-            // posting to permalink, this means comment
-            if(context.equals("entry")) {
-                // comment requests are required to have a "content" param
-                if(request.getParameter("content") != null) {
-                    
-                    forwardUrl.append(COMMENT_SERVLET);
-                    forwardUrl.append('/');
-                    forwardUrl.append(handle);
-                    if(locale != null) {
-                        forwardUrl.append('/');
-                        forwardUrl.append(locale);
-                    }
-                    forwardUrl.append('/');
-                    forwardUrl.append(context);
-                    if(data != null) {
-                        forwardUrl.append('/');
-                        forwardUrl.append(data);
-                    }
 
-                } else {
-                    // A POST to a permalink carrying no content is not a
-                    // comment. Falling through here left forwardUrl empty, and
-                    // the caller only declines on null -- so the request was
-                    // forwarded to "" instead of being passed on.
-                    return null;
-                }
-                
-            } else {
-                // someone posting data where they aren't supposed to
-                return null;
-            }
-            
+        // POST used to be routed here only for comment submission -- the
+        // permalink, carrying a "content" param, forwarded to the comment
+        // servlet. That servlet is gone with the comment subsystem, and
+        // nothing else in the public url space accepts a POST, so every POST
+        // is declined and falls through to the next filter/servlet.
+        if("POST".equals(request.getMethod())) {
+            return null;
+
         } else {
             // no context means weblog homepage
             if(context == null) {

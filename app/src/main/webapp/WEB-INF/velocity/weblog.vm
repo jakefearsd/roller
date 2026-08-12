@@ -1071,7 +1071,6 @@ Show weblog's categories in specified parent category.
     #foreach( $cat in $categories )
         <li><a href="$url.feed.entries.atom($cat.name, false)">$cat.name</a></li>
     #end
-    <li><a href="$url.feed.comments.atom">Comments</a></li>
     </ul>
 #end
 
@@ -1086,7 +1085,6 @@ Show weblog's categories in specified parent category.
     #foreach( $cat in $categories )
         <li><a href="$url.feed.entries.rss($cat.name, false)">$cat.name</a></li>
     #end
-    <li><a href="$url.feed.comments.rss">Comments</a></li>
     </ul>
 #end
 

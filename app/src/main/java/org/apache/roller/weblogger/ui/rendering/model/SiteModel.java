@@ -42,10 +42,8 @@ import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.pojos.wrapper.UserWrapper;
-import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryCommentWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
-import org.apache.roller.weblogger.ui.rendering.pagers.CommentsPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.Pager;
 import org.apache.roller.weblogger.ui.rendering.pagers.UsersPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesListPager;
@@ -196,37 +194,8 @@ public class SiteModel implements Model {
             length);
     }    
     
-    
-    /*
-     * Get pager of most recent Comment objects across all weblogs,
-     * in reverse chrono order by postTime.
-     * @param offset   Offset into results (for paging)
-     * @param len      Max number of results to return
-     */
-    public Pager<WeblogEntryCommentWrapper> getCommentsPager(int sinceDays, int length) {
-        
-        String pagerUrl;
-        if (feedRequest != null) {
-            pagerUrl = urlStrategy.getWeblogFeedURL(weblog, 
-                    weblogRequest.getLocale(), feedRequest.getType(),
-                    feedRequest.getFormat(), null, null, null,
-                    feedRequest.isExcerpts(), true);
-        } else {        
-            pagerUrl = urlStrategy.getWeblogPageURL(weblog, 
-                weblogRequest.getLocale(), pageLink, 
-                null, null, null, null, 0, false);
-        }
-        
-        return new CommentsPager(
-            urlStrategy,
-            pagerUrl,
-            null,
-            sinceDays,
-            pageNum, 
-            length);
-    }     
-    
-    
+
+
     /* Get pager of users whose names begin with specified letter */
     public Pager<UserWrapper> getUsersByLetterPager(String letter, int sinceDays, int length) {
         

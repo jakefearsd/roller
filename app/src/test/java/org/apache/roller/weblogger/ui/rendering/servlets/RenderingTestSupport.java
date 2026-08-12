@@ -150,20 +150,12 @@ public final class RenderingTestSupport {
         return init(new SearchServlet());
     }
 
-    static CommentServlet commentServlet() throws ServletException {
-        return init(new CommentServlet());
-    }
-
     static MediaResourceServlet mediaResourceServlet() throws ServletException {
         return init(new MediaResourceServlet());
     }
 
     static ResourceServlet resourceServlet() throws ServletException {
         return init(new ResourceServlet());
-    }
-
-    static CommentAuthenticatorServlet commentAuthenticatorServlet() throws ServletException {
-        return init(new CommentAuthenticatorServlet());
     }
 
     private static <T extends HttpServlet> T init(T servlet) throws ServletException {
@@ -173,21 +165,6 @@ public final class RenderingTestSupport {
 
     public static MockHttpServletRequest anonymousGet(String servletPath, String pathInfo) {
         return anonymousRequest("GET", servletPath, pathInfo);
-    }
-
-    static MockHttpServletRequest anonymousPost(String servletPath, String pathInfo) {
-        return anonymousRequest("POST", servletPath, pathInfo);
-    }
-
-    /**
-     * A POST carrying a signed-in principal, which is what
-     * {@code ParsedRequest} reads to decide whether the caller is logged in.
-     */
-    static MockHttpServletRequest signedInPost(String servletPath, String pathInfo,
-            String userName) {
-        MockHttpServletRequest request = anonymousRequest("POST", servletPath, pathInfo);
-        request.setUserPrincipal(() -> userName);
-        return request;
     }
 
     private static MockHttpServletRequest anonymousRequest(String method,

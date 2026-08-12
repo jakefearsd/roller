@@ -89,17 +89,6 @@ class WeblogRequestMapperTest {
     }
 
     @Test
-    void commentPostForwardsToCommentServlet() throws Exception {
-        MockHttpServletRequest request = publicUrl("POST", "/mapperblog/entry/my-post");
-        request.setParameter("content", "a comment body");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-
-        assertTrue(mapper.handleRequest(request, response));
-        assertEquals("/roller-ui/rendering/comment/mapperblog/entry/my-post",
-                response.getForwardedUrl());
-    }
-
-    @Test
     void missingTrailingSlashRedirects() throws Exception {
         MockHttpServletRequest request = publicUrl("GET", "/mapperblog");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -333,20 +322,31 @@ class WeblogRequestMapperTest {
     // ------------------------------------------------------------ POST rules
 
     /**
-     * A POST is only meaningful at a permalink, and only as a comment -- which
-     * is what the content parameter identifies. Everything else posting into
-     * the public url space is declined rather than forwarded, so a stray form
-     * cannot reach a rendering servlet.
+     * POST used to be routed here only for comment submission: a permalink
+     * carrying a "content" param forwarded to the comment servlet. That
+     * servlet is gone with the comment subsystem, so a POST is declined
+     * unconditionally now, whether or not it carries a content parameter and
+     * whether or not it targets a permalink -- there is nothing left in the
+     * public url space for this mapper to route a POST to.
      */
     @Test
-    void aPostToAPermalinkWithContentBecomesACommentSubmission() throws Exception {
+    void aPostToAPermalinkIsDeclinedEvenWithAContentParameter() throws Exception {
         MockHttpServletRequest request = publicUrl("POST", "/mapperblog/entry/my-post");
         request.setParameter("content", "a comment");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        assertTrue(mapper.handleRequest(request, response));
-        assertEquals("/roller-ui/rendering/comment/mapperblog/entry/my-post",
-                response.getForwardedUrl());
+        assertFalse(mapper.handleRequest(request, response),
+                "comment-post forwarding is gone with the comment servlet");
+        assertNull(response.getForwardedUrl());
+    }
+
+    @Test
+    void aPostToAPermalinkWithoutContentIsDeclined() throws Exception {
+        MockHttpServletRequest request = publicUrl("POST", "/mapperblog/entry/my-post");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertFalse(mapper.handleRequest(request, response));
+        assertNull(response.getForwardedUrl());
     }
 
     @Test
@@ -356,20 +356,6 @@ class WeblogRequestMapperTest {
 
         assertFalse(mapper.handleRequest(request, response),
                 "posting into the public url space is not something this mapper routes");
-        assertNull(response.getForwardedUrl());
-    }
-
-    /**
-     * A POST to a permalink carrying no content is not a comment. It must not
-     * be forwarded to the comment servlet, which would then have to invent a
-     * reason to refuse it.
-     */
-    @Test
-    void aPostToAPermalinkWithoutContentIsNotForwarded() throws Exception {
-        MockHttpServletRequest request = publicUrl("POST", "/mapperblog/entry/my-post");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-
-        assertFalse(mapper.handleRequest(request, response));
         assertNull(response.getForwardedUrl());
     }
 }

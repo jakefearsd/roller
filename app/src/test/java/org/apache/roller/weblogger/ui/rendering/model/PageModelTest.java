@@ -37,7 +37,6 @@ import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesLatestPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesMonthPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesPermalinkPager;
-import org.apache.roller.weblogger.ui.rendering.util.WeblogEntryCommentForm;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.junit.jupiter.api.AfterEach;
@@ -52,9 +51,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -310,33 +307,6 @@ class PageModelTest {
         assertNull(modelFor(request).getWeblogPage(),
                 "A theme that cannot supply a default template must yield null "
                         + "rather than propagating out of the renderer.");
-    }
-
-    // ---------------------------------------------------------- comment form
-
-    @Test
-    void theCommentFormFromTheRequestIsHandedStraightBack() throws Exception {
-        // After a failed or previewed submission the renderer passes the form
-        // back in so the visitor does not lose what they typed.
-        WeblogEntryCommentForm submitted = new WeblogEntryCommentForm();
-        submitted.setName("Alice");
-
-        PageModel model = modelFor(pageRequest(), Map.of("commentForm", submitted));
-
-        assertSame(submitted, model.getCommentForm(),
-                "The submitted form must survive the round trip, otherwise a visitor "
-                        + "whose comment failed validation retypes it from scratch.");
-    }
-
-    @Test
-    void anEmptyCommentFormIsCreatedOnceAndReused() throws Exception {
-        PageModel model = modelFor(pageRequest());
-
-        WeblogEntryCommentForm first = model.getCommentForm();
-        assertNotNull(first, "A page with no submission still needs a blank form.");
-        assertSame(first, model.getCommentForm(),
-                "Repeat references to $model.commentForm inside one template must see "
-                        + "the same object.");
     }
 
     // ------------------------------------------------------ request parameters

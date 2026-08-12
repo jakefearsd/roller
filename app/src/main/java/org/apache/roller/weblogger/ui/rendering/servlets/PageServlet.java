@@ -40,7 +40,6 @@ import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
-import org.apache.roller.weblogger.ui.rendering.util.WeblogEntryCommentForm;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.ui.rendering.util.cache.SiteWideCache;
 import org.apache.roller.weblogger.ui.rendering.util.cache.WeblogPageCache;
@@ -262,13 +261,6 @@ public class PageServlet extends HttpServlet {
             initData.put("urlStrategy", WebloggerFactory.getWeblogger()
                     .getUrlStrategy());
 
-            // if this was a comment posting, check for comment form
-            WeblogEntryCommentForm commentForm = (WeblogEntryCommentForm) request
-                    .getAttribute("commentForm");
-            if (commentForm != null) {
-                initData.put("commentForm", commentForm);
-            }
-
             // Load models for pages
             String pageModels = WebloggerConfig
                     .getProperty("rendering.pageModels");
@@ -342,32 +334,15 @@ public class PageServlet extends HttpServlet {
      *
      * <p>Extracted from {@code doGet}, which reached 380 lines doing eight
      * separate jobs and could only be exercised end to end. The order of the
-     * branches below is the behaviour: a popup wins over everything, an
-     * explicitly named page never falls through to the default (asking for a
-     * page that does not exist is a 404, not the front page), a tags index
-     * likewise, and only a permalink is allowed to fall back.
+     * branches below is the behaviour: an explicitly named page never falls
+     * through to the default (asking for a page that does not exist is a
+     * 404, not the front page), a tags index likewise, and only a permalink
+     * is allowed to fall back.
      */
     static ThemeTemplate selectTemplate(HttpServletRequest request,
             WeblogPageRequest pageRequest, Weblog weblog) {
 
         ThemeTemplate page = null;
-
-        // If this is a popup request, then deal with it specially
-        if (request.getParameter("popup") != null) {
-            try {
-                // Does user have a popupcomments page?
-                page = weblog.getTheme().getTemplateByName("_popupcomments");
-            } catch (Exception e) {
-                // ignored ... considered page not found
-            }
-
-            // User doesn't have one so return the default
-            if (page == null) {
-                page = new StaticThemeTemplate(
-                        "templates/weblog/popupcomments.vm", TemplateLanguage.VELOCITY);
-            }
-            return page;
-        }
 
         // A static page: getPageSlug() is the syntactic signal, set during
         // parsing with no database access, that this request's single path
@@ -383,10 +358,9 @@ public class PageServlet extends HttpServlet {
                 return null;
             }
 
-            // The theme may override with a custom template named _page,
-            // exactly as it may override _popupcomments; otherwise the
-            // shipped default renders it. Falling back rather than 404ing
-            // means a theme does not have to know pages exist.
+            // The theme may override with a custom template named _page;
+            // otherwise the shipped default renders it. Falling back rather
+            // than 404ing means a theme does not have to know pages exist.
             ThemeTemplate template = null;
             try {
                 template = weblog.getTheme().getTemplateByName("_page");
@@ -526,12 +500,12 @@ public class PageServlet extends HttpServlet {
     }
 
     /**
-     * Handle POST requests.
-     * 
-     * We have this here because the comment servlet actually forwards some of
-     * its requests on to us to render some pages with cusom messaging. We may
-     * want to revisit this approach in the future and see if we can do this in
-     * a different way, but for now this is the easy way.
+     * Handle POST requests the same as GET, with caching disabled.
+     *
+     * <p>Nothing in {@code WeblogRequestMapper} forwards a POST here anymore
+     * (that was comment-submission forwarding, now removed with the comment
+     * subsystem); this stays as a defensive fallback for a direct POST to
+     * the servlet path.
      */
     @Override
     public void doPost(HttpServletRequest request, HttpServletResponse response)

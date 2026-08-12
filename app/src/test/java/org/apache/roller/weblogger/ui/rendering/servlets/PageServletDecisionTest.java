@@ -92,31 +92,6 @@ class PageServletDecisionTest {
     // ------------------------------------------------------ template selection
 
     /**
-     * A popup request always gets a popup template, and falls back to the
-     * bundled one rather than 404ing, so the comment popup works on a theme
-     * that never defined it.
-     */
-    @Test
-    void aPopupRequestFallsBackToTheBundledPopupTemplate() throws Exception {
-        request.setParameter("popup", "true");
-        when(theme.getTemplateByName("_popupcomments")).thenReturn(null);
-
-        ThemeTemplate page = PageServlet.selectTemplate(request, pageRequest, weblog);
-
-        assertInstanceOf(StaticThemeTemplate.class, page,
-                "with no theme popup template the bundled one stands in");
-    }
-
-    @Test
-    void aPopupRequestPrefersTheThemesOwnPopupTemplate() throws Exception {
-        request.setParameter("popup", "true");
-        ThemeTemplate themePopup = mock(ThemeTemplate.class);
-        when(theme.getTemplateByName("_popupcomments")).thenReturn(themePopup);
-
-        assertEquals(themePopup, PageServlet.selectTemplate(request, pageRequest, weblog));
-    }
-
-    /**
      * A bare-slug page request whose slug did not resolve to a published page
      * (unknown, or a draft the reader is not entitled to see) is a 404, not a
      * fall-through to the branches below -- a page slug never doubles as a
@@ -132,8 +107,7 @@ class PageServletDecisionTest {
     }
 
     /**
-     * A resolved page prefers the theme's own {@code _page} override,
-     * exactly as popups prefer {@code _popupcomments}.
+     * A resolved page prefers the theme's own {@code _page} override.
      */
     @Test
     void aResolvedPagePrefersTheThemesOwnPageTemplate() throws Exception {
@@ -150,7 +124,7 @@ class PageServletDecisionTest {
      * A theme with no {@code _page} override falls back to the shipped
      * default rather than 404ing -- a theme does not have to know pages
      * exist. Covers the fallback both when the theme answers null and when
-     * looking it up throws, the same defensive shape as the popup lookup.
+     * looking it up throws.
      */
     @Test
     void aResolvedPageFallsBackToTheBundledPageTemplateWithNoThemeOverride() throws Exception {
@@ -172,7 +146,7 @@ class PageServletDecisionTest {
 
         assertInstanceOf(StaticThemeTemplate.class,
                 PageServlet.selectTemplate(request, pageRequest, weblog),
-                "a broken theme lookup must fall back, not propagate, the same as the popup path");
+                "a broken theme lookup must fall back, not propagate a 500");
     }
 
     /**

@@ -17,6 +17,8 @@
 package org.apache.roller.weblogger.boot;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -25,19 +27,15 @@ import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletRegistration;
 
-import org.apache.roller.weblogger.ui.controllers.ajax.CommentDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.UserDataServlet;
 import org.apache.roller.weblogger.ui.core.RollerSession;
 import org.apache.roller.weblogger.ui.core.filters.BootstrapFilter;
 import org.apache.roller.weblogger.ui.core.filters.CharEncodingFilter;
-import org.apache.roller.weblogger.ui.core.filters.IPBanFilter;
 import org.apache.roller.weblogger.ui.core.filters.InitFilter;
 import org.apache.roller.weblogger.ui.core.filters.PersistenceSessionFilter;
 import org.apache.roller.weblogger.ui.core.filters.SpringFirewallExceptionFilter;
 import org.apache.roller.weblogger.ui.rendering.filters.RequestMappingFilter;
-import org.apache.roller.weblogger.ui.rendering.servlets.CommentAuthenticatorServlet;
-import org.apache.roller.weblogger.ui.rendering.servlets.CommentServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.FeedServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.MediaResourceServlet;
 import org.apache.roller.weblogger.ui.rendering.servlets.PageServlet;
@@ -56,6 +54,7 @@ import org.springframework.web.servlet.DispatcherServlet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -113,10 +112,6 @@ class ServletRegistrationConfigTest {
                 "/roller-ui/rendering/media-resources/*", 5);
         assertServlet(config.searchServletRegistration(), SearchServlet.class,
                 "/roller-ui/rendering/search/*", 5);
-        assertServlet(config.commentServletRegistration(), CommentServlet.class,
-                "/roller-ui/rendering/comment/*", 7);
-        assertServlet(config.commentAuthenticatorServletRegistration(), CommentAuthenticatorServlet.class,
-                "/CommentAuthenticatorServlet", 7);
         assertServlet(config.previewServletRegistration(), PreviewServlet.class,
                 "/roller-ui/authoring/preview/*", 9);
         assertServlet(config.previewResourceServletRegistration(), PreviewResourceServlet.class,
@@ -125,16 +120,48 @@ class ServletRegistrationConfigTest {
 
     @Test
     void ajaxServletsCarryTheirWebXmlPatternAndTheDefaultLoadOrder() throws Exception {
-        // No <load-on-startup> element in web.xml for these three -- left at
+        // No <load-on-startup> element in web.xml for these two -- left at
         // ServletRegistrationBean's own constructor default, -1 (verified via
         // javap against spring-boot-4.1.0.jar: the no-arg and (T, String...)
         // constructors both set loadOnStartup = -1).
-        assertServlet(config.commentDataServletRegistration(), CommentDataServlet.class,
-                "/roller-ui/authoring/commentdata/*", -1);
         assertServlet(config.userDataServletRegistration(), UserDataServlet.class,
                 "/roller-ui/authoring/userdata/*", -1);
         assertServlet(config.themeDataServletRegistration(), ThemeDataServlet.class,
                 "/roller-ui/authoring/themedata/*", -1);
+    }
+
+    /**
+     * Enumerates every url-pattern this class registers a servlet under.
+     * Used to pin the absence of the comment endpoints below rather than
+     * asserting a specific bean method no longer exists -- the point is that
+     * nothing reachable answers to a "comment"-shaped path, not the mechanics
+     * of how that got removed.
+     */
+    private List<String> registeredPatterns() throws ReflectiveOperationException {
+        List<String> patterns = new ArrayList<>();
+        patterns.addAll(config.pageServletRegistration().getUrlMappings());
+        patterns.addAll(config.feedServletRegistration().getUrlMappings());
+        patterns.addAll(config.resourceServletRegistration().getUrlMappings());
+        patterns.addAll(config.mediaResourceServletRegistration().getUrlMappings());
+        patterns.addAll(config.searchServletRegistration().getUrlMappings());
+        patterns.addAll(config.previewServletRegistration().getUrlMappings());
+        patterns.addAll(config.previewResourceServletRegistration().getUrlMappings());
+        patterns.addAll(config.userDataServletRegistration().getUrlMappings());
+        patterns.addAll(config.themeDataServletRegistration().getUrlMappings());
+        return patterns;
+    }
+
+    /**
+     * The comment servlet, the comment authenticator servlet and the comment
+     * ajax servlet's registration are all gone with the comment subsystem --
+     * no url-pattern this class registers should mention "comment" in either
+     * case.
+     */
+    @Test
+    void noCommentServletsAreRegistered() throws Exception {
+        assertTrue(registeredPatterns().stream()
+                        .noneMatch(p -> p.contains("comment") || p.contains("Comment")),
+                "comment servlets must be unregistered: " + registeredPatterns());
     }
 
     // -------------------------------------------------------- listener bean
@@ -223,15 +250,6 @@ class ServletRegistrationConfigTest {
         assertEquals(Set.of("/*"), Set.copyOf(bean.getUrlPatterns()));
         assertEquals(java.util.EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD),
                 bean.determineDispatcherTypes());
-    }
-
-    @Test
-    void ipBanFilterGuardsOnlyTheCommentPathOnForward() {
-        FilterRegistrationBean<IPBanFilter> bean = config.ipBanFilterRegistration();
-        assertInstanceOf(IPBanFilter.class, bean.getFilter());
-        assertEquals(20, bean.getOrder());
-        assertEquals(Set.of("/roller-ui/rendering/comment/*"), Set.copyOf(bean.getUrlPatterns()));
-        assertEquals(java.util.EnumSet.of(DispatcherType.FORWARD), bean.determineDispatcherTypes());
     }
 
     @Test

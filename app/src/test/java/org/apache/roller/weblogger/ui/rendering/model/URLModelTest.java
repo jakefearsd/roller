@@ -242,11 +242,7 @@ class URLModelTest {
     }
 
     @Test
-    void commentAuthenticatorAndThemeResourceUrlsHangOffTheSiteRoot() {
-        assertEquals(SITE + "/CommentAuthenticatorServlet?weblog=testblog",
-                model.getCommentAuthenticator(),
-                "The comment authenticator servlet needs the weblog handle to pick "
-                        + "the right blog's settings.");
+    void themeResourceUrlsHangOffTheSiteRoot() {
         assertEquals(SITE + "/themes/journal/style.css",
                 model.themeResource("journal", "style.css"),
                 "Theme resources are served straight off the site root.");
@@ -482,20 +478,7 @@ class URLModelTest {
     }
 
     @Test
-    void commentAndMediaFileFeedsUseTheirOwnFeedType() {
-        assertEquals(ABSOLUTE_SITE + "/testblog/feed/comments/rss",
-                model.getFeed().getComments().getRss(),
-                "Comment feeds are /feed/comments/...");
-        assertEquals(ABSOLUTE_SITE + "/testblog/feed/comments/atom",
-                model.getFeed().getComments().getAtom(),
-                "Comment feeds are available as Atom too.");
-        assertEquals(Map.of("cat", "Tech", "excerpts", "true"),
-                queryParams(model.getFeed().getComments().rss("Tech", true)),
-                "Comment feeds accept the same narrowing parameters.");
-        assertEquals(Map.of("cat", "Tech"),
-                queryParams(model.getFeed().getComments().atom("Tech", false)),
-                "Comment Atom feeds accept a category.");
-
+    void mediaFileFeedsUseTheirOwnFeedType() {
         assertEquals(ABSOLUTE_SITE + "/testblog/feed/files/rss",
                 model.getFeed().getMediaFiles().getRss(),
                 "Media file feeds are /feed/files/...");
@@ -594,8 +577,5 @@ class URLModelTest {
         assertEquals(ABSOLUTE_SITE + "/myBlog2024/feed/entries/atom",
                 otherModel.getFeed().getEntries().getAtom(),
                 "Feed URLs embed the handle verbatim.");
-        assertEquals(SITE + "/CommentAuthenticatorServlet?weblog=myBlog2024",
-                otherModel.getCommentAuthenticator(),
-                "The handle is also spliced into a query parameter unencoded.");
     }
 }

@@ -44,7 +44,6 @@ import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesLatestPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesMonthPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesPermalinkPager;
-import org.apache.roller.weblogger.ui.rendering.util.WeblogEntryCommentForm;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
 import org.apache.roller.weblogger.util.URLUtilities;
@@ -70,7 +69,6 @@ public class PageModel implements Model {
 
     private WeblogPageRequest pageRequest = null;
     private URLStrategy urlStrategy = null;
-    private WeblogEntryCommentForm commentForm = null;
     private Map<String, String[]> requestParameters = null;
     private Weblog weblog = null;
     
@@ -113,9 +111,6 @@ public class PageModel implements Model {
             throw new WebloggerException("weblogRequest is not a WeblogPageRequest."+
                     "  PageModel only supports page requests.");
         }
-        
-        // see if there is a comment form
-        this.commentForm = (WeblogEntryCommentForm) initData.get("commentForm");
         
         // custom request parameters
         this.requestParameters = (Map<String, String[]>) initData.get("requestParameters");
@@ -430,19 +425,6 @@ public class PageModel implements Model {
         }
     }
         
-    
-    /**
-     * Get comment form to be displayed, may contain preview data.
-     *
-     * @return Comment form object
-     */
-    public WeblogEntryCommentForm getCommentForm() {
-        
-        if(commentForm == null) {
-            commentForm = new WeblogEntryCommentForm();
-        }
-        return commentForm;
-    }
     
     /**
      * Get request parameter by name.

@@ -286,9 +286,6 @@ class FeedModelTest {
                 queryParams(model.getWeblogEntriesPager().getPrevLink()),
                 "Paging back inside a filtered entry feed must stay inside the filter.");
         assertEquals(Map.of("page", "1", "cat", "Tech", "tags", "java"),
-                queryParams(model.getCommentsPager().getPrevLink()),
-                "The comments pager has its own copy of the same logic.");
-        assertEquals(Map.of("page", "1", "cat", "Tech", "tags", "java"),
                 queryParams(model.getMediaFilesPager().getPrevLink()),
                 "The media files pager has its own copy of the same logic.");
     }
@@ -326,19 +323,6 @@ class FeedModelTest {
         assertEquals(50, criteria.getValue().getOffset(),
                 "Page 2 of 25-entry pages starts at offset 50; a wrong entry count "
                         + "silently shifts every page boundary.");
-    }
-
-    @Test
-    void theCommentsPagerUsesTheCommentsFeedUrl() throws Exception {
-        WeblogFeedRequest request = feedRequest("comments", "rss");
-        request.setWeblogCategoryName("Tech");
-
-        String url = ((FeedModel.FeedCommentsPager) modelFor(request).getCommentsPager()).getUrl();
-
-        assertEquals(ABSOLUTE_SITE + "/testblog/feed/comments/rss", path(url),
-                "Comment feeds live under /feed/comments/.");
-        assertEquals(Map.of("cat", "Tech"), queryParams(url),
-                "Comment feeds carry the same filters.");
     }
 
     @Test

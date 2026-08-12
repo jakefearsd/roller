@@ -242,18 +242,14 @@ class SiteModelTest {
 
         assertEquals(expected, model.getWeblogEntriesPager(wrapper, 30, 10).getHomeLink(),
                 "The weblog-scoped entries pager must page within the feed.");
-        assertEquals(expected, model.getCommentsPager(-1, 10).getHomeLink(),
-                "The comments pager must page within the feed.");
         assertEquals(expected, model.getUsersByLetterPager("A", -1, 10).getHomeLink(),
                 "The user directory pager must page within the feed.");
     }
 
     @Test
-    void theCommentsAndDirectoryPagersShareThePageUrl() throws Exception {
+    void theDirectoryPagersShareThePageUrl() throws Exception {
         SiteModel model = model();
 
-        assertEquals("/roller/frontpage/", model.getCommentsPager(-1, 10).getHomeLink(),
-                "The site-wide comments pager pages from the same base URL.");
         assertEquals("/roller/frontpage/", model.getUsersByLetterPager("A", -1, 10).getHomeLink(),
                 "The user directory pages from the same base URL.");
         assertEquals("/roller/frontpage/", model.getWeblogsByLetterPager("A", -1, 10).getHomeLink(),

@@ -27,10 +27,8 @@ import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 import org.apache.roller.weblogger.pojos.Weblog;
-import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryCommentWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
-import org.apache.roller.weblogger.ui.rendering.pagers.CommentsPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.MediaFilesPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.Pager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesListPager;
@@ -140,15 +138,7 @@ public class FeedModel implements Model {
     
     
     /**
-     * Gets most recent comments limited by: weblog specified in request and 
-     * the weblog.entryDisplayCount.
-     */
-    public Pager<WeblogEntryCommentWrapper> getCommentsPager() {
-        return new FeedCommentsPager(feedRequest);
-    }    
-        
-    /**
-     * Gets most recently uploaded media files limited by: weblog specified 
+     * Gets most recently uploaded media files limited by: weblog specified
      * in request and the weblog.entryDisplayCount.
      */
     public Pager<MediaFileWrapper> getMediaFilesPager() {
@@ -202,29 +192,6 @@ public class FeedModel implements Model {
                     feedRequest.getFormat(), null, null, null, false, true), 
                     feedRequest.getWeblog(), null, feedRequest.getWeblogCategoryName(), feedRequest.getTags(),
                     feedRequest.getLocale(), -1, feedRequest.getPage(), defaultEntries());
-            this.feedRequest = feedRequest;
-        }
-        
-        @Override
-        protected String createURL(String url, Map<String, String> params) {
-            return super.createURL(url, withFeedFilters(feedRequest, params));
-        }
-
-        @Override
-        public String getUrl() {
-            return createURL(super.getUrl(), new HashMap<>());
-        }
-    }
-
-    public class FeedCommentsPager extends CommentsPager {
-        
-        private final WeblogFeedRequest feedRequest;
-        
-        public FeedCommentsPager(WeblogFeedRequest feedRequest) {            
-            super(urlStrategy, urlStrategy.getWeblogFeedURL(feedRequest.getWeblog(), 
-                    feedRequest.getLocale(), feedRequest.getType(),
-                    feedRequest.getFormat(), null, null,
-                    null, false, true), feedRequest.getWeblog(), -1, feedRequest.getPage(), defaultEntries());
             this.feedRequest = feedRequest;
         }
         

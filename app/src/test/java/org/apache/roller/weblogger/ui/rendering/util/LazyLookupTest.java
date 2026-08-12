@@ -63,7 +63,6 @@ class LazyLookupTest {
 
     private static final String PAGE_SERVLET = "/roller-ui/rendering/page";
     private static final String FEED_SERVLET = "/roller-ui/rendering/feed";
-    private static final String COMMENT_SERVLET = "/roller-ui/rendering/comment";
     private static final String PREVIEW_SERVLET = "/roller-ui/authoring/preview";
 
     /** Hands the body a Weblogger whose managers are the supplied mocks. */
@@ -487,43 +486,6 @@ class LazyLookupTest {
         withWeblogger(weblogger, () -> assertNull(request.getWeblogCategory()));
     }
 
-    // -------------------------------------------------------------- comments
-
-    @Test
-    void commentRequestEntryIsLookedUpOnceByAnchorAndCached() throws Exception {
-        WeblogEntryManager entryManager = mock(WeblogEntryManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        WeblogEntry entry = new WeblogEntry();
-        when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
-        when(weblogger.getWeblogManager()).thenReturn(mock(WeblogManager.class));
-        when(entryManager.getWeblogEntryByAnchor(any(), eq("hello"))).thenReturn(entry);
-
-        WeblogCommentRequest request = new WeblogCommentRequest(
-                MockRequest.with(COMMENT_SERVLET, "/myblog/entry/hello"));
-
-        withWeblogger(weblogger, () -> {
-            assertSame(entry, request.getWeblogEntry());
-            assertSame(entry, request.getWeblogEntry());
-        });
-
-        verify(entryManager, times(1)).getWeblogEntryByAnchor(any(), eq("hello"));
-    }
-
-    @Test
-    void commentRequestAFailingEntryLookupYieldsNull() throws Exception {
-        WeblogEntryManager entryManager = mock(WeblogEntryManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
-        when(weblogger.getWeblogManager()).thenReturn(mock(WeblogManager.class));
-        when(entryManager.getWeblogEntryByAnchor(any(), anyString()))
-                .thenThrow(new WebloggerException("database is down"));
-
-        WeblogCommentRequest request = new WeblogCommentRequest(
-                MockRequest.with(COMMENT_SERVLET, "/myblog/entry/hello"));
-
-        withWeblogger(weblogger, () -> assertNull(request.getWeblogEntry()));
-    }
-
     // --------------------------------------------------------------- preview
 
     @Test
@@ -729,18 +691,6 @@ class LazyLookupTest {
         assertEquals(1, page.getCustomParams().size());
         assertEquals(true, page.isWebsitePageHit());
         assertEquals(true, page.isOtherPageHit());
-
-        WeblogCommentRequest comment = new WeblogCommentRequest();
-        comment.setName("Ada");
-        comment.setEmail("ada@example.com");
-        comment.setContent("hello");
-        comment.setNotify(true);
-        comment.setWeblogAnchor("hello");
-        assertEquals("Ada", comment.getName());
-        assertEquals("ada@example.com", comment.getEmail());
-        assertEquals("hello", comment.getContent());
-        assertEquals(true, comment.isNotify());
-        assertEquals("hello", comment.getWeblogAnchor());
     }
 
     @Test

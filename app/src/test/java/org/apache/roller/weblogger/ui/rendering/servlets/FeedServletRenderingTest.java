@@ -71,17 +71,6 @@ class FeedServletRenderingTest {
     }
 
     @Test
-    void commentsFeedRenders() throws Exception {
-        TestUtils.setupWeblogEntry("commented-entry", weblog, user);
-        TestUtils.endSession(true);
-
-        MockHttpServletResponse response = feed("comments/rss");
-
-        assertEquals(200, response.getStatus());
-        assertTrue(response.getContentAsString().contains("<rss"));
-    }
-
-    @Test
     void unknownCategoryFeedIsNotFound() throws Exception {
         MockHttpServletRequest request = RenderingTestSupport
                 .anonymousGet("/roller-ui/rendering/feed", "/" + handle + "/entries/rss");
