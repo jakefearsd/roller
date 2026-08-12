@@ -71,7 +71,6 @@ public class Weblog implements Serializable {
     private String  iconPath         = null;
     private String  about            = null;
     private String  creator          = null;
-    private String  analyticsCode    = null;
     private String  analyticsSiteId  = null;
     private String  analyticsShareUrl = null;
     private String  newsletterListUuid = null;
@@ -408,14 +407,6 @@ public class Weblog implements Serializable {
 
     public void setIconPath(String iconPath) {
         this.iconPath = iconPath;
-    }
-
-    public String getAnalyticsCode() {
-        return analyticsCode;
-    }
-
-    public void setAnalyticsCode(String analyticsCode) {
-        this.analyticsCode = analyticsCode;
     }
 
     /**

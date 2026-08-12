@@ -138,25 +138,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void analyticsCodeIsTrimmedBeforeStorage() throws Exception {
-        // The code is injected verbatim into every rendered page.
-        bean.setAnalyticsCode("  <script>tracker()</script>  ");
-
-        controller.save(request, model, bean);
-
-        assertEquals("<script>tracker()</script>", weblog.getAnalyticsCode());
-    }
-
-    @Test
-    void aNullAnalyticsCodeIsLeftNullRatherThanTrimmed() throws Exception {
-        bean.setAnalyticsCode(null);
-
-        controller.save(request, model, bean);
-
-        assertNull(weblog.getAnalyticsCode());
-    }
-
-    @Test
     void aFailedSaveIsReportedRatherThanConfirmed() throws Exception {
         org.mockito.Mockito.doThrow(new WebloggerException("database down"))
                 .when(weblogger.getWeblogManager()).saveWeblog(any());

@@ -39,7 +39,6 @@ public class WeblogConfigBean {
     private String icon = null;
     private String about = null;
 
-    private String analyticsCode = null;
     private String analyticsSiteId = null;
     private String analyticsShareUrl = null;
     private String newsletterListUuid = null;
@@ -125,14 +124,6 @@ public class WeblogConfigBean {
         this.active = active;
     }
 
-    public String getAnalyticsCode() {
-        return analyticsCode;
-    }
-
-    public void setAnalyticsCode(String analyticsCode) {
-        this.analyticsCode = analyticsCode;
-    }
-
     public String getAnalyticsSiteId() {
         return analyticsSiteId;
     }
@@ -167,7 +158,6 @@ public class WeblogConfigBean {
         this.timeZone = dataHolder.getTimeZone();
         this.entryDisplayCount = dataHolder.getEntryDisplayCount();
         setActive(dataHolder.getActive());
-        this.analyticsCode = dataHolder.getAnalyticsCode();
         this.analyticsSiteId = dataHolder.getAnalyticsSiteId();
         this.analyticsShareUrl = dataHolder.getAnalyticsShareUrl();
         this.newsletterListUuid = dataHolder.getNewsletterListUuid();
@@ -186,7 +176,6 @@ public class WeblogConfigBean {
         dataHolder.setActive(this.getActive());
         dataHolder.setIconPath(getIcon());
         dataHolder.setAbout(getAbout());
-        dataHolder.setAnalyticsCode(this.analyticsCode);
         dataHolder.setAnalyticsSiteId(StringUtils.trimToNull(this.analyticsSiteId));
         dataHolder.setAnalyticsShareUrl(StringUtils.trimToNull(this.analyticsShareUrl));
         dataHolder.setNewsletterListUuid(StringUtils.trimToNull(this.newsletterListUuid));

@@ -60,7 +60,6 @@ class WeblogWrapperTest {
         weblog.setLocale("en_US");
         weblog.setTimeZone("America/New_York");
         weblog.setEntryDisplayCount(37);
-        weblog.setAnalyticsCode("analytics-snippet");
         weblog.setAnalyticsSiteId("3fa85f64-5717-4562-b3fc-2c963f66afa6");
         weblog.setAnalyticsShareUrl("https://analytics.example.com/share/abc123");
         weblog.setNewsletterListUuid("94b12e10-1234-4321-aaaa-2c963f66afa6");
@@ -86,8 +85,6 @@ class WeblogWrapperTest {
         assertEquals("America/New_York", wrapper.getTimeZone());
         assertEquals(37, wrapper.getEntryDisplayCount());
         assertEquals(new Date(1_700_000_000_000L), wrapper.getDateCreated());
-        assertEquals("analytics-snippet", wrapper.getAnalyticsCode(),
-                "Text with nothing to sanitise must reach the page unchanged");
         assertEquals("3fa85f64-5717-4562-b3fc-2c963f66afa6", wrapper.getAnalyticsSiteId());
         assertEquals("https://analytics.example.com/share/abc123", wrapper.getAnalyticsShareUrl());
         assertEquals("94b12e10-1234-4321-aaaa-2c963f66afa6", wrapper.getNewsletterListUuid());
@@ -154,27 +151,6 @@ class WeblogWrapperTest {
                     "the about text is emitted into pages too");
             assertTrue(wrapper.getTagline().contains("Hand-built guides"),
                     "and the author's actual words must survive: " + wrapper.getTagline());
-        } finally {
-            HTMLSanitizer.xssEnabled = previous;
-        }
-    }
-
-    @Test
-    void theAnalyticsSnippetIsDeliberatelyNotSanitised() {
-        Boolean previous = HTMLSanitizer.xssEnabled;
-        try {
-            HTMLSanitizer.xssEnabled = Boolean.TRUE;
-            // This field exists to hold a tracking snippet -- a <script> tag --
-            // pasted by a site administrator, and it is gated by the site-wide
-            // analytics.code.override.allowed property. Sanitizing it deletes
-            // the script and the field silently does nothing, which is exactly
-            // how it behaved before and why a pasted Umami or Analytics tag
-            // never appeared on any page.
-            String snippet = "<script defer src=\"https://umami.example/script.js\"></script>";
-            weblog.setAnalyticsCode(snippet);
-
-            assertEquals(snippet, wrapper.getAnalyticsCode(),
-                    "the tracking snippet must reach the page intact");
         } finally {
             HTMLSanitizer.xssEnabled = previous;
         }

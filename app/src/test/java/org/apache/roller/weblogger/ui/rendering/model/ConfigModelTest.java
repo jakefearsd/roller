@@ -207,30 +207,6 @@ class ConfigModelTest {
                 "Trackbacks were removed and must stay off.");
     }
 
-    // ------------------------------------------------------------- analytics
-
-    @Test
-    void analyticsSettingsAreReadFromTheirOwnKeys() throws Exception {
-        givenProperty("analytics.default.tracking.code", "<script>ga()</script>");
-        givenProperty("analytics.code.override.allowed", "true");
-
-        assertEquals("<script>ga()</script>", model.getDefaultAnalyticsTrackingCode(),
-                "The tracking snippet is stored and returned verbatim — it is markup "
-                        + "an administrator pasted in deliberately.");
-        assertTrue(model.getAnalyticsOverrideAllowed(),
-                "$config.analyticsOverrideAllowed reads analytics.code.override.allowed");
-    }
-
-    @Test
-    void analyticsOverrideIsOffWhenNotExplicitlyAllowed() throws Exception {
-        // This one decides whether a blog owner may inject their own script tag
-        // into their pages, so it must not default to permissive.
-        givenProperty("analytics.code.override.allowed", "false");
-        assertFalse(model.getAnalyticsOverrideAllowed(),
-                "Per-blog analytics code must stay disabled unless an administrator "
-                        + "explicitly allows it.");
-    }
-
     // ------------------------------------------------------------------ maps
 
     @Test

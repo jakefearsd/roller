@@ -19,12 +19,9 @@ package org.apache.roller.weblogger.ui.rendering;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPage;
@@ -44,9 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code $weblog.analyticsSiteId} plus the startup-scoped
  * {@code $config.analyticsBasePath}/{@code analyticsScriptName} -- across all
  * three bundled themes' home pages AND the {@code [page]} view (journal's own
- * {@code _page} override), plus one pinned case each for the "no id
- * configured" and legacy-fallback branches that sit below the structured one
- * in the macro.
+ * {@code _page} override), plus one pinned case for the "no id configured"
+ * branch. This is the only branch the macro has; there is no free-text
+ * fallback.
  *
  * <p>One test looping the themes rather than one method per theme --
  * same economical fixture pattern as {@code PageNavRenderingTest}.
@@ -218,46 +215,6 @@ class AnalyticsInjectionRenderingTest {
         assertFalse(pageBody.contains("/analytics/"),
                 "no site id means page.vm must not inject a Umami script either:\n"
                         + pageBody);
-    }
-
-    /**
-     * Pins the third (legacy) branch: with the structured id absent and no
-     * per-weblog analyticsCode, {@code $config.defaultAnalyticsTrackingCode}
-     * still renders exactly as it did before the structured branch was added
-     * above it -- proof the two legacy {@code #elseif}s are byte-identical to
-     * what shipped previously.
-     */
-    @Test
-    void theLegacyDefaultTrackingCodeStillRendersWhenNoStructuredIdIsConfigured()
-            throws Exception {
-        setAnalyticsSiteId(null);
-        String marker = "<!-- legacy-default-tracking-code -->";
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
-        Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
-        String original = config.get("analytics.default.tracking.code").getValue();
-        try {
-            config.get("analytics.default.tracking.code").setValue(marker);
-            pmgr.saveProperties(config);
-            WebloggerFactory.getWeblogger().flush();
-            TestUtils.endSession(true);
-
-            switchTheme("journal");
-            RenderingTestSupport.clearRenderCaches();
-            String body = renderHomePage();
-
-            assertTrue(body.contains(marker),
-                    "with no structured site id, the legacy default tracking code "
-                            + "must still render:\n" + body);
-            assertFalse(body.contains("/analytics/"),
-                    "the structured branch must not fire when analyticsSiteId is "
-                            + "unset, even with a legacy default configured:\n" + body);
-        } finally {
-            Map<String, RuntimeConfigProperty> reset = pmgr.getProperties();
-            reset.get("analytics.default.tracking.code").setValue(original);
-            pmgr.saveProperties(reset);
-            WebloggerFactory.getWeblogger().flush();
-            TestUtils.endSession(true);
-        }
     }
 
     private static String expectedCsp(String theme) {

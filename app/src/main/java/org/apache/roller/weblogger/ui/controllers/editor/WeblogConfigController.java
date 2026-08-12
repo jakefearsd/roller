@@ -27,7 +27,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
@@ -86,10 +85,6 @@ public class WeblogConfigController extends BaseController {
             try {
                 Weblog weblog = getActionWeblog(request);
 
-                if (bean.getAnalyticsCode() != null) {
-                    bean.setAnalyticsCode(bean.getAnalyticsCode().trim());
-                }
-
                 bean.copyTo(weblog);
 
                 weblogger.getWeblogManager().saveWeblog(weblog);
@@ -133,9 +128,6 @@ public class WeblogConfigController extends BaseController {
     }
 
     private void loadFormData(HttpServletRequest request, Model model) {
-        model.addAttribute("weblogAdminsUntrusted",
-                WebloggerConfig.getBooleanProperty("weblogAdminsUntrusted"));
-
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
         model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
     }

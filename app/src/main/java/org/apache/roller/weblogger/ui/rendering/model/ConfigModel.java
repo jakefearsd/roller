@@ -99,14 +99,6 @@ public class ConfigModel implements Model {
         return WebloggerFactory.getWeblogger().getBuildUser();
     }
 
-    public String getDefaultAnalyticsTrackingCode() {
-        return getProperty("analytics.default.tracking.code");
-    }
-
-    public boolean getAnalyticsOverrideAllowed() {
-        return getBooleanProperty("analytics.code.override.allowed");
-    }
-
     /**
      * The raster tile template {@code #showMapAssets} hands to Leaflet for
      * the {@code [map]} shortcode, e.g.

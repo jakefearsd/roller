@@ -180,20 +180,6 @@
       
    </display-group>
 
-     <!-- Web Analytics (e.g., Google Analytics) Group -->
-     <display-group name="webAnalytics" key="configForm.webAnalytics">
-         <property-def  name="analytics.default.tracking.code"  key="configForm.defaultAnalyticsTrackingCode">
-             <type>text</type>
-             <default-value/>
-             <rows>10</rows>
-             <cols>70</cols>
-         </property-def>
-         <property-def  name="analytics.code.override.allowed"  key="configForm.allowAnalyticsCodeOverride">
-             <type>boolean</type>
-             <default-value>true</default-value>
-         </property-def>
-     </display-group>
-
  </config-def>
  
 </runtime-configs>

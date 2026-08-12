@@ -128,7 +128,7 @@ public class MessageKeyTest {
      * drifted out of sync with the actual {@code tabbedmenu.*} total, which is
      * why this one states each bucket's current size plainly instead:
      * <ul>
-     *   <li>30 {@code configForm.*} keys read off {@code key="..."} attributes in
+     *   <li>28 {@code configForm.*} keys read off {@code key="..."} attributes in
      *       {@code runtimeConfigDefs.xml} (GlobalConfig.jsp renders display
      *       groups/properties generically via {@code ${dg.key}} / property
      *       metadata, not a literal code). W1's comment-removal wave deleted
@@ -138,7 +138,16 @@ public class MessageKeyTest {
      *       configForm.commentPlugins}, {@code configForm.emailComments},
      *       {@code configForm.moderationRequired} and {@code
      *       configForm.commentThrottle} -- seven keys, taking this bucket from
-     *       37 down to 30.</li>
+     *       37 down to 30. W2 Task 5 deleted the dormant free-text analytics
+     *       override (never reachable: gated on {@code weblogAdminsUntrusted}
+     *       being off, and this fork keeps it on) -- {@code
+     *       configForm.defaultAnalyticsTrackingCode} and {@code
+     *       configForm.allowAnalyticsCodeOverride}, taking this bucket from 30
+     *       down to 28. ({@code configForm.webAnalytics}, the enclosing
+     *       display-group's key, was not in this bucket -- it was a literal
+     *       {@code code="..."} reference in {@code WeblogConfig.jsp} until that
+     *       section was deleted in the same commit, so it left the bundle
+     *       entirely rather than becoming a new orphan.)</li>
      *   <li>15 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
      *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
      *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
@@ -179,11 +188,11 @@ public class MessageKeyTest {
 
     /**
      * Keys the text scan cannot see: {@code runtimeConfigDefs.xml} {@code key=}
-     * attributes (30) + {@code admin-menu.xml}/{@code editor-menu.xml}
+     * attributes (28) + {@code admin-menu.xml}/{@code editor-menu.xml}
      * {@code name=} attributes (15) + 2 unexplained pre-existing orphans. See
      * the javadoc on {@link #reportsBundleKeysNoJspOrControllerUses()}.
      */
-    private static final int KNOWN_DYNAMIC_KEY_COUNT = 47;
+    private static final int KNOWN_DYNAMIC_KEY_COUNT = 45;
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();

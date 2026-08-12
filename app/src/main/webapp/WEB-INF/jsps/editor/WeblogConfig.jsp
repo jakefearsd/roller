@@ -21,16 +21,6 @@
     <spring:message code="websiteSettings.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<%-- The legacy free-text analytics textarea and its entry in the section index
-     are the SAME branch, held in one variable so the two can never disagree
-     about whether that group is on the page. It renders only when the site
-     allows an analytics-code override AND weblog admins are trusted; this fork
-     keeps weblogAdminsUntrusted on, so in practice it never renders -- the
-     structured, validated bean.analyticsSiteId field below is what a weblog
-     owner uses instead. --%>
-<c:set var="showAnalyticsCodeOverride"
-       value="${rc:getBooleanProp('analytics.code.override.allowed') && !weblogAdminsUntrusted}"/>
-
 <c:url var="weblogRemoveUrl" value="/roller-ui/authoring/weblogRemove.rol">
     <c:param name="weblog" value="${actionWeblog.handle}"/>
 </c:url>
@@ -130,19 +120,6 @@
         </div>
     </div>
 
-    <%-- ***** Web analytics settings ***** --%>
-
-    <c:if test="${showAnalyticsCodeOverride}">
-        <h3 class="section-head" id="settings-web-analytics"><spring:message code="configForm.webAnalytics"/></h3>
-
-        <div class="row mb-3">
-            <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsTrackingCode"/></label>
-            <div class="col-sm-9">
-                <textarea name="bean.analyticsCode" rows="10" cols="70" class="form-control">${bean.analyticsCode}</textarea>
-            </div>
-        </div>
-    </c:if>
-
     <%-- ***** Analytics settings ***** --%>
 
     <h3 class="section-head" id="settings-analytics"><spring:message code="websiteSettings.analyticsSettings"/></h3>
@@ -198,9 +175,6 @@
              aria-label="<spring:message code="websiteSettings.sections"/>">
             <a href="#settings-general" class="is-current"><spring:message code="websiteSettings.generalSettings"/></a>
             <a href="#settings-language"><spring:message code="websiteSettings.languageSettings"/></a>
-            <c:if test="${showAnalyticsCodeOverride}">
-                <a href="#settings-web-analytics"><spring:message code="configForm.webAnalytics"/></a>
-            </c:if>
             <a href="#settings-analytics"><spring:message code="websiteSettings.analyticsSettings"/></a>
             <a href="#settings-newsletter"><spring:message code="websiteSettings.newsletterSettings"/></a>
         </nav>

@@ -370,20 +370,15 @@ will be created.
 #end
 
 #**
-Analytics for a weblog. The structured path: a validated Umami website id
-plus startup config builds the script tag HERE, so no admin-typed markup
-ever reaches the head -- which is what lets per-weblog analytics coexist
-with weblogAdminsUntrusted. Same-origin via Caddy's /analytics handle, so
-the pinned theme CSPs are untouched. The legacy raw-snippet branches remain
-for installations that used them.
+Analytics for a weblog. A validated Umami website id plus startup config
+builds the script tag HERE, so no admin-typed markup ever reaches the head --
+which is what lets per-weblog analytics coexist with weblogAdminsUntrusted.
+Same-origin via Caddy's /analytics handle, so the pinned theme CSPs are
+untouched. This is the only analytics path; there is no free-text fallback.
 *#
 #macro(showAnalyticsTrackingCode $weblog)
     #if ($utils.isNotEmpty($weblog.analyticsSiteId))
 <script defer src="$config.analyticsBasePath/$config.analyticsScriptName" data-website-id="$utils.escapeHTML($weblog.analyticsSiteId)" data-host-url="$config.analyticsBasePath"></script>
-    #elseif ($config.analyticsOverrideAllowed && $utils.isNotEmpty($weblog.analyticsCode))
-        $weblog.analyticsCode
-    #elseif ($utils.isNotEmpty($config.defaultAnalyticsTrackingCode))
-        $config.defaultAnalyticsTrackingCode
     #end
 #end
 
@@ -602,7 +597,7 @@ are fetched browser-direct -- never proxied through Roller, whose Java
 User-Agent the policy blocks. The template is interpolated straight into a
 single-quoted JS string, so a deployer overriding it must not put an apostrophe
 in it; it is deployer-owned static config, at the same trust level as
-analytics.default.tracking.code, and never author or reader input.
+analytics.umami.basePath, and never author or reader input.
 
 CSP: every asset is same-origin, Leaflet has no eval/fetch and injects no
 stylesheet, so the themes' policy covers it unchanged except for one thing --

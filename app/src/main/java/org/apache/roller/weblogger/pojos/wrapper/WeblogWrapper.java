@@ -104,15 +104,6 @@ public final class WeblogWrapper {
         return UserWrapper.wrap(this.pojo.getCreator());
     }
 
-    public String getAnalyticsCode() {
-        // Deliberately NOT sanitized. This field exists to hold a tracking
-        // snippet -- a <script> tag -- pasted by a site administrator, and it
-        // is gated by the site-wide analytics.code.override.allowed property.
-        // Running it through the HTML policy silently deletes the script and
-        // the field appears to do nothing, which is how it behaved until now.
-        return this.pojo.getAnalyticsCode();
-    }
-
     /**
      * The Umami website UUID the theme macro builds this weblog's tracker
      * tag from, or null if analytics is disabled for this weblog.
