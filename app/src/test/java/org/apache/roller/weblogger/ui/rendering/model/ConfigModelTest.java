@@ -189,25 +189,20 @@ class ConfigModelTest {
                 "With no runtime value the static roller.properties default applies.");
     }
 
-    // -------------------------------------------------------------- comments
+    // ------------------------------------------------------------ trackbacks
 
     @Test
     void removedFeaturesReportThemselvesAsOff() {
-        // The comment subsystem is gone entirely; these accessors are
-        // permanently-false compat shims (like getTrackbacksEnabled already
-        // was for trackbacks) so a custom theme still referencing them
-        // degrades quietly instead of breaking. No runtime property backs
-        // any of these any more.
-        assertFalse(model.getCommentHtmlAllowed(),
-                "The comment subsystem was removed; HTML-in-comments is permanently off.");
-        assertTrue(model.getCommentEscapeHtml(),
-                "commentEscapeHtml is the inverse of commentHtmlAllowed, so with that "
-                        + "permanently false this must be permanently true.");
-        assertFalse(model.getCommentEmailNotify(),
-                "The comment subsystem was removed; comment email notification is "
-                        + "permanently off.");
-        assertFalse(model.getCommentAutoFormat(),
-                "Comment auto-format was removed in 4.0 and is permanently off.");
+        // Trackbacks were removed in a different, earlier wave than comments
+        // and are out of scope for comment removal; this accessor is a
+        // permanently-false compat shim so a custom theme still referencing
+        // it degrades quietly instead of breaking. No runtime property backs
+        // it any more. The comment subsystem's own accessors
+        // (getCommentHtmlAllowed/getCommentEscapeHtml/getCommentEmailNotify/
+        // getCommentAutoFormat) were deleted outright rather than kept as
+        // shims -- Velocity resolves a missing method to null, which is
+        // falsy in #if, so a shim bought nothing beyond keeping a
+        // now-meaningless name alive to be discovered and coded against.
         assertFalse(model.getTrackbacksEnabled(),
                 "Trackbacks were removed and must stay off.");
     }
