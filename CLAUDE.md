@@ -662,9 +662,13 @@ Two things a future sweep for "comment" will trip over and must leave alone:
 
 One operational note for whoever runs Maintenance next: `IndexOperation` used
 to write comment content into `C_CONTENT` with `Field.Store.NO` — indexed for
-matching but never stored — while `SearchOperation.SEARCH_FIELDS` only ever
-queried `CONTENT`/`TITLE`, never `C_CONTENT`. Comment text was therefore never
-actually searchable, before or after this wave; there is nothing to fix there.
+matching but never stored — and `SearchOperation.SEARCH_FIELDS` was
+`{CONTENT, TITLE, C_CONTENT}`, so site search really did match text a reader
+had posted in a comment. This wave removed both halves: nothing writes
+`C_CONTENT` any more, and `SEARCH_FIELDS` is now `{CONTENT, TITLE}`. Because
+the query no longer names that field, comment text sitting in an index built
+before the wave is already unreachable — a rebuild is not needed to stop it
+being searchable.
 What an index built before this wave does still hold is commenter name and
 email, written to `C_NAME`/`C_EMAIL` with `Field.Store.YES` — those are
 physically present in the index files on disk until the affected entry's
