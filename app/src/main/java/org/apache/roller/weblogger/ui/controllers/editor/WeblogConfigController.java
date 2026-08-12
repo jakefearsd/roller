@@ -27,11 +27,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
-import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
@@ -86,37 +84,13 @@ public class WeblogConfigController extends BaseController {
 
         if (!hasErrors(model)) {
             try {
-                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 Weblog weblog = getActionWeblog(request);
 
                 if (bean.getAnalyticsCode() != null) {
                     bean.setAnalyticsCode(bean.getAnalyticsCode().trim());
                 }
 
-                // Resolve the category BEFORE copyTo mutates the managed
-                // weblog. Anything that throws after that point leaves a
-                // half-applied change on an entity the session will still
-                // commit, while the page reports a failure.
-                //
-                // The null check is the bug this ordering was written for: a
-                // weblog's blogger category is set to null when that category
-                // is deleted (removeWeblogCategory does it deliberately), and
-                // this line then threw on EVERY subsequent save. The settings
-                // page answered "Error updating configuration" forever, with
-                // no way back through the UI.
-                WeblogCategory newBloggerCategory = null;
-                if (bean.getBloggerCategoryId() != null) {
-                    WeblogCategory current = weblog.getBloggerCategory();
-                    if (current == null || !current.getId().equals(bean.getBloggerCategoryId())) {
-                        newBloggerCategory = wmgr.getWeblogCategory(bean.getBloggerCategoryId());
-                    }
-                }
-
                 bean.copyTo(weblog);
-
-                if (newBloggerCategory != null) {
-                    weblog.setBloggerCategory(newBloggerCategory);
-                }
 
                 weblogger.getWeblogManager().saveWeblog(weblog);
 
@@ -159,14 +133,6 @@ public class WeblogConfigController extends BaseController {
     }
 
     private void loadFormData(HttpServletRequest request, Model model) {
-        try {
-            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
-            model.addAttribute("weblogCategories", wmgr.getWeblogCategories(getActionWeblog(request)));
-
-        } catch (Exception ex) {
-            log.error("Error preparing weblog config action", ex);
-        }
-
         model.addAttribute("weblogAdminsUntrusted",
                 WebloggerConfig.getBooleanProperty("weblogAdminsUntrusted"));
 

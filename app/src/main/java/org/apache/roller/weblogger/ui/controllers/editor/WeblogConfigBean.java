@@ -44,8 +44,6 @@ public class WeblogConfigBean {
     private String analyticsShareUrl = null;
     private String newsletterListUuid = null;
 
-    private String bloggerCategoryId = null;
-
 
     public String getHandle() {
         return this.handle;
@@ -119,14 +117,6 @@ public class WeblogConfigBean {
         this.about = about;
     }
     
-    public String getBloggerCategoryId() {
-        return bloggerCategoryId;
-    }
-    
-    public void setBloggerCategoryId(String bloggerCategoryId) {
-        this.bloggerCategoryId = bloggerCategoryId;
-    }
-
     public boolean getActive() {
         return active;
     }
@@ -183,9 +173,6 @@ public class WeblogConfigBean {
         this.newsletterListUuid = dataHolder.getNewsletterListUuid();
         setIcon(dataHolder.getIconPath());
         setAbout(dataHolder.getAbout());
-        if (dataHolder.getBloggerCategory() != null) {
-            bloggerCategoryId = dataHolder.getBloggerCategory().getId();
-        }
     }
     
     

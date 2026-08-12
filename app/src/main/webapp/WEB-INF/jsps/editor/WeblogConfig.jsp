@@ -130,22 +130,6 @@
         </div>
     </div>
 
-    <%-- ***** Blogger API setting settings ***** --%>
-
-    <h3 class="section-head" id="settings-blogger-api"><spring:message code="websiteSettings.bloggerApi"/></h3>
-
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.bloggerApiCategory"/></label>
-        <div class="col-sm-9">
-            <select name="bean.bloggerCategoryId" class="form-select">
-                <c:forEach items="${weblogCategories}" var="opt">
-                    <option value="${opt.id}" ${opt.id == bean.bloggerCategoryId ? 'selected' : ''}>${opt.name}</option>
-                </c:forEach>
-            </select>
-        </div>
-    </div>
-
-
     <%-- ***** Web analytics settings ***** --%>
 
     <c:if test="${showAnalyticsCodeOverride}">
@@ -214,7 +198,6 @@
              aria-label="<spring:message code="websiteSettings.sections"/>">
             <a href="#settings-general" class="is-current"><spring:message code="websiteSettings.generalSettings"/></a>
             <a href="#settings-language"><spring:message code="websiteSettings.languageSettings"/></a>
-            <a href="#settings-blogger-api"><spring:message code="websiteSettings.bloggerApi"/></a>
             <c:if test="${showAnalyticsCodeOverride}">
                 <a href="#settings-web-analytics"><spring:message code="configForm.webAnalytics"/></a>
             </c:if>

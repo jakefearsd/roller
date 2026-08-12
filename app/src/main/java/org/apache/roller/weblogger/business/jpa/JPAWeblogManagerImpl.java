@@ -262,7 +262,6 @@ public class JPAWeblogManagerImpl implements WeblogManager {
                 newWeblog, newWeblog.getCreator(), actions);
         
         String cats = WebloggerConfig.getProperty("newuser.categories");
-        WeblogCategory firstCat = null;
         if (cats != null) {
             String[] splitcats = cats.split(",");
             for (String split : splitcats) {
@@ -274,16 +273,8 @@ public class JPAWeblogManagerImpl implements WeblogManager {
                         split,
                         null,
                         null );
-                if (firstCat == null) {
-                    firstCat = c;
-                }
                 this.strategy.store(c);
             }
-        }
-
-        // Use first category as default for Blogger API
-        if (firstCat != null) {
-            newWeblog.setBloggerCategory(firstCat);
         }
 
         this.strategy.store(newWeblog);

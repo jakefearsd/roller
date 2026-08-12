@@ -76,9 +76,6 @@ public class Weblog implements Serializable {
     private String  analyticsShareUrl = null;
     private String  newsletterListUuid = null;
 
-    // Associated objects
-    private WeblogCategory bloggerCategory = null;
-
     private transient Map<String, WeblogEntryPlugin> initializedPlugins = null;
 
     private transient List<WeblogCategory> weblogCategories = new ArrayList<>();
@@ -222,12 +219,6 @@ public class Weblog implements Serializable {
         creator = creatorUserName;
     }
 
-    public WeblogCategory getBloggerCategory() { return bloggerCategory; }
-    
-    public void setBloggerCategory(WeblogCategory bloggerCategory) {
-        this.bloggerCategory = bloggerCategory;
-    }
-    
     public String getEmailAddress() {
         return this.emailAddress;
     }
@@ -295,7 +286,6 @@ public class Weblog implements Serializable {
         this.setHandle(other.getHandle());
         this.setTagline(other.getTagline());
         this.setCreatorUserName(other.getCreatorUserName());
-        this.setBloggerCategory(other.getBloggerCategory());
         this.setEmailAddress(other.getEmailAddress());
         this.setEditorTheme(other.getEditorTheme());
         this.setLocale(other.getLocale());

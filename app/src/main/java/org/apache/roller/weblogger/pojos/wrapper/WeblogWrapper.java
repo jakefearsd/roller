@@ -104,10 +104,6 @@ public final class WeblogWrapper {
         return UserWrapper.wrap(this.pojo.getCreator());
     }
 
-    public WeblogCategoryWrapper getBloggerCategory() {
-        return WeblogCategoryWrapper.wrap(this.pojo.getBloggerCategory(), urlStrategy);
-    }
-    
     public String getAnalyticsCode() {
         // Deliberately NOT sanitized. This field exists to hold a tracking
         // snippet -- a <script> tag -- pasted by a site administrator, and it

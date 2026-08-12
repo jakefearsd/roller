@@ -158,7 +158,7 @@ class WeblogWrapperDelegationTest {
     }
 
     @Test
-    void theCreatorAndBloggerCategoryComeBackWrapped() throws Exception {
+    void theCreatorComesBackWrapped() throws Exception {
         User alice = new User();
         alice.setUserName("alice");
         alice.setScreenName("Alice A");
@@ -166,12 +166,7 @@ class WeblogWrapperDelegationTest {
         when(weblogger.getUserManager()).thenReturn(users);
         when(users.getUserByUserName("alice")).thenReturn(alice);
 
-        WeblogCategory bloggerCategory = new WeblogCategory();
-        bloggerCategory.setName("General");
-        weblog.setBloggerCategory(bloggerCategory);
-
         assertEquals("Alice A", withWeblogger(() -> wrapper.getCreator()).getScreenName());
-        assertEquals("General", wrapper.getBloggerCategory().getName());
     }
 
     @Test

@@ -108,11 +108,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         // remove cat
         this.strategy.remove(cat);
 
-        if(cat.equals(cat.getWeblog().getBloggerCategory())) {
-            cat.getWeblog().setBloggerCategory(null);
-            this.strategy.store(cat.getWeblog());
-        }
-
         // update weblog last modified date.  date updated by saveWebsite()
         roller.getWeblogManager().saveWeblog(cat.getWeblog());
     }
@@ -135,13 +130,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             entry.setWebsite(website);
             this.strategy.store(entry);
         }
-        
-        // Update Blogger API category if applicable
-        WeblogCategory bloggerCategory = srcCat.getWeblog().getBloggerCategory();
-        if (bloggerCategory != null && bloggerCategory.getId().equals(srcCat.getId())) {
-            srcCat.getWeblog().setBloggerCategory(destCat);
-            this.strategy.store(srcCat.getWeblog());
-        }
     }
     
     /**
@@ -152,13 +140,8 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     public void saveWeblogEntry(WeblogEntry entry) throws WebloggerException {
 
         if (entry.getCategory() == null) {
-            // Entry is invalid without category, so use weblog client cat
-            WeblogCategory cat = entry.getWebsite().getBloggerCategory();
-            if (cat == null) {
-                // Still no category, so use first one found
-                cat = entry.getWebsite().getWeblogCategories().iterator().next();
-            }
-            entry.setCategory(cat);
+            // Entry is invalid without category, so use the first one found
+            entry.setCategory(entry.getWebsite().getWeblogCategories().iterator().next());
         }
 
         // Entry is invalid without local. if missing use weblog default
@@ -680,12 +663,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     @Override
     public boolean isWeblogCategoryInUse(WeblogCategory cat)
     throws WebloggerException {
-        // A weblog can legitimately have no blogger category: removeWeblogCategory
-        // nulls it when the category it pointed at is deleted. Dereferencing it
-        // threw for every category on such a weblog.
-        if (cat.equals(cat.getWeblog().getBloggerCategory())) {
-            return true;
-        }
         TypedQuery<WeblogEntry> q = strategy.getNamedQuery("WeblogEntry.getByCategory", WeblogEntry.class);
         q.setParameter(1, cat);
         int entryCount = q.getResultList().size();

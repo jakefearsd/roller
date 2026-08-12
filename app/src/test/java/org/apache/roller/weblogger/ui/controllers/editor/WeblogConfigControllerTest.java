@@ -19,12 +19,10 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.Weblog;
-import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
@@ -34,10 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link WeblogConfigController} and {@link WeblogConfigBean}.
@@ -60,8 +56,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         bean = new WeblogConfigBean();
         model = newModel();
 
-        when(weblogger.getWeblogEntryManager().getWeblogCategories(weblog))
-                .thenReturn(Collections.emptyList());
         // The display-count cap is a runtime property; unstubbed it reads as -1,
         // which would reject every possible value.
         givenRuntimeProperty("site.pages.maxEntries", "30");
@@ -106,47 +100,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogManager()).saveWeblog(weblog);
         assertTrue(messages(model).contains("websiteSettings.savedChanges"),
                 "Expected a save confirmation, got: " + messages(model));
-    }
-
-    /**
-     * A weblog with no blogger category must still be savable.
-     *
-     * <p>{@code removeWeblogCategory} nulls a weblog's blogger category when
-     * that category is deleted, so this is a state the product creates for
-     * itself. The save handler then dereferenced it unconditionally and threw,
-     * and the catch turned that into "Error updating configuration" -- for
-     * every save, forever, with nothing in the UI to put it right. A browser
-     * test that merely toggled a checkbox on the settings page is what found
-     * it.
-     */
-    @Test
-    void savingAWeblogThatHasNoBloggerCategoryStillWorks() throws Exception {
-        weblog.setBloggerCategory(null);
-        WeblogCategory chosen = category("cat-1", "General");
-        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(chosen);
-        bean.setBloggerCategoryId("cat-1");
-        bean.setName("Renamed Blog");
-
-        controller.save(request, model, bean);
-
-        assertEquals(chosen, weblog.getBloggerCategory(),
-                "the posted category must be applied rather than throwing");
-        assertEquals("Renamed Blog", weblog.getName());
-        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
-        assertTrue(messages(model).contains("websiteSettings.savedChanges"),
-                "Expected a save confirmation, got: " + messages(model));
-    }
-
-    @Test
-    void savingLeavesTheBloggerCategoryAloneWhenItAlreadyMatches() throws Exception {
-        WeblogCategory existing = category("cat-1", "General");
-        weblog.setBloggerCategory(existing);
-        bean.setBloggerCategoryId("cat-1");
-
-        controller.save(request, model, bean);
-
-        assertEquals(existing, weblog.getBloggerCategory());
-        verify(weblogger.getWeblogEntryManager(), never()).getWeblogCategory(anyString());
     }
 
     @Test
@@ -201,31 +154,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         controller.save(request, model, bean);
 
         assertNull(weblog.getAnalyticsCode());
-    }
-
-    @Test
-    void changingTheBloggerApiCategoryLooksUpTheNewOne() throws Exception {
-        WeblogCategory current = category("cat-1", "Travel");
-        WeblogCategory replacement = category("cat-2", "Food");
-        weblog.setBloggerCategory(current);
-        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-2")).thenReturn(replacement);
-        bean.setBloggerCategoryId("cat-2");
-
-        controller.save(request, model, bean);
-
-        assertEquals(replacement, weblog.getBloggerCategory());
-    }
-
-    @Test
-    void leavingTheBloggerApiCategoryUnchangedDoesNotReLookItUp() throws Exception {
-        WeblogCategory current = category("cat-1", "Travel");
-        weblog.setBloggerCategory(current);
-        bean.setBloggerCategoryId("cat-1");
-
-        controller.save(request, model, bean);
-
-        assertEquals(current, weblog.getBloggerCategory());
-        verify(weblogger.getWeblogEntryManager(), never()).getWeblogCategory(any());
     }
 
     @Test
@@ -290,22 +218,4 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         assertNull(target.getHandle(), "copyTo must never write the handle");
     }
 
-    @Test
-    void beanCopyFromLeavesTheBloggerCategoryUnsetWhenTheWeblogHasNone() {
-        Weblog source = new Weblog();
-        source.setBloggerCategory(null);
-
-        WeblogConfigBean copy = new WeblogConfigBean();
-        copy.copyFrom(source);
-
-        assertNull(copy.getBloggerCategoryId());
-    }
-
-    private WeblogCategory category(String id, String name) {
-        WeblogCategory category = new WeblogCategory();
-        category.setId(id);
-        category.setName(name);
-        category.setWeblog(weblog);
-        return category;
-    }
 }

@@ -175,8 +175,6 @@ class WeblogLogicTest {
         // setData() refreshes a detached weblog from a form bean. A field it
         // forgets is a setting the administrator's edit silently discards, so
         // every one is given a value nothing else in this object has.
-        WeblogCategory bloggerCategory = new WeblogCategory();
-        bloggerCategory.setName("General");
         WeblogCategory listed = new WeblogCategory();
         listed.setName("Travel");
 
@@ -186,7 +184,6 @@ class WeblogLogicTest {
         source.setName("Source Blog");
         source.setTagline("A tagline");
         source.setCreatorUserName("bob");
-        source.setBloggerCategory(bloggerCategory);
         source.setEmailAddress("owner@example.com");
         source.setEditorTheme("journal");
         source.setLocale("fr_FR");
@@ -205,7 +202,6 @@ class WeblogLogicTest {
         assertEquals("Source Blog", weblog.getName());
         assertEquals("A tagline", weblog.getTagline());
         assertEquals("bob", weblog.getCreatorUserName());
-        assertSame(bloggerCategory, weblog.getBloggerCategory());
         assertEquals("owner@example.com", weblog.getEmailAddress());
         assertEquals("journal", weblog.getEditorTheme());
         assertEquals("fr_FR", weblog.getLocale());
