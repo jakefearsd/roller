@@ -113,9 +113,10 @@ class MenuHelperTest {
 
         assertEquals(List.of("tabbedmenu.admin"), tabKeys(menu),
                 "A server administrator must see the administration tab.");
-        assertEquals(List.of("globalConfig", "userAdmin"),
+        assertEquals(List.of("globalConfig", "userAdmin", "maintenance"),
                 itemActions(menu.getTabs().get(0)),
-                "A server administrator must see every administration screen.");
+                "A server administrator must see every administration screen, including "
+                        + "Maintenance now that it has moved off the blog-author tabs.");
     }
 
     @Test
@@ -164,9 +165,10 @@ class MenuHelperTest {
                         "mediaFileView"),
                 itemActions(menu.getTabs().get(0)),
                 "A weblog administrator should see every content screen.");
-        assertEquals(List.of("weblogConfig", "members", "maintenance"),
+        assertEquals(List.of("weblogConfig", "members"),
                 itemActions(menu.getTabs().get(2)),
-                "A weblog administrator should see every settings screen.");
+                "A weblog administrator should see every settings screen. Maintenance is no "
+                        + "longer one of them -- it moved to Global Admin.");
     }
 
     /**
@@ -242,7 +244,7 @@ class MenuHelperTest {
 
         Menu menu = build("editor", MenuHelper.getParsedMenu("editor"), null);
 
-        assertEquals(List.of("weblogConfig", "maintenance"),
+        assertEquals(List.of("weblogConfig"),
                 itemActions(tabNamed(menu, "tabbedmenu.website")),
                 "With group blogging switched off the Members screen must go, and the rest of "
                         + "the settings tab must stay.");

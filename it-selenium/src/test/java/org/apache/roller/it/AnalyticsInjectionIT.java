@@ -125,13 +125,21 @@ class AnalyticsInjectionIT extends RollerIT {
      * (see the Wave C design doc), so a stray "Reset" control left over from
      * before that deletion would offer an operation the backing feature no
      * longer has.
+     *
+     * <p>Maintenance moved off the blog-author tabs and into Global Admin
+     * (W2 Task 7): the page is reached at {@code /roller-ui/admin/
+     * maintenance.rol} with no {@code weblog=} parameter, and the weblog to
+     * operate on is chosen from a {@code <select>} on the page instead. This
+     * still needs a weblog to exist so the picker has an option to select
+     * (and so the page is not just proving an empty dropdown), even though
+     * the test never submits the form.
      */
     @Test
     void maintenancePageKeepsFlushCacheAndHasNoResetButton() {
         loginAsAdmin();
-        String handle = createWeblog();
+        createWeblog();
 
-        openPath("/roller-ui/authoring/maintenance.rol?weblog=" + handle);
+        openPath("/roller-ui/admin/maintenance.rol");
         $("button[formaction$='maintenance!flushCache.rol']").should(exist);
         $$("button").findBy(text("Reset")).shouldNot(exist);
         assertFalse($("body").getText().toLowerCase().contains("reset hit"),

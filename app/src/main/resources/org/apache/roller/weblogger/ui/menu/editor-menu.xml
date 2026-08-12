@@ -98,10 +98,6 @@ Each menu or menu item is governed by four attributes:
         <menu-item action="members"
                    name="tabbedmenu.website.members"
                    enabledProperty="groupblogging.enabled"/>
-        
-        <!-- globalPerms="login" weblogPerms="admin" -->
-        <menu-item action="maintenance"
-                   name="tabbedmenu.website.maintenance" />
     </menu>
     
 </menu-bar>

@@ -19,6 +19,10 @@ See comments in editor-menu.xml for info about attributes.
                    name="tabbedmenu.admin.userAdmin"
                    subactions="createUser,modifyUser" />
 
+        <!-- globalPerms="admin" -->
+        <menu-item action="maintenance"
+                   name="tabbedmenu.admin.maintenance" />
+
     </menu>
 
 </menu-bar>

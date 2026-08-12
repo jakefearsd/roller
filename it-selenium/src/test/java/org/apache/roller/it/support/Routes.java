@@ -194,6 +194,19 @@ public final class Routes {
             new Route("/roller-ui/admin/userAdmin.rol", Role.ADMIN, "",
                     "form[action$='/roller-ui/admin/userAdmin!edit.rol']"),
 
+            // Maintenance moved off the blog-author tabs and into Global
+            // Admin: the three actions (flush cache, rebuild search index,
+            // regenerate media renditions) are operator work, not authoring
+            // work. MaintenanceController.isWeblogRequired() is false -- the
+            // target weblog is chosen from a <select> on the page instead of
+            // the weblog= action-context parameter -- so this reaches the
+            // page with no parameters at all, like globalConfig.rol/
+            // userAdmin.rol above. Maintenance.jsp's outer form posts back to
+            // maintenance.rol itself; the individual buttons override it with
+            // formaction.
+            new Route("/roller-ui/admin/maintenance.rol", Role.ADMIN, "",
+                    "form[action$='/roller-ui/admin/maintenance.rol']"),
+
             // UserEdit.jsp posts to a runtime-chosen ${saveAction}, so the form
             // action is not a stable selector; the username input is.
             // Anchored on the username input by NAME. It used to anchor on
@@ -236,11 +249,6 @@ public final class Routes {
             new Route("/roller-ui/authoring/entries.rol", Role.EDITOR, WEBLOG, "#delete-entry-modal"),
 
             new Route("/roller-ui/authoring/entryAdd.rol", Role.EDITOR, WEBLOG, "#entry"),
-
-            // Maintenance.jsp's outer form posts back to maintenance.rol itself;
-            // the individual buttons override it with formaction.
-            new Route("/roller-ui/authoring/maintenance.rol", Role.EDITOR, WEBLOG,
-                    "form[action$='/roller-ui/authoring/maintenance.rol']"),
 
             new Route("/roller-ui/authoring/mediaFileAdd.rol", Role.EDITOR, WEBLOG,
                     "form[action$='/roller-ui/authoring/mediaFileAdd!save.rol']"),

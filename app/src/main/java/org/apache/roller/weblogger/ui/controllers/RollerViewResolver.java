@@ -262,6 +262,9 @@ public class RollerViewResolver implements ViewResolver, Ordered {
         addExtendedDefinition(".UserEdit", ".tiles-tabbedpage",
                 Map.of("content", "/WEB-INF/jsps/admin/UserEdit.jsp"));
 
+        addExtendedDefinition(".Maintenance", ".tiles-tabbedpage",
+                Map.of("content", "/WEB-INF/jsps/admin/Maintenance.jsp"));
+
         // ---- weblog editor pages ----
 
         addExtendedDefinition(".MediaFileAdd", ".tiles-tabbedpage",
@@ -415,9 +418,6 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "content", "/WEB-INF/jsps/editor/Members.jsp",
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
-
-        addExtendedDefinition(".Maintenance", ".tiles-tabbedpage",
-                Map.of("content", "/WEB-INF/jsps/editor/Maintenance.jsp"));
     }
 
     // ---------------------------------------------------------- helper
