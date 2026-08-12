@@ -46,6 +46,12 @@ import static org.mockito.Mockito.when;
  * revoke the last admin, leaving a blog nobody can administer. The tests
  * therefore assert that no grant or revoke reaches the UserManager when a
  * guard trips, not merely that an error message appeared.
+ *
+ * <p>{@code grant()} is the other half of the screen: it hands an existing
+ * account access to the weblog immediately, with no invitation or acceptance
+ * step. It can only ever add an action, so it never has to consult the
+ * last-admin guard above — there is nothing here for it to be consistent
+ * with.
  */
 class MembersControllerTest extends EditorControllerTestSupport {
 
@@ -58,7 +64,7 @@ class MembersControllerTest extends EditorControllerTestSupport {
         controller = prepare(new MembersController());
         model = newModel();
         storedPermissions = new ArrayList<>();
-        when(weblogger.getUserManager().getWeblogPermissionsIncludingPending(weblog))
+        when(weblogger.getUserManager().getWeblogPermissions(weblog))
                 .thenReturn(storedPermissions);
         // WeblogPermission stores only a handle and a username and re-resolves
         // both through the managers, so those lookups have to work for the
@@ -68,10 +74,9 @@ class MembersControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void theListPageShowsEveryMemberIncludingPendingInvitations() throws Exception {
-        // Pending invitees have to appear or an admin cannot rescind an invite.
-        givenMember(user, WeblogPermission.ADMIN, false);
-        givenMember(otherUser("bob"), WeblogPermission.POST, true);
+    void theListPageShowsEveryMember() throws Exception {
+        givenMember(user, WeblogPermission.ADMIN);
+        givenMember(otherUser("bob"), WeblogPermission.POST);
 
         String view = controller.execute(request, model);
 
@@ -81,7 +86,7 @@ class MembersControllerTest extends EditorControllerTestSupport {
 
     @Test
     void theListPageSurvivesAPermissionLookupFailure() throws Exception {
-        when(weblogger.getUserManager().getWeblogPermissionsIncludingPending(weblog))
+        when(weblogger.getUserManager().getWeblogPermissions(weblog))
                 .thenThrow(new WebloggerException("database down"));
 
         String view = controller.execute(request, model);
@@ -93,9 +98,9 @@ class MembersControllerTest extends EditorControllerTestSupport {
 
     @Test
     void changingAMembersPermissionRevokesTheOldOneAndGrantsTheNew() throws Exception {
-        givenMember(user, WeblogPermission.ADMIN, false);
+        givenMember(user, WeblogPermission.ADMIN);
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.EDIT_DRAFT, false);
+        givenMember(bob, WeblogPermission.EDIT_DRAFT);
 
         submit(user, WeblogPermission.ADMIN);
         submit(bob, WeblogPermission.POST);
@@ -115,9 +120,9 @@ class MembersControllerTest extends EditorControllerTestSupport {
 
     @Test
     void selectingMinusOneRemovesTheMemberWithoutGrantingAnythingBack() throws Exception {
-        givenMember(user, WeblogPermission.ADMIN, false);
+        givenMember(user, WeblogPermission.ADMIN);
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.POST, false);
+        givenMember(bob, WeblogPermission.POST);
 
         submit(user, WeblogPermission.ADMIN);
         submit(bob, "-1");
@@ -135,9 +140,9 @@ class MembersControllerTest extends EditorControllerTestSupport {
     @Test
     void anAdminCannotDemoteThemselves() throws Exception {
         // Self-demotion is how an admin accidentally locks themselves out.
-        givenMember(user, WeblogPermission.ADMIN, false);
+        givenMember(user, WeblogPermission.ADMIN);
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.ADMIN, false);
+        givenMember(bob, WeblogPermission.ADMIN);
 
         submit(user, WeblogPermission.POST);
         submit(bob, WeblogPermission.ADMIN);
@@ -154,11 +159,11 @@ class MembersControllerTest extends EditorControllerTestSupport {
     void aSelfModificationAttemptBlocksEveryOtherChangeInTheSameSubmission() throws Exception {
         // The guard sets a single error flag for the whole form, so a rejected
         // self-demotion must not let an unrelated change through alongside it.
-        givenMember(user, WeblogPermission.ADMIN, false);
+        givenMember(user, WeblogPermission.ADMIN);
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.ADMIN, false);
+        givenMember(bob, WeblogPermission.ADMIN);
         User carol = otherUser("carol");
-        givenMember(carol, WeblogPermission.EDIT_DRAFT, false);
+        givenMember(carol, WeblogPermission.EDIT_DRAFT);
 
         submit(user, WeblogPermission.EDIT_DRAFT);
         submit(bob, WeblogPermission.ADMIN);
@@ -174,7 +179,7 @@ class MembersControllerTest extends EditorControllerTestSupport {
     void theLastAdministratorCannotBeRemoved() throws Exception {
         // Leaves a weblog that nobody can administer.
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.ADMIN, false);
+        givenMember(bob, WeblogPermission.ADMIN);
 
         submit(bob, "-1");
 
@@ -188,7 +193,7 @@ class MembersControllerTest extends EditorControllerTestSupport {
     @Test
     void demotingTheOnlyAdministratorIsAlsoRefused() throws Exception {
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.ADMIN, false);
+        givenMember(bob, WeblogPermission.ADMIN);
 
         submit(bob, WeblogPermission.POST);
 
@@ -200,27 +205,12 @@ class MembersControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void aPendingAdminInviteDoesNotCountTowardsTheAdminRequirement() throws Exception {
-        // An invitation that has not been accepted grants nobody access yet, so
-        // counting it would allow the last real admin to be removed.
-        User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.ADMIN, true);
-
-        submit(bob, WeblogPermission.ADMIN);
-
-        controller.save(request, model);
-
-        assertTrue(errors(model).contains("memberPermissions.oneAdminRequired"),
-                "A pending invite must not satisfy the one-admin rule: " + errors(model));
-    }
-
-    @Test
     void aMemberWhosePermissionIsUnchangedIsLeftAlone() throws Exception {
         // Revoking and re-granting an identical permission would churn rows and
         // inflate the "changed" count the admin is shown.
-        givenMember(user, WeblogPermission.ADMIN, false);
+        givenMember(user, WeblogPermission.ADMIN);
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.POST, false);
+        givenMember(bob, WeblogPermission.POST);
 
         submit(user, WeblogPermission.ADMIN);
         submit(bob, WeblogPermission.POST);
@@ -237,9 +227,9 @@ class MembersControllerTest extends EditorControllerTestSupport {
     void aMemberWithNoFieldInTheSubmissionIsUntouched() throws Exception {
         // The form only posts rows the browser rendered; an absent row means
         // "no opinion", not "remove".
-        givenMember(user, WeblogPermission.ADMIN, false);
+        givenMember(user, WeblogPermission.ADMIN);
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.POST, false);
+        givenMember(bob, WeblogPermission.POST);
 
         submit(user, WeblogPermission.ADMIN);
         // bob deliberately not submitted
@@ -254,16 +244,16 @@ class MembersControllerTest extends EditorControllerTestSupport {
     void theSavedPageIsRepopulatedFromTheDatabaseRatherThanTheSubmission() throws Exception {
         // The list has to be re-read after the writes, or the page would redraw
         // from the pre-change snapshot and appear not to have saved.
-        givenMember(user, WeblogPermission.ADMIN, false);
+        givenMember(user, WeblogPermission.ADMIN);
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.POST, false);
+        givenMember(bob, WeblogPermission.POST);
         submit(user, WeblogPermission.ADMIN);
         submit(bob, "-1");
 
         controller.save(request, model);
 
         verify(weblogger.getUserManager(), org.mockito.Mockito.times(2))
-                .getWeblogPermissionsIncludingPending(weblog);
+                .getWeblogPermissions(weblog);
         assertEquals(storedPermissions, model.getAttribute("weblogPermissions"));
     }
 
@@ -272,13 +262,13 @@ class MembersControllerTest extends EditorControllerTestSupport {
         registerMessage("memberPermissions.membersRemoved", "removed {0}");
         registerMessage("memberPermissions.membersChanged", "changed {0}");
 
-        givenMember(user, WeblogPermission.ADMIN, false);
+        givenMember(user, WeblogPermission.ADMIN);
         User bob = otherUser("bob");
         User carol = otherUser("carol");
         User dave = otherUser("dave");
-        givenMember(bob, WeblogPermission.POST, false);
-        givenMember(carol, WeblogPermission.POST, false);
-        givenMember(dave, WeblogPermission.POST, false);
+        givenMember(bob, WeblogPermission.POST);
+        givenMember(carol, WeblogPermission.POST);
+        givenMember(dave, WeblogPermission.POST);
 
         submit(user, WeblogPermission.ADMIN);
         submit(bob, "-1");
@@ -295,9 +285,9 @@ class MembersControllerTest extends EditorControllerTestSupport {
 
     @Test
     void aFailureWhileSavingIsReportedRatherThanSwallowed() throws Exception {
-        givenMember(user, WeblogPermission.ADMIN, false);
+        givenMember(user, WeblogPermission.ADMIN);
         User bob = otherUser("bob");
-        givenMember(bob, WeblogPermission.POST, false);
+        givenMember(bob, WeblogPermission.POST);
         submit(user, WeblogPermission.ADMIN);
         submit(bob, "-1");
         org.mockito.Mockito.doThrow(new WebloggerException("database down"))
@@ -308,6 +298,73 @@ class MembersControllerTest extends EditorControllerTestSupport {
         assertEquals(".Members", view);
         assertTrue(errors(model).contains("memberPermissions.saveError"),
                 "A failed permission change must be reported: " + errors(model));
+    }
+
+    // --- grant() : adding a brand-new member by username, no ceremony ---
+
+    @Test
+    void grantingAnExistingUsernameAddsThemImmediately() throws Exception {
+        User bob = otherUser("bob");
+
+        String view = controller.grant(request, model, "bob", WeblogPermission.POST);
+
+        assertEquals(".Members", view);
+        verify(weblogger.getUserManager())
+                .grantWeblogPermission(weblog, bob, List.of(WeblogPermission.POST));
+        assertTrue(messages(model).contains("memberPermissions.membersChanged"),
+                "Granting access must be confirmed: " + messages(model));
+    }
+
+    @Test
+    void grantingAnUnknownUsernameIsAFieldErrorNotAnException() throws Exception {
+        // getUserByUserName legitimately returns null for both an unknown and a
+        // disabled username -- MembersController never has to tell them apart.
+        when(weblogger.getUserManager().getUserByUserName("ghost")).thenReturn(null);
+
+        String view = controller.grant(request, model, "ghost", WeblogPermission.POST);
+
+        assertEquals(".Members", view);
+        assertTrue(errors(model).contains("inviteMember.error.userNotFound"),
+                "Expected the not-found error: " + errors(model));
+        verify(weblogger.getUserManager(), never()).grantWeblogPermission(any(), any(), any());
+    }
+
+    @Test
+    void grantingWithABlankUsernameIsAFieldErrorAndNeverLooksUpTheEmptyString() throws Exception {
+        String view = controller.grant(request, model, "  ", WeblogPermission.POST);
+
+        assertEquals(".Members", view);
+        assertTrue(errors(model).contains("inviteMember.error.userNotFound"));
+        verify(weblogger.getUserManager(), never()).getUserByUserName(any());
+        verify(weblogger.getUserManager(), never()).grantWeblogPermission(any(), any(), any());
+    }
+
+    @Test
+    void grantingToAnAlreadyPresentMemberUpdatesRatherThanDuplicates() throws Exception {
+        // grantWeblogPermission itself merges into an existing row when one is
+        // found (JPAUserManagerImpl) -- this pins that MembersController relies
+        // on that behaviour rather than working around it.
+        User bob = otherUser("bob");
+        givenMember(bob, WeblogPermission.POST);
+
+        String view = controller.grant(request, model, "bob", WeblogPermission.ADMIN);
+
+        assertEquals(".Members", view);
+        verify(weblogger.getUserManager())
+                .grantWeblogPermission(weblog, bob, List.of(WeblogPermission.ADMIN));
+    }
+
+    @Test
+    void aFailureWhileGrantingIsReportedRatherThanSwallowed() throws Exception {
+        User bob = otherUser("bob");
+        org.mockito.Mockito.doThrow(new WebloggerException("database down"))
+                .when(weblogger.getUserManager()).grantWeblogPermission(any(), any(), any());
+
+        String view = controller.grant(request, model, "bob", WeblogPermission.POST);
+
+        assertEquals(".Members", view);
+        assertTrue(errors(model).contains("memberPermissions.saveError"),
+                "A failed grant must be reported: " + errors(model));
     }
 
     // --- helpers ---
@@ -332,9 +389,8 @@ class MembersControllerTest extends EditorControllerTestSupport {
         }
     }
 
-    private void givenMember(User member, String action, boolean pending) {
+    private void givenMember(User member, String action) {
         WeblogPermission permission = new WeblogPermission(weblog, member, List.of(action));
-        permission.setPending(pending);
         storedPermissions.add(permission);
     }
 

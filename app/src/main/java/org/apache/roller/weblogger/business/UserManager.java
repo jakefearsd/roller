@@ -200,38 +200,7 @@ public interface UserManager {
     void grantWeblogPermission(Weblog weblog, User user, List<String> actions)
             throws WebloggerException;
 
-    
-    /**
-     * Grant to user specific actions in a weblog, but pending confirmation.
-     * (will create new permission record if none already exists)
-     * @param weblog  Weblog to grant permissions in
-     * @param user    User to grant permissions to
-     * @param actions Actions to be granted
-     */
-    void grantWeblogPermissionPending(Weblog weblog, User user, List<String> actions)
-            throws WebloggerException;
 
-    
-    /**
-     * Confirm user's permission within specified weblog or throw exception if no pending permission exists.
-     * (changes state of permission record to pending = true)
-     * @param weblog  Weblog to grant permissions in
-     * @param user    User to grant permissions to
-     */
-    void confirmWeblogPermission(Weblog weblog, User user)
-            throws WebloggerException;
-
-    
-    /**
-     * Decline permissions within specified weblog or throw exception if no pending permission exists.
-     * (removes permission record)
-     * @param weblog  Weblog to grant permissions in
-     * @param user    User to grant permissions to
-     */
-    void declineWeblogPermission(Weblog weblog, User user)
-            throws WebloggerException;
-
-    
     /**
      * Revoke from user specific actions in a weblog.
      * (if resulting permission has empty removes permission record)
@@ -248,30 +217,11 @@ public interface UserManager {
      */
     List<WeblogPermission> getWeblogPermissions(User user)
             throws WebloggerException;
-    
-    
-    /**
-     * Get all of user's pending weblog permissions.
-     */
-    List<WeblogPermission> getPendingWeblogPermissions(User user)
-            throws WebloggerException;
 
     /**
-     * Get all active permissions associated with a weblog.
+     * Get all permissions associated with a weblog.
      */
     List<WeblogPermission> getWeblogPermissions(Weblog weblog)
-            throws WebloggerException;
-
-    /**
-     * Get all pending permissions associated with a weblog.
-     */
-    List<WeblogPermission> getPendingWeblogPermissions(Weblog weblog)
-            throws WebloggerException;
-
-    /**
-     * Get all permissions (pending or actual) for a weblog.
-     */
-    List<WeblogPermission> getWeblogPermissionsIncludingPending(Weblog weblog)
             throws WebloggerException;
 
 
@@ -279,12 +229,6 @@ public interface UserManager {
      * Get user's permission within a weblog or null if none.
      */
     WeblogPermission getWeblogPermission(Weblog weblog, User user)
-            throws WebloggerException;
-
-    /**
-     * Get user's permission (pending or actual) for a weblog
-     */
-    WeblogPermission getWeblogPermissionIncludingPending(Weblog weblog, User user)
             throws WebloggerException;
 
 

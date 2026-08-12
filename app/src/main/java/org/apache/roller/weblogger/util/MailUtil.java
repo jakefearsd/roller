@@ -38,10 +38,8 @@ import org.apache.roller.weblogger.business.MailProvider;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
-import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
-import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 
 
@@ -127,62 +125,6 @@ public class MailUtil {
                     from, to, cc, bcc, subject, content);
         } catch (MessagingException e) {
             log.error("ERROR: Problem sending pending entry notification email.");
-        }
-    }
-    
-    
-    /**
-     * Send a weblog invitation email.
-     */
-    public static void sendWeblogInvitation(Weblog website, User user)
-            throws WebloggerException {
-        
-        Session mailSession = WebloggerStartup.getMailProvider() != null
-                ? WebloggerStartup.getMailProvider().getSession() : null;
-
-        if(mailSession == null) {
-            throw new WebloggerException("ERROR: Notification email(s) not sent, "
-                    + "Roller's mail session not properly configured");
-        }
-        
-        try {
-            String from = website.getEmailAddress();
-            String cc[] = new String[] {from};
-            String bcc[] = new String[0];
-            String to[] = new String[] {user.getEmailAddress()};
-            String subject;
-            String content;
-            
-            // Figure URL to entry edit page
-            String rootURL = WebloggerRuntimeConfig.getAbsoluteContextURL();
-            String url = rootURL + "/roller-ui/menu.rol";
-            
-            ResourceBundle resources = ResourceBundle.getBundle(
-                    "ApplicationResources",
-                    website.getLocaleInstance());
-            StringBuilder sb = new StringBuilder();
-            sb.append(MessageFormat.format(
-                    resources.getString("inviteMember.notificationSubject"),
-                    new Object[] {
-                website.getName(),
-                website.getHandle()})
-                );
-            subject = sb.toString();
-            sb = new StringBuilder();
-            sb.append(MessageFormat.format(
-                    resources.getString("inviteMember.notificationContent"),
-                    new Object[] {
-                website.getName(),
-                website.getHandle(),
-                user.getUserName(),
-                url
-            }));
-            content = sb.toString();
-            MailUtil.sendTextMessage(
-                    from, to, cc, bcc, subject, content);
-        } catch (MessagingException e) {
-            throw new WebloggerException("ERROR: Notification email(s) not sent, "
-                    + "due to Roller configuration or mail server problem.", e);
         }
     }
     

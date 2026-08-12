@@ -95,9 +95,8 @@ Each menu or menu item is governed by four attributes:
                    subactions="weblogRemove" />
         
         <!-- globalPerms="login" weblogPerms="admin" -->
-        <menu-item action="members" 
-                   name="tabbedmenu.website.members" 
-                   subactions="invite" 
+        <menu-item action="members"
+                   name="tabbedmenu.website.members"
                    enabledProperty="groupblogging.enabled"/>
         
         <!-- globalPerms="login" weblogPerms="admin" -->

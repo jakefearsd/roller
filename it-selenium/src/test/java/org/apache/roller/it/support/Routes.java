@@ -221,8 +221,7 @@ public final class Routes {
      * <p>All of these sit under {@code /roller-ui/authoring/} and inherit
      * {@code BaseController.isWeblogRequired() == true}, so
      * {@code RollerHandlerInterceptor} bounces them to access-denied without the
-     * parameter. {@code memberResign.rol} overrides it to false but its form is
-     * about a specific weblog, so it is passed one anyway.
+     * parameter.
      */
     private static final List<Route> WEBLOG_ONLY = List.of(
 
@@ -252,14 +251,6 @@ public final class Routes {
 
             new Route("/roller-ui/authoring/members.rol", Role.EDITOR, WEBLOG,
                     "form[action$='/roller-ui/authoring/members!save.rol']"),
-
-            // Renders the invite form rather than redirecting to members.rol
-            // because groupblogging.enabled defaults to true.
-            new Route("/roller-ui/authoring/invite.rol", Role.EDITOR, WEBLOG,
-                    "form[action$='/roller-ui/authoring/invite!save.rol']"),
-
-            new Route("/roller-ui/authoring/memberResign.rol", Role.EDITOR, WEBLOG,
-                    "form[action$='/roller-ui/authoring/memberResign!resign.rol']"),
 
             // Table is empty with no pages seeded, but the remove form around
             // it is emitted unconditionally, same reasoning as entries.rol.
@@ -357,10 +348,6 @@ public final class Routes {
                             + "the admin search form."),
             new SkippedRoute("/roller-ui/admin/modifyUser!firstSave.rol", Role.ADMIN,
                     "Delegates to modifyUser; same missing user id."),
-            new SkippedRoute("/roller-ui/menu!accept.rol", Role.EDITOR,
-                    "Needs inviteId of a pending WeblogPermission; no invitations are seeded."),
-            new SkippedRoute("/roller-ui/menu!decline.rol", Role.EDITOR,
-                    "Needs inviteId of a pending WeblogPermission; no invitations are seeded."),
 
             // --- no page of their own ---
 

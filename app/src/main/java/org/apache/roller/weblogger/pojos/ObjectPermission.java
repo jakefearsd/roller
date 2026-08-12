@@ -33,7 +33,6 @@ public abstract class ObjectPermission extends RollerPermission {
     protected String  userName;
     protected String  objectType;
     protected String  objectId;
-    protected boolean pending = false;
     protected Date    dateCreated = new Date();
     protected String  actions;
     
@@ -93,14 +92,6 @@ public abstract class ObjectPermission extends RollerPermission {
 
     public void setDateCreated(Date dateCreated) {
         this.dateCreated = dateCreated;
-    }
-
-    public boolean isPending() {
-        return pending;
-    }
-
-    public void setPending(boolean pending) {
-        this.pending = pending;
     }
 
 }

@@ -31,7 +31,7 @@
 
                 <%-- Create weblog --%>
 
-                <c:if test="${rc:getBooleanProp('site.allowUserWeblogCreation') && (rc:getBooleanProp('groupblogging.enabled') || (empty existingPermissions && empty pendingPermissions))}">
+                <c:if test="${rc:getBooleanProp('site.allowUserWeblogCreation') && (rc:getBooleanProp('groupblogging.enabled') || empty existingPermissions)}">
                     <h4><span class="bi bi-plus-lg" aria-hidden="true"></span>
                     <a href="<c:url value='/roller-ui/createWeblog.rol'/>"><spring:message code="yourWebsites.createWeblog" /></a></h4>
                     <p><spring:message code="yourWebsites.createWeblog.desc" /></p>

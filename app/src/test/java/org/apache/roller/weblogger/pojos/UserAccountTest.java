@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -149,20 +148,5 @@ class UserAccountTest {
         assertFalse("hunter2".equals(user.getPassword()),
                 "Storing the plain text would put every user's password in the database "
                         + "in the clear");
-    }
-
-    @Test
-    void aFreshObjectPermissionIsNotPending() {
-        // Pending is how an unaccepted invitation is marked. Defaulting to
-        // pending would make every directly granted permission look unaccepted;
-        // there is no "accepted" flag to compensate.
-        WeblogPermission granted = new WeblogPermission();
-
-        assertFalse(granted.isPending(),
-                "A permission created directly is in force, not awaiting acceptance");
-
-        granted.setPending(true);
-        assertTrue(granted.isPending(),
-                "and an invitation must be markable as pending");
     }
 }

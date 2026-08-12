@@ -189,83 +189,59 @@ public class PermissionTest  {
         perms = mgr.getWeblogPermissions(TestUtils.getManagedWebsite(testWeblog));
         assertEquals(1, perms.size());
 
-        List<String> actions = new ArrayList<>();
-        actions.add(WeblogPermission.POST);
-        mgr.grantWeblogPermissionPending(testWeblog, user, actions);
-        TestUtils.endSession(true);
-
-        // get pending permissions for a user
-        perms = mgr.getPendingWeblogPermissions(TestUtils.getManagedUser(testUser));
-        assertEquals(0, perms.size());
-        perms = mgr.getPendingWeblogPermissions(TestUtils.getManagedUser(user));
-        assertEquals(1, perms.size());
-
-        // get pending permissions for a weblog
-        perms = mgr.getPendingWeblogPermissions(TestUtils.getManagedWebsite(testWeblog));
-        assertEquals(1, perms.size());            
-
         // get permissions for a specific user/weblog
         perm = null;
         perm = mgr.getWeblogPermission(
-                TestUtils.getManagedWebsite(testWeblog), 
+                TestUtils.getManagedWebsite(testWeblog),
                 TestUtils.getManagedUser(testUser));
         assertNotNull(perm);
         assertTrue(perm.hasAction(WeblogPermission.ADMIN));
 
-        // pending permissions should not be visible
+        // a user with no permission at all is invisible
         perm = null;
         perm = mgr.getWeblogPermission(
-                TestUtils.getManagedWebsite(testWeblog), 
+                TestUtils.getManagedWebsite(testWeblog),
                 TestUtils.getManagedUser(user));
         assertNull(perm);
-        
-        List<WeblogPermission> pendings = mgr.getPendingWeblogPermissions(user);
 
         // cleanup
-        TestUtils.teardownPermissions(pendings.get(0));
         TestUtils.teardownUser(user.getUserName());
         TestUtils.endSession(true);
-        
+
         log.info("END");
     }
 
 
     /**
-     * Tests weblog invitation process.
+     * Tests granting and revoking weblog membership directly -- no
+     * invitation/acceptance ceremony. See {@code MembersControllerTest} for
+     * the grant-by-username screen that drives this at the manager layer.
      */
     @Test
-    public void testInvitations() throws Exception {
-        
+    public void testGrantAndRevokeMembership() throws Exception {
+
         log.info("BEGIN");
-        
+
         // we need a second user for this test
-        User user = TestUtils.setupUser("testInvitations");
+        User user = TestUtils.setupUser("testGrantAndRevoke");
         TestUtils.endSession(true);
 
         WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
         UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
 
-        // invite user to weblog
+        // grant user access to weblog
         List<String> actions = new ArrayList<>();
         actions.add(WeblogPermission.EDIT_DRAFT);
-        umgr.grantWeblogPermissionPending(testWeblog, user, actions);
-        TestUtils.endSession(true);
-
-        // accept invitation
-        umgr.confirmWeblogPermission(testWeblog, user);
+        umgr.grantWeblogPermission(testWeblog, user, actions);
         TestUtils.endSession(true);
 
         // re-query now that we have changed things
         user = umgr.getUserByUserName(user.getUserName());
         testWeblog = wmgr.getWeblogByHandle(testWeblog.getHandle());
 
-        // assert that invitation list is empty
+        // assert that user is member of weblog
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
         user = TestUtils.getManagedUser(user);
-        assertTrue(umgr.getPendingWeblogPermissions(user).isEmpty());
-        assertTrue(umgr.getPendingWeblogPermissions(testWeblog).isEmpty());
-
-        // assert that user is member of weblog
         assertNotNull(umgr.getWeblogPermission(testWeblog, user));
         List<Weblog> weblogs = wmgr.getUserWeblogs(TestUtils.getManagedUser(user), true);
         assertEquals(1, weblogs.size());
@@ -292,7 +268,7 @@ public class PermissionTest  {
     
     
     /**
-     * Tests weblog invitation process.
+     * Tests permission-based access checks.
      */
     @Test
     public void testPermissionChecks() throws Exception {

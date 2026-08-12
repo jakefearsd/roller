@@ -49,8 +49,6 @@ class ControllerMetadataTest {
                 new EntryEditController().requiredWeblogPermissionActions());
         assertEquals(List.of(WeblogPermission.EDIT_DRAFT),
                 new EntryRemoveController().requiredWeblogPermissionActions());
-        assertEquals(List.of(WeblogPermission.EDIT_DRAFT),
-                new MemberResignController().requiredWeblogPermissionActions());
     }
 
     @Test
@@ -89,8 +87,6 @@ class ControllerMetadataTest {
         assertEquals(List.of(WeblogPermission.ADMIN),
                 new MembersController().requiredWeblogPermissionActions());
         assertEquals(List.of(WeblogPermission.ADMIN),
-                new MembersInviteController().requiredWeblogPermissionActions());
-        assertEquals(List.of(WeblogPermission.ADMIN),
                 new TemplateEditController().requiredWeblogPermissionActions());
         assertEquals(List.of(WeblogPermission.ADMIN),
                 new StylesheetEditController().requiredWeblogPermissionActions());
@@ -122,8 +118,6 @@ class ControllerMetadataTest {
         // The action name is matched against the menu definition to decide
         // which tab is shown as current.
         assertEquals("members", new MembersController().getActionName());
-        assertEquals("invite", new MembersInviteController().getActionName());
-        assertEquals("memberResign", new MemberResignController().getActionName());
         assertEquals("categoryRemove", new CategoryRemoveController().getActionName());
         assertEquals("weblogConfig", new WeblogConfigController().getActionName());
         assertEquals("templateEdit", new TemplateEditController().getActionName());
@@ -136,8 +130,6 @@ class ControllerMetadataTest {
     @Test
     void controllersThatOwnAPageDeclareItsTitleKey() {
         assertEquals("memberPermissions.title", new MembersController().getPageTitle());
-        assertEquals("inviteMember.title", new MembersInviteController().getPageTitle());
-        assertEquals("yourWebsites.resign", new MemberResignController().getPageTitle());
         assertEquals("categoryDeleteOK.title", new CategoryRemoveController().getPageTitle());
         assertEquals("weblogEdit.deleteEntry", new EntryRemoveController().getPageTitle());
         assertEquals("websiteSettings.title", new WeblogConfigController().getPageTitle());
@@ -146,14 +138,6 @@ class ControllerMetadataTest {
         assertEquals("mediaFileAdd.title", new MediaFileAddController().getPageTitle());
         assertEquals("mediaFileView.title", new MediaFileViewController().getPageTitle());
         assertEquals("mediaFile.edit.title", new MediaFileEditController().getPageTitle());
-    }
-
-    @Test
-    void resigningFromAWeblogDoesNotItselfRequireOneToBeSelected() {
-        // The resign form is reached from the "your weblogs" list rather than
-        // from inside a weblog, so demanding an action weblog would make it
-        // unreachable.
-        assertFalse(new MemberResignController().isWeblogRequired());
     }
 
     private static List<BaseController> allControllers() {
@@ -165,9 +149,7 @@ class ControllerMetadataTest {
                 new MediaFileAddController(),
                 new MediaFileEditController(),
                 new MediaFileViewController(),
-                new MemberResignController(),
                 new MembersController(),
-                new MembersInviteController(),
                 new StylesheetEditController(),
                 new TemplateEditController(),
                 new WeblogConfigController());

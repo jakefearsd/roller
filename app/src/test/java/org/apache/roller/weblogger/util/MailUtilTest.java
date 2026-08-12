@@ -23,10 +23,8 @@ import java.util.List;
 import jakarta.mail.Message;
 import jakarta.mail.internet.MimeMessage;
 
-import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.startup.MockMailProvider;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
-import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +32,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -42,9 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Mail is optional to configure and so was easy to leave uncovered, but when
  * it is configured it carries the things a user cannot get any other way: the
- * link in a password reset, who an invitation came from, what a comment
- * notification is about. A mistake here is invisible to every other test in the
- * suite and shows up as an email nobody can act on.
+ * link in a password reset, what a comment notification is about. A mistake
+ * here is invisible to every other test in the suite and shows up as an email
+ * nobody can act on.
  *
  * <p>The provider is installed through {@link MockMailProvider}, which records
  * messages instead of sending them. The session is a real JavaMail one so the
@@ -54,7 +51,6 @@ class MailUtilTest {
 
     private MockMailProvider mail;
     private Weblog weblog;
-    private User invitee;
 
     @BeforeEach
     void setUp() {
@@ -65,11 +61,6 @@ class MailUtilTest {
         weblog.setName("Mail Blog");
         weblog.setEmailAddress("owner@example.invalid");
         weblog.setLocale("en_US");
-
-        invitee = new User();
-        invitee.setUserName("dana");
-        invitee.setScreenName("Dana D");
-        invitee.setEmailAddress("dana@example.invalid");
     }
 
     @AfterEach
@@ -102,22 +93,6 @@ class MailUtilTest {
         try {
             MailUtil.sendTextMessage("from@example.invalid",
                     new String[]{"to@example.invalid"}, null, null, "subject", "body");
-        } finally {
-            mail = MockMailProvider.install();
-        }
-    }
-
-    /**
-     * The invitation is the one message that throws rather than returning
-     * quietly when mail is unconfigured -- the caller has told a user their
-     * invitation was sent, so silently dropping it would be worse than failing.
-     */
-    @Test
-    void anInvitationWithNoProviderFailsLoudlyRatherThanSilently() {
-        MockMailProvider.uninstall();
-        try {
-            assertThrows(WebloggerException.class,
-                    () -> MailUtil.sendWeblogInvitation(weblog, invitee));
         } finally {
             mail = MockMailProvider.install();
         }
@@ -233,44 +208,6 @@ class MailUtilTest {
                 new String[]{"to@example.invalid"}, null, null, "subject", "body");
 
         assertEquals(List.of(), replyToAddresses(mail.onlyMessage()));
-    }
-
-    // ----------------------------------------------------------- invitations
-
-    /**
-     * An invitation goes to the invited user and copies the weblog's own
-     * address, so the owner has a record of who they invited.
-     */
-    @Test
-    void anInvitationIsAddressedToTheInviteeAndCopiesTheWeblog() throws Exception {
-        MailUtil.sendWeblogInvitation(weblog, invitee);
-
-        MimeMessage message = mail.onlyMessage();
-        assertEquals(List.of("dana@example.invalid"),
-                addresses(message, Message.RecipientType.TO));
-        assertEquals(List.of("owner@example.invalid"),
-                addresses(message, Message.RecipientType.CC));
-        assertEquals("owner@example.invalid", message.getFrom()[0].toString());
-    }
-
-    /**
-     * The invitation has to say which weblog it is for and give the recipient
-     * somewhere to go. An invitation naming neither is one a user cannot act
-     * on, which is indistinguishable from not sending it.
-     */
-    @Test
-    void anInvitationNamesTheWeblogAndLinksSomewhereToAcceptIt() throws Exception {
-        MailUtil.sendWeblogInvitation(weblog, invitee);
-
-        String subject = mail.onlyMessage().getSubject();
-        String body = mail.onlyMessage().getContent().toString();
-
-        assertTrue(subject.contains("Mail Blog") || subject.contains("mailblog"),
-                "the subject must identify the weblog: " + subject);
-        assertTrue(body.contains("mailblog") || body.contains("Mail Blog"),
-                "and so must the body: " + body);
-        assertTrue(body.contains("menu.rol"),
-                "the body must point the recipient at somewhere to accept: " + body);
     }
 
     // ---------------------------------------------------------------- helpers

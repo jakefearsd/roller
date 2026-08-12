@@ -101,12 +101,11 @@ class MenuDefinitionTest {
         ParsedTabItem members = item("editor", "tabbedmenu.website", "members");
 
         assertEquals("groupblogging.enabled", members.getEnabledProperty(),
-                "Inviting members must be hidden on single-user installations. Without this "
-                        + "property the invite screen is reachable even when group blogging is "
-                        + "switched off.");
-        assertEquals(Set.of("invite"), members.getSubActions(),
-                "The invite screen has to count as part of the Members item, or the tab stops "
-                        + "looking selected once the user gets there.");
+                "Sharing a weblog with a second account must be hidden on single-user "
+                        + "installations.");
+        assertNull(members.getSubActions(),
+                "The Members item has no subactions of its own now that the invite screen "
+                        + "is gone.");
     }
 
     @Test

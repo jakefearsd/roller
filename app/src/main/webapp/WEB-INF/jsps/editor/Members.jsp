@@ -39,19 +39,53 @@ function save() {
 
 <p><spring:message code="memberPermissions.description"/></p>
 
+<%-- Grants an existing account access to this weblog immediately -- no
+     invitation, no acceptance step. Its own form/CSRF, separate from the
+     table below's. --%>
+<form class="form-stacked mb-4"
+      action="${pageContext.request.contextPath}/roller-ui/authoring/members!grant.rol" method="post">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+    <div class="row mb-3">
+        <label for="grantUserName" class="col-sm-3 col-form-label">
+            <spring:message code="memberPermissions.userName"/>
+        </label>
+        <div class="col-sm-9">
+            <input type="text" class="form-control" name="userName" id="grantUserName"
+                   size="30" maxlength="30"/>
+        </div>
+    </div>
+    <div class="row mb-3">
+        <label for="grantPermission" class="col-sm-3 col-form-label">
+            <spring:message code="yourWebsites.permission"/>
+        </label>
+        <div class="col-sm-9">
+            <select class="form-select" name="permissionString" id="grantPermission">
+                <option value="post" selected>
+                    <spring:message code="memberPermissions.author"/>
+                </option>
+                <option value="admin">
+                    <spring:message code="memberPermissions.administrator"/>
+                </option>
+                <option value="edit_draft">
+                    <spring:message code="memberPermissions.limited"/>
+                </option>
+            </select>
+        </div>
+    </div>
+    <div class="control">
+        <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
+    </div>
+<sec:csrfInput/>
+</form>
+
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-    
-    <%-- Legend and table are gated on there being members to show; the <form>
+
+    <%-- Table is gated on there being members to show; the <form>
          itself stays unconditional because RouteSweepIT identifies this route
          by "form[action$='/roller-ui/authoring/members!save.rol']"
          (Routes.java). --%>
     <c:if test="${not empty weblogPermissions}">
-
-    <div style="text-align: right; padding-bottom: 6px;">
-        <span class="pendingCommentBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <spring:message code="commentManagement.pending"/>&nbsp;
-    </div>
 
     <table class="rollertable table table-striped">
         <tr class="rHeaderTr">
@@ -73,9 +107,6 @@ function save() {
         </tr>
         <c:forEach items="${weblogPermissions}" var="perm" varStatus="rowstatus">
             <c:choose>
-<c:when test="${perm.pending}">
-                <tr class="rollertable_pending">
-            </c:when>
 <c:when test="${rowstatus.index % 2 != 0}">
                 <tr class="rollertable_odd">
             </c:when>
@@ -120,12 +151,6 @@ function save() {
         <div class="empty-state">
             <p class="empty-state-title"><spring:message code="empty.members.title"/></p>
             <p class="empty-state-body"><spring:message code="empty.members.body"/></p>
-            <c:url var="emptyMembersInviteUrl" value="/roller-ui/authoring/invite.rol">
-                <c:param name="weblog" value="${actionWeblog.handle}"/>
-            </c:url>
-            <a href="${emptyMembersInviteUrl}" class="btn btn-primary">
-                <spring:message code="memberPermissions.inviteMember"/>
-            </a>
         </div>
     </c:if>
 

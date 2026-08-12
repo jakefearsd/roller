@@ -25,9 +25,6 @@
             <basic name="actions">
                 <column name="actions"/>
             </basic>
-            <basic name="pending">
-                <column name="pending"/>
-            </basic>
             <basic name="dateCreated">
                 <column name="datecreated"/>
                 <temporal>DATE</temporal>

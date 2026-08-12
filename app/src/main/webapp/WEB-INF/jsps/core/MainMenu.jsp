@@ -24,7 +24,7 @@
      title line, one sentence, one primary action. #createWeblogLink moves onto
      the button rather than being dropped -- nothing in the repo selects on it
      today, but it is the only handle this action has ever had. --%>
-<c:if test="${empty existingPermissions && empty pendingPermissions}">
+<c:if test="${empty existingPermissions}">
     <div class="empty-state">
         <p class="empty-state-title"><spring:message code="empty.weblogs.title" /></p>
         <p class="empty-state-body"><spring:message code="empty.weblogs.body" /></p>
@@ -35,32 +35,8 @@
     </div>
 </c:if>
 
-<%-- PROMPT: You have invitation(s) --%>
-<c:if test="${not empty pendingPermissions}">
-    <p><spring:message code="yourWebsites.invitationsPrompt" /></p>
-
-    <c:forEach items="${pendingPermissions}" var="invite">
-        <spring:message code="yourWebsites.youAreInvited" arguments="${invite.weblog.handle}" />
-
-        <c:url value="/roller-ui/menu!accept.rol" var="acceptInvite">
-            <c:param name="inviteId" value="${invite.weblog.id}" />
-        </c:url>
-        <a href='${acceptInvite}'>
-            <spring:message code="yourWebsites.accept" />
-        </a>
-        &nbsp;|&nbsp;
-        <c:url value="/roller-ui/menu!decline.rol" var="declineInvite">
-            <c:param name="inviteId" value="${invite.weblog.id}" />
-        </c:url>
-        <a href='${declineInvite}'>
-            <spring:message code="yourWebsites.decline" />
-        </a><br />
-    </c:forEach>
-    <br />
-</c:if>
-
 <%-- PROMPT: default ... select a weblog to edit --%>
-<c:if test="${not empty existingPermissions && empty pendingPermissions}">
+<c:if test="${not empty existingPermissions}">
     <p class="subtitle"><spring:message code="yourWebsites.prompt.hasBlog" /></p>
 </c:if>
 
@@ -90,8 +66,9 @@
                  WeblogPermission action constants (ADMIN/POST/EDIT_DRAFT) in
                  upper case. inviteMember.administrator/.author/.limited
                  already exist (and are already translated in every locale
-                 bundle) because InviteMember.jsp uses them for the same
-                 three actions; reused here rather than adding new keys. --%>
+                 bundle) from the deleted invite screen; reused here rather
+                 than adding new keys. This page is their only remaining
+                 consumer -- do not delete them as orphans. --%>
             <c:set var="permLabels" value="false"/>
             <p>You have
             <c:if test='${perms.hasAction("admin")}'><spring:message code="inviteMember.administrator"/><c:set var="permLabels" value="true"/></c:if>
@@ -155,21 +132,6 @@
                         <span class="bi bi-gear" aria-hidden="true"></span>
                         <spring:message code="yourWebsites.manage"/>
                     </a>
-
-                </c:if>
-
-                <%-- resign from blog (last-admin check enforced server-side) --%>
-                <c:if test='${perms.hasAction("admin")}'>
-
-                    <button type="button" class="btn btn-secondary">
-                        <span class="bi bi-trash" aria-hidden="true"></span>
-                        <c:url value="/roller-ui/authoring/memberResign.rol" var="resignWeblog">
-                            <c:param name="weblog" value="${perms.weblog.handle}"/>
-                        </c:url>
-                        <a href='${resignWeblog}'>
-                            <spring:message code='yourWebsites.resign'/>
-                        </a>
-                    </button>
 
                 </c:if>
 

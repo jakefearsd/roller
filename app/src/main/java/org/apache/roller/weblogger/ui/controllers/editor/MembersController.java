@@ -23,6 +23,7 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -36,9 +37,14 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * Allows weblog admin to list/modify member permissions.
+ * Allows weblog admin to list/modify member permissions, and to grant a
+ * fresh permission to an existing account by username. Granting is
+ * immediate -- no invitation, no acceptance step -- via the same
+ * {@link UserManager#grantWeblogPermission} the table below uses to change
+ * an existing member's role.
  */
 @Controller
 @RequestMapping("/roller-ui/authoring")
@@ -79,7 +85,7 @@ public class MembersController extends BaseController {
 
         try {
             UserManager userMgr = weblogger.getUserManager();
-            List<WeblogPermission> permsFromDB = userMgr.getWeblogPermissionsIncludingPending(getActionWeblog(request));
+            List<WeblogPermission> permsFromDB = userMgr.getWeblogPermissions(getActionWeblog(request));
 
             for (WeblogPermission perm : permsFromDB) {
                 permsList.add(perm);
@@ -90,7 +96,7 @@ public class MembersController extends BaseController {
             for (WeblogPermission perms : permsList) {
                 String sval = request.getParameter("perm-" + perms.getUser().getId());
                 if (sval != null) {
-                    if (sval.equals(WeblogPermission.ADMIN) && !perms.isPending()) {
+                    if (sval.equals(WeblogPermission.ADMIN)) {
                         numAdmins++;
                     }
                     if (perms.getUser().getUserName().equals(user.getUserName())) {
@@ -146,10 +152,58 @@ public class MembersController extends BaseController {
         return ".Members";
     }
 
+    /**
+     * Grants an existing account access to this weblog, immediately -- no
+     * invitation, no acceptance step. A username that does not resolve to an
+     * enabled account is a field error, not an exception. Granting to a user
+     * who already has a permission on this weblog updates that row rather
+     * than creating a duplicate ({@link UserManager#grantWeblogPermission}
+     * already merges into an existing row), and since this only ever adds an
+     * action it can never trip the "at least one admin" invariant the way
+     * revoking can.
+     */
+    @PostMapping("/members!grant.rol")
+    public String grant(HttpServletRequest request, Model model,
+                         @RequestParam(value = "userName", required = false) String userName,
+                         @RequestParam(value = "permissionString", required = false) String permissionString) {
+        populateCommonModel(request, model);
+
+        UserManager userMgr = weblogger.getUserManager();
+        User user = null;
+        if (StringUtils.isBlank(userName)) {
+            addError(model, "inviteMember.error.userNotFound", request);
+        } else {
+            try {
+                user = userMgr.getUserByUserName(userName);
+                if (user == null) {
+                    addError(model, "inviteMember.error.userNotFound", request);
+                }
+            } catch (WebloggerException ex) {
+                log.error("Error looking up user by name - " + userName, ex);
+                addError(model, "memberPermissions.saveError", request);
+            }
+        }
+
+        if (!hasErrors(model)) {
+            try {
+                userMgr.grantWeblogPermission(getActionWeblog(request), user,
+                        Utilities.stringToStringList(permissionString, ","));
+                weblogger.flush();
+                addMessage(model, "memberPermissions.membersChanged", "1", request);
+            } catch (Exception ex) {
+                log.error("Error granting permission on weblog - " + getActionWeblog(request).getHandle(), ex);
+                addError(model, "memberPermissions.saveError", request);
+            }
+        }
+
+        model.addAttribute("weblogPermissions", getWeblogPermissions(request));
+        return ".Members";
+    }
+
     private List<WeblogPermission> getWeblogPermissions(HttpServletRequest request) {
         try {
             return weblogger.getUserManager()
-                    .getWeblogPermissionsIncludingPending(getActionWeblog(request));
+                    .getWeblogPermissions(getActionWeblog(request));
         } catch (WebloggerException ex) {
             log.error("ERROR getting weblog permissions", ex);
         }

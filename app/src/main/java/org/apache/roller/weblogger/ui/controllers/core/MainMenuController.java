@@ -23,21 +23,15 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
-import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 
 /**
@@ -46,8 +40,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 @RequestMapping("/roller-ui")
 public class MainMenuController extends BaseController {
-
-    private static final Log log = LogFactory.getLog(MainMenuController.class);
 
     @Override
     public boolean isWeblogRequired() {
@@ -66,66 +58,9 @@ public class MainMenuController extends BaseController {
         return ".MainMenu";
     }
 
-    @GetMapping("/menu!accept.rol")
-    public String accept(HttpServletRequest request, Model model,
-                         @RequestParam(value = "inviteId", required = false) String inviteId) {
-
-        populateCommonModel(request, model);
-
-        try {
-            UserManager umgr = weblogger.getUserManager();
-            WeblogManager wmgr = weblogger.getWeblogManager();
-            Weblog weblog = wmgr.getWeblog(inviteId);
-            if (weblog == null) {
-                // Revoked invitation, deleted weblog, or a hand-made link. The
-                // null used to travel on into the permission code.
-                addError(model, "yourWebsites.permNotFound", request);
-            } else {
-                umgr.confirmWeblogPermission(weblog, getAuthenticatedUser(request));
-                weblogger.flush();
-            }
-        } catch (WebloggerException ex) {
-            log.error("Error handling invitation accept weblog id - " + inviteId, ex);
-            addError(model, "yourWebsites.permNotFound", request);
-        }
-
-        populateMenuData(request, model);
-        return ".MainMenu";
-    }
-
-    @GetMapping("/menu!decline.rol")
-    public String decline(HttpServletRequest request, Model model,
-                          @RequestParam(value = "inviteId", required = false) String inviteId) {
-
-        populateCommonModel(request, model);
-
-        try {
-            UserManager umgr = weblogger.getUserManager();
-            WeblogManager wmgr = weblogger.getWeblogManager();
-            Weblog weblog = wmgr.getWeblog(inviteId);
-            if (weblog == null) {
-                // Same stale-invitation case as accept, except here the missing
-                // weblog was dereferenced straight away for its handle.
-                addError(model, "yourWebsites.permNotFound", request);
-            } else {
-                String handle = weblog.getHandle();
-                umgr.declineWeblogPermission(weblog, getAuthenticatedUser(request));
-                weblogger.flush();
-                addMessage(model, "yourWebsites.declined", handle, request);
-            }
-        } catch (WebloggerException ex) {
-            log.error("Error handling invitation decline weblog id - " + inviteId, ex);
-            addError(model, "yourWebsites.permNotFound", request);
-        }
-
-        populateMenuData(request, model);
-        return ".MainMenu";
-    }
-
     private void populateMenuData(HttpServletRequest request, Model model) {
         User user = getAuthenticatedUser(request);
         model.addAttribute("existingPermissions", getExistingPermissions(user));
-        model.addAttribute("pendingPermissions", getPendingPermissions(user));
         model.addAttribute("userIsAdmin", isUserIsAdmin(user));
     }
 
@@ -133,15 +68,6 @@ public class MainMenuController extends BaseController {
         try {
             UserManager mgr = weblogger.getUserManager();
             return mgr.getWeblogPermissions(user);
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
-    }
-
-    private List<WeblogPermission> getPendingPermissions(User user) {
-        try {
-            UserManager mgr = weblogger.getUserManager();
-            return mgr.getPendingWeblogPermissions(user);
         } catch (Exception e) {
             return Collections.emptyList();
         }

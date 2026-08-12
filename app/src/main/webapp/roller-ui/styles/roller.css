@@ -1303,18 +1303,6 @@ td.scheduledentry, tr.scheduledentry {
     background: var(--paper);
 }
 
-/* comments */
-
-/* .pendingCommentBox is the warn swatch Members.jsp puts beside a member
-   whose invitation is still outstanding. Its approved twin, and the
-   td.pendingcomment / table.innertable rules that dressed the old nested-table
-   comment layout, went with the moderation rebuild -- nothing emits them. */
-
-.pendingCommentBox {
-    background: color-mix(in srgb, var(--warn) 20%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--surface));
-}
-
 /* categories */
 
 #feedback-area {
@@ -1463,17 +1451,10 @@ div.image-controls input {
     height: 13em;
 }
 
-/* members */
-
-tr.rollertable_pending {
-    background: color-mix(in srgb, var(--warn) 15%, var(--surface));
-}
-
 /* Quiet Instrument: the legacy multi-row search select (UserAdmin.jsp's
-   #userList, reused verbatim by MembersInvite.jsp -- same ajax-user.js,
-   same id, different page) gets its native browser highlight retoned.
-   Plain `background-color` on `option:checked` is ignored by most engines
-   for a real native selection highlight; the linear-gradient trick (a
+   #userList) gets its native browser highlight retoned. Plain
+   `background-color` on `option:checked` is ignored by most engines for a
+   real native selection highlight; the linear-gradient trick (a
    "background image" rather than a flat color) is the standard workaround
    and paints identically to a solid fill. */
 #userList option:checked {
