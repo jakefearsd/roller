@@ -132,7 +132,6 @@
 			<transient name="theme"/>
 			<transient name="creator"/>
 			<transient name="absoluteURL"/>
-			<transient name="commentCount"/>
 			<transient name="commentModerationRequired"/>
 			<transient name="URL"/>
 			<transient name="entryCount"/>

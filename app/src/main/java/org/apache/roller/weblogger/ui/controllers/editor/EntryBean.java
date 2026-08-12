@@ -25,7 +25,6 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
 import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -62,8 +61,6 @@ public class EntryBean {
     private Integer commentDays = 0;
     private boolean pinnedToMain = false;
     private String searchDescription = null;
-
-    private int commentCount = 0;
 
     // Wave 1 media & SEO foundation -- no editor UI yet, plumbing only
     private String featuredImageId = null;
@@ -176,14 +173,6 @@ public class EntryBean {
         }
     }
     
-    public int getCommentCount() {
-        return commentCount;
-    }
-
-    public void setCommentCount(int commentCount) {
-        this.commentCount = commentCount;
-    }
-
     public boolean getPinnedToMain() {
         return this.pinnedToMain;
     }
@@ -474,18 +463,6 @@ public class EntryBean {
         setEventStart(entry.getEventStart());
         setEventEnd(entry.getEventEnd());
         setEventLocation(entry.getEventLocation());
-
-        // set comment count for all comments (including spam and unapproved)
-        try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-            CommentSearchCriteria csc = new CommentSearchCriteria();
-            csc.setWeblog(entry.getWebsite());
-            csc.setEntry(entry);
-            setCommentCount(wmgr.getComments(csc).size());
-        } catch (WebloggerException e) {
-            log.error("Error getting comment count", e);
-            setCommentCount(0);
-        }
 
         // init pubtime value -- emitted in the WEBLOG's timezone, matching
         // what getPubTime(TimeZone) parses it back with, so opening and

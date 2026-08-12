@@ -44,8 +44,6 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.util.RollerMessages;
 
@@ -337,57 +335,6 @@ public final class TestUtils {
 
         // remove the entry
         mgr.removeWeblogEntry(entry);
-
-        // flush to db
-        WebloggerFactory.getWeblogger().flush();
-    }
-
-    /**
-     * Convenience method for creating a comment.
-     */
-    public static WeblogEntryComment setupComment(String content,
-            WeblogEntry entry) throws Exception {
-
-        WeblogEntryComment testComment = new WeblogEntryComment();
-        testComment.setName("test");
-        testComment.setEmail("test");
-        testComment.setRemoteHost("foofoo");
-        testComment.setContent("this is a test comment");
-        testComment.setPostTime(new java.sql.Timestamp(new java.util.Date()
-                .getTime()));
-        testComment.setWeblogEntry(getManagedWeblogEntry(entry));
-        testComment.setStatus(ApprovalStatus.APPROVED);
-
-        // store testComment
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger()
-                .getWeblogEntryManager();
-        mgr.saveComment(testComment);
-
-        // flush to db
-        WebloggerFactory.getWeblogger().flush();
-
-        // query for object
-        WeblogEntryComment comment = mgr.getComment(testComment.getId());
-
-        if (comment == null) {
-            throw new WebloggerException("error setting up comment");
-        }
-
-        return comment;
-    }
-
-    /**
-     * Convenience method for removing a comment.
-     */
-    public static void teardownComment(String id) throws Exception {
-
-        // lookup the comment
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger()
-                .getWeblogEntryManager();
-        WeblogEntryComment comment = mgr.getComment(id);
-
-        // remove the comment
-        mgr.removeComment(comment);
 
         // flush to db
         WebloggerFactory.getWeblogger().flush();

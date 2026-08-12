@@ -19,7 +19,6 @@ package org.apache.roller.weblogger.pojos.wrapper;
 
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -27,7 +26,6 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -257,35 +255,6 @@ class WeblogEntryWrapperTest {
         assertEquals("/testblog/entry/hello+world%26again", wrapper.getPermaLink(),
                 "An anchor containing a space or an ampersand must be encoded, or the "
                         + "link it produces is broken HTML");
-    }
-
-    @Test
-    void commentsAreHandedOutWrapped() throws Exception {
-        WeblogEntryComment comment = new WeblogEntryComment();
-        comment.setName("alice");
-        comment.setContent("Nice post");
-        comment.setContentType("text/html");
-
-        WeblogEntryManager entries = mock(WeblogEntryManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
-        when(entries.getComments(any())).thenReturn(List.of(comment));
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            List<WeblogEntryCommentWrapper> comments = wrapper.getComments();
-            assertEquals(1, comments.size());
-            assertEquals("alice", comments.get(0).getName(),
-                    "Comments must come back wrapped, not as raw pojos a theme could mutate");
-            assertEquals(1, wrapper.getCommentCount());
-
-            @SuppressWarnings("deprecation")
-            List<WeblogEntryCommentWrapper> unfiltered = wrapper.getComments(true, false);
-            assertEquals("alice", unfiltered.get(0).getName(),
-                    "The deprecated two-argument form must wrap its results too, or the "
-                            + "one caller still using it hands a theme raw pojos");
-        }
     }
 
     @Test

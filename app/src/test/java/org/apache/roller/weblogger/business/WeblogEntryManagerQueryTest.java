@@ -24,38 +24,36 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
-import org.apache.roller.weblogger.pojos.StatCount;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The parts of {@code JPAWeblogEntryManagerImpl} outside the entry-criteria
- * query: tag aggregates, comment bulk operations, entry navigation and
- * attributes.
+ * query: tag aggregates, entry navigation and attributes.
  *
  * <p>Unlike {@code PageServlet}, nothing here needed restructuring -- these are
- * small, single-purpose methods that simply had no tests. Four were at zero
- * ({@code removeMatchingComments}, {@code applyCommentDefaultsToEntries},
- * {@code removeWeblogEntryAttribute}, {@code getRevision}), and two more
+ * small, single-purpose methods that simply had no tests. Two were at zero
+ * ({@code removeWeblogEntryAttribute}, {@code getRevision}), and two more
  * carried most of their branches in the null-or-not permutations of their
  * parameters, which is exactly what goes wrong when a caller starts passing a
  * null it never used to.
+ *
+ * <p>W1 deleted the comment bulk-operation coverage this class used to carry
+ * ({@code removeMatchingComments}, {@code applyCommentDefaultsToEntries}, and
+ * the {@code getMostCommentedWeblogEntries} ranking) along with the manager
+ * methods themselves.
  */
 class WeblogEntryManagerQueryTest {
 
@@ -78,10 +76,6 @@ class WeblogEntryManagerQueryTest {
 
         popular = entry("popular-post", "Popular", Instant.now().minus(2, ChronoUnit.DAYS));
         quiet = entry("quiet-post", "Quiet", Instant.now().minus(1, ChronoUnit.DAYS));
-        TestUtils.endSession(true);
-
-        comment(popular, "first thoughts");
-        comment(popular, "second thoughts");
         TestUtils.endSession(true);
     }
 
@@ -183,99 +177,6 @@ class WeblogEntryManagerQueryTest {
                 "sorted by count the most-used tag leads: " + byCount);
     }
 
-    // -------------------------------------------------------------- comments
-
-    @Test
-    void theMostCommentedEntriesAreRankedByCommentCount() throws Exception {
-        List<StatCount> ranked = entries().getMostCommentedWeblogEntries(
-                TestUtils.getManagedWebsite(blog), null, null, 0, 10);
-
-        assertFalse(ranked.isEmpty(), "the commented entry must be ranked");
-        assertEquals(popular.getAnchor(), ranked.get(0).getSubjectNameShort(),
-                "the entry with two comments must lead");
-        assertEquals(2, ranked.get(0).getCount(), "and carry its comment count");
-    }
-
-    @Test
-    void theMostCommentedEntriesCanSpanTheWholeSite() throws Exception {
-        List<StatCount> ranked = entries()
-                .getMostCommentedWeblogEntries(null, null, null, 0, 50);
-
-        assertFalse(ranked.isEmpty(), "a null weblog means site-wide, not nothing");
-    }
-
-    /**
-     * Bulk comment removal is what the moderation screen's "delete all matching"
-     * runs. It has to delete exactly what the query matched -- deleting more is
-     * unrecoverable.
-     */
-    @Test
-    void removingMatchingCommentsDeletesOnlyWhatMatched() throws Exception {
-        comment(quiet, "keep me");
-        TestUtils.endSession(true);
-
-        int removed = entries().removeMatchingComments(
-                TestUtils.getManagedWebsite(blog), null, "first thoughts", null, null, null);
-        TestUtils.endSession(true);
-
-        assertEquals(1, removed, "one comment matched that text");
-
-        List<String> left = commentTexts();
-        assertFalse(left.contains("first thoughts"), "got: " + left);
-        assertTrue(left.containsAll(List.of("second thoughts", "keep me")),
-                "everything else must survive: " + left);
-    }
-
-    @Test
-    void removingMatchingCommentsCanBeScopedToOneEntry() throws Exception {
-        comment(quiet, "on the quiet post");
-        TestUtils.endSession(true);
-
-        int removed = entries().removeMatchingComments(
-                TestUtils.getManagedWebsite(blog), TestUtils.getManagedWeblogEntry(quiet),
-                null, null, null, null);
-        TestUtils.endSession(true);
-
-        assertEquals(1, removed);
-        assertTrue(commentTexts().containsAll(List.of("first thoughts", "second thoughts")),
-                "the other entry's comments must be untouched: " + commentTexts());
-    }
-
-    @Test
-    void removingMatchingCommentsCanBeScopedByApprovalStatus() throws Exception {
-        int removed = entries().removeMatchingComments(
-                TestUtils.getManagedWebsite(blog), null, null, null, null,
-                ApprovalStatus.DISAPPROVED);
-        TestUtils.endSession(true);
-
-        assertEquals(0, removed, "no comment is disapproved, so nothing matches");
-        assertEquals(2, commentTexts().size(), "and nothing was deleted");
-    }
-
-    /**
-     * Applying the weblog's comment defaults rewrites every existing entry --
-     * the settings page offers it as an explicit action because it is not
-     * undoable.
-     */
-    @Test
-    void applyingCommentDefaultsRewritesEveryEntry() throws Exception {
-        Weblog managed = TestUtils.getManagedWebsite(blog);
-        managed.setDefaultAllowComments(Boolean.FALSE);
-        managed.setDefaultCommentDays(0);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
-        WebloggerFactory.getWeblogger().flush();
-        TestUtils.endSession(true);
-
-        entries().applyCommentDefaultsToEntries(TestUtils.getManagedWebsite(blog));
-        WebloggerFactory.getWeblogger().flush();
-        TestUtils.endSession(true);
-
-        WeblogEntry after = entries().getWeblogEntry(popular.getId());
-        assertEquals(Boolean.FALSE, after.getAllowComments(),
-                "every entry must take the weblog's new default");
-        assertEquals(0, after.getCommentDays().intValue());
-    }
-
     // ------------------------------------------------------------ navigation
 
     /**
@@ -362,13 +263,6 @@ class WeblogEntryManagerQueryTest {
         return WebloggerFactory.getWeblogger().getWeblogEntryManager();
     }
 
-    private List<String> commentTexts() throws Exception {
-        CommentSearchCriteria criteria = new CommentSearchCriteria();
-        criteria.setWeblog(TestUtils.getManagedWebsite(blog));
-        return entries().getComments(criteria).stream()
-                .map(WeblogEntryComment::getContent).toList();
-    }
-
     private WeblogEntry entry(String anchor, String title, Instant pubTime) throws Exception {
         WeblogEntry created = TestUtils.setupWeblogEntry(anchor, travel,
                 PubStatus.PUBLISHED, blog, user);
@@ -379,18 +273,6 @@ class WeblogEntryManagerQueryTest {
         entries().saveWeblogEntry(managed);
         WebloggerFactory.getWeblogger().flush();
         return managed;
-    }
-
-    private void comment(WeblogEntry entry, String content) throws Exception {
-        WeblogEntryComment comment = new WeblogEntryComment();
-        comment.setWeblogEntry(TestUtils.getManagedWeblogEntry(entry));
-        comment.setName("A Reader");
-        comment.setEmail("reader@example.invalid");
-        comment.setContent(content);
-        comment.setPostTime(new Timestamp(System.currentTimeMillis()));
-        comment.setStatus(ApprovalStatus.APPROVED);
-        entries().saveComment(comment);
-        WebloggerFactory.getWeblogger().flush();
     }
 
     private void tag(WeblogEntry entry, String tagName) throws Exception {

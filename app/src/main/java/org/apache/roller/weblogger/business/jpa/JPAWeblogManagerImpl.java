@@ -30,7 +30,6 @@ import jakarta.persistence.TypedQuery;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -44,8 +43,6 @@ import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
-import org.apache.roller.weblogger.pojos.StatCount;
-import org.apache.roller.weblogger.pojos.StatCountCountComparator;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
 import org.apache.roller.weblogger.pojos.User;
@@ -65,10 +62,7 @@ import org.apache.roller.weblogger.pojos.WeblogTemplate;
 public class JPAWeblogManagerImpl implements WeblogManager {
     
     private static final Log log = LogFactory.getLog(JPAWeblogManagerImpl.class);
-    
-    private static final Comparator<StatCount> STAT_COUNT_COUNT_REVERSE_COMPARATOR =
-            Collections.reverseOrder(StatCountCountComparator.getInstance());
-    
+
     private final Weblogger roller;
     private final JPAPersistenceStrategy strategy;
     
@@ -615,59 +609,6 @@ public class JPAWeblogManagerImpl implements WeblogManager {
             query.setMaxResults(length);
         }
         return query.getResultList();
-    }
-    
-    @Override
-    public List<StatCount> getMostCommentedWeblogs(Date startDate, Date endDate,
-            int offset, int length)
-            throws WebloggerException {
-        
-        Query query;
-        
-        if (endDate == null) {
-            endDate = new Date();
-        }
-        
-        if (startDate != null) {
-            Timestamp start = new Timestamp(startDate.getTime());
-            Timestamp end = new Timestamp(endDate.getTime());
-            query = strategy.getNamedQuery(
-                    "WeblogEntryComment.getMostCommentedWebsiteByEndDate&StartDate");
-            query.setParameter(1, end);
-            query.setParameter(2, start);
-        } else {
-            Timestamp end = new Timestamp(endDate.getTime());
-            query = strategy.getNamedQuery(
-                    "WeblogEntryComment.getMostCommentedWebsiteByEndDate");
-            query.setParameter(1, end);
-        }
-        if (offset != 0) {
-            query.setFirstResult(offset);
-        }
-        if (length != -1) {
-            query.setMaxResults(length);
-        }
-        List<?> queryResults = query.getResultList();
-        List<StatCount> results = new ArrayList<>();
-        if (queryResults != null) {
-            for (Object obj : queryResults) {
-                Object[] row = (Object[]) obj;
-                StatCount sc = new StatCount(
-                        (String)row[1],                     // weblog id
-                        (String)row[2],                     // weblog handle
-                        (String)row[3],                     // weblog name
-                        "statCount.weblogCommentCountType", // stat type
-                        ((Long)row[0]));        // # comments
-                sc.setWeblogHandle((String)row[2]);
-                results.add(sc);
-            }
-        }
-
-        // Original query ordered by desc # comments.
-        // JPA QL doesn't allow queries to be ordered by aggregates; do it in memory
-        results.sort(STAT_COUNT_COUNT_REVERSE_COMPARATOR);
-        
-        return results;
     }
     
     /**

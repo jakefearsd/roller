@@ -27,7 +27,6 @@ import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
-import org.apache.roller.weblogger.pojos.StatCount;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -481,38 +480,6 @@ class SiteModelTest {
     // ------------------------------------------------------------ statistics
 
     @Test
-    void mostCommentedListsComeStraightFromTheManagers() throws Exception {
-        StatCount weblogStat = new StatCount("id", "handle", "name", "key", 7);
-        StatCount entryStat = new StatCount("id2", "anchor", "title", "key2", 3);
-        when(weblogManager.getMostCommentedWeblogs(any(), any(), eq(0), eq(5)))
-                .thenReturn(List.of(weblogStat));
-        when(entryManager.getMostCommentedWeblogEntries(isNull(), any(), any(), eq(0), eq(5)))
-                .thenReturn(List.of(entryStat));
-
-        SiteModel model = model();
-
-        assertEquals(List.of(weblogStat), model.getMostCommentedWeblogs(30, 5),
-                "$site.getMostCommentedWeblogs passes the manager's result through.");
-        assertEquals(List.of(entryStat), model.getMostCommentedWeblogEntries(null, 30, 5),
-                "$site.getMostCommentedWeblogEntries passes the manager's result through.");
-    }
-
-    @Test
-    void failuresGatheringMostCommentedListsLeaveEmptyLists() throws Exception {
-        when(weblogManager.getMostCommentedWeblogs(any(), any(), anyInt(), anyInt()))
-                .thenThrow(new WebloggerException("database is down"));
-        when(entryManager.getMostCommentedWeblogEntries(any(), any(), any(), anyInt(), anyInt()))
-                .thenThrow(new WebloggerException("database is down"));
-
-        SiteModel model = model();
-
-        assertEquals(List.of(), model.getMostCommentedWeblogs(30, 5),
-                "A failure must leave the section empty.");
-        assertEquals(List.of(), model.getMostCommentedWeblogEntries(null, 30, 5),
-                "A failure must leave the section empty.");
-    }
-
-    @Test
     void pinnedEntriesAreWrappedForTheTemplate() throws Exception {
         WeblogEntry entry = new WeblogEntry();
         entry.setTitle("Pinned Post");
@@ -580,14 +547,12 @@ class SiteModelTest {
 
     @Test
     void siteWideCountsComeFromTheManagers() throws Exception {
-        when(entryManager.getCommentCount()).thenReturn(11L);
         when(entryManager.getEntryCount()).thenReturn(22L);
         when(weblogManager.getWeblogCount()).thenReturn(33L);
         when(userManager.getUserCount()).thenReturn(44L);
 
         SiteModel model = model();
 
-        assertEquals(11L, model.getCommentCount(), "$site.commentCount");
         assertEquals(22L, model.getEntryCount(), "$site.entryCount");
         assertEquals(33L, model.getWeblogCount(), "$site.weblogCount");
         assertEquals(44L, model.getUserCount(), "$site.userCount");
@@ -595,14 +560,12 @@ class SiteModelTest {
 
     @Test
     void countsReadAsZeroWhenTheDatabaseIsUnavailable() throws Exception {
-        when(entryManager.getCommentCount()).thenThrow(new WebloggerException("down"));
         when(entryManager.getEntryCount()).thenThrow(new WebloggerException("down"));
         when(weblogManager.getWeblogCount()).thenThrow(new WebloggerException("down"));
         when(userManager.getUserCount()).thenThrow(new WebloggerException("down"));
 
         SiteModel model = model();
 
-        assertEquals(0L, model.getCommentCount(), "A failed count must read as 0.");
         assertEquals(0L, model.getEntryCount(), "A failed count must read as 0.");
         assertEquals(0L, model.getWeblogCount(), "A failed count must read as 0.");
         assertEquals(0L, model.getUserCount(), "A failed count must read as 0.");

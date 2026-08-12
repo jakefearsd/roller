@@ -708,33 +708,6 @@ public class Weblog implements Serializable {
     }   
     
     /**
-     * Get up to 100 most recent approved and non-spam comments in weblog.
-     * @param length Max entries to return (1-100)
-     * @return List of comment objects.
-     */
-    public List<WeblogEntryComment> getRecentComments(int length) {
-        if (length > MAX_ENTRIES) {
-            length = MAX_ENTRIES;
-        }
-        if (length < 1) {
-            return Collections.emptyList();
-        }
-        try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-            CommentSearchCriteria csc = new CommentSearchCriteria();
-            csc.setWeblog(this);
-            csc.setStatus(WeblogEntryComment.ApprovalStatus.APPROVED);
-            csc.setReverseChrono(true);
-            csc.setMaxResults(length);
-            return wmgr.getComments(csc);
-        } catch (WebloggerException e) {
-            log.error("ERROR: getting recent comments", e);
-        }
-        return Collections.emptyList();
-    }
-
-
-    /**
      * Get a list of TagStats objects for the most popular tags
      *
      * @param sinceDays Number of days into past (or -1 for all days)
@@ -759,18 +732,6 @@ public class Weblog implements Serializable {
         return Collections.emptyList();
     }      
 
-    public long getCommentCount() {
-        long count = 0;
-        try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
-            WeblogEntryManager mgr = roller.getWeblogEntryManager();
-            count = mgr.getCommentCount(this);            
-        } catch (WebloggerException e) {
-            log.error("Error getting comment count for weblog " + this.getName(), e);
-        }
-        return count;
-    }
-    
     public long getEntryCount() {
         long count = 0;
         try {

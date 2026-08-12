@@ -21,7 +21,6 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -91,7 +90,6 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(category);
         when(weblogger.getWeblogEntryManager().getWeblogCategories(weblog))
                 .thenReturn(java.util.List.of(category));
-        when(weblogger.getWeblogEntryManager().getComments(any())).thenReturn(Collections.emptyList());
         when(weblogger.getPluginManager().getWeblogEntryPlugins(weblog))
                 .thenReturn(java.util.Collections.emptyMap());
 

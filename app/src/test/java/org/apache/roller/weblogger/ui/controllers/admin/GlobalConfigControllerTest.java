@@ -25,7 +25,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MockWeblogger;
-import org.apache.roller.weblogger.business.plugins.comment.WeblogEntryCommentPlugin;
 import org.apache.roller.weblogger.config.runtime.ConfigDef;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
@@ -97,16 +96,12 @@ class GlobalConfigControllerTest {
         Weblog weblog = new Weblog();
         when(weblogger.weblogManager().getWeblogs(anyBoolean(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(List.of(weblog));
-        List<WeblogEntryCommentPlugin> plugins = List.of();
-        when(weblogger.pluginManager().getCommentPlugins()).thenReturn(plugins);
 
         String view = controller.execute(request(), model);
 
         assertEquals(".GlobalConfig", view);
         assertEquals("globalConfig", model.getAttribute("actionName"));
         assertEquals("admin", model.getAttribute("desiredMenu"));
-        assertSame(plugins, model.getAttribute("pluginsList"),
-                "the comment plugin checkboxes are built from this list");
         assertSame(stored, model.getAttribute("properties"));
         assertEquals(List.of(weblog), model.getAttribute("weblogs"),
                 "the front-page weblog picker needs the weblog list");

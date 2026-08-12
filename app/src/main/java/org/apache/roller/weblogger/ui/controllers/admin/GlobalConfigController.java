@@ -28,8 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.plugins.PluginManager;
-import org.apache.roller.weblogger.business.plugins.comment.WeblogEntryCommentPlugin;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.config.runtime.ConfigDef;
 import org.apache.roller.weblogger.config.runtime.PropertyDef;
@@ -91,12 +89,10 @@ public class GlobalConfigController extends BaseController {
         Map<String, RuntimeConfigProperty> properties = loadProperties(model);
         ConfigDef globalConfigDef = loadConfigDef();
         Collection<Weblog> weblogs = loadWeblogs(model);
-        List<WeblogEntryCommentPlugin> pluginsList = loadPlugins();
 
         model.addAttribute("properties", properties);
         model.addAttribute("globalConfigDef", globalConfigDef);
         model.addAttribute("weblogs", weblogs);
-        model.addAttribute("pluginsList", pluginsList);
 
         // setup array of configured plugins
         String[] commentPlugins = new String[0];
@@ -119,12 +115,10 @@ public class GlobalConfigController extends BaseController {
         Map<String, RuntimeConfigProperty> properties = loadProperties(model);
         ConfigDef globalConfigDef = loadConfigDef();
         Collection<Weblog> weblogs = loadWeblogs(model);
-        List<WeblogEntryCommentPlugin> pluginsList = loadPlugins();
 
         model.addAttribute("properties", properties);
         model.addAttribute("globalConfigDef", globalConfigDef);
         model.addAttribute("weblogs", weblogs);
-        model.addAttribute("pluginsList", pluginsList);
 
         // get comment plugins from request
         String[] commentPlugins = request.getParameterValues("commentPlugins");
@@ -253,8 +247,4 @@ public class GlobalConfigController extends BaseController {
         }
     }
 
-    private List<WeblogEntryCommentPlugin> loadPlugins() {
-        PluginManager pmgr = weblogger.getPluginManager();
-        return pmgr.getCommentPlugins();
-    }
 }

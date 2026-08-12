@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
-import org.apache.roller.weblogger.pojos.StatCount;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -125,23 +124,8 @@ public interface WeblogManager {
      * @return List of WebsiteData objects.
      */
     List<User> getWeblogUsers(Weblog weblog, boolean enabledOnly) throws WebloggerException;
-    
-    
-    /**
-     * Get websites ordered by descending number of comments.
-     * @param startDate Restrict to those created after (or null for all)
-     * @param endDate Restrict to those created before (or null for all)
-     * @param offset    Offset into results (for paging)
-     * @param length       Maximum number of results to return (for paging)
-     * @return List of StatCount objects.
-     */
-    List<StatCount> getMostCommentedWeblogs(
-            Date startDate,
-            Date endDate,
-            int  offset,
-            int  length)
-            throws WebloggerException;
-    
+
+
     
     /**
      * Get map with 26 entries, one for each letter A-Z and

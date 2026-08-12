@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.business.search.lucene;
 
 
 /**
- * Field constants for indexing blog entries and comments.
- * 
+ * Field constants for indexing blog entries.
+ *
  * @author Mindaugas Idzelis (min@idzelis.com)
  */
 public final class FieldConstants {
@@ -35,9 +35,6 @@ public final class FieldConstants {
     public static final String PUBLISHED = "published";
     public static final String CONTENT = "content";
     public static final String CONTENT_STORED = "content_stored";
-    public static final String C_CONTENT = "comment";
-    public static final String C_EMAIL = "email";
-    public static final String C_NAME = "name";
     public static final String CONSTANT = "constant";
     // CONSTANT_V must be lowercase or match transform rules of analyzer
     public static final String CONSTANT_V = "v";

@@ -35,7 +35,6 @@ import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.jpa.JPAWeblogEntryManagerImpl;
 import org.apache.roller.weblogger.pojos.TagStat;
-import org.apache.roller.weblogger.pojos.StatCount;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -395,44 +394,6 @@ public class SiteModel implements Model {
     
     
     /**
-     * Get most collection of most commented websites, as StatCount objects,
-     * in descending order by number of comments.
-     * @param sinceDays Only consider weblogs updated in the last sinceDays
-     * @param length   Max number of results to return
-     */
-    public List<StatCount> getMostCommentedWeblogs(int sinceDays , int length) {
-        Date startDate = JPAWeblogEntryManagerImpl.getStartDateNow(sinceDays);
-        try {
-            return WebloggerFactory.getWeblogger().getWeblogManager().getMostCommentedWeblogs(
-                    startDate, new Date(), 0, length);
-        } catch (Exception e) {
-            log.error("ERROR: fetching commented weblog list", e);
-        }
-        return Collections.emptyList();
-    }
-    
-    
-    /**
-     * Get most commented weblog entries across all weblogs, as StatCount 
-     * objects, in descending order by number of comments.
-     * @param sinceDays Only consider weblogs updated in the last sinceDays
-     * @param cats     To limit results to list of category names
-     * @param length      Max number of results to return
-     */
-    public List<StatCount> getMostCommentedWeblogEntries(List<String> cats, int sinceDays, int length) {
-        Date startDate = JPAWeblogEntryManagerImpl.getStartDateNow(sinceDays);
-        try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
-            WeblogEntryManager wmgr = roller.getWeblogEntryManager();
-            return wmgr.getMostCommentedWeblogEntries(
-                    null, startDate, new Date(), 0, length);
-        } catch (Exception e) {
-            log.error("ERROR: fetching commented weblog entries list", e);
-        }
-        return Collections.emptyList();
-    }
-    
-    /**
      * Get pinned entries.
      * @param length    Max number of results to return
      */
@@ -475,19 +436,6 @@ public class SiteModel implements Model {
         }
         return Collections.emptyList();
     }   
-    
-    
-    public long getCommentCount() {
-        long count = 0;
-        try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
-            WeblogEntryManager mgr = roller.getWeblogEntryManager();
-            count = mgr.getCommentCount();            
-        } catch (WebloggerException e) {
-            log.error("Error getting comment count for site ", e);
-        }
-        return count;
-    }
     
     
     public long getEntryCount() {

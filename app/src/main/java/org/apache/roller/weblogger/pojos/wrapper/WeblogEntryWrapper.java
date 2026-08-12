@@ -199,30 +199,6 @@ public final class WeblogEntryWrapper {
     }
     
     
-    public List<WeblogEntryCommentWrapper> getComments() {
-        return this.pojo.getComments().stream()
-                .map(comment -> WeblogEntryCommentWrapper.wrap(comment, urlStrategy))
-                .collect(Collectors.toList());
-    }
-    
-    
-    /**
-     * @deprecated Use getComments() instead
-     */
-    @Deprecated
-    @SuppressWarnings("deprecation")
-    public List<WeblogEntryCommentWrapper> getComments(boolean ignoreSpam, boolean approvedOnly) {
-        return this.pojo.getComments(ignoreSpam, approvedOnly).stream()
-                .map(comment -> WeblogEntryCommentWrapper.wrap(comment, urlStrategy))
-                .collect(Collectors.toList());
-    }
-    
-    
-    public int getCommentCount() {
-        return this.pojo.getCommentCount();
-    }
-    
-    
     public String getPermalink() {
         return this.pojo.getPermalink();
     }

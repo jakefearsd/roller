@@ -21,19 +21,16 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.Collections;
 import java.util.Locale;
 import java.util.TimeZone;
 
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
 import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -641,37 +638,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         assertFalse(fresh.getAllowComments());
     }
 
-    @Test
-    void copyFromCountsEveryCommentIncludingSpamAndPending() throws Exception {
-        // The editor shows this count next to a link to comment moderation, so
-        // it must not filter by approval status -- a pending comment is exactly
-        // the one the author needs to be told about.
-        WeblogEntry entry = storedEntry();
-        when(weblogger.getWeblogEntryManager().getComments(
-                ArgumentMatchers.any(CommentSearchCriteria.class)))
-                .thenReturn(java.util.List.of(
-                        new org.apache.roller.weblogger.pojos.WeblogEntryComment(),
-                        new org.apache.roller.weblogger.pojos.WeblogEntryComment(),
-                        new org.apache.roller.weblogger.pojos.WeblogEntryComment()));
-
-        bean.copyFrom(entry, Locale.US);
-
-        assertEquals(3, bean.getCommentCount());
-    }
-
-    @Test
-    void copyFromReportsZeroCommentsWhenTheLookupFails() throws Exception {
-        WeblogEntry entry = storedEntry();
-        when(weblogger.getWeblogEntryManager().getComments(
-                ArgumentMatchers.any(CommentSearchCriteria.class)))
-                .thenThrow(new WebloggerException("database down"));
-
-        bean.copyFrom(entry, Locale.US);
-
-        assertEquals(0, bean.getCommentCount(),
-                "A failed comment count must not stop the editor from opening");
-    }
-
     private WeblogEntry entryInCategory(String categoryId) throws WebloggerException {
         WeblogCategory category = new WeblogCategory();
         category.setId(categoryId);
@@ -692,9 +658,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         entry.setStatus(PubStatus.PUBLISHED);
         entry.setLocale("en_US");
         entry.setCommentDays(0);
-        when(weblogger.getWeblogEntryManager().getComments(
-                ArgumentMatchers.any(CommentSearchCriteria.class)))
-                .thenReturn(Collections.emptyList());
         return entry;
     }
 

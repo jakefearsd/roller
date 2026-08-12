@@ -21,7 +21,6 @@
 package org.apache.roller.weblogger.business.search.lucene;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +36,6 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 
 /**
  * This is the base class for all index operation. These operations include:<br>
@@ -67,41 +65,6 @@ public abstract class IndexOperation implements Runnable {
     // ~ Methods
     // ================================================================
     protected Document getDocument(WeblogEntry data) {
-
-        // Actual comment content is indexed only if search.index.comments
-        // is true or absent from the (static) configuration properties.
-        // If false in the configuration, comments are treated as if empty.
-        boolean indexComments = WebloggerConfig.getBooleanProperty(
-                "search.index.comments", true);
-
-        String commentContent = "";
-        String commentEmail = "";
-        String commentName = "";
-        if (indexComments) {
-            List<WeblogEntryComment> comments = data.getComments();
-            if (comments != null) {
-                StringBuilder commentEmailBld = new StringBuilder();
-                StringBuilder commentContentBld = new StringBuilder();
-                StringBuilder commentNameBld = new StringBuilder();
-                for (WeblogEntryComment comment : comments) {
-                    if (comment.getContent() != null) {
-                        commentContentBld.append(comment.getContent());
-                        commentContentBld.append(",");
-                    }
-                    if (comment.getEmail() != null) {
-                        commentEmailBld.append(comment.getEmail());
-                        commentEmailBld.append(",");
-                    }
-                    if (comment.getName() != null) {
-                        commentNameBld.append(comment.getName());
-                        commentNameBld.append(",");
-                    }
-                }
-                commentEmail = commentEmailBld.toString();
-                commentContent = commentContentBld.toString();
-                commentName = commentNameBld.toString();
-            }
-        }
 
         Document doc = new Document();
 
@@ -147,18 +110,6 @@ public abstract class IndexOperation implements Runnable {
             doc.add(new StringField(FieldConstants.CATEGORY, categorydata
                     .getName().toLowerCase(), Field.Store.YES));
         }
-
-        // index Comments, unstored
-        doc.add(new TextField(FieldConstants.C_CONTENT, commentContent,
-                Field.Store.NO));
-
-        // keyword
-        doc.add(new StringField(FieldConstants.C_EMAIL, commentEmail,
-                Field.Store.YES));
-
-        // keyword
-        doc.add(new StringField(FieldConstants.C_NAME, commentName,
-                Field.Store.YES));
 
         return doc;
     }

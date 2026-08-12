@@ -323,23 +323,11 @@ public final class WeblogWrapper {
     }
     
     
-    public List<WeblogEntryCommentWrapper> getRecentComments(int length) {
-        return this.pojo.getRecentComments(length).stream()
-                .map(wec -> WeblogEntryCommentWrapper.wrap(wec, urlStrategy))
-                .collect(Collectors.toList());
-    }
-    
-
     public List<TagStat> getPopularTags(int sinceDays,int length) {
         return this.pojo.getPopularTags(sinceDays,length);
     }
-    
-    
-    public long getCommentCount() {
-        return this.pojo.getCommentCount();
-    }
-    
-    
+
+
     public long getEntryCount() {
         return this.pojo.getEntryCount();
     }

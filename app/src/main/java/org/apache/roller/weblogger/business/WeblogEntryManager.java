@@ -22,20 +22,17 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
 import org.apache.roller.weblogger.pojos.StatCount;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntryRevision;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 
 
 /**
- * Interface to weblog entry, category and comment management.
+ * Interface to weblog entry and category management.
  */
 public interface WeblogEntryManager {
 
@@ -109,23 +106,6 @@ public interface WeblogEntryManager {
             throws WebloggerException;
     
     /**
-     * Get weblog entries ordered by descending number of comments.
-     * @param website    Weblog or null to get for all weblogs.
-     * @param startDate  Start date or null for no start date.
-     * @param endDate    End date or null for no end date.
-     * @param offset     Offset into results for paging
-     * @param length     Max comments to return (or -1 for no limit)
-     * @return List of StatCount objects.
-     */
-    List<StatCount> getMostCommentedWeblogEntries(
-            Weblog website,             
-            Date        startDate,
-            Date        endDate,
-            int         offset, 
-            int         length)
-            throws WebloggerException;
-    
-    /**
      * Get the WeblogEntry following, chronologically, the current entry.
      * Restrict by the Category, if named.
      * @param current The "current" WeblogEntryData
@@ -195,48 +175,6 @@ public interface WeblogEntryManager {
             throws WebloggerException;
 
     /**
-     * Save comment.
-     */
-    void saveComment(WeblogEntryComment comment) throws WebloggerException;
-    
-    /**
-     * Remove comment.
-     */
-    void removeComment(WeblogEntryComment comment) throws WebloggerException;
-   
-    /**
-     * Get comment by id.
-     */
-    WeblogEntryComment getComment(String id) throws WebloggerException;
-       
-    /**
-     * Generic comments query method.
-     * @param csc CommentSearchCriteria object with fields indicating search criteria
-     * @return list of comments fitting search criteria
-     */
-    List<WeblogEntryComment> getComments(CommentSearchCriteria csc) throws WebloggerException;
-
-    /**
-     * Deletes comments that match paramters.
-     * @param website    Website or null for all comments on site
-     * @param entry      Entry or null to include all comments
-     * @param startDate  Start date or null for no restriction
-     * @param endDate    End date or null for no restriction
-     * @param status     Status of comment
-     * @return Number of comments deleted
-     */
-    int removeMatchingComments(
-            
-            Weblog          website,
-            WeblogEntry     entry,
-            String          searchString,
-            Date            startDate,
-            Date            endDate,
-            ApprovalStatus  status
-            
-            ) throws WebloggerException;
-        
-    /**
      * Create unique anchor for weblog entry.
      */
     String createAnchor(WeblogEntry data) throws WebloggerException;
@@ -251,15 +189,9 @@ public interface WeblogEntryManager {
      * Check if weblog category is in use.
      */
     boolean isWeblogCategoryInUse(WeblogCategory data)
-            throws WebloggerException;    
-    
-    
-    /**
-     * Apply comment default settings from website to all of website's entries.
-     */
-    void applyCommentDefaultsToEntries(Weblog website)
-        throws WebloggerException;
-    
+            throws WebloggerException;
+
+
     /**
      * Release all resources held by manager.
      */
@@ -304,20 +236,8 @@ public interface WeblogEntryManager {
     boolean getTagComboExists(List<String> tags, Weblog weblog) throws WebloggerException;
 
     /**
-     * Get site-wide comment count
+     * Get site-wide entry count
      */
-    long getCommentCount() throws WebloggerException;
-
-    
-    /**
-     * Get weblog comment count 
-     */    
-    long getCommentCount(Weblog websiteData) throws WebloggerException;
-
-    
-    /**
-     * Get site-wide entry count 
-     */    
     long getEntryCount() throws WebloggerException;
 
     

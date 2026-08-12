@@ -32,12 +32,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.pojos.CommentSearchCriteria;
 import org.apache.roller.weblogger.pojos.RollerEvent;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment.ApprovalStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
-import org.apache.roller.weblogger.pojos.StatCount;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.TagStatComparator;
 import org.apache.roller.weblogger.pojos.TagStatCountComparator;
@@ -50,7 +47,6 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntryAttribute;
 import org.apache.roller.weblogger.pojos.WeblogEntryRevision;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
-import org.apache.roller.weblogger.pojos.StatCountCountComparator;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 
@@ -75,11 +71,8 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     
     private static final Comparator<TagStat> TAG_STAT_COUNT_REVERSE_COMPARATOR =
             Collections.reverseOrder(TagStatCountComparator.getInstance());
-    
-    private static final Comparator<StatCount> STAT_COUNT_COUNT_REVERSE_COMPARATOR =
-            Collections.reverseOrder(StatCountCountComparator.getInstance());
-    
-    
+
+
     public JPAWeblogEntryManagerImpl(Weblogger roller, JPAPersistenceStrategy strategy) {
         LOG.debug("Instantiating JPA Weblog Manager");
         this.roller = roller;
@@ -150,28 +143,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             srcCat.getWeblog().setBloggerCategory(destCat);
             this.strategy.store(srcCat.getWeblog());
         }
-    }
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public void saveComment(WeblogEntryComment comment) throws WebloggerException {
-        this.strategy.store(comment);
-        
-        // update weblog last modified date.  date updated by saveWebsite()
-        roller.getWeblogManager().saveWeblog(comment.getWeblogEntry().getWebsite());
-    }
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public void removeComment(WeblogEntryComment comment) throws WebloggerException {
-        this.strategy.remove(comment);
-        
-        // update weblog last modified date.  date updated by saveWebsite()
-        roller.getWeblogManager().saveWeblog(comment.getWeblogEntry().getWebsite());
     }
     
     /**
@@ -357,15 +328,16 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         removeRevisions.setParameter(1, entry);
         removeRevisions.executeUpdate();
         
-        CommentSearchCriteria csc = new CommentSearchCriteria();
-        csc.setEntry(entry);
-
-        // remove comments
-        List<WeblogEntryComment> comments = getComments(csc);
-        for (WeblogEntryComment comment : comments) {
+        // roller_comment.entryid FK-references weblogentry with no cascade,
+        // so an orphaned comment row would fail this delete at the database.
+        // The comment reading/writing surface left the manager interface in
+        // W1 (comments are being removed wholesale -- see Task 5/6 for the
+        // pojo and schema), but the row cleanup a delete still owes stays as
+        // a private, non-public query.
+        for (WeblogEntryComment comment : getCommentsForEntryRemoval(entry)) {
             this.strategy.remove(comment);
         }
-        
+
         // remove tag & tag aggregates
         if (entry.getTags() != null) {
             for (WeblogEntryTag tag : entry.getTags()) {
@@ -732,98 +704,20 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     }
     
     /**
-     * @inheritDoc
+     * Comments belonging to one entry, used only to clean up {@code
+     * roller_comment} rows when their entry is removed (see {@link
+     * #removeWeblogEntry}). The comment reading surface itself left {@link
+     * WeblogEntryManager} in W1; this is a private implementation detail,
+     * not a replacement for it.
      */
-    @Override
-    public List<WeblogEntryComment> getComments(CommentSearchCriteria csc) throws WebloggerException {
-        
-        List<Object> params = new ArrayList<>();
-        int size = 0;
-        StringBuilder queryString = new StringBuilder();
-        queryString.append("SELECT c FROM WeblogEntryComment c ");
-        
-        StringBuilder whereClause = new StringBuilder();
-        if (csc.getEntry() != null) {
-            params.add(size++, csc.getEntry());
-            whereClause.append("c.weblogEntry = ?").append(size);
-        } else if (csc.getWeblog() != null) {
-            params.add(size++, csc.getWeblog());
-            whereClause.append("c.weblogEntry.website = ?").append(size);
-        }
-        
-        if (csc.getSearchText() != null) {
-            params.add(size++, "%" + csc.getSearchText().toUpperCase() + "%");
-            appendConjuctionToWhereclause(whereClause, "upper(c.content) LIKE ?").append(size);
-        }
-        
-        if (csc.getStartDate() != null) {
-            Timestamp start = new Timestamp(csc.getStartDate().getTime());
-            params.add(size++, start);
-            appendConjuctionToWhereclause(whereClause, "c.postTime >= ?").append(size);
-        }
-        
-        if (csc.getEndDate() != null) {
-            Timestamp end = new Timestamp(csc.getEndDate().getTime());
-            params.add(size++, end);
-            appendConjuctionToWhereclause(whereClause, "c.postTime <= ?").append(size);
-        }
-        
-        if (csc.getStatus() != null) {
-            params.add(size++, csc.getStatus());
-            appendConjuctionToWhereclause(whereClause, "c.status = ?").append(size);
-        }
-        
-        if(whereClause.length() != 0) {
-            queryString.append(" WHERE ").append(whereClause);
-        }
-        if (csc.isReverseChrono()) {
-            queryString.append(" ORDER BY c.postTime DESC");
-        } else {
-            queryString.append(" ORDER BY c.postTime ASC");
-        }
-        
-        TypedQuery<WeblogEntryComment> query = strategy.getDynamicQuery(queryString.toString(), WeblogEntryComment.class);
-        setFirstMax( query, csc.getOffset(), csc.getMaxResults());
-        bindParams(query, params);
+    private List<WeblogEntryComment> getCommentsForEntryRemoval(WeblogEntry entry) throws WebloggerException {
+        TypedQuery<WeblogEntryComment> query = strategy.getDynamicQuery(
+                "SELECT c FROM WeblogEntryComment c WHERE c.weblogEntry = ?1", WeblogEntryComment.class);
+        query.setParameter(1, entry);
         return query.getResultList();
-        
     }
-    
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public int removeMatchingComments(
-            Weblog     weblog,
-            WeblogEntry entry,
-            String  searchString,
-            Date    startDate,
-            Date    endDate,
-            ApprovalStatus status) throws WebloggerException {
-        
-        // TODO dynamic bulk delete query: I'd MUCH rather use a bulk delete,
-        // but MySQL says "General error, message from server: "You can't
-        // specify target table 'roller_comment' for update in FROM clause"
-        
-        CommentSearchCriteria csc = new CommentSearchCriteria();
-        csc.setWeblog(weblog);
-        csc.setEntry(entry);
-        csc.setSearchText(searchString);
-        csc.setStartDate(startDate);
-        csc.setEndDate(endDate);
-        csc.setStatus(status);
 
-        List<WeblogEntryComment> comments = getComments(csc);
-        int count = 0;
-        for (WeblogEntryComment comment : comments) {
-            removeComment(comment);
-            count++;
-        }
-        return count;
-    }
-    
-    
+
     /**
      * @inheritDoc
      */
@@ -853,14 +747,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         }
     }
 
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public WeblogEntryComment getComment(String id) throws WebloggerException {
-        return (WeblogEntryComment) this.strategy.load(WeblogEntryComment.class, id);
-    }
-    
     /**
      * @inheritDoc
      */
@@ -921,69 +807,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
      * @inheritDoc
      */
     @Override
-    public List<StatCount> getMostCommentedWeblogEntries(Weblog website,
-            Date startDate, Date endDate, int offset,
-            int length) throws WebloggerException {
-        TypedQuery<WeblogEntryComment> query;
-        List<WeblogEntryComment> queryResults;
-
-        Timestamp end = new Timestamp(endDate != null? endDate.getTime() : new Date().getTime());
-
-        if (website != null) {
-            if (startDate != null) {
-                Timestamp start = new Timestamp(startDate.getTime());
-                query = strategy.getNamedQuery(
-                        "WeblogEntryComment.getMostCommentedWeblogEntryByWebsite&EndDate&StartDate",
-                        WeblogEntryComment.class);
-                query.setParameter(1, website);
-                query.setParameter(2, end);
-                query.setParameter(3, start);
-            } else {
-                query = strategy.getNamedQuery(
-                        "WeblogEntryComment.getMostCommentedWeblogEntryByWebsite&EndDate", WeblogEntryComment.class);
-                query.setParameter(1, website);
-                query.setParameter(2, end);
-            }
-        } else {
-            if (startDate != null) {
-                Timestamp start = new Timestamp(startDate.getTime());
-                query = strategy.getNamedQuery(
-                        "WeblogEntryComment.getMostCommentedWeblogEntryByEndDate&StartDate", WeblogEntryComment.class);
-                query.setParameter(1, end);
-                query.setParameter(2, start);
-            } else {
-                query = strategy.getNamedQuery(
-                        "WeblogEntryComment.getMostCommentedWeblogEntryByEndDate", WeblogEntryComment.class);
-                query.setParameter(1, end);
-            }
-        }
-        setFirstMax( query, offset, length);
-        queryResults = query.getResultList();
-        List<StatCount> results = new ArrayList<>();
-        if (queryResults != null) {
-            for (Object obj : queryResults) {
-                Object[] row = (Object[]) obj;
-                StatCount sc = new StatCount(
-                        (String)row[1],                             // weblog handle
-                        (String)row[2],                             // entry anchor
-                        (String)row[3],                             // entry title
-                        "statCount.weblogEntryCommentCountType",    // stat desc
-                        ((Long)row[0]));                            // count
-                sc.setWeblogHandle((String)row[1]);
-                results.add(sc);
-            }
-        }
-        // Original query ordered by desc count.
-        // JPA QL doesn't allow queries to be ordered by agregates; do it in memory
-        results.sort(STAT_COUNT_COUNT_REVERSE_COMPARATOR);
-        
-        return results;
-    }
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
     public WeblogEntry getNextEntry(WeblogEntry current,
             String catName, String locale) throws WebloggerException {
         WeblogEntry entry = null;
@@ -1013,26 +836,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
      */
     @Override
     public void release() {}
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public void applyCommentDefaultsToEntries(Weblog website)
-    throws WebloggerException {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("applyCommentDefaults");
-        }
-        
-        // TODO: Non-standard JPA bulk update, using parameter values in set clause
-        Query q = strategy.getNamedUpdate(
-                "WeblogEntry.updateAllowComments&CommentDaysByWebsite");
-        q.setParameter(1, website.getDefaultAllowComments());
-        q.setParameter(2, website.getDefaultCommentDays());
-        q.setParameter(3, website);
-        q.executeUpdate();
-    }
-    
+
     /**
      * @inheritDoc
      */
@@ -1307,29 +1111,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
      * @inheritDoc
      */
     @Override
-    public long getCommentCount() throws WebloggerException {
-        TypedQuery<Long> q = strategy.getNamedQuery(
-                "WeblogEntryComment.getCountAllDistinctByStatus", Long.class);
-        q.setParameter(1, ApprovalStatus.APPROVED);
-        return q.getResultList().get(0);
-    }
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
-    public long getCommentCount(Weblog website) throws WebloggerException {
-        TypedQuery<Long> q = strategy.getNamedQuery(
-                "WeblogEntryComment.getCountDistinctByWebsite&Status", Long.class);
-        q.setParameter(1, website);
-        q.setParameter(2, ApprovalStatus.APPROVED);
-        return q.getResultList().get(0);
-    }
-    
-    /**
-     * @inheritDoc
-     */
-    @Override
     public long getEntryCount() throws WebloggerException {
         TypedQuery<Long> q = strategy.getNamedQuery(
                 "WeblogEntry.getCountDistinctByStatus", Long.class);
@@ -1349,20 +1130,4 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         return q.getResultList().get(0);
     }
 
-    /**
-     * Appends given expression to given whereClause. If whereClause already
-     * has other conditions, an " AND " is also appended before appending
-     * the expression
-     * @param whereClause The given where Clauuse
-     * @param expression The given expression
-     * @return the whereClause.
-     */
-    private static StringBuilder appendConjuctionToWhereclause(StringBuilder whereClause,
-            String expression) {
-        if (whereClause.length() != 0 && expression.length() != 0) {
-            whereClause.append(" AND ");
-        }
-        return whereClause.append(expression);
-    }
-    
 }

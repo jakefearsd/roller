@@ -19,13 +19,11 @@ package org.apache.roller.weblogger.pojos;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.mockito.MockedStatic;
 
@@ -39,11 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -628,74 +623,6 @@ class WeblogEntryLogicTest {
         assertEquals(Boolean.TRUE, copy.getRightToLeft());
         assertEquals(Boolean.TRUE, copy.getPinnedToMain());
         assertEquals("fr", copy.getLocale());
-    }
-
-    @Test
-    void commentQueriesAreScopedToThisEntryAndItsWeblog() throws Exception {
-        // getComments() is reachable from a theme. If the criteria lost their
-        // entry or weblog the template would render another post's comments;
-        // if they lost the approval filter it would render the moderation queue.
-        WeblogEntryManager entries = mock(WeblogEntryManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
-        when(entries.getComments(any())).thenReturn(List.of());
-        ArgumentCaptor<CommentSearchCriteria> captor =
-                ArgumentCaptor.forClass(CommentSearchCriteria.class);
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            entry.getComments();
-            entry.getComments(true, false);
-        }
-
-        verify(entries, times(2)).getComments(captor.capture());
-        List<CommentSearchCriteria> issued = captor.getAllValues();
-
-        assertSame(weblog, issued.get(0).getWeblog());
-        assertSame(entry, issued.get(0).getEntry());
-        assertEquals(WeblogEntryComment.ApprovalStatus.APPROVED, issued.get(0).getStatus(),
-                "The public accessor must ask for approved comments only");
-        assertFalse(issued.get(0).isReverseChrono(),
-                "Comments on an entry read oldest first, unlike the site-wide recent "
-                        + "comments list");
-        assertNull(issued.get(1).getStatus(),
-                "approvedOnly=false asks for every status, which reaches the query as no "
-                        + "status restriction");
-    }
-
-    @Test
-    void commentAccessorsFailSoftWhenThePersistenceLayerErrors() throws Exception {
-        WeblogEntryManager entries = mock(WeblogEntryManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
-        when(entries.getComments(any())).thenThrow(new WebloggerException("boom"));
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertEquals(List.of(), entry.getComments(),
-                    "A failed comment query must render as no comments rather than taking "
-                            + "the entry's page down");
-            assertEquals(0, entry.getCommentCount());
-        }
-    }
-
-    @Test
-    void commentCountIsTheNumberOfCommentsReturned() throws Exception {
-        WeblogEntryComment one = new WeblogEntryComment();
-        WeblogEntryComment two = new WeblogEntryComment();
-        two.setName("someone else");
-
-        WeblogEntryManager entries = mock(WeblogEntryManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
-        when(entries.getComments(any())).thenReturn(List.of(one, two));
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertEquals(2, entry.getCommentCount());
-        }
     }
 
     private static Timestamp now() {

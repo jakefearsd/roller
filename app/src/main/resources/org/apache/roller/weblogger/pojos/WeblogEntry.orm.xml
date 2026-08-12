@@ -29,9 +29,6 @@
             <!-- DISTINCT is not required for this query -->
             <query>SELECT COUNT(e) FROM WeblogEntry e WHERE e.status = ?1 AND e.website = ?2</query>
         </named-query>
-        <named-query name="WeblogEntry.updateAllowComments&amp;CommentDaysByWebsite">
-            <query>UPDATE WeblogEntry e SET e.allowComments = ?1, e.commentDays = ?2 WHERE e.website = ?3</query>
-        </named-query>
         <!-- Remembers the title/text/summary this entry was loaded with, so a
              later save can tell whether the content actually changed and, when
              it did, record what it displaced. Without this the entry has only
@@ -145,7 +142,6 @@
             </one-to-many>
             <transient name="creator"/>
             <transient name="categories"/>
-            <transient name="commentCount"/>
             <transient name="commentsLink"/>
             <transient name="commentsStillAllowed"/>
             <transient name="displayContent"/>
@@ -158,8 +154,7 @@
             <transient name="rss09xDescription"/>
             <transient name="tagsAsString"/>
             <transient name="transformedText"/>
-            <transient name="transformedSummary"/>         
-            <transient name="comments"/>
+            <transient name="transformedSummary"/>
             <transient name="addedTags"/>
             <transient name="removedTags"/>
             <transient name="refreshAggregates"/>

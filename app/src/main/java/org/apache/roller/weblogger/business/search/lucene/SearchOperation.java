@@ -51,8 +51,7 @@ public class SearchOperation extends ReadFromIndexOperation {
 
     private static final String[] SEARCH_FIELDS = new String[] {
         FieldConstants.CONTENT,
-        FieldConstants.TITLE,
-        FieldConstants.C_CONTENT
+        FieldConstants.TITLE
     };
 
     private static final Sort SORTER = new Sort(new SortField(

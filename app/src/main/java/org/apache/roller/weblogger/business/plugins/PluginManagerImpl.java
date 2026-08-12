@@ -18,12 +18,9 @@
 
 package org.apache.roller.weblogger.business.plugins;
 
-import java.util.ArrayList;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -31,7 +28,6 @@ import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.plugins.comment.WeblogEntryCommentPlugin;
 import org.apache.roller.weblogger.business.MarkdownRenderer;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.pojos.WeblogEntryComment;
@@ -48,20 +44,14 @@ public class PluginManagerImpl implements PluginManager {
     
     // Plugin classes keyed by plugin name
     private static final Map<String, Class<? extends WeblogEntryPlugin>> mPagePlugins = new LinkedHashMap<>();
-    
-    // Comment plugins
-    private final List<WeblogEntryCommentPlugin> commentPlugins = new ArrayList<>();
-    
-    
+
+
     /**
      * Creates a new instance of PluginManagerImpl
      */
     public PluginManagerImpl() {
         // load weblog entry plugins
         loadPagePluginClasses();
-        
-        // load weblog entry comment plugins
-        loadCommentPlugins();
     }
     
     
@@ -124,36 +114,17 @@ public class PluginManagerImpl implements PluginManager {
     
     /**
      * @inheritDoc
-     */
-    @Override
-    public List<WeblogEntryCommentPlugin> getCommentPlugins() {
-        return commentPlugins;
-    }
-    
-    
-    /**
-     * @inheritDoc
+     *
+     * <p>W1 deleted the comment-plugin registry this used to consult (see the
+     * javadoc on the interface method) -- there is nothing left to apply, so
+     * this is a pure pass-through kept only for a Task-5-owned caller.
      */
     @Override
     public String applyCommentPlugins(WeblogEntryComment comment, String text) {
-        
-        if(comment == null || text == null) {
+        if (comment == null || text == null) {
             throw new IllegalArgumentException("comment cannot be null");
         }
-        
-        String content = text;
-        
-        if (!commentPlugins.isEmpty()) {
-            for (WeblogEntryCommentPlugin plugin : commentPlugins) {
-                if(comment.getPlugins() != null &&
-                        comment.getPlugins().contains(plugin.getId())) {
-                    log.debug("Invoking comment plugin "+plugin.getId());
-                    content = plugin.render(comment, content);
-                }
-            }
-        }
-        
-        return content;
+        return text;
     }
     
     
@@ -193,23 +164,7 @@ public class PluginManagerImpl implements PluginManager {
             }
         }
     }
-    
-    
-    /**
-     * Initialize all comment plugins defined in weblogger config.
-     */
-    private void loadCommentPlugins() {
-        
-        try {
-            commentPlugins.addAll(Reflection.newInstancesFromProperty("comment.formatter.classnames"));
-        } catch (ReflectiveOperationException e) {
-            log.error("unable to create comment plugins", e);
-        }
-        
-        log.info("Configured comment plugins");
-        log.info(commentPlugins.stream().map(t -> t.getClass().toString()).collect(Collectors.joining(",", "[", "]")));
-    }
-    
+
     @Override
     public void release() {
         // no op

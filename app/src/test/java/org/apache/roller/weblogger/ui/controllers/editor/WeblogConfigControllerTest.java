@@ -254,25 +254,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void applyingCommentDefaultsRewritesExistingEntriesOnlyWhenAsked() throws Exception {
-        bean.setApplyCommentDefaults(true);
-
-        controller.save(request, model, bean);
-
-        verify(weblogger.getWeblogEntryManager()).applyCommentDefaultsToEntries(weblog);
-    }
-
-    @Test
-    void existingEntriesAreLeftAloneWhenCommentDefaultsAreNotApplied() throws Exception {
-        // This is a bulk rewrite of every entry on the blog; it must be opt-in.
-        bean.setApplyCommentDefaults(false);
-
-        controller.save(request, model, bean);
-
-        verify(weblogger.getWeblogEntryManager(), never()).applyCommentDefaultsToEntries(any());
-    }
-
-    @Test
     void changingTheBloggerApiCategoryLooksUpTheNewOne() throws Exception {
         WeblogCategory current = category("cat-1", "Travel");
         WeblogCategory replacement = category("cat-2", "Food");

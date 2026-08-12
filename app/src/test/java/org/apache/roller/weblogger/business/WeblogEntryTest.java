@@ -1020,37 +1020,20 @@ public class WeblogEntryTest  {
         WeblogEntry entry3 = TestUtils.setupWeblogEntry("entry3", blog2, user1);
         WeblogEntry entry4 = TestUtils.setupWeblogEntry("entry4", blog2, user1);
         WeblogEntry entry5 = TestUtils.setupWeblogEntry("entry5", blog2, user1);
-               
-        WeblogEntryComment comment1 = TestUtils.setupComment("comment1", entry1);
-        WeblogEntryComment comment2 = TestUtils.setupComment("comment2", entry1);
-        
-        WeblogEntryComment comment3 = TestUtils.setupComment("comment3", entry3);
-        WeblogEntryComment comment4 = TestUtils.setupComment("comment4", entry3);
-        WeblogEntryComment comment5 = TestUtils.setupComment("comment5", entry3);
         TestUtils.endSession(true);
 
         try {
             blog1 = wmgr.getWeblog(blog1.getId());
             blog2 = wmgr.getWeblog(blog2.getId());
-            
+
             assertEquals(2L, blog1.getEntryCount());
             assertEquals(3L, blog2.getEntryCount());
             assertEquals(5L, emgr.getEntryCount());
 
-            assertEquals(2L, blog1.getCommentCount());
-            assertEquals(3L, blog2.getCommentCount());
-            assertEquals(5L, emgr.getCommentCount());
-
             assertEquals(4L, wmgr.getWeblogCount());
             assertEquals(existingUserCount + 2L, umgr.getUserCount());
-            
+
         } finally {
-            
-            TestUtils.teardownComment(comment1.getId());
-            TestUtils.teardownComment(comment2.getId());
-            TestUtils.teardownComment(comment3.getId());
-            TestUtils.teardownComment(comment4.getId());
-            TestUtils.teardownComment(comment5.getId());
 
             TestUtils.teardownWeblogEntry(entry1.getId());
             TestUtils.teardownWeblogEntry(entry2.getId());

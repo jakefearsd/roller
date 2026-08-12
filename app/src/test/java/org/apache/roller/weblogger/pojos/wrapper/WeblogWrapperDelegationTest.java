@@ -29,7 +29,6 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.junit.jupiter.api.BeforeEach;
@@ -108,12 +107,8 @@ class WeblogWrapperDelegationTest {
 
     @Test
     void countsComeFromTheEntryManager() throws Exception {
-        when(entries.getCommentCount(weblog)).thenReturn(7L);
         when(entries.getEntryCount(weblog)).thenReturn(13L);
 
-        // Two different numbers, so an accessor wired to the wrong count is
-        // visible rather than coincidentally right.
-        assertEquals(7L, withWeblogger(wrapper::getCommentCount));
         assertEquals(13L, withWeblogger(wrapper::getEntryCount));
     }
 
@@ -123,13 +118,10 @@ class WeblogWrapperDelegationTest {
         entry.setWebsite(weblog);
         entry.setAnchor("hello-world");
         entry.setTitle("Hello World");
-        WeblogEntryComment comment = new WeblogEntryComment();
-        comment.setName("Alice");
         TagStat tag = new TagStat();
         tag.setName("java");
 
         when(entries.getWeblogEntries(any())).thenReturn(List.of(entry));
-        when(entries.getComments(any())).thenReturn(List.of(comment));
         when(entries.getPopularTags(any(), any(), org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt())).thenReturn(List.of(tag));
 
@@ -140,8 +132,6 @@ class WeblogWrapperDelegationTest {
         assertEquals("Hello World",
                 withWeblogger(() -> wrapper.getRecentWeblogEntriesByTag("java", 5))
                         .get(0).getTitle());
-        assertEquals("Alice",
-                withWeblogger(() -> wrapper.getRecentComments(5)).get(0).getName());
         assertEquals(List.of(tag), withWeblogger(() -> wrapper.getPopularTags(30, 5)),
                 "Tag statistics carry no mutable state, so they are passed through as-is");
     }

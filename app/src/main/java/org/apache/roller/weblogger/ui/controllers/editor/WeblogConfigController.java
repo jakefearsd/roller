@@ -131,10 +131,6 @@ public class WeblogConfigController extends BaseController {
 
                 weblogger.getWeblogManager().saveWeblog(weblog);
 
-                if (bean.getApplyCommentDefaults()) {
-                    wmgr.applyCommentDefaultsToEntries(weblog);
-                }
-
                 weblogger.flush();
                 addMessage(model, "websiteSettings.savedChanges", request);
                 CacheManager.invalidate(weblog);

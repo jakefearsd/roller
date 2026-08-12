@@ -386,7 +386,6 @@ class WeblogLogicTest {
         Weblogger weblogger = mock(Weblogger.class);
         when(weblogger.getWeblogEntryManager()).thenReturn(entries);
         when(entries.getWeblogEntries(any())).thenReturn(List.of(first, second));
-        when(entries.getComments(any())).thenReturn(List.of(new WeblogEntryComment()));
 
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
             factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
@@ -395,7 +394,6 @@ class WeblogLogicTest {
                     "The finder must hand back what the query returned; an empty list "
                             + "would render as a blog with no posts");
             assertEquals(List.of(first, second), weblog.getRecentWeblogEntriesByTag("java", 10));
-            assertEquals(1, weblog.getRecentComments(10).size());
         }
     }
 
@@ -412,7 +410,6 @@ class WeblogLogicTest {
                     "A length of zero means no entries were asked for");
             assertEquals(List.of(), weblog.getRecentWeblogEntries("General", -1),
                     "A negative length must not be treated as 'unlimited'");
-            assertEquals(List.of(), weblog.getRecentComments(0));
             assertEquals(List.of(), weblog.getRecentWeblogEntriesByTag("java", 0));
         }
         org.mockito.Mockito.verifyNoInteractions(entries);
@@ -453,36 +450,6 @@ class WeblogLogicTest {
                         + "rejected as if it were a request for none");
     }
 
-    @Test
-    void recentCommentsAskOnlyForApprovedOnesNewestFirst() throws Exception {
-        WeblogEntryManager entries = mock(WeblogEntryManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
-        when(entries.getComments(any())).thenReturn(List.of());
-        ArgumentCaptor<CommentSearchCriteria> captor =
-                ArgumentCaptor.forClass(CommentSearchCriteria.class);
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            weblog.getRecentComments(500);
-            weblog.getRecentComments(1);
-        }
-
-        org.mockito.Mockito.verify(entries, org.mockito.Mockito.times(2))
-                .getComments(captor.capture());
-        CommentSearchCriteria criteria = captor.getAllValues().get(0);
-
-        assertEquals(WeblogEntryComment.ApprovalStatus.APPROVED, criteria.getStatus(),
-                "A 'recent comments' sidebar must never leak comments still awaiting "
-                        + "moderation, or marked as spam, onto the public blog");
-        assertTrue(criteria.isReverseChrono(), "Recent means newest first");
-        assertEquals(100, criteria.getMaxResults(), "The 100 item ceiling applies here too");
-        assertSame(weblog, criteria.getWeblog(),
-                "and the sidebar must show this blog's comments, not the whole server's");
-        assertEquals(1, captor.getAllValues().get(1).getMaxResults(),
-                "A request for a single comment must reach the database");
-    }
-
     private WeblogEntrySearchCriteria captureRecentEntryQuery(String category, int length)
             throws Exception {
         WeblogEntryManager entries = mock(WeblogEntryManager.class);
@@ -510,13 +477,11 @@ class WeblogLogicTest {
         WeblogEntryManager entries = mock(WeblogEntryManager.class);
         Weblogger weblogger = mock(Weblogger.class);
         when(weblogger.getWeblogEntryManager()).thenReturn(entries);
-        when(entries.getCommentCount(weblog)).thenThrow(new WebloggerException("boom"));
         when(entries.getEntryCount(weblog)).thenThrow(new WebloggerException("boom"));
 
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
             factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
 
-            assertEquals(0L, weblog.getCommentCount());
             assertEquals(0L, weblog.getEntryCount());
         }
     }
@@ -639,16 +604,14 @@ class WeblogLogicTest {
         WeblogEntryManager entries = mock(WeblogEntryManager.class);
         Weblogger weblogger = mock(Weblogger.class);
         when(weblogger.getWeblogEntryManager()).thenReturn(entries);
-        when(entries.getCommentCount(weblog)).thenReturn(7L);
         when(entries.getEntryCount(weblog)).thenReturn(13L);
 
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
             factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
 
-            assertEquals(7L, weblog.getCommentCount(),
+            assertEquals(13L, weblog.getEntryCount(),
                     "The counts are rendered in the admin blog list; reporting a constant "
                             + "would make every blog look identical");
-            assertEquals(13L, weblog.getEntryCount());
         }
     }
 

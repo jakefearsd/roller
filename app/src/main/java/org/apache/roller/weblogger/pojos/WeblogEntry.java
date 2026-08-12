@@ -47,7 +47,6 @@ import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.ContentRenderer;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeContext;
@@ -934,34 +933,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
         }
         
         return "ERROR: formatting date";
-    }
-    
-    //------------------------------------------------------------------------
-    
-    public List<WeblogEntryComment> getComments() {
-        return getComments(true, true);
-    }
-    
-    /**
-     * TODO: why is this method exposed to users with ability to get spam/non-approved comments?
-     */
-    @Deprecated
-    public List<WeblogEntryComment> getComments(boolean ignoreSpam, boolean approvedOnly) {
-        try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-
-            CommentSearchCriteria csc = new CommentSearchCriteria();
-            csc.setWeblog(getWebsite());
-            csc.setEntry(this);
-            csc.setStatus(approvedOnly ? WeblogEntryComment.ApprovalStatus.APPROVED : null);
-            return wmgr.getComments(csc);
-        } catch (WebloggerException alreadyLogged) {}
-        
-        return Collections.emptyList();
-    }
-    
-    public int getCommentCount() {
-        return getComments().size();
     }
     
     //------------------------------------------------------------------------
