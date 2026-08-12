@@ -180,8 +180,29 @@ git commit -m "W1: the endpoints a comment travelled through are gone"
 
 ### Task 3: Admin and authoring UI
 
+> **Amended mid-execution.** Task 2's implementer found that the plan missed
+> `MailUtil.java`. Its comment-notification methods call
+> `URLStrategy.getWeblogCommentsURL` (`MailUtil:295,489`) and two
+> `commentServlet.email.*` keys (`309,327`), and are themselves called from
+> `CommentsController:221`. Deleting the URL methods in Task 2 would not
+> compile. Task 2 therefore deferred four things to this task — they are folded
+> into the file list below and marked **(deferred from T2)**.
+
 **Files:**
 - Delete: `ui/controllers/editor/CommentsController.java`, `CommentsBean.java`
+- **(deferred from T2)** Modify: `util/MailUtil.java` — delete
+  `sendEmailNotification(WeblogEntryComment, …)`,
+  `sendEmailApprovalNotifications`, `sendEmailApprovalNotification`, and the two
+  `commentServlet.email.thereAreSystemMessages` /
+  `…thereAreErrorMessages` lookups. Every other mailer in this class survives.
+- **(deferred from T2)** Modify: `app/src/test/java/.../MailUtilTest.java` —
+  remove the comment-notification cases only
+- **(deferred from T2)** Modify: `business/URLStrategy.java` + its
+  `MultiWeblogURLStrategy` impl — remove `getWeblogCommentsURL` (117),
+  `getWeblogCommentURL` (126)
+- **(deferred from T2)** Modify: `ui/rendering/model/URLModel.java` — remove
+  `comment(String, String)` (172) and `comments(String)` (177). Task 2 already
+  removed `getCommentAuthenticator()` and the `CommentFeedURLS` class.
 - Delete: `ui/controllers/admin/GlobalCommentManagementController.java`, `GlobalCommentManagementBean.java`
 - Delete: `ui/controllers/ajax/CommentDataServlet.java`
 - Delete: `ui/controllers/pagers/CommentsPager.java`
