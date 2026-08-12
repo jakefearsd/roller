@@ -57,8 +57,6 @@ public class EntryBean {
     private String status = null;
 
     private String pubTimeLocal = null;
-    private boolean allowComments = false;
-    private Integer commentDays = 0;
     private boolean pinnedToMain = false;
     private String searchDescription = null;
 
@@ -154,25 +152,6 @@ public class EntryBean {
         this.pubTimeLocal = pubTimeLocal;
     }
 
-    public boolean getAllowComments() {
-        return this.allowComments;
-    }
-    
-    public void setAllowComments( boolean allowComments ) {
-        this.allowComments = allowComments;
-    }
-    
-    public Integer getCommentDays() {
-        return this.commentDays;
-    }
-    
-    public void setCommentDays(Integer commentDays) {
-        this.commentDays = commentDays;
-        if (commentDays == -1) {
-            allowComments = false;
-        }
-    }
-    
     public boolean getPinnedToMain() {
         return this.pinnedToMain;
     }
@@ -428,10 +407,6 @@ public class EntryBean {
             throw new WebloggerException("No category specified");
         }
 
-        // comment settings
-        entry.setAllowComments(getAllowComments());
-        entry.setCommentDays(getCommentDays());
-
         // NOTE: pubtime and pinned to main attributes are set in action
     }
     
@@ -474,8 +449,6 @@ public class EntryBean {
             setPubTimeLocal(zoned.toLocalDateTime().format(DATETIME_LOCAL));
         }
 
-        setAllowComments(entry.getAllowComments());
-        setCommentDays(entry.getCommentDays());
         setPinnedToMain(entry.getPinnedToMain());
     }
     
@@ -484,7 +457,7 @@ public class EntryBean {
     public String toString() {
         StringBuilder buf = new StringBuilder();
         
-        //title,locale,catId,tags,text,summary,pubTimeLocal,status,comments
+        //title,locale,catId,tags,text,summary,pubTimeLocal,status
         buf.append("title = ").append(getTitle()).append("\n");
         buf.append("locale = ").append(getLocale()).append("\n");
         buf.append("status = ").append(getStatus()).append("\n");
@@ -494,8 +467,6 @@ public class EntryBean {
         buf.append("text = ").append(getText()).append("\n");
         buf.append("summary = ").append(getSummary()).append("\n");
         buf.append("search description = ").append(getSearchDescription()).append("\n");
-        buf.append("comments = ").append(getAllowComments()).append("\n");
-        buf.append("commentDays = ").append(getCommentDays()).append("\n");
 
         return buf.toString();
     }

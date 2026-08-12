@@ -18,7 +18,6 @@
 package org.apache.roller.weblogger.pojos;
 
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
@@ -188,8 +187,6 @@ class WeblogLogicTest {
         source.setTagline("A tagline");
         source.setCreatorUserName("bob");
         source.setBloggerCategory(bloggerCategory);
-        source.setAllowComments(Boolean.FALSE);
-        source.setEmailComments(Boolean.TRUE);
         source.setEmailAddress("owner@example.com");
         source.setEditorTheme("journal");
         source.setLocale("fr_FR");
@@ -209,8 +206,6 @@ class WeblogLogicTest {
         assertEquals("A tagline", weblog.getTagline());
         assertEquals("bob", weblog.getCreatorUserName());
         assertSame(bloggerCategory, weblog.getBloggerCategory());
-        assertEquals(Boolean.FALSE, weblog.getAllowComments());
-        assertEquals(Boolean.TRUE, weblog.getEmailComments());
         assertEquals("owner@example.com", weblog.getEmailAddress());
         assertEquals("journal", weblog.getEditorTheme());
         assertEquals("fr_FR", weblog.getLocale());
@@ -268,40 +263,6 @@ class WeblogLogicTest {
         assertNull(weblog.getMediaFileDirectory("videos"),
                 "A directory that does not exist must read as null so the caller can "
                         + "create it, rather than returning an arbitrary other directory");
-    }
-
-    // ------------------------------------------------------- moderation
-
-    @Test
-    void commentModerationIsRequiredIfEitherTheBlogOrTheSiteSaysSo() {
-        weblog.setModerateComments(Boolean.TRUE);
-        assertTrue(moderationRequiredWithSiteSetting(false),
-                "A blog that switched moderation on must get it even when the site has "
-                        + "not made moderation compulsory");
-
-        weblog.setModerateComments(Boolean.FALSE);
-        assertTrue(moderationRequiredWithSiteSetting(true),
-                "A site that made moderation compulsory must override an individual "
-                        + "blog's preference -- that switch is what an administrator reaches "
-                        + "for during a spam wave");
-        assertFalse(moderationRequiredWithSiteSetting(false),
-                "With neither switch set, comments are published immediately");
-    }
-
-    private boolean moderationRequiredWithSiteSetting(boolean siteWide) {
-        Weblogger weblogger = mock(Weblogger.class);
-        PropertiesManager properties = mock(PropertiesManager.class);
-        when(weblogger.getPropertiesManager()).thenReturn(properties);
-        try {
-            when(properties.getProperty("users.moderation.required")).thenReturn(
-                    new RuntimeConfigProperty("users.moderation.required", String.valueOf(siteWide)));
-        } catch (WebloggerException e) {
-            throw new AssertionError(e);
-        }
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            return weblog.getCommentModerationRequired();
-        }
     }
 
     // ------------------------------------------------------------- urls

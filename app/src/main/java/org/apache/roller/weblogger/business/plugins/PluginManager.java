@@ -22,7 +22,6 @@ import java.util.Map;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 
 
 /**
@@ -57,25 +56,6 @@ public interface PluginManager {
     String applyWeblogEntryPlugins(Map<String, WeblogEntryPlugin> pagePlugins, WeblogEntry entry, String str);
 
 
-    /**
-     * Apply comment plugins.
-     *
-     * <p>W1 deleted the comment-plugin registry (the {@code
-     * business.plugins.comment} package and {@code comment.formatter.classnames})
-     * along with {@link #getCommentPlugins()}'s registration surface -- there is
-     * nothing left to apply. This method survives, as a pure pass-through, ONLY
-     * because {@code WeblogEntryCommentWrapper.getContent()} (Task 5's, not
-     * touched here) still calls it and is itself unreachable from any live
-     * render path once its own callers went in this task; it is out of scope to
-     * delete a Task 5 file from Task 4.
-     *
-     * @param comment The comment to apply plugins for.
-     * @param text The text to apply the plugins to.
-     * @return String The comment text, unchanged.
-     */
-    String applyCommentPlugins(WeblogEntryComment comment, String text);
-    
-    
     /**
      * Release all resources associated with Roller session.
      */

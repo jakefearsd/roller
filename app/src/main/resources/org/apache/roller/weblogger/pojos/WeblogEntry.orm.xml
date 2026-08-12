@@ -66,12 +66,6 @@
             <basic name="link">
                 <column name="link" insertable="true" updatable="true" unique="false"/>
             </basic>
-            <basic name="allowComments">
-                <column name="allowcomments" insertable="true" updatable="true" unique="false"/>
-            </basic>
-            <basic name="commentDays">
-                <column name="commentdays" insertable="true" updatable="true" unique="false"/>
-            </basic>
             <basic name="rightToLeft">
                 <column name="righttoleft" insertable="true" updatable="true" unique="false"/>
             </basic>
@@ -142,8 +136,6 @@
             </one-to-many>
             <transient name="creator"/>
             <transient name="categories"/>
-            <transient name="commentsLink"/>
-            <transient name="commentsStillAllowed"/>
             <transient name="displayContent"/>
             <transient name="displayTitle"/>
             <transient name="draft"/>

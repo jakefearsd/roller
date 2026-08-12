@@ -25,7 +25,6 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -221,15 +220,6 @@ public final class CacheManager {
         log.debug("invalidating website = "+website.getHandle());
         for (CacheHandler handler : cacheHandlers) {
             handler.invalidate(website);
-        }
-    }
-    
-    
-    public static void invalidate(WeblogEntryComment comment) {
-        
-        log.debug("invalidating comment = "+comment.getId());
-        for (CacheHandler handler : cacheHandlers) {
-            handler.invalidate(comment);
         }
     }
     

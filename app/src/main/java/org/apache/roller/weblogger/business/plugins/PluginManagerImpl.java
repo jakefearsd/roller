@@ -30,7 +30,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MarkdownRenderer;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.apache.roller.weblogger.util.Reflection;
 
@@ -109,22 +108,6 @@ public class PluginManagerImpl implements PluginManager {
         ret = MarkdownRenderer.render(ret);
 
         return HTMLSanitizer.conditionallySanitize(ret);
-    }
-    
-    
-    /**
-     * @inheritDoc
-     *
-     * <p>W1 deleted the comment-plugin registry this used to consult (see the
-     * javadoc on the interface method) -- there is nothing left to apply, so
-     * this is a pure pass-through kept only for a Task-5-owned caller.
-     */
-    @Override
-    public String applyCommentPlugins(WeblogEntryComment comment, String text) {
-        if (comment == null || text == null) {
-            throw new IllegalArgumentException("comment cannot be null");
-        }
-        return text;
     }
     
     

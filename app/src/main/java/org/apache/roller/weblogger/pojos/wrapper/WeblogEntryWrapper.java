@@ -146,16 +146,6 @@ public final class WeblogEntryWrapper {
     }
     
     
-    public Boolean getAllowComments() {
-        return this.pojo.getAllowComments();
-    }
-    
-    
-    public Integer getCommentDays() {
-        return this.pojo.getCommentDays();
-    }
-    
-    
     public Boolean getRightToLeft() {
         return this.pojo.getRightToLeft();
     }
@@ -182,13 +172,8 @@ public final class WeblogEntryWrapper {
     public String getTagsAsString() {
         return this.pojo.getTagsAsString();
     }
-    
-    
-    public boolean getCommentsStillAllowed() {
-        return this.pojo.getCommentsStillAllowed();
-    }
-    
-    
+
+
     public String formatPubTime(String pattern) {
         return this.pojo.formatPubTime(pattern);
     }
@@ -214,16 +199,6 @@ public final class WeblogEntryWrapper {
     }
 
 
-    /**
-     * @deprecated Use getPermalink() + "#comments" instead
-     */
-    @Deprecated
-    @SuppressWarnings("deprecation")
-    public String getCommentsLink() {
-        return this.pojo.getCommentsLink();
-    }
-    
-    
     public String getDisplayTitle() {
         return this.pojo.getDisplayTitle();
     }

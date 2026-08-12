@@ -18,7 +18,6 @@
 
 package org.apache.roller.weblogger.util.cache;
 
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -40,8 +39,6 @@ public interface CacheHandler {
     default void invalidate(WeblogEntry entry) {}
 
     default void invalidate(Weblog website) {}
-
-    default void invalidate(WeblogEntryComment comment) {}
 
     default void invalidate(User user) {}
 

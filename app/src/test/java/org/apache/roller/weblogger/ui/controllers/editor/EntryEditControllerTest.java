@@ -120,17 +120,13 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
     // --- entryAdd, GET ---
 
     @Test
-    void openingTheNewEntryFormSeedsTheBeanFromTheWeblogsDefaults() {
+    void openingTheNewEntryFormSeedsTheBeanFromTheWeblogsLocale() {
         weblog.setLocale("fr_FR");
-        weblog.setDefaultAllowComments(Boolean.TRUE);
-        weblog.setDefaultCommentDays(30);
 
         String view = controller.entryAddExecute(request, model, bean);
 
         assertEquals(".EntryEdit", view);
         assertEquals("fr_FR", bean.getLocale());
-        assertTrue(bean.getAllowComments());
-        assertEquals(30, bean.getCommentDays());
     }
 
     @Test
@@ -828,7 +824,6 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         entry.setCategory(category);
         entry.setStatus(status);
         entry.setCreatorUserName(USER_NAME);
-        entry.setCommentDays(0);
         when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
         bean.setId("entry-1");
         return entry;

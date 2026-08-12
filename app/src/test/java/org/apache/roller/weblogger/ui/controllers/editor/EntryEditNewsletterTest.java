@@ -321,7 +321,6 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
         entry.setCategory(category);
         entry.setStatus(status);
         entry.setCreatorUserName(USER_NAME);
-        entry.setCommentDays(0);
         when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
         return entry;
     }

@@ -56,7 +56,7 @@ public class SchemaMigrationTest {
      */
     private static final List<String> EXPECTED_TABLES = List.of(
             "custom_template_rendition", "entryattribute", "newsfeed",
-            "roller_audit_log", "roller_comment",
+            "roller_audit_log",
             "roller_mediafile", "roller_mediafiledir", "roller_mediafiletag",
             "roller_permission", "roller_properties",
             "roller_tasklock",
@@ -76,7 +76,9 @@ public class SchemaMigrationTest {
             // V017: hitcount subsystem replaced by Umami traffic counting.
             "roller_hitcounts",
             // V020: share-link feature removed entirely, not coming back.
-            "roller_share_link");
+            "roller_share_link",
+            // V022: comment subsystem removed entirely (W1), not coming back.
+            "roller_comment");
 
     @Test
     public void migrationsAreDiscoverableOnTheClasspath() {

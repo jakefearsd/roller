@@ -27,7 +27,6 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
@@ -197,28 +196,6 @@ public class SiteWideCacheTest {
         assertEquals("rendered page", cache.get("key"),
                 "A profile change does not alter rendered site-wide content, and dropping "
                         + "this cache is expensive enough not to do it for nothing");
-    }
-
-    @Test
-    public void aCommentOnTheFrontPageWeblogDropsTheCache() {
-        cache.put("key", "rendered page");
-
-        cache.invalidate(comment(weblog(FRONT_PAGE)));
-
-        assertNull(cache.get("key"),
-                "A new comment on the site-wide weblog changes its rendered pages");
-    }
-
-    @Test
-    public void aCommentOnAnyOtherWeblogLeavesTheCacheAlone() {
-        cache.put("key", "rendered page");
-
-        cache.invalidate(comment(weblog("someone-else")));
-
-        assertEquals("rendered page", cache.get("key"),
-                "Comments on ordinary weblogs must not flush the site-wide cache. On a "
-                        + "site with many weblogs that would keep the front page "
-                        + "permanently uncached.");
     }
 
     @Test
@@ -509,7 +486,6 @@ public class SiteWideCacheTest {
         // never built
         disabled.invalidate(new WeblogEntry());
         disabled.invalidate(new Weblog());
-        disabled.invalidate(comment(weblog(FRONT_PAGE)));
         disabled.invalidate(category(weblog(FRONT_PAGE)));
         disabled.invalidate(template(weblog(FRONT_PAGE)));
         disabled.remove("key");
@@ -526,14 +502,6 @@ public class SiteWideCacheTest {
         Weblog weblog = new Weblog();
         weblog.setHandle(handle);
         return weblog;
-    }
-
-    private static WeblogEntryComment comment(Weblog weblog) {
-        WeblogEntry entry = new WeblogEntry();
-        entry.setWebsite(weblog);
-        WeblogEntryComment comment = new WeblogEntryComment();
-        comment.setWeblogEntry(entry);
-        return comment;
     }
 
     private static WeblogCategory category(Weblog weblog) {

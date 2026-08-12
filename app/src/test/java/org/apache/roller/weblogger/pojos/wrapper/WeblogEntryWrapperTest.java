@@ -78,10 +78,8 @@ class WeblogEntryWrapperTest {
         entry.setStatus(PubStatus.PUBLISHED);
         entry.setPubTime(Timestamp.valueOf("2024-03-09 15:30:00"));
         entry.setUpdateTime(Timestamp.valueOf("2024-03-10 09:00:00"));
-        entry.setCommentDays(21);
         entry.setPinnedToMain(Boolean.TRUE);
         entry.setRightToLeft(Boolean.TRUE);
-        entry.setAllowComments(Boolean.FALSE);
         entry.setSearchDescription("A search description");
 
         urls = mock(URLStrategy.class);
@@ -103,7 +101,6 @@ class WeblogEntryWrapperTest {
         assertEquals(PubStatus.PUBLISHED, wrapper.getStatus());
         assertEquals(Timestamp.valueOf("2024-03-09 15:30:00"), wrapper.getPubTime());
         assertEquals(Timestamp.valueOf("2024-03-10 09:00:00"), wrapper.getUpdateTime());
-        assertEquals(Integer.valueOf(21), wrapper.getCommentDays());
     }
 
     @Test
@@ -113,21 +110,17 @@ class WeblogEntryWrapperTest {
         // Holding the other flags at the opposite value rules that out.
         entry.setPinnedToMain(Boolean.TRUE);
         entry.setRightToLeft(Boolean.FALSE);
-        entry.setAllowComments(Boolean.FALSE);
         assertEquals(Boolean.TRUE, wrapper.getPinnedToMain(),
                 "Pinning a post to the site front page is a per-post decision, so this "
                         + "must not answer for another flag");
         assertEquals(Boolean.FALSE, wrapper.getRightToLeft());
-        assertEquals(Boolean.FALSE, wrapper.getAllowComments());
 
         entry.setPinnedToMain(Boolean.FALSE);
         entry.setRightToLeft(Boolean.TRUE);
-        entry.setAllowComments(Boolean.TRUE);
         assertEquals(Boolean.FALSE, wrapper.getPinnedToMain());
         assertEquals(Boolean.TRUE, wrapper.getRightToLeft(),
                 "A right-to-left post must render right to left; a flag stuck at one "
                         + "answer breaks either every Arabic blog or every English one");
-        assertEquals(Boolean.TRUE, wrapper.getAllowComments());
     }
 
     @Test
@@ -244,8 +237,6 @@ class WeblogEntryWrapperTest {
 
         assertEquals("/testblog/entry/hello-world", wrapper.getPermaLink(),
                 "The deprecated relative form is built from the handle and anchor");
-        assertEquals("/testblog/entry/hello-world#comments", wrapper.getCommentsLink(),
-                "and the comments link is that plus the fragment");
     }
 
     @Test
@@ -284,17 +275,11 @@ class WeblogEntryWrapperTest {
     }
 
     @Test
-    void theCommentWindowAndCreatorAreReadThroughTheEntry() throws Exception {
-        org.apache.roller.weblogger.business.PropertiesManager properties =
-                mock(org.apache.roller.weblogger.business.PropertiesManager.class);
+    void theCreatorIsReadThroughTheEntry() throws Exception {
         org.apache.roller.weblogger.business.UserManager users =
                 mock(org.apache.roller.weblogger.business.UserManager.class);
         Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getPropertiesManager()).thenReturn(properties);
         when(weblogger.getUserManager()).thenReturn(users);
-        when(properties.getProperty("users.comments.enabled")).thenReturn(
-                new org.apache.roller.weblogger.pojos.RuntimeConfigProperty(
-                        "users.comments.enabled", "true"));
 
         org.apache.roller.weblogger.pojos.User alice =
                 new org.apache.roller.weblogger.pojos.User();
@@ -302,22 +287,13 @@ class WeblogEntryWrapperTest {
         alice.setScreenName("Alice A");
         when(users.getUserByUserName("alice")).thenReturn(alice);
 
-        weblog.setAllowComments(Boolean.TRUE);
-        entry.setAllowComments(Boolean.TRUE);
-        entry.setCommentDays(0);
         entry.setCreatorUserName("alice");
 
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
             factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
 
-            assertTrue(wrapper.getCommentsStillAllowed(),
-                    "The theme decides whether to render the comment form from this");
             assertEquals("Alice A", wrapper.getCreator().getScreenName(),
                     "The author must be reachable, wrapped, for the byline");
-
-            entry.setAllowComments(Boolean.FALSE);
-            assertFalse(wrapper.getCommentsStillAllowed(),
-                    "and it must track the entry rather than being decided once");
         }
     }
 

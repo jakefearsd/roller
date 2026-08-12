@@ -21,9 +21,11 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 
-import java.sql.Timestamp;
+import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -106,7 +108,6 @@ class EqualsContractTest {
         Weblog blogB = weblog("blog-b");
         WeblogEntry entryA = entry("first-post", blogA);
         WeblogEntry entryB = entry("second-post", blogA);
-        Timestamp posted = Timestamp.valueOf("2024-01-02 03:04:05");
         WeblogTemplate templateA = template("Weblog", blogA);
         templateA.setId("template-a");
         WeblogTemplate templateB = template("_day", blogA);
@@ -121,10 +122,6 @@ class EqualsContractTest {
                 new Specimen("WeblogEntry (keyed on anchor + weblog)",
                         entry("first-post", blogA), entry("first-post", blogA),
                         entry("first-post", blogB)),
-
-                new Specimen("WeblogEntryComment (keyed on name + postTime + entry)",
-                        comment("alice", posted, entryA), comment("alice", posted, entryA),
-                        comment("alice", posted, entryB)),
 
                 new Specimen("WeblogEntryTag (keyed on name + entry)",
                         tag("java", entryA), tag("java", entryA), tag("java", entryB)),
@@ -259,14 +256,6 @@ class EqualsContractTest {
         WeblogEntryRevision revision = new WeblogEntryRevision();
         revision.setId(id);
         return revision;
-    }
-
-    private static WeblogEntryComment comment(String name, Timestamp postTime, WeblogEntry entry) {
-        WeblogEntryComment comment = new WeblogEntryComment();
-        comment.setName(name);
-        comment.setPostTime(postTime);
-        comment.setWeblogEntry(entry);
-        return comment;
     }
 
     private static WeblogEntryTag tag(String name, WeblogEntry entry) {
@@ -451,5 +440,16 @@ class EqualsContractTest {
                 "The same anchor on two different weblogs is two different entries");
         assertEquals(2, new HashSet<>(List.of(mine, yours)).size(),
                 "Both entries must survive in a set");
+    }
+
+    @Test
+    void weblogAndEntryCarryNoCommentState() {
+        for (Class<?> c : List.of(Weblog.class, WeblogEntry.class)) {
+            List<String> offenders = Arrays.stream(c.getDeclaredFields())
+                    .map(Field::getName)
+                    .filter(n -> n.toLowerCase(Locale.ROOT).contains("comment"))
+                    .sorted().toList();
+            assertTrue(offenders.isEmpty(), c.getSimpleName() + " keeps: " + offenders);
+        }
     }
 }

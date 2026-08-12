@@ -108,33 +108,6 @@ public final class WeblogWrapper {
         return WeblogCategoryWrapper.wrap(this.pojo.getBloggerCategory(), urlStrategy);
     }
     
-    public Boolean getAllowComments() {
-        return this.pojo.getAllowComments();
-    }
-    
-    
-    public Boolean getDefaultAllowComments() {
-        return this.pojo.getDefaultAllowComments();
-    }
-    
-    
-    public int getDefaultCommentDays() {
-        return this.pojo.getDefaultCommentDays();
-    }
-    
-    
-    public Boolean getModerateComments() {
-        return this.pojo.getModerateComments();
-    }
-
-
-    /**
-     * Whether an entry comment requires a signed-in commenter.
-     */
-    public Boolean getRequireAuthenticatedComments() {
-        return this.pojo.getRequireAuthenticatedComments();
-    }
-
     public String getAnalyticsCode() {
         // Deliberately NOT sanitized. This field exists to hold a tracking
         // snippet -- a <script> tag -- pasted by a site administrator, and it
@@ -166,10 +139,6 @@ public final class WeblogWrapper {
      */
     public String getNewsletterListUuid() {
         return this.pojo.getNewsletterListUuid();
-    }
-
-    public Boolean getEmailComments() {
-        return this.pojo.getEmailComments();
     }
 
     public String getEmailAddress() {

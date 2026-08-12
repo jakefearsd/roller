@@ -18,9 +18,6 @@
 package org.apache.roller.weblogger.pojos;
 
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.PropertiesManager;
-import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +26,6 @@ import org.mockito.MockedStatic;
 
 import java.sql.Timestamp;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,9 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
 
 /**
  * Covers the computed properties of {@link WeblogEntry} -- the parts that are
@@ -437,132 +431,6 @@ class WeblogEntryLogicTest {
         assertEquals("ERROR: formatting date", entry.formatUpdateTime("yyyy-MM-dd"));
     }
 
-    // ------------------------------------------------------ comment window
-
-    /**
-     * Runs {@code getCommentsStillAllowed} with the site-wide
-     * {@code users.comments.enabled} runtime property pinned to a known value.
-     * The property is read through {@code WebloggerRuntimeConfig}, which goes
-     * to the {@code PropertiesManager}; stubbing it here keeps these tests
-     * independent of whether anything else in the JVM has bootstrapped the
-     * business tier.
-     */
-    private boolean commentsStillAllowedWithSiteWideSetting(boolean siteWideEnabled) throws Exception {
-        Weblogger weblogger = mock(Weblogger.class);
-        PropertiesManager properties = mock(PropertiesManager.class);
-        when(weblogger.getPropertiesManager()).thenReturn(properties);
-        when(properties.getProperty("users.comments.enabled")).thenReturn(
-                new RuntimeConfigProperty("users.comments.enabled", String.valueOf(siteWideEnabled)));
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            return entry.getCommentsStillAllowed();
-        }
-    }
-
-    @Test
-    void commentsAreClosedWhenDisabledSiteWide() throws Exception {
-        weblog.setAllowComments(Boolean.TRUE);
-        entry.setAllowComments(Boolean.TRUE);
-        entry.setCommentDays(0);
-        entry.setPubTime(now());
-
-        assertFalse(commentsStillAllowedWithSiteWideSetting(false),
-                "The site-wide comments switch must override everything below it -- an "
-                        + "administrator turning comments off site-wide is how a spam wave "
-                        + "gets stopped, and it has to take effect on every blog at once");
-        assertTrue(commentsStillAllowedWithSiteWideSetting(true),
-                "Precondition: with the site-wide switch on, this entry does take comments");
-    }
-
-    @Test
-    void commentsAreClosedWhenTheWeblogDisallowsThem() throws Exception {
-        weblog.setAllowComments(Boolean.FALSE);
-        entry.setAllowComments(Boolean.TRUE);
-        entry.setPubTime(now());
-
-        assertFalse(commentsStillAllowedWithSiteWideSetting(true),
-                "A weblog-level 'no comments' setting must override the entry's own");
-    }
-
-    @Test
-    void commentsAreClosedWhenTheEntryDisallowsThem() throws Exception {
-        weblog.setAllowComments(Boolean.TRUE);
-        entry.setAllowComments(Boolean.FALSE);
-        entry.setPubTime(now());
-
-        assertFalse(commentsStillAllowedWithSiteWideSetting(true),
-                "An author who closed comments on one post must have that respected");
-    }
-
-    @Test
-    void commentWindowExpiresCommentDaysAfterPublication() throws Exception {
-        weblog.setAllowComments(Boolean.TRUE);
-        entry.setAllowComments(Boolean.TRUE);
-        entry.setCommentDays(7);
-
-        entry.setPubTime(daysAgo(2));
-        assertTrue(commentsStillAllowedWithSiteWideSetting(true),
-                "A post published 2 days ago with a 7 day window must still take comments");
-
-        entry.setPubTime(daysAgo(30));
-        assertFalse(commentsStillAllowedWithSiteWideSetting(true),
-                "A post published 30 days ago with a 7 day window must be closed -- this "
-                        + "expiry is the only thing keeping old posts off the spam target list");
-    }
-
-    @Test
-    void theCommentWindowIsMeasuredInDaysNotSomeOtherUnit() throws Exception {
-        // A 3 day window must be open on day 2 and shut on day 4. Getting the
-        // Calendar field wrong (MONTH, HOUR) still "works" for most inputs, so
-        // both sides of the boundary are pinned here.
-        weblog.setAllowComments(Boolean.TRUE);
-        entry.setAllowComments(Boolean.TRUE);
-        entry.setCommentDays(3);
-
-        entry.setPubTime(daysAgo(2));
-        assertTrue(commentsStillAllowedWithSiteWideSetting(true),
-                "Two days into a three day window comments must be open");
-
-        entry.setPubTime(daysAgo(4));
-        assertFalse(commentsStillAllowedWithSiteWideSetting(true),
-                "Four days into a three day window comments must be shut");
-    }
-
-    @Test
-    void aCommentDaysOfZeroMeansTheWindowNeverCloses() throws Exception {
-        weblog.setAllowComments(Boolean.TRUE);
-        entry.setAllowComments(Boolean.TRUE);
-        entry.setPubTime(daysAgo(3650));
-
-        entry.setCommentDays(0);
-        assertTrue(commentsStillAllowedWithSiteWideSetting(true),
-                "Zero means 'no limit', so even a ten year old post stays open");
-
-        entry.setCommentDays(null);
-        assertTrue(commentsStillAllowedWithSiteWideSetting(true),
-                "An unset comment window means 'no limit' too -- treating null as zero "
-                        + "days would close comments on every entry migrated without one");
-    }
-
-    @Test
-    void unpublishedEntriesFallBackToTheirUpdateTime() throws Exception {
-        // Drafts have no pubTime at all; without the fallback the expiry
-        // calculation would dereference null.
-        weblog.setAllowComments(Boolean.TRUE);
-        entry.setAllowComments(Boolean.TRUE);
-        entry.setCommentDays(7);
-        entry.setPubTime(null);
-
-        entry.setUpdateTime(daysAgo(1));
-        assertTrue(commentsStillAllowedWithSiteWideSetting(true),
-                "With no publication date the window is measured from the last edit");
-
-        entry.setUpdateTime(daysAgo(30));
-        assertFalse(commentsStillAllowedWithSiteWideSetting(true),
-                "and an entry last edited long ago is past its window");
-    }
-
     // ------------------------------------------------------------- misc
 
     @Test
@@ -595,8 +463,6 @@ class WeblogEntryLogicTest {
         entry.setPubTime(Timestamp.valueOf("2024-03-09 15:30:00"));
         entry.setUpdateTime(Timestamp.valueOf("2024-03-10 09:00:00"));
         entry.setStatus(PubStatus.PUBLISHED);
-        entry.setAllowComments(Boolean.FALSE);
-        entry.setCommentDays(14);
         entry.setRightToLeft(Boolean.TRUE);
         entry.setPinnedToMain(Boolean.TRUE);
         entry.setLocale("fr");
@@ -618,18 +484,8 @@ class WeblogEntryLogicTest {
         assertEquals(PubStatus.PUBLISHED, copy.getStatus(),
                 "Status must be copied; silently resetting it to DRAFT would unpublish "
                         + "the post the copy is standing in for");
-        assertEquals(Boolean.FALSE, copy.getAllowComments());
-        assertEquals(Integer.valueOf(14), copy.getCommentDays());
         assertEquals(Boolean.TRUE, copy.getRightToLeft());
         assertEquals(Boolean.TRUE, copy.getPinnedToMain());
         assertEquals("fr", copy.getLocale());
-    }
-
-    private static Timestamp now() {
-        return new Timestamp(System.currentTimeMillis());
-    }
-
-    private static Timestamp daysAgo(int days) {
-        return new Timestamp(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(days));
     }
 }

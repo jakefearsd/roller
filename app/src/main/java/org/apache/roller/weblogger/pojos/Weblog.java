@@ -28,7 +28,6 @@ import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
@@ -60,8 +59,6 @@ public class Weblog implements Serializable {
     private String  handle           = null;
     private String  name             = null;
     private String  tagline          = null;
-    private Boolean allowComments    = Boolean.TRUE;
-    private Boolean emailComments    = Boolean.FALSE;
     private String  emailAddress     = null;
     private String  editorTheme      = null;
     private String  locale           = null;
@@ -69,10 +66,6 @@ public class Weblog implements Serializable {
     private Boolean visible          = Boolean.TRUE;
     private Boolean active           = Boolean.TRUE;
     private Date    dateCreated      = new java.util.Date();
-    private Boolean defaultAllowComments = Boolean.TRUE;
-    private int     defaultCommentDays = 0;
-    private Boolean moderateComments = Boolean.FALSE;
-    private Boolean requireAuthenticatedComments = Boolean.TRUE;
     private int     entryDisplayCount = 15;
     private Date    lastModified     = new Date();
     private boolean enableMultiLang  = false;
@@ -237,64 +230,6 @@ public class Weblog implements Serializable {
         this.bloggerCategory = bloggerCategory;
     }
     
-    public Boolean getAllowComments() {
-        return this.allowComments;
-    }
-    
-    public void setAllowComments(Boolean allowComments) {
-        this.allowComments = allowComments;
-    }
-    
-    public Boolean getDefaultAllowComments() {
-        return defaultAllowComments;
-    }
-    
-    public void setDefaultAllowComments(Boolean defaultAllowComments) {
-        this.defaultAllowComments = defaultAllowComments;
-    }
-    
-    public int getDefaultCommentDays() {
-        return defaultCommentDays;
-    }
-    
-    public void setDefaultCommentDays(int defaultCommentDays) {
-        this.defaultCommentDays = defaultCommentDays;
-    }
-    
-    public Boolean getModerateComments() {
-        return moderateComments;
-    }
-    
-    public void setModerateComments(Boolean moderateComments) {
-        this.moderateComments = moderateComments;
-    }
-
-    /**
-     * True if a commenter must be signed in to this server before they can
-     * comment on this weblog.
-     *
-     * <p>Defaults to true, for new weblogs and for every weblog that existed
-     * when the column arrived. An open comment box is the way spam gets in, and
-     * there is no filter here to catch it -- the honest options are a known
-     * author or no comment at all.
-     */
-    public Boolean getRequireAuthenticatedComments() {
-        return requireAuthenticatedComments;
-    }
-
-    public void setRequireAuthenticatedComments(Boolean requireAuthenticatedComments) {
-        this.requireAuthenticatedComments = requireAuthenticatedComments;
-    }
-
-
-    public Boolean getEmailComments() {
-        return this.emailComments;
-    }
-    
-    public void setEmailComments(Boolean emailComments) {
-        this.emailComments = emailComments;
-    }
-    
     public String getEmailAddress() {
         return this.emailAddress;
     }
@@ -363,8 +298,6 @@ public class Weblog implements Serializable {
         this.setTagline(other.getTagline());
         this.setCreatorUserName(other.getCreatorUserName());
         this.setBloggerCategory(other.getBloggerCategory());
-        this.setAllowComments(other.getAllowComments());
-        this.setEmailComments(other.getEmailComments());
         this.setEmailAddress(other.getEmailAddress());
         this.setEditorTheme(other.getEditorTheme());
         this.setLocale(other.getLocale());
@@ -458,21 +391,9 @@ public class Weblog implements Serializable {
     }
     
     /**
-     * Returns true if comment moderation is required by website or config.
-     */ 
-    public boolean getCommentModerationRequired() { 
-        return (getModerateComments()
-         || WebloggerRuntimeConfig.getBooleanProperty("users.moderation.required"));
-    }
-    
-    /** No-op */
-    public void setCommentModerationRequired(boolean modRequired) {}    
-
-    
-    /**
      * The last time any visible part of this weblog was modified.
      * This includes a change to weblog settings, entries, themes, templates,
-     * comments, categories, etc.
+     * categories, etc.
      */
     public Date getLastModified() {
         return lastModified;

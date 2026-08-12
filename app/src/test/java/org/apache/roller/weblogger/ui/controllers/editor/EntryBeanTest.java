@@ -153,30 +153,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
                 "An unset status must not accidentally read as one of the real statuses");
     }
 
-    // --- comment days ---
-
-    @Test
-    void settingCommentDaysToMinusOneTurnsCommentsOff() {
-        // -1 is the "no comments" option in the dropdown, so it has to imply
-        // allowComments=false; leaving the flag on would let the entry keep
-        // accepting comments while the UI says it does not.
-        bean.setAllowComments(true);
-        bean.setCommentDays(-1);
-
-        assertFalse(bean.getAllowComments(),
-                "Choosing 'no comments' must clear the allowComments flag");
-        assertEquals(-1, bean.getCommentDays());
-    }
-
-    @Test
-    void settingAnyOtherCommentDaysLeavesTheAllowCommentsFlagAlone() {
-        bean.setAllowComments(true);
-        bean.setCommentDays(30);
-
-        assertTrue(bean.getAllowComments(), "Only -1 means 'no comments'");
-        assertEquals(30, bean.getCommentDays());
-    }
-
     // --- copyTo ---
 
     @Test
@@ -271,12 +247,10 @@ class EntryBeanTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void copyToCarriesCommentSettingsAcross() throws Exception {
+    void copyToCarriesTheSummaryAndSeoFieldsAcross() throws Exception {
         WeblogEntry entry = entryInCategory("cat-1");
         bean.setStatus(PubStatus.DRAFT.name());
         bean.setCategoryId("cat-1");
-        bean.setAllowComments(true);
-        bean.setCommentDays(14);
         bean.setSummary("A summary");
         bean.setSearchDescription("For search engines");
         bean.setLocale("fr_FR");
@@ -294,8 +268,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
 
         bean.copyTo(entry);
 
-        assertTrue(entry.getAllowComments());
-        assertEquals(14, entry.getCommentDays());
         assertEquals("A summary", entry.getSummary());
         assertEquals("For search engines", entry.getSearchDescription());
         assertEquals("fr_FR", entry.getLocale());
@@ -520,8 +492,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         entry.setText("The body");
         entry.setSearchDescription("The search description");
         entry.setTagsAsString("alpha beta");
-        entry.setAllowComments(Boolean.FALSE);
-        entry.setCommentDays(30);
         entry.setPinnedToMain(Boolean.TRUE);
         entry.setFeaturedImageId("mf-featured-1");
         entry.setMetaTitle("Stored SEO Title");
@@ -546,8 +516,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         assertEquals("The search description", bean.getSearchDescription());
         assertEquals("cat-1", bean.getCategoryId());
         assertEquals("alpha beta", bean.getTagsAsString());
-        assertFalse(bean.getAllowComments());
-        assertEquals(30, bean.getCommentDays());
         assertTrue(bean.getPinnedToMain());
         assertEquals("mf-featured-1", bean.getFeaturedImageId());
         assertEquals("Stored SEO Title", bean.getMetaTitle());
@@ -597,22 +565,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void copyToCarriesTheNegativeCaseOfEveryFlagToo() throws Exception {
-        // The flags all default to true on a fresh WeblogEntry, so a copyTo
-        // that dropped them would still look correct in a test that only ever
-        // sets them to true.
-        WeblogEntry entry = entryInCategory("cat-1");
-        entry.setAllowComments(Boolean.TRUE);
-        bean.setStatus(PubStatus.DRAFT.name());
-        bean.setCategoryId("cat-1");
-        bean.setAllowComments(false);
-
-        bean.copyTo(entry);
-
-        assertFalse(entry.getAllowComments());
-    }
-
-    @Test
     void copyToFilesTheEntryUnderTheSelectedCategory() throws Exception {
         // The category drives the entry's URL and its feed membership.
         WeblogEntry entry = entryInCategory("cat-1");
@@ -635,7 +587,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         // true would silently pin every new post to the site front page.
         EntryBean fresh = new EntryBean();
         assertFalse(fresh.getPinnedToMain());
-        assertFalse(fresh.getAllowComments());
     }
 
     private WeblogEntry entryInCategory(String categoryId) throws WebloggerException {
@@ -657,7 +608,6 @@ class EntryBeanTest extends EditorControllerTestSupport {
         entry.setTitle("A title");
         entry.setStatus(PubStatus.PUBLISHED);
         entry.setLocale("en_US");
-        entry.setCommentDays(0);
         return entry;
     }
 

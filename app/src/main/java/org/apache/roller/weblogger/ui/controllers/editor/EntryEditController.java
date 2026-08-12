@@ -23,9 +23,7 @@ import java.sql.Timestamp;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -119,8 +117,6 @@ public class EntryEditController extends BaseController {
 
         // set weblog defaults
         bean.setLocale(getActionWeblog(request).getLocale());
-        bean.setAllowComments(getActionWeblog(request).getDefaultAllowComments());
-        bean.setCommentDays(getActionWeblog(request).getDefaultCommentDays());
 
         model.addAttribute("entry", entry);
         addEntryModelAttributes(request, model, entry, bean);
@@ -707,9 +703,6 @@ public class EntryEditController extends BaseController {
         // Locale list for multi-language blogs
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
 
-        // Comment days options
-        model.addAttribute("commentDaysList", getCommentDaysList(request));
-
         // Thumbnail previews for the SEO panel's featured/social image pickers.
         // Read off the bean rather than the entry so a save that failed
         // validation still shows the image the author picked in the form.
@@ -739,21 +732,6 @@ public class EntryEditController extends BaseController {
         } catch (WebloggerException ex) {
             log.error("Error looking up media file - " + mediaFileId, ex);
         }
-    }
-
-    private Map<Integer, String> getCommentDaysList(HttpServletRequest request) {
-        Map<Integer, String> map = new LinkedHashMap<>();
-        map.put(0, getText("weblogEdit.unlimitedCommentDays", request));
-        map.put(1, getText("weblogEdit.days1", request));
-        map.put(2, getText("weblogEdit.days2", request));
-        map.put(3, getText("weblogEdit.days3", request));
-        map.put(7, getText("weblogEdit.days7", request));
-        map.put(14, getText("weblogEdit.days14", request));
-        map.put(30, getText("weblogEdit.days30", request));
-        map.put(60, getText("weblogEdit.days60", request));
-        map.put(90, getText("weblogEdit.days90", request));
-        map.put(-1, getText("weblogEdit.noComments", request));
-        return map;
     }
 
     private List<WeblogCategory> getCategories(HttpServletRequest request) {

@@ -23,7 +23,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -89,8 +88,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     private String    anchor        = null;
     private Timestamp pubTime       = null;
     private Timestamp updateTime    = null;
-    private Boolean   allowComments = Boolean.TRUE;
-    private Integer   commentDays   = 7;
     private Boolean   rightToLeft   = Boolean.FALSE;
     private Boolean   pinnedToMain  = Boolean.FALSE;
     private PubStatus status        = PubStatus.DRAFT;
@@ -191,8 +188,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
         this.setPubTime(other.getPubTime());
         this.setUpdateTime(other.getUpdateTime());
         this.setStatus(other.getStatus());
-        this.setAllowComments(other.getAllowComments());
-        this.setCommentDays(other.getCommentDays());
         this.setRightToLeft(other.getRightToLeft());
         this.setPinnedToMain(other.getPinnedToMain());
         this.setLocale(other.getLocale());
@@ -257,9 +252,7 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
      *       weblog for collisions;</li>
      *   <li>the publication time and status -- a copy starts as a DRAFT that
      *       has never been published, so it cannot appear on the blog before
-     *       its author has looked at it;</li>
-     *   <li>comments, which belong to the published post and not to its
-     *       text.</li>
+     *       its author has looked at it.</li>
      * </ul>
      *
      * <p>Tags are re-added by name rather than shared, so the copy owns its own
@@ -686,32 +679,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     }
     
     /**
-     * True if comments are allowed on this weblog entry.
-     */
-    public Boolean getAllowComments() {
-        return allowComments;
-    }
-    /**
-     * True if comments are allowed on this weblog entry.
-     */
-    public void setAllowComments(Boolean allowComments) {
-        this.allowComments = allowComments;
-    }
-    
-    /**
-     * Number of days after pubTime that comments should be allowed, or 0 for no limit.
-     */
-    public Integer getCommentDays() {
-        return commentDays;
-    }
-    /**
-     * Number of days after pubTime that comments should be allowed, or 0 for no limit.
-     */
-    public void setCommentDays(Integer commentDays) {
-        this.commentDays = commentDays;
-    }
-    
-    /**
      * True if this entry should be rendered right to left.
      */
     public Boolean getRightToLeft() {
@@ -847,51 +814,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
         }
     }
 
-    // ------------------------------------------------------------------------
-    
-    /**
-     * True if comments are still allowed on this entry considering the
-     * allowComments and commentDays fields as well as the website and 
-     * site-wide configs.
-     */
-    public boolean getCommentsStillAllowed() {
-        if (!WebloggerRuntimeConfig.getBooleanProperty("users.comments.enabled")) {
-            return false;
-        }
-        if (getWebsite().getAllowComments() != null && !getWebsite().getAllowComments()) {
-            return false;
-        }
-        if (getAllowComments() != null && !getAllowComments()) {
-            return false;
-        }
-        boolean ret = false;
-        if (getCommentDays() == null || getCommentDays() == 0) {
-            ret = true;
-        } else {
-            // we want to use pubtime for calculating when comments expire, but
-            // if pubtime isn't set (like for drafts) then just use updatetime
-            Date inPubTime = getPubTime();
-            if (inPubTime == null) {
-                inPubTime = getUpdateTime();
-            }
-            
-            Calendar expireCal = Calendar.getInstance(
-                    getWebsite().getLocaleInstance());
-            expireCal.setTime(inPubTime);
-            expireCal.add(Calendar.DATE, getCommentDays());
-            Date expireDay = expireCal.getTime();
-            Date today = new Date();
-            if (today.before(expireDay)) {
-                ret = true;
-            }
-        }
-        return ret;
-    }
-    public void setCommentsStillAllowed(boolean ignored) {
-        // no-op
-    }
-    
-    
     //------------------------------------------------------------------------
     
     /**
@@ -952,15 +874,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     public String getPermaLink() {
         String lAnchor = URLEncoder.encode(getAnchor(), StandardCharsets.UTF_8);
         return "/" + getWebsite().getHandle() + "/entry/" + lAnchor;
-    }
-    
-    /**
-     * Get relative URL to comments page.
-     * @deprecated Use commentLink() instead
-     */
-    @Deprecated
-    public String getCommentsLink() {
-        return getPermaLink() + "#comments";
     }
     
     /**

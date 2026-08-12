@@ -60,7 +60,6 @@ class WeblogWrapperTest {
         weblog.setLocale("en_US");
         weblog.setTimeZone("America/New_York");
         weblog.setEntryDisplayCount(37);
-        weblog.setDefaultCommentDays(9);
         weblog.setAnalyticsCode("analytics-snippet");
         weblog.setAnalyticsSiteId("3fa85f64-5717-4562-b3fc-2c963f66afa6");
         weblog.setAnalyticsShareUrl("https://analytics.example.com/share/abc123");
@@ -70,10 +69,6 @@ class WeblogWrapperTest {
         weblog.setShowAllLangs(false);
         weblog.setVisible(Boolean.FALSE);
         weblog.setActive(Boolean.TRUE);
-        weblog.setModerateComments(Boolean.TRUE);
-        weblog.setEmailComments(Boolean.TRUE);
-        weblog.setAllowComments(Boolean.FALSE);
-        weblog.setDefaultAllowComments(Boolean.FALSE);
 
         urls = mock(URLStrategy.class);
         wrapper = WeblogWrapper.wrap(weblog, urls);
@@ -92,7 +87,6 @@ class WeblogWrapperTest {
         assertEquals("en_US", wrapper.getLocale());
         assertEquals("America/New_York", wrapper.getTimeZone());
         assertEquals(37, wrapper.getEntryDisplayCount());
-        assertEquals(9, wrapper.getDefaultCommentDays());
         assertEquals(new Date(1_700_000_000_000L), wrapper.getDateCreated());
         assertEquals("analytics-snippet", wrapper.getAnalyticsCode(),
                 "Text with nothing to sanitise must reach the page unchanged");
@@ -113,10 +107,6 @@ class WeblogWrapperTest {
         setAllFlags(false);
         assertEquals(Boolean.FALSE, wrapper.getVisible());
         assertEquals(Boolean.FALSE, wrapper.getActive());
-        assertEquals(Boolean.FALSE, wrapper.getAllowComments());
-        assertEquals(Boolean.FALSE, wrapper.getDefaultAllowComments());
-        assertEquals(Boolean.FALSE, wrapper.getModerateComments());
-        assertEquals(Boolean.FALSE, wrapper.getEmailComments());
         assertFalse(wrapper.isEnableMultiLang());
         assertFalse(wrapper.isShowAllLangs());
         assertEquals(Boolean.FALSE, wrapper.getEnabled(),
@@ -128,10 +118,6 @@ class WeblogWrapperTest {
                         + "stuck at one answer either hides every blog or publishes every "
                         + "hidden one");
         assertEquals(Boolean.TRUE, wrapper.getActive());
-        assertEquals(Boolean.TRUE, wrapper.getAllowComments());
-        assertEquals(Boolean.TRUE, wrapper.getDefaultAllowComments());
-        assertEquals(Boolean.TRUE, wrapper.getModerateComments());
-        assertEquals(Boolean.TRUE, wrapper.getEmailComments());
         assertTrue(wrapper.isEnableMultiLang());
         assertTrue(wrapper.isShowAllLangs());
         assertEquals(Boolean.TRUE, wrapper.getEnabled());
@@ -140,10 +126,6 @@ class WeblogWrapperTest {
     private void setAllFlags(boolean value) {
         weblog.setVisible(value);
         weblog.setActive(value);
-        weblog.setAllowComments(value);
-        weblog.setDefaultAllowComments(value);
-        weblog.setModerateComments(value);
-        weblog.setEmailComments(value);
         weblog.setEnableMultiLang(value);
         weblog.setShowAllLangs(value);
     }

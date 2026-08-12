@@ -33,7 +33,6 @@ import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.RollerEvent;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.TagStatComparator;
@@ -327,16 +326,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         Query removeRevisions = strategy.getNamedUpdate("WeblogEntryRevision.removeByEntry");
         removeRevisions.setParameter(1, entry);
         removeRevisions.executeUpdate();
-        
-        // roller_comment.entryid FK-references weblogentry with no cascade,
-        // so an orphaned comment row would fail this delete at the database.
-        // The comment reading/writing surface left the manager interface in
-        // W1 (comments are being removed wholesale -- see Task 5/6 for the
-        // pojo and schema), but the row cleanup a delete still owes stays as
-        // a private, non-public query.
-        for (WeblogEntryComment comment : getCommentsForEntryRemoval(entry)) {
-            this.strategy.remove(comment);
-        }
 
         // remove tag & tag aggregates
         if (entry.getTags() != null) {
@@ -703,21 +692,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         return entryCount > 0;
     }
     
-    /**
-     * Comments belonging to one entry, used only to clean up {@code
-     * roller_comment} rows when their entry is removed (see {@link
-     * #removeWeblogEntry}). The comment reading surface itself left {@link
-     * WeblogEntryManager} in W1; this is a private implementation detail,
-     * not a replacement for it.
-     */
-    private List<WeblogEntryComment> getCommentsForEntryRemoval(WeblogEntry entry) throws WebloggerException {
-        TypedQuery<WeblogEntryComment> query = strategy.getDynamicQuery(
-                "SELECT c FROM WeblogEntryComment c WHERE c.weblogEntry = ?1", WeblogEntryComment.class);
-        query.setParameter(1, entry);
-        return query.getResultList();
-    }
-
-
     /**
      * @inheritDoc
      */

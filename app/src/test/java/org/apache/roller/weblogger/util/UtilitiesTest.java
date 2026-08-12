@@ -220,10 +220,9 @@ public class UtilitiesTest  {
 
         @Test
         public void addsRelNofollowToALinkThatLacksIt() {
-            // This is the whole point of the method: comment bodies are run
-            // through it (WeblogEntryCommentWrapper) so that spam links carry
-            // no PageRank. If this assertion fails, every comment link on the
-            // site is followable again.
+            // This is the whole point of the method: it is exposed to themes as
+            // $utils.addNofollow so any reader-supplied HTML a template chooses
+            // to run it over cannot pass PageRank through an unmarked link.
             assertEquals("<p>x <a href=\"http://e.com\" rel=\"nofollow\">link</a></p>",
                     Utilities.addNofollow("<p>x <a href=\"http://e.com\">link</a></p>"));
         }

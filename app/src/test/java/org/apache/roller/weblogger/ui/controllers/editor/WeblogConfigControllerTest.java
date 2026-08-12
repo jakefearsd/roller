@@ -42,8 +42,8 @@ import static org.mockito.Mockito.when;
  * <p>This form writes settings that govern the blog's public behaviour, so the
  * checks that matter are the ones that stop a setting from being applied: the
  * entry-display cap (a blog asking for 10,000 entries per page would render
- * itself into a timeout) and the comment/language invariants the controller
- * enforces after copying the form onto the weblog.
+ * itself into a timeout) and the language invariant the controller enforces
+ * after copying the form onto the weblog.
  */
 class WeblogConfigControllerTest extends EditorControllerTestSupport {
 
@@ -183,32 +183,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void deactivatingAWeblogAlsoTurnsOffItsComments() throws Exception {
-        // An inactive blog is not served, so leaving comments on would keep
-        // accepting them against content nobody can read.
-        bean.setActive(false);
-        bean.setAllowComments(true);
-
-        controller.save(request, model, bean);
-
-        assertFalse(weblog.getAllowComments(),
-                "Deactivating a weblog must close its comments");
-        assertTrue(messages(model).contains("websiteSettings.commentsOffForInactiveWeblog"),
-                "The owner must be told comments were turned off: " + messages(model));
-    }
-
-    @Test
-    void anActiveWeblogKeepsItsCommentSetting() throws Exception {
-        bean.setActive(true);
-        bean.setAllowComments(true);
-
-        controller.save(request, model, bean);
-
-        assertTrue(weblog.getAllowComments());
-        assertFalse(messages(model).contains("websiteSettings.commentsOffForInactiveWeblog"));
-    }
-
-    @Test
     void turningOffBothLanguageOptionsIsNotAllowedToLeaveTheBlogShowingNothing() throws Exception {
         // showAllLangs=false means "only show the weblog's own locale", which
         // only makes sense when multi-language mode is on. With both off the
@@ -303,7 +277,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         source.setLocale("fr_FR");
         source.setTimeZone("Asia/Tokyo");
         source.setEntryDisplayCount(7);
-        source.setDefaultCommentDays(14);
         source.setAbout("About me");
         source.setIconPath("icon.png");
         source.setActive(Boolean.TRUE);
@@ -318,8 +291,6 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         assertEquals("fr_FR", copy.getLocale());
         assertEquals("Asia/Tokyo", copy.getTimeZone());
         assertEquals(7, copy.getEntryDisplayCount());
-        assertEquals("14", copy.getDefaultCommentDays(),
-                "The dropdown binds a string, so the numeric setting is stringified");
         assertEquals("About me", copy.getAbout());
         assertEquals("icon.png", copy.getIcon());
 
@@ -328,64 +299,7 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
 
         assertEquals("Source Blog", target.getName());
         assertEquals("Asia/Tokyo", target.getTimeZone());
-        assertEquals(14, target.getDefaultCommentDays());
         assertNull(target.getHandle(), "copyTo must never write the handle");
-    }
-
-    /**
-     * The sign-in requirement has to survive the round trip in both directions.
-     *
-     * <p>It is the setting that decides whether an anonymous stranger can write
-     * to the database, so a copyFrom or copyTo that quietly dropped it would
-     * either show a moderator the wrong state or reset the weblog to the bean's
-     * default the next time anything else on the page was saved.
-     */
-    @Test
-    void theSignInRequirementSurvivesTheRoundTripInBothStates() {
-        Weblog source = new Weblog();
-        source.setRequireAuthenticatedComments(Boolean.FALSE);
-
-        WeblogConfigBean opened = new WeblogConfigBean();
-        opened.copyFrom(source);
-        assertFalse(opened.getRequireAuthenticatedComments(),
-                "a weblog that accepts anonymous comments must show the box unticked");
-
-        Weblog target = new Weblog();
-        opened.copyTo(target);
-        assertEquals(Boolean.FALSE, target.getRequireAuthenticatedComments());
-
-        source.setRequireAuthenticatedComments(Boolean.TRUE);
-        opened.copyFrom(source);
-        assertTrue(opened.getRequireAuthenticatedComments());
-        opened.copyTo(target);
-        assertEquals(Boolean.TRUE, target.getRequireAuthenticatedComments());
-    }
-
-    /**
-     * New weblogs require a sign-in; the form bean does not.
-     *
-     * <p>The two defaults have to disagree. An unticked HTML checkbox posts no
-     * parameter at all, so whatever the bean field starts as is exactly what
-     * "unticked" means on save -- a bean defaulting to true would make the
-     * setting impossible to turn off, which is how this was first written and
-     * what a browser test caught. The weblog's own default is the one that
-     * decides what a brand new blog does.
-     */
-    @Test
-    void aBrandNewWeblogRequiresASignInButAnUntickedBoxTurnsItOff() {
-        assertEquals(Boolean.TRUE, new Weblog().getRequireAuthenticatedComments(),
-                "a weblog created before anyone visits its settings page must not be "
-                        + "open to anonymous comments");
-
-        Weblog closed = new Weblog();
-        closed.setRequireAuthenticatedComments(Boolean.TRUE);
-
-        // Exactly what Spring hands the save handler when the box is unticked:
-        // a fresh bean with nothing bound into that field.
-        new WeblogConfigBean().copyTo(closed);
-
-        assertEquals(Boolean.FALSE, closed.getRequireAuthenticatedComments(),
-                "an unticked box must actually turn the requirement off");
     }
 
     @Test

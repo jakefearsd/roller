@@ -380,18 +380,19 @@ class UtilitiesModelTest {
     @Test
     void autoformatTurnsNewlinesIntoLineBreaks() {
         assertEquals("a<br />b", model().autoformat("a\nb"),
-                "$utils.autoformat is how plain-text comments keep their line breaks.");
+                "$utils.autoformat is how a plain-text block (e.g. an error page's stack "
+                        + "trace) keeps its line breaks.");
         assertNull(model().autoformat(null), "autoformat(null) must return null");
     }
 
     /**
-     * {@code rel="nofollow"} is the only thing that makes link spam in comments
-     * unprofitable, and {@code WeblogEntryCommentWrapper.getContent()} applies
-     * it to every comment it renders. Both branches are asserted because the
+     * {@code rel="nofollow"} is what makes a link spam-planted into
+     * reader-supplied HTML unprofitable; it is exposed to themes as
+     * {@code $utils.addNofollow}. Both branches are asserted because the
      * condition guarding them was inverted until this test was written.
      */
     @Test
-    void addNofollowMarksLinksSoCommentSpamEarnsNoPageRank() {
+    void addNofollowMarksLinksSoLinkSpamEarnsNoPageRank() {
         assertEquals("<a href=\"http://spam.example.com\" rel=\"nofollow\">x</a>",
                 model().addNofollow("<a href=\"http://spam.example.com\">x</a>"),
                 "An unmarked link must come back carrying rel=\"nofollow\".");

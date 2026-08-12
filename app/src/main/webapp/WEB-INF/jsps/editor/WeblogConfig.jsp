@@ -146,80 +146,6 @@
         </div>
     </div>
 
-    <%-- ***** Comment settings ***** --%>
-
-    <h3 class="section-head" id="settings-comments"><spring:message code="websiteSettings.commentSettings"/></h3>
-
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <div class="form-check">
-                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.allowComments" value="true" ${bean.allowComments ? 'checked' : ''}/> <spring:message code="websiteSettings.allowComments"/></label>
-            </div>
-        </div>
-    </div>
-
-    <c:choose>
-<c:when test="${rc:getBooleanProp('users.comments.emailnotify')}">
-        <div class="row mb-3">
-            <div class="offset-sm-3 col-sm-9">
-                <div class="form-check">
-                    <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.emailComments" value="true" ${bean.emailComments ? 'checked' : ''}/> <spring:message code="websiteSettings.emailComments"/></label>
-                </div>
-            </div>
-        </div>
-    </c:when>
-</c:choose>
-
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <div class="form-check">
-                <label class="form-check-label"><input type="checkbox" class="form-check-input" id="bean_requireAuthenticatedComments" name="bean.requireAuthenticatedComments" value="true" ${bean.requireAuthenticatedComments ? 'checked' : ''}/> <spring:message code="websiteSettings.requireAuthenticatedComments"/></label>
-                <div class="form-text"><spring:message code="websiteSettings.requireAuthenticatedComments.tip"/></div>
-            </div>
-        </div>
-    </div>
-
-    <c:if test="${!rc:getBooleanProp('users.moderation.required')}">
-        <div class="row mb-3">
-            <div class="offset-sm-3 col-sm-9">
-                <div class="form-check">
-                    <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.moderateComments" value="true" ${bean.moderateComments ? 'checked' : ''}/> <spring:message code="websiteSettings.moderateComments"/></label>
-                </div>
-            </div>
-        </div>
-    </c:if>
-
-    <%-- ***** Default entry comment settings ***** --%>
-
-    <h3 class="section-head" id="settings-comment-defaults"><spring:message code="websiteSettings.defaultCommentSettings"/></h3>
-
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.applyCommentDefaults"/></label>
-        <div class="col-sm-9">
-            <select name="bean.defaultCommentDays" class="form-select">
-                <c:forEach items="${commentDaysList}" var="opt">
-                    <option value="${opt.key}" ${opt.key == bean.defaultCommentDays ? 'selected' : ''}>${opt.value}</option>
-                </c:forEach>
-            </select>
-        </div>
-    </div>
-
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <div class="form-check">
-                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.defaultAllowComments" value="true" ${bean.defaultAllowComments ? 'checked' : ''}/> <spring:message code="websiteSettings.defaultAllowComments"/></label>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <div class="form-check">
-                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.applyCommentDefaults" value="true" ${bean.applyCommentDefaults ? 'checked' : ''}/> <spring:message code="websiteSettings.applyCommentDefaults"/></label>
-            </div>
-        </div>
-    </div>
-
     <%-- ***** Blogger API setting settings ***** --%>
 
     <h3 class="section-head" id="settings-blogger-api"><spring:message code="websiteSettings.bloggerApi"/></h3>
@@ -304,8 +230,6 @@
              aria-label="<spring:message code="websiteSettings.sections"/>">
             <a href="#settings-general" class="is-current"><spring:message code="websiteSettings.generalSettings"/></a>
             <a href="#settings-language"><spring:message code="websiteSettings.languageSettings"/></a>
-            <a href="#settings-comments"><spring:message code="websiteSettings.commentSettings"/></a>
-            <a href="#settings-comment-defaults"><spring:message code="websiteSettings.defaultCommentSettings"/></a>
             <a href="#settings-blogger-api"><spring:message code="websiteSettings.bloggerApi"/></a>
             <c:if test="${showAnalyticsCodeOverride}">
                 <a href="#settings-web-analytics"><spring:message code="configForm.webAnalytics"/></a>

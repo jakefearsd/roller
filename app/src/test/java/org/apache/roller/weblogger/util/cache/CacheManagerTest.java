@@ -28,7 +28,6 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * events out to everything that registered an interest.
  *
  * The fan-out is the part worth guarding. Every manager that changes a weblog
- * entry, comment, category, template, user or weblog tells the CacheManager,
+ * entry, category, template, user or weblog tells the CacheManager,
  * and the CacheManager is the only thing that tells the page cache, the feed
  * cache and the site-wide cache to drop what they are holding. A handler that
  * silently stops being called does not fail anything -- it just leaves readers
@@ -93,14 +92,13 @@ public class CacheManagerTest {
 
         CacheManager.invalidate(entry);
         CacheManager.invalidate(weblog);
-        CacheManager.invalidate(comment(entry));
         CacheManager.invalidate(new User());
         CacheManager.invalidate(category(weblog));
         CacheManager.invalidate(template(weblog));
 
         for (RecordingHandler handler : List.of(first, second)) {
             assertEquals(
-                    List.of("entry", "weblog", "comment", "user", "category", "template"),
+                    List.of("entry", "weblog", "user", "category", "template"),
                     handler.invalidations,
                     "Every registered handler must be told about every kind of change. "
                             + "A missing event here is a cache that keeps serving content "
@@ -299,12 +297,6 @@ public class CacheManagerTest {
         return entry;
     }
 
-    private static WeblogEntryComment comment(WeblogEntry entry) {
-        WeblogEntryComment comment = new WeblogEntryComment();
-        comment.setWeblogEntry(entry);
-        return comment;
-    }
-
     private static WeblogCategory category(Weblog weblog) {
         WeblogCategory category = new WeblogCategory();
         category.setWeblog(weblog);
@@ -332,11 +324,6 @@ public class CacheManagerTest {
         public void invalidate(Weblog weblog) {
             invalidations.add("weblog");
             weblogs.add(weblog);
-        }
-
-        @Override
-        public void invalidate(WeblogEntryComment comment) {
-            invalidations.add("comment");
         }
 
         @Override

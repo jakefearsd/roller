@@ -58,24 +58,6 @@
             <basic name="newsletterListUuid">
                 <column name="newsletter_list_uuid" insertable="true" updatable="true" unique="false"/>
             </basic>
-			<basic name="allowComments">
-				<column name="allowcomments" insertable="true" updatable="true" unique="false"/>
-			</basic>
-			<basic name="defaultAllowComments">
-				<column name="defaultallowcomments" insertable="true" updatable="true" unique="false"/>
-			</basic>
-			<basic name="defaultCommentDays">
-				<column name="defaultcommentdays" insertable="true" updatable="true" unique="false"/>
-			</basic>
-			<basic name="moderateComments">
-				<column name="commentmod" insertable="true" updatable="true" unique="false"/>
-			</basic>
-			<basic name="requireAuthenticatedComments">
-				<column name="comment_auth_required" insertable="true" updatable="true" unique="false"/>
-			</basic>
-			<basic name="emailComments">
-				<column name="emailcomments" insertable="true" updatable="true" unique="false"/>
-			</basic>
 			<basic name="emailAddress">
 				<column name="emailaddress" insertable="true" updatable="true" unique="false"/>
 			</basic>
@@ -132,7 +114,6 @@
 			<transient name="theme"/>
 			<transient name="creator"/>
 			<transient name="absoluteURL"/>
-			<transient name="commentModerationRequired"/>
 			<transient name="URL"/>
 			<transient name="entryCount"/>
             <transient name="initializedPlugins"/>

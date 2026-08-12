@@ -31,23 +31,11 @@ public class WeblogConfigBean {
     private String handle = null;
     private String name = null;
     private String tagline = null;
-    private boolean allowComments = false;
-    private boolean defaultAllowComments = false;
-    private String defaultCommentDays = "0";
-    private boolean moderateComments = false;
-    // false, like every other checkbox on this form, and unlike the Weblog
-    // POJO's own default of true. An unticked checkbox posts no parameter at
-    // all, so whatever this field starts as IS what an unticked box means: a
-    // true default here would make the setting impossible to turn off. New
-    // weblogs get their default from Weblog, not from this per-request bean.
-    private boolean requireAuthenticatedComments = false;
-    private boolean emailComments = false;
     private String emailAddress = null;
     private String locale = null;
     private String timeZone = null;
     private int entryDisplayCount = 15;
     private boolean active = false;
-    private boolean commentModerationRequired = false;
     private boolean enableMultiLang = false;
     private boolean showAllLangs = false;
     private String icon = null;
@@ -59,9 +47,8 @@ public class WeblogConfigBean {
     private String newsletterListUuid = null;
 
     private String bloggerCategoryId = null;
-    private boolean applyCommentDefaults = false;
-    
-    
+
+
     public String getHandle() {
         return this.handle;
     }
@@ -84,54 +71,6 @@ public class WeblogConfigBean {
     
     public void setTagline( String tagline ) {
         this.tagline = tagline;
-    }
-    
-    public boolean getAllowComments() {
-        return this.allowComments;
-    }
-    
-    public void setAllowComments( boolean allowComments ) {
-        this.allowComments = allowComments;
-    }
-    
-    public boolean getDefaultAllowComments() {
-        return this.defaultAllowComments;
-    }
-    
-    public void setDefaultAllowComments( boolean defaultAllowComments ) {
-        this.defaultAllowComments = defaultAllowComments;
-    }
-    
-    public String getDefaultCommentDays() {
-        return this.defaultCommentDays;
-    }
-    
-    public void setDefaultCommentDays( String defaultCommentDays ) {
-        this.defaultCommentDays = defaultCommentDays;
-    }
-    
-    public boolean getModerateComments() {
-        return this.moderateComments;
-    }
-    
-    public void setModerateComments( boolean moderateComments ) {
-        this.moderateComments = moderateComments;
-    }
-
-    public boolean getRequireAuthenticatedComments() {
-        return this.requireAuthenticatedComments;
-    }
-
-    public void setRequireAuthenticatedComments( boolean requireAuthenticatedComments ) {
-        this.requireAuthenticatedComments = requireAuthenticatedComments;
-    }
-
-    public boolean getEmailComments() {
-        return this.emailComments;
-    }
-    
-    public void setEmailComments( boolean emailComments ) {
-        this.emailComments = emailComments;
     }
     
     public String getEmailAddress() {
@@ -164,14 +103,6 @@ public class WeblogConfigBean {
     
     public void setEntryDisplayCount( int entryDisplayCount ) {
         this.entryDisplayCount = entryDisplayCount;
-    }
-    
-    public boolean getCommentModerationRequired() {
-        return this.commentModerationRequired;
-    }
-    
-    public void setCommentModerationRequired( boolean commentModerationRequired ) {
-        this.commentModerationRequired = commentModerationRequired;
     }
     
     public boolean isEnableMultiLang() {
@@ -214,14 +145,6 @@ public class WeblogConfigBean {
         this.bloggerCategoryId = bloggerCategoryId;
     }
 
-    public boolean getApplyCommentDefaults() {
-        return applyCommentDefaults;
-    }
-    
-    public void setApplyCommentDefaults(boolean applyCommentDefaults) {
-        this.applyCommentDefaults = applyCommentDefaults;
-    }
-    
     public boolean getActive() {
         return active;
     }
@@ -267,18 +190,11 @@ public class WeblogConfigBean {
         this.handle = dataHolder.getHandle();
         this.name = dataHolder.getName();
         this.tagline = dataHolder.getTagline();
-        this.allowComments = dataHolder.getAllowComments();
-        this.defaultAllowComments = dataHolder.getDefaultAllowComments();
-        this.defaultCommentDays = ""+dataHolder.getDefaultCommentDays();
-        this.moderateComments = dataHolder.getModerateComments();
-        this.requireAuthenticatedComments = dataHolder.getRequireAuthenticatedComments();
-        this.emailComments = dataHolder.getEmailComments();
         this.emailAddress = dataHolder.getEmailAddress();
         this.locale = dataHolder.getLocale();
         this.timeZone = dataHolder.getTimeZone();
         this.entryDisplayCount = dataHolder.getEntryDisplayCount();
         setActive(dataHolder.getActive());
-        this.commentModerationRequired = dataHolder.getCommentModerationRequired();
         this.enableMultiLang = dataHolder.isEnableMultiLang();
         this.showAllLangs = dataHolder.isShowAllLangs();
         this.analyticsCode = dataHolder.getAnalyticsCode();
@@ -296,17 +212,11 @@ public class WeblogConfigBean {
     public void copyTo(Weblog dataHolder) {
         dataHolder.setName(this.name);
         dataHolder.setTagline(this.tagline);
-        dataHolder.setAllowComments(this.allowComments);
-        dataHolder.setDefaultAllowComments(this.defaultAllowComments);
-        dataHolder.setModerateComments(this.moderateComments);
-        dataHolder.setRequireAuthenticatedComments(this.requireAuthenticatedComments);
-        dataHolder.setEmailComments(this.emailComments);
         dataHolder.setEmailAddress(this.emailAddress);
         dataHolder.setLocale(this.locale);
         dataHolder.setTimeZone(this.timeZone);
         dataHolder.setEntryDisplayCount(this.entryDisplayCount);
         dataHolder.setActive(this.getActive());
-        dataHolder.setCommentModerationRequired(this.commentModerationRequired);
         dataHolder.setEnableMultiLang(this.enableMultiLang);
         dataHolder.setShowAllLangs(this.showAllLangs);
         dataHolder.setIconPath(getIcon());
@@ -315,7 +225,6 @@ public class WeblogConfigBean {
         dataHolder.setAnalyticsSiteId(StringUtils.trimToNull(this.analyticsSiteId));
         dataHolder.setAnalyticsShareUrl(StringUtils.trimToNull(this.analyticsShareUrl));
         dataHolder.setNewsletterListUuid(StringUtils.trimToNull(this.newsletterListUuid));
-        dataHolder.setDefaultCommentDays(Integer.parseInt(this.defaultCommentDays));
     }
     
 

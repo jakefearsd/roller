@@ -28,7 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
-import org.apache.roller.weblogger.pojos.WeblogEntryComment;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -67,10 +66,10 @@ public final class SiteWideCache implements CacheHandler {
     static final Predicate<String> SITE_WIDE_WEBLOG = WebloggerRuntimeConfig::isSiteWideWeblog;
 
     /**
-     * How this cache decides whether a changed comment, category or template
-     * belongs to the site-wide weblog. Held behind a seam so that the
-     * invalidation rules can be tested for what they are -- rules -- without
-     * standing up the runtime config they normally ask.
+     * How this cache decides whether a changed category or template belongs
+     * to the site-wide weblog. Held behind a seam so that the invalidation
+     * rules can be tested for what they are -- rules -- without standing up
+     * the runtime config they normally ask.
      */
     private Predicate<String> siteWideWeblog = SITE_WIDE_WEBLOG;
 
@@ -357,17 +356,6 @@ public final class SiteWideCache implements CacheHandler {
     }
     
     
-    /**
-     * A comment has changed.
-     */
-    @Override
-    public void invalidate(WeblogEntryComment comment) {
-        if(siteWideWeblog.test(comment.getWeblogEntry().getWebsite().getHandle())) {
-            invalidate(comment.getWeblogEntry().getWebsite());
-        }
-    }
-
-
     /**
      * A user profile has changed.
      */
