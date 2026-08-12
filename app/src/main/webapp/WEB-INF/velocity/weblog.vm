@@ -42,8 +42,6 @@ These are the documented macros in order defined in this file:
     #showAtomFeedsList($weblog)
     #showRSSFeedsList($weblog)
 
-    #showWeblogEntryCalendar($weblog $category)
-
     #showPageMenu($weblog)
     #showAuthorMenu($vertical)
 
@@ -1136,21 +1134,6 @@ Show weblog's categories in specified parent category.
             #end
         #end
     </ul>
-#end
-
-
-#**
-Show weblog entry calendar, with optional category restriction.
-*#
-#macro(showWeblogEntryCalendar $weblog $category)
-$calendarModel.showWeblogEntryCalendar($weblog, $category)
-#end
-
-#**
-Show large format weblog entry calendar, with optional category restriction.
-*#
-#macro(showWeblogEntryCalendarBig $weblog $category)
-$calendarModel.showWeblogEntryCalendarBig($weblog, $category)
 #end
 
 

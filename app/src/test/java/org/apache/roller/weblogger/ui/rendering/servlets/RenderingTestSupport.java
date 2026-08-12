@@ -100,8 +100,8 @@ public final class RenderingTestSupport {
     }
 
     /**
-     * The PageContext stub is map-backed so CalendarModel's
-     * setAttribute/findAttribute round-trip and the sidebar calendar renders.
+     * The PageContext stub is map-backed so setAttribute/findAttribute
+     * round-trip for any model that stashes state on it mid-render.
      */
     private static final class MapBackedJspFactory extends JspFactory {
         @Override
