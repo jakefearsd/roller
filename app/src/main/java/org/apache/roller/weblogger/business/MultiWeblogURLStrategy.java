@@ -338,23 +338,6 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
     
     
     @Override
-    public String getWeblogSearchFeedURLTemplate(Weblog weblog) {
-        if(weblog == null) {
-            return null;
-        }
-        
-        StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
-        
-        url.append(getWeblogURL(weblog, null, true));
-        url.append("feed/entries/atom");
-        
-        Map<String, String> params = Map.of("q", "{searchTerms}", "page", "{startPage}");
-        
-        return url.append(URLUtilities.getQueryString(params)).toString();
-    }
-
-    
-    @Override
     public String getWeblogSearchPageURLTemplate(Weblog weblog) {
         if(weblog == null) {
             return null;

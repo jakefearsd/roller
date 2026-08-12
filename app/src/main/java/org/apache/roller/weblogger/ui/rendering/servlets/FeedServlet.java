@@ -43,7 +43,6 @@ import org.apache.roller.weblogger.util.cache.CachedContent;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
-import org.apache.roller.weblogger.ui.rendering.model.SearchResultsFeedModel;
 import org.apache.roller.weblogger.ui.rendering.util.cache.SiteWideCache;
 import org.apache.roller.weblogger.ui.rendering.util.cache.WeblogFeedCache;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
@@ -185,6 +184,13 @@ public class FeedServlet extends HttpServlet {
         if (feedRequest.getLocale() != null) {
             invalid = true;
         }
+        // Search feeds are gone (W2: Atom only). A term on a feed request used
+        // to select the search-atom template and SearchResultsFeedModel; with
+        // both deleted, a "q" parameter must 404 rather than silently fall
+        // through to the unfiltered entries/files feed for that type/format.
+        if (feedRequest.getTerm() != null) {
+            invalid = true;
+        }
         if (feedRequest.getWeblogCategoryName() != null) {
 
             // category specified. category must exist.
@@ -222,15 +228,7 @@ public class FeedServlet extends HttpServlet {
             // determine what template to render with
             boolean siteWide = WebloggerRuntimeConfig.isSiteWideWeblog(weblog
                     .getHandle());
-            if (siteWide && "entries".equals(feedRequest.getType())
-                    && feedRequest.getTerm() != null) {
-                pageId = "site-search-atom.vm";
-
-            } else if ("entries".equals(feedRequest.getType())
-                    && feedRequest.getTerm() != null) {
-                pageId = "feeds/weblog-search-atom.vm";
-
-            } else if (siteWide) {
+            if (siteWide) {
                 pageId = "site-" + feedRequest.getType() + "-"
                         + feedRequest.getFormat() + ".vm";
 
@@ -258,13 +256,6 @@ public class FeedServlet extends HttpServlet {
                 String siteModels = WebloggerConfig
                         .getProperty("rendering.siteModels");
                 ModelLoader.loadModels(siteModels, model, initData, true);
-            }
-
-            // Load search models if search feed
-            if ("entries".equals(feedRequest.getType())
-                    && feedRequest.getTerm() != null) {
-                ModelLoader.loadModels(SearchResultsFeedModel.class.getName(),
-                        model, initData, true);
             }
 
         } catch (WebloggerException ex) {

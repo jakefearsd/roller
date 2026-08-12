@@ -194,7 +194,7 @@ ol li h4 {
             
             <h1>Atom newsfeed</h1>
 
-            This page is an <a href="http://www.ietf.org/rfc/rfc4287.txt">Atom</a> 
+            This page is an <a href="https://www.ietf.org/rfc/rfc4287.txt">Atom</a>
             newsfeed, an XML data representation of the latest entries
             from a Roller weblog. If you have a newsfeed reader or aggregator, you can 
             subscribe to this newsfeed. To subscribe, copy the URL from your browser's 
@@ -213,7 +213,7 @@ ol li h4 {
             
             <br />      
             <hr />            
-            <p>To learn more about Atom visit <a href="http://www.ietf.org/rfc/rfc4287.txt">http://www.ietf.org/rfc/rfc4287.txt</a></p>
+            <p>To learn more about Atom visit <a href="https://www.ietf.org/rfc/rfc4287.txt">https://www.ietf.org/rfc/rfc4287.txt</a></p>
             
         </div>
     </div>

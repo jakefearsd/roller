@@ -84,7 +84,7 @@
 </div>
 
 <div class="fd-feed">
-    <a href='$url.feed.entries.rss' title='Combined RSS feed for site.'>Subscribe to the combined RSS feed</a>
+    <a href='$url.feed.entries.atom' title='Combined Atom feed for site.'>Subscribe to the combined Atom feed</a>
 </div>
 
 <div class="fd-search">

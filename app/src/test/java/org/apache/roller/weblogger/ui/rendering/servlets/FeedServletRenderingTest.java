@@ -42,19 +42,19 @@ class FeedServletRenderingTest {
         return RenderingTestSupport.execute(RenderingTestSupport.feedServlet(), request);
     }
 
+    /**
+     * W2: feeds are Atom only. {@code entries/rss} used to be a live format;
+     * the template that rendered it ({@code weblog-entries-rss.vm}) is gone,
+     * so the same request must now 404 rather than pretend to still work.
+     */
     @Test
-    void rssEntriesFeedContainsPublishedEntry() throws Exception {
+    void rssEntriesFeedIsGone() throws Exception {
         TestUtils.setupWeblogEntry("rss-entry", weblog, user);
         TestUtils.endSession(true);
 
         MockHttpServletResponse response = feed("entries/rss");
 
-        assertEquals(200, response.getStatus());
-        assertTrue(response.getContentType().contains("xml"),
-                "feed content type must be xml but was: " + response.getContentType());
-        String body = response.getContentAsString();
-        assertTrue(body.contains("<rss"), "must be an RSS document:\n" + body);
-        assertTrue(body.contains("rss-entry"), "entry must appear in the feed:\n" + body);
+        assertEquals(404, response.getStatus());
     }
 
     @Test
@@ -68,6 +68,33 @@ class FeedServletRenderingTest {
         String body = response.getContentAsString();
         assertTrue(body.contains("<feed"), "must be an Atom document:\n" + body);
         assertTrue(body.contains("atom-entry"), "entry must appear in the feed:\n" + body);
+        // W2: RSS is gone but styled feeds (site.newsfeeds.styledFeeds,
+        // default on) must still work for the surviving Atom feeds -- the
+        // stylesheet PI is what turns a bare XML download into a styled page
+        // when a browser requests it directly.
+        assertTrue(body.contains("<?xml-stylesheet type=\"text/xsl\" "
+                        + "href=\"http://localhost:8080/roller/roller-ui/styles/atom.xsl\" media=\"screen\"?>"),
+                "a styled feed must carry the atom.xsl stylesheet PI:\n" + body);
+    }
+
+    /**
+     * W2: search feeds are gone ({@code weblog-search-atom.vm} and
+     * {@code SearchResultsFeedModel} are deleted). A {@code q} parameter on
+     * a feed request must 404, not silently fall through and serve the
+     * unfiltered entries feed under the same URL a search reader bookmarked.
+     */
+    @Test
+    void searchTermOnAFeedRequestIsNotFound() throws Exception {
+        TestUtils.setupWeblogEntry("atom-entry", weblog, user);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/feed", "/" + handle + "/entries/atom");
+        request.setParameter("q", "atom");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.feedServlet(), request);
+
+        assertEquals(404, response.getStatus());
     }
 
     @Test

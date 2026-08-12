@@ -20,7 +20,6 @@
 
    Contents
       #showEntriesAtom10()
-      #showEntriesRSS20()
       #showFilesAtom10()
 *#
 
@@ -51,35 +50,6 @@
 #set($mc_url = false) #set($mc_type = false) #set($mc_length = false)#end
     </entry>
 #end
-#end
-
-#macro(showEntriesRSS20 $entries)
-  #foreach($entry in $entries)
-  <item>
-    <guid isPermaLink="true">$entry.permalink</guid>
-    <title>$utils.escapeXML($utils.removeHTML($entry.title))</title>
-    <dc:creator>$utils.escapeXML($entry.creator.screenName)</dc:creator>
-    <link>$entry.permalink</link>
-    #if( $entry.link && !$entry.link.trim().equals("") )
-    <source url="$utils.escapeXML($entry.link)">$utils.escapeXML($entry.link)</source>
-    #end
-    <pubDate>$utils.formatRfc822Date($entry.pubTime)</pubDate>
-    <category>$utils.escapeXML($entry.category.name)</category>
-#foreach($tag in $entry.tags)
-    <category>$utils.escapeXML($tag.name)</category>
-#end            
-    #if( $utils.isNotEmpty($entry.summary) && $utils.isNotEmpty($entry.text))<atom:summary type="html">$utils.escapeXML($entry.transformedSummary)</atom:summary>#end
-    #if( $utils.isNotEmpty($entry.summary) && $utils.isEmpty($entry.text))<description>$utils.escapeXML($entry.transformedText)</description>#end
-    #if( $utils.isNotEmpty($entry.text) )<description>$utils.escapeXML($entry.transformedText)</description>#end
-    #set( $mc_url = $entry.findEntryAttribute("att_mediacast_url") )
-    #set( $mc_type = $entry.findEntryAttribute("att_mediacast_type") )
-    #set( $mc_length = $entry.findEntryAttribute("att_mediacast_length") )
-    #if( $mc_url && $mc_length && $mc_type )
-       <enclosure url="$utils.escapeXML($mc_url)" type="$mc_type" length="$mc_length" />
-       #set($mc_url = false) #set($mc_type = false) #set($mc_length = false)
-    #end
-  </item>
-  #end
 #end
 
 #macro(showFilesAtom10 $mediaFiles)

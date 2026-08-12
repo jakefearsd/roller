@@ -248,6 +248,26 @@ class FrontpageRenderingTest {
                 "the contributing weblog's handle must appear in the directory:\n" + body);
     }
 
+    /**
+     * W2: feeds are Atom only. This anchor is a visible link on the site's
+     * front door (not just head autodiscovery), so it is the one place a
+     * leftover {@code $url.feed.entries.rss} reference -- which would print
+     * as literal text under this fork's non-strict Velocity settings, not
+     * throw -- would be immediately visible to a reader.
+     */
+    @Test
+    void theFrontDoorAdvertisesTheCombinedAtomFeedNotRss() throws Exception {
+        String body = render("/" + SITE_HANDLE + "/");
+
+        assertTrue(body.contains("Subscribe to the combined Atom feed"),
+                "the front door must advertise the combined Atom feed:\n" + body);
+        assertFalse(body.contains("$url.feed.entries.rss"),
+                "a stale RSS reference would render as literal text, not fail the "
+                        + "build:\n" + body);
+        assertFalse(body.toLowerCase().contains("rss"),
+                "no RSS wording should remain on the front door:\n" + body);
+    }
+
     @Test
     void theHomePageLinksToTheWeblogDirectoryPage() throws Exception {
         String body = render("/" + SITE_HANDLE + "/");

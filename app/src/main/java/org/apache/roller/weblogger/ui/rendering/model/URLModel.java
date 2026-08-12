@@ -298,64 +298,24 @@ public class URLModel implements Model {
     ///////  Inner Classes  ///////
     
     public class FeedURLS {
-        
+
         public EntryFeedURLS getEntries() {
             return new EntryFeedURLS();
         }
-
-        public MediaFileFeedURLS getMediaFiles() {
-            return new MediaFileFeedURLS();
-        }
     }
-    
+
     public class EntryFeedURLS {
-        
-        public String getRss() {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "entries", "rss", null, null, null, false, true);
-        }
-        
-        public String rss(String catName, boolean excerpts) {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "entries", "rss", catName, null, null, excerpts, true);
-        }
-        
-        public String rssByTags(List<String> tags, boolean excerpts) {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "entries", "rss", null, null, tags, excerpts, true);
-        }
-        
+
         public String getAtom() {
             return urlStrategy.getWeblogFeedURL(weblog, locale, "entries", "atom", null, null, null, false, true);
         }
-        
+
         public String atom(String catName, boolean excerpts) {
             return urlStrategy.getWeblogFeedURL(weblog, locale, "entries", "atom", catName, null, null, excerpts, true);
         }
-        
-        public String search(String term, String catName) {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "entries", "atom", catName, term, null, false, true);
-        }        
-        
+
         public String atomByTags(List<String> tags, boolean excerpts) {
             return urlStrategy.getWeblogFeedURL(weblog, locale, "entries", "atom", null, null, tags, excerpts, true);
         }
-    }
-    
-    public class MediaFileFeedURLS {
-        
-        public String getRss() {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "files", "rss", null, null, null, false, true);
-        }
-        
-        public String rss(String catName, boolean excerpts) {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "files", "rss", catName, null, null, excerpts, true);
-        }
-        
-        public String getAtom() {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "files", "atom", null, null, null, false, true);
-        }
-        
-        public String atom(String catName, boolean excerpts) {
-            return urlStrategy.getWeblogFeedURL(weblog, locale, "files", "atom", catName, null, null, excerpts, true);
-        }
-        
     }
 }

@@ -83,12 +83,6 @@ public interface URLStrategy {
     
     
     /**
-     * Get OpenSearch compatible search URL template for weblog search feed.
-     */
-    String getWeblogSearchFeedURLTemplate(Weblog weblog);
-
-    
-    /**
      * Get OpenSearch compatible search URL template for weblog search page.
      */
     String getWeblogSearchPageURLTemplate(Weblog weblog);

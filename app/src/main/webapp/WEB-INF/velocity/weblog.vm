@@ -40,7 +40,6 @@ These are the documented macros in order defined in this file:
     #showWeblogCategoryLinksList()
     #showMobileCategoryLinksList()
     #showAtomFeedsList($weblog)
-    #showRSSFeedsList($weblog)
 
     #showPageMenu($weblog)
     #showAuthorMenu($vertical)
@@ -74,24 +73,23 @@ Parse and include page template from weblog.
 
 
 #**
-Show RSS and Atom auto-discovery links as HTML link elements.
+Show Atom auto-discovery links as HTML link elements.
+
+W2: feeds are Atom only -- RSS autodiscovery is gone, and so is the search
+feed link that used to render here for the search-results page ($model.searchResults);
+there is no feed representing search results any more, so that page now
+advertises nothing.
 *#
 #macro(showAutodiscoveryLinks $weblog)
-    ## main feed urls are always available
+    ## main feed urls are always available, except on the search results page
     #if (!$model.searchResults)
     <link rel="alternate" type="application/atom+xml" title="Recent Entries (Atom)"  href="$url.feed.entries.atom" />
-    <link rel="alternate" type="application/rss+xml"  title="Recent Entries (RSS)"   href="$url.feed.entries.rss" />
 
     #if ($model.tags)
       <link rel="alternate" type="application/atom+xml" title="Entries tagged $model.tags.toString() (Atom)"  href="$url.feed.entries.atomByTags($model.tags, false)" />
-      <link rel="alternate" type="application/rss+xml"  title="Entries tagged $model.tags.toString() (RSS)"   href="$url.feed.entries.rssByTags($model.tags, false)" />
     #elseif ($model.weblogCategory)
       <link rel="alternate" type="application/atom+xml" title="Entries for category $model.weblogCategory.name (Atom)"  href="$url.feed.entries.atom($model.weblogCategory.name, false)" />
-      <link rel="alternate" type="application/rss+xml"  title="Entries for category $model.weblogCategory.name (RSS)"   href="$url.feed.entries.rss($model.weblogCategory.name, false)" />
     #end
-
-    #else
-    <link rel="alternate" type="application/rss+xml"  title="Search results for '$utils.escapeHTML($model.term)'"  href="$utils.escapeHTML($url.feed.entries.search($model.term,$model.weblogCategory.name))" />
     #end
 #end
 
@@ -1060,7 +1058,7 @@ Show weblog's categories in specified parent category.
 
 
 #**
- * Show list of all RSS feeds available for weblog.
+ * Show list of all Atom feeds available for weblog.
  *#
 #macro(showAtomFeedsList $weblog)
     <ul class="rFeeds">
@@ -1068,20 +1066,6 @@ Show weblog's categories in specified parent category.
     #set($categories = $weblog.weblogCategories )
     #foreach( $cat in $categories )
         <li><a href="$url.feed.entries.atom($cat.name, false)">$cat.name</a></li>
-    #end
-    </ul>
-#end
-
-
-#**
- * Show list of all Atom feeds available for weblog.
- *#
-#macro(showRSSFeedsList $weblog)
-    <ul class="rFeeds">
-    <li><a href="$url.feed.entries.rss">$text.get("generic.all")</a></li>
-    #set($categories = $weblog.weblogCategories )
-    #foreach( $cat in $categories )
-        <li><a href="$url.feed.entries.rss($cat.name, false)">$cat.name</a></li>
     #end
     </ul>
 #end

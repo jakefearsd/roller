@@ -438,9 +438,6 @@ class URLModelTest {
     void entryFeedUrlsAreAbsoluteAndTypedByFormat() {
         // Feed URLs are a feed's identity: readers de-duplicate on them, so a
         // change here makes every subscriber re-download every old post.
-        assertEquals(ABSOLUTE_SITE + "/testblog/feed/entries/rss",
-                model.getFeed().getEntries().getRss(),
-                "$url.feed.entries.rss must be the absolute RSS URL.");
         assertEquals(ABSOLUTE_SITE + "/testblog/feed/entries/atom",
                 model.getFeed().getEntries().getAtom(),
                 "$url.feed.entries.atom must be the absolute Atom URL.");
@@ -448,43 +445,12 @@ class URLModelTest {
 
     @Test
     void entryFeedUrlsCanBeNarrowedByCategoryTagsAndExcerpts() {
-        assertEquals(Map.of("cat", "Tech+News", "excerpts", "true"),
-                queryParams(model.getFeed().getEntries().rss("Tech News", true)),
-                "A category-scoped excerpt feed carries both parameters, encoded.");
         assertEquals(Map.of("cat", "Tech+News"),
                 queryParams(model.getFeed().getEntries().atom("Tech News", false)),
                 "excerpts=false must be omitted rather than sent as false.");
-        assertEquals(Map.of("tags", "foo+bar"),
-                queryParams(model.getFeed().getEntries().rssByTags(List.of("foo", "bar"), false)),
-                "Tag feeds join tags with '+'.");
         assertEquals(Map.of("tags", "foo+bar", "excerpts", "true"),
                 queryParams(model.getFeed().getEntries().atomByTags(List.of("foo", "bar"), true)),
                 "Tag feeds can also be excerpt-only.");
-    }
-
-    @Test
-    void feedSearchUrlsCarryTheTermAsQ() {
-        String url = model.getFeed().getEntries().search("c++", "Tech");
-        assertEquals(ABSOLUTE_SITE + "/testblog/feed/entries/atom", path(url),
-                "Search results are delivered as an Atom feed.");
-        assertEquals(Map.of("q", "c%2B%2B", "cat", "Tech"), queryParams(url),
-                "The search term must be encoded into q.");
-    }
-
-    @Test
-    void mediaFileFeedsUseTheirOwnFeedType() {
-        assertEquals(ABSOLUTE_SITE + "/testblog/feed/files/rss",
-                model.getFeed().getMediaFiles().getRss(),
-                "Media file feeds are /feed/files/...");
-        assertEquals(ABSOLUTE_SITE + "/testblog/feed/files/atom",
-                model.getFeed().getMediaFiles().getAtom(),
-                "Media file feeds are available as Atom too.");
-        assertEquals(Map.of("cat", "Photos"),
-                queryParams(model.getFeed().getMediaFiles().rss("Photos", false)),
-                "Media file feeds accept a category.");
-        assertEquals(Map.of("cat", "Photos", "excerpts", "true"),
-                queryParams(model.getFeed().getMediaFiles().atom("Photos", true)),
-                "Media file Atom feeds accept excerpts.");
     }
 
     // ------------------------------------------------------------ editor links
