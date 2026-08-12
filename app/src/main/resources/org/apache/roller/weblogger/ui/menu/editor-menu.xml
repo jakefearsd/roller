@@ -68,20 +68,30 @@ Each menu or menu item is governed by four attributes:
     
     <!--  if we already have checked weblogPerms="admin" globalPerms="login" we should -->
     <!--  not need to recheck on each tab item as they are the same -->
-    <menu name="tabbedmenu.design" weblogPerms="admin" globalPerms="login" enabledProperty="themes.customtheme.allowed">
+    <!--  Picking among the shared themes is safe and reversible, so the group
+          itself is not gated. Converting a weblog to a CUSTOM theme is
+          one-way (it imports the shared theme's templates as the weblog's
+          own rows), so stylesheetEdit and templates, which only matter once
+          a weblog is customised, stay individually gated on
+          themes.customtheme.allowed, same as before. ThemeEditController
+          enforces the actual conversion server-side regardless of what this
+          menu shows. -->
+    <menu name="tabbedmenu.design" weblogPerms="admin" globalPerms="login">
 
         <!-- globalPerms="login" weblogPerms="admin" -->
         <menu-item action="themeEdit"
                    name="tabbedmenu.website.themes" />
-        
+
         <!-- globalPerms="login" weblogPerms="admin" -->
         <menu-item action="stylesheetEdit"
-                   name="tabbedmenu.design.stylesheet" />
-        
+                   name="tabbedmenu.design.stylesheet"
+                   enabledProperty="themes.customtheme.allowed" />
+
         <!-- globalPerms="login" weblogPerms="admin" -->
         <menu-item action="templates"
                    name="tabbedmenu.website.pages"
-                   subactions="templateAdd,templateEdit,templateRemove,templatesRemove" />
+                   subactions="templateAdd,templateEdit,templateRemove,templatesRemove"
+                   enabledProperty="themes.customtheme.allowed" />
     </menu>
     
     

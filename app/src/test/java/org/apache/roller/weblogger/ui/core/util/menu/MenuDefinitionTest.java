@@ -81,19 +81,44 @@ class MenuDefinitionTest {
     }
 
     @Test
-    void theDesignTabIsGuardedByTheCustomThemeProperty() {
+    void theDesignTabIsOpenButCustomisationStaysGuardedByTheCustomThemeProperty() {
         ParsedTab designTab = tab("editor", "tabbedmenu.design");
 
-        assertEquals("themes.customtheme.allowed", designTab.getEnabledProperty(),
-                "The Design tab must stay switched off on installations that do not allow "
-                        + "custom themes. Losing this property exposes theme editing to "
-                        + "everyone.");
+        assertNull(designTab.getEnabledProperty(),
+                "Picking among the shared themes is safe and must always be available to a "
+                        + "weblog admin; the group itself must not be gated on "
+                        + "themes.customtheme.allowed.");
         assertEquals(List.of("admin"), designTab.getWeblogPermissionActions(),
                 "Only a weblog administrator may redesign a blog.");
         assertEquals(List.of("login"), designTab.getGlobalPermissionActions(),
                 "The Design tab requires a logged-in user.");
         assertEquals(List.of("themeEdit", "stylesheetEdit", "templates"), actions(designTab),
                 "The Design tab's items come from editor-menu.xml.");
+
+        assertNull(item("editor", "tabbedmenu.design", "themeEdit").getEnabledProperty(),
+                "Selecting a shared theme is reversible and must never be gated.");
+        assertEquals("themes.customtheme.allowed",
+                item("editor", "tabbedmenu.design", "stylesheetEdit").getEnabledProperty(),
+                "Editing a custom theme's stylesheet only makes sense once a weblog has been "
+                        + "converted, so it stays behind the flag.");
+        assertEquals("themes.customtheme.allowed",
+                item("editor", "tabbedmenu.design", "templates").getEnabledProperty(),
+                "Editing a custom theme's templates only makes sense once a weblog has been "
+                        + "converted, so it stays behind the flag.");
+    }
+
+    /**
+     * The failing-test-first proof for the Design gating fix: theme selection
+     * itself must never be gated on themes.customtheme.allowed, no matter
+     * where in the group's XML the property ends up living.
+     */
+    @Test
+    void themeSelectionIsNotGatedOnTheCustomThemeFlag() {
+        String xml = menuXml();
+        int designIdx = xml.indexOf("tabbedmenu.design");
+        String group = xml.substring(designIdx, xml.indexOf("</menu>", designIdx));
+        assertFalse(group.substring(0, group.indexOf("themeEdit")).contains("themes.customtheme.allowed"),
+                "the Design group and its themeEdit item must not be gated on the custom-theme flag");
     }
 
     @Test

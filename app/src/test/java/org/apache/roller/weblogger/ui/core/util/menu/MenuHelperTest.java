@@ -225,16 +225,30 @@ class MenuHelperTest {
         }
     }
 
+    /**
+     * Picking among the shared themes is safe and reversible, so the Design
+     * tab itself must stay regardless of the flag -- only the items that
+     * matter once a weblog has actually been customised (the stylesheet
+     * editor and the template list) go away.
+     */
     @Test
-    void theDesignTabDisappearsWhereCustomThemesAreNotAllowed() throws Exception {
+    void onlyCustomisationItemsDisappearWhereCustomThemesAreNotAllowed() throws Exception {
         beAWeblogAdministrator();
         enabledProperties.remove("themes.customtheme.allowed");
 
         Menu menu = build("editor", MenuHelper.getParsedMenu("editor"), null);
 
-        assertEquals(List.of("tabbedmenu.weblog", "tabbedmenu.website"), tabKeys(menu),
-                "With themes.customtheme.allowed switched off the Design tab must go, and "
-                        + "only that tab.");
+        assertEquals(List.of("tabbedmenu.weblog", "tabbedmenu.design", "tabbedmenu.website"),
+                tabKeys(menu),
+                "With themes.customtheme.allowed switched off the Design tab must stay -- "
+                        + "selecting a shared theme is always safe.");
+        assertEquals(List.of("themeEdit"), itemActions(tabNamed(menu, "tabbedmenu.design")),
+                "Only theme selection is left; the stylesheet editor and template list only "
+                        + "matter once a weblog has been customised, so they must go with the "
+                        + "flag switched off.");
+        assertEquals("themeEdit", tabNamed(menu, "tabbedmenu.design").getAction(),
+                "With stylesheetEdit and templates hidden, the Design tab's own link must fall "
+                        + "back to the item that is left.");
     }
 
     @Test
@@ -624,10 +638,13 @@ class MenuHelperTest {
         try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
             Menu menu = MenuHelper.getMenu("editor", null, user, weblog);
 
-            assertFalse(tabKeys(menu).contains("tabbedmenu.design"),
+            assertTrue(tabKeys(menu).contains("tabbedmenu.design"),
                     "themes.customtheme.allowed is set in neither configuration, so it must "
-                            + "read as false and the Design tab must stay hidden. Tabs "
-                            + "present: " + tabKeys(menu));
+                            + "read as false, but the Design tab itself must stay -- theme "
+                            + "selection is not gated on it. Tabs present: " + tabKeys(menu));
+            assertEquals(List.of("themeEdit"), itemActions(tabNamed(menu, "tabbedmenu.design")),
+                    "With the property unknown (false), stylesheetEdit and templates must be "
+                            + "hidden; only theme selection remains.");
         }
     }
 
@@ -642,10 +659,13 @@ class MenuHelperTest {
         try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
             Menu menu = MenuHelper.getMenu("editor", null, user, weblog);
 
-            assertFalse(tabKeys(menu).contains("tabbedmenu.design"),
-                    "An administrator switched custom themes off at runtime; the Design tab "
-                            + "must go even though it is not disabled in roller.properties. "
-                            + "Tabs present: " + tabKeys(menu));
+            assertTrue(tabKeys(menu).contains("tabbedmenu.design"),
+                    "An administrator switched custom themes off at runtime, but the Design "
+                            + "tab must still be there -- selecting a shared theme is always "
+                            + "safe. Tabs present: " + tabKeys(menu));
+            assertEquals(List.of("themeEdit"), itemActions(tabNamed(menu, "tabbedmenu.design")),
+                    "With custom themes switched off at runtime, stylesheetEdit and templates "
+                            + "must be hidden; only theme selection remains.");
         }
     }
 

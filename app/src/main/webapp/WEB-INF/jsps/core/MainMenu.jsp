@@ -104,25 +104,32 @@
                 <%-- Only admins get access to theme and config settings --%>
                 <c:if test='${perms.hasAction("admin")}'>
 
-                    <%-- And only show theme option if custom themes are enabled --%>
-                    <c:if test="${rc:getProp('themes.customtheme.allowed')}">
-                        <c:choose>
-                            <c:when test="${perms.weblog.editorTheme == 'custom'}">
+                    <%-- Choosing among the shared themes is safe and always available.
+                         A weblog already on a custom theme links to its own templates
+                         instead, and that link stays behind the custom-theme flag --
+                         same gate ThemeEditController enforces server-side. --%>
+                    <c:choose>
+                        <c:when test="${perms.weblog.editorTheme == 'custom'}">
+                            <c:if test="${rc:getProp('themes.customtheme.allowed')}">
                                 <c:url value="/roller-ui/authoring/templates.rol" var="weblogTheme">
                                     <c:param name="weblog" value="${perms.weblog.handle}" />
                                 </c:url>
-                            </c:when>
-                            <c:otherwise>
-                                <c:url value="/roller-ui/authoring/themeEdit.rol" var="weblogTheme">
-                                    <c:param name="weblog" value="${perms.weblog.handle}" />
-                                </c:url>
-                            </c:otherwise>
-                        </c:choose>
-                        <a href='${weblogTheme}' class="btn btn-secondary">
-                            <span class="bi bi-eye" aria-hidden="true"></span>
-                            <spring:message code="yourWebsites.theme" />
-                        </a>
-                    </c:if>
+                                <a href='${weblogTheme}' class="btn btn-secondary">
+                                    <span class="bi bi-eye" aria-hidden="true"></span>
+                                    <spring:message code="yourWebsites.theme" />
+                                </a>
+                            </c:if>
+                        </c:when>
+                        <c:otherwise>
+                            <c:url value="/roller-ui/authoring/themeEdit.rol" var="weblogTheme">
+                                <c:param name="weblog" value="${perms.weblog.handle}" />
+                            </c:url>
+                            <a href='${weblogTheme}' class="btn btn-secondary">
+                                <span class="bi bi-eye" aria-hidden="true"></span>
+                                <spring:message code="yourWebsites.theme" />
+                            </a>
+                        </c:otherwise>
+                    </c:choose>
 
                     <%-- settings button --%>
                     <c:url value="/roller-ui/authoring/weblogConfig.rol" var="manageWeblog">
