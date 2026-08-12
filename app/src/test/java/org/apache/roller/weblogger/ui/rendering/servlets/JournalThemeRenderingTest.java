@@ -141,7 +141,12 @@ class JournalThemeRenderingTest {
         assertFalse(body.contains("#showSeoHead"), body);
         assertFalse(body.contains("#showEmbedAssets"), body);
         assertFalse(body.contains("#showAudienceAssets"), body);
-        assertFalse(body.contains("$entry.featuredImage"), body);
+        // A broken $entry.xyz reference (e.g. a method the manager no longer
+        // has) prints as this literal text in Velocity's lenient mode rather
+        // than failing the render -- see _day.vm's now-fixed
+        // "$entry.commentCount comments". This subsumes the old
+        // $entry.featuredImage-only check.
+        assertFalse(body.contains("$entry."), body);
         assertFalse(body.contains("$utils."), body);
     }
 

@@ -33,7 +33,7 @@
         #if($utils.isNotEmpty($entry.searchDescription))
         <p class="qj-sum">$utils.escapeHTML($entry.searchDescription)</p>
         #end
-        <p class="qj-meta">In <b>$utils.escapeHTML($entry.category.name)</b> &middot; $entry.commentCount comments</p>
+        <p class="qj-meta">In <b>$utils.escapeHTML($entry.category.name)</b></p>
     </div>
 </article>
 #end
