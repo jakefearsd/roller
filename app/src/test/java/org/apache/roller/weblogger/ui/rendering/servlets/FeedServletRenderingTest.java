@@ -3,6 +3,7 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FeedServletRenderingTest {
@@ -75,6 +77,29 @@ class FeedServletRenderingTest {
         assertTrue(body.contains("<?xml-stylesheet type=\"text/xsl\" "
                         + "href=\"http://localhost:8080/roller/roller-ui/styles/atom.xsl\" media=\"screen\"?>"),
                 "a styled feed must carry the atom.xsl stylesheet PI:\n" + body);
+    }
+
+    /**
+     * A trashed entry must not be syndicated -- same invariant as
+     * {@code draftEntryPermalinkIsNotFound}/{@code frontPageExcludesTrashedEntry}
+     * in {@code PageServletRenderingTest}, for the Atom feed. A live entry
+     * alongside it is what stops "the trashed entry is absent" from being
+     * satisfied by an empty feed.
+     */
+    @Test
+    void atomEntriesFeedExcludesTrashedEntry() throws Exception {
+        TestUtils.setupWeblogEntry("atom-live-entry", weblog, user);
+        TestUtils.setupWeblogEntry("atom-gone-entry", weblog, user, PubStatus.TRASHED);
+        TestUtils.endSession(true);
+
+        MockHttpServletResponse response = feed("entries/atom");
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+        assertTrue(body.contains("atom-live-entry"),
+                "the published entry must be syndicated:\n" + body);
+        assertFalse(body.contains("atom-gone-entry"),
+                "a trashed entry must not be syndicated in atom:\n" + body);
     }
 
     /**

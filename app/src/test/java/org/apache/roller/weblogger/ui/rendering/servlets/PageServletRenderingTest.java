@@ -125,6 +125,56 @@ class PageServletRenderingTest {
         assertEquals(404, response.getStatus(), "a draft must never render publicly");
     }
 
+    /**
+     * A trashed entry's permalink must behave exactly like an unknown one --
+     * a clean 404, not a 500 and not a rendered page. {@code TRASHED} is a
+     * status {@code WeblogEntry.isPublished()} and every reader-facing query
+     * path already excludes the same way {@code DRAFT} does (see
+     * {@code draftEntryPermalinkIsNotFound} above), but that is exactly the
+     * kind of "obviously fine" default a later change could quietly narrow --
+     * this is what would catch it.
+     */
+    @Test
+    void trashedEntryPermalinkIsNotFound() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        WeblogCategory category = managed.getWeblogCategories().iterator().next();
+        TestUtils.setupWeblogEntry("trashed-entry", category, PubStatus.TRASHED, managed, user);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagerenderblog/entry/trashed-entry");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(404, response.getStatus(), "a trashed entry must never render publicly");
+    }
+
+    /**
+     * Same shape as {@code frontPageRendersPublishedEntry}, with a trashed
+     * entry alongside the published one -- so "the trashed entry is absent"
+     * cannot be satisfied by the whole front page rendering empty.
+     */
+    @Test
+    void frontPageExcludesTrashedEntry() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        WeblogCategory category = managed.getWeblogCategories().iterator().next();
+        TestUtils.setupWeblogEntry("live-entry", weblog, user);
+        TestUtils.setupWeblogEntry("gone-entry", category, PubStatus.TRASHED, managed, user);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagerenderblog");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+        assertTrue(body.contains("live-entry"),
+                "the published entry must be on the front page:\n" + body);
+        assertFalse(body.contains("gone-entry"),
+                "a trashed entry must not be on the front page:\n" + body);
+    }
+
     @Test
     void unknownWeblogIsNotFound() throws Exception {
         MockHttpServletRequest request = RenderingTestSupport

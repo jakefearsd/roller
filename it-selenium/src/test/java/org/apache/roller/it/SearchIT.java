@@ -27,6 +27,7 @@ import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.executeJavaScript;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,6 +60,13 @@ class SearchIT extends RollerIT {
     /** Generous: a background index operation competes with the whole suite. */
     private static final Duration INDEX_TIMEOUT = Duration.ofSeconds(45);
 
+    /**
+     * How long to keep checking after the index first reports an entry gone,
+     * to catch a delayed re-add rather than just the eventual removal. See
+     * {@link #assertStaysAbsentFromSearch}.
+     */
+    private static final Duration SUSTAINED_ABSENCE_WINDOW = Duration.ofSeconds(10);
+
     @BeforeEach
     void logIn() {
         loginAsAdmin();
@@ -80,6 +88,16 @@ class SearchIT extends RollerIT {
         assertTrue(waitForSearchToReport(term, title, false),
                 "a deleted entry is still in the search index, so readers get results "
                         + "linking to a page that no longer exists");
+
+        // waitForSearchToReport returns at the FIRST poll that finds the entry
+        // gone, which proves the de-index eventually happened but not that it
+        // sticks -- and this wave's de-index seam (BaseController's trash
+        // helpers) had exactly that failure mode once already: an
+        // asynchronous re-index job re-fetched the entry from the database
+        // and put it right back into the index a moment after the caller that
+        // removed it had already returned. Keep polling past the first clean
+        // result and fail the instant the entry comes back.
+        assertStaysAbsentFromSearch(term, title, SUSTAINED_ABSENCE_WINDOW);
     }
 
     /**
@@ -120,6 +138,23 @@ class SearchIT extends RollerIT {
             sleepFor(Duration.ofSeconds(2));
         } while (System.currentTimeMillis() < deadline);
         return searchFinds(term, title) == expected;
+    }
+
+    /**
+     * Polls search for the whole window and fails the instant the entry is
+     * found, rather than stopping at the first clean poll the way
+     * {@link #waitForSearchToReport} does. That early return is right for
+     * "did the index eventually catch up" but wrong for "does it stay caught
+     * up" -- a delayed re-add would sail through a single check.
+     */
+    private void assertStaysAbsentFromSearch(String term, String title, Duration window) {
+        long deadline = System.currentTimeMillis() + window.toMillis();
+        do {
+            assertFalse(searchFinds(term, title),
+                    "a deleted entry reappeared in search results after having been "
+                            + "removed -- the index is not staying de-indexed");
+            sleepFor(Duration.ofSeconds(2));
+        } while (System.currentTimeMillis() < deadline);
     }
 
     /**

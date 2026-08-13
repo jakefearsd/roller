@@ -201,6 +201,13 @@ class SeoControllerTest {
         noindexed = TestUtils.getManagedWeblogEntry(noindexed);
         noindexed.setNoindex(Boolean.TRUE);
         WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(noindexed);
+        // A trashed entry must be as invisible to crawlers as a draft -- same
+        // reasoning as the draft/noindex cases above: a query default that got
+        // "simplified" to drop the TRASHED exclusion would advertise a URL that
+        // 404s the moment a crawler follows it.
+        WeblogEntry trashed = TestUtils.setupWeblogEntry("seoTrashedEntry",
+                TestUtils.getManagedWebsite(weblog).getWeblogCategories().iterator().next(),
+                PubStatus.TRASHED, weblog, user);
         TestUtils.endSession(true);
 
         ResponseEntity<String> response = controller.weblogSitemap(weblog.getHandle());
@@ -219,6 +226,8 @@ class SeoControllerTest {
                 "Draft entries must not leak into the sitemap:\n" + body);
         assertFalse(body.contains(noindexed.getAnchor()),
                 "noindex entries must be excluded from the sitemap:\n" + body);
+        assertFalse(body.contains(trashed.getAnchor()),
+                "Trashed entries must not be advertised to crawlers:\n" + body);
     }
 
     @Test
