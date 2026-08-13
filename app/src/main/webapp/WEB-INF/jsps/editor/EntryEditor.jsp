@@ -146,7 +146,10 @@
         $("#entry").on('input change', function () {
             rollerEntryDirty = true;
         });
-        $(window).on("beforeunload", function (event) {
+        <%-- Namespaced. A bare .off("beforeunload") below would unbind every
+             beforeunload handler on the page, including one belonging to
+             something else added later -- silently, with no signal. --%>
+        $(window).on("beforeunload.rollerLeaveWarning", function (event) {
             if (!rollerEntryDirty) {
                 return undefined;
             }
@@ -157,7 +160,7 @@
         });
         $("#entry").on('submit', function () {
             rollerEntryDirty = false;
-            $(window).off("beforeunload");
+            $(window).off("beforeunload.rollerLeaveWarning");
         });
 
         <%-- Local draft recovery. The key carries the context path so two

@@ -317,7 +317,9 @@
         $("#pageEditForm").on('input change', function () {
             rollerPageDirty = true;
         });
-        $(window).on("beforeunload", function (event) {
+        <%-- Namespaced, same reason as EntryEditor.jsp: a bare
+             .off("beforeunload") unbinds every handler on the page. --%>
+        $(window).on("beforeunload.rollerLeaveWarning", function (event) {
             if (!rollerPageDirty) {
                 return undefined;
             }
@@ -328,7 +330,7 @@
         });
         $("#pageEditForm").on('submit', function () {
             rollerPageDirty = false;
-            $(window).off("beforeunload");
+            $(window).off("beforeunload.rollerLeaveWarning");
         });
 
         if (window.rollerDraft) {

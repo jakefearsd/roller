@@ -129,7 +129,7 @@ class EditorAutosaveWiringTest {
         // $("#entry").on('submit', ...) INSIDE the codemirror change callback,
         // so a thousand-word entry left a thousand submit handlers on the form
         // it was about to post.
-        String jsp = read(ENTRY_EDITOR);
+        String jsp = codeOnly(read(ENTRY_EDITOR));
         assertTrue(jsp.contains("beforeunload"), "the leave-warning must still exist");
 
         String body = firstEditorChangeCallbackBody(jsp);
@@ -154,6 +154,18 @@ class EditorAutosaveWiringTest {
         assertTrue(jsp.contains("getText: rollerGetEntryText")
                         && jsp.contains("setText: rollerSetEntryText"),
                 "PageEdit.jsp has its own copy of the editor seam and must pass both halves");
+
+        // The bar's internals are hand-duplicated from EntryEdit.jsp rather
+        // than shared, so they need the same assertions the entry side gets.
+        // A typo in any one of these makes offer() return early: no bar, no
+        // error, no failing test without this.
+        for (String required : new String[] {
+                "draft-bar-text", "draft-bar-restore", "draft-bar-discard",
+                "data-template=", "data-restored=" }) {
+            assertTrue(jsp.contains(required),
+                    "roller-draft.js querySelector()s '" + required
+                            + "' and silently declines to offer anything without it");
+        }
     }
 
     @Test
@@ -165,6 +177,61 @@ class EditorAutosaveWiringTest {
                 "a key without the handle lets two weblogs' page editors share a snapshot");
         assertTrue(jsp.contains(":pageEdit:"),
                 "the page editor's key must not collide with the entry editor's");
+        assertTrue(jsp.contains("${pageContext.request.contextPath}"),
+                "a key without the context path lets two Roller installs on one "
+                        + "origin share storage");
+        assertTrue(jsp.contains("${empty bean.id ? 'new' : bean.id}"),
+                "one action serves both add and edit here, so the id is the ONLY "
+                        + "thing separating one page's draft from another's -- without "
+                        + "the ternary every page in the weblog shares a single slot");
+    }
+
+    @Test
+    void thePageEditorsLeaveWarningIsAlsoBoundOnce() throws IOException {
+        // PageEdit.jsp carried its own copy of the per-keystroke handler leak
+        // and got its own copy of the fix. Without this, a future edit
+        // reverting the page editor alone would pass every other test here.
+        String jsp = codeOnly(read(PAGE_EDIT));
+        assertTrue(jsp.contains("beforeunload"), "the leave-warning must still exist");
+
+        String body = firstEditorChangeCallbackBody(jsp);
+        assertFalse(body.contains("beforeunload"),
+                "beforeunload must be bound once, outside the change callback -- "
+                        + "the callback body is:\n" + body);
+        assertFalse(body.contains("'submit'"),
+                "a submit handler bound inside the change callback accumulates one "
+                        + "per keystroke on the form about to be posted -- "
+                        + "the callback body is:\n" + body);
+    }
+
+    @Test
+    void bothEditorsUnbindTheLeaveWarningByNamespace() throws IOException {
+        // An un-namespaced unbind removes EVERY beforeunload handler on the
+        // page, so a later feature that binds one would be silently disarmed
+        // on submit.
+        for (Path jsp : new Path[] { ENTRY_EDITOR, PAGE_EDIT }) {
+            String code = codeOnly(read(jsp));
+            assertTrue(code.contains("beforeunload.rollerLeaveWarning"),
+                    jsp + " must namespace its leave-warning binding");
+            assertFalse(code.contains("off(\"beforeunload\")"),
+                    jsp + " must not unbind beforeunload wholesale");
+        }
+    }
+
+    /**
+     * The JSP with its comments removed.
+     *
+     * <p>Every assertion in this class searches JSP source for a string, and
+     * the first version of the leave-warning test taught the lesson twice:
+     * a rule that matches raw source is really a rule about the file's
+     * <em>prose</em>, and the author ends up rewording an English sentence to
+     * satisfy a JavaScript assertion. The second time it happened, the comment
+     * explaining why an unbind must be namespaced was itself what failed the
+     * namespacing check. Strip the commentary; assert on the code.
+     */
+    private static String codeOnly(String jsp) {
+        return jsp.replaceAll("(?s)<%--.*?--%>", "")
+                .replaceAll("(?m)^\\s*//.*$", "");
     }
 
     @Test

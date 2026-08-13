@@ -328,22 +328,42 @@
         }
 
         /*
-         * A snapshot that matches what the server just rendered is one whose
-         * save went through: drop it silently. That single rule is also how a
-         * finished "new entry" draft gets cleaned up -- saving a new entry
-         * redirects to entryEdit under a DIFFERENT key, so the entryAdd:new
-         * snapshot would otherwise linger for 30 days and be offered to
-         * whoever started the next entry. EntryEdit/PageEdit pass it in
-         * staleKeys for exactly that reason.
+         * The PRIMARY key is compared on the whole form: a snapshot matching
+         * what the server just rendered is one whose save went through, so it
+         * is dropped silently, and anything else is unsaved work worth
+         * offering.
+         *
+         * A STALE key is compared on the editor TEXT ALONE, and that asymmetry
+         * is load-bearing rather than lazy. A stale key names a snapshot
+         * written by a DIFFERENT page whose form state legitimately differs:
+         * saving a new entry redirects to entryEdit, where copyFrom() has
+         * populated bean.status and bean.pubTimeLocal that were empty on the
+         * add form. A whole-form comparison therefore NEVER matches, the
+         * entryAdd:new snapshot survives its own save, and the next author to
+         * open a blank editor is offered the previous entry's text -- the exact
+         * failure staleKeys exists to prevent. A browser IT caught this; the
+         * unit tests could not, because the difference only appears once a real
+         * save has round-tripped through the controller.
+         *
+         * Text equality is the specific signal "this new-entry draft became
+         * this entry", and it must not be loosened further: a genuinely
+         * different new-entry draft sitting in another tab has different text
+         * and must survive.
          */
         var keys = [key].concat(options.staleKeys || []);
         var offerable = null;
         for (var i = 0; i < keys.length; i++) {
             var snapshot = readSnapshot(store, keys[i]);
-            if (!snapshot || !differs(snapshot, now)) {
+            if (!snapshot) {
                 drop(keys[i]);
-            } else if (keys[i] === key) {
+            } else if (keys[i] !== key) {
+                if (snapshot.text === now.text) {
+                    drop(keys[i]);
+                }
+            } else if (differs(snapshot, now)) {
                 offerable = snapshot;
+            } else {
+                drop(keys[i]);
             }
         }
         if (offerable) {
