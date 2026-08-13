@@ -204,6 +204,52 @@ class ImageShortcodeTest {
         assertTrue(render(Map.of("id", "mf-1"), null).contains(" alt=\"hawk.jpg\""));
     }
 
+    @Test
+    void storedAltTextIsUsedWhenNoShortcodeAttributeIsGiven() {
+        // The chain's middle link: an editor who described the photo on the
+        // media file itself, but did not repeat it in the shortcode, must get
+        // that description in production -- not the bare filename, which
+        // tells a screen reader nothing a sighted visitor doesn't already
+        // have from looking at the picture.
+        photo.setAltText("A red-tailed hawk banking against a clear sky");
+
+        String html = render(Map.of("id", "mf-1"), null);
+
+        assertTrue(html.contains(" alt=\"A red-tailed hawk banking against a clear sky\""), html);
+        // Not just "not the filename in the alt attribute" -- the filename
+        // must not appear anywhere, or a test that only checked the alt text
+        // was present would pass even if both strings landed in it.
+        assertFalse(html.contains("hawk.jpg"), html);
+    }
+
+    @Test
+    void blankStoredAltTextFallsBackToTheFileNameRatherThanEmittingAnEmptyAlt() {
+        // An author who types alt text and later clears the field leaves ""
+        // in the column, not null. If that were emitted verbatim, alt=""
+        // asserts the image is purely decorative -- wrong for a photograph,
+        // and it would hide the picture from the "missing alt text" marker
+        // just as effectively as a real description would, defeating it.
+        photo.setAltText("   ");
+
+        String html = render(Map.of("id", "mf-1"), null);
+
+        assertTrue(html.contains(" alt=\"hawk.jpg\""), html);
+    }
+
+    @Test
+    void anExplicitAltAttributeWinsOverStoredAltText() {
+        // The chain's first link beats the second: a caption written for this
+        // one placement of the photo (a different crop, a different context)
+        // must not be silently overridden by the media file's own general
+        // description.
+        photo.setAltText("A red-tailed hawk banking against a clear sky");
+
+        String html = render(Map.of("id", "mf-1", "alt", "Hawk in flight over the ridge"), null);
+
+        assertTrue(html.contains(" alt=\"Hawk in flight over the ridge\""), html);
+        assertFalse(html.contains("red-tailed"), html);
+    }
+
     // -------------------------------------------------------------- blurhash
 
     @Test

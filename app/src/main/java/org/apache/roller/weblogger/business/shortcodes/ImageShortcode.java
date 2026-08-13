@@ -111,7 +111,7 @@ public class ImageShortcode implements ShortcodeHandler {
             html.append(" width=\"").append(media.getWidth())
                     .append("\" height=\"").append(media.getHeight()).append('"');
         }
-        String alt = attributes.containsKey("alt") ? attributes.get("alt") : media.getName();
+        String alt = firstNonBlank(attributes.get("alt"), media.getAltText(), media.getName());
         html.append(" alt=\"").append(escape(StringUtils.defaultString(alt))).append('"');
         html.append(" loading=\"lazy\" decoding=\"async\"");
         if (StringUtils.isNotBlank(media.getBlurhash())) {
@@ -139,5 +139,22 @@ public class ImageShortcode implements ShortcodeHandler {
 
     private static String escape(String value) {
         return value == null ? null : HTMLSanitizer.htmlEncodeApexesAndTags(value);
+    }
+
+    /**
+     * The first candidate that is neither null nor blank, or null if every
+     * candidate is. A blank string counts as absent at every link of the alt
+     * chain (explicit {@code alt=} attribute, stored alt text, filename): an
+     * author who clears the alt field leaves {@code ""} behind, and emitting
+     * that verbatim would assert the image is decorative, which is wrong for
+     * a photograph and would also hide it from the "missing alt text" marker.
+     */
+    private static String firstNonBlank(String... candidates) {
+        for (String candidate : candidates) {
+            if (StringUtils.isNotBlank(candidate)) {
+                return candidate;
+            }
+        }
+        return null;
     }
 }

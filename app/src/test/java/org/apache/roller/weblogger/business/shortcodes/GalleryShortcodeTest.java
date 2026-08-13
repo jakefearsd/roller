@@ -312,6 +312,47 @@ class GalleryShortcodeTest {
         assertFalse(html2.contains("background-color"), html2);
     }
 
+    // -------------------------------------------------------------------- alt
+
+    @Test
+    void storedAltTextIsUsedInsteadOfTheFileName() {
+        // The gallery grid has no per-image shortcode attribute to carry an
+        // alt override -- the media file's own alt text, when an editor set
+        // one, is the only thing that should beat the filename.
+        image("mf-1", "hawk.jpg", 100, 100).setAltText("A red-tailed hawk on a fence post");
+
+        String html = render(Map.of("dir", "album"));
+
+        assertTrue(html.contains(" alt=\"A red-tailed hawk on a fence post\""), html);
+        // Not just "not the filename in the alt attribute" -- the filename
+        // must not appear anywhere, or a test that only checked the alt text
+        // was present would pass even if both strings landed in it.
+        assertFalse(html.contains("hawk.jpg"), html);
+    }
+
+    @Test
+    void blankStoredAltTextFallsBackToTheFileNameRatherThanEmittingAnEmptyAlt() {
+        // An author who types alt text and later clears the field leaves ""
+        // in the column, not null. Emitting that verbatim would assert the
+        // image is purely decorative -- wrong for a photograph, and it would
+        // hide the picture from the "missing alt text" marker just as
+        // effectively as a real description would, defeating it.
+        image("mf-1", "hawk.jpg", 100, 100).setAltText("   ");
+
+        String html = render(Map.of("dir", "album"));
+
+        assertTrue(html.contains(" alt=\"hawk.jpg\""), html);
+    }
+
+    @Test
+    void withoutStoredAltTextTheFileNameIsUsedUnchanged() {
+        image("mf-1", "hawk.jpg", 100, 100);
+
+        String html = render(Map.of("dir", "album"));
+
+        assertTrue(html.contains(" alt=\"hawk.jpg\""), html);
+    }
+
     // ------------------------------------------------------- refusal to render
 
     @Test
