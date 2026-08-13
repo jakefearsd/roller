@@ -922,8 +922,10 @@ in a local index file worth clearing, not a search-correctness bug.
   checkboxes, per-row duplicate, and the action bar all post through it, so the
   duplicate control is a submit button carrying `name="duplicateId"` rather than
   a nested form. Every bulk action loops per id through `BaseController`'s
-  `lookupEntry`, and delete goes through `removeEntryWithIndex` so the Lucene
-  index cannot be orphaned.
+  `lookupEntry`, and delete goes through `trashEntryWithIndex` so the Lucene
+  index cannot be orphaned. **Delete moves an entry to the trash rather than
+  removing it** as of W5 — see Trash below; the flash copy says so, because the
+  whole value of the feature is that the author knows the entry is recoverable.
 - **Revisions**: `weblogentry_revision` (V010) keeps the pre-save title/text/
   summary of every content-changing save. The snapshot is taken by a JPA
   `post-load` callback (`WeblogEntry.snapshotLoadedContent`) because
@@ -937,6 +939,82 @@ in a local index file worth clearing, not a search-correctness bug.
 build does not pass `-parameters`, so a bare `@RequestParam String id` throws at
 runtime while unit tests (which call the method directly) keep passing.
 `ControllerMetadataTest` fails on any unnamed one.
+
+## Trash (soft delete, W5)
+
+Deleting an entry from the authoring UI moves it to a trash it can be restored
+from. Everything about the design exists to keep the new dimension from
+spreading — the program's own notes flagged soft delete as the one item that
+makes the system bigger, and sequenced it last so it would be the cheapest
+thing to drop.
+
+- **It is a fifth `PubStatus` value (`TRASHED`), not a `deleted_at` column**,
+  and that is the whole trick. Every query that names a status excludes trash
+  **by construction** — nobody asks for `TRASHED`, so nobody gets it. A
+  `deleted_at IS NULL` condition would instead have to be remembered in seven
+  named queries, a dynamic query builder and 23 call sites, and it fails
+  **open**: forget it once and deleted entries reappear on a public page.
+  `status` is stored by name (`<enumerated>STRING</enumerated>`), so the new
+  value carries no ordinal hazard. `weblogentry.trashed_at` (V025) exists only
+  so the trash list can sort and the purge can expire.
+- **The exclusion lives in exactly one place**: `WeblogEntrySearchCriteria`'s
+  `includeTrashed`, defaulting to **false**, applied in
+  `JPAWeblogEntryManagerImpl.getWeblogEntries` when no explicit status is set.
+  The default IS the safety property — a new caller that thinks about nothing
+  gets the safe behaviour. If you find yourself adding a status condition to a
+  second query, that is the design failing, not a detail.
+- **Four status-less queries deliberately still see trash**, each for a
+  reason, and each carries a comment in `WeblogEntry.orm.xml` saying so:
+  `getByCategory` (a trashed entry must still block deleting its category —
+  otherwise there is nothing to restore into), the two anchor queries (a
+  trashed entry still occupies its anchor; and the permalink lookup is safe
+  only because `PageServlet` filters `isPublished()`), and `getByWebsite` (the
+  weblog-deletion cascade must take the trash with it).
+- **Restore always goes to `DRAFT`, never back to `PUBLISHED`.** An undelete
+  that silently republishes to feeds, the sitemap and every subscriber is worse
+  than one extra click. That is also why no column remembers the pre-trash
+  status.
+- **`BaseController.trashEntryWithIndex`** (was `removeEntryWithIndex`) is
+  still the single authoring-side deletion seam, with
+  `deleteEntryForeverWithIndex` beside it for "delete forever".
+  `WeblogEntryManager.removeWeblogEntry` remains the one permanent-deletion
+  path — `purgeTrash` calls it per entry rather than issuing a bulk DELETE.
+- **The index steps are not optional just because the entry now survives —
+  they are MORE necessary.** A `TRASHED` entry left in Lucene is findable by
+  site search and links to a permalink that 404s. Two things had to change for
+  this to actually hold, and both were live bugs first:
+  - `ReIndexEntryOperation` is **asynchronous** and **re-fetches the entry from
+    the database by id**, so the old seam's "flip the in-memory status to DRAFT
+    and re-index" trick never worked the way its javadoc claimed. It was
+    accidentally safe only because the row was gone by the time the job ran.
+    With the row surviving, the job re-added trashed entries to the index
+    moments after the synchronous remove took them out. `ReIndexEntryOperation`
+    now refuses to add a document for a non-`PUBLISHED` entry — enforcing an
+    invariant its five callers had been maintaining by convention.
+  - **`weblog.lastModified` must be bumped when a published entry is trashed.**
+    `WeblogPageCache` has no CacheHandler, so `CacheManager.invalidate` never
+    reaches it and `lastModified` is the *only* thing that expires a rendered
+    page (see Templates). `trashWeblogEntry` sets `TRASHED` before saving, which
+    makes `saveWeblogEntry`'s `isPublished()` bump gate false — so the bump has
+    to be explicit, or the cached home page keeps serving a post whose
+    permalink now 404s.
+  Trashing and restoring also set `refreshAggregates`, or a trashed entry's
+  tags stay counted in the tag cloud until it is purged — which at the default
+  retention is never.
+- **`entry.trash.retention.days`** — runtime property, default **30**, `-1`
+  keeps trash forever. Swept by `TrashPurgeTask` beside `ScheduledEntriesTask`.
+  It is re-read per sweep, not latched in `init()` (CLAUDE.md's third
+  Configuration-scope trap); a per-weblog try/catch means one weblog's failure
+  does not stop the others.
+- **Pages and media files are deliberately NOT in the trash.** A soft-deleted
+  media file still occupies disk, still counts against `uploads.dir.maxsize`,
+  still has a rendition ladder and a thumbnail, and is still reachable at its
+  media URL unless every one of those paths learns about trash — precisely the
+  spreading this design exists to avoid. Pages are few and deliberate.
+- **Editing `runtimeConfigDefs.xml` by hand: a bare `--` inside an XML comment
+  makes the parse fail SILENTLY.** `getRuntimeConfigDefs()` returns null and it
+  surfaces as unrelated NPEs somewhere else entirely. (The same rule bit the
+  `pom.xml` coverage comments earlier in this program.)
 
 ## Pages
 Static pages (`WeblogPage`, V014) are a separate entity from `WeblogEntry` **on
