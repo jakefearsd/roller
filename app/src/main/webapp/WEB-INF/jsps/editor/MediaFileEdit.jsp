@@ -111,6 +111,15 @@
     </div>
 
     <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileEdit.altText"/></label>
+        <div class="col-sm-9">
+            <input type="text" name="bean.altText" value="${bean.altText}"
+                   maxlength="255" class="form-control"/>
+            <div class="form-text"><spring:message code="mediaFileEdit.altText.tip"/></div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="mediaFileEdit.tags"/></label>
         <div class="col-sm-9">
             <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" size="30" maxlength="100" tabindex="3" class="form-control"/>

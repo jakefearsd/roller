@@ -1475,6 +1475,23 @@ span.button {
     float:right;
 }
 
+/* "Not described yet" on an image in the media grid. A marker, not a scold:
+   --warn on a quiet ground, lowercase, no icon. It says where the work is and
+   stops there. */
+
+.media-alt-missing {
+    display: inline-block;
+    margin-top: 2px;
+    padding: 1px 6px;
+    border-radius: var(--radius);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    color: var(--warn);
+    font-family: var(--font-ui);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+}
+
 .sortByMenu, .viewDirectoryMenu {
     display: inline;
 }
