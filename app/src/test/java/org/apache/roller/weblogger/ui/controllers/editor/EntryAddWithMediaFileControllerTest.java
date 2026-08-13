@@ -29,14 +29,16 @@ import static org.mockito.Mockito.when;
 /**
  * Tests for {@link EntryAddWithMediaFileController}.
  *
- * <p>This controller never renders its own page; it builds an HTML snippet
- * from the media files selected in the picker, stuffs it into
- * {@code bean.text}, and forwards straight into {@link EntryAddController}'s
- * template ({@code entryAdd.rol}). The snippet is built by string
- * substitution rather than a template engine, so the exact markup for the
- * image and non-image cases is worth pinning literally - a stray typo in a
- * placeholder like {@code <urlt>} would silently leave garbage in the entry
- * text instead of failing anything visibly.
+ * <p>This controller never renders its own page; it builds a snippet from
+ * the media files selected in the picker, stuffs it into {@code bean.text},
+ * and forwards straight into {@link EntryAddController}'s template
+ * ({@code entryAdd.rol}). An image contributes an {@code [image id="..."]}
+ * shortcode -- the same one the editor's own media insert pastes, so it picks
+ * up srcset/renditions/alt text through the normal render chain -- while a
+ * non-image file (no shortcode covers it) still gets a hand-built plain link,
+ * built by string substitution, so its exact markup is worth pinning
+ * literally: a stray typo in a placeholder like {@code <size>} would silently
+ * leave garbage in the entry text instead of failing anything visibly.
  */
 class EntryAddWithMediaFileControllerTest extends EditorControllerTestSupport {
 
@@ -54,22 +56,19 @@ class EntryAddWithMediaFileControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void aSingleImageProducesAnImageTagWithItsPermalinkAndThumbnail() throws Exception {
+    void aSingleImageProducesAnImageShortcodeByMediaFileId() throws Exception {
+        // The [image] shortcode -- not a hand-built <img> -- is what expands
+        // at render time into the full responsive <figure><picture> block
+        // with srcset, renditions, and alt text pulled from the media file
+        // automatically. No thumbnail URL is needed here at all: the
+        // shortcode resolves the media file by id at render time.
         MediaFile photo = imageFile("file-1", "photo.jpg", 100, 80);
         when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(photo);
-        when(weblogger.getUrlStrategy().getMediaFileURL(weblog, "file-1", true))
-                .thenReturn("http://example.com/media/photo.jpg");
-        when(weblogger.getUrlStrategy().getMediaFileThumbnailURL(weblog, "file-1", true))
-                .thenReturn("http://example.com/media/photo-thumb.jpg");
 
         String view = controller.execute(request, model, bean, null, "file-1");
 
         assertEquals(FORWARD, view);
-        String expected = "<p>photo.jpg</p>"
-                + "<a href='http://example.com/media/photo.jpg'>"
-                + "<img src='http://example.com/media/photo-thumb.jpg' alt='photo.jpg' "
-                + "width='100' height='80'></img></a>";
-        assertEquals(expected, bean.getText());
+        assertEquals("[image id=\"file-1\"]", bean.getText());
     }
 
     @Test
@@ -109,23 +108,10 @@ class EntryAddWithMediaFileControllerTest extends EditorControllerTestSupport {
         MediaFile second = imageFile("file-2", "two.jpg", 60, 60);
         when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(first);
         when(weblogger.getMediaFileManager().getMediaFile("file-2")).thenReturn(second);
-        when(weblogger.getUrlStrategy().getMediaFileURL(weblog, "file-1", true))
-                .thenReturn("http://example.com/one.jpg");
-        when(weblogger.getUrlStrategy().getMediaFileThumbnailURL(weblog, "file-1", true))
-                .thenReturn("http://example.com/one-thumb.jpg");
-        when(weblogger.getUrlStrategy().getMediaFileURL(weblog, "file-2", true))
-                .thenReturn("http://example.com/two.jpg");
-        when(weblogger.getUrlStrategy().getMediaFileThumbnailURL(weblog, "file-2", true))
-                .thenReturn("http://example.com/two-thumb.jpg");
 
         controller.execute(request, model, bean, new String[]{"file-1", "file-2"}, null);
 
-        String expected =
-                "<p>one.jpg</p><a href='http://example.com/one.jpg'>"
-                        + "<img src='http://example.com/one-thumb.jpg' alt='one.jpg' width='50' height='50'></img></a>"
-                + "<p>two.jpg</p><a href='http://example.com/two.jpg'>"
-                        + "<img src='http://example.com/two-thumb.jpg' alt='two.jpg' width='60' height='60'></img></a>";
-        assertEquals(expected, bean.getText(),
+        assertEquals("[image id=\"file-1\"][image id=\"file-2\"]", bean.getText(),
                 "Multiple selections must be appended in the order they were selected");
     }
 
@@ -158,9 +144,12 @@ class EntryAddWithMediaFileControllerTest extends EditorControllerTestSupport {
 
     @Test
     void aSelectedFileFromAnotherWeblogContributesNothingToTheSnippet() throws Exception {
-        // The generated snippet embeds the file's name and permalink, so a
-        // global by-id lookup with no ownership check leaks both into weblog
-        // A's draft.
+        // The generated snippet embeds the file's id (as an [image] shortcode)
+        // or its name and permalink (plain link), so a global by-id lookup
+        // with no ownership check would leak another weblog's media into this
+        // weblog's draft -- and, for the image case, would let this weblog's
+        // entry render an image it does not own the moment the shortcode
+        // expands.
         org.apache.roller.weblogger.pojos.Weblog other =
                 new org.apache.roller.weblogger.pojos.Weblog();
         other.setId("weblog-2");

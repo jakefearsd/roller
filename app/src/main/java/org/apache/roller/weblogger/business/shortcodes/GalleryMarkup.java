@@ -344,12 +344,16 @@ public final class GalleryMarkup {
     }
 
     /**
-     * The first candidate that is neither null nor blank, or null if every
-     * candidate is. A blank string counts as absent at every link of the alt
-     * chain (stored alt text, then filename): an author who clears the alt
-     * field leaves {@code ""} behind, and emitting that verbatim would assert
-     * the image is decorative, which is wrong for a photograph and would also
-     * hide it from the "missing alt text" marker.
+     * The first candidate that is neither null nor blank, or {@code ""} if
+     * every candidate is -- never {@code null}, because the only caller
+     * appends the result straight into an {@code alt="..."} attribute value,
+     * and a helper whose whole job is producing an attribute value must never
+     * hand back something that stringifies to the literal text {@code null}.
+     * A blank string counts as absent at every link of the alt chain (stored
+     * alt text, then filename): an author who clears the alt field leaves
+     * {@code ""} behind, and emitting that verbatim would assert the image is
+     * decorative, which is wrong for a photograph and would also hide it from
+     * the "missing alt text" marker.
      */
     private static String firstNonBlank(String... candidates) {
         for (String candidate : candidates) {
@@ -357,6 +361,6 @@ public final class GalleryMarkup {
                 return candidate;
             }
         }
-        return null;
+        return "";
     }
 }

@@ -86,13 +86,16 @@ public class EntryAddWithMediaFileController extends MediaFileBase {
                     }
                     String link;
                     if (mediaFile.isImageFile()) {
-                        link = "<p>" + mediaFile.getName() + "</p>";
-                        link += "<a href='<url>'><img src='<urlt>' alt='<name>' width='<width>' height='<height>'></img></a>";
-                        link = link.replace("<url>", mediaFile.getPermalink())
-                                   .replace("<urlt>", mediaFile.getThumbnailURL())
-                                   .replace("<name>", mediaFile.getName())
-                                   .replace("<width>", "" + mediaFile.getThumbnailWidth())
-                                   .replace("<height>", "" + mediaFile.getThumbnailHeight());
+                        // The [image] shortcode is what the editor's own media
+                        // insert pastes (see CLAUDE.md's Entry editing section):
+                        // it expands at render time into the full responsive
+                        // <figure><picture> block -- srcset, the rendition
+                        // ladder, and alt text pulled from the media file's own
+                        // altText/name chain automatically. Hand-building an
+                        // <img> here bypassed all of that (no srcset, no
+                        // renditions, no alt text) and emitted an invalid
+                        // self-closing </img>.
+                        link = "[image id=\"" + mediaFile.getId() + "\"]";
                     } else {
                         link = "<a href='<url>'><name></a> (<size> bytes, <type>)";
                         link = link.replace("<url>", mediaFile.getPermalink())

@@ -111,7 +111,17 @@ public class ImageShortcode implements ShortcodeHandler {
             html.append(" width=\"").append(media.getWidth())
                     .append("\" height=\"").append(media.getHeight()).append('"');
         }
-        String alt = firstNonBlank(attributes.get("alt"), media.getAltText(), media.getName());
+        // An explicit alt="" attribute is an author's deliberate assertion
+        // that the image is decorative -- the standard way to say so -- and
+        // must be honoured verbatim, so this link of the chain is gated on
+        // containsKey (attribute present at all), not blankness. The stored
+        // altText link below it is gated on blankness instead: an author who
+        // clears the edit field leaves "" behind and has no way to express
+        // "decorative" through that field, so a blank altText still falls
+        // through to the filename rather than being taken as an assertion.
+        String alt = attributes.containsKey("alt")
+                ? attributes.get("alt")
+                : firstNonBlank(media.getAltText(), media.getName());
         html.append(" alt=\"").append(escape(StringUtils.defaultString(alt))).append('"');
         html.append(" loading=\"lazy\" decoding=\"async\"");
         if (StringUtils.isNotBlank(media.getBlurhash())) {
@@ -142,12 +152,16 @@ public class ImageShortcode implements ShortcodeHandler {
     }
 
     /**
-     * The first candidate that is neither null nor blank, or null if every
-     * candidate is. A blank string counts as absent at every link of the alt
-     * chain (explicit {@code alt=} attribute, stored alt text, filename): an
-     * author who clears the alt field leaves {@code ""} behind, and emitting
-     * that verbatim would assert the image is decorative, which is wrong for
-     * a photograph and would also hide it from the "missing alt text" marker.
+     * The first candidate that is neither null nor blank, or {@code ""} if
+     * every candidate is -- never {@code null}, because the only caller
+     * appends the result straight into an {@code alt="..."} attribute value,
+     * and a helper whose whole job is producing an attribute value must never
+     * hand back something that stringifies to the literal text {@code null}.
+     * A blank string counts as absent at every link of the alt chain (stored
+     * alt text, then filename): an author who clears the alt field leaves
+     * {@code ""} behind, and emitting that verbatim would assert the image is
+     * decorative, which is wrong for a photograph and would also hide it from
+     * the "missing alt text" marker.
      */
     private static String firstNonBlank(String... candidates) {
         for (String candidate : candidates) {
@@ -155,6 +169,6 @@ public class ImageShortcode implements ShortcodeHandler {
                 return candidate;
             }
         }
-        return null;
+        return "";
     }
 }

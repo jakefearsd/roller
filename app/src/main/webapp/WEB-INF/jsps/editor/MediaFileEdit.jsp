@@ -106,14 +106,14 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
-            <textarea name="bean.description" rows="2" cols="50" tabindex="2" class="form-control">${bean.description}</textarea>
+            <textarea name="bean.description" rows="2" cols="50" tabindex="2" class="form-control">${fn:escapeXml(bean.description)}</textarea>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="mediaFileEdit.altText"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.altText" value="${bean.altText}"
+            <input type="text" name="bean.altText" value="${fn:escapeXml(bean.altText)}"
                    maxlength="255" class="form-control"/>
             <div class="form-text"><spring:message code="mediaFileEdit.altText.tip"/></div>
         </div>
@@ -129,7 +129,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="mediaFileEdit.copyright"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.copyrightText" value="${bean.copyrightText}" size="30" maxlength="100" tabindex="4" class="form-control"/>
+            <input type="text" name="bean.copyrightText" value="${fn:escapeXml(bean.copyrightText)}" size="30" maxlength="100" tabindex="4" class="form-control"/>
         </div>
     </div>
 

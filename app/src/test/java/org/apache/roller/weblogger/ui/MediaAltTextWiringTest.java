@@ -106,13 +106,21 @@ class MediaAltTextWiringTest {
     @Test
     void theMissingAltMarkerIsGatedOnImageFileAndEmptyAltText() throws IOException {
         String jsp = codeOnly(read(MEDIA_FILE_VIEW));
-        String needle = "mediaFile.imageFile and empty mediaFile.altText";
+        // fn:trim(...) around mediaFile.altText, not the bare field: JSP EL's
+        // "empty" treats a whitespace-only string as non-empty, but the
+        // renderer's fallback chain (StringUtils.isNotBlank) treats it as
+        // absent. Without the trim, an image whose alt text is a single
+        // space would render with a filename fallback on every page while
+        // this marker stayed silent -- the exact defect the marker exists to
+        // surface.
+        String needle = "mediaFile.imageFile and empty fn:trim(mediaFile.altText)";
         int first = jsp.indexOf(needle);
         assertTrue(first >= 0,
                 "the marker must be gated on ${mediaFile.imageFile and empty "
-                        + "mediaFile.altText} -- without the imageFile half, a non-image "
-                        + "(e.g. a PDF) gets a meaningless alt-text marker; without the "
-                        + "empty-altText half every image is flagged forever");
+                        + "fn:trim(mediaFile.altText)} -- without the imageFile half, a "
+                        + "non-image (e.g. a PDF) gets a meaningless alt-text marker; without "
+                        + "the fn:trim, a whitespace-only altText (which the renderer treats "
+                        + "as blank via StringUtils.isNotBlank) would not trip the marker");
         int second = jsp.indexOf(needle, first + needle.length());
         assertTrue(second >= 0,
                 "the imageFile/empty-altText gate must appear in both grid loops, not just one");

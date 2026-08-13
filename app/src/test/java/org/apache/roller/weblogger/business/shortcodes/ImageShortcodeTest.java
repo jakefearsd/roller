@@ -250,6 +250,51 @@ class ImageShortcodeTest {
         assertFalse(html.contains("red-tailed"), html);
     }
 
+    @Test
+    void anExplicitEmptyAltAttributeIsHonouredAsDecorativeRatherThanFallingThrough() {
+        // alt="" is the standard way an author asserts an image is purely
+        // decorative. The attribute is PRESENT (attributes.containsKey is
+        // true), which must be enough to win outright -- falling through to
+        // the stored alt text or the filename here would actively defeat a
+        // deliberate choice and put a filename in front of a screen reader.
+        photo.setAltText("A red-tailed hawk banking against a clear sky");
+
+        String html = render(Map.of("id", "mf-1", "alt", ""), null);
+
+        assertTrue(html.contains(" alt=\"\""), html);
+        assertFalse(html.contains("red-tailed"), html);
+        assertFalse(html.contains("hawk.jpg"), html);
+    }
+
+    @Test
+    void anAbsentAltAttributeFallsThroughToStoredAltTextThenFileName() {
+        // The other half of the same distinction: when the "alt" key is not
+        // in the attributes map at all (as opposed to present-but-empty),
+        // the chain must still fall through normally.
+        photo.setAltText("A red-tailed hawk banking against a clear sky");
+        assertTrue(render(Map.of("id", "mf-1"), null)
+                .contains(" alt=\"A red-tailed hawk banking against a clear sky\""));
+
+        photo.setAltText(null);
+        assertTrue(render(Map.of("id", "mf-1"), null).contains(" alt=\"hawk.jpg\""));
+    }
+
+    @Test
+    void blankStoredAltTextAndBlankFileNameEmitAWellFormedEmptyAltNeverTheLiteralTextNull() {
+        // Regression: firstNonBlank used to return Java null when every
+        // candidate was blank, and escape(null) fed straight into
+        // StringBuilder#append(String), which appends the four characters
+        // "null" -- screen-reader-visible garbage, not an empty attribute.
+        photo.setAltText("   ");
+        photo.setName("   ");
+
+        String html = render(Map.of("id", "mf-1"), null);
+
+        assertTrue(html.contains(" alt=\"\""), html);
+        assertFalse(html.contains("alt=\"null\""), html);
+        assertFalse(html.contains("null"), html);
+    }
+
     // -------------------------------------------------------------- blurhash
 
     @Test

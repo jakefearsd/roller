@@ -54,6 +54,7 @@ class EditorJspEscapingTest {
      */
     private static final List<String> AUTHOR_CONTROLLED = List.of(
             "mediaFile.name",
+            "bean.altText",
             "category.name",
             "category.description",
             "category.image",

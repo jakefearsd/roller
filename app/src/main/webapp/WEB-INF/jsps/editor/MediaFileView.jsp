@@ -191,7 +191,7 @@
                                         ${fn:escapeXml(mediaFile.name)}
                                     </str:truncateNicely>
 
-                                    <c:if test="${mediaFile.imageFile and empty mediaFile.altText}">
+                                    <c:if test="${mediaFile.imageFile and empty fn:trim(mediaFile.altText)}">
                                         <span class="media-alt-missing"
                                               title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></span>
                                     </c:if>
@@ -245,7 +245,7 @@
                                         ${fn:escapeXml(mediaFile.name)}
                                     </str:truncateNicely>
 
-                                    <c:if test="${mediaFile.imageFile and empty mediaFile.altText}">
+                                    <c:if test="${mediaFile.imageFile and empty fn:trim(mediaFile.altText)}">
                                         <span class="media-alt-missing"
                                               title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></span>
                                     </c:if>
