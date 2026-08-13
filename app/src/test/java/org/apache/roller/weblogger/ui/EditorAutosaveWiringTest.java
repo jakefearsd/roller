@@ -26,6 +26,7 @@ import java.nio.file.Paths;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -127,11 +128,47 @@ class EditorAutosaveWiringTest {
         // so a thousand-word entry left a thousand submit handlers on the form
         // it was about to post.
         String jsp = read(ENTRY_EDITOR);
-        int changeHandler = jsp.indexOf("rollerEditor.codemirror.on('change'");
-        assertTrue(changeHandler > 0, "the editor must still have a change handler");
-        int beforeUnload = jsp.indexOf("beforeunload");
-        assertTrue(beforeUnload > 0, "the leave-warning must still exist");
-        assertTrue(beforeUnload > jsp.indexOf("});", changeHandler),
-                "beforeunload must be bound outside the change callback, not on every keystroke");
+        assertTrue(jsp.contains("beforeunload"), "the leave-warning must still exist");
+
+        String body = firstEditorChangeCallbackBody(jsp);
+        assertFalse(body.contains("beforeunload"),
+                "beforeunload must be bound once, outside the change callback -- "
+                        + "the callback body is:\n" + body);
+        assertFalse(body.contains("'submit'"),
+                "a submit handler bound inside the change callback accumulates one "
+                        + "per keystroke on the form about to be posted -- "
+                        + "the callback body is:\n" + body);
+    }
+
+    /**
+     * The source between {@code codemirror.on('change', function () {} and its
+     * matching close.
+     *
+     * <p>Brace-matched rather than "the text up to the next {@code });}", and
+     * asserted on for what the body <em>contains</em> rather than where a
+     * keyword first appears in the file. The first version of this test did the
+     * latter, and the result was a test that a JSP <em>comment</em> mentioning
+     * beforeunload could break — it made prose fail the build while a genuinely
+     * misplaced binding a few lines further down would have passed.
+     */
+    private static String firstEditorChangeCallbackBody(String jsp) {
+        int start = jsp.indexOf("rollerEditor.codemirror.on('change'");
+        assertTrue(start > 0, "the editor must still have a change handler");
+        int open = jsp.indexOf('{', jsp.indexOf("function", start));
+        assertTrue(open > 0, "the change handler must have a function body");
+
+        int depth = 0;
+        for (int i = open; i < jsp.length(); i++) {
+            char c = jsp.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return jsp.substring(open + 1, i);
+                }
+            }
+        }
+        throw new AssertionError("unbalanced braces in the change handler");
     }
 }
