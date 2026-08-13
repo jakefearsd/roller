@@ -267,14 +267,21 @@ class MediaCropIT extends RollerIT {
         switchTo().defaultContent();
     }
 
-    /** Reads the media file's id out of the gallery tile's {@code onClickEdit(...)} handler. */
+    /**
+     * Reads the media file's id off the gallery tile.
+     *
+     * <p>It used to be scraped out of an {@code onclick="onClickEdit('id','name')"}
+     * attribute. That attribute is gone: building a JS call out of a filename
+     * meant a name containing an apostrophe produced a syntax error and a dead
+     * tile, so the id and name moved to {@code data-} attributes with a
+     * delegated listener. Reading the data attribute is also simply what this
+     * helper always wanted.
+     */
     private String mediaFileIdOf(String imageName) {
-        String onclick = $("div.mediaObject img[alt='" + imageName + "']")
-                .should(exist).parent().getAttribute("onclick");
-        assertNotNull(onclick, "the gallery tile must carry an onClickEdit handler");
-        Matcher matcher = Pattern.compile("onClickEdit\\(\\s*'([^']+)'").matcher(onclick);
-        assertTrue(matcher.find(), "cannot read a media file id out of: " + onclick);
-        return matcher.group(1);
+        String id = $("div.mediaObject img[alt='" + imageName + "']")
+                .should(exist).parent().getAttribute("data-media-file-id");
+        assertNotNull(id, "the gallery tile must carry data-media-file-id");
+        return id;
     }
 
     /**
