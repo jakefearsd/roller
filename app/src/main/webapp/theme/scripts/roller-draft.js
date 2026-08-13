@@ -62,7 +62,15 @@
      * and bean.ogImageId are hidden inputs carrying real author choices made
      * through the image pickers. bean.status is deliberately absent -- on
      * PageEdit it is a visible <select> the author sets, and on EntryEdit the
-     * submit buttons' formaction decides the status regardless of the field.
+     * submit buttons' formaction decides the status regardless of the field
+     * (EntryEditController sets bean.setStatus(...) from the action name in
+     * doEntryAddSave/doEntryEditSave, overwriting whatever the hidden field
+     * held). bean.text -- the textarea EasyMDE wraps -- is excluded too: its
+     * authoritative value arrives through the getText/setText seam
+     * (options.getText()/setText()), already captured once as snapshot.text,
+     * not through the DOM. Capturing it a second time here would double the
+     * size of every snapshot and give differs() a possibly-stale second copy
+     * to compare independently of the first.
      */
     function isStructural(el, csrfName) {
         if (!el.name) {
@@ -72,15 +80,18 @@
                 || el.type === 'button' || el.type === 'reset') {
             return true;
         }
-        return el.name === csrfName || el.name === 'bean.id' || el.name === 'weblog';
+        return el.name === csrfName || el.name === 'bean.id' || el.name === 'weblog'
+                || el.name === 'bean.text';
     }
 
     /*
-     * Radios share a name, so keying by name alone would let the last one in
-     * the group overwrite the rest.
+     * Radios and checkboxes both let multiple inputs share a name (a radio
+     * group, or a set of same-named checkboxes), so keying by name alone
+     * would let the last one in the group overwrite the rest.
      */
     function fieldKey(el) {
-        return el.type === 'radio' ? el.name + '=' + el.value : el.name;
+        return (el.type === 'radio' || el.type === 'checkbox')
+                ? el.name + '=' + el.value : el.name;
     }
 
     function readFields(form, csrfName) {
@@ -134,6 +145,15 @@
                 continue;
             }
             seen[key] = true;
+            // A field present on only one side compares via
+            // String(undefined) ("undefined" vs. the other side's real
+            // value), which reads as a difference. Deliberate, not a bug:
+            // the failure mode is a spurious recovery offer when the form's
+            // field set has changed since the snapshot was taken, and the
+            // author just reads the bar and clicks Discard. Making this
+            // lenient about missing keys would fail the other way --
+            // masking a real difference and losing recoverable work -- so
+            // do not "fix" this into a leniency check.
             if (String(stored.fields[key]) !== String(current.fields[key])) {
                 return true;
             }
@@ -205,8 +225,25 @@
 
         sweep(store);
 
+        /*
+         * options.getText() is the caller's editor read seam, and every
+         * other operation in this module is guarded against failure -- this
+         * one was not. A caller that installs before its editor is fully
+         * constructed (CLAUDE.md already documents one such race, EasyMDE
+         * against the page's own ready handler) would have thrown a
+         * TypeError straight out of install(), into the host page's
+         * $(document).ready, aborting the rest of that handler. Returning
+         * null here instead means a broken read seam disables the module for
+         * this page rather than breaking the editor around it.
+         */
         function current() {
-            return { at: 0, fields: readFields(form, csrfName), text: options.getText() };
+            var text;
+            try {
+                text = options.getText();
+            } catch (e) {
+                return null;
+            }
+            return { at: 0, fields: readFields(form, csrfName), text: text };
         }
 
         function drop(which) {
@@ -222,6 +259,9 @@
                 return;
             }
             var snapshot = current();
+            if (!snapshot) {
+                return;
+            }
             snapshot.at = new Date().getTime();
             try {
                 store.setItem(key, JSON.stringify(snapshot));
@@ -260,10 +300,18 @@
                 if (typeof options.setText === 'function') {
                     options.setText(snapshot.text);
                 }
-                // Restoring hands the text back; it deliberately does NOT
-                // save. What to do with recovered work is the author's call.
                 bar.textContent = bar.getAttribute('data-restored') || '';
-                drop(key);
+                // Re-snapshot rather than drop: writeFields/setText set
+                // values programmatically and dispatch no input/change
+                // event, so without this the restored content would exist
+                // only in the DOM -- a crash right after clicking Restore
+                // would lose exactly the work this feature exists to
+                // protect. The restored state still differs from what the
+                // server rendered, so it will be offered again on a later
+                // reload; that is correct, since the work genuinely is still
+                // unsaved, and the offer disappears the moment the author
+                // actually saves.
+                save();
             });
 
             discardButton.addEventListener('click', function () {
@@ -275,6 +323,9 @@
         }
 
         var now = current();
+        if (!now) {
+            return;
+        }
 
         /*
          * A snapshot that matches what the server just rendered is one whose
@@ -302,7 +353,15 @@
         form.addEventListener('input', schedule, true);
         form.addEventListener('change', schedule, true);
         if (typeof options.onEditorChange === 'function') {
-            options.onEditorChange(schedule);
+            // Same reasoning as current() above: registering with the
+            // caller's editor is not this module's to trust blindly, and a
+            // throw here must not propagate out of install() and abort
+            // whatever the host page's ready handler still has left to do.
+            try {
+                options.onEditorChange(schedule);
+            } catch (e) {
+                /* nothing to do */
+            }
         }
 
         /*
