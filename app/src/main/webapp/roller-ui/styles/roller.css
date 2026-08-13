@@ -1008,6 +1008,67 @@ table.mm_table_actions td {
     max-width: 100%;
 }
 
+/* Draft recovery: an offer, not an alarm. One line above the title, in the
+   same register as .empty-state ("invitations, not shrugs") -- accent-quiet
+   ground, no icon, no modal, no red. Hidden until roller-draft.js has
+   something to offer. */
+
+.draft-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0 0 16px;
+    padding: 10px 14px;
+    background: var(--accent-quiet);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.draft-bar[hidden] {
+    display: none;
+}
+
+.draft-bar-text {
+    margin-right: 4px;
+}
+
+.draft-bar-sep {
+    color: var(--ink-soft);
+}
+
+.draft-bar-restore,
+.draft-bar-discard {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.draft-bar-restore {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.draft-bar-discard {
+    color: var(--ink-soft);
+}
+
+.draft-bar-restore:hover,
+.draft-bar-discard:hover {
+    text-decoration: underline;
+}
+
+.draft-bar-restore:focus-visible,
+.draft-bar-discard:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
 /* ---- jQuery UI datepicker ----
    head.jsp loads the full stock jquery-ui theme, which carries its own
    white/grey/blue palette and no dark mode. Until this block the only rule
