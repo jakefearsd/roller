@@ -348,6 +348,16 @@ class MediaFileAddControllerTest extends EditorControllerTestSupport {
                 "Nothing landed, so there is no success page to show");
         assertTrue(messages(model).isEmpty(),
                 "No file landed; there must be no success message: " + messages(model));
+
+        // The name of this test promises EVERY error, and that is the part
+        // worth pinning: a batch reports per file, so a regression that
+        // collapsed two rejections into one would leave the author fixing one
+        // filename and resubmitting the other unchanged. Two files, two
+        // errors -- count them, do not just check the list is non-empty.
+        assertEquals(2, errors(model).stream()
+                        .filter("uploadFiles.error.badPath"::equals).count(),
+                "Each rejected file must be reported on its own: " + errors(model));
+
         verify(weblogger.getMediaFileManager(), never()).createMediaFile(any(), any(), any());
     }
 

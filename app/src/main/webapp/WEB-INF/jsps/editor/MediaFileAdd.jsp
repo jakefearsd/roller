@@ -133,17 +133,44 @@
             dropZone.classList.add("media-dropzone-active");
         });
 
+        // Counted rather than a bare dragleave: HTML5 fires dragleave every
+        // time the pointer crosses INTO a child box during a drag (the input,
+        // the hint, a chosen-file row), so the naive version strips the
+        // highlight repeatedly while the pointer is still inside the zone and
+        // the whole thing flickers.
+        var dragDepth = 0;
+
+        dropZone.addEventListener("dragenter", function () {
+            dragDepth++;
+            dropZone.classList.add("media-dropzone-active");
+        });
+
         dropZone.addEventListener("dragleave", function () {
-            dropZone.classList.remove("media-dropzone-active");
+            dragDepth--;
+            if (dragDepth <= 0) {
+                dragDepth = 0;
+                dropZone.classList.remove("media-dropzone-active");
+            }
         });
 
         dropZone.addEventListener("drop", function (event) {
             // Same reason as dragover: without preventDefault the browser
             // navigates away to the dropped file.
             event.preventDefault();
+            dragDepth = 0;
             dropZone.classList.remove("media-dropzone-active");
             fileInput.files = event.dataTransfer.files;
             renderChosenFiles();
+        });
+
+        // The hint says "or click to choose", so the whole zone has to open
+        // the picker -- otherwise only the native control does and the copy
+        // is describing an affordance that is not there. Clicks on the input
+        // itself are left alone; forwarding those would reopen the dialog.
+        dropZone.addEventListener("click", function (event) {
+            if (event.target !== fileInput) {
+                fileInput.click();
+            }
         });
 
         uploadButton.disabled = true;
