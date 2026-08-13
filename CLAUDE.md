@@ -797,7 +797,59 @@ in a local index file worth clearing, not a search-correctness bug.
   `insertMediaFile`, `rollerSetEntryText`, `rollerGetEntryText` — so replacing
   the editor (e.g. with a WYSIWYG surface that edits Markdown) is one file.
   Browser ITs drive `.CodeMirror` and go through those functions, never the
-  editor's own API. Byte-untouched by the rail rebuild.
+  editor's own API. Byte-untouched by the rail rebuild. Autosave (below) is
+  the seam's fourth consumer and reaches the editor only through
+  `rollerGetEntryText`/`rollerSetEntryText`, so an editor swap carries draft
+  recovery with it for free.
+- **Autosave is LOCAL ONLY and there is no server endpoint** —
+  `theme/scripts/roller-draft.js` writing to `localStorage`, installed from
+  `EntryEditor.jsp` and `PageEdit.jsp`. Not a design accident: a server-side
+  autosave would multiply `weblogentry_revision` rows by the autosave rate
+  against `entry.revisions.retention`'s default of **-1, keep everything**
+  (see Revisions below), and would have to invent a real entry row for
+  anything anyone started typing. The work that actually gets lost — tab
+  crash, wrong tab closed, a session that expired while the laptop slept and
+  turned the save POST into a login redirect — is all lost in the browser it
+  was typed in, which is exactly what `localStorage` covers.
+  Five things about it that are load-bearing:
+  - **Recovery is decided by comparing content, never timestamps.** A
+    timestamp check against `entry.updateTime` has to reconcile a browser
+    clock, a server clock and the weblog's timezone, and is wrong when any of
+    the three drift. A snapshot matching what the server just rendered is one
+    whose save went through, and is dropped silently.
+  - **`staleKeys` are compared on the editor text ALONE**, unlike the primary
+    key's whole-form comparison, and this asymmetry is not laziness. Saving a
+    new entry redirects to `entryEdit`, where `EntryBean.copyFrom` has
+    populated `bean.status` and `bean.pubTimeLocal` that were empty on the add
+    form — so a whole-form comparison never matches, the `entryAdd:new`
+    snapshot survives its own save, and the next author to open a blank editor
+    is handed the previous entry's text. `EntryAutosaveIT` caught this; no unit
+    test could, because the divergence only appears after a real save has
+    round-tripped through the controller.
+  - **The field denylist is by NAME, not by `type="hidden"`.**
+    `bean.featuredImageId`/`bean.ogImageId` are hidden inputs carrying real
+    author choices from the image pickers. `bean.status` is deliberately *not*
+    excluded — it is a visible `<select>` on the page editor, and on the entry
+    editor the submit buttons' `formaction` decides status regardless. One
+    consequence worth knowing: on a **page**, `PageBean.copyTo` writes the
+    submitted status straight through, so clicking Restore can put a stored
+    DRAFT/PUBLISHED choice back into that select. That is correct — it was the
+    author's unsaved selection, and the bar says "unsaved changes", not
+    "unsaved text" — but it is the one place in the wave where Restore changes
+    something other than prose.
+  - **Submit saves the snapshot rather than clearing it**, so an expired
+    session that redirects to login does not take the text with it. The
+    snapshot is dropped on the next load instead, by the content comparison.
+  - **Restore re-saves rather than dropping**, so the recovered text is not
+    left with no backup at all; and it never auto-restores, because silently
+    overwriting the server's copy with an unreviewed snapshot is worse than
+    losing the snapshot.
+  The leave-warning both editors carry is bound **once** against a dirty flag,
+  under the `beforeunload.rollerLeaveWarning` namespace. It used to register a
+  fresh `beforeunload` *and* `submit` handler inside the CodeMirror `change`
+  callback — one pair per keystroke, on the form about to be posted. It stays
+  even though drafts now survive: a snapshot is a recovery mechanism, not a
+  reason to stop telling someone they are walking away from unsaved work.
 - **Preview** is rendered server-side (`entryEdit!preview.rol`) because only the
   server can expand shortcodes; a browser-side Markdown library would disagree
   with the published page.
