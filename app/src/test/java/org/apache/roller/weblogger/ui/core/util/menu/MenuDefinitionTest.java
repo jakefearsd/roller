@@ -73,7 +73,7 @@ class MenuDefinitionTest {
     void theWeblogTabListsTheContentManagementActions() {
         ParsedTab weblogTab = tab("editor", "tabbedmenu.weblog");
 
-        assertEquals(List.of("entryAdd", "entries", "submissions", "categories", "pages",
+        assertEquals(List.of("entryAdd", "entries", "trash", "submissions", "categories", "pages",
                         "mediaFileView"),
                 actions(weblogTab),
                 "These are the actions the Weblog tab offers, in order. The first of them is "

@@ -250,6 +250,11 @@ public final class Routes {
 
             new Route("/roller-ui/authoring/entryAdd.rol", Role.EDITOR, WEBLOG, "#entry"),
 
+            // Trash is empty with nothing seeded to trash, but the wrapper div
+            // around the list region (table or empty-state invitation) is
+            // emitted unconditionally, same reasoning as entries.rol above.
+            new Route("/roller-ui/authoring/trash.rol", Role.EDITOR, WEBLOG, "#trash-list-marker"),
+
             new Route("/roller-ui/authoring/mediaFileAdd.rol", Role.EDITOR, WEBLOG,
                     "form[action$='/roller-ui/authoring/mediaFileAdd!save.rol']"),
 

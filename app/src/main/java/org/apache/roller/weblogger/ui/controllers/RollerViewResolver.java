@@ -347,6 +347,13 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
 
+        addExtendedDefinition(".Trash", ".tiles-tabbedpage",
+                Map.of(
+                        "head",    "/WEB-INF/jsps/tiles/head.jsp",
+                        "content", "/WEB-INF/jsps/editor/Trash.jsp",
+                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
+                ));
+
         addExtendedDefinition(".Categories", ".tiles-tabbedpage",
                 Map.of(
                         "content", "/WEB-INF/jsps/editor/Categories.jsp",

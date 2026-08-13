@@ -148,12 +148,14 @@ public class MessageKeyTest {
      *       {@code code="..."} reference in {@code WeblogConfig.jsp} until that
      *       section was deleted in the same commit, so it left the bundle
      *       entirely rather than becoming a new orphan.)</li>
-     *   <li>15 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
+     *   <li>16 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
      *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
      *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
      *       {@code key}, which the JSPs render as {@code <spring:message
      *       code="${tab.key}">} -- see {@code tiles/bannerStatus.jsp} and
-     *       {@code admin/GlobalConfig.jsp}.</li>
+     *       {@code admin/GlobalConfig.jsp}. (The Trash screen's {@code
+     *       tabbedmenu.trash} menu-item name joined this bucket in the W5 trash
+     *       wave, taking it from 15 to 16.)</li>
      *   <li>2 keys -- {@code macro.weblog.datetime.toStringFormat} and
      *       {@code macro.weblog.time.toStringFormat} -- that this scan cannot
      *       find a literal reference to anywhere and that are <em>not</em>
@@ -192,7 +194,7 @@ public class MessageKeyTest {
      * {@code name=} attributes (15) + 2 unexplained pre-existing orphans. See
      * the javadoc on {@link #reportsBundleKeysNoJspOrControllerUses()}.
      */
-    private static final int KNOWN_DYNAMIC_KEY_COUNT = 45;
+    private static final int KNOWN_DYNAMIC_KEY_COUNT = 46;
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();

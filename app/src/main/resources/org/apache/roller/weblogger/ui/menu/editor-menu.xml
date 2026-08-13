@@ -36,10 +36,15 @@ Each menu or menu item is governed by four attributes:
                    subactions="entryEdit,entryRemove" />
         
         <!-- globalPerms="login" -->
-        <menu-item action="entries" 
-                   name="tabbedmenu.weblog.archives" 
+        <menu-item action="entries"
+                   name="tabbedmenu.weblog.archives"
                    weblogPerms="post"
                    subactions="entryRemoveViaList" />
+
+        <!-- globalPerms="login" -->
+        <menu-item action="trash"
+                   name="tabbedmenu.trash"
+                   weblogPerms="post" />
 
         <!-- globalPerms="login" -->
         <menu-item action="submissions"
