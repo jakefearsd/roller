@@ -294,7 +294,6 @@ public class MediaFileTest  {
         mediaFile.setName("test4.jpg");
         mediaFile.setDescription("This is a test image 4");
         mediaFile.setCopyrightText("test 4 copyright text");
-        mediaFile.setSharedForGallery(false);
         mediaFile.setLength(3000);
         mediaFile.setDirectory(rootDirectory);
         mediaFile.setWeblog(testWeblog);
@@ -361,7 +360,6 @@ public class MediaFileTest  {
         mediaFile.setName("test.jpg");
         mediaFile.setDescription("This is a test image");
         mediaFile.setCopyrightText("test copyright text");
-        mediaFile.setSharedForGallery(true);
         mediaFile.setLength(2000);
         mediaFile.setDirectory(rootDirectory);
         mediaFile.setWeblog(testWeblog);
@@ -382,7 +380,6 @@ public class MediaFileTest  {
         assertEquals("test.jpg", mediaFile1.getName());
         assertEquals("This is a test image", mediaFile1.getDescription());
         assertEquals("test copyright text", mediaFile1.getCopyrightText());
-        assertTrue(mediaFile1.getSharedForGallery());
         assertEquals(2000, mediaFile1.getLength());
 
         TestUtils.endSession(true);
@@ -415,7 +412,6 @@ public class MediaFileTest  {
                 mf.setName("test_work.jpg");
                 mf.setDescription("This is a test image");
                 mf.setCopyrightText("test copyright text");
-                mf.setSharedForGallery(true);
                 mf.setLength(2000);
                 mf.setDirectory(rootDirectory);
                 mf.setWeblog(testWeblog);
@@ -447,7 +443,6 @@ public class MediaFileTest  {
                 mf.setName("test_home.jpg");
                 mf.setDescription("This is a test image");
                 mf.setCopyrightText("test copyright text");
-                mf.setSharedForGallery(true);
                 mf.setLength(3000);
                 mf.setDirectory(rootDirectory);
                 mf.setWeblog(testWeblog);
@@ -478,7 +473,6 @@ public class MediaFileTest  {
                 mf.setName("test_pers.jpg");
                 mf.setDescription("This is a personal test image");
                 mf.setCopyrightText("test pers copyright text");
-                mf.setSharedForGallery(true);
                 mf.setLength(4000);
                 mf.setWeblog(testWeblog);
                 mf.setDirectory(rootDirectory);
@@ -641,7 +635,6 @@ public class MediaFileTest  {
                 mediaFile.setName(String.format("test_file%02d.jpg", i));
                 mediaFile.setDescription("This is a test image");
                 mediaFile.setCopyrightText("test copyright text");
-                mediaFile.setSharedForGallery(true);
                 mediaFile.setLength(2000);
                 mediaFile.setWeblog(testWeblog);
                 mediaFile.setInputStream(getClass().getResourceAsStream(
@@ -735,7 +728,6 @@ public class MediaFileTest  {
                     .setName("test_file<index>.jpg".replace("<index>", i + ""));
             mediaFile.setDescription("This is a test image");
             mediaFile.setCopyrightText("test copyright text");
-            mediaFile.setSharedForGallery(true);
             mediaFile.setLength(2000);
             mediaFile.setDirectory(rootDirectory);
             mediaFile.setWeblog(testWeblog);
@@ -821,7 +813,6 @@ public class MediaFileTest  {
         mediaFile.setName("test5.jpg");
         mediaFile.setDescription("This is a test image 5");
         mediaFile.setCopyrightText("test 5 copyright text");
-        mediaFile.setSharedForGallery(false);
         mediaFile.setLength(3000);
         mediaFile.setDirectory(rootDirectory);
         mediaFile.setWeblog(testWeblog);
@@ -845,7 +836,6 @@ public class MediaFileTest  {
         mediaFile1.setDescription("updated desc");
         mediaFile1.setCopyrightText("updated copyright");
         mediaFile1.setContentType("image/gif");
-        mediaFile1.setSharedForGallery(true);
         mfMgr.updateMediaFile(testWeblog, mediaFile1);
         TestUtils.endSession(true);
 
@@ -854,7 +844,6 @@ public class MediaFileTest  {
         assertEquals("updated desc", mediaFile2.getDescription());
         assertEquals("updated copyright", mediaFile2.getCopyrightText());
         assertEquals("image/gif", mediaFile2.getContentType());
-        assertTrue(mediaFile2.getSharedForGallery());
         assertNotNull(mediaFile2.getTags());
         assertEquals(2, mediaFile2.getTags().size());
 
@@ -903,7 +892,6 @@ public class MediaFileTest  {
         mediaFile.setName("test6_1.jpg");
         mediaFile.setDescription("This is a test image 6.1");
         mediaFile.setCopyrightText("test 6.1 copyright text");
-        mediaFile.setSharedForGallery(false);
         mediaFile.setLength(4000);
         mediaFile.setInputStream(getClass().getResourceAsStream(TEST_IMAGE));
         mediaFile.setContentType("image/jpeg");
@@ -916,7 +904,6 @@ public class MediaFileTest  {
         mediaFile2.setName("test6_2.jpg");
         mediaFile2.setDescription("This is a test image 6.2");
         mediaFile2.setCopyrightText("test 6.2 copyright text");
-        mediaFile2.setSharedForGallery(true);
         mediaFile2.setLength(4000);
         mediaFile2.setInputStream(getClass().getResourceAsStream(TEST_IMAGE));
         mediaFile2.setContentType("image/jpeg");
@@ -996,7 +983,6 @@ public class MediaFileTest  {
             mediaFile.setName("test7_1.jpg");
             mediaFile.setDescription("This is a test image 7.1");
             mediaFile.setCopyrightText("test 7.1 copyright text");
-            mediaFile.setSharedForGallery(false);
             mediaFile.setLength(4000);
             mediaFile.setInputStream(getClass().getResourceAsStream(TEST_IMAGE));
             mediaFile.setContentType("image/jpeg");
@@ -1009,7 +995,6 @@ public class MediaFileTest  {
             mediaFile2.setName("test7_2.jpg");
             mediaFile2.setDescription("This is a test image 7.2");
             mediaFile2.setCopyrightText("test 7.2 copyright text");
-            mediaFile2.setSharedForGallery(true);
             mediaFile2.setLength(4000);
             mediaFile2.setInputStream(getClass()
                     .getResourceAsStream(TEST_IMAGE));

@@ -29,6 +29,7 @@ public class MediaFileBean {
     private String id;
     private String name;
     private String description;
+    private String altText;
     private String contentType;
     private String copyrightText;
     private String tagsAsString;
@@ -57,6 +58,14 @@ public class MediaFileBean {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getAltText() {
+        return altText;
+    }
+
+    public void setAltText(String altText) {
+        this.altText = altText;
     }
 
     public String getCopyrightText() {
@@ -99,6 +108,7 @@ public class MediaFileBean {
 
         dataHolder.setName(this.name);
         dataHolder.setDescription(this.description);
+        dataHolder.setAltText(this.altText);
         dataHolder.setCopyrightText(this.copyrightText);
         dataHolder.setTagsAsString(this.tagsAsString);
         dataHolder.setOriginalPath(this.originalPath);
@@ -127,6 +137,7 @@ public class MediaFileBean {
         this.setId(dataHolder.getId());
         this.setName(dataHolder.getName());
         this.setDescription(dataHolder.getDescription());
+        this.setAltText(dataHolder.getAltText());
         this.setCopyrightText(dataHolder.getCopyrightText());
         this.setTagsAsString(dataHolder.getTagsAsString());
         this.setDirectoryId(dataHolder.getDirectory().getId());

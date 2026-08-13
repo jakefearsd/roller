@@ -28,6 +28,9 @@
             <basic name="description">
                 <column name="description" insertable="true" updatable="true" unique="false" nullable="true"/>
             </basic>
+            <basic name="altText">
+                <column name="alt_text" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
             <basic name="contentType">
                 <column name="content_type" insertable="true" updatable="true" unique="false" nullable="false"/>
             </basic>
@@ -42,9 +45,6 @@
             </basic>
             <basic name="lastUpdated">
                 <column name="last_updated" insertable="true" updatable="true" unique="false"/>
-            </basic>
-            <basic name="sharedForGallery">
-                <column name="is_public" insertable="true" updatable="true" unique="false" nullable="false" />
             </basic>
             <basic name="creatorUserName">
                 <column name="creator" insertable="true" updatable="true" unique="false" />

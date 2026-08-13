@@ -49,8 +49,8 @@ public class MediaFile implements Serializable {
 
     private String name;
     private String description;
+    private String altText;
     private String copyrightText;
-    private Boolean isSharedForGallery = Boolean.FALSE;
     private long length;
     private int width = -1;
     private int height = -1;
@@ -135,8 +135,22 @@ public class MediaFile implements Serializable {
     }
 
     /**
+     * The author's description of what is in the image, for an alt
+     * attribute. Raw storage, nullable: null means nobody has described this
+     * image yet, as distinct from an author having deliberately left it
+     * blank.
+     */
+    public String getAltText() {
+        return altText;
+    }
+
+    public void setAltText(String altText) {
+        this.altText = altText;
+    }
+
+    /**
      * Copyright text for media file
-     * 
+     *
      */
     public String getCopyrightText() {
         return copyrightText;
@@ -144,18 +158,6 @@ public class MediaFile implements Serializable {
 
     public void setCopyrightText(String copyrightText) {
         this.copyrightText = copyrightText;
-    }
-
-    /**
-     * Is media file shared for gallery
-     * 
-     */
-    public Boolean getSharedForGallery() {
-        return isSharedForGallery;
-    }
-
-    public void setSharedForGallery(Boolean isSharedForGallery) {
-        this.isSharedForGallery = isSharedForGallery;
     }
 
     /**

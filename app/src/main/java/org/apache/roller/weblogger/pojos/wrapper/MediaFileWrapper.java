@@ -69,6 +69,18 @@ public final class MediaFileWrapper {
         return HTMLSanitizer.conditionallySanitizeText(this.pojo.getDescription());
     }
 
+    /**
+     * The author's description of what is in the image, for an alt attribute.
+     *
+     * <p>Sanitised the same way {@link #getDescription()} is, and for the same
+     * reason: it is author input that reaches a rendered page. Null when nobody
+     * has described this image yet — callers pick the fallback, because what a
+     * sensible fallback is depends on where the image is being rendered.
+     */
+    public String getAltText() {
+        return HTMLSanitizer.conditionallySanitizeText(this.pojo.getAltText());
+    }
+
     public String getContentType() {
         return this.pojo.getContentType();
     }
