@@ -130,19 +130,56 @@
             previewRender: rollerRenderPreview
         });
 
-        // Warn before leaving with unsaved edits, and stand down on submit.
+        <%-- Warn before leaving with unsaved edits, and stand down on submit.
+             Bound ONCE, tracking a dirty flag. The previous version registered
+             both leave-warning handlers *inside* the change callback, so every
+             keystroke added another one of each -- and the one that actually
+             mattered, another submit handler on the form about to be posted.
+
+             The warning stays even though drafts now survive a lost tab: a
+             local snapshot is a recovery mechanism, not a reason to stop
+             telling someone they are walking away from unsaved work. --%>
+        var rollerEntryDirty = false;
         rollerEditor.codemirror.on('change', function () {
-            var confirmLeaving = function (event) {
-                if (event.originalEvent) {
-                    event.originalEvent.returnValue = "Are you sure you want to leave?";
-                }
-                return "Are you sure you want to leave?";
-            };
-            $(window).on("beforeunload", confirmLeaving);
-            $("#entry").on('submit', function () {
-                $(window).off("beforeunload", confirmLeaving);
-            });
+            rollerEntryDirty = true;
         });
+        $("#entry").on('input change', function () {
+            rollerEntryDirty = true;
+        });
+        $(window).on("beforeunload", function (event) {
+            if (!rollerEntryDirty) {
+                return undefined;
+            }
+            if (event.originalEvent) {
+                event.originalEvent.returnValue = "Are you sure you want to leave?";
+            }
+            return "Are you sure you want to leave?";
+        });
+        $("#entry").on('submit', function () {
+            rollerEntryDirty = false;
+            $(window).off("beforeunload");
+        });
+
+        <%-- Local draft recovery. The key carries the context path so two
+             Roller installs on one origin cannot share storage, and the
+             action name so entryAdd and entryEdit are distinct. staleKeys
+             names the entryAdd:new snapshot: saving a new entry redirects
+             here under a real id, and without this the "new" draft would
+             linger and be offered to whoever starts the next entry. --%>
+        if (window.rollerDraft) {
+            window.rollerDraft.install({
+                form: document.getElementById('entry'),
+                key: '${draftKey}',
+                staleKeys: ['${draftNewKey}'],
+                bar: document.getElementById('draftRecoveryBar'),
+                csrfName: '${_csrf.parameterName}',
+                getText: rollerGetEntryText,
+                setText: rollerSetEntryText,
+                onEditorChange: function (callback) {
+                    rollerEditor.codemirror.on('change', callback);
+                }
+            });
+        }
 
         <%-- Every card goes through insertMediaFile, the editor's one insert
              seam, so the WYSIWYG-for-Markdown surface that may replace EasyMDE

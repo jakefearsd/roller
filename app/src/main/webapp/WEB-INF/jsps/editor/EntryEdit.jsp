@@ -47,6 +47,18 @@
      is display:contents so the newsletter/revisions cards -- which carry
      their own <form>s and therefore cannot nest inside #entry -- can still
      join the rail's grid column below it. --%>
+
+<%-- Local draft recovery. Static script, not a JSP include: every string it
+     needs rides on the bar's data- attributes below. --%>
+<script src="<c:url value='/theme/scripts/roller-draft.js'/>"></script>
+
+<%-- Request scope, not page scope: EntryEditor.jsp arrives via jsp:include
+     and cannot see page-scoped variables set here. --%>
+<c:set var="draftKey" scope="request"
+       value="roller.draft.v1:${pageContext.request.contextPath}:${actionWeblog.handle}:${actionName}:${empty bean.id ? 'new' : bean.id}"/>
+<c:set var="draftNewKey" scope="request"
+       value="roller.draft.v1:${pageContext.request.contextPath}:${actionWeblog.handle}:entryAdd:new"/>
+
 <div class="editor-grid">
 
 <form id="entry" method="post" class="form-stacked editor-form">
@@ -62,6 +74,18 @@
     <%-- The writing surface: title, permalink, editor --%>
 
     <div class="editor-main">
+
+        <%-- Draft recovery. Hidden until roller-draft.js finds a local
+             snapshot the server does not have. type="button" is load-bearing:
+             this sits inside #entry, where a bare <button> submits the form. --%>
+        <div id="draftRecoveryBar" class="draft-bar" hidden
+             data-restored="<spring:message code='weblogEdit.draftRecovery.restored'/>">
+            <span class="draft-bar-text"
+                  data-template="<spring:message code='weblogEdit.draftRecovery.message'/>"></span>
+            <button type="button" class="draft-bar-restore"><spring:message code="weblogEdit.draftRecovery.restore"/></button>
+            <span class="draft-bar-sep">&#183;</span>
+            <button type="button" class="draft-bar-discard"><spring:message code="weblogEdit.draftRecovery.discard"/></button>
+        </div>
 
         <%-- title: the page's one piece of layout hierarchy. Large serif,
              borderless -- emphasis elsewhere is weight, never size. --%>
