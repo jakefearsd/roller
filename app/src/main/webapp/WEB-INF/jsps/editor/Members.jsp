@@ -41,7 +41,15 @@ function save() {
 
 <%-- Grants an existing account access to this weblog immediately -- no
      invitation, no acceptance step. Its own form/CSRF, separate from the
-     table below's. --%>
+     table below's.
+
+     Hidden when groupblogging.enabled is off, matching the refusal
+     MembersController.grant() enforces server-side; the table below stays so
+     an operator who turns the setting off can still revoke the members it
+     left behind. This page is reachable by URL even with the setting off --
+     the menu gate only hides the tab -- so the form has to be gated here too,
+     not merely left off the menu. --%>
+<c:if test="${rc:getBooleanProp('groupblogging.enabled')}">
 <form class="form-stacked mb-4"
       action="${pageContext.request.contextPath}/roller-ui/authoring/members!grant.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
@@ -77,6 +85,7 @@ function save() {
     </div>
 <sec:csrfInput/>
 </form>
+</c:if>
 
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>

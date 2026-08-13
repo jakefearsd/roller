@@ -21,6 +21,7 @@ package org.apache.roller.weblogger.business;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -199,5 +200,35 @@ public class WeblogCategoryCRUDTest  {
         
         log.info("END");
     }
-    
+
+
+    /**
+     * A weblog must always keep at least one category, because
+     * {@code saveWeblogEntry} falls back to "the first category found" for any
+     * entry that arrives without one. Removing the last category left that
+     * fallback with nothing to pick and every subsequent entry save died on
+     * {@code NoSuchElementException} -- unrecoverable through the UI, since the
+     * screen that would add a category back is not the screen that fails.
+     */
+    @Test
+    public void testCannotRemoveTheLastCategory() throws Exception {
+
+        log.info("BEGIN");
+
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        assertEquals(1, testWeblog.getWeblogCategories().size());
+
+        WeblogCategory only = testWeblog.getWeblogCategories().getFirst();
+        assertThrows(WebloggerException.class, () -> mgr.removeWeblogCategory(only));
+
+        // Still there, and still the weblog's only one.
+        TestUtils.endSession(true);
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        assertEquals(1, testWeblog.getWeblogCategories().size());
+
+        log.info("END");
+    }
+
 }

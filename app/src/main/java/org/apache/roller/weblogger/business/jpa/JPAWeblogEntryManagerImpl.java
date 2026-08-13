@@ -103,6 +103,19 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             throw new WebloggerException("Cannot remove category with entries");
         }
 
+        // A weblog must always keep at least one category, because
+        // saveWeblogEntry() below falls back to "the first category found"
+        // whenever an entry arrives without one -- which is what happens when
+        // the editor's category <select> has nothing to offer. Categories.jsp
+        // already hides Delete on the last row, but that only stops the UI; a
+        // direct POST to categoryRemove!remove.rol took the last category out
+        // from under that fallback and every subsequent entry save died on
+        // NoSuchElementException, with no way back through the UI since adding
+        // a category is a different screen than the one that now fails.
+        if (cat.getWeblog().getWeblogCategories().size() <= 1) {
+            throw new WebloggerException("Cannot remove a weblog's last category");
+        }
+
         cat.getWeblog().getWeblogCategories().remove(cat);
 
         // remove cat
@@ -140,8 +153,18 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     public void saveWeblogEntry(WeblogEntry entry) throws WebloggerException {
 
         if (entry.getCategory() == null) {
-            // Entry is invalid without category, so use the first one found
-            entry.setCategory(entry.getWebsite().getWeblogCategories().iterator().next());
+            // Entry is invalid without category, so use the first one found.
+            // removeWeblogCategory() guarantees there is one; if that invariant
+            // is ever breached, say so rather than letting an iterator throw
+            // NoSuchElementException with no hint of what is actually wrong.
+            Iterator<WeblogCategory> cats =
+                    entry.getWebsite().getWeblogCategories().iterator();
+            if (!cats.hasNext()) {
+                throw new WebloggerException("Weblog "
+                        + entry.getWebsite().getHandle()
+                        + " has no categories; cannot save an entry without one");
+            }
+            entry.setCategory(cats.next());
         }
 
         // Entry is invalid without local. if missing use weblog default

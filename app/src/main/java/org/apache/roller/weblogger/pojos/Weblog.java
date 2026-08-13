@@ -504,8 +504,13 @@ public class Weblog implements Serializable {
             WeblogEntryManager wmgr = roller.getWeblogEntryManager();
             if (categoryName != null && !categoryName.equals("nil")) {
                 category = wmgr.getWeblogCategoryByName(this, categoryName);
-            } else {
-                category = getWeblogCategories().iterator().next();
+            } else if (!getWeblogCategories().isEmpty()) {
+                // Same "first category found" fallback saveWeblogEntry uses, and
+                // the same reason for the guard: this is reachable from a
+                // template, where an unchecked NoSuchElementException escapes the
+                // catch below and takes the whole render with it. Returning null
+                // is what every other failure here already does.
+                category = getWeblogCategories().getFirst();
             }
         } catch (WebloggerException e) {
             log.error("ERROR: fetching category: " + categoryName, e);

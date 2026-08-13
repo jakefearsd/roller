@@ -69,7 +69,15 @@ touching the rendering path call `CacheManager.clear()` in `@BeforeEach`
 
 - JaCoCo `check` runs at `verify` with floors in the parent `pom.xml`
   (`jacoco.line.minimum` / `jacoco.branch.minimum`, plus a PACKAGE rule for
-  `ui.rendering.*`). Floors only ever move up. Raise them after each stage.
+  `ui.rendering.*`). Floors only ever move up. Raise them after each stage —
+  **but "raise" means "raise where there is slack", not "raise all three".**
+  Post-W2 the BUNDLE LINE floor is 0.8700 against a measured 0.8705, i.e. it
+  is already binding to within a rounding error, and pushing it higher just
+  means an unrelated change fails the build for the one uncovered line it
+  happened to add. It was therefore left alone while BRANCH went 0.7800 →
+  0.7900 and the `ui.rendering.*` PACKAGE LINE rule went 0.55 → 0.60 (binding
+  package: `velocity`, 0.6190). Coverage of *new* work is the diff gate's job
+  below, not this floor's.
 - Changed lines need ~90% coverage: `bin/check-diff-coverage.sh [base-ref]`
   (default `HEAD~1`; needs `pip install diff_cover` and a fresh
   `mvn -pl app jacoco:report`). CI enforces this on every push/PR.

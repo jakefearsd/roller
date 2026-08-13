@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
@@ -161,12 +162,27 @@ public class MembersController extends BaseController {
      * already merges into an existing row), and since this only ever adds an
      * action it can never trip the "at least one admin" invariant the way
      * revoking can.
+     *
+     * <p>Refused outright when {@code groupblogging.enabled} is off. Adding a
+     * second person to a weblog <em>is</em> group blogging, so the menu gate
+     * in {@code editor-menu.xml} is aimed correctly -- but a hidden menu entry
+     * stops nobody who posts here directly, the same gap
+     * {@code themes.customtheme.allowed} had before it was enforced in
+     * {@link ThemeEditController}. Only granting is gated: {@link #save} keeps
+     * working so an operator who turns the setting off can still revoke the
+     * members it left behind, rather than being locked out of undoing them.
      */
     @PostMapping("/members!grant.rol")
     public String grant(HttpServletRequest request, Model model,
                          @RequestParam(value = "userName", required = false) String userName,
                          @RequestParam(value = "permissionString", required = false) String permissionString) {
         populateCommonModel(request, model);
+
+        if (!WebloggerRuntimeConfig.getBooleanProperty("groupblogging.enabled")) {
+            addError(model, "memberPermissions.error.groupBloggingDisabled", request);
+            model.addAttribute("weblogPermissions", getWeblogPermissions(request));
+            return ".Members";
+        }
 
         UserManager userMgr = weblogger.getUserManager();
         User user = null;

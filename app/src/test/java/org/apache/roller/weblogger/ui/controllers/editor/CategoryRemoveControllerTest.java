@@ -64,6 +64,12 @@ class CategoryRemoveControllerTest extends EditorControllerTestSupport {
         target = category("cat-2", "General");
         when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(doomed);
         when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-2")).thenReturn(target);
+
+        // The controller refuses to delete a weblog's last category, so every
+        // test that expects a deletion to go through needs the weblog to hold
+        // more than one. A fresh Weblog starts with an empty list.
+        weblog.getWeblogCategories().add(doomed);
+        weblog.getWeblogCategories().add(target);
     }
 
     @Test
@@ -212,6 +218,35 @@ class CategoryRemoveControllerTest extends EditorControllerTestSupport {
         category.setName(name);
         category.setWeblog(otherWeblog);
         return category;
+    }
+
+    @Test
+    void aWeblogsLastCategoryIsRefusedRatherThanDeleted() throws Exception {
+        // Categories.jsp hides Delete on the last row, but that only stops the
+        // UI. A direct POST used to take the last category out from under
+        // saveWeblogEntry's "first category found" fallback, after which every
+        // entry save died on NoSuchElementException with no way back through
+        // the UI.
+        weblog.getWeblogCategories().remove(target);
+
+        String view = controller.remove(request, model, "cat-1", null, redirectAttributes);
+
+        assertEquals(LIST_REDIRECT, view);
+        assertTrue(flashErrors(redirectAttributes).contains("categoryForm.error.lastCategory"),
+                "Expected a last-category error, got: " + flashErrors(redirectAttributes));
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogCategory(any());
+    }
+
+    @Test
+    void refusingTheLastCategoryAlsoLeavesItsContentsWhereTheyAre() throws Exception {
+        // The refusal comes before the move, so naming a move target cannot be
+        // used to empty the last category on the way to deleting it.
+        weblog.getWeblogCategories().remove(target);
+
+        controller.remove(request, model, "cat-1", "cat-2", redirectAttributes);
+
+        verify(weblogger.getWeblogEntryManager(), never())
+                .moveWeblogCategoryContents(any(), any());
     }
 
     private WeblogCategory category(String id, String name) {

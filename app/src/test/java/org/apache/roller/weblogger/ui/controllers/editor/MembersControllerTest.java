@@ -385,6 +385,44 @@ class MembersControllerTest extends EditorControllerTestSupport {
                 "A failed grant must be reported: " + errors(model));
     }
 
+    // --- grant() : groupblogging.enabled ---
+
+    @Test
+    void grantingIsRefusedWhenGroupBloggingIsOff() throws Exception {
+        // The menu gate in editor-menu.xml hides the Members tab, but the page
+        // is still reachable by URL and a hand-crafted POST reaches grant()
+        // regardless -- the same gap themes.customtheme.allowed had before
+        // ThemeEditController enforced it server-side.
+        givenRuntimeProperty("groupblogging.enabled", "false");
+        User bob = otherUser("bob");
+
+        String view = controller.grant(request, model, "bob", WeblogPermission.POST);
+
+        assertEquals(".Members", view);
+        assertTrue(errors(model).contains("memberPermissions.error.groupBloggingDisabled"),
+                "Expected the group-blogging refusal: " + errors(model));
+        verify(weblogger.getUserManager(), never()).grantWeblogPermission(any(), any(), any());
+        verify(weblogger.getUserManager(), never()).getUserByUserName(any());
+    }
+
+    @Test
+    void turningGroupBloggingOffStillLetsExistingMembersBeRemoved() throws Exception {
+        // Only granting is gated. An operator who turns the setting off must
+        // still be able to undo the members it left behind, otherwise the
+        // switch strands exactly the state it is meant to discourage.
+        givenRuntimeProperty("groupblogging.enabled", "false");
+        User bob = otherUser("bob");
+        givenMember(bob, WeblogPermission.POST);
+        givenMember(user, WeblogPermission.ADMIN);
+        when(request.getParameter("perm-" + bob.getId())).thenReturn("-1");
+        when(request.getParameter("perm-" + user.getId())).thenReturn(WeblogPermission.ADMIN);
+
+        controller.save(request, model);
+
+        verify(weblogger.getUserManager())
+                .revokeWeblogPermission(weblog, bob, WeblogPermission.ALL_ACTIONS);
+    }
+
     // --- helpers ---
 
     private User otherUser(String userName) {

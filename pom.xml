@@ -50,9 +50,25 @@ limitations under the License.
         <!-- JaCoCo coverage gate (jacoco:check on verify). The ratchet is ACTIVE:
              these floors are measured minus a 0.01 margin, and later stages only
              ever raise them, never lower them. Targets are documented in
-             CLAUDE.md. -->
+             CLAUDE.md.
+
+             Measured after W2 (the minimalism program's second subtraction
+             wave): LINE 0.8705, BRANCH 0.7958.
+
+             BRANCH moves 0.7800 to 0.7900. LINE deliberately does NOT move, and
+             the reason is worth keeping: at 0.8705 measured against a 0.8700
+             floor it is already binding to within five hundredths of a point,
+             so it behaves as a ratchet with no slack, and one uncovered line
+             anywhere fails the build whatever the change was about. That is
+             the same failure mode the PACKAGE comment below records for the
+             velocity package at 0.4900, and raising LINE here would make it
+             worse rather than better. Coverage of NEW work is held by
+             bin/check-diff-coverage.sh (~90% of changed lines), not by this
+             floor; this floor's job is to stop the whole-codebase number
+             sliding, and it does that already. Raise it only after a wave that
+             genuinely adds line coverage in bulk. -->
         <jacoco.line.minimum>0.8700</jacoco.line.minimum>
-        <jacoco.branch.minimum>0.7800</jacoco.branch.minimum>
+        <jacoco.branch.minimum>0.7900</jacoco.branch.minimum>
         <jacoco.check.skip>false</jacoco.check.skip>
     </properties>
 
@@ -173,9 +189,15 @@ limitations under the License.
                                                  its first direct tests. It had sat at exactly
                                                  0.4900 against this floor, so any macro change
                                                  that added an untested branch broke the build for
-                                                 reasons unrelated to the change. The binding
-                                                 package is now velocity at 0.5823. -->
-                                            <minimum>0.55</minimum>
+                                                 reasons unrelated to the change.
+
+                                                 0.55 to 0.60 after W2. The binding package is
+                                                 still velocity, now at 0.6190 (servlets 0.6667,
+                                                 rendering 0.8020); the subtraction waves removed
+                                                 the RSS and comment feed paths, which were among
+                                                 the least covered here. Unlike the BUNDLE LINE
+                                                 floor above, this one has real slack to take. -->
+                                            <minimum>0.60</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

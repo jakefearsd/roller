@@ -88,6 +88,17 @@ public class CategoryRemoveController extends BaseController {
             try {
                 WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
 
+                // removeWeblogCategory refuses this too -- that refusal is the
+                // real enforcement -- but it arrives as a bare WebloggerException
+                // the catch below can only report as "check the logs". A weblog
+                // needing its last category is an ordinary thing to tell someone,
+                // not a server fault, so say it plainly here.
+                if (getActionWeblog(request).getWeblogCategories().size() <= 1) {
+                    addFlashError(redirectAttributes, "categoryForm.error.lastCategory", request);
+                    return "redirect:/roller-ui/authoring/categories.rol?weblog="
+                            + getActionWeblog(request).getHandle();
+                }
+
                 if (targetCategoryId != null) {
                     WeblogCategory target = lookupCategory(targetCategoryId, request);
                     if (target == null) {
