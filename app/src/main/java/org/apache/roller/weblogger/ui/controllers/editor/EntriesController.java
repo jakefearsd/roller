@@ -228,7 +228,7 @@ public class EntriesController extends BaseController {
     }
 
     /**
-     * Deletes every selected entry, each through the same path the single-entry
+     * Trashes every selected entry, each through the same path the single-entry
      * delete uses -- a bulk JPQL delete would leave the search index holding
      * documents for entries that no longer exist.
      */
@@ -238,7 +238,7 @@ public class EntriesController extends BaseController {
                              List<String> selectedEntries,
                              RedirectAttributes redirectAttributes) {
         return applyToSelection(request, selectedEntries, redirectAttributes,
-                "weblogEntryQuery.bulkDeleted", this::removeEntryWithIndex);
+                "weblogEntryQuery.bulkDeleted", this::trashEntryWithIndex);
     }
 
     /** What one bulk action does to one entry, once it has been found and vetted. */

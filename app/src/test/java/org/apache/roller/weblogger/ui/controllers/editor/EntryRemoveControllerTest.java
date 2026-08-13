@@ -38,11 +38,14 @@ import static org.mockito.Mockito.when;
 /**
  * Tests for {@link EntryRemoveController}.
  *
- * <p>Deleting an entry has to take it out of the search index as well as the
- * database — an entry that survives only in the Lucene index keeps appearing in
- * site search results and links to a 404. The two endpoints differ only in
- * where they send the user afterwards, and both are covered because they are
- * separate code paths that could drift.
+ * <p>"Deleting" an entry through this controller trashes it (see
+ * {@code BaseController#trashEntryWithIndex}) rather than removing it from the
+ * database, but it still has to come out of the search index -- an entry that
+ * survives only in the Lucene index keeps appearing in site search results and
+ * links to a page that now 404s, exactly the failure a genuine delete would
+ * produce. The two endpoints differ only in where they send the user
+ * afterwards, and both are covered because they are separate code paths that
+ * could drift.
  */
 class EntryRemoveControllerTest extends EditorControllerTestSupport {
 
@@ -81,7 +84,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
         String view = controller.remove(request, model, "entry-1", redirectAttributes);
 
         assertEquals(ADD_REDIRECT, view);
-        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(entry);
+        verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 
     @Test
@@ -100,7 +103,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
                 "a foreign entryId must bounce, exactly like an unknown one");
         assertEquals("redirect:/roller-ui/menu.rol",
                 controller.entryRemoveViaListRemove(request, model, "entry-1", newRedirectAttributes()));
-        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+        verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
     }
 
     @Test
@@ -109,7 +112,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
 
         assertEquals(ENTRIES_REDIRECT, view,
                 "Deleting from the list must put the user back on the list, not on a blank form");
-        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(entry);
+        verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 
     @Test
@@ -120,7 +123,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
 
         InOrder order = inOrder(weblogger.getIndexManager(), weblogger.getWeblogEntryManager());
         order.verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
-        order.verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(entry);
+        order.verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 
     @Test
@@ -130,7 +133,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
         controller.remove(request, model, "entry-1", redirectAttributes);
 
         verify(weblogger.getIndexManager(), never()).removeEntryIndexOperation(any());
-        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(entry);
+        verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 
     @Test
@@ -163,7 +166,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
         assertEquals("redirect:/roller-ui/menu.rol", view);
         assertTrue(flashErrors(redirectAttributes).contains("weblogEntry.notFound"),
                 "Expected a not-found error, got: " + flashErrors(redirectAttributes));
-        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+        verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
     }
 
     @Test
@@ -171,7 +174,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
         String view = controller.remove(request, model, null, redirectAttributes);
 
         assertEquals("redirect:/roller-ui/menu.rol", view);
-        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+        verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
     }
 
     @Test
@@ -179,7 +182,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
         String view = controller.entryRemoveViaListRemove(request, model, null, redirectAttributes);
 
         assertEquals("redirect:/roller-ui/menu.rol", view);
-        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+        verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
     }
 
     @Test
@@ -191,7 +194,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
 
         InOrder order = inOrder(weblogger.getIndexManager(), weblogger.getWeblogEntryManager());
         order.verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
-        order.verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(entry);
+        order.verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
         assertEquals(PubStatus.PUBLISHED, entry.getStatus(),
                 "The temporary status change must be undone here too");
     }
@@ -203,13 +206,13 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
         controller.entryRemoveViaListRemove(request, model, "entry-1", redirectAttributes);
 
         verify(weblogger.getIndexManager(), never()).removeEntryIndexOperation(any());
-        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(entry);
+        verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 
     @Test
     void theListVariantReportsAFailedDeletion() throws Exception {
         org.mockito.Mockito.doThrow(new WebloggerException("constraint violation"))
-                .when(weblogger.getWeblogEntryManager()).removeWeblogEntry(any());
+                .when(weblogger.getWeblogEntryManager()).trashWeblogEntry(any());
 
         String view = controller.entryRemoveViaListRemove(request, model, "entry-1", redirectAttributes);
 
@@ -248,13 +251,13 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
         String view = controller.remove(request, model, "entry-1", redirectAttributes);
 
         assertEquals(ADD_REDIRECT, view);
-        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(entry);
+        verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 
     @Test
     void aFailedDeletionIsReportedAndReturnsToTheList() throws Exception {
         org.mockito.Mockito.doThrow(new WebloggerException("constraint violation"))
-                .when(weblogger.getWeblogEntryManager()).removeWeblogEntry(any());
+                .when(weblogger.getWeblogEntryManager()).trashWeblogEntry(any());
 
         String view = controller.remove(request, model, "entry-1", redirectAttributes);
 

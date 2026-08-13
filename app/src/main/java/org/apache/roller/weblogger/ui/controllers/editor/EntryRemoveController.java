@@ -71,7 +71,7 @@ public class EntryRemoveController extends BaseController {
         WeblogEntry entry = lookupEntry(removeId, request);
         if (entry != null) {
             try {
-                removeEntryWithIndex(entry);
+                trashEntryWithIndex(entry);
                 weblogger.flush();
 
                 addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);
@@ -107,7 +107,7 @@ public class EntryRemoveController extends BaseController {
         WeblogEntry entry = lookupEntry(removeId, request);
         if (entry != null) {
             try {
-                removeEntryWithIndex(entry);
+                trashEntryWithIndex(entry);
                 weblogger.flush();
 
                 addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);

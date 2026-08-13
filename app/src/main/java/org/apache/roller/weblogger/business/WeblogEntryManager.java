@@ -42,10 +42,49 @@ public interface WeblogEntryManager {
     void saveWeblogEntry(WeblogEntry entry) throws WebloggerException;
        
     /**
-     * Remove weblog entry.
+     * Remove weblog entry permanently -- there is exactly one path to a hard
+     * delete, and this is it. Used by "delete forever", the purge sweep, and
+     * the weblog-deletion cascade; never called directly by the entry list's
+     * ordinary delete action, which trashes instead (see
+     * {@link #trashWeblogEntry}).
      */
     void removeWeblogEntry(WeblogEntry entry) throws WebloggerException;
-    
+
+    /**
+     * Moves an entry to the trash: status becomes {@link WeblogEntry.PubStatus#TRASHED}
+     * and {@link WeblogEntry#getTrashedAt()} is stamped with now. The entry
+     * still exists in the database -- this is a save, not a delete -- so
+     * {@link #getTrashedEntries} can list it and {@link #restoreWeblogEntry}
+     * can bring it back.
+     */
+    void trashWeblogEntry(WeblogEntry entry) throws WebloggerException;
+
+    /**
+     * Brings a trashed entry back as a draft.
+     *
+     * <p>Always {@code DRAFT}, never whatever status the entry held before it
+     * was trashed -- no column remembers that on purpose. An undelete that
+     * silently republishes an entry to feeds, the sitemap and every
+     * subscriber is a worse outcome than making the author click Publish
+     * again.
+     */
+    void restoreWeblogEntry(WeblogEntry entry) throws WebloggerException;
+
+    /**
+     * This weblog's trashed entries, newest-trashed first.
+     */
+    List<WeblogEntry> getTrashedEntries(Weblog weblog) throws WebloggerException;
+
+    /**
+     * Permanently deletes every entry in this weblog's trash that was trashed
+     * longer ago than {@code retentionDays}.
+     *
+     * @param retentionDays the retention window in days; {@code -1} purges
+     *                      nothing (keep trash forever)
+     * @return the number of entries purged
+     */
+    int purgeTrash(Weblog weblog, int retentionDays) throws WebloggerException;
+
     /**
      * Get weblog entry by id.
      */

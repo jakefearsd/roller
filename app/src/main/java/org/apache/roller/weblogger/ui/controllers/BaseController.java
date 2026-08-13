@@ -296,21 +296,58 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     }
 
     /**
-     * Deletes an entry and everything that indexes or caches it.
+     * Moves an entry to the trash, taking it out of everything that indexes
+     * or caches it. This is the authoring UI's single deletion seam -- the
+     * entry list's bulk action and both entry-removal endpoints all call
+     * this, never {@link WeblogEntryManager#trashWeblogEntry} directly.
      *
-     * <p>The order matters and the steps are not optional. The search index
-     * holds documents keyed by entry id, so an entry removed from the database
-     * without {@code removeEntryIndexOperation} leaves a document that still
-     * matches searches and links to a page that 404s. The re-index of the
-     * entry as a DRAFT first is how the index learns to drop it while the
-     * entry still exists to be read. {@code CacheManager.invalidate} then
-     * clears the rendered pages that contained it.
+     * <p>The order matters and the steps are not optional, and staying
+     * TRASHED rather than being removed from the database does not make them
+     * unnecessary -- the opposite: the search index holds documents keyed by
+     * entry id, so a TRASHED entry left in it is still findable by site
+     * search and still links to a page that now 404s, exactly the failure a
+     * genuine delete would produce. The re-index of the entry as a DRAFT
+     * first is how the index learns to drop it while the entry still exists
+     * to be read. {@code CacheManager.invalidate} then clears the rendered
+     * pages that contained it.
      *
      * <p>Indexing failures are logged and swallowed rather than aborting the
-     * delete: an index that has fallen behind is repairable from the admin
-     * screen, whereas a half-deleted entry is not.
+     * trash: an index that has fallen behind is repairable from the admin
+     * screen, whereas a half-trashed entry is not.
      */
-    protected void removeEntryWithIndex(WeblogEntry entry) throws WebloggerException {
+    protected void trashEntryWithIndex(WeblogEntry entry) throws WebloggerException {
+        deIndexAndInvalidate(entry);
+        weblogger.getWeblogEntryManager().trashWeblogEntry(entry);
+    }
+
+    /**
+     * Permanently deletes an entry -- the "delete forever" action on an
+     * already-trashed entry -- taking it out of everything that indexes or
+     * caches it first.
+     *
+     * <p>Same index/cache steps as {@link #trashEntryWithIndex} and for the
+     * same reason (see its javadoc); the only difference is the final call,
+     * which here is the actual, irreversible {@link WeblogEntryManager#removeWeblogEntry}
+     * rather than a trash. A trashed entry is normally already out of the
+     * index -- it was de-indexed on the way into the trash -- but this
+     * re-runs the same dance rather than assuming that, since nothing
+     * prevents a caller from reaching this on an entry that never went
+     * through the trash path.
+     */
+    protected void deleteEntryForeverWithIndex(WeblogEntry entry) throws WebloggerException {
+        deIndexAndInvalidate(entry);
+        weblogger.getWeblogEntryManager().removeWeblogEntry(entry);
+    }
+
+    /**
+     * The shared index/cache dance {@link #trashEntryWithIndex} and
+     * {@link #deleteEntryForeverWithIndex} both need before their differing
+     * final step: re-index as DRAFT so the index drops the document while the
+     * entry still exists to be read, de-index outright if it was published,
+     * then invalidate the render cache. See {@link #trashEntryWithIndex}'s
+     * javadoc for why none of this is optional.
+     */
+    private void deIndexAndInvalidate(WeblogEntry entry) {
         IndexManager indexManager = weblogger.getIndexManager();
         try {
             WeblogEntry.PubStatus originalStatus = entry.getStatus();
@@ -326,7 +363,6 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
         }
 
         CacheManager.invalidate(entry);
-        weblogger.getWeblogEntryManager().removeWeblogEntry(entry);
     }
 
     /**

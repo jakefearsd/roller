@@ -360,7 +360,89 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         // remove entry from cache mapping
         this.entryAnchorToIdMap.remove(entry.getWebsite().getHandle()+":"+entry.getAnchor());
     }
-    
+
+    /**
+     * @inheritDoc
+     *
+     * <p>Goes through {@code saveWeblogEntry} like every other status change
+     * in this class -- the entry is not removed, so all of its normal save
+     * bookkeeping (tag aggregate adjustments, weblog last-modified) still
+     * applies. {@code saveWeblogEntry}'s revision recording compares only
+     * title/text/summary, so a pure status change deposits no revision, and
+     * its {@code ENTRY_PUBLISHED} event gate requires the NEW status to be
+     * PUBLISHED, which TRASHED never is -- so trashing a published entry
+     * fires no event either.
+     */
+    @Override
+    public void trashWeblogEntry(WeblogEntry entry) throws WebloggerException {
+        entry.setStatus(PubStatus.TRASHED);
+        entry.setTrashedAt(new Timestamp(System.currentTimeMillis()));
+        saveWeblogEntry(entry);
+    }
+
+    /**
+     * @inheritDoc
+     *
+     * <p>Always DRAFT -- never the status the entry held before it was
+     * trashed, because nothing records what that was. Restoring to whatever
+     * came before would mean an undelete of a formerly-published entry could
+     * silently republish it to feeds, the sitemap and every subscriber; one
+     * extra click to hit Publish again is the safer failure mode, so this
+     * intentionally does not try to remember or infer the prior status.
+     */
+    @Override
+    public void restoreWeblogEntry(WeblogEntry entry) throws WebloggerException {
+        entry.setStatus(PubStatus.DRAFT);
+        entry.setTrashedAt(null);
+        saveWeblogEntry(entry);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @Override
+    public List<WeblogEntry> getTrashedEntries(Weblog weblog) throws WebloggerException {
+        if (weblog == null) {
+            throw new WebloggerException("weblog is null");
+        }
+        TypedQuery<WeblogEntry> query = strategy.getDynamicQuery(
+                "SELECT e FROM WeblogEntry e WHERE e.website = ?1 AND e.status = ?2 "
+                        + "ORDER BY e.trashedAt DESC", WeblogEntry.class);
+        query.setParameter(1, weblog);
+        query.setParameter(2, PubStatus.TRASHED);
+        return query.getResultList();
+    }
+
+    /**
+     * @inheritDoc
+     *
+     * <p>Deletes one entry at a time through {@link #removeWeblogEntry},
+     * deliberately: that is the only permanent-deletion path in this class
+     * (also used by "delete forever" and the weblog-deletion cascade), and a
+     * bulk JPQL delete here would bypass its revision/tag/attribute cleanup
+     * the same way a bulk entry delete would.
+     */
+    @Override
+    public int purgeTrash(Weblog weblog, int retentionDays) throws WebloggerException {
+        if (retentionDays < 0) {
+            // -1 (and, defensively, any other negative value) means "keep
+            // trash forever" -- purge nothing.
+            return 0;
+        }
+
+        Timestamp cutoff = Timestamp.from(
+                java.time.Instant.now().minus(java.time.Duration.ofDays(retentionDays)));
+
+        int purged = 0;
+        for (WeblogEntry entry : getTrashedEntries(weblog)) {
+            if (entry.getTrashedAt() != null && entry.getTrashedAt().before(cutoff)) {
+                removeWeblogEntry(entry);
+                purged++;
+            }
+        }
+        return purged;
+    }
+
     private List<WeblogEntry> getNextPrevEntries(WeblogEntry current, String catName,
             String locale, int maxEntries, boolean next)
             throws WebloggerException {

@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * cannot be found is a feature quietly not working; an entry that is deleted
  * and can still be found is worse, because the result links to a page that no
  * longer exists. The second is why entry deletion goes through
- * {@code removeEntryWithIndex} rather than a plain delete.
+ * {@code trashEntryWithIndex} rather than a plain delete.
  *
  * <p>Indexing is asynchronous, so every assertion here polls rather than
  * checking once: the alternative is a test that passes or fails on how busy

@@ -332,11 +332,13 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         controller.bulkDelete(request, List.of("entry-1", "entry-2"), newRedirectAttributes());
 
         // A bulk JPQL delete would skip exactly this, leaving the index holding
-        // documents that link to pages which now 404.
+        // documents that link to pages which now 404. Bulk delete trashes
+        // rather than removes (see BaseController#trashEntryWithIndex), but
+        // the de-indexing must still happen.
         verify(weblogger.getIndexManager()).removeEntryIndexOperation(first);
         verify(weblogger.getIndexManager()).removeEntryIndexOperation(second);
-        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(first);
-        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(second);
+        verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(first);
+        verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(second);
     }
 
     /**
@@ -415,7 +417,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         assertEquals("redirect:/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE, view);
         assertEquals(List.of("weblogEntryQuery.bulkNothingSelected"), flashErrors(redirect));
         assertTrue(flashMessages(redirect).isEmpty());
-        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+        verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
     }
 
     /**
