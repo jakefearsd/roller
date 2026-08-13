@@ -162,12 +162,27 @@ public class EntryEditController extends BaseController {
 
     @GetMapping("/entryEdit.rol")
     public String entryEditExecute(HttpServletRequest request, Model model,
-                                   @ModelAttribute("bean") EntryBean bean) {
+                                   @ModelAttribute("bean") EntryBean bean,
+                                   RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "entryEdit");
         model.addAttribute("pageTitle", getText("weblogEdit.title.editEntry", request));
 
-        WeblogEntry entry = lookupEntry(bean.getId(), request);
+        // A bookmarked editor URL can name an entry that has since been
+        // trashed. lookupEntry alone has no status filter and would render
+        // the full editor for it -- Save would then resurrect the entry to
+        // DRAFT (or straight to PUBLISHED) by a side door that bypasses
+        // restore entirely, with trashedAt still populated on the row. Send
+        // the author to the trash screen instead, where restoring is the
+        // actual, intentional action -- rather than 404ing silently the way
+        // an unknown or foreign id does.
+        WeblogEntry lookedUp = lookupEntry(bean.getId(), request);
+        if (lookedUp != null && lookedUp.getStatus() == PubStatus.TRASHED) {
+            addFlashError(redirectAttributes, "entryEdit.entryIsTrashed", request);
+            return "redirect:/roller-ui/authoring/trash.rol?weblog="
+                    + getActionWeblog(request).getHandle();
+        }
+        WeblogEntry entry = lookupNonTrashedEntry(bean.getId(), request);
         if (entry == null) {
             return "redirect:/roller-ui/menu.rol";
         }

@@ -464,8 +464,17 @@ public class LuceneIndexManager implements IndexManager {
 
                 // maybe null if search result returned inactive user
                 // or entry's user is not the requested user.
-                // but don't return future posts
-                if (entry != null && entry.getPubTime().before(now)) {
+                // but don't return future posts, and -- now that a trashed
+                // (or otherwise unpublished) entry can survive as a live row
+                // rather than disappearing on delete -- don't resolve a
+                // stale index document back into a reader-visible entry
+                // either. The de-index on trash is best-effort (swallowed
+                // failures, no retry), so a stale document is not
+                // hypothetical: this is what keeps search safe by
+                // construction rather than relying on the index always
+                // being current, the same defence ReIndexEntryOperation
+                // already applies on the write side.
+                if (entry != null && entry.isPublished() && entry.getPubTime().before(now)) {
                     results.add(WeblogEntryWrapper.wrap(entry, urlStrategy));
                 }
             }

@@ -77,7 +77,8 @@ It is what "delete forever" and the weblog-deletion cascade call.
 
 A **Trash** item on the editor menu, listing trashed entries newest-first with:
 
-- **Restore** — status becomes `DRAFT`, `trashedAt` cleared, re-indexed.
+- **Restore** — status becomes `DRAFT`, `trashedAt` cleared. Not re-indexed:
+  DRAFT is not published, so there is nothing for search to add.
 - **Delete forever** — the existing hard delete, with a confirm.
 - **Empty trash** — hard-deletes everything currently in it, with a confirm
   naming the count.
@@ -151,9 +152,9 @@ not overlooked.
   apply, but the check is cheap and the habit is why W4 caught nothing.
 - Unit: the criteria default (a trashed entry is absent unless asked for, at
   the manager level, which is the assertion that matters); trashing sets status
-  and stamp and de-indexes; restore goes to DRAFT and re-indexes; purge
-  respects the retention including `-1`; a trashed entry still blocks its
-  category and still holds its anchor.
+  and stamp and de-indexes; restore goes to DRAFT (no re-index -- a draft has
+  nothing for search to add); purge respects the retention including `-1`; a
+  trashed entry still blocks its category and still holds its anchor.
 - **The regression that matters most**: a trashed entry must be absent from
   the home page, its permalink, the Atom feed, the sitemap and site search.
   Prove each; four of the five are free by construction, and a test that says

@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -268,13 +270,17 @@ class WeblogEntryManagerQueryTest {
     // why, and WeblogEntryCriteriaTest for the query that DOES exclude trash.
 
     /**
-     * A category whose only entry has been trashed must still read as "in
-     * use": the entry has not been deleted forever, it can be restored, and
-     * deleting the category out from under it would leave nothing to restore
-     * into.
+     * A category whose only entry has been trashed must still be refused
+     * deletion -- the entry has not been deleted forever, it can be
+     * restored, and deleting the category out from under it would leave
+     * nothing to restore into. {@code isWeblogCategoryInUse} (a UI hint fed
+     * by the always-trash-visible {@code getByCategory} query) is not what
+     * enforces this; {@code removeWeblogCategory}'s own guard is, and it
+     * goes through {@code retrieveWeblogEntries(false)} instead -- so this
+     * asserts the actual enforcement, not the query next to it.
      */
     @Test
-    void aCategoryWhoseOnlyEntryIsTrashedIsStillInUse() throws Exception {
+    void deletingACategoryWhoseOnlyEntryIsTrashedIsRefused() throws Exception {
         WeblogCategory onlyTrash = TestUtils.setupWeblogCategory(
                 TestUtils.getManagedWebsite(blog), "OnlyTrash");
         TestUtils.endSession(true);
@@ -289,8 +295,46 @@ class WeblogEntryManagerQueryTest {
         WebloggerFactory.getWeblogger().flush();
         TestUtils.endSession(true);
 
-        assertTrue(entries().isWeblogCategoryInUse(TestUtils.getManagedWeblogCategory(onlyTrash)),
-                "a category holding only a trashed entry must still read as in use");
+        WeblogCategory managedCat = TestUtils.getManagedWeblogCategory(onlyTrash);
+        assertThrows(WebloggerException.class, () -> entries().removeWeblogCategory(managedCat),
+                "a category holding only a trashed entry must still be refused deletion");
+    }
+
+    /**
+     * Moving a category's contents elsewhere -- the path the UI drives before
+     * it will let an author delete a non-empty category -- must carry a
+     * trashed entry along too. Before the fix, {@code
+     * moveWeblogCategoryContents} silently moved zero entries for a
+     * category holding only trash, leaving the trashed entry pointed at a
+     * category about to be removed out from under it.
+     */
+    @Test
+    void movingACategorysContentsMovesItsTrashedEntryToo() throws Exception {
+        WeblogCategory onlyTrash = TestUtils.setupWeblogCategory(
+                TestUtils.getManagedWebsite(blog), "OnlyTrash2");
+        WeblogCategory dest = TestUtils.setupWeblogCategory(
+                TestUtils.getManagedWebsite(blog), "Dest");
+        TestUtils.endSession(true);
+
+        WeblogEntry created = TestUtils.setupWeblogEntry(
+                "to-be-trashed-and-moved", onlyTrash, PubStatus.PUBLISHED, blog, user);
+        TestUtils.endSession(true);
+
+        WeblogEntry managed = entries().getWeblogEntry(created.getId());
+        managed.setStatus(PubStatus.TRASHED);
+        entries().saveWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        WeblogCategory src = TestUtils.getManagedWeblogCategory(onlyTrash);
+        WeblogCategory destManaged = TestUtils.getManagedWeblogCategory(dest);
+        entries().moveWeblogCategoryContents(src, destManaged);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        WeblogEntry moved = entries().getWeblogEntry(created.getId());
+        assertEquals(dest.getId(), moved.getCategory().getId(),
+                "moving a category's contents must move its trashed entry, not skip it");
     }
 
     /**

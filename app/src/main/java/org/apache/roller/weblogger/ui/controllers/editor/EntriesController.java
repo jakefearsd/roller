@@ -142,7 +142,10 @@ public class EntriesController extends BaseController {
         String handle = getActionWeblog(request).getHandle();
         String backToList = "redirect:/roller-ui/authoring/entries.rol?weblog=" + handle;
 
-        WeblogEntry original = lookupEntry(duplicateId, request);
+        // lookupNonTrashedEntry, not lookupEntry: a forged duplicateId
+        // naming a trashed entry must not be usable to duplicate it back
+        // into a live draft -- that is what restore is for.
+        WeblogEntry original = lookupNonTrashedEntry(duplicateId, request);
         if (original == null) {
             addFlashError(redirectAttributes, "weblogEntry.notFound", request);
             return backToList;
@@ -270,7 +273,11 @@ public class EntriesController extends BaseController {
         int applied = 0;
         List<String> failed = new ArrayList<>();
         for (String id : selectedEntries) {
-            WeblogEntry entry = lookupEntry(id, request);
+            // lookupNonTrashedEntry, not lookupEntry: a trashed id slipped
+            // into a bulk selection must not be actionable -- bulkPublish in
+            // particular would otherwise resurrect a trashed entry straight
+            // to PUBLISHED, bypassing restore entirely.
+            WeblogEntry entry = lookupNonTrashedEntry(id, request);
             if (entry == null) {
                 failed.add(id);
                 continue;

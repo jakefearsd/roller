@@ -73,7 +73,15 @@ public class AddEntryOperation extends WriteToIndexOperation {
         }
         
         try {
-            if (writer != null) {
+            // Only a published entry belongs in the search index -- the
+            // same guard ReIndexEntryOperation applies on its own add path.
+            // This class has no production caller today (only tests reach
+            // addEntryIndexOperation directly), but the interface exists for
+            // a future one, and re-fetching by id on a background thread
+            // means whatever the scheduling caller checked can already be
+            // stale by the time this runs: an entry trashed or unpublished
+            // between scheduling and execution must not be added.
+            if (writer != null && data != null && data.isPublished()) {
                 writer.addDocument(getDocument(data));
             }
         } catch (IOException e) {

@@ -160,7 +160,7 @@
     </td>
     
     <td>
-        ${post.category.name}
+        ${fn:escapeXml(post.category.name)}
     </td>
 
     <td>

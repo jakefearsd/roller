@@ -990,7 +990,7 @@ thing to drop.
     With the row surviving, the job re-added trashed entries to the index
     moments after the synchronous remove took them out. `ReIndexEntryOperation`
     now refuses to add a document for a non-`PUBLISHED` entry — enforcing an
-    invariant its five callers had been maintaining by convention.
+    invariant its four callers had been maintaining by convention.
   - **`weblog.lastModified` must be bumped when a published entry is trashed.**
     `WeblogPageCache` has no CacheHandler, so `CacheManager.invalidate` never
     reaches it and `lastModified` is the *only* thing that expires a rendered
@@ -998,9 +998,12 @@ thing to drop.
     makes `saveWeblogEntry`'s `isPublished()` bump gate false — so the bump has
     to be explicit, or the cached home page keeps serving a post whose
     permalink now 404s.
-  Trashing and restoring also set `refreshAggregates`, or a trashed entry's
-  tags stay counted in the tag cloud until it is purged — which at the default
-  retention is never.
+  Trashing a published entry also sets `refreshAggregates`, or its tags stay
+  counted in the tag cloud until it is purged — which at the default
+  retention is never. **Restore deliberately does not** — `restoreWeblogEntry`
+  always lands on `DRAFT`, `trashWeblogEntry` already decremented the tag
+  counts on the way in, and `DRAFT` is not published, so re-incrementing on
+  restore would over-count a draft's tags in the cloud.
 - **`entry.trash.retention.days`** — runtime property, default **30**, `-1`
   keeps trash forever. Swept by `TrashPurgeTask` beside `ScheduledEntriesTask`.
   It is re-read per sweep, not latched in `init()` (CLAUDE.md's third

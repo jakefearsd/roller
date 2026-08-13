@@ -236,6 +236,24 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
     }
 
+    /**
+     * A forged {@code duplicateId} naming a trashed entry must not be usable
+     * to duplicate it back into a live draft -- that would resurrect the
+     * entry by a side door that bypasses restore entirely.
+     */
+    @Test
+    void aTrashedEntryIsRefusedTheSameWayAsAForeignOne() throws Exception {
+        WeblogEntry trashed = ownedEntry("entry-1", "Walking the Cinque Terre");
+        trashed.setStatus(WeblogEntry.PubStatus.TRASHED);
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        String view = controller.duplicate(request, "entry-1", redirect);
+
+        assertEquals("redirect:/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE, view);
+        assertEquals(List.of("weblogEntry.notFound"), flashErrors(redirect));
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
     @Test
     void duplicatingSavesADraftCopyAndOpensItInTheEditor() throws Exception {
         registerMessage("weblogEdit.duplicateTitle", "Copy of {0}");
@@ -320,6 +338,26 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         controller.bulkPublish(request, List.of("entry-1"), newRedirectAttributes());
 
         assertEquals(WeblogEntry.PubStatus.PENDING, entry.getStatus());
+    }
+
+    /**
+     * A trashed id slipped into a bulk selection must not be actionable --
+     * bulkPublish in particular would otherwise resurrect a trashed entry
+     * straight to PUBLISHED, bypassing restore entirely.
+     */
+    @Test
+    void bulkPublishRefusesATrashedEntry() throws Exception {
+        givenPostPermission();
+        WeblogEntry trashed = ownedDraft("entry-1");
+        trashed.setStatus(WeblogEntry.PubStatus.TRASHED);
+
+        RedirectAttributes redirect = newRedirectAttributes();
+        controller.bulkPublish(request, List.of("entry-1"), redirect);
+
+        assertEquals(WeblogEntry.PubStatus.TRASHED, trashed.getStatus(),
+                "a trashed entry must not be flipped to PUBLISHED by a bulk action");
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(trashed);
+        assertEquals(List.of("weblogEntryQuery.bulkFailed"), flashErrors(redirect));
     }
 
     @Test

@@ -53,7 +53,7 @@
                 <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${entry.trashedAt}"/>
             </c:if>
         </td>
-        <td>${entry.category.name}</td>
+        <td>${fn:escapeXml(entry.category.name)}</td>
         <td>
             <%-- The clicked submit button is the only one whose name/value is
                  sent, so restoreId identifies this row without a hidden field

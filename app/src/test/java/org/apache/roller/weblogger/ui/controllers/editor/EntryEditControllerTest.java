@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -250,7 +251,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         when(weblogger.getWeblogEntryManager().getWeblogEntry("gone")).thenReturn(null);
 
         assertEquals("redirect:/roller-ui/menu.rol",
-                controller.entryEditExecute(request, model, bean),
+                controller.entryEditExecute(request, model, bean, newRedirectAttributes()),
                 "A missing entry must not render the editor against a null entry");
     }
 
@@ -259,7 +260,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         bean.setId(null);
 
         assertEquals("redirect:/roller-ui/menu.rol",
-                controller.entryEditExecute(request, model, bean));
+                controller.entryEditExecute(request, model, bean, newRedirectAttributes()));
     }
 
     @Test
@@ -269,7 +270,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
                 .thenThrow(new WebloggerException("database down"));
 
         assertEquals("redirect:/roller-ui/menu.rol",
-                controller.entryEditExecute(request, model, bean),
+                controller.entryEditExecute(request, model, bean, newRedirectAttributes()),
                 "A lookup failure must be handled, not propagated as a 500");
     }
 
@@ -284,13 +285,29 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         other.setHandle("otherblog");
         foreign.setWebsite(other);
 
-        String view = controller.entryEditExecute(request, model, bean);
+        String view = controller.entryEditExecute(request, model, bean, newRedirectAttributes());
 
         assertEquals("redirect:/roller-ui/menu.rol", view,
                 "an entryId from another weblog must bounce, exactly like an unknown one");
         assertNull(model.getAttribute("entry"));
         assertFalse("Stored title".equals(bean.getTitle()),
                 "the foreign entry's content must not reach this weblog's form");
+    }
+
+    @Test
+    void openingATrashedEntryRedirectsToTheTrashScreenRatherThanTheEditor() throws Exception {
+        // A bookmarked editor URL can name an entry that has since been
+        // trashed. It must not render an editable form -- Save would
+        // resurrect the entry to DRAFT (or straight to PUBLISHED) by a side
+        // door that bypasses restore entirely, with trashedAt still
+        // populated on the row.
+        existingEntry(PubStatus.TRASHED);
+        RedirectAttributes redirect = newRedirectAttributes();
+
+        String view = controller.entryEditExecute(request, model, bean, redirect);
+
+        assertEquals("redirect:/roller-ui/authoring/trash.rol?weblog=" + WEBLOG_HANDLE, view);
+        assertEquals(List.of("entryEdit.entryIsTrashed"), flashErrors(redirect));
     }
 
     @Test
@@ -336,7 +353,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         foreign.setWeblog(other);
         when(weblogger.getMediaFileManager().getMediaFile("mf-foreign")).thenReturn(foreign);
 
-        controller.entryEditExecute(request, model, bean);
+        controller.entryEditExecute(request, model, bean, newRedirectAttributes());
 
         assertNull(model.getAttribute("featuredImageThumbnailUrl"),
                 "a foreign media file must not produce a preview URL");
@@ -347,7 +364,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         WeblogEntry existing = existingEntry(PubStatus.PUBLISHED);
         existing.setTitle("Stored title");
 
-        String view = controller.entryEditExecute(request, model, bean);
+        String view = controller.entryEditExecute(request, model, bean, newRedirectAttributes());
 
         assertEquals(".EntryEdit", view);
         assertEquals("Stored title", bean.getTitle());
@@ -749,7 +766,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         existing.setCanonicalUrl("https://example.com/stored");
         existing.setNoindex(Boolean.TRUE);
 
-        controller.entryEditExecute(request, model, bean);
+        controller.entryEditExecute(request, model, bean, newRedirectAttributes());
 
         assertEquals("Stored meta title", bean.getMetaTitle());
         assertEquals("Stored description", bean.getSearchDescription());
@@ -767,7 +784,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         givenMediaFile("mf-featured");
         givenMediaFile("mf-og");
 
-        controller.entryEditExecute(request, model, bean);
+        controller.entryEditExecute(request, model, bean, newRedirectAttributes());
 
         assertEquals("http://media/mf-featured?t=true",
                 model.getAttribute("featuredImageThumbnailUrl"));
@@ -785,7 +802,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         when(weblogger.getMediaFileManager().getMediaFile("mf-broken"))
                 .thenThrow(new WebloggerException("database down"));
 
-        String view = controller.entryEditExecute(request, model, bean);
+        String view = controller.entryEditExecute(request, model, bean, newRedirectAttributes());
 
         assertEquals(".EntryEdit", view);
         assertNull(model.getAttribute("featuredImageThumbnailUrl"));
@@ -796,7 +813,7 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
     void anEntryWithoutSeoImagesAsksTheMediaTierForNothing() throws Exception {
         existingEntry(PubStatus.PUBLISHED);
 
-        controller.entryEditExecute(request, model, bean);
+        controller.entryEditExecute(request, model, bean, newRedirectAttributes());
 
         verify(weblogger.getMediaFileManager(), never()).getMediaFile(any());
         assertNull(model.getAttribute("featuredImageThumbnailUrl"));

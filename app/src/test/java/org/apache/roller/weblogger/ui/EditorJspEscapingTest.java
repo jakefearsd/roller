@@ -88,14 +88,26 @@ class EditorJspEscapingTest {
             throw new RuntimeException(e);
         }
         for (String expr : AUTHOR_CONTROLLED) {
-            // A raw usage is ${expr} exactly; ${fn:escapeXml(expr)} (or any
-            // wrapper taking expr as an argument) does not match because the
-            // character before the expression is then '(' rather than '{'.
-            Matcher m = Pattern.compile("\\$\\{\\s*" + Pattern.quote(expr) + "\\s*\\}")
+            // The property being pinned is "this field must never render
+            // raw", not "this exact expression must never appear" -- a
+            // caller can reach the same author-controlled field through any
+            // access chain (${category.name}, ${entry.category.name},
+            // ${post.category.name}, ...), and every one of them is exactly
+            // as exploitable as the bare form. So a raw usage is any dotted
+            // access path ending in expr, optionally preceded by further
+            // "identifier." segments. ${fn:escapeXml(expr)} (or any wrapper
+            // taking expr as an argument) still does not match, because the
+            // character immediately after "${" is then "f" of "fn:..." --
+            // not an identifier-dot chain leading straight into expr -- so
+            // the whole prefix-plus-expr sequence never lines up against the
+            // closing "}".
+            Matcher m = Pattern.compile(
+                            "\\$\\{\\s*(?:[A-Za-z][A-Za-z0-9_]*\\.)*"
+                                    + Pattern.quote(expr) + "\\s*\\}")
                     .matcher(source);
             while (m.find()) {
                 int line = (int) source.chars().limit(m.start()).filter(c -> c == '\n').count() + 1;
-                violations.add(jsp.getFileName() + ":" + line + "  ${" + expr + "}");
+                violations.add(jsp.getFileName() + ":" + line + "  " + m.group().strip());
             }
         }
     }

@@ -36,6 +36,7 @@ import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogPage;
@@ -293,6 +294,36 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
             baseLog.error("Error looking up entry by id - " + id, ex);
         }
         return null;
+    }
+
+    /**
+     * The entry with this id, but refusing one that has been trashed -- the
+     * counterpart to {@code TrashController}'s own {@code trashedEntry} check,
+     * which refuses everything that is <em>not</em> trashed. This refuses
+     * everything that <em>is</em>.
+     *
+     * <p>{@link #lookupEntry} carries the ownership check but no status
+     * filter, so without this a bookmarked editor URL, a forged
+     * {@code duplicateId}, or a trashed id slipped into a bulk-action
+     * selection would resolve a trashed entry as if it were live. That
+     * matters because every one of those seams can end in a save: the
+     * editor's Publish button, the duplicate action's copy-and-open, and
+     * bulk actions like {@code bulkPublish} all end up calling
+     * {@code saveWeblogEntry}, which would resurrect the entry to
+     * {@code DRAFT} (or straight to {@code PUBLISHED}) by a side door that
+     * bypasses restore entirely -- and does so while {@code trashedAt} is
+     * still populated on the row.
+     *
+     * <p>An unknown id, a foreign id, and a trashed id are deliberately
+     * indistinguishable to the caller, the same way {@link #lookupEntry}
+     * already keeps an unknown id and a foreign one indistinguishable.
+     */
+    protected WeblogEntry lookupNonTrashedEntry(String id, HttpServletRequest request) {
+        WeblogEntry entry = lookupEntry(id, request);
+        if (entry == null || entry.getStatus() == PubStatus.TRASHED) {
+            return null;
+        }
+        return entry;
     }
 
     /**
