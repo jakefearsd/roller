@@ -160,7 +160,10 @@
             </c:if>
         </div>
 
-        <%-- Organize: category, tags, language --%>
+        <%-- Organize: category and tags are the visible controls. Locale
+             rides along as a hidden input -- there is no locale picker in
+             this rail -- so the entry's existing locale value round-trips
+             on save instead of silently reverting to a default. --%>
         <div class="editor-box">
             <p class="rail-group-label"><spring:message code="weblogEdit.organizeGroup"/></p>
 

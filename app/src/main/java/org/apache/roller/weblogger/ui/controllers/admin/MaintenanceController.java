@@ -57,6 +57,21 @@ import org.springframework.web.bind.annotation.RequestParam;
  * operate on is chosen explicitly from a {@code <select>} on the page and
  * resolved here by id, exactly as {@code GlobalConfig.jsp}'s front-page-weblog
  * picker does.
+ *
+ * <p>The three POST handlers' {@code weblogId} {@code @RequestParam}s are all
+ * {@code required = false}. {@code Maintenance.jsp}'s placeholder
+ * {@code <option>} is both {@code disabled} and (while nothing is chosen)
+ * {@code selected} -- per WHATWG HTML's form-entry-list construction, an
+ * option that is disabled contributes NO entry to the submitted form at all,
+ * selected or not. An admin who opens the page and clicks an action button
+ * without touching the dropdown therefore submits a POST with no
+ * {@code weblogId} parameter whatsoever, not an empty one. A required
+ * parameter would fail request binding with {@code
+ * MissingServletRequestParameterException} (HTTP 400, routed by {@code
+ * WebContainerConfig} to the generic 404 page) before any handler method
+ * ever ran; {@code required = false} lets a missing parameter reach {@code
+ * resolveWeblog(null)} and land on the same {@code
+ * maintenance.error.noSuchWeblog} page error as an explicit empty one.
  */
 @Controller
 @RequestMapping("/roller-ui/admin")
@@ -106,7 +121,7 @@ public class MaintenanceController extends BaseController {
 
     @PostMapping("/maintenance!flushCache.rol")
     public String flushCache(HttpServletRequest request, Model model,
-            @RequestParam("weblogId") String weblogId) {
+            @RequestParam(value = "weblogId", required = false) String weblogId) {
         populateCommonModel(request, model);
         model.addAttribute("weblogs", loadWeblogs());
 
@@ -133,7 +148,7 @@ public class MaintenanceController extends BaseController {
 
     @PostMapping("/maintenance!index.rol")
     public String index(HttpServletRequest request, Model model,
-            @RequestParam("weblogId") String weblogId) {
+            @RequestParam(value = "weblogId", required = false) String weblogId) {
         populateCommonModel(request, model);
         model.addAttribute("weblogs", loadWeblogs());
 
@@ -158,7 +173,7 @@ public class MaintenanceController extends BaseController {
 
     @PostMapping("/maintenance!regenerateRenditions.rol")
     public String regenerateRenditions(HttpServletRequest request, Model model,
-            @RequestParam("weblogId") String weblogId) {
+            @RequestParam(value = "weblogId", required = false) String weblogId) {
         populateCommonModel(request, model);
         model.addAttribute("weblogs", loadWeblogs());
 

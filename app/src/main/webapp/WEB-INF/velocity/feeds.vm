@@ -20,7 +20,6 @@
 
    Contents
       #showEntriesAtom10()
-      #showFilesAtom10()
 *#
 
 #macro(showEntriesAtom10 $entries)
@@ -48,26 +47,6 @@
 #if( $mc_url && $mc_length && $mc_type )
         <link rel="enclosure" type="$mc_type" length="$mc_length" href="$utils.escapeXML($mc_url)"/>
 #set($mc_url = false) #set($mc_type = false) #set($mc_length = false)#end
-    </entry>
-#end
-#end
-
-#macro(showFilesAtom10 $mediaFiles)
-#foreach($file in $mediaFiles)
-    <entry>
-        <id>$file.permalink</id>
-        <title type="html">$utils.escapeXML($file.name)</title>
-        <author><name>$utils.escapeXML($utils.removeHTML($file.creator.screenName))</name></author>
-        <link rel="alternate" type="text/html" href="$file.permalink"/>
-        <published>$utils.formatIso8601Date($file.dateUploaded)</published>
-        <updated>$utils.formatIso8601Date($file.lastUpdated)</updated> 
-#foreach($tag in $file.tags)
-        <category term="$utils.escapeXML($tag.name)" scheme="http://roller.apache.org/ns/tags/" />
-#end        
-#if( $utils.isNotEmpty($file.description))
-        <summary type="html">$utils.escapeXML($file.description)</summary>
-#end
-        <link rel="enclosure" type="$file.contentType" href="$utils.escapeXML($file.permalink)"/>
     </entry>
 #end
 #end

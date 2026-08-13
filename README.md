@@ -10,7 +10,7 @@
 
 ### Multi-User Blogging
 - Host unlimited weblogs on a single installation, each with its own URL, theme, and settings
-- Role-based permissions per weblog — invite members with `edit_draft`, `post`, or `admin` access (`WeblogPermission`)
+- Role-based permissions per weblog — grant an existing account `edit_draft`, `post`, or `admin` access (`WeblogPermission`)
 - Designate any weblog as the site-wide front page (`WebloggerRuntimeConfig.isFrontPageWeblog`)
 - Admin-managed user accounts: create, edit, disable, and assign global roles (`UserAdmin.jsp`)
 
@@ -31,7 +31,7 @@
 - Search across entries with category and locale filtering
 
 ### Feeds
-- RSS 2.0 and Atom 1.0 feeds for weblog entries and search results, hand-rendered by Velocity templates (`WEB-INF/velocity/templates/feeds/`)
+- Atom 1.0 feeds for weblog entries, hand-rendered by Velocity templates (`WEB-INF/velocity/templates/feeds/`)
 
 ### Security and Authentication
 - Database-backed authentication only; the enum kept for LDAP/OpenID/container-managed values now fails loudly at startup instead of silently degrading (`AuthMethod`)

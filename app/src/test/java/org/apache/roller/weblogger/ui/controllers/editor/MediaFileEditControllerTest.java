@@ -260,7 +260,6 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         mediaFile.setDescription("A photo");
         mediaFile.setCopyrightText("(c) me");
         mediaFile.setTagsAsString("holiday beach");
-        mediaFile.setSharedForGallery(Boolean.TRUE);
         mediaFile.setOriginalPath("/orig/photo.jpg");
         mediaFile.setLength(1234L);
 
@@ -274,7 +273,6 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         assertEquals("dir-1", copy.getDirectoryId());
         assertEquals("image/jpeg", copy.getContentType());
         assertEquals(1234L, copy.getLength());
-        assertTrue(copy.isSharedForGallery());
         assertTrue(copy.isIsImage(), "A jpeg must be recognised as an image for the gallery view");
 
         MediaFile target = new MediaFile();
@@ -284,7 +282,6 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         assertEquals("A photo", target.getDescription());
         assertEquals("(c) me", target.getCopyrightText());
         assertEquals("/orig/photo.jpg", target.getOriginalPath());
-        assertTrue(target.getSharedForGallery());
     }
 
     @Test

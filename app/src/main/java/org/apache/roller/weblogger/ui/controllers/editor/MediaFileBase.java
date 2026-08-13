@@ -133,27 +133,6 @@ public abstract class MediaFileBase extends BaseController {
     }
 
     /**
-     * Shares media file for public gallery.
-     */
-    protected void doIncludeMediaFileInGallery(String mediaFileId, HttpServletRequest request, Model model) {
-        try {
-            log.debug("Processing include-in-gallery of file id - " + mediaFileId);
-            MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
-            if (mediaFile == null) {
-                addError(model, "mediaFile.includeInGallery.error", mediaFileId, request);
-                return;
-            }
-            mediaFile.setSharedForGallery(true);
-            weblogger.getMediaFileManager().updateMediaFile(getActionWeblog(request), mediaFile);
-            weblogger.flush();
-            addMessage(model, "mediaFile.includeInGallery.success", request);
-        } catch (WebloggerException e) {
-            log.error("Error including media file in gallery", e);
-            addError(model, "mediaFile.includeInGallery.error", mediaFileId, request);
-        }
-    }
-
-    /**
      * Delete selected media files.
      */
     protected void doDeleteSelected(String[] selectedMediaFiles, HttpServletRequest request, Model model) {

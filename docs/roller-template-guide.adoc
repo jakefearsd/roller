@@ -1677,32 +1677,6 @@ Site object
 |Total number of weblogs in entire site
 |===
 
-For some SiteModel methods (e.g. hot-blogs, etc.) return
-a special type of object use to expressing a count with a short name, a
-long name and an internationalized type:
-
-*StatCount object*
-
-|===
-|Name |Type |Description
-
-|$stat.subjectNameLong
-|WeblogEntry
-|Long name of subject of statistic (e.g. name of a weblog)
-
-|$stat.subjectNameShort
-|String
-|Short name of subject of statistic (e.g. handle of a weblog)
-
-|$stat.count
-|Integer
-|Value of the statistic (i.e. number of hits)
-
-|$stat.typeKey
-|String
-|I18N key for type of the statistic
-|===
-
 ==== $site Methods
 
 * *Pager getWeblogEntriesPager(int sinceDays, int max)* Get pager that

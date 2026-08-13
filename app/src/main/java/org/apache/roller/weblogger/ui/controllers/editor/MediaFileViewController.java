@@ -189,19 +189,6 @@ public class MediaFileViewController extends MediaFileBase {
         return ".MediaFileView";
     }
 
-    @PostMapping("/mediaFileView!includeInGallery.rol")
-    public String includeInGallery(HttpServletRequest request, Model model,
-                                   @RequestParam(value = "directoryId", required = false) String directoryId,
-                                   @RequestParam(value = "mediaFileId", required = false) String mediaFileId,
-                                   @RequestParam(value = "sortBy", required = false) String sortBy) {
-        populateCommonModel(request, model);
-        doIncludeMediaFileInGallery(mediaFileId, request, model);
-        model.addAttribute("allDirectories", refreshAllDirectories(request));
-        loadDropdowns(request, model);
-        loadDirectory(request, model, directoryId, null, sortBy);
-        return ".MediaFileView";
-    }
-
     /**
      * Flips a directory's private flag. Private directories vanish from every
      * public surface (base media path, inline galleries, sitemap images) and

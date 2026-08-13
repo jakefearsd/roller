@@ -45,10 +45,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * org.apache.roller.weblogger.ui.EditorJspEscapingTest}: it reads the raw
  * JSP rather than rendering it (there is no lightweight JSP-rendering
  * harness in this codebase), so it proves the placeholder markup is present,
- * first, and correctly guarded -- not that a real browser submits an empty
- * value for it. That half (a disabled, initially-selected {@code <option
- * value="">} posts an empty value when left untouched) is well-established
- * HTML spec behaviour, not something this test re-derives.
+ * first, and correctly guarded -- not what a real browser actually submits
+ * for it. That other half matters and is NOT "posts weblogId=\"\"", despite
+ * what an earlier version of this comment claimed: per WHATWG HTML's
+ * form-entry-list construction, an {@code <option>} that is both {@code
+ * disabled} and selected contributes NO entry to the submitted form at all
+ * when the placeholder is left untouched -- not an empty one. That is why
+ * {@code MaintenanceController}'s three POST handlers declare their {@code
+ * weblogId} {@code @RequestParam} as {@code required = false}, and why
+ * {@link MaintenanceControllerRequestBindingTest} exists: a plain source
+ * scan of this JSP, or a controller test that calls the handler method
+ * directly with {@code ""}, cannot see a defect that only exists in how
+ * Spring MVC binds (or fails to bind) an ACTUAL missing request parameter.
  */
 class MaintenanceJspTest {
 

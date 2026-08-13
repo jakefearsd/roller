@@ -386,34 +386,6 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
                 "Expected a move error, got: " + errors(model));
     }
 
-    // --- gallery sharing ---
-
-    @Test
-    void includingAFileInTheGalleryFlagsItAndSavesIt() throws Exception {
-        // Sharing publishes the file into the site-wide gallery, so both the
-        // flag and the persist have to happen.
-        MediaFile file = mediaFile("file-1", "photo.jpg");
-        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(file);
-
-        controller.includeInGallery(request, model, "dir-1", "file-1", null);
-
-        assertTrue(file.getSharedForGallery());
-        verify(weblogger.getMediaFileManager()).updateMediaFile(weblog, file);
-        assertTrue(messages(model).contains("mediaFile.includeInGallery.success"),
-                "Expected a gallery confirmation, got: " + messages(model));
-    }
-
-    @Test
-    void aFailureSharingToTheGalleryIsReported() throws Exception {
-        when(weblogger.getMediaFileManager().getMediaFile("file-1"))
-                .thenThrow(new WebloggerException("no such file"));
-
-        controller.includeInGallery(request, model, "dir-1", "file-1", null);
-
-        assertTrue(errors(model).contains("mediaFile.includeInGallery.error"),
-                "Expected a gallery error, got: " + errors(model));
-    }
-
     // --- searching ---
 
     @Test
@@ -588,21 +560,6 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getMediaFileManager()).removeMediaFile(weblog, mine);
         verify(weblogger.getMediaFileManager(), org.mockito.Mockito.times(1))
                 .removeMediaFile(any(), any());
-    }
-
-    @Test
-    void aFileFromAnotherWeblogCannotBeSharedToTheGallery() throws Exception {
-        MediaFile foreign = foreignMediaFile("file-x", "theirs.jpg");
-        when(weblogger.getMediaFileManager().getMediaFile("file-x")).thenReturn(foreign);
-
-        controller.includeInGallery(request, model, "dir-1", "file-x", null);
-
-        org.junit.jupiter.api.Assertions.assertNotEquals(Boolean.TRUE,
-                foreign.getSharedForGallery(),
-                "a foreign file must not be published into this site's gallery");
-        verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
-        assertTrue(errors(model).contains("mediaFile.includeInGallery.error"),
-                "Expected the share to be refused, got: " + errors(model));
     }
 
     @Test

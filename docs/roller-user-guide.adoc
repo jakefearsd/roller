@@ -43,7 +43,7 @@ First, let’s get some terminology out of the way because there’s a lot
 of jargon in weblogging. Here’s a list of some of the terms we use in
 this manual without a whole lot of background.
 
-* *Weblog*: A set of web pages and RSS/Atom feeds that display weblog
+* *Weblog*: A set of web pages and Atom feeds that display weblog
 entries written by one or more authors, uploaded images and bookmarks.
 Weblog entries are displayed on the main page of the weblog and in the
 weblog’s feeds in reverse chronological order.
@@ -56,8 +56,7 @@ languages are possible via plugins (i.e. Groovy Server Pages, JRuby,
 etc.)
 * *Feed*. A feed is an XML representation of the most recent entries or
 other data. Folks can subscribe to your feed to be alerted of new
-weblog entries posted. Roller supports both RSS and Atom formats for
-feeds.
+weblog entries posted. Roller publishes feeds in the Atom format.
 * *Feed reader*. Software that makes it easy to subscribe to and read
 feeds, e.g. Google Reader, Net News Wire, Feed Demon, etc.
 * *Blog client*. Software that makes it easy to post to your weblog,
@@ -342,7 +341,7 @@ It’s a way to indicate that a post is a __special announcement __that
 should be pinned to the top of the front-page of a weblog site. The
 front-page theme respects this setting.
 * *Enclosure URL*: if you’d like to include a audio, video or image file
-as a p__odcast__ in your weblog’s RSS feed, then enter the URL of that
+as a p__odcast__ in your weblog’s Atom feed, then enter the URL of that
 file here.
 
 ==== Weblog editor SEO and social sharing settings
@@ -435,8 +434,7 @@ Each of these is covered in more detail later in this chapter.
 All of your weblog entries are saved in a database. Once your entries
 scroll off the front page or off the recent entries list of the weblog
 editor page, they are still available via next and previous links
-displayed on your weblog and via the weblog calendar that is included in
-most weblog themes.
+displayed on your weblog.
 
 You can also access your entries via the Edit Entries page, which allows
 you to search entries via keyword, category, tags, date and status.
@@ -779,15 +777,15 @@ provides you an option to create a new blog entry with that media file
 (podcast). If chosen, Roller will include the media file in the post
 content and in the Enclosure URL field in the Advanced Settings section
 of the Blog Edit Entry page. The Enclosure URL field is used just for
-your blog’s RSS and Atom feeds, it will include the podcast as a feed
-enclosure (http://en.wikipedia.org/wiki/RSS_enclosure) to make it easy
+your blog’s Atom feed, it will include the podcast as a feed
+enclosure (https://en.wikipedia.org/wiki/RSS_enclosure) to make it easy
 for podcast readers to fetch it.
 
 Alternatively, you can select an podcast from the Add Media File link
 referenced in the previous section, which will add its URL to the post
 content, and then copy that URL to the Enclosure URL field in the
-Advanced Settings section if you wish to add it to your blog’s RSS
-and/or Atom feeds.
+Advanced Settings section if you wish to add it to your blog’s Atom
+feed.
 
 === Maps, questions and booking buttons
 
@@ -945,8 +943,8 @@ is OK, you’ll see something like this:
 
 image::user-guide-podcast.png[]
 
-* Roller will add the podcast to your RSS newsfeed as an _<enclosure>_.
-You can check this by looking at your RSS newsfeed and any podcast
+* Roller will add the podcast to your Atom newsfeed as an _<enclosure>_.
+You can check this by looking at your Atom newsfeed and any podcast
 software that is subscribed to your feed will pick it up automatically.
 
 <enclosure url="http://example.com/roller/nina/resource/mycast.mp3"
@@ -1024,11 +1022,11 @@ Here is an explanation of each of the settings on the weblog
 image::user-guide-settings.png[]
 
 * *Title* - The title of your weblog may include HTML, but the HTML will
-be stripped out in your RSS feed. You can access your title in a page
+be stripped out in your Atom feed. You can access your title in a page
 template with the expression _#showWebsiteTitle()_
 
 * *Tagline* – Short description or sub title of your weblog. May include
-HTML, but the HTML will be stripped out in your RSS feed. You can access
+HTML, but the HTML will be stripped out in your Atom feed. You can access
 your tagline in a page template with the expression
 _#showWebsiteDescription()_.
 * *Icon* - The image file name (ex: thumbnail.jpg) or image url (ex:
@@ -1057,15 +1055,10 @@ entries to be displayed on your weblog.
 
 image::user-guide-internationalization.png[]
 
-* I publish my weblog in multiple languages: check this box if you blog
-in multiple languages and would like to specify a language locale for
-each of your weblog entries.
-* Show my weblog entries from all languages on my home page: check this
-box if you’d like your weblog’s main page to show your posts in all
-languages. If you don’t check it, then readers will only see weblog
-entries from your default locale.
-* Locale set the default locale for your weblog.
-* Timezone: the timezone to be used in your weblog.
+* *Locale* – sets the default locale for your weblog.
+* *Timezone* – the timezone to be used in your weblog. This is also what
+`Pub Time` on the entry editor is interpreted against when you set a
+publication time.
 
 ==== *Formatting*
 
@@ -1076,40 +1069,38 @@ enabled by default on a new weblog entry.
 
 ==== Web Analytics
 
-If you wish to use Web Analytics software tools such as Google Analytics
-(a fuller list of services is here:
-http://en.wikipedia.org/wiki/List_of_web_analytics_software) to track
-blog readers you can place your tracking code (usually a JavaScript
-snippet including the <script> element that contains it) in this field.
-Then, add the “#showAnalyticsTrackingCode($model.weblog)” macro to an
-appropriate area in your blog’s template (the HTML <head/> section is
-a good place) and this tracking code will be active for your blog.
-(Most if not all of the blog templates pre-packaged with Roller
-will already have this macro present; it will not output anything
-if no tracking code is provided.)
+Roller ships first-party analytics through
+https://umami.is[Umami], served from your own blog’s domain. There is no
+free-text tracking-code field to paste anything into – you connect your
+weblog to a website Umami already knows about with two settings:
 
-This option will be available only if it has been activated by the blog
-server administrator; alternatively, the tracking code can be directly
-placed within the blog template if your administrator has enabled
-template customization for blog owners. The blog server administrator
-may configure a blog server-level default tracking key that will hold
-for all blogs or alternatively just for blogs which haven’t overwritten
-this default key.
+* *Analytics website ID* – the Website ID Umami assigns your site (find
+it in Umami under *Settings → Websites → your site*). Leave this blank
+to turn analytics off for this weblog.
+* *Analytics share URL* – optional. Umami’s public share link for this
+site, shown as a convenience link on this settings page.
+
+Once a website ID is set, every bundled theme’s `<head>` automatically
+emits the tracking script for you – there is no macro to add to a
+template yourself.
 
 === Weblog maintenance operations
 
-The *Preferences -> Maintenance* page collects one-click maintenance
-operations for your weblog. You’ll rarely need them, but they are handy
+Maintenance operations moved out of the per-weblog Preferences tab and
+into *Global Admin → Maintenance*, since these are operator actions
+("the search index is corrupt", "the page cache is stale") rather than
+day-to-day authoring – you’ll need a Global Administrator account to
+reach the page. Choose the weblog to operate on from the dropdown first,
+then use the buttons below. You’ll rarely need them, but they are handy
 after upgrades or when something looks stale:
 
-* *Flush Cache* – clears your weblog’s page cache so that your next
-page view is rendered fresh.
+* *Flush Cache* – clears the chosen weblog’s page cache so that its
+next page view is rendered fresh.
 * *Rebuild Search Index* – schedules a rebuild of the search index for
-your weblog’s entries.
-* *Reset Hit Count* – resets your weblog’s hit counter to zero.
+the weblog’s entries.
 * *Regenerate Image Renditions* – regenerates the resized responsive
 versions (and WebP versions, if the server supports them) of every
-image uploaded to your weblog. Use this once after upgrading to a
+image uploaded to the weblog. Use this once after upgrading to a
 Roller version with the responsive image pipeline, so that images
 uploaded before the upgrade get resized versions too; new uploads get
 them automatically.
@@ -1118,66 +1109,42 @@ them automatically.
 
 To create a group blog, create a new weblog or log into an existing
 weblog that you’d like members to contribute to. Creating a weblog for
-group blogging is the same a creating a personal weblog (see section
-http://www.rollerweblogger.org/wiki/Wiki.jsp?page=UserGuide_2.x#ref-UserGuide_2.x-3[[3]]
-for instructions). Navigate to the *Members* menu item in the
-*Preferences* tab. The *Preferences:Members* page enables weblog admins
-to invite members to a group blog and manage the group blog user access.
+group blogging is the same as creating a personal weblog. Navigate to
+the *Members* menu item in the *Preferences* tab. The Members page
+enables weblog admins to add members to a group blog and manage the
+group blog’s user access. Roller grants you Admin rights automatically
+on any weblog you create.
 
 image::user-guide-21-member.png[]
 
-You can use the *Invite new member* link to invite any Roller user to
-join your weblog, but before you do you should understand the three
-different permission levels allowed for members of a weblog. They are:
+Before adding someone, it helps to understand the three permission
+levels allowed for members of a weblog. They are:
 
 * *Admin*: an admin can create/edit weblog entries and publish them to
 the web. They can also manage the weblog by changing the theme, editing
 the page templates that define the look of the blog, and managing the
-users of the blog. Roller will grant you admin rights in any weblog you
-create. Admin users can see both the Create & Edit tab and the
+users of the blog. Admins can see both the Create & Edit tab and the
 Preferences tab of Roller.
 * *Author*: author permission allows users to create entries, edit
 entries and upload files. But authors cannot change weblog settings,
 modify the theme or manage users. Authors can see the weblog Create &
 Edit tab, but not the weblog Preferences tab.
-
 * *Limited*: limited bloggers can create and edit blog entries and save
 them as drafts, but cannot publish them to the web.
 
-Select *Invite new member* from the right navigation to invite Admins,
-Authors, and Limited authors to join the group blog. You’ll need to know
-the users individual blog username to find them in the list of users.
-You may scroll through the list, but it’s best to begin typing their
-username to locate them. Set the users Permissions by selecting Admin,
-Author, or Limited. Click on *Send Invitation*. If Roller is not
-configured to talk to the mail server, you may get the following
-messages:
+Adding a member is immediate – there is no invitation, no notification
+email, and nothing for the other person to accept. Near the top of the
+Members page, type the username of an existing Roller account into the
+*Username* field, choose their permission (Admin, Author, or Limited)
+from the dropdown, and submit. They have access to the weblog as soon as
+you submit the form; the next time they log in, the weblog shows up in
+their Main Menu.
 
-User successfully invited.
-
-ERROR: Notification email(s) not sent, due to Roller configuration or
-mail server problem.
-
-As long as the first message is present, the invite is successful. The
-next time the user logs into the blog site, they will see the message
-show in the screenshot below asking them to accept or decline your
-invitation.
-
-Once a user is a member of your blog, you can change their permissions.
-Just click the appropriate radio button in the table and click the
-*Save* button. You can also remove users from the site, but note that
-you cannot reduce your own permissions or remove yourself from the
-weblog.
-
-*Accept or Decline a Group Blog Invitation*
-
-If you are invited to become a member of a group blog, an invitation
-will be present at the top of the Main Menu page. Example:
-
-image::user-guide-22-invite-member.png[]
-
-Click 'accept' to become a member of the group blog or 'decline' to turn
-down the invitation.
+Once someone is a member of your blog, you can change their permission
+or remove them from the table further down the same page: click the
+radio button for their new permission (or the remove option) in their
+row, then click *Save*. You cannot reduce your own permissions or remove
+yourself from the weblog – ask another admin to do that for you.
 
 *Contribute to a group blog*
 
@@ -1191,11 +1158,6 @@ For users who participate in multiple weblogs it is important to note
 that the Main Menu page is how you switch between the various weblogs
 you can author to. The Main Menu will always show you what weblogs you
 are participating in and what privileges you have on each weblog.
-
-*Resign from a Group Blog*
-
-To resign from a group blog, login, on the Main Menu page, navigate to
-the blog information for which you wish to resign. Select 'Resign'.
 
 == Roller administration
 
@@ -1257,18 +1219,18 @@ each section separately below.
 image::user-guide-26-site-setting.png[]
 
 * *Site name*: name of the site, to be included in site-wide newsfeeds
-(RSS and Atom) and on the default front page of the Roller.
+(Atom) and on the default front page of the Roller.
 * *Short name*: short name of the site, to be included as the link in
 the banner that appears at the top of every page in the Roller
 editor/admin UI.
 * *Site description*: description of site, to be included in site-wide
-newsfeeds (RSS and Atom) and on the default front page of the site.
+newsfeeds (Atom) and on the default front page of the site.
 * *Site Administrator’s emailConfiguring Roller Address*: admin’s email address, to be
-include in side-side newsfeeds (RSS and Atom)
+include in side-side newsfeeds (Atom)
 * *Handle of weblog to serve as frontpage blog*: specify the weblog that
 is to be displayed as the frontpage of this Roller site.
 * *Enable aggregated frontpage feeds*: Set this to true if you would
-like the frontpage weblog’s RSS and Atom feeds to be an aggregation of
+like the frontpage weblog’s Atom feed to be an aggregation of
 all weblogs on the Roller site.
 * *Absolute URL to this site*: to be used as basis for creating absolute
 URLs.
@@ -1285,11 +1247,11 @@ users and blogs, set the URL of that system here.
 image::user-guide-28-feed.png[]
 
 * *Default number of entries*: default number of entries to appear in
-each newsfeed (RSS and Atom).
+each newsfeed (Atom).
 * *Maximum number of entries*: maximum number of entries to be allowed
-in each newsfeed (RSS and Atom).
+in each newsfeed (Atom).
 * *Display styled newsfeeds for browsers*: Set to true to enable
-user-friendly RSS and Atom feed display, so that users don’t see raw XML
+user-friendly Atom feed display, so that users don’t see raw XML
 when they load the feed in their browsers.
 
 image::user-guide-29-fileupload.png[]

@@ -33,7 +33,6 @@ public class MediaFileBean {
     private String copyrightText;
     private String tagsAsString;
     private String directoryId;
-    private boolean isSharedForGallery;
     private String permalink;
     private String thumbnailURL;
     private boolean isImage;
@@ -84,14 +83,6 @@ public class MediaFileBean {
         this.directoryId = directoryId;
     }
 
-    public boolean isSharedForGallery() {
-        return isSharedForGallery;
-    }
-
-    public void setSharedForGallery(boolean isSharedForGallery) {
-        this.isSharedForGallery = isSharedForGallery;
-    }
-
     public String getId() {
         return id;
     }
@@ -110,7 +101,6 @@ public class MediaFileBean {
         dataHolder.setDescription(this.description);
         dataHolder.setCopyrightText(this.copyrightText);
         dataHolder.setTagsAsString(this.tagsAsString);
-        dataHolder.setSharedForGallery(this.isSharedForGallery);
         dataHolder.setOriginalPath(this.originalPath);
         // The focal point is both-or-neither: a lone coordinate cannot
         // position anything, so it degrades to "no focal point" rather than
@@ -139,7 +129,6 @@ public class MediaFileBean {
         this.setDescription(dataHolder.getDescription());
         this.setCopyrightText(dataHolder.getCopyrightText());
         this.setTagsAsString(dataHolder.getTagsAsString());
-        this.setSharedForGallery(dataHolder.getSharedForGallery());
         this.setDirectoryId(dataHolder.getDirectory().getId());
         this.setPermalink(dataHolder.getPermalink());
         this.setThumbnailURL(dataHolder.getThumbnailURL());

@@ -64,14 +64,6 @@
         </div>
     </div>
 
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <div class="form-check">
-                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''}/> <spring:message code="mediaFileAdd.includeGallery"/></label>
-            </div>
-        </div>
-    </div>
-
     <div class="card">
         <div class="card-header">
             <h4 class="card-title">

@@ -34,9 +34,19 @@
                  no error and no visual cue a choice was ever made. Disabled
                  so it can never be re-selected once a real weblog is picked;
                  selected only while selectedWeblog is null, so exactly one
-                 <option> ever carries "selected". Submitting it posts
-                 weblogId="", which resolveWeblog() below already turns into
-                 maintenance.error.noSuchWeblog. --%>
+                 <option> ever carries "selected".
+
+                 NOTE: per WHATWG HTML's form-entry-list construction, a
+                 <select>'s option contributes an entry only when it is
+                 selected AND NOT disabled. Left untouched, this placeholder
+                 is both -- so submitting the form this way sends NO
+                 "weblogId" parameter at all, not weblogId="". That is why
+                 the three POST handlers below declare their @RequestParam
+                 weblogId as required=false: a missing parameter has to reach
+                 resolveWeblog() as null and land on
+                 maintenance.error.noSuchWeblog exactly like an explicit
+                 empty one, rather than failing request binding with a 400
+                 before the controller ever runs. --%>
             <option value=""
                 <c:if test="${selectedWeblog == null}">selected="selected"</c:if>
                 disabled="disabled"><spring:message code="maintenance.select.placeholder"/></option>

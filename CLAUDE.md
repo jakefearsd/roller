@@ -497,7 +497,7 @@ Four classes carry the configuration matrix. The split is deliberate:
   their `postCommentDirectly`/`approveComment` helpers were deleted with the
   rest of the comment subsystem in W1, not replaced — there is nothing left
   in this class to cover them with.
-- `GlobalConfigMatrixIT` — **the only class that mutates site-wide state**:
+- `GlobalConfigMatrixIT` — three tests that mutate site-wide state:
   the feature-refusal switch (uploads/weblog-creation off, batched together),
   `groupblogging.enabled`'s own refusal (a user who already owns a weblog is
   refused a second one — isolated in its own test rather than batched with
@@ -507,14 +507,17 @@ Four classes carry the configuration matrix. The split is deliberate:
   `MembersController.grant()` now adds a first-time collaborator directly,
   no invitation or acceptance step, and has no `groupblogging.enabled` check
   of its own; only the menu entry is gated by it), and the entry-URL
-  word-separator setting. Kept to one
-  class on purpose: it is what would have to be serialised if the suite ever
-  runs classes in parallel, since everything else is per-weblog. It used to
+  word-separator setting. It used to
   carry three more tests covering the site-wide comment switches
   (off-at-the-servlet, moderation, HTML-escaping); those and the
   `postCommentDirectly` helper were deleted in W1 along with the comment
-  subsystem they exercised — the class still mutates global state, so the
-  serialisation rationale for keeping it to one class is unchanged.
+  subsystem they exercised — the class still mutates global state.
+  **Not actually the only class that does**, despite an earlier version of
+  this paragraph's claim: `ThemeIT` (`CUSTOM_THEMES_ALLOWED`, three tests)
+  and `ThemeMatrixIT` (`uploads.enabled`, one test) both call
+  `setGlobalFlag` too. Worth knowing for a future parallelisation decision —
+  `GlobalConfigMatrixIT` is not the one class that would need serialising,
+  it is one of at least three.
 - `ScheduledEntryIT` — a future-dated entry is withheld from pages, its Atom
   feed, and the sitemap.
 
@@ -646,9 +649,12 @@ excused whatever its type.
   properties rather than trusting every future caller to remember.
 - `roller-ui/scripts/ajax-user.js` is pulled in with `<%@ include %>` (a
   translation-time include), so JSP scriptlets inside it **are** interpolated —
-  it is not a static resource despite the `.js` extension. Shared by
-  `UserAdmin.jsp` and `MembersInvite.jsp`, which do not have the same element
-  ids, so anything touching one page's controls needs a null guard.
+  it is not a static resource despite the `.js` extension. `UserAdmin.jsp`'s
+  only includer now — `MembersInvite.jsp`, the other JSP this file used to be
+  shared with, was deleted along with the rest of the invite/accept ceremony
+  (`MembersController.grant()` above adds a first-time collaborator directly
+  instead); the file's own `// Used in: UserAdmin.jsp` comment already
+  reflects this.
 - Enabling/disabling an account is the Weblog-Settings-shaped hazard again: the
   checkbox persists whatever happens, so only an end-to-end check (disable, then
   try to sign in) proves it works. `UserAdminIT` does that.
@@ -727,7 +733,8 @@ in a local index file worth clearing, not a search-correctness bug.
   a copy control, and the untouched `EntryEditor.jsp` include. Everything
   about *managing* the entry — not writing it — lives in the rail: a Publish
   box (status pill, the one visible time field, the submit buttons), an
-  Organize box (category/tags/locale), an SEO drawer (the SEO & Social
+  Organize box (category/tags — locale is carried as a hidden input, not a
+  visible Organize control), an SEO drawer (the SEO & Social
   Sharing card, unchanged, just collapsed by default), and the
   newsletter/revisions cards as quiet boxes below. Delete is a quiet text
   link, not a red button. The `#entry` form is `display:contents` specifically

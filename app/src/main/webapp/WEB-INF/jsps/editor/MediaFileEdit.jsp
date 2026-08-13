@@ -135,12 +135,6 @@
         </div>
     </div>
 
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <label><input type="checkbox" name="bean.sharedForGallery" value="true" ${bean.sharedForGallery ? 'checked' : ''} tabindex="6"/> <spring:message code="mediaFileEdit.includeGalleryHelp"/></label>
-        </div>
-    </div>
-
     <!-- original path from base URL of ctx/resources/ -->
     <c:if test="${rc:getBooleanProp('mediafile.originalPathEdit.enabled')}">
         <div id="originalPathdiv" class="miscControl">
