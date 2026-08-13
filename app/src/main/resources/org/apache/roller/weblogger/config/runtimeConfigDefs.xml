@@ -87,10 +87,9 @@
            <type>boolean</type>
            <default-value>true</default-value>
        </property-def>
-       <!-- Both promoted from roller.properties. CreateWeblogController and
-            MembersInviteController read groupblogging.enabled per request;
-            UserWrapper reads user.hideUserNames per render. Defaults match
-            the startup file. -->
+       <!-- Both promoted from roller.properties. CreateWeblogController reads
+            groupblogging.enabled per request; UserWrapper reads
+            user.hideUserNames per render. Defaults match the startup file. -->
        <property-def name="groupblogging.enabled" key="configForm.groupBloggingEnabled">
            <type>boolean</type>
            <default-value>true</default-value>

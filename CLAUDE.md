@@ -402,12 +402,25 @@ Key domain entities:
   (or the radio) first to reveal the right one.
 - A theme switch reaches readers via `saveWeblog` bumping `lastModified`, not
   via `CacheManager.invalidate` — see Templates on `WeblogPageCache`.
+- **The Design tab is reachable by default; `themes.customtheme.allowed`
+  (default `false`) gates only two of its three items.** `editor-menu.xml`
+  used to gate the whole `tabbedmenu.design` group on the flag, which made
+  theme *selection* — safe and reversible — invisible on every default
+  install alongside theme *customisation* — one-way and rightly gated.
+  `themeEdit` (picking among the shared themes) is now ungated; only
+  `stylesheetEdit` and `templates` (which only matter once a weblog is
+  customised) still carry `enabledProperty="themes.customtheme.allowed"`.
+  `MainMenu.jsp`'s theme button is split the same way: the shared-theme link
+  is unconditional, the custom-theme link stays behind the flag.
 - **`themes.customtheme.allowed` is enforced in `ThemeEditController`, not just
-  in the menu.** `editor-menu.xml` gates the Design tab on it and that used to
-  be the *only* check, so a POST to `themeEdit!save.rol` converted the weblog
-  whatever the setting said — a one-way conversion behind a hidden menu entry.
-  A weblog already on a custom theme is grandfathered (turning the option off
-  stops new customisations; it must not strand a weblog that has no way back).
+  in the menu.** A hidden menu entry stops nobody who posts to
+  `themeEdit!save.rol` directly, so a POST there whatever the setting said
+  used to convert the weblog regardless — a one-way conversion behind a
+  hidden menu entry. `ThemeEditController.save`'s shared-theme branch has
+  never called this check at all (shared-theme selection was never gated
+  server-side); only the `WeblogTheme.CUSTOM` branch does. A weblog already
+  on a custom theme is grandfathered (turning the option off stops new
+  customisations; it must not strand a weblog that has no way back).
 - `travel` and `portfolio` each ship a `_page` template
   (`themes/<id>/page.vm`) — a `WeblogPage` falls back to it through the same
   `StaticThemeTemplate` path as any other unthemed content, so a static page
@@ -485,25 +498,36 @@ Four classes carry the configuration matrix. The split is deliberate:
   rest of the comment subsystem in W1, not replaced — there is nothing left
   in this class to cover them with.
 - `GlobalConfigMatrixIT` — **the only class that mutates site-wide state**:
-  the feature-refusal switch (uploads/weblog-creation/group-blogging off) and
-  the entry-URL word-separator setting. Kept to one on purpose: it is what
-  would have to be serialised if the suite ever runs classes in parallel,
-  since everything else is per-weblog. It used to carry three more tests
-  covering the site-wide comment switches (off-at-the-servlet, moderation,
-  HTML-escaping); those and the `postCommentDirectly` helper were deleted in
-  W1 along with the comment subsystem they exercised, leaving the two tests
-  above — the class still mutates global state, so the serialisation
-  rationale for keeping it to one class is unchanged.
-- `ScheduledEntryIT` — a future-dated entry is withheld from pages, feeds and
-  the sitemap.
+  the feature-refusal switch (uploads/weblog-creation off, batched together),
+  `groupblogging.enabled`'s own refusal (a user who already owns a weblog is
+  refused a second one — isolated in its own test rather than batched with
+  the other two, so the assertion cannot pass for the wrong reason; it used
+  to be batched with the other two and asserted against `invite.rol`, which
+  W2 deleted along with the rest of the invite/accept ceremony —
+  `MembersController.grant()` now adds a first-time collaborator directly,
+  no invitation or acceptance step, and has no `groupblogging.enabled` check
+  of its own; only the menu entry is gated by it), and the entry-URL
+  word-separator setting. Kept to one
+  class on purpose: it is what would have to be serialised if the suite ever
+  runs classes in parallel, since everything else is per-weblog. It used to
+  carry three more tests covering the site-wide comment switches
+  (off-at-the-servlet, moderation, HTML-escaping); those and the
+  `postCommentDirectly` helper were deleted in W1 along with the comment
+  subsystem they exercised — the class still mutates global state, so the
+  serialisation rationale for keeping it to one class is unchanged.
+- `ScheduledEntryIT` — a future-dated entry is withheld from pages, its Atom
+  feed, and the sitemap.
 
-Two settings have **no reachable browser coverage**, both documented in place
+One setting has **no reachable browser coverage**, documented in place
 rather than silently skipped:
-- per-weblog `analyticsCode` — its textarea renders only when
-  `weblogAdminsUntrusted` is off, and this fork keeps it on.
 - `user.hideUserNames` — every bundled theme and feed uses
   `$entry.creator.screenName`, never `.userName`, so the flag changes nothing
   in shipped output.
+
+(Per-weblog `analyticsCode` used to be here too, uncoverable because its
+textarea only rendered with `weblogAdminsUntrusted` off, which this fork
+never does. W2 deleted the field, its form, and its column outright — see
+Analytics below — so there is nothing left to be uncovered.)
 
 `ScheduledEntriesTask` promoting a scheduled entry is also uncovered: an entry
 is only `SCHEDULED` when its pubtime is >1 minute out, and the task cadence is
@@ -548,14 +572,25 @@ excused whatever its type.
   into the rendered page, silently, with no failing test to catch it. This W1
   comment-removal wave shipped two such bugs before they were caught by hand
   (`journal/_day.vm`'s `$entry.commentCount`, and `feeds.vm`'s
-  `<comments>$url.comments(...)</comments>` in every RSS feed). The mitigation
-  is manual and has to stay manual: any change that deletes a Java member
+  `<comments>$url.comments(...)</comments>`, back when RSS feeds still
+  existed — the RSS format itself, and the search feed, are gone now (W2);
+  every weblog and site feed is Atom only). The mitigation is manual and has
+  to stay manual: any change that deletes a Java member
   reachable from a template must `grep` `app/src/main/webapp/themes` and
   `app/src/main/webapp/WEB-INF/velocity` for it before calling the change
   done. This is not comment-specific — it applies to every future deletion
   that touches a pojo, wrapper, or model class a `.vm` file can reach.
 
 ## Admin UI
+- **Maintenance is a Global Admin screen, not a per-weblog one.**
+  `MaintenanceController`/`Maintenance.jsp` live under
+  `ui/controllers/admin`/`jsps/admin`, served at
+  `/roller-ui/admin/maintenance.rol`, and are listed in `admin-menu.xml`
+  (`globalPerms="admin"`) alongside Global Config and User Admin — not in
+  `editor-menu.xml`. The three actions (flush cache, rebuild search index,
+  regenerate media renditions) are still per-weblog, so the page carries an
+  explicit weblog `<select>` (the operator picks a weblog; the old editor
+  version got its weblog from the per-weblog action context for free).
 - **Design system**: `docs/design/design-system.md` is the committed spec
   ("Quiet Instrument" — tokens, type, spacing, and the three "signature
   moves": the rail spine, empty-states-as-invitations, the button
@@ -632,8 +667,15 @@ excused whatever its type.
   the server binds and cannot drift unnoticed.
 - **Add and edit are different endpoints** (`categoryAdd!save.rol` /
   `categoryEdit!save.rol`); the shared modal picks by whether `bean.id` is set.
-- A weblog's blogger category **can be null** — `removeWeblogCategory` nulls it
-  when that category is deleted. Anything reading it must cope.
+- The Blogger XML-RPC API (and `weblog.bloggercatid`, its default posting
+  category) is gone (W2) — dropped in `V023__drop_w2_fossils.sql`. It used to
+  be a raw id with no cascade, so deleting the category it pointed at left a
+  weblog's settings unsaveable ("Error updating configuration", forever, with
+  no way back through the UI); `removeWeblogCategory` no longer has anything
+  like that to null out. `CategoryIT.deletingACategoryLeavesTheWeblogSaveable`
+  keeps covering the general shape (delete a category, confirm the settings
+  page still saves) even though the specific bug it used to guard cannot
+  happen anymore.
 
 ## Comments
 The comment subsystem — servlet, manager, moderation screens, pojos, schema,
@@ -902,23 +944,22 @@ Per-weblog Umami tracking plus a read-only Grafana contract over two
 databases (Stage 2 Wave C). Umami owns traffic; Roller owns first-party
 outcomes; nothing is emitted that an admin typed.
 
-- **Structured injection vs `weblogAdminsUntrusted`, and why.** `Weblog
-  .analyticsSiteId` is a validated UUID (`WeblogConfigController.myValidate`
-  rejects anything else), not markup. `#showAnalyticsTrackingCode`
-  (`weblog.vm`) checks it first and, when present, **builds** the
+- **Structured injection is the only analytics path; there is no free-text
+  fallback (W2).** `Weblog.analyticsSiteId` is a validated UUID
+  (`WeblogConfigController.myValidate` rejects anything else), not markup.
+  `#showAnalyticsTrackingCode` (`weblog.vm`) **builds** the
   `<script defer src="…" data-website-id="…" data-host-url="…">` tag itself
   from that UUID plus two startup properties
   (`ConfigModel.getAnalyticsBasePath()`/`getAnalyticsScriptName()`, backed by
   `analytics.umami.basePath`/`analytics.umami.scriptName` in
-  `roller.properties`) — no admin-typed text ever reaches the page head.
-  That is what lets per-weblog analytics exist at all in this fork: the
-  legacy free-text `analyticsCode` textarea it sits beside only renders when
-  *Allow analytics code override* is on **and** `weblogAdminsUntrusted` is
-  off, and this fork keeps `weblogAdminsUntrusted` on everywhere (see
-  Permutation coverage above) — that textarea has never actually been
-  reachable, and the structured field is what a weblog owner uses instead.
-  The legacy branches remain in the macro (config-default fallback included)
-  but are dead weight for any weblog on this fork's default settings.
+  `roller.properties`) — no admin-typed text ever reaches the page head. The
+  legacy free-text `analyticsCode` textarea this used to sit beside — gated
+  on *Allow analytics code override* **and** `weblogAdminsUntrusted` being
+  off, and never actually reachable since this fork keeps
+  `weblogAdminsUntrusted` on everywhere — is gone end to end: the field, its
+  `Weblog`/`WeblogConfigBean` plumbing, the JSP textarea, the
+  `ConfigModel`/macro legacy branches, and the `weblog.analyticscode` column
+  itself (dropped in `V023__drop_w2_fossils.sql`).
 - **Same-origin, so the pinned CSPs never moved.** The tracker is served
   from the blog's own origin through Caddy's `/analytics/*` handle
   (`docker_deployment.md`), which is why it runs under every bundled theme's

@@ -99,7 +99,8 @@ docker compose up -d   # starts PostgreSQL only, for local dev
 ./roller dev            # applies migrations, runs the app
 ```
 
-Pre-built images are published to GHCR on every push to master. For a real
+Pre-built images are published to GHCR only when a `v*.*.*` tag is pushed —
+pushing to master publishes nothing. For a real
 deployment — the app itself containerized behind TLS, with automated backups
 and one-command upgrades — see the production stack
 (`docker-compose.prod.yml`, `deploy/deploy.sh`) and its runbook,
@@ -145,7 +146,7 @@ Detailed guides are available in the [`docs/`](docs/) directory:
 
 ## Testing
 
-- ~2,200 JUnit tests run against a real PostgreSQL container (Testcontainers) —
+- ~2,985 JUnit tests run against a real PostgreSQL container (Testcontainers) —
   no mocked persistence layer. `mvn test` (needs Docker).
 - JaCoCo coverage floors are enforced at `verify` and only ever move up; see
   `CLAUDE.md` for the coverage-gate and diff-coverage commands.

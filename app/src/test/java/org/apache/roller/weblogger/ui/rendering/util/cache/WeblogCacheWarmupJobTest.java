@@ -55,7 +55,7 @@ public class WeblogCacheWarmupJobTest {
     @Test
     public void aJobWithNoWeblogsDoesNothing() {
         Map<String, Object> inputs = new HashMap<>();
-        inputs.put("feed-entries-rss", "true");
+        inputs.put("feed-entries-atom", "true");
         job.input(inputs);
 
         // no "weblogs" key at all: nothing to warm up, and nothing to throw over
@@ -70,11 +70,12 @@ public class WeblogCacheWarmupJobTest {
         inputs.put("weblogs", List.of("myblog"));
         job.input(inputs);
 
-        // neither feed-entries-rss nor feed-entries-atom was asked for, so
-        // nothing must be rendered for the weblog that was named
+        // feed-entries-atom was not asked for, so nothing must be rendered
+        // for the weblog that was named. (RSS feeds are gone -- W2 -- so
+        // "feed-entries-rss" is no longer a recognized input at all.)
         job.execute();
 
-        assertNull(WeblogFeedCache.getInstance().get("cache.weblogfeed:myblog/entries/rss", 0L),
+        assertNull(WeblogFeedCache.getInstance().get("cache.weblogfeed:myblog/entries/atom", 0L),
                 "Naming a weblog is not on its own an instruction to render anything");
     }
 
@@ -82,11 +83,10 @@ public class WeblogCacheWarmupJobTest {
     public void anEmptyWeblogListIsAcceptedForEveryFormat() {
         Map<String, Object> inputs = new HashMap<>();
         inputs.put("weblogs", List.of());
-        inputs.put("feed-entries-rss", "true");
         inputs.put("feed-entries-atom", "true");
         job.input(inputs);
 
-        // both formats requested, no weblogs to do them for
+        // atom requested, no weblogs to do it for
         job.execute();
 
         assertNull(job.output(), "This job reports nothing back to its scheduler");

@@ -142,8 +142,6 @@ public class FeedServlet extends HttpServlet {
             // browsers to load the page rather than popping up the download
             // dialog, so we provide a content-type that browsers will display
             response.setContentType("text/xml");
-        } else if ("rss".equals(feedRequest.getFormat())) {
-            response.setContentType("application/rss+xml; charset=utf-8");
         } else if ("atom".equals(feedRequest.getFormat())) {
             response.setContentType("application/atom+xml; charset=utf-8");
         }

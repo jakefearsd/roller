@@ -68,11 +68,6 @@ public class WeblogCacheWarmupJob implements Job {
                 return;
             }
             
-            // should we do rss entries feeds?
-            if("true".equals(inputs.get("feed-entries-rss"))) {
-                this.warmupFeedCache(weblogs, "entries", "rss");
-            }
-            
             // should we do atom entries feeds?
             if("true".equals(inputs.get("feed-entries-atom"))) {
                 this.warmupFeedCache(weblogs, "entries", "atom");

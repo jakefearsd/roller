@@ -25,11 +25,9 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
-import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
-import org.apache.roller.weblogger.ui.rendering.pagers.MediaFilesPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.Pager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesListPager;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
@@ -138,14 +136,6 @@ public class FeedModel implements Model {
     
     
     /**
-     * Gets most recently uploaded media files limited by: weblog specified
-     * in request and the weblog.entryDisplayCount.
-     */
-    public Pager<MediaFileWrapper> getMediaFilesPager() {
-        return new FeedFilesPager(feedRequest);
-    }    
-        
-    /**
      * Returns the list of tags specified in the request /?tags=foo+bar
      * @return
      */
@@ -206,26 +196,4 @@ public class FeedModel implements Model {
         }
     }
 
-    public class FeedFilesPager extends MediaFilesPager {
-        
-        private final WeblogFeedRequest feedRequest;
-        
-        public FeedFilesPager(WeblogFeedRequest feedRequest) {            
-            super(urlStrategy, urlStrategy.getWeblogFeedURL(feedRequest.getWeblog(), 
-                    feedRequest.getLocale(), feedRequest.getType(),
-                    feedRequest.getFormat(), null, null,
-                    null, false, true), feedRequest.getPage(), 10);
-            this.feedRequest = feedRequest;
-        }
-        
-        @Override
-        protected String createURL(String url, Map<String, String> params) {
-            return super.createURL(url, withFeedFilters(feedRequest, params));
-        }
-
-        @Override
-        public String getUrl() {
-            return createURL(super.getUrl(), new HashMap<>());
-        }
-    }
 }

@@ -52,12 +52,12 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO weblog (id, name, handle, tagline, creator,
                     emailaddress, editortheme,
                     locale, timezone, visible, isactive, datecreated,
-                    displaycnt, enablemultilang, showalllangs)
+                    displaycnt)
 VALUES ('it-weblog-0000-0000-0000-00000000001',
         'IT Weblog', 'it_weblog', 'Integration test weblog', 'it_admin',
         'it-admin@example.invalid', 'journal',
         'en_US', 'UTC', true, true, NOW(),
-        15, false, true)
+        15)
 ON CONFLICT (handle) DO NOTHING;
 
 -- Weblog ADMIN permission: the authoring routes check WeblogPermission, and
@@ -68,11 +68,11 @@ ON CONFLICT (handle) DO NOTHING;
 -- Seeding the uuid here makes the main menu throw
 -- "WebloggerException: Invalid handle".
 INSERT INTO roller_permission (id, username, actions, objectid, objecttype,
-                               pending, datecreated)
+                               datecreated)
 VALUES ('it-perm-0000-0000-0000-000000000001',
         'it_admin', 'admin,post,edit_draft',
         'it_weblog', 'Weblog',
-        false, NOW())
+        NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Entries require a category, and the weblog needs at least one for the

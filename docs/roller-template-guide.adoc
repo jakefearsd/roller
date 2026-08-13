@@ -146,7 +146,7 @@ First, let’s look at a simple Weblog template.
 
 Below is a simple Weblog page that displays all of the data that weblog
 typically contains including recent entries with paging to past entries,
-category link, feed links, a calendar and feed auto-discovery. Check the
+category link, feed links, and feed auto-discovery. Check the
 annotations for more detail.
 
 Listing 1: a typical Weblog template
@@ -178,20 +178,18 @@ Listing 1: a typical Weblog template
         #showWeblogEntriesPager($pager) #9
       </td>
       <td width="20%" valign="top">
-        <h2>Calendar</h2>
-        #showWeblogEntryCalendar($model.weblog "nil") #10
         <h2>Feeds</h2>
-        #showAtomFeedsList($model.weblog) #11
+        #showAtomFeedsList($model.weblog) #10
         <h2>Search</h2>
-        #showWeblogSearchForm($model.weblog false) #12
+        #showWeblogSearchForm($model.weblog false) #11
         <h2>Links</h2>
-        #set($defaultFolder = $model.weblog.getBookmarkFolder("/")) #13
+        #set($defaultFolder = $model.weblog.getBookmarkFolder("/")) #12
         #showBookmarkLinksList($defaultFolder)
         <h2>Navigation</h2>
-        #showPageMenu($model.weblog) #14
-        #showAuthorMenu(true) #15
+        #showPageMenu($model.weblog) #13
+        #showAuthorMenu(true) #14
         <h2>Referrers</h2>
-        #set($refs = $model.weblog.getTodaysReferrers()) #16
+        #set($refs = $model.weblog.getTodaysReferrers()) #15
         #showReferrersList($refs 30 20)
       </td>
     </tr>
@@ -209,7 +207,7 @@ Here’s the point-by-point breakdown.
 and the name of the page template that is currently being displayed.
 . *Auto-discovery links*
 The __#showAutodiscoveryLinks() __macro adds
-the HTML _<link>_ elements required for RSS and Atom feed auto-discovery.
+the HTML _<link>_ elements required for Atom feed auto-discovery.
 . *Include CSS styles* Here we use the include the theme’s *_css*
 template directly in the page, right inside a pair of _<style>_ tags.
 . *Display a page title* Here we use the weblog’s name again in an
@@ -223,7 +221,6 @@ search in progress
 . *Show entries* Show current page’s worth of entries (or search
 results). Calls on *_day* template to do the display of each day’s worth
 of entries.
-. *Show the calendar* Show the standard weblog calendar.
 . *Show feed links* Show links to all available Atom entry feeds, one
 per category.
 . *Search form* Show the weblog search form, false indicates no
@@ -458,14 +455,14 @@ displaying your blogroll.
 Calling a macro is a little different from calling a macro. A macro call
 starts with a # pound-sign, followed by the macro name and the macro
 parameters enclosed in parentheses. For example, you call the weblog
-calendar macro like so:
+search form macro like so:
 
-*#showWeblogEntryCalendar($model.weblog "nil")*
+*#showWeblogSearchForm($model.weblog false)*
 
-Argument one is the weblog for the calendar and argument two is the
-category, where "nil" indicates that no category is specified. Note
-that the arguments for a macro are separated by a space and NOT a comma
-as was the case for methods.
+Argument one is the weblog to search and argument two is whether to show
+a category chooser alongside the search box. Note that the arguments for
+a macro are separated by a space and NOT a comma as was the case for
+methods.
 
 === A word about pagers
 
@@ -529,17 +526,9 @@ you’ll need in your weblog.
 |===
 |Property Name |Type |Description
 
-|$config.analyticsOverrideAllowed
-|Boolean
-|True if individual bloggers are allowed to override the default tracking code (if any) provided by the blog administrator.
-
-|$config.defaultAnalyticsTrackin gCode
-|String
-|Default tracking code for web analytics software, if configured by the blog administrator (See Roller User’s Guide, Roller Administration chapter.)
-
 |$config.feedMaxSize
 |Integer
-|Maximum number of items displayed in RSS and Atom feeds.
+|Maximum number of items displayed in Atom feeds.
 
 |$config.feedStyle
 |Boolean
@@ -732,10 +721,6 @@ Every possible type of Roller URL is supported:
 |$url.feed.entries.atom
 |String
 |URL of entries feed (Atom).
-
-|$url.feed.entries.rss
-|String
-|URL of entries feed (RSS).
 
 |$url.home
 |String
@@ -1011,10 +996,6 @@ are hierarchical
 |$weblog.active
 |Boolean
 |True if weblog is considered active
-
-|$weblog.analyticsCode
-|String
-|Web analytics tracking code for the weblog. Will be null if not configured at the blog level, see $config.defaultAnalyticsTrackingCode for the global tracking code for blogs which do not have this value set. See Weblog Settings - Web Analytics section of Roller User’s Guide.
 
 |$weblog.creator
 |User
@@ -1514,56 +1495,6 @@ Generated HTML and CSS classes used
 
 === Misc. macros
 
-`#showWeblogEntryCalendar($weblog $category)`
-
-Arguments:
-
-*$weblog:* Weblog object
-
-*$category:* Category restriction (or `nil' for no restriction)
-
-Synopsis:
-
-Show weblog entry calendar, optionally restricted by category name
-("nil" for no category)
-
-Generated HTML and CSS classes used
-
-A weblog entry calendar is displayed as a table with different CSS
-classes for <td>, <th>, <div> and links elements within, as illustrated
-below.
-
-----
-<table class="hCalendarTable" ...>
-  <tr>
-    <td colspan="7" class="hCalendarMonthYearRow">
-      <a href="..." class="hCalendarNavBar">&laquo; ...prev month...</a> |
-      <a href="..." class="hCalendarNavBar">&raquo; ...next month...</a></td>
-  </tr>
-  <tr>
-    <th class="hCalendarDayNameRow" align="center">Sun</th>
-    ...days of week...
-    <th class="hCalendarDayNameRow" align="center">Sat</th>
-  </tr>
-  <tr>
-    <td class="hCalendarDayNotInMonth">&nbsp;</td>
-    ...days of week...
-    <td class="hCalendarDay">
-      <div class="hCalendarDayTitle">1</div>
-    </td>
-    <td class="hCalendarDayLinked">
-      <div class="hCalendarDayTitle">
-        <a href="...">2</a>
-      </div>
-    </td>
-  </tr>
-  <tr class="hCalendarNextPrev">
-    <td colspan="7" align="center">
-      <a href="..." class="hCalendarNavBar">Today</a></td>
-  </tr>
-</table>
-----
-
 `#includeTemplate($weblog $pageName)`
 
 Arguments:
@@ -1584,7 +1515,7 @@ Arguments:
 
 Synopsis:
 
-Show the RSS and Atom auto-discovery links suitable for use within
+Show the Atom auto-discovery links suitable for use within
 an HTML <head> element.
 
 Generated HTML and CSS classes used
@@ -1619,13 +1550,11 @@ Arguments:
 
 Synopsis:
 
-Adds either the blog-specific or blog server-level web analytics
-tracking code provided by such services as Google Analytics. The
-server-level default tracking code is used unless a blog-specific one
-has been configured. See the Roller User’s Guide - Weblog Settings and
-Roller Administration sections for information on where to configure the
-tracking codes within Roller. This tag is normally placed within the
-HTML header section.
+Adds the Umami analytics tracking script for this weblog, built from its
+validated analytics site id (configured on Weblog Settings). Emits
+nothing when the weblog has no analytics site id configured — there is
+no server-level default to fall back to. This tag is normally placed
+within the HTML header section.
 
 Generated HTML and CSS classes used
 
@@ -1665,26 +1594,6 @@ for list and list-items.
 ----
 <ul class="rFeeds">
   <li> <a href="..."> ...feed name...</a> </li>
-</ul>
-----
-
-`#showRSSFeedsList($weblog)`
-
-$weblog: Weblog object
-
-Synopsis:
-
-Displays a list of links to a weblog’s RSS newsfeeds. One for entries
-and one for entries in each category that is defined in your weblog.
-
-Generated HTML and CSS classes used
-
-The feed list is displayed as a simple HTML list with separate styles
-for list and list-items.
-
-----
-<ul class="rFeeds">
-  <li><a href="..."> ...feed name... </a></li>
 </ul>
 ----
 
@@ -1835,6 +1744,3 @@ associated with a specified weblog.
 objects, i.e. only those created in last sinceDays number of days.
 * *List getNewUsers(int sinceDays, int max)* Get newest User objects,
 i.e. only those created in last sinceDays number of days.
-* *List getHotWeblogs(int sinceDays, int max)* Get recent hot Weblogs in
-the form of StatCount objects, but only those updated in last sinceDays
-number of days.

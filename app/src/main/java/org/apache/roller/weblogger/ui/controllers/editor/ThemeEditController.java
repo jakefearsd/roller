@@ -187,12 +187,16 @@ public class ThemeEditController extends BaseController {
     /**
      * Whether this weblog may adopt a custom theme.
      *
-     * <p>{@code themes.customtheme.allowed} gates the Design tab in
-     * {@code editor-menu.xml} and the customise link on the main menu, but a
-     * hidden menu entry stops nobody who posts to {@code themeEdit!save.rol}
-     * directly. The switch imports the shared theme's templates and is
-     * one-way, so an installation that has turned the option off needs the
-     * refusal enforced here, not merely rendered.
+     * <p>{@code themes.customtheme.allowed} gates two of the Design tab's
+     * three items in {@code editor-menu.xml} -- {@code stylesheetEdit} and
+     * {@code templates}, which only matter once a weblog is customised --
+     * and the customise link on the main menu; {@code themeEdit} itself
+     * (picking among the shared themes) stays unconditionally reachable,
+     * since that part is safe and reversible. But a hidden menu entry stops
+     * nobody who posts to {@code themeEdit!save.rol} directly. The switch
+     * imports the shared theme's templates and is one-way, so an
+     * installation that has turned the option off needs the refusal
+     * enforced here, not merely rendered.
      *
      * <p>A weblog that is <em>already</em> custom stays editable whatever the
      * setting says. Turning the option off is meant to stop new

@@ -340,6 +340,24 @@ class MembersControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void grantingWithABlankPermissionStringIsAFieldErrorNotAnException() throws Exception {
+        // A hand-crafted POST omitting permissionString used to NPE inside
+        // Utilities.stringToStringList(null, ","); that was caught further
+        // down and surfaced as a field error, but logged a full stack trace
+        // at ERROR for what is really just malformed input. This pins the
+        // clean-validation replacement: a field error, no lookup, no grant,
+        // and (implicitly) no exception thrown out of the controller.
+        User bob = otherUser("bob");
+
+        String view = controller.grant(request, model, "bob", null);
+
+        assertEquals(".Members", view);
+        assertTrue(errors(model).contains("memberPermissions.saveError"),
+                "Expected a field error for the missing permission: " + errors(model));
+        verify(weblogger.getUserManager(), never()).grantWeblogPermission(any(), any(), any());
+    }
+
+    @Test
     void grantingToAnAlreadyPresentMemberUpdatesRatherThanDuplicates() throws Exception {
         // grantWeblogPermission itself merges into an existing row when one is
         // found (JPAUserManagerImpl) -- this pins that MembersController relies

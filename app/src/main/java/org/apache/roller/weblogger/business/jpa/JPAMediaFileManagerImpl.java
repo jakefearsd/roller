@@ -601,27 +601,6 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
      * {@inheritDoc}
      */
     @Override
-    public List<MediaFile> fetchRecentPublicMediaFiles(int length)
-            throws WebloggerException {
-
-        // The directory's privacy flag outranks the file's gallery flag. This
-        // feed renders name, description, tags, uploader and permalink, so a
-        // private-directory file reaching it leaks metadata even though the
-        // bytes stay behind the MediaResourceServlet gate. The two flags can
-        // be set in either order -- a folder can be privatised long after its
-        // files were shared -- so the exclusion has to live in the query.
-        String queryString = "SELECT m FROM MediaFile m WHERE m.sharedForGallery = true"
-                + " AND m.directory.private = false order by m.dateUploaded";
-        TypedQuery<MediaFile> query = strategy.getDynamicQuery(queryString, MediaFile.class);
-        query.setFirstResult(0);
-        query.setMaxResults(length);
-        return query.getResultList();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public List<MediaFile> searchMediaFiles(Weblog weblog,
             MediaFileFilter filter) throws WebloggerException {
 

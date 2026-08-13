@@ -41,8 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * It is also the one where a mistake is silent in both directions: an entry
  * that leaks early is published without its author meaning it, and one that
  * never leaks at all simply never appears. This covers the first — everywhere a
- * scheduled entry could escape to: the weblog's own pages, both feeds, and the
- * sitemap a crawler is pointed at.
+ * scheduled entry could escape to: the weblog's own pages, its Atom feed, and
+ * the sitemap a crawler is pointed at.
  *
  * <p><b>What this deliberately does not cover</b> is the other half: the
  * {@code ScheduledEntriesTask} later promoting the entry to
@@ -89,14 +89,13 @@ class ScheduledEntryIT extends RollerIT {
         assertFalse(home.contains(scheduled),
                 "a scheduled entry must not be on the front page, got: " + snippet(home));
 
-        for (String flavor : new String[]{"rss", "atom"}) {
-            String feed = getAnonymously(baseUrl() + "/" + handle + "/feed/entries/" + flavor);
-            assertTrue(feed.contains(live),
-                    flavor + " must carry the published entry, got: " + snippet(feed));
-            assertFalse(feed.contains(scheduled),
-                    "a scheduled entry must not be syndicated in " + flavor + ", got: "
-                            + snippet(feed));
-        }
+        // RSS is gone (W2, Atom only) -- this used to loop rss/atom; only
+        // the observation channel changed, not the invariant being proved.
+        String feed = getAnonymously(baseUrl() + "/" + handle + "/feed/entries/atom");
+        assertTrue(feed.contains(live),
+                "atom must carry the published entry, got: " + snippet(feed));
+        assertFalse(feed.contains(scheduled),
+                "a scheduled entry must not be syndicated in atom, got: " + snippet(feed));
 
         // The sitemap is where a scheduled entry leaking is worst: a crawler
         // told about a URL fetches it, and keeps the result.

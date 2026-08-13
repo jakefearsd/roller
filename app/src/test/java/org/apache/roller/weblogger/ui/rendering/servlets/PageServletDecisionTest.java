@@ -34,7 +34,6 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockHttpServletRequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -63,7 +62,6 @@ import static org.mockito.Mockito.when;
 class PageServletDecisionTest {
 
     private MockWeblogger weblogger;
-    private MockHttpServletRequest request;
     private Weblog weblog;
     private WeblogTheme theme;
     private WeblogPageRequest pageRequest;
@@ -71,7 +69,6 @@ class PageServletDecisionTest {
     @BeforeEach
     void setUp() throws Exception {
         weblogger = MockWeblogger.install();
-        request = new MockHttpServletRequest();
 
         weblog = new Weblog();
         weblog.setHandle("decisionblog");
@@ -102,7 +99,7 @@ class PageServletDecisionTest {
         when(pageRequest.getPageSlug()).thenReturn("no-such-page");
         when(pageRequest.getWeblogPageContent()).thenReturn(null);
 
-        assertNull(PageServlet.selectTemplate(request, pageRequest, weblog));
+        assertNull(PageServlet.selectTemplate(pageRequest, weblog));
     }
 
     /**
@@ -116,7 +113,7 @@ class PageServletDecisionTest {
         ThemeTemplate override = mock(ThemeTemplate.class);
         when(theme.getTemplateByName("_page")).thenReturn(override);
 
-        assertEquals(override, PageServlet.selectTemplate(request, pageRequest, weblog));
+        assertEquals(override, PageServlet.selectTemplate(pageRequest, weblog));
     }
 
     /**
@@ -133,7 +130,7 @@ class PageServletDecisionTest {
         when(theme.getTemplateByName("_page")).thenReturn(null);
 
         assertInstanceOf(StaticThemeTemplate.class,
-                PageServlet.selectTemplate(request, pageRequest, weblog));
+                PageServlet.selectTemplate(pageRequest, weblog));
     }
 
     @Test
@@ -144,7 +141,7 @@ class PageServletDecisionTest {
         when(theme.getTemplateByName("_page")).thenThrow(new WebloggerException("theme is broken"));
 
         assertInstanceOf(StaticThemeTemplate.class,
-                PageServlet.selectTemplate(request, pageRequest, weblog),
+                PageServlet.selectTemplate(pageRequest, weblog),
                 "a broken theme lookup must fall back, not propagate a 500");
     }
 
@@ -160,7 +157,7 @@ class PageServletDecisionTest {
         ThemeTemplate defaultTemplate = mock(ThemeTemplate.class);
         when(theme.getDefaultTemplate()).thenReturn(defaultTemplate);
 
-        assertNull(PageServlet.selectTemplate(request, pageRequest, weblog),
+        assertNull(PageServlet.selectTemplate(pageRequest, weblog),
                 "a named page is answered by that page or by nothing");
     }
 
@@ -170,7 +167,7 @@ class PageServletDecisionTest {
         when(pageRequest.getContext()).thenReturn("page");
         when(pageRequest.getWeblogPage()).thenReturn(named);
 
-        assertEquals(named, PageServlet.selectTemplate(request, pageRequest, weblog));
+        assertEquals(named, PageServlet.selectTemplate(pageRequest, weblog));
     }
 
     @Test
@@ -180,7 +177,7 @@ class PageServletDecisionTest {
         when(theme.getTemplateByAction(ComponentType.TAGSINDEX)).thenReturn(null);
         when(theme.getDefaultTemplate()).thenReturn(mock(ThemeTemplate.class));
 
-        assertNull(PageServlet.selectTemplate(request, pageRequest, weblog),
+        assertNull(PageServlet.selectTemplate(pageRequest, weblog),
                 "a tags index has no default to fall back to either");
     }
 
@@ -197,7 +194,7 @@ class PageServletDecisionTest {
         when(theme.getDefaultTemplate()).thenReturn(defaultTemplate);
 
         assertEquals(defaultTemplate,
-                PageServlet.selectTemplate(request, pageRequest, weblog));
+                PageServlet.selectTemplate(pageRequest, weblog));
     }
 
     @Test
@@ -206,7 +203,7 @@ class PageServletDecisionTest {
         when(pageRequest.getWeblogAnchor()).thenReturn("some-post");
         when(theme.getTemplateByAction(ComponentType.PERMALINK)).thenReturn(permalink);
 
-        assertEquals(permalink, PageServlet.selectTemplate(request, pageRequest, weblog));
+        assertEquals(permalink, PageServlet.selectTemplate(pageRequest, weblog));
     }
 
     @Test
@@ -215,7 +212,7 @@ class PageServletDecisionTest {
         when(theme.getDefaultTemplate()).thenReturn(defaultTemplate);
 
         assertEquals(defaultTemplate,
-                PageServlet.selectTemplate(request, pageRequest, weblog));
+                PageServlet.selectTemplate(pageRequest, weblog));
     }
 
     /**
@@ -226,7 +223,7 @@ class PageServletDecisionTest {
     void aThemeThatFailsToLoadYieldsNoTemplateRatherThanAnError() throws Exception {
         when(theme.getDefaultTemplate()).thenThrow(new WebloggerException("theme is broken"));
 
-        assertNull(PageServlet.selectTemplate(request, pageRequest, weblog));
+        assertNull(PageServlet.selectTemplate(pageRequest, weblog));
     }
 
     // --------------------------------------------------------------- rejection

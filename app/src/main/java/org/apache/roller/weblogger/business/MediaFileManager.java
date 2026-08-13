@@ -162,12 +162,6 @@ public interface MediaFileManager {
             throws WebloggerException;
 
     /**
-     * Return recently added media files that are public.
-     */
-    List<MediaFile> fetchRecentPublicMediaFiles(int length)
-            throws WebloggerException;
-
-    /**
      * Remove all media files associated with a weblog.
      * 
      * @param website

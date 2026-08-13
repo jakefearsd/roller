@@ -214,7 +214,7 @@ public class PageServlet extends HttpServlet {
         log.debug("Looking for template to use for rendering");
 
         // figure out what template to use
-        ThemeTemplate page = selectTemplate(request, pageRequest, weblog);
+        ThemeTemplate page = selectTemplate(pageRequest, weblog);
         if (page == null) {
             RenderingServletUtils.sendNotFound(response);
             return;
@@ -340,8 +340,7 @@ public class PageServlet extends HttpServlet {
      * 404, not the front page), a tags index likewise, and only a permalink
      * is allowed to fall back.
      */
-    static ThemeTemplate selectTemplate(HttpServletRequest request,
-            WeblogPageRequest pageRequest, Weblog weblog) {
+    static ThemeTemplate selectTemplate(WeblogPageRequest pageRequest, Weblog weblog) {
 
         ThemeTemplate page = null;
 
@@ -437,15 +436,13 @@ public class PageServlet extends HttpServlet {
         }
 
         if (pageRequest.getWeblogAnchor() != null) {
-            // permalink specified. entry must exist, be published before the
-            // current time, and its locale must match.
+            // permalink specified. entry must exist and be published before
+            // the current time. (A per-entry locale mismatch was checked
+            // here too, but pageRequest.getLocale() != null already returned
+            // above -- this branch is only ever reached with a null locale.)
             WeblogEntry entry = pageRequest.getWeblogEntry();
             if (entry == null) {
                 return "no entry with that anchor";
-            }
-            if (pageRequest.getLocale() != null
-                    && !entry.getLocale().startsWith(pageRequest.getLocale())) {
-                return "entry is not in the requested locale";
             }
             if (!entry.isPublished()) {
                 return "entry is not published";

@@ -56,13 +56,6 @@ class PublicSurfaceIT extends RollerIT {
     }
 
     @Test
-    void rssFeedServesTheSeededEntry() {
-        String body = getAnonymously(baseUrl() + "/" + WEBLOG_HANDLE + "/feed/entries/rss");
-        assertTrue(body.contains("<rss"), "must serve an RSS document:\n" + body);
-        assertTrue(body.contains("IT Seeded Entry"), "seeded entry must be in the feed");
-    }
-
-    @Test
     void atomFeedServesTheSeededEntry() {
         String body = getAnonymously(baseUrl() + "/" + WEBLOG_HANDLE + "/feed/entries/atom");
         assertTrue(body.contains("<feed"), "must serve an Atom document:\n" + body);

@@ -16,7 +16,7 @@
 * directory of this distribution.
 */
 
-// Used in: MemberInvite.jsp, UserAdmin.jsp
+// Used in: UserAdmin.jsp
 
 function createRequestObject() {
     var ro;
@@ -43,8 +43,9 @@ var userURL = "<%= request.getContextPath() %>" + "/roller-ui/authoring/userdata
  * box next to a button marked Edit -- was left with the button greyed out no
  * matter what they typed, and the only way through was to click the list.
  *
- * The null guard is for MembersInvite.jsp, which shares this script and has no
- * #user-submit of its own.
+ * The null guard is defensive: UserAdmin.jsp is this script's only consumer
+ * now and always has a #user-submit, but nothing enforces that at compile
+ * time.
  */
 function updateUserSubmitState() {
     var userSubmitButton = document.getElementById("user-submit");

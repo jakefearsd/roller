@@ -184,6 +184,17 @@ public class MembersController extends BaseController {
             }
         }
 
+        // The form's <select> always submits a value, so a blank
+        // permissionString only happens via a hand-crafted POST. Reject it
+        // here, the same way a blank userName is rejected above, rather than
+        // letting it fall into Utilities.stringToStringList(null, ",") --
+        // that NPEs, and while the catch below surfaces it as a normal field
+        // error, it also logs a full stack trace at ERROR for what is really
+        // just malformed input.
+        if (StringUtils.isBlank(permissionString)) {
+            addError(model, "memberPermissions.saveError", request);
+        }
+
         if (!hasErrors(model)) {
             try {
                 userMgr.grantWeblogPermission(getActionWeblog(request), user,

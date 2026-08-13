@@ -268,10 +268,11 @@ class FeedModelTest {
 
     /**
      * Regression test. {@code AbstractPager} builds its next/previous links
-     * from {@code Map.of("page", ...)}, which is immutable; all three feed
-     * pagers used to write their filters straight into that map, so asking a
-     * filtered feed for a paging link threw {@code UnsupportedOperationException}
-     * and took the whole feed render down.
+     * from {@code Map.of("page", ...)}, which is immutable; the feed pagers
+     * (this one, plus the media-files and search pagers since removed) used
+     * to write their filters straight into that map, so asking a filtered
+     * feed for a paging link threw {@code UnsupportedOperationException} and
+     * took the whole feed render down.
      */
     @Test
     void pagingLinksCarryTheFiltersInsteadOfThrowing() throws Exception {
@@ -285,9 +286,6 @@ class FeedModelTest {
         assertEquals(Map.of("page", "1", "cat", "Tech", "tags", "java"),
                 queryParams(model.getWeblogEntriesPager().getPrevLink()),
                 "Paging back inside a filtered entry feed must stay inside the filter.");
-        assertEquals(Map.of("page", "1", "cat", "Tech", "tags", "java"),
-                queryParams(model.getMediaFilesPager().getPrevLink()),
-                "The media files pager has its own copy of the same logic.");
     }
 
     @Test
@@ -323,19 +321,5 @@ class FeedModelTest {
         assertEquals(50, criteria.getValue().getOffset(),
                 "Page 2 of 25-entry pages starts at offset 50; a wrong entry count "
                         + "silently shifts every page boundary.");
-    }
-
-    @Test
-    void theMediaFilesPagerUsesTheFilesFeedUrl() throws Exception {
-        WeblogFeedRequest request = feedRequest("files", "atom");
-        request.setTags(List.of("photos"));
-        request.setExcerpts(true);
-
-        String url = ((FeedModel.FeedFilesPager) modelFor(request).getMediaFilesPager()).getUrl();
-
-        assertEquals(ABSOLUTE_SITE + "/testblog/feed/files/atom", path(url),
-                "Media file feeds live under /feed/files/.");
-        assertEquals(Map.of("tags", "photos", "excerpts", "true"), queryParams(url),
-                "Media file feeds carry the same filters.");
     }
 }

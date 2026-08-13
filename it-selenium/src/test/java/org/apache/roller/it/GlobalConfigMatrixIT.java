@@ -57,24 +57,32 @@ class GlobalConfigMatrixIT extends RollerIT {
     private static final String PERMALINK = "#entry_bean_permalink";
 
     /**
-     * Three features switched off site-wide, each refused on its own page.
+     * Two features switched off site-wide, each refused on its own page.
      *
-     * <p>Batched into one settings save rather than three tests: the flags do
-     * not interact, they are asserted on three different pages, and a test that
-     * spends three settings round trips to prove three independent refusals is
+     * <p>Batched into one settings save rather than two tests: the flags do
+     * not interact, they are asserted on two different pages, and a test that
+     * spends two settings round trips to prove two independent refusals is
      * mostly measuring the settings page.
      *
      * <p>The uploads check has to attempt an actual upload — the refusal lives
      * in the save handler, so the media page renders perfectly well with
      * uploads off.
+     *
+     * <p>{@code groupblogging.enabled} used to be checked here too, against
+     * {@code invite.rol} — deleted along with the rest of the invite/accept
+     * ceremony (the members page now grants access directly, see
+     * {@code MembersController}). Its own behaviour survives (a user who
+     * already owns a weblog is refused a second one) and is covered
+     * separately below, isolated from {@code site.allowUserWeblogCreation} so
+     * each flag proves its own branch rather than either one masking the
+     * other.
      */
     @Test
     void switchingFeaturesOffSiteWideRefusesThemWhereTheyAreUsed() {
         loginAsAdmin();
         Map<String, Boolean> before = setGlobalFlags(Map.of(
                 "uploads.enabled", false,
-                "site.allowUserWeblogCreation", false,
-                "groupblogging.enabled", false));
+                "site.allowUserWeblogCreation", false));
         try {
             openPath("/roller-ui/authoring/mediaFileAdd.rol?weblog=" + WEBLOG_HANDLE);
             $("#fileControl0").should(exist).uploadFile(testImage());
@@ -84,12 +92,29 @@ class GlobalConfigMatrixIT extends RollerIT {
             openPath("/roller-ui/createWeblog.rol");
             $("#errors").should(visible);
             $$("#handle").shouldHave(CollectionCondition.size(0));
-
-            openPath("/roller-ui/authoring/invite.rol?weblog=" + WEBLOG_HANDLE);
-            $("#errors").should(visible);
-            $$("input[name='userName']").shouldHave(CollectionCondition.size(0));
         } finally {
             setGlobalFlags(before);
+            logout();
+        }
+    }
+
+    /**
+     * {@code groupblogging.enabled} off refuses a second weblog to an
+     * account that already owns one — the seeded admin, via the seed
+     * fixture's {@code it_weblog} permission. Isolated from
+     * {@code site.allowUserWeblogCreation} (left at its default) so this
+     * assertion cannot pass for the wrong reason.
+     */
+    @Test
+    void groupBloggingDisabledRefusesASecondWeblogToAnExistingOwner() {
+        loginAsAdmin();
+        boolean before = setGlobalFlag("groupblogging.enabled", false);
+        try {
+            openPath("/roller-ui/createWeblog.rol");
+            $("#errors").should(visible);
+            $$("#handle").shouldHave(CollectionCondition.size(0));
+        } finally {
+            setGlobalFlag("groupblogging.enabled", before);
             logout();
         }
     }

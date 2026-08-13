@@ -139,16 +139,21 @@ class CategoryIT extends RollerIT {
     }
 
     /**
-     * Deleting the category a weblog uses as its "blogger category" must not
-     * break the weblog.
+     * Deleting a category must not leave the weblog unable to save its
+     * settings.
      *
-     * <p>{@code removeWeblogCategory} nulls that pointer, and the settings page
-     * then threw on every save -- "Error updating configuration", forever, with
-     * no way back through the UI. This walks the whole route: delete the
-     * category, then save the settings page.
+     * <p>This used to guard a specific bug: a weblog's "blogger category"
+     * (the Blogger XML-RPC API's default posting target, {@code
+     * weblog.bloggercatid}) was a raw id with no cascade, so deleting the
+     * category it pointed at left the settings page throwing "Error updating
+     * configuration" on every save with no way back through the UI. The
+     * Blogger API and its column are gone now (W2), so that specific failure
+     * mode no longer exists -- but the general shape is still worth
+     * covering: delete a category, then confirm the settings page still
+     * saves cleanly.
      */
     @Test
-    void deletingTheBloggerCategoryLeavesTheWeblogSaveable() {
+    void deletingACategoryLeavesTheWeblogSaveable() {
         String suffix = nonce();
         String extra = "ITCatBlogger" + suffix;
 
