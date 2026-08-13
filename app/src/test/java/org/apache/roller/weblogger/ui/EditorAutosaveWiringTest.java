@@ -24,6 +24,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -218,6 +221,69 @@ class EditorAutosaveWiringTest {
         }
     }
 
+    @Test
+    void theStorageKeyPrefixAgreesBetweenTheModuleAndBothEditors() throws IOException {
+        // The JSPs build the key; the module's own PREFIX is used only by
+        // sweep() and the storage probe. Bump one without the other and
+        // nothing breaks except housekeeping, which silently stops reaping
+        // the keys the JSPs keep writing -- forever, in every author's
+        // browser.
+        String module = read(Paths.get("src/main/webapp/theme/scripts/roller-draft.js"));
+        Matcher prefix = Pattern.compile("var PREFIX = '([^']+)'").matcher(module);
+        assertTrue(prefix.find(), "roller-draft.js must declare a PREFIX");
+
+        for (Path jsp : new Path[] { ENTRY_EDIT, PAGE_EDIT }) {
+            assertTrue(read(jsp).contains(prefix.group(1)),
+                    jsp + " builds a storage key that does not start with the module's "
+                            + "own PREFIX (" + prefix.group(1) + "), so sweep() will never "
+                            + "reap what this page writes");
+        }
+    }
+
+    @Test
+    void eachEditorExcludesItsOwnTextareaFromTheFieldSweep() throws IOException {
+        // The editor's content arrives through getText/setText and is stored
+        // once as snapshot.text. Capturing the textarea again doubles every
+        // snapshot and gives differs() a second, possibly-stale copy of the
+        // same content to compare independently of the first. The two editors
+        // name that textarea differently, which is exactly why the module
+        // cannot hardcode it.
+        assertTrue(read(ENTRY_EDITOR).contains("'bean.text'"),
+                "EntryEditor.jsp must exclude its own bean.text textarea");
+        assertTrue(read(PAGE_EDIT).contains("'bean.content'"),
+                "PageEdit.jsp's textarea is bean.content, not bean.text");
+    }
+
+    @Test
+    void onlyTheEntryEditorExcludesStatusFromTheComparison() throws IOException {
+        // Entries: doEntryEditSave mutates the bean and FORWARDS, so the page
+        // rendered right after a successful Post carries PUBLISHED while the
+        // snapshot taken at submit holds DRAFT. Comparing it raises a phantom
+        // "unsaved changes" bar over a save that just succeeded -- and keeps
+        // raising it on every later visit, eventually offering days-old text
+        // over something newer.
+        assertTrue(codeOnly(read(ENTRY_EDITOR)).contains("'bean.status'"),
+                "EntryEditor.jsp must exclude bean.status from the snapshot");
+
+        // Pages: it is a visible <select> the author sets, and PageBean.copyTo
+        // writes it straight through. Excluding it would drop a real choice.
+        assertFalse(codeOnly(read(PAGE_EDIT)).contains("'bean.status'"),
+                "PageEdit.jsp must NOT exclude bean.status -- it is author input there");
+    }
+
+    @Test
+    void theRecoveryBarIsAnnouncedToScreenReaders() throws IOException {
+        for (Path jsp : new Path[] { ENTRY_EDIT, PAGE_EDIT }) {
+            String jspText = read(jsp);
+            int start = jspText.indexOf("id=\"draftRecoveryBar\"");
+            assertTrue(start > 0, jsp + " must render the recovery bar");
+            String bar = jspText.substring(start, jspText.indexOf('>', start));
+            assertTrue(bar.contains("aria-live"),
+                    jsp + "'s recovery bar appears without warning; it needs aria-live "
+                            + "so it is not silent for a screen-reader user");
+        }
+    }
+
     /**
      * The JSP with its comments removed.
      *
@@ -246,8 +312,7 @@ class EditorAutosaveWiringTest {
     }
 
     /**
-     * The source between {@code codemirror.on('change', function () {} and its
-     * matching close.
+     * The source of the callback that sets the leave-warning's dirty flag.
      *
      * <p>Brace-matched rather than "the text up to the next {@code });}", and
      * asserted on for what the body <em>contains</em> rather than where a
@@ -257,8 +322,17 @@ class EditorAutosaveWiringTest {
      * misplaced binding a few lines further down would have passed.
      */
     private static String firstEditorChangeCallbackBody(String jsp) {
-        int start = jsp.indexOf("rollerEditor.codemirror.on('change'");
-        assertTrue(start > 0, "the editor must still have a change handler");
+        // Anchored on the dirty-flag assignment rather than on "the first
+        // codemirror.on('change')" in the file. Both JSPs register a SECOND
+        // change handler inside install()'s onEditorChange, so an ordinal
+        // anchor means simply moving the install() block above the
+        // leave-warning block makes these assertions inspect a one-line
+        // callback and pass vacuously -- with the per-keystroke leak fully
+        // reintroduced.
+        int flag = jsp.indexOf("Dirty = true;");
+        assertTrue(flag > 0, "the leave-warning must still track a dirty flag");
+        int start = jsp.lastIndexOf("rollerEditor.codemirror.on('change'", flag);
+        assertTrue(start > 0, "the dirty flag must be set from the editor's change handler");
         int open = jsp.indexOf('{', jsp.indexOf("function", start));
         assertTrue(open > 0, "the change handler must have a function body");
 

@@ -176,6 +176,14 @@
                 staleKeys: ['${draftNewKey}'],
                 bar: document.getElementById('draftRecoveryBar'),
                 csrfName: '${_csrf.parameterName}',
+                <%-- bean.text is the editor's own textarea, already captured
+                     through getText/setText. bean.status must be excluded HERE
+                     but not on PageEdit: doEntryEditSave mutates the bean and
+                     forwards, so the page rendered right after a successful
+                     Post carries PUBLISHED while the snapshot taken at submit
+                     holds DRAFT -- comparing it would raise a phantom
+                     "unsaved changes" bar over a save that just succeeded. --%>
+                exclude: ['bean.text', 'bean.status'],
                 getText: rollerGetEntryText,
                 setText: rollerSetEntryText,
                 onEditorChange: function (callback) {

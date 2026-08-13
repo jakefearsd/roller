@@ -137,6 +137,47 @@ class EntryAutosaveIT extends RollerIT {
     }
 
     @Test
+    void publishingAnExistingEntryOffersNothingAfterwards() {
+        // The case that exercises differs()' DROP branch -- the wave's headline
+        // invariant ("a snapshot matching what the server just rendered is one
+        // whose save went through") -- against the PRIMARY key. Every other
+        // case here either offers a bar or is satisfied by the staleKeys
+        // branch, so without this one differs() could be rewritten to
+        // `return true` and the whole suite would stay green.
+        //
+        // It is also a status CHANGE on purpose. doEntryEditSave mutates
+        // bean.status and forwards, so the page rendered right after a
+        // successful Post carries PUBLISHED while the snapshot taken at submit
+        // holds DRAFT. That difference used to raise a phantom "unsaved
+        // changes" bar over a save that had just succeeded, and kept raising it
+        // on every later visit -- an offer of stale text the author could act
+        // on. bean.status is excluded from the entry snapshot for this reason.
+        String suffix = nonce();
+        String body = "A paragraph that gets published " + suffix;
+
+        String entryId = saveDraftFromAddForm("IT Autosave Publish " + suffix, body);
+
+        openPath("/roller-ui/authoring/entryEdit.rol?weblog=" + WEBLOG_HANDLE
+                + "&bean.id=" + entryId);
+        $("#entry").should(exist);
+        $(EDITOR_BODY).should(visible);
+        executeJavaScript("rollerSetEntryText(arguments[0]);", body + " (revised)");
+
+        String editKey = entryDraftKey("entryEdit", entryId);
+        waitForDraftSnapshot(editKey);
+
+        $("button[formaction$='entryEdit!publish.rol']").click();
+        $("#entry").should(exist);
+
+        reloadWithoutLeaveWarning();
+        $("#entry").should(exist);
+        $(DRAFT_BAR).shouldNotBe(visible);
+        assertTrue(!storageHasKey(editKey),
+                "a snapshot matching the just-published content must not survive; "
+                        + "a status change is not an unsaved edit");
+    }
+
+    @Test
     void discardingRemovesTheOfferForGood() {
         String suffix = nonce();
         String body = "A paragraph nobody wants recovered " + suffix;
@@ -183,6 +224,18 @@ class EntryAutosaveIT extends RollerIT {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    /** Creates an entry through the add form and returns its id. */
+    private String saveDraftFromAddForm(String title, String body) {
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("input[name='bean.title']").setValue(title);
+        $(EDITOR_BODY).should(visible);
+        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        $("button[formaction$='entryAdd!saveDraft.rol']").click();
+        $("input[name='bean.id']").should(exist);
+        return $("input[name='bean.id']").getValue();
+    }
 
     /**
      * Reloads the current page after silencing the editor's own

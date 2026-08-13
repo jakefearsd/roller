@@ -39,7 +39,7 @@
 <c:set var="draftNewKey"
        value="roller.draft.v1:${pageContext.request.contextPath}:${actionWeblog.handle}:pageEdit:new"/>
 
-<div id="draftRecoveryBar" class="draft-bar" hidden
+<div id="draftRecoveryBar" class="draft-bar" hidden role="status" aria-live="polite"
      data-restored="<spring:message code='weblogEdit.draftRecovery.restored'/>">
     <span class="draft-bar-text"
           data-template="<spring:message code='weblogEdit.draftRecovery.message'/>"></span>
@@ -340,6 +340,11 @@
                 staleKeys: ['${draftNewKey}'],
                 bar: document.getElementById('draftRecoveryBar'),
                 csrfName: '${_csrf.parameterName}',
+                <%-- The page editor's textarea is bean.content, not bean.text.
+                     bean.status is deliberately NOT excluded here: it is a
+                     visible <select> the author sets and PageBean.copyTo
+                     writes it straight through, so it is real content. --%>
+                exclude: ['bean.content'],
                 getText: rollerGetEntryText,
                 setText: rollerSetEntryText,
                 onEditorChange: function (callback) {

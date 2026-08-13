@@ -99,11 +99,15 @@ It exposes one entry point:
 
 ```js
 rollerDraft.install({
-  form:      HTMLFormElement,   // the form to watch
-  key:       String,            // storage key, built by the JSP
-  bar:       HTMLElement,       // the recovery bar, hidden until needed
-  getText:   () => String,      // rollerGetEntryText
-  setText:   (String) => void   // rollerSetEntryText
+  form:           HTMLFormElement,   // the form to watch
+  key:            String,            // storage key, built by the JSP
+  staleKeys:      [String],          // keys to consume if this page IS them, saved
+  exclude:        [String],          // page-specific field names to skip
+  bar:            HTMLElement,       // the recovery bar, hidden until needed
+  csrfName:       String,            // ${_csrf.parameterName}
+  getText:        () => String,      // rollerGetEntryText
+  setText:        (String) => void,  // rollerSetEntryText
+  onEditorChange: (cb) => void       // registers cb with the editor
 });
 ```
 
@@ -130,14 +134,26 @@ The denylist is what must never be restored from a stale snapshot:
 | `weblog` | ditto |
 | `type="file"` | cannot be restored; setting `.value` throws |
 | buttons, submits, unnamed controls | not state |
+| the editor's own textarea | `bean.text` on entries, `bean.content` on pages — already captured as `snapshot.text` through the seam; capturing it again doubles the snapshot and gives `differs()` a second, possibly-stale copy of the same content. Passed per-editor, because the two name it differently. |
+| `bean.status` — **entries only** | see below |
 
-**`bean.status` is deliberately NOT excluded**, which is worth stating because
-it looks like it should be. On `PageEdit.jsp` it is a visible `<select>` and a
-real author choice, so excluding it would lose one. On `EntryEdit.jsp` it is a
-hidden input, but it is *not* what decides the entry's status: the rail's two
-submit buttons carry `formaction="…!publish.rol"` / `"…!saveDraft.rol"`, and
-`EntryEditController` overwrites `bean.status` from that action on every save.
-Restoring it there is inert.
+> **Amended during implementation.** The denylist is no longer a fixed list in
+> the module: the three universal names stay there, and each editor passes its
+> own via an `exclude` option. See the two paragraphs below.
+
+**`bean.status` differs between the two editors, and the whole-wave review
+caught why.** On `PageEdit.jsp` it is a visible `<select>` and a real author
+choice, so excluding it would lose one — it stays in. On `EntryEdit.jsp` it is
+a hidden input, and *restoring* it is inert (the rail's submit buttons carry
+`formaction="…!publish.rol"` / `"…!saveDraft.rol"`, and `EntryEditController`
+overwrites `bean.status` from that action on every save) — but **comparing** it
+is not inert. `doEntryEditSave` mutates the bean and *forwards*, so the page
+rendered immediately after a successful Post carries `PUBLISHED` while the
+snapshot taken at submit holds `DRAFT`. That difference raised a phantom
+"unsaved changes" bar over a save that had just succeeded, and kept raising it
+on every later visit — eventually offering days-old text over something newer,
+which is precisely the "silently overwriting what the server has" failure this
+spec forbids. So `bean.status` is excluded **on entries only**.
 
 That is also why the denylist is by **name**, not by `type="hidden"`. Excluding
 hidden inputs wholesale would drop `bean.featuredImageId` and `bean.ogImageId`
@@ -254,3 +270,25 @@ Both suites green. Typing into an entry, killing the tab, and coming back
 offers the text; saving and coming back does not. Nothing new in the database,
 no new route, no new runtime property. CLAUDE.md's "Entry editing" section
 records the seam and the reason autosave is local.
+
+## Known limits, recorded rather than fixed
+
+These came out of the whole-wave review and are deliberate, not oversights.
+
+- **Two tabs on the same new entry share one slot.** Both `entryAdd.rol` tabs
+  key on `…:entryAdd:new`, so the later debounce overwrites the earlier tab's
+  snapshot. Inherent to keying an unsaved thing by `new` — the alternative is
+  minting a client-side id per tab, which then has to be reconciled on save.
+  Not worth it for a recovery mechanism.
+- **A stale key is consumed on text AND title matching.** Text alone was the
+  first implementation and was wrong: copy an entry's body into a new-entry tab
+  and reloading the *entry* tab would delete the new draft. Two independent
+  fields is a much stronger "this draft became this entry" signal. It is still
+  a heuristic, and a deliberate one — the exact alternative (only consume on
+  the `firstSave` landing) needs a signal the page does not currently carry.
+- **Drafts outlive logout.** Nothing clears `roller.draft.v1:*` on sign-out; a
+  snapshot lives up to 30 days in the browser profile. On a shared machine the
+  next person who can open that weblog's editor is offered the previous
+  author's unsaved text. No privilege boundary is crossed — only someone
+  already permitted on that weblog sees the bar — but "no server storage" was
+  partly a privacy argument, and this is its counterpart.

@@ -58,21 +58,34 @@
     }
 
     /*
-     * Structural fields, by name. Not by type="hidden": bean.featuredImageId
-     * and bean.ogImageId are hidden inputs carrying real author choices made
-     * through the image pickers. bean.status is deliberately absent -- on
-     * PageEdit it is a visible <select> the author sets, and on EntryEdit the
-     * submit buttons' formaction decides the status regardless of the field
-     * (EntryEditController sets bean.setStatus(...) from the action name in
-     * doEntryAddSave/doEntryEditSave, overwriting whatever the hidden field
-     * held). bean.text -- the textarea EasyMDE wraps -- is excluded too: its
-     * authoritative value arrives through the getText/setText seam
-     * (options.getText()/setText()), already captured once as snapshot.text,
-     * not through the DOM. Capturing it a second time here would double the
-     * size of every snapshot and give differs() a possibly-stale second copy
-     * to compare independently of the first.
+     * Fields that are identity or plumbing rather than content, by NAME -- not
+     * by type="hidden", because bean.featuredImageId and bean.ogImageId are
+     * hidden inputs carrying real author choices made through the image
+     * pickers, and losing those on a recovery is exactly the sort of work that
+     * is annoying to redo.
+     *
+     * Only the three universal ones live here. Anything Roller-page-specific
+     * comes in through options.exclude, because the right answer differs
+     * between the two editors and the module has no business guessing:
+     *
+     *   - the editor's own textarea (bean.text on entries, bean.content on
+     *     pages) -- its authoritative value arrives through the getText/setText
+     *     seam and is already captured as snapshot.text. Capturing it again
+     *     doubles every snapshot and hands differs() a possibly-stale second
+     *     copy of the same content to compare independently of the first.
+     *   - bean.status ON ENTRIES ONLY. Restoring it there is inert
+     *     (EntryEditController overwrites it from the submit button's
+     *     formaction), but COMPARING it is not: doEntryEditSave mutates the
+     *     bean and forwards, so the page rendered right after a successful
+     *     Post carries PUBLISHED while the snapshot taken at submit holds
+     *     DRAFT. differs() would see a difference, raise a phantom "unsaved
+     *     changes" bar over a save that had just succeeded, and keep raising it
+     *     on every later visit -- eventually offering days-old text over
+     *     something newer. On PAGES bean.status must stay in: it is a visible
+     *     <select> the author sets, and PageBean.copyTo writes it straight
+     *     through.
      */
-    function isStructural(el, csrfName) {
+    function isStructural(el, csrfName, exclude) {
         if (!el.name) {
             return true;
         }
@@ -80,8 +93,15 @@
                 || el.type === 'button' || el.type === 'reset') {
             return true;
         }
-        return el.name === csrfName || el.name === 'bean.id' || el.name === 'weblog'
-                || el.name === 'bean.text';
+        if (el.name === csrfName || el.name === 'bean.id' || el.name === 'weblog') {
+            return true;
+        }
+        for (var i = 0; i < exclude.length; i++) {
+            if (el.name === exclude[i]) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /*
@@ -94,12 +114,12 @@
                 ? el.name + '=' + el.value : el.name;
     }
 
-    function readFields(form, csrfName) {
+    function readFields(form, csrfName, exclude) {
         var fields = {};
         var els = form.elements;
         for (var i = 0; i < els.length; i++) {
             var el = els[i];
-            if (isStructural(el, csrfName)) {
+            if (isStructural(el, csrfName, exclude)) {
                 continue;
             }
             fields[fieldKey(el)] =
@@ -108,11 +128,11 @@
         return fields;
     }
 
-    function writeFields(form, csrfName, fields) {
+    function writeFields(form, csrfName, exclude, fields) {
         var els = form.elements;
         for (var i = 0; i < els.length; i++) {
             var el = els[i];
-            if (isStructural(el, csrfName)) {
+            if (isStructural(el, csrfName, exclude)) {
                 continue;
             }
             var key = fieldKey(el);
@@ -124,6 +144,29 @@
             } else {
                 el.value = fields[key];
             }
+            // Setting .value/.checked in script fires nothing, so anything the
+            // page derives from a field stays stale: the SEO card's Event rows
+            // keep hiding while the restored jsonLdType says EVENT, the
+            // featured-image thumbnail keeps showing the server's pick. The
+            // values submit correctly either way, but a Restore that visibly
+            // does nothing to half the form reads as a Restore that failed.
+            dispatch(el, 'change');
+        }
+    }
+
+    /* A change event the page's own handlers will see, IE-compatible-ish. */
+    function dispatch(el, type) {
+        try {
+            var event;
+            if (typeof window.Event === 'function') {
+                event = new window.Event(type, { bubbles: true });
+            } else {
+                event = document.createEvent('HTMLEvents');
+                event.initEvent(type, true, false);
+            }
+            el.dispatchEvent(event);
+        } catch (e) {
+            /* a page handler that throws is not this module's problem */
         }
     }
 
@@ -159,6 +202,16 @@
             }
         }
         return false;
+    }
+
+    /*
+     * Both editors name their title field bean.title. Hardcoded rather than
+     * configurable because a title is the one field every editor here has, and
+     * an option nobody would ever pass a different value for is just a way to
+     * get it wrong.
+     */
+    function sameTitle(a, b) {
+        return String(a.fields['bean.title']) === String(b.fields['bean.title']);
     }
 
     function readSnapshot(store, key) {
@@ -219,6 +272,7 @@
         var form = options.form;
         var key = options.key;
         var csrfName = options.csrfName || '_csrf';
+        var exclude = options.exclude || [];
         var bar = options.bar || null;
         var timer = null;
         var stopped = false;
@@ -243,7 +297,7 @@
             } catch (e) {
                 return null;
             }
-            return { at: 0, fields: readFields(form, csrfName), text: text };
+            return { at: 0, fields: readFields(form, csrfName, exclude), text: text };
         }
 
         function drop(which) {
@@ -296,7 +350,7 @@
                     .replace('{0}', when.toLocaleString());
 
             restoreButton.addEventListener('click', function () {
-                writeFields(form, csrfName, snapshot.fields);
+                writeFields(form, csrfName, exclude, snapshot.fields);
                 if (typeof options.setText === 'function') {
                     options.setText(snapshot.text);
                 }
@@ -349,6 +403,15 @@
          * this entry", and it must not be loosened further: a genuinely
          * different new-entry draft sitting in another tab has different text
          * and must survive.
+         *
+         * Text alone is not enough for that, though, which is why the title
+         * has to match too. A perfectly ordinary move -- open an entry, copy
+         * its body, paste it into a new-entry tab, start on the title -- leaves
+         * a new-entry snapshot whose text is byte-identical to the entry's, and
+         * reloading the ENTRY tab would then consume and delete it. Two
+         * independent fields matching is a much stronger signal that this
+         * new-entry draft is the thing that became this entry; a body pasted
+         * but not yet titled does not match, and survives.
          */
         var keys = [key].concat(options.staleKeys || []);
         var offerable = null;
@@ -357,7 +420,7 @@
             if (!snapshot) {
                 drop(keys[i]);
             } else if (keys[i] !== key) {
-                if (snapshot.text === now.text) {
+                if (snapshot.text === now.text && sameTitle(snapshot, now)) {
                     drop(keys[i]);
                 }
             } else if (differs(snapshot, now)) {

@@ -825,7 +825,10 @@ in a local index file worth clearing, not a search-correctness bug.
     snapshot survives its own save, and the next author to open a blank editor
     is handed the previous entry's text. `EntryAutosaveIT` caught this; no unit
     test could, because the divergence only appears after a real save has
-    round-tripped through the controller.
+    round-tripped through the controller. The consumption test is text **and**
+    title, not text alone: copying an entry's body into a new-entry tab leaves
+    a snapshot whose text matches that entry exactly, and reloading the entry's
+    own tab would otherwise delete the new draft.
   - **The field denylist is by NAME, not by `type="hidden"`.**
     `bean.featuredImageId`/`bean.ogImageId` are hidden inputs carrying real
     author choices from the image pickers. `bean.status` is deliberately *not*
@@ -844,6 +847,11 @@ in a local index file worth clearing, not a search-correctness bug.
     left with no backup at all; and it never auto-restores, because silently
     overwriting the server's copy with an unreviewed snapshot is worse than
     losing the snapshot.
+  Two limits recorded rather than fixed: two tabs on the same *new* entry share
+  the one `…:new` slot (the later debounce wins), and a draft outlives logout —
+  up to 30 days in that browser profile, so on a shared machine the next person
+  permitted on the weblog is offered the previous author's unsaved text. Both
+  are in the spec's "Known limits".
   The leave-warning both editors carry is bound **once** against a dirty flag,
   under the `beforeunload.rollerLeaveWarning` namespace. It used to register a
   fresh `beforeunload` *and* `submit` handler inside the CodeMirror `change`

@@ -78,7 +78,7 @@
         <%-- Draft recovery. Hidden until roller-draft.js finds a local
              snapshot the server does not have. type="button" is load-bearing:
              this sits inside #entry, where a bare <button> submits the form. --%>
-        <div id="draftRecoveryBar" class="draft-bar" hidden
+        <div id="draftRecoveryBar" class="draft-bar" hidden role="status" aria-live="polite"
              data-restored="<spring:message code='weblogEdit.draftRecovery.restored'/>">
             <span class="draft-bar-text"
                   data-template="<spring:message code='weblogEdit.draftRecovery.message'/>"></span>
