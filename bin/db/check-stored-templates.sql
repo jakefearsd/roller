@@ -1,14 +1,25 @@
--- Pre-deploy check: do any STORED templates reference something W1/W2 removed?
+-- Do any STORED templates reference something a removal wave deleted?
 --
--- Shipped themes live in the repo and were swept by both waves. Custom themes
--- do not: they live as rows in this database, where no compiler, test or grep
--- can reach them. Velocity here is lenient (velocity.properties sets no
+-- Shipped themes live in the repo and get swept by each wave. Custom themes do
+-- not: they live as rows in this database, where no compiler, test or grep can
+-- reach them. Velocity here is lenient (velocity.properties sets no
 -- runtime.references.strict and turns off runtime.log.invalid.reference), so a
 -- stored template calling a deleted macro or reading a deleted property does
 -- NOT fail -- it prints the reference as literal text onto the public page,
 -- with no exception, no log line, and no failing test.
 --
--- Run against production BEFORE deploying W1+W2:
+-- WHEN THIS MATTERS, and when it does not:
+-- As of W2 there is no production instance -- the first deploy will build its
+-- schema from the migration chain on an empty database, so no legacy stored
+-- template can exist and W1/W2 have nothing to break. This script is therefore
+-- NOT a W1/W2 pre-deploy gate; it is forward-looking. It earns its keep the
+-- first time BOTH of these are true:
+--   1. themes.customtheme.allowed has been switched on and a weblog converted
+--      (or a Templates/Stylesheet row saved), AND
+--   2. a later wave deletes a macro, model method or weblog property.
+-- Extend the pattern list in query 2 with whatever that wave removes.
+--
+-- Run it:
 --   docker compose exec -T postgres psql -U roller -d rollerdb \
 --     < bin/db/check-stored-templates.sql
 --
