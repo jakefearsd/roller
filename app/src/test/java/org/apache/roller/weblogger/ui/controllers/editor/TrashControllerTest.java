@@ -24,6 +24,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
+import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
@@ -63,6 +64,24 @@ class TrashControllerTest extends EditorControllerTestSupport {
         controller = prepare(new TrashController());
         model = newModel();
         redirectAttributes = newRedirectAttributes();
+    }
+
+    /**
+     * {@code requiredWeblogPermissionActions} is what {@code
+     * RollerHandlerInterceptor} checks before this controller is ever
+     * entered -- unlike {@code getActionName}/{@code getDesiredMenu}/{@code
+     * getPageTitle}, which only steer rendering, a wrong value here changes
+     * who is allowed to reach {@code trash!restore.rol} and {@code
+     * trash!delete.rol} at all. POST matches every other blog-wide-structure
+     * controller (categories, media, pages), not the lower EDIT_DRAFT bar
+     * entry editing uses.
+     */
+    @Test
+    void declaresPostPermissionAndTheEditorMenuIdentity() {
+        assertEquals(List.of(WeblogPermission.POST), controller.requiredWeblogPermissionActions());
+        assertEquals("editor", controller.getDesiredMenu());
+        assertEquals("trash", controller.getActionName());
+        assertEquals("trash.title", controller.getPageTitle());
     }
 
     // ------------------------------------------------------------------ list

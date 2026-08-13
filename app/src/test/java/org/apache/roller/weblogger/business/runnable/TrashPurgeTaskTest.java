@@ -17,7 +17,10 @@
  */
 package org.apache.roller.weblogger.business.runnable;
 
+import java.lang.reflect.Field;
+import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
@@ -25,6 +28,7 @@ import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
@@ -32,6 +36,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -217,7 +224,240 @@ class TrashPurgeTaskTest {
         verify(weblogger).release();
     }
 
+    /**
+     * A purge that actually removed entries (the {@code purged > 0} branch,
+     * which logs a summary) must not treat that weblog any differently from
+     * one with nothing to purge -- the sweep still has to visit every other
+     * weblog. A stray early return or exception added to that branch would
+     * silently truncate the sweep the moment any weblog actually had trash.
+     */
+    @Test
+    void aWeblogWithSomethingActuallyPurgedDoesNotStopTheSweepForOthers() throws Exception {
+        Weblog withTrash = weblog("hastrash");
+        Weblog empty = weblog("notrash");
+        givenWeblogs(withTrash, empty);
+        givenRetention(30);
+        when(entryManager.purgeTrash(withTrash, 30)).thenReturn(5);
+
+        new TrashPurgeTask().runTask();
+
+        verify(entryManager).purgeTrash(withTrash, 30);
+        verify(entryManager).purgeTrash(empty, 30);
+    }
+
+    /**
+     * {@code runTask()} has its own outer try/catch around everything before
+     * the per-weblog loop (getting the managers, reading the retention
+     * property, listing the weblogs) -- separate from the per-weblog
+     * isolation covered above. A checked failure listing the weblogs
+     * themselves must not propagate: this runs unattended off the
+     * scheduler, with nobody watching to catch an uncaught exception.
+     */
+    @Test
+    void aFailureListingWeblogsIsCaughtAndDoesNotPropagate() throws Exception {
+        when(weblogManager.getWeblogs(eq(true), isNull(), isNull(), isNull(), eq(0), eq(-1)))
+                .thenThrow(new WebloggerException("db down"));
+        givenRetention(30);
+
+        assertDoesNotThrow(() -> new TrashPurgeTask().runTask(),
+                "a failure listing weblogs must not propagate out of runTask()");
+        verify(weblogger).release();
+    }
+
+    /**
+     * Same outer-catch contract, for an unchecked exception rather than the
+     * declared {@code WebloggerException} -- the top-level body has a second
+     * catch clause specifically so a runtime exception this early (before any
+     * per-weblog try/catch is even reached) does not take the whole task
+     * down either.
+     */
+    @Test
+    void anUnexpectedRuntimeExceptionListingWeblogsIsCaughtAndDoesNotPropagate() throws Exception {
+        when(weblogManager.getWeblogs(eq(true), isNull(), isNull(), isNull(), eq(0), eq(-1)))
+                .thenThrow(new RuntimeException("boom"));
+        givenRetention(30);
+
+        assertDoesNotThrow(() -> new TrashPurgeTask().runTask(),
+                "an unchecked exception listing weblogs must not propagate out of runTask() either");
+        verify(weblogger).release();
+    }
+
+    // ------------------------------------------------------- task scaffolding
+    //
+    // getClientId/getStartTime/getStartTimeDesc/getInterval/getLeaseTime,
+    // init(...), and the malformed-number branches -- the RollerTask
+    // machinery this class shares with ScheduledEntriesTask, which has no
+    // test of its own for this scaffolding either. Nothing here duplicates
+    // runTask()'s behaviour, which is covered above and needs a real
+    // Weblogger facade to exercise at all.
+
+    /**
+     * The four scheduling values a freshly constructed task reports, treated
+     * as one contract rather than four separate getter tests -- they are a
+     * real product decision, not incidental field values: a purge that ran
+     * every minute would hammer the database for nothing, and one that ran
+     * once a year would leave trash sitting long past a short configured
+     * retention. Regressing any single default silently changes how often,
+     * or how late in the day, production sweeps trash.
+     */
+    @Test
+    void aFreshlyConstructedTaskReportsTheDocumentedSchedulingDefaults() {
+        TrashPurgeTask task = new TrashPurgeTask();
+
+        assertNull(task.getClientId(), "no clientId until init() reads one from config");
+        assertEquals("startOfDay", task.getStartTimeDesc(),
+                "trash purge is meant to run once a day, at day's end");
+        assertEquals(RollerTask.DEFAULT_INTERVAL_MINS, task.getInterval(),
+                "default interval must stay the shared once-a-day default");
+        assertEquals(RollerTaskWithLeasing.DEFAULT_LEASE_MINS, task.getLeaseTime(),
+                "default lease must stay the shared 30-minute lease");
+    }
+
+    /**
+     * {@code getStartTime} delegates to the shared {@code getAdjustedTime}
+     * helper using this task's {@code startTimeDesc} -- pinned against the
+     * real adjustment {@code DateUtil} performs (end of the current day),
+     * not just "returns some non-null date", since a broken delegation (e.g.
+     * returning {@code currentTime} unchanged) would still return a date.
+     */
+    @Test
+    void getStartTimeAdjustsToTheEndOfTheCurrentDayByDefault() {
+        TrashPurgeTask task = new TrashPurgeTask();
+        Date now = new Date();
+
+        assertEquals(org.apache.roller.util.DateUtil.getEndOfDay(now), task.getStartTime(now));
+    }
+
+    /**
+     * The zero-arg {@code init()} is what production actually calls
+     * ({@code main()} below, and every task started the normal way) -- it
+     * must delegate to {@code init(String)} using THIS task's own registered
+     * name ({@code tasks.TrashPurgeTask.*} in {@code roller.properties}), not
+     * silently no-op or read some other task's configuration. {@code
+     * clientId} is the one field with no matching default (it starts {@code
+     * null}), so seeing it become the shipped {@code tasks.clientId} value
+     * is proof init() actually ran rather than coincidence.
+     */
+    @Test
+    void noArgInitDelegatesToInitWithThisTasksOwnRegisteredName() throws Exception {
+        TrashPurgeTask task = new TrashPurgeTask();
+
+        task.init();
+
+        assertEquals("defaultClientId", task.getClientId(),
+                "init() must have read the global tasks.clientId from roller.properties");
+    }
+
+    /**
+     * {@code init(name)} is what turns {@code tasks.<name>.*} configuration
+     * (plus the global {@code tasks.clientId}) into the four scheduling
+     * fields. If this stopped reading any one of them, an operator's
+     * {@code roller-custom.properties} override for that field would be
+     * silently ignored and the shipped default would run in production
+     * instead.
+     */
+    @Test
+    void initReadsClientIdStartTimeIntervalAndLeaseTimeFromTaskProperties() throws Exception {
+        String taskName = "trashPurgeConfigReadTest";
+        String prefix = "tasks." + taskName + ".";
+
+        String previousClientId = overrideConfigProperty("tasks.clientId", "node-7");
+        String previousStart = overrideConfigProperty(prefix + "startTime", "startOfHour");
+        String previousInterval = overrideConfigProperty(prefix + "interval", "60");
+        String previousLease = overrideConfigProperty(prefix + "leaseTime", "5");
+        try {
+            TrashPurgeTask task = new TrashPurgeTask();
+            task.init(taskName);
+
+            assertEquals("node-7", task.getClientId());
+            assertEquals("startOfHour", task.getStartTimeDesc());
+            assertEquals(60, task.getInterval());
+            assertEquals(5, task.getLeaseTime());
+        } finally {
+            overrideConfigProperty("tasks.clientId", previousClientId);
+            overrideConfigProperty(prefix + "startTime", previousStart);
+            overrideConfigProperty(prefix + "interval", previousInterval);
+            overrideConfigProperty(prefix + "leaseTime", previousLease);
+        }
+    }
+
+    /**
+     * The one branch in this scaffolding with real behaviour: a malformed
+     * {@code interval} in config is caught and logged, not thrown, and must
+     * leave the default interval in place rather than half-applying a bad
+     * value. A mistyped override in {@code roller-custom.properties} must
+     * not stop the task from being constructed at all.
+     */
+    @Test
+    void aMalformedIntervalLeavesTheDefaultIntervalInPlaceAndDoesNotThrow() throws Exception {
+        String taskName = "trashPurgeBadIntervalTest";
+        String key = "tasks." + taskName + ".interval";
+
+        String previous = overrideConfigProperty(key, "not-a-number");
+        try {
+            TrashPurgeTask task = new TrashPurgeTask();
+
+            assertDoesNotThrow(() -> task.init(taskName),
+                    "a malformed interval must not stop the task from being constructed");
+            assertEquals(RollerTask.DEFAULT_INTERVAL_MINS, task.getInterval(),
+                    "a malformed interval must leave the default interval in place");
+        } finally {
+            overrideConfigProperty(key, previous);
+        }
+    }
+
+    /**
+     * Same contract as the interval case, for {@code leaseTime}: a malformed
+     * value is caught and logged, and the default lease survives.
+     */
+    @Test
+    void aMalformedLeaseTimeLeavesTheDefaultLeaseTimeInPlaceAndDoesNotThrow() throws Exception {
+        String taskName = "trashPurgeBadLeaseTimeTest";
+        String key = "tasks." + taskName + ".leaseTime";
+
+        String previous = overrideConfigProperty(key, "not-a-number");
+        try {
+            TrashPurgeTask task = new TrashPurgeTask();
+
+            assertDoesNotThrow(() -> task.init(taskName),
+                    "a malformed leaseTime must not stop the task from being constructed");
+            assertEquals(RollerTaskWithLeasing.DEFAULT_LEASE_MINS, task.getLeaseTime(),
+                    "a malformed leaseTime must leave the default lease in place");
+        } finally {
+            overrideConfigProperty(key, previous);
+        }
+    }
+
+    // Note on main(String[]): it is a standalone entry point meant to be run
+    // outside the webapp (see its javadoc) -- it calls System.exit() on both
+    // the success and failure paths, which would terminate the test JVM
+    // rather than report a result. That is the whole method: construct,
+    // init(), run(), exit. Everything it calls (init(), run() via
+    // RollerTaskWithLeasing) is exercised above and in runTask()'s own
+    // tests; main() itself is left uncovered rather than restructured or
+    // deleted just to win a coverage number.
+
     // ---------------------------------------------------------------- fixtures
+
+    /**
+     * Overrides a value in the startup configuration (standing in for
+     * {@code roller-custom.properties}) and returns what was there before, so
+     * callers can put it back. The backing {@code Properties} is
+     * process-global -- same reflective access pattern as
+     * {@code PromotedRuntimePropertyTest}.
+     */
+    private static String overrideConfigProperty(String name, String value) throws Exception {
+        Field field = WebloggerConfig.class.getDeclaredField("config");
+        field.setAccessible(true);
+        Properties config = (Properties) field.get(null);
+        String previous = config.getProperty(name);
+        if (value == null) {
+            config.remove(name);
+        } else {
+            config.setProperty(name, value);
+        }
+        return previous;
+    }
 
     private static Weblog weblog(String handle) {
         Weblog weblog = new Weblog();

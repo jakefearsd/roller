@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.RollerEvent;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.User;
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -244,6 +246,20 @@ class WeblogEntryTrashOperationsTest {
 
         assertEquals(List.of("trashed-second", "trashed-first"), anchors,
                 "newest-trashed first: " + anchors);
+    }
+
+    /**
+     * {@code getTrashedEntries} is routed through the general-purpose
+     * {@code getWeblogEntries(WeblogEntrySearchCriteria)} query, which is
+     * happy to run scoped to "no weblog" and would silently return every
+     * TRASHED entry across every weblog on the system -- exposing another
+     * weblog's trashed content to whoever is looking at this one's Trash
+     * screen. The explicit null-check exists so a caller mistake fails loudly
+     * instead of leaking that.
+     */
+    @Test
+    void getTrashedEntriesRejectsANullWeblogInsteadOfListingEveryWeblogsTrash() {
+        assertThrows(WebloggerException.class, () -> entries().getTrashedEntries(null));
     }
 
     // ---------------------------------------------------------------- purge
