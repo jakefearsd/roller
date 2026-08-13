@@ -30,6 +30,24 @@
     <spring:message code="weblogPagesForm.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
+<%-- Local draft recovery -- see EntryEdit.jsp; PageEdit carries its own copy
+     of the editor bootstrap, so it carries its own wiring too. Page scope is
+     fine here: nothing is jsp:include-d. --%>
+<script src="<c:url value='/theme/scripts/roller-draft.js'/>"></script>
+<c:set var="draftKey"
+       value="roller.draft.v1:${pageContext.request.contextPath}:${actionWeblog.handle}:pageEdit:${empty bean.id ? 'new' : bean.id}"/>
+<c:set var="draftNewKey"
+       value="roller.draft.v1:${pageContext.request.contextPath}:${actionWeblog.handle}:pageEdit:new"/>
+
+<div id="draftRecoveryBar" class="draft-bar" hidden
+     data-restored="<spring:message code='weblogEdit.draftRecovery.restored'/>">
+    <span class="draft-bar-text"
+          data-template="<spring:message code='weblogEdit.draftRecovery.message'/>"></span>
+    <button type="button" class="draft-bar-restore"><spring:message code="weblogEdit.draftRecovery.restore"/></button>
+    <span class="draft-bar-sep">&#183;</span>
+    <button type="button" class="draft-bar-discard"><spring:message code="weblogEdit.draftRecovery.discard"/></button>
+</div>
+
 <form id="pageEditForm" method="post" class="form-stacked"
       action="${pageContext.request.contextPath}/roller-ui/authoring/pageEdit!save.rol">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
@@ -288,18 +306,45 @@
                       'link', 'table', '|', 'preview', 'side-by-side', 'guide']
         });
 
+        <%-- Bound once, tracking a dirty flag -- the same fix as
+             EntryEditor.jsp, where registering both handlers inside the change
+             callback left one submit handler per keystroke on the form about
+             to be posted. --%>
+        var rollerPageDirty = false;
         rollerEditor.codemirror.on('change', function () {
-            var confirmLeaving = function (event) {
-                if (event.originalEvent) {
-                    event.originalEvent.returnValue = "Are you sure you want to leave?";
-                }
-                return "Are you sure you want to leave?";
-            };
-            $(window).on("beforeunload", confirmLeaving);
-            $("#pageEditForm").on('submit', function () {
-                $(window).off("beforeunload", confirmLeaving);
-            });
+            rollerPageDirty = true;
         });
+        $("#pageEditForm").on('input change', function () {
+            rollerPageDirty = true;
+        });
+        $(window).on("beforeunload", function (event) {
+            if (!rollerPageDirty) {
+                return undefined;
+            }
+            if (event.originalEvent) {
+                event.originalEvent.returnValue = "Are you sure you want to leave?";
+            }
+            return "Are you sure you want to leave?";
+        });
+        $("#pageEditForm").on('submit', function () {
+            rollerPageDirty = false;
+            $(window).off("beforeunload");
+        });
+
+        if (window.rollerDraft) {
+            window.rollerDraft.install({
+                form: document.getElementById('pageEditForm'),
+                key: '${draftKey}',
+                staleKeys: ['${draftNewKey}'],
+                bar: document.getElementById('draftRecoveryBar'),
+                csrfName: '${_csrf.parameterName}',
+                getText: rollerGetEntryText,
+                setText: rollerSetEntryText,
+                onEditorChange: function (callback) {
+                    rollerEditor.codemirror.on('change', callback);
+                }
+            });
+        }
 
         $(".shortcode-card").on('click', function (event) {
             event.preventDefault();

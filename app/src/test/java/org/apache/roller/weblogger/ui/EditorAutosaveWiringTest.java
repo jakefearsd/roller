@@ -46,6 +46,8 @@ class EditorAutosaveWiringTest {
             Paths.get("src/main/webapp/WEB-INF/jsps/editor/EntryEdit.jsp");
     private static final Path ENTRY_EDITOR =
             Paths.get("src/main/webapp/WEB-INF/jsps/editor/EntryEditor.jsp");
+    private static final Path PAGE_EDIT =
+            Paths.get("src/main/webapp/WEB-INF/jsps/editor/PageEdit.jsp");
 
     private static String read(Path jsp) throws IOException {
         return Files.readString(jsp, StandardCharsets.UTF_8);
@@ -138,6 +140,42 @@ class EditorAutosaveWiringTest {
                 "a submit handler bound inside the change callback accumulates one "
                         + "per keystroke on the form about to be posted -- "
                         + "the callback body is:\n" + body);
+    }
+
+    @Test
+    void thePageEditorIsWiredTheSameWay() throws IOException {
+        String jsp = read(PAGE_EDIT);
+        assertTrue(jsp.contains("/theme/scripts/roller-draft.js"),
+                "PageEdit.jsp must load roller-draft.js");
+        assertTrue(jsp.contains("id=\"draftRecoveryBar\""),
+                "PageEdit.jsp must render the recovery bar");
+        assertTrue(jsp.contains("rollerDraft.install("),
+                "PageEdit.jsp must install the module");
+        assertTrue(jsp.contains("getText: rollerGetEntryText")
+                        && jsp.contains("setText: rollerSetEntryText"),
+                "PageEdit.jsp has its own copy of the editor seam and must pass both halves");
+    }
+
+    @Test
+    void thePageEditorsDraftKeyIsScopedToTheWeblogAndThePage() throws IOException {
+        String jsp = read(PAGE_EDIT);
+        assertTrue(jsp.contains("roller.draft.v1:"),
+                "the storage key must carry the versioned prefix roller-draft.js sweeps on");
+        assertTrue(jsp.contains("${actionWeblog.handle}"),
+                "a key without the handle lets two weblogs' page editors share a snapshot");
+        assertTrue(jsp.contains(":pageEdit:"),
+                "the page editor's key must not collide with the entry editor's");
+    }
+
+    @Test
+    void thePageEditorInstallsAgainstItsOwnFormNotTheEntryForm() throws IOException {
+        // PageEdit.jsp's form is #pageEditForm. Copying EntryEditor.jsp's
+        // install() verbatim would pass document.getElementById('entry'),
+        // which is null here -- install() returns silently and the page has
+        // autosave that never fires.
+        String jsp = read(PAGE_EDIT);
+        assertTrue(jsp.contains("form: document.getElementById('pageEditForm')"),
+                "PageEdit.jsp must install against #pageEditForm");
     }
 
     /**
