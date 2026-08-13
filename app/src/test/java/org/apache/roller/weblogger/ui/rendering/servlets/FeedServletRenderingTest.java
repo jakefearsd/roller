@@ -97,6 +97,28 @@ class FeedServletRenderingTest {
         assertEquals(404, response.getStatus());
     }
 
+    /**
+     * W2: multi-locale weblogs are gone, but the URL shape
+     * {@code /<handle>/<locale>/...} the old per-locale feeds used is still
+     * parsed by WeblogFeedRequest -- {@code getLocale()} can come back
+     * non-null even though there is no per-locale content behind it anymore.
+     * Without this check the request would fall through and quietly serve
+     * the ordinary unfiltered feed under a URL that looks locale-scoped,
+     * instead of 404ing on a feed shape that no longer exists.
+     */
+    @Test
+    void aFeedRequestNamingALocaleIsNotFound() throws Exception {
+        TestUtils.setupWeblogEntry("atom-entry", weblog, user);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/feed", "/" + handle + "/en_US/entries/atom");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.feedServlet(), request);
+
+        assertEquals(404, response.getStatus());
+    }
+
     @Test
     void unknownCategoryFeedIsNotFound() throws Exception {
         MockHttpServletRequest request = RenderingTestSupport

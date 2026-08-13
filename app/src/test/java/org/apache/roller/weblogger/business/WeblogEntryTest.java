@@ -21,6 +21,7 @@ package org.apache.roller.weblogger.business;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.*;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.junit.jupiter.api.AfterEach;
@@ -996,6 +997,102 @@ public class WeblogEntryTest  {
         assertNull(entry);
     }
 
+
+    /**
+     * saveWeblogEntry() falls back to the weblog's first category whenever an
+     * entry arrives with none set -- the entry editor never lets an author
+     * leave category blank, but any other caller that builds a WeblogEntry
+     * directly (a future import path, a script, this fixture) can. If that
+     * fallback regressed, such an entry would save with a null category and
+     * silently drop out of every category-scoped view -- category archive
+     * pages, category-filtered search -- with nothing to say why.
+     */
+    @Test
+    public void testSavingAnEntryWithNoCategorySetFallsBackToTheWeblogsFirstCategory() throws Exception {
+
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        testUser = TestUtils.getManagedUser(testUser);
+        WeblogCategory onlyCategory = testWeblog.getWeblogCategories().getFirst();
+
+        WeblogEntry testEntry = new WeblogEntry();
+        testEntry.setTitle("noCategoryEntry");
+        testEntry.setLink("testEntryLink");
+        testEntry.setText("blah blah entry");
+        testEntry.setAnchor("noCategoryEntryAnchor");
+        testEntry.setPubTime(new java.sql.Timestamp(new java.util.Date().getTime()));
+        testEntry.setUpdateTime(new java.sql.Timestamp(new java.util.Date().getTime()));
+        testEntry.setWebsite(testWeblog);
+        testEntry.setCreatorUserName(testUser.getUserName());
+        // Deliberately no setCategory() call -- that is the case under test.
+
+        mgr.saveWeblogEntry(testEntry);
+        String id = testEntry.getId();
+        TestUtils.endSession(true);
+
+        WeblogEntry saved = mgr.getWeblogEntry(id);
+        assertNotNull(saved);
+        assertNotNull(saved.getCategory());
+        assertEquals(onlyCategory.getId(), saved.getCategory().getId());
+
+        // teardown our test entry
+        TestUtils.teardownWeblogEntry(id);
+        TestUtils.endSession(true);
+    }
+
+    /**
+     * removeWeblogCategory() is supposed to make "a weblog with zero
+     * categories" unreachable (see
+     * WeblogCategoryCRUDTest#testCannotRemoveTheLastCategory), so
+     * saveWeblogEntry()'s null-category fallback should never actually find
+     * an empty list. But if that invariant is ever breached some other way,
+     * the fallback must fail loudly with a WebloggerException naming the
+     * weblog, not let the bare iterator throw NoSuchElementException with no
+     * hint of which weblog broke or why -- that failure mode is exactly what
+     * an operator staring at a stack trace with no context cannot debug.
+     */
+    @Test
+    public void testSavingAnEntryWithNoCategorySetFailsLoudlyWhenTheWeblogHasNoCategoriesAtAll() throws Exception {
+
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+
+        testWeblog = TestUtils.getManagedWebsite(testWeblog);
+        testUser = TestUtils.getManagedUser(testUser);
+
+        // Simulate the otherwise-unreachable state directly, in memory only:
+        // clear the managed weblog's category list without deleting
+        // anything, so the throw below happens before saveWeblogEntry ever
+        // touches the database.
+        testWeblog.getWeblogCategories().clear();
+
+        WeblogEntry testEntry = new WeblogEntry();
+        testEntry.setTitle("noCategoryNoWeblogCategoriesEntry");
+        testEntry.setLink("testEntryLink");
+        testEntry.setText("blah blah entry");
+        testEntry.setAnchor("noCategoryNoWeblogCategoriesEntryAnchor");
+        testEntry.setPubTime(new java.sql.Timestamp(new java.util.Date().getTime()));
+        testEntry.setUpdateTime(new java.sql.Timestamp(new java.util.Date().getTime()));
+        testEntry.setWebsite(testWeblog);
+        testEntry.setCreatorUserName(testUser.getUserName());
+        // Deliberately no setCategory() call -- that is the case under test.
+
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> mgr.saveWeblogEntry(testEntry));
+        assertTrue(thrown.getMessage().contains(testWeblog.getHandle()),
+                "exception should name the offending weblog, not just say 'no categories': "
+                        + thrown.getMessage());
+
+        // The save must have been refused before anything was written --
+        // confirm the entry never made it into the database, not merely
+        // that an exception was thrown somewhere.
+        assertNull(mgr.getWeblogEntry(testEntry.getId()));
+
+        // Roll back rather than commit: the in-memory category-list clear
+        // was never meant to reach the database, and ending with flush=true
+        // here would be testing something else entirely.
+        TestUtils.endSession(false);
+    }
 
     @Test
     public void testWeblogStats() throws Exception {

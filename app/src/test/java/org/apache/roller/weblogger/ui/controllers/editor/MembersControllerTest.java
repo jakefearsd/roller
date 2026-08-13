@@ -385,6 +385,24 @@ class MembersControllerTest extends EditorControllerTestSupport {
                 "A failed grant must be reported: " + errors(model));
     }
 
+    @Test
+    void aFailureWhileLookingUpTheGranteeIsReportedRatherThanSwallowed() throws Exception {
+        // getUserByUserName can throw as well as return null (a lookup
+        // failure, not "no such user"). Without the catch around it, that
+        // exception would propagate out of the controller as an unhandled
+        // 500 instead of the same field-error screen every other grant
+        // failure produces.
+        org.mockito.Mockito.when(weblogger.getUserManager().getUserByUserName("bob"))
+                .thenThrow(new WebloggerException("database down"));
+
+        String view = controller.grant(request, model, "bob", WeblogPermission.POST);
+
+        assertEquals(".Members", view);
+        assertTrue(errors(model).contains("memberPermissions.saveError"),
+                "A failed lookup must be reported: " + errors(model));
+        verify(weblogger.getUserManager(), never()).grantWeblogPermission(any(), any(), any());
+    }
+
     // --- grant() : groupblogging.enabled ---
 
     @Test

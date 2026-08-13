@@ -143,6 +143,22 @@ class MaintenanceControllerTest {
                 "Expected a no-such-weblog error, got: " + ControllerTestFixture.errors(model));
     }
 
+    @Test
+    void aFailedWeblogListLookupYieldsAnEmptyPickerRatherThanAnException() throws Exception {
+        // loadWeblogs() backs the page's <select>; without the catch, a
+        // lookup failure here would take down the whole Maintenance screen
+        // instead of just leaving the picker empty -- an operator trying to
+        // flush a cache or rebuild an index could not even reach the buttons.
+        when(weblogger.weblogManager().getWeblogs(true, null, null, null, 0, -1))
+                .thenThrow(new WebloggerException("database down"));
+
+        String view = controller.execute(request(), model, null);
+
+        assertEquals(".Maintenance", view);
+        assertEquals(List.of(), model.getAttribute("weblogs"),
+                "A failed weblog-list lookup must degrade to an empty picker, not a null or an exception");
+    }
+
     // --- flush cache ---
 
     @Test
@@ -182,6 +198,25 @@ class MaintenanceControllerTest {
         assertEquals(".Maintenance", view);
         assertTrue(ControllerTestFixture.errors(model).contains("maintenance.error.noSuchWeblog"),
                 "Expected a no-such-weblog error, got: " + ControllerTestFixture.errors(model));
+        verify(weblogger.weblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void aFailedWeblogLookupByIdIsAPageErrorRatherThanAnException() throws Exception {
+        // resolveWeblog() is shared by every action handler. Without the
+        // catch, a lookup failure for an id that DOES exist (unlike the
+        // "unknown id" cases above, which get null back from a lookup that
+        // succeeds) would propagate out of the controller as an unhandled
+        // exception instead of the same noSuchWeblog page error.
+        when(weblogger.weblogManager().getWeblog("weblog-1"))
+                .thenThrow(new WebloggerException("database down"));
+
+        String view = controller.flushCache(request(), model, "weblog-1");
+
+        assertEquals(".Maintenance", view);
+        assertTrue(ControllerTestFixture.errors(model).contains("maintenance.error.noSuchWeblog"),
+                "A lookup failure must be reported the same way an unknown id is, not thrown: "
+                        + ControllerTestFixture.errors(model));
         verify(weblogger.weblogManager(), never()).saveWeblog(any());
     }
 
