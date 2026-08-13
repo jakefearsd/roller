@@ -135,8 +135,17 @@ public class MediaFileAddController extends MediaFileBase {
                     }
                     mediaFile.setContentType(contentType);
 
+                    // createMediaFile reports a validation refusal (quota, forbidden
+                    // file type, ...) by adding to this shared collector and returning
+                    // normally rather than throwing -- so a growth in the error count
+                    // across this one call is this file being refused, not persisted.
+                    int errorCountBeforeThisFile = errors.getErrorCount();
                     manager.createMediaFile(getActionWeblog(request), mediaFile, errors);
                     weblogger.flush();
+
+                    if (errors.getErrorCount() > errorCountBeforeThisFile) {
+                        continue;
+                    }
 
                     if (mediaFile.isImageFile()) {
                         newImages.add(mediaFile);
@@ -147,7 +156,7 @@ public class MediaFileAddController extends MediaFileBase {
 
                 } catch (Exception e) {
                     log.error("Error uploading media file", e);
-                    addError(model, "mediaFileAdd.errorUploading", bean.getName(), request);
+                    addError(model, "mediaFileAdd.errorUploading", uploadedFile.getOriginalFilename(), request);
                 }
             }
 
@@ -156,7 +165,16 @@ public class MediaFileAddController extends MediaFileBase {
                 addError(model, msg.getKey(), request);
             }
 
-            if (!uploaded.isEmpty() && !hasErrors(model)) {
+            // A batch upload can partly succeed: report BOTH what landed and what
+            // did not, rather than one generic failure that hides which of thirty
+            // files actually made it. Whenever anything landed, land on the success
+            // page -- it lists exactly the files in `uploaded`, and any errors
+            // recorded above render in the same response via the shared errors
+            // banner, so a mixed batch shows both the successes and the failures at
+            // once instead of suppressing the successes because something else in
+            // the batch failed. Only a batch where nothing landed at all falls back
+            // to redisplaying the form.
+            if (!uploaded.isEmpty()) {
                 addMessage(model, "uploadFiles.uploadedFiles", request);
                 for (MediaFile upload : uploaded) {
                     addMessage(model, "uploadFiles.uploadedFile", upload.getPermalink(), request);

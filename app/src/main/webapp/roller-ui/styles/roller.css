@@ -1492,6 +1492,50 @@ span.button {
     letter-spacing: 0.02em;
 }
 
+/* MediaFileAdd.jsp's bulk-upload drop zone: a dashed --line border on
+   --paper at rest, --accent while a drag is over it (#mediaDropZone.media-
+   dropzone-active, toggled by the page's own drag handlers). */
+
+.media-dropzone {
+    padding: 24px;
+    text-align: center;
+    background: var(--paper);
+    border: 2px dashed var(--line);
+    border-radius: var(--radius);
+}
+
+.media-dropzone-active {
+    border-color: var(--accent);
+    background: var(--accent-quiet);
+}
+
+.media-dropzone-hint {
+    margin: 0;
+    color: var(--ink-soft);
+}
+
+.media-chosen {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+}
+
+.media-chosen li {
+    padding: 2px 0;
+    font-family: var(--font-data);
+    font-size: 13px;
+    color: var(--ink);
+}
+
+.media-chosen li.media-chosen-total {
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-ui);
+    color: var(--ink-soft);
+}
+
 .sortByMenu, .viewDirectoryMenu {
     display: inline;
 }

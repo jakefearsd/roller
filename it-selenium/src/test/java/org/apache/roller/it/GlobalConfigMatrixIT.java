@@ -85,7 +85,7 @@ class GlobalConfigMatrixIT extends RollerIT {
                 "site.allowUserWeblogCreation", false));
         try {
             openPath("/roller-ui/authoring/mediaFileAdd.rol?weblog=" + WEBLOG_HANDLE);
-            $("#fileControl0").should(exist).uploadFile(testImage());
+            $("#uploadedFiles").should(exist).uploadFile(testImage());
             $("#uploadButton").click();
             $("#errors").should(visible);
 

@@ -304,6 +304,98 @@ class MediaFileAddControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void theFailureReportNamesTheFileThatFailedNotTheRemovedBeanName() throws Exception {
+        // bean.getName() is always null now that the form's Name field is
+        // gone; the error must name the upload that actually failed.
+        registerMessage("mediaFileAdd.errorUploading", "Error uploading file {0}");
+        org.mockito.Mockito.doThrow(new WebloggerException("disk full"))
+                .when(weblogger.getMediaFileManager()).createMediaFile(any(), any(), any());
+
+        controller.save(request, model, bean,
+                new MultipartFile[]{upload("vacation.jpg", "image/jpeg", "x")});
+
+        assertTrue(errors(model).contains("Error uploading file vacation.jpg"),
+                "Expected the failed file's own name in the error, got: " + errors(model));
+    }
+
+    @Test
+    void aBatchThatPartlySucceedsReportsBothTheLandedAndTheFailedFiles() throws Exception {
+        // Thirty files where one is bad must not hide the other twenty-nine:
+        // the success list and the failure must both reach the author.
+        String view = controller.save(request, model, bean, new MultipartFile[]{
+                upload("good.jpg", "image/jpeg", "x"),
+                upload("bad/name.jpg", "image/jpeg", "y")});
+
+        assertEquals(".MediaFileAddSuccess", view,
+                "A batch with at least one landed file must still reach the success "
+                        + "page so the author can act on what DID upload");
+        assertEquals(1, ((java.util.List<?>) model.getAttribute("newImages")).size(),
+                "Only the good file should be counted as landed");
+        assertTrue(messages(model).contains("uploadFiles.uploadedFiles"),
+                "The success list must still be reported: " + messages(model));
+        assertTrue(errors(model).contains("uploadFiles.error.badPath"),
+                "The failure must ALSO be reported in the same response, not "
+                        + "suppressed by the batch's partial success: " + errors(model));
+    }
+
+    @Test
+    void aBatchThatFailsCompletelyStillRedisplaysTheFormWithEveryError() throws Exception {
+        String view = controller.save(request, model, bean, new MultipartFile[]{
+                upload("bad/one.jpg", "image/jpeg", "x"),
+                upload("bad/two.jpg", "image/jpeg", "y")});
+
+        assertEquals(".MediaFileAdd", view,
+                "Nothing landed, so there is no success page to show");
+        assertTrue(messages(model).isEmpty(),
+                "No file landed; there must be no success message: " + messages(model));
+        verify(weblogger.getMediaFileManager(), never()).createMediaFile(any(), any(), any());
+    }
+
+    @Test
+    void aFileTheManagerRefusesIsNotCountedAsLandedEvenWithoutAnException() throws Exception {
+        // createMediaFile reports a quota/forbidden-type refusal by adding to
+        // the shared RollerMessages collector and returning normally, not by
+        // throwing -- the controller must not count that file as uploaded just
+        // because no exception was thrown.
+        org.mockito.Mockito.doAnswer(invocation -> {
+            org.apache.roller.weblogger.util.RollerMessages messages = invocation.getArgument(2);
+            messages.addError("error.upload.forbiddenFile");
+            return null;
+        }).when(weblogger.getMediaFileManager()).createMediaFile(any(), any(), any());
+
+        String view = controller.save(request, model, bean,
+                new MultipartFile[]{upload("evil.exe", "application/octet-stream", "x")});
+
+        assertEquals(".MediaFileAdd", view,
+                "The one file offered was refused by the manager, so nothing landed");
+        assertTrue(messages(model).isEmpty(),
+                "A refused file must not be reported as a success: " + messages(model));
+        assertTrue(errors(model).contains("error.upload.forbiddenFile"));
+    }
+
+    @Test
+    void aManagerRefusalOfOneFileDoesNotHideAnotherFilesSuccessInTheSameBatch() throws Exception {
+        org.mockito.Mockito.doAnswer(invocation -> {
+            MediaFile target = invocation.getArgument(1);
+            if ("evil.exe".equals(target.getName())) {
+                org.apache.roller.weblogger.util.RollerMessages messages = invocation.getArgument(2);
+                messages.addError("error.upload.forbiddenFile");
+            }
+            return null;
+        }).when(weblogger.getMediaFileManager()).createMediaFile(any(), any(), any());
+
+        String view = controller.save(request, model, bean, new MultipartFile[]{
+                upload("good.jpg", "image/jpeg", "x"),
+                upload("evil.exe", "application/octet-stream", "y")});
+
+        assertEquals(".MediaFileAddSuccess", view,
+                "The good file landed, so the success page must still show");
+        assertEquals(1, ((java.util.List<?>) model.getAttribute("newImages")).size());
+        assertTrue(errors(model).contains("error.upload.forbiddenFile"),
+                "The refused file's error must still reach the author: " + errors(model));
+    }
+
+    @Test
     void cancellingReturnsToTheMediaFileList() {
         assertEquals("redirect:/roller-ui/authoring/mediaFileView.rol?weblog=" + WEBLOG_HANDLE,
                 controller.cancel(request));

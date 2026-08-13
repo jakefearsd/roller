@@ -194,7 +194,7 @@ class ThemeMatrixIT extends RollerIT {
      */
     private String uploadImage(String handle) {
         openPath("/roller-ui/authoring/mediaFileAdd.rol?weblog=" + handle);
-        $("#fileControl0").should(exist).uploadFile(testImage());
+        $("#uploadedFiles").should(exist).uploadFile(testImage());
         $("#uploadButton").click();
 
         $("button[formaction$='entryAddWithMediaFile.rol']").should(exist);

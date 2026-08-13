@@ -273,7 +273,7 @@ class EditorSeoIT extends RollerIT {
     private String uploadImage(String uniqueName) {
         File image = uniquelyNamedCopy(testImage(), uniqueName);
         openPath(MEDIA_ADD);
-        $("#fileControl0").should(exist).uploadFile(image);
+        $("#uploadedFiles").should(exist).uploadFile(image);
         $("#uploadButton").click();
         // Only the success page offers to create a post from the upload; an
         // error would render the upload form again with an error banner.

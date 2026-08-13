@@ -358,7 +358,7 @@ class MediaCropIT extends RollerIT {
     private String uploadImage(String uniqueName) {
         File image = uniquelyNamedCopy(testImage(), uniqueName);
         openPath(MEDIA_ADD);
-        $("#fileControl0").should(exist).uploadFile(image);
+        $("#uploadedFiles").should(exist).uploadFile(image);
         $("#uploadButton").click();
         $("button[formaction$='entryAddWithMediaFile.rol']").should(exist);
         return uniqueName;

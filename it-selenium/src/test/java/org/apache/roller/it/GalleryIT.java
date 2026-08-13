@@ -149,7 +149,7 @@ class GalleryIT extends RollerIT {
      */
     private String uploadImage() {
         openPath(MEDIA_ADD);
-        $("#fileControl0").should(exist).uploadFile(testImage());
+        $("#uploadedFiles").should(exist).uploadFile(testImage());
         $("#uploadButton").click();
         // Only the success page offers to create a post from the upload.
         $("button[formaction$='entryAddWithMediaFile.rol']").should(exist);

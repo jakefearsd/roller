@@ -26,13 +26,6 @@
     <input type="hidden" name="directoryName" value="${directoryName}"/>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
-        <div class="col-sm-9">
-            <input type="text" id="entry_bean_name" name="bean.name" value="${bean.name}" maxlength="255" class="form-control"/>
-        </div>
-    </div>
-
-    <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
             <textarea name="bean.description" rows="3" class="form-control">${bean.description}</textarea>
@@ -71,11 +64,11 @@
             </h4>
         </div>
         <div class="card-body">
-            <input type="file" name="uploadedFiles" id="fileControl0" size="30"/>
-            <input type="file" name="uploadedFiles" id="fileControl1" size="30"/>
-            <input type="file" name="uploadedFiles" id="fileControl2" size="30"/>
-            <input type="file" name="uploadedFiles" id="fileControl3" size="30"/>
-            <input type="file" name="uploadedFiles" id="fileControl4" size="30"/>
+            <div id="mediaDropZone" class="media-dropzone">
+                <input type="file" name="uploadedFiles" id="uploadedFiles" multiple/>
+                <p class="media-dropzone-hint"><spring:message code="mediaFileAdd.dropHint"/></p>
+                <ul id="mediaChosenFiles" class="media-chosen"></ul>
+            </div>
         </div>
     </div>
 
@@ -90,54 +83,70 @@
 
 <script>
 
-    $(document).ready(function () {
+    (function () {
+        var dropZone = document.getElementById("mediaDropZone");
+        var fileInput = document.getElementById("uploadedFiles");
+        var chosenList = document.getElementById("mediaChosenFiles");
+        var uploadButton = document.getElementById("uploadButton");
 
-        $("input[type='file']").change(function () {
+        function formatSize(bytes) {
+            var units = ["B", "KB", "MB", "GB"];
+            var unit = 0;
+            var size = bytes;
+            while (size >= 1024 && unit < units.length - 1) {
+                size = size / 1024;
+                unit++;
+            }
+            return (unit === 0 ? size : size.toFixed(1)) + " " + units[unit];
+        }
 
-            var name = '';
-            var count = 0;
-            var fileControls = $("input[type='file']");
+        function renderChosenFiles() {
+            var files = fileInput.files;
+            chosenList.innerHTML = "";
 
-            for (var i = 0; i < fileControls.length; i++) {
-                if (jQuery.trim(fileControls.get(i).value).length > 0) {
-                    count++;
-                    name = fileControls.get(i).value;
-                }
+            var total = 0;
+            for (var i = 0; i < files.length; i++) {
+                var item = document.createElement("li");
+                item.textContent = files[i].name + " (" + formatSize(files[i].size) + ")";
+                chosenList.appendChild(item);
+                total += files[i].size;
             }
 
-            var entryBean = $("#entry_bean_name");
-            if (count === 1) {
-                entryBean.get(0).disabled = false;
-                entryBean.get(0).value = getFileName(name);
-
-            } else if (count > 1) {
-                entryBean.css("font-style", "italic");
-                entryBean.css("color", "grey");
-                entryBean.get(0).value = "<spring:message code="mediaFileAdd.multipleNames"/>";
-                entryBean.get(0).disabled = true;
+            if (files.length > 0) {
+                var summary = document.createElement("li");
+                summary.className = "media-chosen-total";
+                summary.textContent = files.length
+                        + (files.length === 1 ? " file, " : " files, ")
+                        + formatSize(total) + " total";
+                chosenList.appendChild(summary);
             }
 
-            if (count > 0) {
-                $("#uploadButton:first").attr("disabled", false)
-            }
+            uploadButton.disabled = files.length === 0;
+        }
+
+        fileInput.addEventListener("change", renderChosenFiles);
+
+        dropZone.addEventListener("dragover", function (event) {
+            // Without this the browser's default is to navigate to the
+            // dropped file, losing everything typed into the form so far.
+            event.preventDefault();
+            dropZone.classList.add("media-dropzone-active");
         });
 
-        $("#uploadButton:first").attr("disabled", true)
-    });
+        dropZone.addEventListener("dragleave", function () {
+            dropZone.classList.remove("media-dropzone-active");
+        });
 
-    function getFileName(fullName) {
-        var backslashIndex = fullName.lastIndexOf('/');
-        var fwdslashIndex = fullName.lastIndexOf('\\');
-        var fileName;
-        if (backslashIndex >= 0) {
-            fileName = fullName.substring(backslashIndex + 1);
-        } else if (fwdslashIndex >= 0) {
-            fileName = fullName.substring(fwdslashIndex + 1);
-        }
-        else {
-            fileName = fullName;
-        }
-        return fileName;
-    }
+        dropZone.addEventListener("drop", function (event) {
+            // Same reason as dragover: without preventDefault the browser
+            // navigates away to the dropped file.
+            event.preventDefault();
+            dropZone.classList.remove("media-dropzone-active");
+            fileInput.files = event.dataTransfer.files;
+            renderChosenFiles();
+        });
+
+        uploadButton.disabled = true;
+    })();
 
 </script>
