@@ -20,10 +20,12 @@ package org.apache.roller.weblogger.business;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.pojos.RollerEvent;
+import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -33,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -84,6 +87,95 @@ class WeblogEntryTrashOperationsTest {
         assertNotNull(reloaded, "trashing must not hard-delete the row");
         assertEquals(PubStatus.TRASHED, reloaded.getStatus());
         assertNotNull(reloaded.getTrashedAt(), "the trash stamp must be set");
+    }
+
+    /**
+     * {@code WeblogPageCache} has no CacheHandler and expires a rendered page
+     * only by comparing it against {@code weblog.lastModified} (see the
+     * Templates section of CLAUDE.md). {@code saveWeblogEntry}'s own bump is
+     * gated on the entry's NEW status being PUBLISHED, which TRASHED never
+     * is, so without a bump of its own a reader would keep seeing a trashed
+     * post on the cached home page.
+     */
+    @Test
+    void trashingAPublishedEntryBumpsTheWeblogsLastModified() throws Exception {
+        WeblogEntry created = TestUtils.setupWeblogEntry("bumps-last-modified", blog, user);
+        TestUtils.endSession(true);
+        assertEquals(PubStatus.PUBLISHED, created.getStatus(), "fixture sanity check");
+
+        Date before = freshLastModifiedBaseline();
+        // Guarantee a distinguishable millisecond boundary even on a very
+        // fast clock/database, same pattern as WeblogPageManagerTest.
+        Thread.sleep(5);
+
+        WeblogEntry managed = entries().getWeblogEntry(created.getId());
+        entries().trashWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        Date after = TestUtils.getManagedWebsite(blog).getLastModified();
+        assertTrue(after.after(before),
+                "trashing a published entry must bump weblog.lastModified or a cached "
+                        + "copy of the home page keeps showing it");
+    }
+
+    /**
+     * The flip side of the test above: a draft was never visible on any
+     * public page, so trashing one must not spuriously expire an otherwise
+     * still-valid cached page.
+     */
+    @Test
+    void trashingAnUnpublishedEntryDoesNotBumpTheWeblogsLastModified() throws Exception {
+        WeblogEntry created = TestUtils.setupWeblogEntry("no-bump-for-draft", blog, user, PubStatus.DRAFT);
+        TestUtils.endSession(true);
+
+        Date before = freshLastModifiedBaseline();
+        Thread.sleep(5);
+
+        WeblogEntry managed = entries().getWeblogEntry(created.getId());
+        entries().trashWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        Date after = TestUtils.getManagedWebsite(blog).getLastModified();
+        assertEquals(before, after,
+                "a draft was never visible, so trashing it must not bump weblog.lastModified");
+    }
+
+    /**
+     * The tag cloud counts published entries only. Trashing a published
+     * entry must decrement its tags out of the aggregate the same way
+     * unpublishing does -- otherwise its tags stay counted until the entry
+     * is purged, which with the default "keep forever" retention is
+     * effectively never.
+     */
+    @Test
+    void trashingAPublishedEntryDecrementsItsTagsOutOfTheAggregate() throws Exception {
+        WeblogEntry created = TestUtils.setupWeblogEntry("tagged-then-trashed", blog, user);
+        TestUtils.endSession(true);
+
+        WeblogEntry withTag = entries().getWeblogEntry(created.getId());
+        withTag.addTag("cycling");
+        entries().saveWeblogEntry(withTag);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        List<String> beforeTrash = entries()
+                .getTags(TestUtils.getManagedWebsite(blog), null, null, 0, 50)
+                .stream().map(TagStat::getName).toList();
+        assertTrue(beforeTrash.contains("cycling"), "fixture sanity check, got: " + beforeTrash);
+
+        WeblogEntry managed = entries().getWeblogEntry(created.getId());
+        entries().trashWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        List<String> afterTrash = entries()
+                .getTags(TestUtils.getManagedWebsite(blog), null, null, 0, 50)
+                .stream().map(TagStat::getName).toList();
+        assertFalse(afterTrash.contains("cycling"),
+                "trashing a published entry must decrement its tags out of the tag cloud, got: "
+                        + afterTrash);
     }
 
     // --------------------------------------------------------------- restore
@@ -177,6 +269,38 @@ class WeblogEntryTrashOperationsTest {
         assertEquals(PubStatus.TRASHED, entries().getWeblogEntry(fresh.getId()).getStatus());
     }
 
+    /**
+     * The cutoff comparison is a strict {@code before(cutoff)}, matching the
+     * brief's "longer ago than" wording: an entry trashed exactly at the
+     * retention boundary is KEPT, not purged. The coarse test above (10 days
+     * vs. 1 day against a 5-day retention) never exercises that edge -- both
+     * fixtures here sit within a few seconds of the one-day boundary itself,
+     * tight enough to prove the comparison is strict rather than inclusive,
+     * loose enough not to flake against a real wall clock (there is no way
+     * to observe {@code purgeTrash}'s internal "now" directly, since real
+     * time has always moved on a little by the time it runs).
+     */
+    @Test
+    void anEntryTrashedExactlyAtTheRetentionBoundaryIsKept() throws Exception {
+        WeblogEntry justInside = TestUtils.setupWeblogEntry("just-inside-retention", blog, user, PubStatus.DRAFT);
+        WeblogEntry justOutside = TestUtils.setupWeblogEntry("just-outside-retention", blog, user, PubStatus.DRAFT);
+        TestUtils.endSession(true);
+
+        Instant boundary = Instant.now().minus(1, ChronoUnit.DAYS);
+        trashWithStamp(justInside, boundary.plusSeconds(5));
+        trashWithStamp(justOutside, boundary.minusSeconds(5));
+
+        int purged = entries().purgeTrash(TestUtils.getManagedWebsite(blog), 1);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        assertEquals(1, purged, "only the entry trashed more than a day ago should purge");
+        assertNotNull(entries().getWeblogEntry(justInside.getId()),
+                "an entry trashed just inside the retention window must survive");
+        assertNull(entries().getWeblogEntry(justOutside.getId()),
+                "an entry trashed just past the retention window must be purged");
+    }
+
     @Test
     void aRetentionOfMinusOnePurgesNothing() throws Exception {
         WeblogEntry ancient = TestUtils.setupWeblogEntry("ancient-trash", blog, user, PubStatus.DRAFT);
@@ -255,6 +379,20 @@ class WeblogEntryTrashOperationsTest {
 
     private static WeblogEntryManager entries() {
         return WebloggerFactory.getWeblogger().getWeblogEntryManager();
+    }
+
+    /**
+     * Forces a fresh, known {@code lastModified} value and returns it, so a
+     * later assertion that it moved cannot pass by coincidence against
+     * whatever the fixture setup happened to leave behind. Same idiom as
+     * {@code WeblogPageManagerTest}.
+     */
+    private Date freshLastModifiedBaseline() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(blog);
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+        return TestUtils.getManagedWebsite(blog).getLastModified();
     }
 
     private List<RollerEvent> events() throws Exception {

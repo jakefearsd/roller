@@ -306,10 +306,8 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * unnecessary -- the opposite: the search index holds documents keyed by
      * entry id, so a TRASHED entry left in it is still findable by site
      * search and still links to a page that now 404s, exactly the failure a
-     * genuine delete would produce. The re-index of the entry as a DRAFT
-     * first is how the index learns to drop it while the entry still exists
-     * to be read. {@code CacheManager.invalidate} then clears the rendered
-     * pages that contained it.
+     * genuine delete would produce. {@code CacheManager.invalidate} then
+     * clears the rendered pages that contained it.
      *
      * <p>Indexing failures are logged and swallowed rather than aborting the
      * trash: an index that has fallen behind is repairable from the admin
@@ -340,26 +338,31 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     }
 
     /**
-     * The shared index/cache dance {@link #trashEntryWithIndex} and
+     * The shared index/cache step {@link #trashEntryWithIndex} and
      * {@link #deleteEntryForeverWithIndex} both need before their differing
-     * final step: re-index as DRAFT so the index drops the document while the
-     * entry still exists to be read, de-index outright if it was published,
-     * then invalidate the render cache. See {@link #trashEntryWithIndex}'s
-     * javadoc for why none of this is optional.
+     * final step: take the entry out of the search index, then invalidate
+     * the render cache.
+     *
+     * <p>This used to flip the entry's in-memory status to DRAFT and hand it
+     * to {@code addEntryReIndexOperation} on the theory that a re-index
+     * would teach the index to drop it. That never worked: the re-index runs
+     * on a background thread and re-fetches the entry from the database by
+     * id before doing anything, so the caller's in-memory flip was discarded
+     * before the job ever ran, and the entry went right back into the index
+     * moments after this method returned -- a TRASHED entry, findable again
+     * by site search, linking to a page that 404s. The honest operation here
+     * is "remove this document from the index", not "re-index it as a draft
+     * and hope", so this now calls {@link IndexManager#removeEntryIndexOperation}
+     * directly and unconditionally. It runs synchronously (in the foreground,
+     * not scheduled on a background thread) and is safe to call on an entry
+     * that was never published -- deleting a document that was never indexed
+     * is a no-op.
      */
     private void deIndexAndInvalidate(WeblogEntry entry) {
-        IndexManager indexManager = weblogger.getIndexManager();
         try {
-            WeblogEntry.PubStatus originalStatus = entry.getStatus();
-            entry.setStatus(WeblogEntry.PubStatus.DRAFT);
-            indexManager.addEntryReIndexOperation(entry);
-            entry.setStatus(originalStatus);
-
-            if (entry.isPublished()) {
-                indexManager.removeEntryIndexOperation(entry);
-            }
+            weblogger.getIndexManager().removeEntryIndexOperation(entry);
         } catch (WebloggerException ex) {
-            baseLog.warn("Trouble triggering entry indexing for " + entry.getId(), ex);
+            baseLog.warn("Trouble removing entry from the search index for " + entry.getId(), ex);
         }
 
         CacheManager.invalidate(entry);

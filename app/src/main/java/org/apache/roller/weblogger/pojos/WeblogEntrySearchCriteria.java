@@ -24,7 +24,12 @@ import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 public class WeblogEntrySearchCriteria {
 
     public enum SortOrder {ASCENDING, DESCENDING}
-    public enum SortBy {PUBLICATION_TIME, UPDATE_TIME}
+    // TRASH_TIME sorts by e.trashedAt, the only field guaranteed non-null
+    // for a trashed entry -- pubTime is null for a draft that was trashed
+    // before ever being published, and updateTime does not reflect when the
+    // entry was trashed at all. Only the trash screen (includeTrashed /
+    // status == TRASHED) has any reason to use it.
+    public enum SortBy {PUBLICATION_TIME, UPDATE_TIME, TRASH_TIME}
 
     // TODO: See if can switch from name of Category to Category object
 

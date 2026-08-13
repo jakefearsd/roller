@@ -365,9 +365,28 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
      * @inheritDoc
      *
      * <p>Goes through {@code saveWeblogEntry} like every other status change
-     * in this class -- the entry is not removed, so all of its normal save
-     * bookkeeping (tag aggregate adjustments, weblog last-modified) still
-     * applies. {@code saveWeblogEntry}'s revision recording compares only
+     * in this class, but its two most consequential effects -- the tag
+     * aggregate adjustment and the weblog {@code lastModified} bump -- are
+     * both gated inside {@code saveWeblogEntry} on the entry's NEW status
+     * being PUBLISHED, which TRASHED never is. Neither happens for free, so
+     * this method drives both explicitly itself, while it can still see
+     * that the entry WAS published (before the status flip below):
+     * <ul>
+     *   <li>{@code entry.setRefreshAggregates(true)} so
+     *       {@code saveWeblogEntry}'s tag-count adjustment fires and
+     *       decrements this entry's tags out of the tag cloud -- otherwise
+     *       they stay counted until the entry is purged, which with the
+     *       default "keep forever" retention is effectively never.</li>
+     *   <li>An explicit {@code saveWeblog} call bumps
+     *       {@code weblog.lastModified} directly -- {@code WeblogPageCache}
+     *       has no CacheHandler and expires a rendered page only by
+     *       comparing it against that timestamp (see the Templates section
+     *       of CLAUDE.md), so without this a reader keeps seeing a trashed
+     *       post on the cached home page until something unrelated happens
+     *       to bump it.</li>
+     * </ul>
+     *
+     * <p>{@code saveWeblogEntry}'s revision recording compares only
      * title/text/summary, so a pure status change deposits no revision, and
      * its {@code ENTRY_PUBLISHED} event gate requires the NEW status to be
      * PUBLISHED, which TRASHED never is -- so trashing a published entry
@@ -375,9 +394,17 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
      */
     @Override
     public void trashWeblogEntry(WeblogEntry entry) throws WebloggerException {
+        boolean wasPublished = entry.isPublished();
+        if (wasPublished) {
+            entry.setRefreshAggregates(true);
+        }
         entry.setStatus(PubStatus.TRASHED);
         entry.setTrashedAt(new Timestamp(System.currentTimeMillis()));
         saveWeblogEntry(entry);
+
+        if (wasPublished) {
+            roller.getWeblogManager().saveWeblog(entry.getWebsite());
+        }
     }
 
     /**
@@ -389,6 +416,16 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
      * silently republish it to feeds, the sitemap and every subscriber; one
      * extra click to hit Publish again is the safer failure mode, so this
      * intentionally does not try to remember or infer the prior status.
+     *
+     * <p>Unlike {@link #trashWeblogEntry}, this needs neither a tag
+     * aggregate refresh nor an explicit {@code weblog.lastModified} bump.
+     * TRASHED and DRAFT are both absent from every reader-facing query path
+     * (see {@code WeblogEntrySearchCriteria}'s default exclusion of
+     * TRASHED, and DRAFT was never included to begin with), so nothing a
+     * reader can see changes by moving an entry between them, and
+     * {@code trashWeblogEntry} already decremented the tag counts on the
+     * way in whenever the entry being restored had been published -- there
+     * is nothing left here to undo.
      */
     @Override
     public void restoreWeblogEntry(WeblogEntry entry) throws WebloggerException {
@@ -399,18 +436,26 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
 
     /**
      * @inheritDoc
+     *
+     * <p>Routed through {@link #getWeblogEntries(WeblogEntrySearchCriteria)}
+     * like every other entry listing, rather than a hand-written query --
+     * the TRASHED dimension is meant to live in exactly one query path (see
+     * the W5 trash design). An explicit {@code status == TRASHED} names the
+     * entries directly, and {@link WeblogEntrySearchCriteria.SortBy#TRASH_TIME}
+     * sorts by {@code trashedAt}, the only timestamp guaranteed non-null for
+     * an entry that was trashed before ever being published.
      */
     @Override
     public List<WeblogEntry> getTrashedEntries(Weblog weblog) throws WebloggerException {
         if (weblog == null) {
             throw new WebloggerException("weblog is null");
         }
-        TypedQuery<WeblogEntry> query = strategy.getDynamicQuery(
-                "SELECT e FROM WeblogEntry e WHERE e.website = ?1 AND e.status = ?2 "
-                        + "ORDER BY e.trashedAt DESC", WeblogEntry.class);
-        query.setParameter(1, weblog);
-        query.setParameter(2, PubStatus.TRASHED);
-        return query.getResultList();
+        WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
+        wesc.setWeblog(weblog);
+        wesc.setStatus(PubStatus.TRASHED);
+        wesc.setSortBy(WeblogEntrySearchCriteria.SortBy.TRASH_TIME);
+        wesc.setSortOrder(WeblogEntrySearchCriteria.SortOrder.DESCENDING);
+        return getWeblogEntries(wesc);
     }
 
     /**
@@ -626,6 +671,8 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
 
         if (wesc.getSortBy() != null && wesc.getSortBy().equals(WeblogEntrySearchCriteria.SortBy.UPDATE_TIME)) {
             queryString.append(" ORDER BY e.updateTime ");
+        } else if (wesc.getSortBy() != null && wesc.getSortBy().equals(WeblogEntrySearchCriteria.SortBy.TRASH_TIME)) {
+            queryString.append(" ORDER BY e.trashedAt ");
         } else {
             queryString.append(" ORDER BY e.pubTime ");
         }

@@ -127,24 +127,28 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void anUnpublishedEntryNeedsNoDeIndexing() throws Exception {
+    void anUnpublishedEntryIsAlsoDeIndexed() throws Exception {
+        // The de-index call is unconditional now, not gated on isPublished():
+        // removing a document that was never indexed is a safe no-op, and
+        // asking every time is simpler than trusting a status check to be
+        // right in every caller.
         entry.setStatus(PubStatus.DRAFT);
 
         controller.remove(request, model, "entry-1", redirectAttributes);
 
-        verify(weblogger.getIndexManager(), never()).removeEntryIndexOperation(any());
+        verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
         verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 
     @Test
-    void theEntrysPublicationStatusIsRestoredAfterTheReIndexProbe() throws Exception {
-        // The controller flips the status to DRAFT to trigger a re-index, then
-        // puts it back. If it forgot, the subsequent isPublished() check would
-        // skip the de-index and leave the entry in the search index forever.
+    void theEntrysPublicationStatusIsUntouchedByDeIndexing() throws Exception {
+        // De-indexing used to flip the entry to DRAFT to trigger a re-index
+        // job, then flip it back. That trick is gone -- the de-index call
+        // asks the index directly and never touches the entry's own status.
         controller.remove(request, model, "entry-1", redirectAttributes);
 
         assertEquals(PubStatus.PUBLISHED, entry.getStatus(),
-                "The temporary status change must be undone");
+                "De-indexing must not mutate the entry's own status field");
         verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
     }
 
@@ -196,16 +200,16 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
         order.verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
         order.verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
         assertEquals(PubStatus.PUBLISHED, entry.getStatus(),
-                "The temporary status change must be undone here too");
+                "De-indexing must not mutate the entry's own status field here either");
     }
 
     @Test
-    void theListVariantSkipsDeIndexingAnUnpublishedEntry() throws Exception {
+    void theListVariantAlsoDeIndexesAnUnpublishedEntry() throws Exception {
         entry.setStatus(PubStatus.DRAFT);
 
         controller.entryRemoveViaListRemove(request, model, "entry-1", redirectAttributes);
 
-        verify(weblogger.getIndexManager(), never()).removeEntryIndexOperation(any());
+        verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
         verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 
@@ -246,7 +250,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
         // The index is a derived artefact; failing to update it must not leave
         // the author unable to delete their own post.
         org.mockito.Mockito.doThrow(new WebloggerException("index locked"))
-                .when(weblogger.getIndexManager()).addEntryReIndexOperation(any(WeblogEntry.class));
+                .when(weblogger.getIndexManager()).removeEntryIndexOperation(any(WeblogEntry.class));
 
         String view = controller.remove(request, model, "entry-1", redirectAttributes);
 

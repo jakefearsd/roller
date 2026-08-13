@@ -69,10 +69,14 @@ public class ReIndexEntryOperation extends WriteToIndexOperation {
 
         // since this operation can be run on a separate thread we must treat
         // the weblog object passed in as a detached object which is prone to
-        // lazy initialization problems, so requery for the object now
+        // lazy initialization problems, so requery for the object now.
+        // The id is captured before the requery because a genuinely deleted
+        // entry re-fetches as null, and the delete-by-id below still needs
+        // to know what id to remove from the index.
+        String entryId = this.data.getId();
         try {
             WeblogEntryManager wMgr = roller.getWeblogEntryManager();
-            this.data = wMgr.getWeblogEntry(this.data.getId());
+            this.data = wMgr.getWeblogEntry(entryId);
         } catch (WebloggerException ex) {
             logger.error("Error getting weblogentry object", ex);
             return;
@@ -82,12 +86,23 @@ public class ReIndexEntryOperation extends WriteToIndexOperation {
         try {
             if (writer != null) {
 
-                // Delete Doc
-                Term term = new Term(FieldConstants.ID, data.getId());
+                // Delete Doc -- always, whether or not it comes back below.
+                // A re-fetch that returns null (entry deleted out from under
+                // this queued job) or a non-PUBLISHED entry (e.g. trashed
+                // since this job was queued) must not leave a stale document
+                // behind.
+                Term term = new Term(FieldConstants.ID, entryId);
                 writer.deleteDocuments(term);
 
-                // Add Doc
-                writer.addDocument(getDocument(data));
+                // Add Doc -- only a published entry belongs in the search
+                // index. Every caller already gates on isPublished() before
+                // scheduling this operation, but by the time this runs on
+                // its own thread the entry may have moved on (trashed,
+                // unpublished, deleted) -- that check is enforced here too
+                // rather than trusted from the scheduling side.
+                if (data != null && data.isPublished()) {
+                    writer.addDocument(getDocument(data));
+                }
             }
         } catch (IOException e) {
             logger.error("Problems adding/deleting doc to index", e);
