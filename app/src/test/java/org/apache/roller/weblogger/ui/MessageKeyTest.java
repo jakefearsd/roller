@@ -128,7 +128,7 @@ public class MessageKeyTest {
      * drifted out of sync with the actual {@code tabbedmenu.*} total, which is
      * why this one states each bucket's current size plainly instead:
      * <ul>
-     *   <li>28 {@code configForm.*} keys read off {@code key="..."} attributes in
+     *   <li>29 {@code configForm.*} keys read off {@code key="..."} attributes in
      *       {@code runtimeConfigDefs.xml} (GlobalConfig.jsp renders display
      *       groups/properties generically via {@code ${dg.key}} / property
      *       metadata, not a literal code). W1's comment-removal wave deleted
@@ -147,7 +147,10 @@ public class MessageKeyTest {
      *       display-group's key, was not in this bucket -- it was a literal
      *       {@code code="..."} reference in {@code WeblogConfig.jsp} until that
      *       section was deleted in the same commit, so it left the bundle
-     *       entirely rather than becoming a new orphan.)</li>
+     *       entirely rather than becoming a new orphan.) The W5 trash wave's
+     *       Task 4 added {@code configForm.entryTrashRetentionDays} for the
+     *       new {@code entry.trash.retention.days} runtime property, taking
+     *       this bucket from 28 to 29.</li>
      *   <li>16 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
      *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
      *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
@@ -190,11 +193,11 @@ public class MessageKeyTest {
 
     /**
      * Keys the text scan cannot see: {@code runtimeConfigDefs.xml} {@code key=}
-     * attributes (28) + {@code admin-menu.xml}/{@code editor-menu.xml}
-     * {@code name=} attributes (15) + 2 unexplained pre-existing orphans. See
+     * attributes (29) + {@code admin-menu.xml}/{@code editor-menu.xml}
+     * {@code name=} attributes (16) + 2 unexplained pre-existing orphans. See
      * the javadoc on {@link #reportsBundleKeysNoJspOrControllerUses()}.
      */
-    private static final int KNOWN_DYNAMIC_KEY_COUNT = 46;
+    private static final int KNOWN_DYNAMIC_KEY_COUNT = 47;
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();

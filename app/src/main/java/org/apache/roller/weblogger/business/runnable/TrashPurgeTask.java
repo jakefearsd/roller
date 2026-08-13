@@ -1,0 +1,221 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+
+package org.apache.roller.weblogger.business.runnable;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
+import org.apache.roller.weblogger.pojos.Weblog;
+
+
+/**
+ * Hard-deletes weblog entries that have sat in the trash (see
+ * {@link org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus#TRASHED})
+ * longer than the configured retention.
+ *
+ * <p>Retention lives in the runtime property {@code entry.trash.retention.days}
+ * (read fresh on every sweep -- see below), and is interpreted exactly as
+ * {@link WeblogEntryManager#purgeTrash(Weblog, int)} interprets it: -1 keeps
+ * trash forever and purges nothing, 0 purges everything currently trashed,
+ * and a positive n purges anything trashed more than n days ago.
+ *
+ * <p>Modeled directly on {@link ScheduledEntriesTask} -- same base class,
+ * same {@code tasks.<name>.*} configuration shape, same registration via
+ * {@code tasks.enabled} in {@code roller.properties} -- because this project
+ * has exactly one way of running a scheduled task.
+ */
+public class TrashPurgeTask extends RollerTaskWithLeasing {
+    private static Log log = LogFactory.getLog(TrashPurgeTask.class);
+
+    public static final String NAME = "TrashPurgeTask";
+
+    /** The runtime property read fresh on every sweep -- see {@link #runTask()}. */
+    public static final String RETENTION_PROPERTY = "entry.trash.retention.days";
+
+
+    // a unique id for this specific task instance
+    // this is meant to be unique for each client in a clustered environment
+    private String clientId = null;
+
+    // a String description of when to start this task
+    private String startTimeDesc = "startOfDay";
+
+    // interval at which the task is run, default is once per day
+    private int interval = RollerTask.DEFAULT_INTERVAL_MINS;
+
+    // lease time given to task lock, default is 30 minutes
+    private int leaseTime = RollerTaskWithLeasing.DEFAULT_LEASE_MINS;
+
+
+    @Override
+    public String getClientId() {
+        return clientId;
+    }
+
+    @Override
+    public Date getStartTime(Date currentTime) {
+        return getAdjustedTime(currentTime, startTimeDesc);
+    }
+
+    @Override
+    public String getStartTimeDesc() {
+        return startTimeDesc;
+    }
+
+    @Override
+    public int getInterval() {
+        return this.interval;
+    }
+
+    @Override
+    public int getLeaseTime() {
+        return this.leaseTime;
+    }
+
+
+    public void init() throws WebloggerException {
+        this.init(TrashPurgeTask.NAME);
+    }
+
+    @Override
+    public void init(String name) throws WebloggerException {
+        super.init(name);
+
+        // get relevant props
+        Properties props = this.getTaskProperties();
+
+        // extract clientId
+        String client = props.getProperty("clientId");
+        if (client != null) {
+            this.clientId = client;
+        }
+
+        // extract start time
+        String startTimeStr = props.getProperty("startTime");
+        if (startTimeStr != null) {
+            this.startTimeDesc = startTimeStr;
+        }
+
+        // extract interval
+        String intervalStr = props.getProperty("interval");
+        if (intervalStr != null) {
+            try {
+                this.interval = Integer.parseInt(intervalStr);
+            } catch (NumberFormatException ex) {
+                log.warn("Invalid interval: " + intervalStr);
+            }
+        }
+
+        // extract lease time
+        String leaseTimeStr = props.getProperty("leaseTime");
+        if (leaseTimeStr != null) {
+            try {
+                this.leaseTime = Integer.parseInt(leaseTimeStr);
+            } catch (NumberFormatException ex) {
+                log.warn("Invalid leaseTime: " + leaseTimeStr);
+            }
+        }
+    }
+
+
+    /**
+     * Execute the task: purge each weblog's trash past its retention window.
+     *
+     * <p>The retention value is read fresh here, on every sweep, rather than
+     * cached on the instance in {@link #init} -- an admin changing
+     * {@code entry.trash.retention.days} on the Admin Settings page must take
+     * effect on the very next sweep, with no restart.
+     *
+     * <p>One weblog's purge failing must not stop the others', and must not
+     * take the task runner down -- this runs unattended off the scheduler,
+     * with nobody watching to retry it. Failures are therefore caught and
+     * logged per weblog, the same granularity {@link ScheduledEntriesTask}
+     * uses for the sweep as a whole; a single misbehaving weblog costs that
+     * weblog's purge for this sweep, not every other weblog's.
+     */
+    @Override
+    public void runTask() {
+
+        log.debug("task started");
+
+        try {
+            WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
+            WeblogEntryManager wemgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+
+            int retentionDays = WebloggerRuntimeConfig.getIntProperty(RETENTION_PROPERTY);
+
+            List<Weblog> weblogs = wmgr.getWeblogs(true, null, null, null, 0, -1);
+            log.debug("purging trash for " + weblogs.size() + " weblogs at retention "
+                    + retentionDays + " days");
+
+            for (Weblog weblog : weblogs) {
+                try {
+                    int purged = wemgr.purgeTrash(weblog, retentionDays);
+                    if (purged > 0) {
+                        log.info("purged " + purged + " trashed entries from weblog "
+                                + weblog.getHandle());
+                    }
+                } catch (WebloggerException e) {
+                    log.error("Error purging trash for weblog " + weblog.getHandle(), e);
+                } catch (Exception e) {
+                    log.error("Unexpected exception purging trash for weblog "
+                            + weblog.getHandle(), e);
+                }
+            }
+
+            // commit the changes
+            WebloggerFactory.getWeblogger().flush();
+
+        } catch (WebloggerException e) {
+            log.error("Error running trash purge task", e);
+        } catch (Exception e) {
+            log.error("Unexpected exception running task", e);
+        } finally {
+            // always release
+            WebloggerFactory.getWeblogger().release();
+        }
+
+        log.debug("task completed");
+
+    }
+
+
+    /**
+     * Main method so that this task may be run from outside the webapp.
+     */
+    public static void main(String[] args) throws Exception {
+        try {
+            TrashPurgeTask task = new TrashPurgeTask();
+            task.init();
+            task.run();
+            System.exit(0);
+        } catch (WebloggerException ex) {
+            ex.printStackTrace();
+            System.exit(-1);
+        }
+    }
+
+}

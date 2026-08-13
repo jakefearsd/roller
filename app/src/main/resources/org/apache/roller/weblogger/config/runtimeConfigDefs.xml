@@ -123,6 +123,13 @@
          <type>integer</type>
          <default-value>-1</default-value>
       </property-def>
+      <!-- How many days a trashed entry survives before TrashPurgeTask hard-
+           deletes it. -1 keeps trash forever. 0 purges it on the very next
+           sweep. Read fresh on every sweep; see TrashPurgeTask. -->
+      <property-def  name="entry.trash.retention.days"  key="configForm.entryTrashRetentionDays">
+         <type>integer</type>
+         <default-value>30</default-value>
+      </property-def>
       <!-- Promoted from roller.properties. Only affects anchors generated
            after the change; anchors already stored on entries keep whichever
            separator was in force when they were created. -->
