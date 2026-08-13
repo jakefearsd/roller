@@ -310,6 +310,59 @@ IndexManager getIndexManager()
   share-link feature that once punched a tokened public hole through it —
   `ShareController`, `roller_share_link` — was removed entirely and is not
   coming back.)
+- **Alt text (W4): `MediaFile.altText`, and the chain is not the obvious one.**
+  Before W4 every alt attribute this system emitted fell back to
+  `MediaFile.getName()` — the uploaded **filename** — so a screen reader
+  announced "IMG_4821.jpg" down a whole portfolio page. The chain now is:
+  - `ImageShortcode`: an `alt` attribute **present** on the shortcode wins
+    verbatim *including empty* — `[image id=".." alt=""]` is the standard way
+    to say "decorative" and falling through would defeat it. Only an **absent**
+    attribute falls through to `altText`, then to the filename.
+  - `GalleryMarkup`: `altText` → filename. A gallery has no per-image
+    attribute to carry an override.
+  - At the `altText` link, **blank counts as absent** at both sites (an author
+    who clears the edit field left `""` behind and did not thereby declare the
+    image decorative; the field has no way to express that distinction). This
+    is deliberately different from the shortcode-attribute link above, and
+    looks inconsistent until you know why.
+  - `firstNonBlank` returns `""`, never null. It briefly returned null and
+    `GalleryMarkup` appended it straight into the attribute, rendering the
+    literal `alt="null"` when an image had blank alt text *and* a blank name.
+- **The filename is still the last fallback rather than `alt=""`.** An empty
+  alt asserts "decorative", which is the wrong claim about a photograph, and it
+  would hide undescribed images from the marker instead of surfacing them.
+- **`MediaFileView.jsp` renders the "no alt text" marker from TWO `c:forEach`
+  loops** (`childFiles` and `pager.items`); the paged one is what an author
+  with a lot of photographs actually sees, so a marker added to only one is
+  invisible exactly when it matters. Its gate uses `fn:trim` so that
+  whitespace-only alt text counts as missing — matching the renderer's
+  `isNotBlank`, not EL's `empty`, which would show such an image as described
+  while every page rendered the filename.
+- **Alt text is deliberately absent from the upload form.** It is per-image,
+  and one shared box across a thirty-file batch writes thirty wrong
+  descriptions that the marker then reports as done.
+- **`#showResponsiveImage`'s `$alt` stays caller-supplied.** The theme callers
+  pass `$entry.title` for a featured image, which is right in a card context
+  and is not the file's own description of itself. Do not "unify" it.
+- **Bulk upload (W4) was a form change only.** `MediaFileAddController.save`
+  always bound `MultipartFile[]` and looped; the five-file ceiling was five
+  `<input type="file">` elements in the JSP. One `multiple` input plus a drop
+  zone now; `spring.servlet.multipart.max-request-size` is 1GB. The add form's
+  Name field went with them — it was inert, overwritten by the uploaded
+  filename immediately after `bean.copyTo`.
+  **A batch is not a transaction**: quota and forbidden-extension refusals are
+  reported per file by `createMediaFile` *without throwing*, so the controller
+  snapshots `RollerMessages.getErrorCount()` around each call rather than
+  trusting the absence of an exception, and a partly-failed batch shows both
+  what landed and what did not on one page. Before W4 a single bad file
+  suppressed the entire success list.
+- **`MediaFile.sharedForGallery` / `roller_mediafile.is_public` are gone**
+  (`V024`), finishing what W2 started when it deleted the last reader.
+- `EntryAddWithMediaFileController` ("create an entry from these files") now
+  seeds the draft with `[image id=".."]` instead of hand-built `<img>` markup,
+  so it picks up alt text and the rendition ladder through the normal path.
+  It was the fourth alt-emission site and the only one still bypassing the
+  shortcode.
 
 ### SEO (Stage 2 Wave 1)
 - Per-entry SEO fields on `WeblogEntry` (metaTitle, searchDescription,
