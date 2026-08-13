@@ -62,7 +62,11 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     
     public static final long serialVersionUID = 2341505386843044125L;
 
-    public enum PubStatus {DRAFT, PUBLISHED, PENDING, SCHEDULED}
+    // Stored by name (see WeblogEntry.orm.xml's <enumerated>STRING</enumerated>
+    // on status), so appending TRASHED here is safe regardless of position --
+    // it is added last anyway, as the habit to keep if that mapping ever
+    // changes to ordinal.
+    public enum PubStatus {DRAFT, PUBLISHED, PENDING, SCHEDULED, TRASHED}
 
     /**
      * Word separator for generated anchors.
@@ -112,6 +116,9 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
 
     // Wave B audience: newsletter
     private Timestamp newsletterSentAt = null;
+
+    // W5 trash
+    private Timestamp trashedAt = null;
 
     // set to true when switching between pending/draft/scheduled and published
     // either the aggregate table needs the entry's tags added (for published)
@@ -658,9 +665,23 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     public PubStatus getStatus() {
         return this.status;
     }
-    
+
     public void setStatus(PubStatus status) {
         this.status = status;
+    }
+
+    /**
+     * When this entry was moved to the trash. Null means it is not trashed;
+     * the trash state itself lives in {@link #getStatus()} being
+     * {@link PubStatus#TRASHED} -- this stamp exists only so the purge sweep
+     * and the trash list can order and expire entries.
+     */
+    public Timestamp getTrashedAt() {
+        return trashedAt;
+    }
+
+    public void setTrashedAt(Timestamp trashedAt) {
+        this.trashedAt = trashedAt;
     }
     
     /**

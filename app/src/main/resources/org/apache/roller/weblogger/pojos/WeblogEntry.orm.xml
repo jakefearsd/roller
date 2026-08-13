@@ -6,18 +6,33 @@
     <entity metadata-complete="true" name="WeblogEntry"
             class="org.apache.roller.weblogger.pojos.WeblogEntry" access="PROPERTY">
         <table name="weblogentry"/>
+        <!-- Names no status, and must keep seeing trash: a trashed entry
+             still holds its category, and deleting the category out from
+             under it would leave nothing to restore into. See
+             WeblogEntrySearchCriteria for the one place trash IS excluded. -->
         <named-query name="WeblogEntry.getByCategory">
             <query>SELECT w FROM WeblogEntry w WHERE w.category = ?1</query>
         </named-query>
         <named-query name="WeblogEntry.getByPinnedToMain&amp;statusOrderByPubTimeDesc">
             <query>SELECT w FROM WeblogEntry w WHERE w.pinnedToMain = ?1 AND w.status = ?2 ORDER BY w.pubTime DESC</query>
         </named-query>
+        <!-- Names no status, and must keep seeing trash: the caller (permalink
+             lookup) only renders isPublished() entries and TRASHED is never
+             PUBLISHED, so a trashed entry 404s at its permalink without this
+             query knowing anything about trash. -->
         <named-query name="WeblogEntry.getByWebsite&amp;AnchorOrderByPubTimeDesc">
             <query>SELECT w FROM WeblogEntry w WHERE w.website = ?1 AND w.anchor = ?2 ORDER BY w.pubTime DESC</query>
         </named-query>
+        <!-- Names no status, and must keep seeing trash: a trashed entry
+             still occupies its anchor. Excluding it here would let a new
+             entry take the anchor and collide the moment the old one is
+             restored. -->
         <named-query name="WeblogEntry.getByWebsite&amp;Anchor">
             <query>SELECT w FROM WeblogEntry w WHERE w.website = ?1 AND w.anchor = ?2</query>
         </named-query>
+        <!-- Names no status, and must keep seeing trash: this backs the
+             weblog-deletion cascade, and deleting a weblog must take its
+             trash with it. -->
         <named-query name="WeblogEntry.getByWebsite">
             <query>SELECT w FROM WeblogEntry w WHERE w.website = ?1</query>
         </named-query>
@@ -114,6 +129,9 @@
             </basic>
             <basic name="newsletterSentAt">
                 <column name="newsletter_sent_at" insertable="true" updatable="true" unique="false" nullable="true"/>
+            </basic>
+            <basic name="trashedAt">
+                <column name="trashed_at" insertable="true" updatable="true" unique="false" nullable="true"/>
             </basic>
             <many-to-one name="category" target-entity="org.apache.roller.weblogger.pojos.WeblogCategory">
                 <join-column name="categoryid" insertable="true" updatable="true" nullable="false"/>

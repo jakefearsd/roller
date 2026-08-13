@@ -35,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -255,6 +256,69 @@ class WeblogEntryManagerQueryTest {
         assertNull(entries().getRevision("no-such-revision"));
         assertNull(entries().getRevision(null),
                 "a null id must not reach the database");
+    }
+
+    // -------------------------------------------------------------- trash
+    //
+    // These two exist because the two named queries they exercise
+    // (WeblogEntry.getByCategory, WeblogEntry.getByWebsite&Anchor) name no
+    // status and deliberately do NOT get the trash exclusion that
+    // getWeblogEntries() gets by default -- a trashed entry still holds its
+    // category and still occupies its anchor. See WeblogEntry.orm.xml for
+    // why, and WeblogEntryCriteriaTest for the query that DOES exclude trash.
+
+    /**
+     * A category whose only entry has been trashed must still read as "in
+     * use": the entry has not been deleted forever, it can be restored, and
+     * deleting the category out from under it would leave nothing to restore
+     * into.
+     */
+    @Test
+    void aCategoryWhoseOnlyEntryIsTrashedIsStillInUse() throws Exception {
+        WeblogCategory onlyTrash = TestUtils.setupWeblogCategory(
+                TestUtils.getManagedWebsite(blog), "OnlyTrash");
+        TestUtils.endSession(true);
+
+        WeblogEntry created = TestUtils.setupWeblogEntry(
+                "to-be-trashed", onlyTrash, PubStatus.PUBLISHED, blog, user);
+        TestUtils.endSession(true);
+
+        WeblogEntry managed = entries().getWeblogEntry(created.getId());
+        managed.setStatus(PubStatus.TRASHED);
+        entries().saveWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        assertTrue(entries().isWeblogCategoryInUse(TestUtils.getManagedWeblogCategory(onlyTrash)),
+                "a category holding only a trashed entry must still read as in use");
+    }
+
+    /**
+     * Trashing an entry does not free its anchor. If it did, a new entry
+     * could take the same anchor and collide with the trashed one the moment
+     * it is restored.
+     */
+    @Test
+    void theAnchorOfATrashedEntryIsStillTaken() throws Exception {
+        WeblogEntry created = TestUtils.setupWeblogEntry(
+                "trash-anchor-post", travel, PubStatus.PUBLISHED, blog, user);
+        TestUtils.endSession(true);
+
+        WeblogEntry managed = entries().getWeblogEntry(created.getId());
+        managed.setStatus(PubStatus.TRASHED);
+        entries().saveWeblogEntry(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+
+        // setupWeblogEntry gives the entry the same title as its anchor, so
+        // createAnchorBase() on the trashed entry reproduces its own anchor
+        // exactly -- the same shape createAnchor()'s own uniqueness check
+        // has to defeat.
+        WeblogEntry trashed = TestUtils.getManagedWeblogEntry(created);
+        String newAnchor = entries().createAnchor(trashed);
+
+        assertNotEquals("trash-anchor-post", newAnchor,
+                "a trashed entry's anchor must still be reported as taken: got " + newAnchor);
     }
 
     // ---------------------------------------------------------------- helpers

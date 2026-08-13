@@ -42,6 +42,12 @@ public class WeblogEntrySearchCriteria {
     private List<String> tags;
     // Publication status of the weblog entry (DRAFT, PUBLISHED, etc.)
     private PubStatus status;
+    // Whether a query naming no explicit status should still see trashed
+    // entries. Default false: a caller that thinks about nothing must get the
+    // safe behaviour, since the unsafe direction puts deleted entries back on
+    // a public page. Only the trash screen sets this true; a caller wanting
+    // trash specifically should ask for status == PubStatus.TRASHED instead.
+    private boolean includeTrashed = false;
     // Text appearing in the text or summary, or null for all
     private String text;
     // Date field to sort by
@@ -109,6 +115,14 @@ public class WeblogEntrySearchCriteria {
 
     public void setStatus(PubStatus status) {
         this.status = status;
+    }
+
+    public boolean isIncludeTrashed() {
+        return includeTrashed;
+    }
+
+    public void setIncludeTrashed(boolean includeTrashed) {
+        this.includeTrashed = includeTrashed;
     }
 
     public String getText() {

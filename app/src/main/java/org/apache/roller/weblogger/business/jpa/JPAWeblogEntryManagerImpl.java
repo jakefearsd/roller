@@ -509,10 +509,26 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         }
                 
         if (wesc.getStatus() != null) {
+            // An explicit status wins outright: a caller asking for TRASHED
+            // gets trash, and a caller asking for anything else cannot get
+            // it -- that asymmetry is the property the whole trash design
+            // rests on, so it must not be second-guessed here.
             params.add(size++, wesc.getStatus());
             queryString.append(" AND e.status = ?").append(size);
+        } else if (!wesc.isIncludeTrashed()) {
+            // No explicit status and trash was not asked for: exclude it.
+            // This is the ONE place a new, thoughtless caller is protected --
+            // getWeblogEntries() backs 23 call sites, 11 of which set no
+            // status, and every one of them must default to never seeing a
+            // deleted entry. The alternative (require every caller to
+            // remember to exclude TRASHED) fails open: forget it once and a
+            // deleted entry is back on a public page.
+            params.add(size++, PubStatus.TRASHED);
+            queryString.append(" AND e.status <> ?").append(size);
         }
-        
+        // else: no explicit status, includeTrashed true -- no status
+        // condition at all (only the trash screen does this).
+
         if (wesc.getLocale() != null) {
             params.add(size++, wesc.getLocale() + '%');
             queryString.append(" AND e.locale like ?").append(size);

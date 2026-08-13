@@ -72,6 +72,7 @@ class WeblogEntryCriteriaTest {
     private WeblogEntry draft;
     private WeblogEntry bobsPost;
     private WeblogEntry otherBlogPost;
+    private WeblogEntry trashedPost;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -97,6 +98,8 @@ class WeblogEntryCriteriaTest {
                 daysAgo(3), "Bob writes too", "a guest contribution");
         otherBlogPost = entry("other-blog-post", null, PubStatus.PUBLISHED, otherBlog, bob,
                 daysAgo(1), "Somewhere else entirely", "different weblog");
+        trashedPost = entry("a-trashed-post", travel, PubStatus.TRASHED, blog, alice,
+                daysAgo(4), "Deleted by mistake", "should not be visible by default");
         TestUtils.endSession(true);
     }
 
@@ -239,6 +242,23 @@ class WeblogEntryCriteriaTest {
         assertTrue(anchors.contains("old-travel"));
     }
 
+    /**
+     * A PUBLISHED filter is exactly as blind to trash as it is to any other
+     * status -- an explicit status always wins, and TRASHED is simply another
+     * status a caller did not ask for. See the trash section below for the
+     * one place trash gets a default of its own.
+     */
+    @Test
+    void aPublishedStatusCriterionNeverReturnsATrashedEntry() throws Exception {
+        List<String> anchors = anchorsOf(criteria(c -> {
+            c.setWeblog(managed(blog));
+            c.setStatus(PubStatus.PUBLISHED);
+        }));
+
+        assertFalse(anchors.contains("a-trashed-post"),
+                "a trashed entry must not survive a PUBLISHED filter: " + anchors);
+    }
+
     @Test
     void draftsAreReachableWhenAskedForByStatus() throws Exception {
         List<String> anchors = anchorsOf(criteria(c -> {
@@ -250,12 +270,58 @@ class WeblogEntryCriteriaTest {
                 "the author's own entry list asks for these by name");
     }
 
+    /**
+     * Every status but trash. This is the "nothing is filtered out" case for
+     * everything except trash: see {@code aTrashedEntryIsAbsentByDefault}
+     * immediately below for why trash is the one exception, and why it has to
+     * be.
+     */
     @Test
-    void noStatusCriterionReturnsEveryStatus() throws Exception {
+    void noStatusCriterionReturnsEveryStatusExceptTrash() throws Exception {
         List<String> anchors = anchorsOf(criteria(c -> c.setWeblog(managed(blog))));
 
         assertTrue(anchors.contains("a-draft") && anchors.contains("old-travel"),
-                "with no status asked for, nothing is filtered out: " + anchors);
+                "with no status asked for, nothing but trash is filtered out: " + anchors);
+    }
+
+    // ---------------------------------------------------------------- trash
+
+    /**
+     * The property the whole trash design rests on: a caller that names no
+     * status and does not ask for trash must never see a trashed entry, with
+     * no per-caller opt-out required. This is what keeps a deleted entry off
+     * the 23 call sites of {@code getWeblogEntries} that do not think about
+     * trash at all.
+     */
+    @Test
+    void aTrashedEntryIsAbsentByDefault() throws Exception {
+        List<String> anchors = anchorsOf(criteria(c -> c.setWeblog(managed(blog))));
+
+        assertFalse(anchors.contains("a-trashed-post"),
+                "a default-constructed criteria must never surface trash: " + anchors);
+    }
+
+    /** The one escape hatch, and it is opt-in: only the trash screen sets this. */
+    @Test
+    void aTrashedEntryIsPresentWhenIncludeTrashedIsSet() throws Exception {
+        List<String> anchors = anchorsOf(criteria(c -> {
+            c.setWeblog(managed(blog));
+            c.setIncludeTrashed(true);
+        }));
+
+        assertTrue(anchors.contains("a-trashed-post"),
+                "includeTrashed=true must surface trash: " + anchors);
+    }
+
+    /** Asking for TRASHED by name is the other way to reach it. */
+    @Test
+    void aTrashedEntryIsPresentWhenStatusIsTrashedExplicitly() throws Exception {
+        List<String> anchors = anchorsOf(criteria(c -> {
+            c.setWeblog(managed(blog));
+            c.setStatus(PubStatus.TRASHED);
+        }));
+
+        assertEquals(List.of("a-trashed-post"), anchors);
     }
 
     // --------------------------------------------------------------- locale
