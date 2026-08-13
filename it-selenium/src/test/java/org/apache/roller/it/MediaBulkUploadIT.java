@@ -1,0 +1,317 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.it;
+
+import com.codeborne.selenide.Selenide;
+import com.codeborne.selenide.SelenideElement;
+import org.apache.roller.it.support.RollerIT;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.openqa.selenium.WebElement;
+
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.time.Duration;
+
+import static com.codeborne.selenide.CollectionCondition.size;
+import static com.codeborne.selenide.Condition.disappear;
+import static com.codeborne.selenide.Condition.exist;
+import static com.codeborne.selenide.Condition.value;
+import static com.codeborne.selenide.Condition.visible;
+import static com.codeborne.selenide.Selenide.$;
+import static com.codeborne.selenide.Selenide.$$;
+import static com.codeborne.selenide.Selenide.executeJavaScript;
+import static com.codeborne.selenide.Selenide.switchTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Browser proof for the W4 media wave: bulk upload (one POST, several files
+ * through the {@code multiple} {@code #uploadedFiles} input and its drop
+ * zone) and alt text (stored on {@code MediaFile}, edited on
+ * {@code MediaFileEdit.jsp}'s {@code bean.altText} field, rendered into both
+ * shortcode emission points, and flagged on the grid when missing).
+ *
+ * <p>{@code GalleryIT} and {@code MediaCropIT} already close the
+ * upload-to-public-page loop for captions and crops; this test follows the
+ * same conventions (fixtures, login, the {@code onClickEdit}/iframe dance)
+ * for the two features Tasks 3 and 4 added. {@code [image]} and
+ * {@code [gallery]} are separate emission points ({@link
+ * org.apache.roller.weblogger.business.shortcodes.ImageShortcode} vs.
+ * {@link org.apache.roller.weblogger.business.shortcodes.GalleryMarkup}), so
+ * alt text reaching one says nothing about the other -- both are proved here.
+ */
+class MediaBulkUploadIT extends RollerIT {
+
+    private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
+    private static final String MEDIA_ADD = "/roller-ui/authoring/mediaFileAdd.rol?weblog=" + WEBLOG_HANDLE;
+    private static final String MEDIA_VIEW = "/roller-ui/authoring/mediaFileView.rol?weblog=" + WEBLOG_HANDLE;
+    private static final String GLOBAL_CONFIG = "/roller-ui/admin/globalConfig.rol";
+
+    /**
+     * The editor's editable surface. Tests wait for this and then put text in
+     * through {@code rollerSetEntryText}, the page's own seam -- never through
+     * the editor's API directly, so replacing the editor is one change here
+     * rather than one in every journey.
+     */
+    private static final String EDITOR_BODY = ".CodeMirror";
+
+    /** Rendered on the edit page only once the entry is actually published. */
+    private static final String PERMALINK = "#entry_bean_permalink";
+
+    @TempDir
+    Path tempDir;
+
+    @BeforeEach
+    void logIn() {
+        loginAsAdmin();
+    }
+
+    @Test
+    void threeFilesUploadInOnePost() throws IOException {
+        String suffix = uniqueSuffix();
+        String nameA = "bulk-a-" + suffix + ".png";
+        String nameB = "bulk-b-" + suffix + ".jpg";
+        String nameC = "bulk-c-" + suffix + ".png";
+
+        enableUploads();
+        File a = newImageFile(nameA, 40, 30, "png");
+        File b = newImageFile(nameB, 40, 30, "jpg");
+        File c = newImageFile(nameC, 40, 30, "png");
+
+        openPath(MEDIA_ADD);
+        // One sendKeys of a newline-separated path list to the `multiple`
+        // input -- what Selenide's uploadFile(File...) does under the hood --
+        // then a single click of #uploadButton: one POST, three files.
+        $("#uploadedFiles").should(exist).uploadFile(a, b, c);
+        $("#uploadButton").click();
+
+        // The success page offers one checkbox per uploaded image; three
+        // rows for one POST is the proof this was a bulk upload, not three
+        // separate round trips.
+        $$("input[name='selectedImages']").shouldHave(size(3));
+
+        openPath(MEDIA_VIEW);
+        $("img[alt='" + nameA + "']").should(exist);
+        $("img[alt='" + nameB + "']").should(exist);
+        $("img[alt='" + nameC + "']").should(exist);
+    }
+
+    @Test
+    void altTextReachesTheRenderedPage() throws IOException {
+        String suffix = uniqueSuffix();
+        String imageName = "alt-image-" + suffix + ".jpg";
+        String altText = "A red kite riding the thermal " + suffix;
+
+        enableUploads();
+        String mediaFileId = uploadOneImage(imageName);
+        setAltText(mediaFileId, imageName, altText);
+
+        // --- author and publish an entry carrying [image id=...] -----------
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("input[name='bean.title']").setValue("IT Alt Image " + suffix);
+        $(EDITOR_BODY).should(visible);
+        executeJavaScript(
+                "rollerSetEntryText(arguments[0]);",
+                "<p>Alt text entry " + suffix + "</p><p>[image id=" + mediaFileId + "]</p>");
+        $("button[formaction$='entryAdd!publish.rol']").click();
+        $(PERMALINK).should(exist);
+        String permalink = $(PERMALINK).getAttribute("href");
+        assertNotNull(permalink);
+
+        // --- the public page's <img> must carry the alt text, not the name --
+        String page = getAnonymously(permalink);
+        assertTrue(page.contains("alt=\"" + altText + "\""),
+                "the published page must carry the stored alt text. Page:\n" + page);
+        assertFalse(page.contains(imageName),
+                "the published page must not fall back to the filename once alt text is set. Page:\n" + page);
+    }
+
+    /**
+     * Same journey as {@link #altTextReachesTheRenderedPage()}, through
+     * {@code [gallery dir="default"]} instead of {@code [image id=...]}.
+     * {@code GalleryMarkup} is a second, independent emitter of the {@code
+     * <img alt="...">} attribute and has been wrong on its own before, so
+     * this is not redundant with the {@code [image]} case above.
+     */
+    @Test
+    void altTextReachesAGallery() throws IOException {
+        String suffix = uniqueSuffix();
+        String imageName = "gallery-alt-" + suffix + ".jpg";
+        String altText = "A gallery view of the coastline " + suffix;
+
+        enableUploads();
+        String mediaFileId = uploadOneImage(imageName);
+        setAltText(mediaFileId, imageName, altText);
+
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("input[name='bean.title']").setValue("IT Gallery Alt " + suffix);
+        $(EDITOR_BODY).should(visible);
+        executeJavaScript(
+                "rollerSetEntryText(arguments[0]);",
+                "<p>Gallery alt entry " + suffix + "</p><p>[gallery dir=\"default\"]</p>");
+        $("button[formaction$='entryAdd!publish.rol']").click();
+        $(PERMALINK).should(exist);
+        String permalink = $(PERMALINK).getAttribute("href");
+        assertNotNull(permalink);
+
+        String page = getAnonymously(permalink);
+        assertTrue(page.contains("alt=\"" + altText + "\""),
+                "the gallery markup must carry the stored alt text. Page:\n" + page);
+        assertFalse(page.contains(imageName),
+                "the gallery markup must not fall back to the filename once alt text is set. Page:\n" + page);
+    }
+
+    @Test
+    void theGridMarksAnImageWithNoAltText() throws IOException {
+        String suffix = uniqueSuffix();
+        String imageName = "altmissing-" + suffix + ".jpg";
+        String altText = "A ridge line at dusk " + suffix;
+
+        enableUploads();
+        String mediaFileId = uploadOneImage(imageName);
+
+        // --- fresh upload, no alt text yet: the grid must flag it ----------
+        openPath(MEDIA_VIEW);
+        gridRowFor(imageName).$(".media-alt-missing").should(exist);
+
+        // --- once alt text is saved, the marker must go away ----------------
+        setAltText(mediaFileId, imageName, altText);
+        openPath(MEDIA_VIEW);
+        gridRowFor(imageName).$(".media-alt-missing").shouldNot(exist);
+    }
+
+    /**
+     * The {@code <li>} row of the media grid holding the image with this
+     * name. The image itself sits inside {@code div.mediaObject}, a sibling
+     * of the {@code div.mediaObjectInfo} that carries {@code
+     * .media-alt-missing} -- both children of the same {@code <li>} -- so
+     * walking up two parents from the {@code <img>} reaches the row, the same
+     * {@code .parent()} idiom {@code GalleryIT} uses to reach a tile's
+     * caption.
+     */
+    private SelenideElement gridRowFor(String imageName) {
+        return $("img[alt='" + imageName + "']").should(exist).parent().parent();
+    }
+
+    /**
+     * File uploads are globally disabled by default; flipping the runtime
+     * property through the admin screen keeps this journey on real UI.
+     */
+    private void enableUploads() {
+        openPath(GLOBAL_CONFIG);
+        WebElement checkbox = $("input[name='uploads.enabled']").should(exist).toWebElement();
+        if (!checkbox.isSelected()) {
+            checkbox.click();
+        }
+        $("#saveButton").click();
+        $("#messages").should(exist);
+    }
+
+    /**
+     * Uploads one run-uniquely-named image and returns the new media file's
+     * id, read off the success page's image-selection checkbox -- same
+     * convention as {@code GalleryIT.uploadImage()}.
+     */
+    private String uploadOneImage(String fileName) throws IOException {
+        File image = newImageFile(fileName, 60, 40, "jpg");
+        openPath(MEDIA_ADD);
+        $("#uploadedFiles").should(exist).uploadFile(image);
+        $("#uploadButton").click();
+        $("button[formaction$='entryAddWithMediaFile.rol']").should(exist);
+        String mediaFileId = $("input[name='selectedImages']").should(exist).getValue();
+        assertNotNull(mediaFileId, "the upload success page must carry the new file's id");
+        return mediaFileId;
+    }
+
+    /**
+     * Sets the media file's alt text through the media-view edit modal,
+     * exactly as an author would -- the {@code onClickEdit}/iframe dance
+     * {@code GalleryIT.renameAndDescribe()} uses, trimmed to the one field
+     * this test cares about.
+     */
+    private void setAltText(String mediaFileId, String imageName, String altText) {
+        openPath(MEDIA_VIEW);
+        // Marker for the re-submit dance below: onEditSuccess re-submits the
+        // view form, replacing this document with a new one that lacks the
+        // marker -- which is the only reliable arrival signal, since the URL
+        // does not change.
+        executeJavaScript("window.__altMarker = true;");
+        executeJavaScript("onClickEdit(arguments[0], arguments[1]);", mediaFileId, imageName);
+        $("#mediafile_edit_lightbox").shouldBe(visible);
+        switchTo().frame("mediaFileEditor");
+
+        // Wait for the iframe to hold THIS file's form before typing into it;
+        // see GalleryIT.renameAndDescribe() for why this matters.
+        $("input[name='bean.name']").shouldHave(value(imageName));
+        $("input[name='bean.altText']").setValue(altText);
+
+        waitForFontsReady();
+        $("input[name='submit']").click();
+        switchTo().defaultContent();
+
+        $("#mediafile_edit_lightbox").should(disappear, Duration.ofSeconds(30));
+
+        Selenide.Wait().withTimeout(Duration.ofSeconds(30)).until(d ->
+                Boolean.TRUE.equals(executeJavaScript("return window.__altMarker === undefined;")));
+        waitForFontsReady();
+    }
+
+    /**
+     * Blocks until every webfont the current page requested has finished
+     * loading (or failed on its own, not by cancellation). See {@code
+     * GalleryIT.waitForFontsReady()} for why this matters around the
+     * edit-modal iframe's navigation.
+     */
+    private void waitForFontsReady() {
+        Selenide.Wait().withTimeout(Duration.ofSeconds(10)).until(d ->
+                Boolean.TRUE.equals(executeJavaScript("return document.fonts.status === 'loaded';")));
+    }
+
+    /**
+     * A small, real PNG/JPEG under a run-unique name in the JUnit temp dir --
+     * a zero-byte file would either be rejected by the upload pipeline or
+     * skip the image path (dimension extraction, thumbnail, BlurHash)
+     * entirely, which would make the alt-text and grid-marker tests assert
+     * nothing.
+     */
+    private File newImageFile(String fileName, int width, int height, String formatName) throws IOException {
+        BufferedImage image = new BufferedImage(width, height,
+                "png".equals(formatName) ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        g.setColor(Color.BLUE);
+        g.fillRect(0, 0, width, height);
+        g.dispose();
+        File file = tempDir.resolve(fileName).toFile();
+        ImageIO.write(image, formatName, file);
+        return file;
+    }
+
+    private static String uniqueSuffix() {
+        return Long.toString(System.nanoTime(), 36);
+    }
+}
