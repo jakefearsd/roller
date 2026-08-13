@@ -28,21 +28,21 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
-            <textarea name="bean.description" rows="3" class="form-control">${bean.description}</textarea>
+            <textarea name="bean.description" rows="3" class="form-control">${fn:escapeXml(bean.description)}</textarea>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="mediaFileAdd.copyright"/></label>
         <div class="col-sm-9">
-            <textarea name="bean.copyrightText" rows="3" class="form-control">${bean.copyrightText}</textarea>
+            <textarea name="bean.copyrightText" rows="3" class="form-control">${fn:escapeXml(bean.copyrightText)}</textarea>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="mediaFileAdd.tags"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" maxlength="255" class="form-control"/>
+            <input type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" maxlength="255" class="form-control"/>
         </div>
     </div>
 

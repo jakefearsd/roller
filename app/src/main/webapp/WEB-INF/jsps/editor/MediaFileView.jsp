@@ -156,9 +156,23 @@
                             <li class="align-images"
                                 onmouseover="highlight(this, true)" onmouseout="highlight(this, false)">
 
-                                <div class="mediaObject" onclick="onClickEdit(
-                                        '${mediaFile.id}',
-                                        '${fn:escapeXml(mediaFile.name)}' )">
+                                <%-- id/name ride in data-* attributes, not an inline onclick built by
+                                     string concatenation. fn:escapeXml here escapes for the
+                                     ATTRIBUTE (the same call this file already makes for the alt/
+                                     title attributes below), and the browser hands the exact
+                                     original string back through dataset -- no JS string literal is
+                                     ever built from author-controlled text, which is what broke
+                                     before: the old onclick="onClickEdit('id','name')" fed
+                                     fn:escapeXml's output into a JS string literal, and
+                                     fn:escapeXml renders an apostrophe as &#039;, which the HTML
+                                     parser decodes back to ' BEFORE that onclick attribute is
+                                     compiled as JavaScript -- so a filename containing one (e.g.
+                                     "Maiia's portrait.jpg") produced a syntax error and made the
+                                     tile permanently unclickable, the only route to the alt-text
+                                     field. See the click binding below (same data-attribute
+                                     convention as EntryEditor.jsp/PageEdit.jsp's data-snippet). --%>
+                                <div class="mediaObject" data-media-file-id="${mediaFile.id}"
+                                     data-media-file-name="${fn:escapeXml(mediaFile.name)}">
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
@@ -166,15 +180,13 @@
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
                                              title='${fn:escapeXml(mediaFile.name)}'
-                                             alt='${fn:escapeXml(mediaFile.name)}'
-                                            <%-- onclick="onClickEdit('${mediaFile.id}')" --%> />
+                                             alt='${fn:escapeXml(mediaFile.name)}' />
                                     </c:when>
 <c:otherwise>
                                         <c:url var="mediaFileURL" value="/images/page.png"/>
                                         <img border="0" src='${mediaFileURL}'
                                              style="padding:40px 50px;"
-                                             alt='${fn:escapeXml(mediaFile.name)}'
-                                            <%-- onclick="onClickEdit('${mediaFile.id}')" --%> />
+                                             alt='${fn:escapeXml(mediaFile.name)}' />
                                     </c:otherwise>
                                     </c:choose>
                                 </div>
@@ -214,9 +226,8 @@
                             <li class="align-images"
                                 onmouseover="highlight(this, true)" onmouseout="highlight(this, false)">
 
-                                <div class="mediaObject" onclick="onClickEdit(
-                                        '${mediaFile.id}',
-                                        '${fn:escapeXml(mediaFile.name)}' )">
+                                <div class="mediaObject" data-media-file-id="${mediaFile.id}"
+                                     data-media-file-name="${fn:escapeXml(mediaFile.name)}">
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
@@ -473,6 +484,15 @@
         document.mediaFileViewForm.action = "<c:url value='/roller-ui/authoring/mediaFileView!view.rol'/>";
         document.mediaFileViewForm.submit();
     }
+
+    <%-- Delegated on the grid container rather than bound per-tile: a tile's
+         id/name ride in data-* attributes (see the c:out comment above each
+         loop), never in an inline onclick string, so a filename carrying an
+         apostrophe cannot break the handler the way it did when the id/name
+         were concatenated into onclick="onClickEdit('...','...')". --%>
+    $(document).on('click', '.mediaObject', function () {
+        onClickEdit(this.dataset.mediaFileId, this.dataset.mediaFileName);
+    });
 
     <%-- code to toggle buttons on/off as media file/directory selections change --%>
 

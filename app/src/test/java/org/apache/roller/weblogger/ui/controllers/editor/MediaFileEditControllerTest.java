@@ -262,6 +262,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         mediaFile.setTagsAsString("holiday beach");
         mediaFile.setOriginalPath("/orig/photo.jpg");
         mediaFile.setLength(1234L);
+        mediaFile.setAltText("A red kite riding the thermal");
 
         MediaFileBean copy = new MediaFileBean();
         copy.copyFrom(mediaFile);
@@ -273,6 +274,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         assertEquals("dir-1", copy.getDirectoryId());
         assertEquals("image/jpeg", copy.getContentType());
         assertEquals(1234L, copy.getLength());
+        assertEquals("A red kite riding the thermal", copy.getAltText());
         assertTrue(copy.isIsImage(), "A jpeg must be recognised as an image for the gallery view");
 
         MediaFile target = new MediaFile();
@@ -282,6 +284,25 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         assertEquals("A photo", target.getDescription());
         assertEquals("(c) me", target.getCopyrightText());
         assertEquals("/orig/photo.jpg", target.getOriginalPath());
+        assertEquals("A red kite riding the thermal", target.getAltText());
+    }
+
+    @Test
+    void beanCopyToOverwritesAltTextRatherThanLeavingAStaleValue() throws Exception {
+        // Whatever the bean carries -- including blank, a cleared field --
+        // must win outright; copyTo is a full overwrite, not a merge, and
+        // W4's Testing section named this "the bean round trip" as a gap the
+        // wave itself never closed (the only thing pinning it was a browser
+        // test, which does not run on a push).
+        MediaFileBean copy = new MediaFileBean();
+        copy.copyFrom(mediaFile);
+        copy.setAltText("");
+
+        MediaFile target = new MediaFile();
+        target.setAltText("stale value from before the edit");
+        copy.copyTo(target);
+
+        assertEquals("", target.getAltText());
     }
 
     @Test

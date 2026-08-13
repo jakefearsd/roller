@@ -197,25 +197,53 @@ class MediaBulkUploadIT extends RollerIT {
 
         // --- fresh upload, no alt text yet: the grid must flag it ----------
         openPath(MEDIA_VIEW);
-        gridRowFor(imageName).$(".media-alt-missing").should(exist);
+        gridRowFor(mediaFileId).$(".media-alt-missing").should(exist);
 
         // --- once alt text is saved, the marker must go away ----------------
         setAltText(mediaFileId, imageName, altText);
         openPath(MEDIA_VIEW);
-        gridRowFor(imageName).$(".media-alt-missing").shouldNot(exist);
+        gridRowFor(mediaFileId).$(".media-alt-missing").shouldNot(exist);
     }
 
     /**
-     * The {@code <li>} row of the media grid holding the image with this
-     * name. The image itself sits inside {@code div.mediaObject}, a sibling
-     * of the {@code div.mediaObjectInfo} that carries {@code
-     * .media-alt-missing} -- both children of the same {@code <li>} -- so
-     * walking up two parents from the {@code <img>} reaches the row, the same
-     * {@code .parent()} idiom {@code GalleryIT} uses to reach a tile's
-     * caption.
+     * A filename carrying an apostrophe used to make a grid tile permanently
+     * unclickable: the tile's onclick was built by string-concatenating
+     * {@code fn:escapeXml(mediaFile.name)} into
+     * {@code onclick="onClickEdit('id','name')"}, and {@code fn:escapeXml}
+     * renders {@code '} as {@code &#039;} -- which the HTML parser decodes
+     * back to {@code '} before the attribute is compiled as JavaScript,
+     * producing a syntax error. {@code onClickEdit} is the only route to the
+     * alt-text field, so an image with this kind of name could never be
+     * described. This is an entirely ordinary filename (a possessive), not a
+     * crafted payload.
      */
-    private SelenideElement gridRowFor(String imageName) {
-        return $("img[alt='" + imageName + "']").should(exist).parent().parent();
+    @Test
+    void aFilenameContainingAnApostropheCanStillBeGivenAltText() throws IOException {
+        String suffix = uniqueSuffix();
+        String imageName = "Maiia's portrait " + suffix + ".jpg";
+        String altText = "A portrait with soft window light " + suffix;
+
+        enableUploads();
+        String mediaFileId = uploadOneImage(imageName);
+        setAltText(mediaFileId, imageName, altText);
+
+        openPath(MEDIA_VIEW);
+        gridRowFor(mediaFileId).$(".media-alt-missing").shouldNot(exist);
+    }
+
+    /**
+     * The {@code <li>} row of the media grid holding the tile with this media
+     * file id. Keyed off {@code data-media-file-id} (see the click binding in
+     * {@code MediaFileView.jsp}) rather than the rendered {@code alt} text: an
+     * {@code img[alt='...']} selector built by string concatenation cannot
+     * name a filename containing an apostrophe (it terminates the CSS
+     * attribute value early, exactly the class of bug this file's apostrophe
+     * test exists to catch) and would not disambiguate two tiles that happen
+     * to share a name. {@code div.mediaObject} carries the id and is itself a
+     * child of the row {@code <li>}.
+     */
+    private SelenideElement gridRowFor(String mediaFileId) {
+        return $(".mediaObject[data-media-file-id='" + mediaFileId + "']").should(exist).parent();
     }
 
     /**
@@ -250,9 +278,12 @@ class MediaBulkUploadIT extends RollerIT {
 
     /**
      * Sets the media file's alt text through the media-view edit modal,
-     * exactly as an author would -- the {@code onClickEdit}/iframe dance
-     * {@code GalleryIT.renameAndDescribe()} uses, trimmed to the one field
-     * this test cares about.
+     * exactly as an author would: clicking the grid tile itself (not
+     * {@code executeJavaScript("onClickEdit(...)")}, which would bypass the
+     * tile's click wiring entirely and could not have caught the
+     * apostrophe-breaks-the-handler bug this method now exercises for every
+     * caller) via its {@code data-media-file-id} attribute, which is exact
+     * regardless of what the file is named.
      */
     private void setAltText(String mediaFileId, String imageName, String altText) {
         openPath(MEDIA_VIEW);
@@ -261,7 +292,7 @@ class MediaBulkUploadIT extends RollerIT {
         // marker -- which is the only reliable arrival signal, since the URL
         // does not change.
         executeJavaScript("window.__altMarker = true;");
-        executeJavaScript("onClickEdit(arguments[0], arguments[1]);", mediaFileId, imageName);
+        $(".mediaObject[data-media-file-id='" + mediaFileId + "']").should(exist).click();
         $("#mediafile_edit_lightbox").shouldBe(visible);
         switchTo().frame("mediaFileEditor");
 

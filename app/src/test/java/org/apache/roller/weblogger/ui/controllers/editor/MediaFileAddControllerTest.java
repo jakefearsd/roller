@@ -384,6 +384,48 @@ class MediaFileAddControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void aQuotaRefusalReachesTheModelWithItsArgumentsFilledIn() throws Exception {
+        // error.upload.dirmax carries a {0} placeholder for the configured
+        // limit. Replaying msg.getKey() alone (dropping msg.getArgs()) would
+        // leave the literal "{0}" in the rendered error -- this pins that the
+        // argument actually reaches the resolved message.
+        registerMessage("error.upload.dirmax",
+                "You cannot exceed the maximum directory size of {0} MB.");
+        org.mockito.Mockito.doAnswer(invocation -> {
+            org.apache.roller.weblogger.util.RollerMessages messages = invocation.getArgument(2);
+            messages.addError("error.upload.dirmax", "50");
+            return null;
+        }).when(weblogger.getMediaFileManager()).createMediaFile(any(), any(), any());
+
+        controller.save(request, model, bean,
+                new MultipartFile[]{upload("photo.jpg", "image/jpeg", "x")});
+
+        assertTrue(errors(model).contains("You cannot exceed the maximum directory size of 50 MB."),
+                "Expected the quota limit substituted into the message, got: " + errors(model));
+    }
+
+    @Test
+    void aTwoArgumentRefusalReachesTheModelWithBothArgumentsFilledIn() throws Exception {
+        // error.upload.forbiddenFile carries two placeholders (filename,
+        // content-type); this is the shape that only the Object[]/String[]
+        // addError overload can carry.
+        registerMessage("error.upload.forbiddenFile",
+                "File <b>{0}</b> content-type <b>{1}</b> not allowed");
+        org.mockito.Mockito.doAnswer(invocation -> {
+            org.apache.roller.weblogger.util.RollerMessages messages = invocation.getArgument(2);
+            messages.addError("error.upload.forbiddenFile", new String[]{"evil.exe", "application/x-msdownload"});
+            return null;
+        }).when(weblogger.getMediaFileManager()).createMediaFile(any(), any(), any());
+
+        controller.save(request, model, bean,
+                new MultipartFile[]{upload("evil.exe", "application/octet-stream", "x")});
+
+        assertTrue(errors(model).contains(
+                        "File <b>evil.exe</b> content-type <b>application/x-msdownload</b> not allowed"),
+                "Expected both arguments substituted into the message, got: " + errors(model));
+    }
+
+    @Test
     void aManagerRefusalOfOneFileDoesNotHideAnotherFilesSuccessInTheSameBatch() throws Exception {
         org.mockito.Mockito.doAnswer(invocation -> {
             MediaFile target = invocation.getArgument(1);

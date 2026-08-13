@@ -39,10 +39,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>None of these fail at compile time. A renamed form field silently stops
  * binding {@code bean.altText} and every save discards what the author typed;
  * a marker present in only one of {@code MediaFileView.jsp}'s two
- * {@code c:forEach} loops is invisible on exactly the view an author with a
- * lot of photographs is actually looking at (the paged/search results loop),
- * while the unpaged-folder loop keeps the feature looking complete to anyone
- * testing casually against a small folder.
+ * {@code c:forEach} loops is invisible on exactly the view an author is
+ * actually looking at most of the time: {@code childFiles}, the ordinary
+ * unpaged folder-browse loop that {@code MediaFileViewController} populates
+ * on every plain visit to a directory. {@code pager.items} is populated only
+ * by {@code mediaFileView!search.rol} -- it is the occasional search-results
+ * loop, not the primary one -- so a marker present only there would look
+ * complete to anyone testing casually by running a search, while missing it
+ * on every normal folder visit.
  */
 class MediaAltTextWiringTest {
 
@@ -97,10 +101,11 @@ class MediaAltTextWiringTest {
         }
         assertEquals(2, count,
                 "media-alt-missing must appear in BOTH of MediaFileView.jsp's "
-                        + "c:forEach loops (childFiles and pager.items) -- the paged/search "
-                        + "loop is the view an author with a lot of photographs is actually "
-                        + "looking at, so missing it there makes the whole feature invisible "
-                        + "exactly when it matters; found " + count + " occurrence(s)");
+                        + "c:forEach loops (childFiles and pager.items) -- childFiles is the "
+                        + "ordinary unpaged folder-browse loop an author sees on every normal "
+                        + "visit, so missing it there makes the whole feature invisible on the "
+                        + "view that matters most; pager.items only renders after a search; "
+                        + "found " + count + " occurrence(s)");
     }
 
     @Test

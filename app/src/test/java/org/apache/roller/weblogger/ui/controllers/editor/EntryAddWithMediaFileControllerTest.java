@@ -111,8 +111,10 @@ class EntryAddWithMediaFileControllerTest extends EditorControllerTestSupport {
 
         controller.execute(request, model, bean, new String[]{"file-1", "file-2"}, null);
 
-        assertEquals("[image id=\"file-1\"][image id=\"file-2\"]", bean.getText(),
-                "Multiple selections must be appended in the order they were selected");
+        assertEquals("[image id=\"file-1\"]\n\n[image id=\"file-2\"]", bean.getText(),
+                "Multiple selections must be appended in the order they were selected, "
+                        + "separated by a blank line so the author has somewhere to put a "
+                        + "caption or split them onto their own lines");
     }
 
     @Test

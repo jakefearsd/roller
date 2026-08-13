@@ -332,9 +332,13 @@ IndexManager getIndexManager()
   alt asserts "decorative", which is the wrong claim about a photograph, and it
   would hide undescribed images from the marker instead of surfacing them.
 - **`MediaFileView.jsp` renders the "no alt text" marker from TWO `c:forEach`
-  loops** (`childFiles` and `pager.items`); the paged one is what an author
-  with a lot of photographs actually sees, so a marker added to only one is
-  invisible exactly when it matters. Its gate uses `fn:trim` so that
+  loops** (`childFiles` and `pager.items`). `childFiles` is the ordinary,
+  unpaged folder-browse view and is what an author sees on every normal visit
+  to a directory; `MediaFileViewController` sets `pager` only in
+  `mediaFileView!search.rol`, so `pager.items` renders only after a search.
+  Both are real screens an author's eyes land on, so a marker added to only
+  one is invisible exactly when it matters — but `childFiles` is the one
+  worth remembering as "primary", not `pager.items`. Its gate uses `fn:trim` so that
   whitespace-only alt text counts as missing — matching the renderer's
   `isNotBlank`, not EL's `empty`, which would show such an image as described
   while every page rendered the filename.

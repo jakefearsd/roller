@@ -162,7 +162,12 @@ public class MediaFileAddController extends MediaFileBase {
 
             for (Iterator<RollerMessage> it = errors.getErrors(); it.hasNext();) {
                 RollerMessage msg = it.next();
-                addError(model, msg.getKey(), request);
+                String[] args = msg.getArgs();
+                if (args == null || args.length == 0) {
+                    addError(model, msg.getKey(), request);
+                } else {
+                    addError(model, msg.getKey(), (Object[]) args, request);
+                }
             }
 
             // A batch upload can partly succeed: report BOTH what landed and what

@@ -151,6 +151,7 @@ class MediaFileWrapperTest {
             pojo.setDescription("Desc <script>alert(1)</script>");
             pojo.setExifCamera("Camera <script>alert(1)</script>");
             pojo.setExifLens("Lens <script>alert(1)</script>");
+            pojo.setAltText("Alt <script>alert(1)</script>");
 
             assertFalse(wrapper.getName().contains("<script>"),
                     "EXIF/name/description fields originate in attacker-controlled file "
@@ -159,10 +160,16 @@ class MediaFileWrapperTest {
             assertFalse(wrapper.getDescription().contains("<script>"));
             assertFalse(wrapper.getExifCamera().contains("<script>"));
             assertFalse(wrapper.getExifLens().contains("<script>"));
+            assertFalse(wrapper.getAltText().contains("<script>"),
+                    "altText is author-entered free text stored raw (W4), the same as "
+                            + "description, and must be sanitised the same way before a theme "
+                            + "emits it into the alt attribute");
 
             assertTrue(pojo.getName().contains("<script>"),
                     "Precondition: the underlying pojo still holds the raw value, so the "
                             + "cleaning demonstrably happens in the wrapper");
+            assertTrue(pojo.getAltText().contains("<script>"),
+                    "Precondition: the underlying pojo still holds the raw altText value");
         } finally {
             HTMLSanitizer.xssEnabled = previous;
         }

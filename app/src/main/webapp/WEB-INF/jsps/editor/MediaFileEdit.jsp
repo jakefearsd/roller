@@ -69,7 +69,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.name" value="${bean.name}" size="35" maxlength="100" tabindex="1" class="form-control"/>
+            <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="35" maxlength="100" tabindex="1" class="form-control"/>
         </div>
     </div>
 

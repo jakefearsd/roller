@@ -103,6 +103,14 @@ public class EntryAddWithMediaFileController extends MediaFileBase {
                                    .replace("<size>", "" + mediaFile.getLength())
                                    .replace("<type>", mediaFile.getContentType());
                     }
+                    // A blank line between entries, not concatenated flush
+                    // against one another: adjacent [image id="a"][image
+                    // id="b"] shortcodes with nothing between them land as one
+                    // unbroken run in the editor with no cursor position to
+                    // insert a caption or split them onto separate lines.
+                    if (!sb.isEmpty()) {
+                        sb.append("\n\n");
+                    }
                     sb.append(link);
                 }
             }

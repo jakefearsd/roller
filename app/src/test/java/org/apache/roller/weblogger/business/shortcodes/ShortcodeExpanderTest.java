@@ -20,14 +20,25 @@ package org.apache.roller.weblogger.business.shortcodes;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 /**
  * The parsing/dispatch matrix for {@link ShortcodeExpander}: registered
@@ -472,6 +483,63 @@ class ShortcodeExpanderTest {
         void aFailingShortcodeDoesNotStopItsNeighborsFromExpanding() {
             assertEquals("[boom] X [shy]",
                     failing.expand(entry, "[boom] [upper word=x] [shy]"));
+        }
+    }
+
+    // --------------------------------------------------------- default registry
+
+    /**
+     * {@code ImageShortcodeTest} already pins "an explicit {@code alt=""}
+     * wins over the stored/filename fallbacks" at the HANDLER level, calling
+     * {@link ImageShortcode#render} directly with a pre-parsed attribute map.
+     * That leaves the {@link ShortcodeExpander#ATTRIBUTE} regex itself
+     * unpinned: nothing proved that {@code alt=""} in raw entry text actually
+     * parses into an attribute map containing the key {@code "alt"} with an
+     * empty value, as opposed to, say, being dropped as if absent. This
+     * exercises the real default registry end to end, the way both render
+     * seams (see {@code WeblogEntry.render()}) actually call it.
+     */
+    @Nested
+    class DefaultRegistry {
+
+        @Test
+        void anExplicitlyEmptyAltSurvivesParsingThroughTheDefaultExpander() throws Exception {
+            Weblog weblog = new Weblog();
+            weblog.setHandle("blog");
+
+            MediaFile photo = new MediaFile();
+            photo.setId("x");
+            photo.setWeblog(weblog);
+            photo.setName("hawk.jpg");
+            photo.setAltText("A red kite riding the thermal");
+            photo.setContentType("image/jpeg");
+
+            MediaFileManager mediaFileManager = mock(MediaFileManager.class);
+            when(mediaFileManager.getMediaFile("x")).thenReturn(photo);
+
+            URLStrategy urls = mock(URLStrategy.class);
+            when(urls.getMediaFileURL(weblog, "x", true)).thenReturn("http://example.com/x");
+
+            Weblogger weblogger = mock(Weblogger.class);
+            when(weblogger.getMediaFileManager()).thenReturn(mediaFileManager);
+            when(weblogger.getUrlStrategy()).thenReturn(urls);
+
+            WeblogEntry imageEntry = new WeblogEntry();
+            imageEntry.setWebsite(weblog);
+
+            String out;
+            try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
+                factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+                out = ShortcodeExpander.defaultExpander()
+                        .expand(imageEntry, "[image id=\"x\" alt=\"\"]");
+            }
+
+            assertTrue(out.contains("alt=\"\""),
+                    "alt=\"\" in the raw shortcode text must parse through and be honoured "
+                            + "verbatim, not be dropped by the attribute regex and fall back to "
+                            + "the stored alt text or filename: " + out);
+            assertFalse(out.contains("A red kite riding the thermal"), out);
+            assertFalse(out.contains("hawk.jpg"), out);
         }
     }
 }

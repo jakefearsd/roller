@@ -170,6 +170,24 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     }
 
     /**
+     * Add an error message (resolved from the message source) with arbitrary
+     * arguments to the model.
+     *
+     * <p>For a key carrying more than one placeholder -- or whose arguments
+     * are already collected as an {@code Object[]}/{@code String[]}, e.g. a
+     * {@link org.apache.roller.weblogger.util.RollerMessages.RollerMessage}
+     * replayed from a validation collector -- the single-{@code param}
+     * overload above cannot carry them, and dropping them silently returns
+     * the raw, unresolved {@code {0}}/{@code {1}} pattern text: {@code
+     * alwaysUseMessageFormat} is {@code false} (see {@code
+     * MessageFormatRegressionTest}), so a no-args lookup never runs the
+     * pattern through {@code MessageFormat} at all.
+     */
+    protected void addError(Model model, String key, Object[] args, HttpServletRequest request) {
+        addToModel(model, "errors", getText(key, args, request));
+    }
+
+    /**
      * Check whether any error messages have been added to the model.
      */
     @SuppressWarnings("unchecked")
