@@ -28,15 +28,13 @@
 #   2. runtime -- just a JRE, the WAR, baked-in themes, and the migrations
 #      SQL for reference/exec-based use by deploy tooling (Stage 1C Task 3).
 #
-# Run: java -jar roller.war (Boot's embedded Tomcat serves the app at
-# /roller on 8080, and a second embedded connector serves
-# /actuator/health on the management port 8090 -- see
-# app/src/main/resources/application.properties). Runtime config is supplied
-# via -Droller.custom.config=/config/roller-production.properties (see
-# WebloggerConfig.java), which must set at least database.configurationType,
-# database.jdbc.*, mediafiles.storage.dir=/data/mediafiles,
-# search.index.dir=/data/search-index, uploads.dir=/data/uploads, and
-# mail.configurationType + SMTP keys.
+# Run: java -jar roller.war (Boot's embedded Tomcat serves the app at /roller
+# on 8080, and a second embedded connector serves /actuator/health on the
+# management port 8090 -- see app/src/main/resources/application.properties).
+# Runtime config is supplied entirely by ROLLER_* environment variables, which
+# WebloggerConfig overlays on top of its built-in defaults; at minimum set
+# ROLLER_DATABASE_CONFIGURATIONTYPE, ROLLER_DATABASE_JDBC_*, and the
+# ROLLER_MAIL_* keys. See deploy/.env.example for the full set.
 
 # ---- Stage 1: build -------------------------------------------------------
 FROM maven:3.9-eclipse-temurin-25@sha256:7e461cec477077c1d9e50b13df8aef9018764410f4c4cd7c34803f10c4c99e4c AS builder
@@ -65,8 +63,21 @@ FROM eclipse-temurin:25-jre@sha256:681c543d6f36c50f45e9b5226930a46203dcfa351d367
 # Roller feature-detects it at first use and falls back to a JPEG/PNG-only
 # rendition ladder when absent, so this is an enhancement, not a hard
 # dependency -- but production should always have it.
-RUN apt-get update && apt-get install -y --no-install-recommends curl webp \
+#
+# postgresql-client provides psql/createdb for /app/provision.sh and pg_dump
+# for the nightly backup loop -- this one image is the app, the provisioner and
+# the backup runner, because those are exactly the roles needing the WAR or a
+# PostgreSQL client. The version assertion is load-bearing: pg_dump refuses a
+# server newer than itself, so a base-image change that dropped the client
+# below 16 would break backups silently at 03:00 rather than at build time.
+RUN apt-get update && apt-get install -y --no-install-recommends curl webp postgresql-client \
     && rm -rf /var/lib/apt/lists/*
+
+# Separate RUN on purpose. Chaining this onto the install with `&& ... || exit`
+# makes a failed apt-get report the pg_dump version message instead of its own,
+# which sends you looking in the wrong place.
+RUN pg_dump --version | grep -Eq 'PostgreSQL\) (1[6-9]|[2-9][0-9])' \
+    || { echo "pg_dump must be 16 or newer: the stack runs PostgreSQL 16 and pg_dump refuses a server newer than itself" >&2; exit 1; }
 
 RUN groupadd --system roller && useradd --system --gid roller --home-dir /app --shell /usr/sbin/nologin roller
 
@@ -76,10 +87,22 @@ COPY --from=builder /build/app/target/roller.war /app/roller.war
 COPY --from=builder /build/app/src/main/webapp/themes /app/themes
 COPY --from=builder /build/bin/db/migrations /app/migrations
 
-# Runtime data: mediafiles, search index, uploads (all under /data per the
-# runtime contract) plus /config for the mounted roller-production.properties.
-RUN mkdir -p /data/mediafiles /data/search-index /data/uploads /config \
-    && chown -R roller:roller /app /data /config
+# migrate.sh resolves its migrations directory as $(dirname $0)/migrations, so
+# it must sit beside /app/migrations. Copied unmodified from the build context:
+# the deploy path and a manual ./bin/db/migrate.sh run must never disagree
+# about what "applied" means.
+COPY bin/db/migrate.sh /app/migrate.sh
+COPY deploy/provision.sh /app/provision.sh
+COPY deploy/analytics/umami-views.sql /app/umami-views.sql
+COPY deploy/backup/backup.sh /app/backup/backup.sh
+COPY deploy/backup/loop.sh /app/backup/loop.sh
+
+# Runtime data: mediafiles, search index, uploads, all under /data per the
+# runtime contract. There is no /config any more -- configuration arrives as
+# ROLLER_* environment variables (see WebloggerConfig.applyEnvironmentOverrides).
+RUN chmod 755 /app/migrate.sh /app/provision.sh /app/backup/backup.sh /app/backup/loop.sh \
+    && mkdir -p /data/mediafiles /data/search-index /data/uploads \
+    && chown -R roller:roller /app /data
 
 VOLUME ["/data"]
 
@@ -89,7 +112,7 @@ EXPOSE 8080 8090
 
 ENV JAVA_OPTS=""
 
-# Shell form so JAVA_OPTS expands; -Droller.custom.config points at the
-# operator-mounted production properties file (see docker-compose.prod.yml,
-# Stage 1C Task 2).
-ENTRYPOINT ["/bin/sh", "-c", "exec java $JAVA_OPTS -Droller.custom.config=/config/roller-production.properties -jar /app/roller.war"]
+# Shell form so JAVA_OPTS expands. No -Droller.custom.config: configuration
+# comes from ROLLER_* environment variables, which compose supplies from .env.
+# WebloggerConfig still honours the flag if an operator sets it in JAVA_OPTS.
+ENTRYPOINT ["/bin/sh", "-c", "exec java $JAVA_OPTS -jar /app/roller.war"]

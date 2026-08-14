@@ -29,10 +29,7 @@ it-selenium/src
 docker-compose.yml
 docker_deployment.md
 
-# Secrets -- not COPYd by Dockerfile (deploy/config/roller-production.properties
-# is bind-mounted at runtime, not baked into the image; .env is read only by
-# docker compose on the host), but keep them out of the build context as
-# defense-in-depth against a future Dockerfile change accidentally COPYing
-# them in.
+# Secrets -- .env is read only by docker compose on the host and is never
+# COPYd by the Dockerfile. Kept out of the build context as defense-in-depth
+# against a future Dockerfile change accidentally COPYing it in.
 /.env
-deploy/config/roller-production.properties
