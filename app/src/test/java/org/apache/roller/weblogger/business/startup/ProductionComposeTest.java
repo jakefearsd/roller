@@ -23,6 +23,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -183,6 +184,64 @@ class ProductionComposeTest {
     void theAppTakesItsConfigurationFromEnvFile() {
         assertEquals(".env", String.valueOf(service("app").get("env_file")),
                 "the app's whole configuration arrives as ROLLER_* variables from .env");
+    }
+
+    @Test
+    void analyticsViewsNeverRestarts() {
+        // A restarting one-shot that waits up to ANALYTICS_VIEWS_WAIT_SECONDS
+        // (default 180s) for website_event to appear would hammer the
+        // database indefinitely if that table is never going to show up
+        // (Umami misconfigured, or simply not deployed on this stack) --
+        // restart: "no" is what makes a timeout here a one-time, logged
+        // no-op instead of a permanent background retry storm.
+        assertEquals("no", String.valueOf(service("analytics-views").get("restart")),
+                "analytics-views must not restart -- see the comment above for why a "
+                        + "restarting one-shot here is actively harmful, not just wasteful");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void everyEntrypointPathIsActuallyBakedIntoTheImage() throws IOException {
+        // C1: deploy/backup/loop.sh called the absolute path /backup.sh, which
+        // existed only under the OLD compose file's bind mounts. The image now
+        // bakes the pair at /app/backup/{loop,backup}.sh, and nothing caught
+        // the drift -- loop.sh's own call site was never touched by the wave
+        // that moved the scripts, so no per-task review ever looked at it, and
+        // this compose file's shape was pinned thoroughly while the image's
+        // internal layout was pinned nowhere at all. That gap is what this
+        // test closes: for every service whose entrypoint names an absolute
+        // path under /app, the root Dockerfile must actually create that path
+        // (a COPY destination or a chmod target) -- reading the Dockerfile as
+        // plain text, the same idiom this class already uses for the compose
+        // file.
+        Path dockerfile = Paths.get("../Dockerfile");
+        assertTrue(Files.exists(dockerfile), "missing " + dockerfile.toAbsolutePath());
+        String dockerfileText = Files.readString(dockerfile, StandardCharsets.UTF_8);
+
+        List<String> offenders = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : services().entrySet()) {
+            Map<String, Object> svc = (Map<String, Object>) entry.getValue();
+            Object entrypointRaw = svc.get("entrypoint");
+            if (entrypointRaw == null) {
+                continue;
+            }
+            String entrypointPath;
+            if (entrypointRaw instanceof List<?> list) {
+                assertFalse(list.isEmpty(), entry.getKey() + "'s entrypoint list is empty");
+                entrypointPath = String.valueOf(list.get(0));
+            } else {
+                entrypointPath = String.valueOf(entrypointRaw).trim().split("\\s+")[0];
+            }
+            if (!entrypointPath.startsWith("/app/")) {
+                continue;
+            }
+            if (!dockerfileText.contains(entrypointPath)) {
+                offenders.add(entry.getKey() + ": " + entrypointPath);
+            }
+        }
+        assertTrue(offenders.isEmpty(),
+                "these services declare an /app/* entrypoint the Dockerfile never creates "
+                        + "(no matching COPY destination or chmod target): " + offenders);
     }
 
     @Test
