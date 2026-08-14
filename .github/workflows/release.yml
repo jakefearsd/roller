@@ -17,9 +17,11 @@
 
 name: Release
 
-# Fires when a tag matching v*.*.* is pushed. Builds the executable WAR,
-# publishes the production image to GHCR as both :<version> and :latest,
-# and creates a GitHub Release with the WAR attached.
+# Fires when a tag matching v*.*.* is pushed. Runs the unit suite and
+# coverage gates, publishes the app and caddy production images to GHCR as
+# :<version>, :latest and :sha-<short>, and creates a GitHub Release with a
+# self-contained deploy bundle attached (the WAR extracted from the app
+# image, docker-compose.prod.yml, .env.example, deploy.sh).
 #
 # This is the ONLY thing that publishes an image. `docker-compose.prod.yml`
 # defaults the app to ghcr.io/jakefearsd/roller:latest and `deploy/deploy.sh`
@@ -27,11 +29,18 @@ name: Release
 # last commit anyone pushed". To deploy an untagged tree, deploy.sh --build
 # builds from the checkout instead.
 #
+# main.yml triggers on `push: branches: [master]`, which a tag push does not
+# match, so a tag alone would never wait on the unit suite -- the `test` job
+# below runs it here, gated with `needs:` on the publish job, instead of
+# racing main.yml's copy on the same commit.
+#
 # To cut a release:
 #   1. mvn versions:set -DnewVersion=6.2.0 -DgenerateBackupPoms=false
 #      (only if the pom version is changing -- the tag drives the image tag
 #      either way)
 #   2. Run the browser ITs locally: mvn verify -Pit
+#      (still not run by this workflow -- see main.yml's integration-test
+#      job for why they stay off the push/tag path)
 #   3. git commit -am "release: 6.2.0"
 #   4. git tag v6.2.0 && git push origin master v6.2.0
 
@@ -45,8 +54,37 @@ permissions:
   packages: write    # push to ghcr.io
 
 jobs:
+  test:
+    name: Unit suite and coverage gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          submodules: false
+          show-progress: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'zulu'
+          cache: maven
+
+      # main.yml triggers on `push: branches: [master]`, which a TAG push does
+      # not match -- so in the documented release flow
+      # (`git push origin master v6.2.0`) the unit suite and this workflow race,
+      # with no dependency between them. Without this job a tag on a commit that
+      # never passed build-test publishes anyway. `install` runs `verify`, so
+      # this covers the JaCoCo floors too.
+      - name: Build and run the unit suite
+        run: mvn -V -ntp install
+
   release:
-    name: Build, publish image, create release
+    name: Build, publish images, create release
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -63,26 +101,10 @@ jobs:
         run: |
           # v6.2.0 -> 6.2.0
           echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Set up JDK 25
-        uses: actions/setup-java@v5
-        with:
-          java-version: '25'
-          distribution: 'zulu'
-          cache: maven
-
-      # The unit suite already gated the commit this tag points at (main.yml
-      # runs it on every push to master), and the browser ITs are a
-      # pre-release local step. -DskipTests, not -Dmaven.test.skip: test
-      # sources must still compile, so a tag cut from a tree with a broken
-      # test source fails here rather than shipping.
-      - name: Build the executable WAR
-        run: mvn -V -ntp clean package -DskipTests
-
-      # GHCR requires an all-lowercase repository path, but
-      # github.repository preserves the owner/repo casing as configured on
-      # GitHub, so it may contain uppercase characters. Lowercase it into an
-      # env var here rather than assuming the repo name is already lowercase.
+      # GHCR requires an all-lowercase repository path; github.repository keeps
+      # the casing configured on GitHub.
       - name: Compute lowercase image repository
         run: echo "IMAGE_REPO=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
@@ -96,7 +118,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push production image
+      - name: Build and push the app image
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -104,6 +126,7 @@ jobs:
           tags: |
             ghcr.io/${{ env.IMAGE_REPO }}:${{ steps.version.outputs.version }}
             ghcr.io/${{ env.IMAGE_REPO }}:latest
+            ghcr.io/${{ env.IMAGE_REPO }}:sha-${{ steps.version.outputs.sha_short }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.version.outputs.version }}
@@ -112,10 +135,50 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push the caddy image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/caddy/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_REPO }}-caddy:${{ steps.version.outputs.version }}
+            ghcr.io/${{ env.IMAGE_REPO }}-caddy:latest
+            ghcr.io/${{ env.IMAGE_REPO }}-caddy:sha-${{ steps.version.outputs.sha_short }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=Apache-2.0
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The image build is the ONLY build of the WAR. Extracting the artifact
+      # from the image it shipped in means the WAR attached to this Release and
+      # the WAR running in production are the same bytes; running `mvn package`
+      # separately produced a second, merely-equivalent binary.
+      - name: Extract the WAR from the published image
+        run: |
+          image="ghcr.io/${IMAGE_REPO}:${{ steps.version.outputs.version }}"
+          docker pull "$image"
+          cid="$(docker create "$image")"
+          mkdir -p release-assets
+          docker cp "$cid:/app/roller.war" release-assets/roller.war
+          docker rm "$cid"
+          cp docker-compose.prod.yml release-assets/
+          cp deploy/.env.example release-assets/.env.example
+          cp deploy/deploy.sh release-assets/deploy.sh
+          ls -l release-assets
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           name: Roller ${{ steps.version.outputs.version }}
           generate_release_notes: true
-          files: app/target/roller.war
+          # A production host has no checkout, so everything it needs is here.
+          files: |
+            release-assets/roller.war
+            release-assets/docker-compose.prod.yml
+            release-assets/.env.example
+            release-assets/deploy.sh
           fail_on_unmatched_files: true
