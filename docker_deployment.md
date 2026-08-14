@@ -40,10 +40,10 @@ public IP.
   [DNS](#dns) — Caddy supports both modes).
 - Ports 80 and 443 reachable from the internet (Caddy needs 80 for the ACME
   HTTP-01 challenge even if you only ever browse over HTTPS).
-- Outbound SMTP relay credentials if you want comment-notification and
-  password-reset mail to work (`mail.hostname`/`mail.port`/optional
-  `mail.username`/`mail.password`). Roller runs fine without mail configured;
-  those two features just won't send anything.
+- Outbound SMTP relay credentials if you want password-reset mail to work
+  (`mail.hostname`/`mail.port`/optional `mail.username`/`mail.password`).
+  Roller runs fine without mail configured; that feature just won't send
+  anything.
 - Nothing needs to be pre-installed on the host besides Docker: the app image
   bakes in its own JRE, themes, and migration SQL (see `Dockerfile`); Caddy
   and Postgres run from their own images. The app image also bakes in
@@ -65,11 +65,15 @@ and `deploy.sh`. Download them into one directory, e.g. `/opt/roller`:
 ```bash
 mkdir -p /opt/roller && cd /opt/roller
 curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/docker-compose.prod.yml
-curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/.env.example
+curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/env.example
 curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/deploy.sh
 chmod +x deploy.sh
-mv .env.example .env
+mv env.example .env
 ```
+
+(The release asset is named `env.example`, not `.env.example` — GitHub
+renames any release asset whose filename starts with a dot, so a link built
+from the dotted name would 404.)
 
 (If you maintain a different fork, the `IMAGE_VERSION` tag in your `.env`
 still resolves against `ghcr.io/jakefearsd/roller` unless you also edit the
@@ -80,7 +84,19 @@ image names in `docker-compose.prod.yml` to point at your fork's GHCR path.)
 `docker-compose.prod.yml` reads all of its configuration — infrastructure
 settings **and** the app's own runtime properties — from a `.env` file next
 to it (gitignored — it holds secrets). You already renamed the downloaded
-`.env.example` to `.env` above; edit it in place.
+`env.example` to `.env` above; edit it in place.
+
+The `app` service loads `.env` wholesale via `env_file: .env`, not just the
+`ROLLER_*` keys `WebloggerConfig` actually reads — every variable in the
+file, including `POSTGRES_PASSWORD`, `UMAMI_APP_SECRET` and
+`LISTMONK_ADMIN_PASSWORD`, ends up in the `app` container's environment and
+is visible to anything that can read it: `docker inspect`, `/proc/1/environ`
+inside the container, `docker compose config`. This is a deliberate
+tradeoff (one file, one place to look, matching what a bare-metal deploy
+would keep in environment variables anyway), not an oversight — but it does
+mean `.env`'s file permissions and who has shell access to the host are the
+actual secret boundary, same as they would be for any other
+environment-variable-configured container.
 
 `.env` has four parts:
 
@@ -124,7 +140,15 @@ to it (gitignored — it holds secrets). You already renamed the downloaded
     name); normally leave these as shipped.
   - `ROLLER_DATABASE_JDBC_USERNAME` / `ROLLER_DATABASE_JDBC_PASSWORD` — **must
     match** `POSTGRES_USER` / `POSTGRES_PASSWORD` below. The two are not
-    templated against each other; keep them in sync by hand.
+    templated against each other; keep them in sync by hand. The same is true
+    of the database **name**: `ROLLER_DATABASE_JDBC_CONNECTIONURL`'s trailing
+    path segment (`.../rollerdb`) and `POSTGRES_DB` below are two independent
+    strings, not one templated value. Changing `POSTGRES_DB` alone makes
+    `provision` create and migrate a database under the new name while the
+    app's connection URL still points at the old one — the app fails to
+    bootstrap against a database that was never migrated, rather than
+    against a missing one, which reads like a permissions problem rather
+    than the name mismatch it actually is. Change both together.
   - `ROLLER_THEMES_DIR`, `ROLLER_MEDIAFILES_STORAGE_DIR`,
     `ROLLER_SEARCH_INDEX_DIR`, `ROLLER_UPLOADS_DIR` — match the image's own
     layout and the volumes `docker-compose.prod.yml` mounts; no reason to
@@ -643,8 +667,15 @@ On your workstation, in a directory holding the same two files:
 
 ```bash
 IMAGE_VERSION=6.2.1 docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+IMAGE_VERSION=6.2.1 docker compose -f docker-compose.prod.yml up -d
 ```
+
+(The prefix has to be on **both** lines, or `export`ed first — an
+`IMAGE_VERSION=6.2.1` prefix on the `pull` line alone only scopes the
+override to that one command, so `up -d` would fall back to whatever
+`IMAGE_VERSION` is already in `.env`, silently defeating the point of this
+snippet. Matches the same snippet in
+`docs/superpowers/specs/2026-08-14-container-push-deployment-design.md`.)
 
 with a local `.env` carrying `SITE_DOMAIN=:80`, `UMAMI_DOMAIN=:8081`,
 `LISTMONK_DOMAIN=:8082`, `LISTMONK_ROOT_URL=http://localhost:8082` and
@@ -660,7 +691,40 @@ equivalent rather than identical.
 
 ## Upgrades
 
-Edit `IMAGE_VERSION` in `.env` to the new release's version, then:
+Re-download `docker-compose.prod.yml` and `deploy.sh` from the new release
+alongside bumping `IMAGE_VERSION` in `.env` — the compose file and the script
+are **not** guaranteed to be unchanged between releases; this very release is
+a counterexample (it added the `provision` and `analytics-views` services,
+repinned three image digests, and moved the `backup` service from the
+`postgres:16` image onto the app image). Bumping `IMAGE_VERSION` alone runs
+last release's topology against this release's images, which is a real
+category of failure, not a hypothetical one: an operator who did exactly that
+across this same release would keep last release's `backup` service (still
+entrypoint-ed at the bind-mounted path the old compose file used) pointed at
+this release's app image, which does not carry a script at that path at all:
+
+```bash
+curl -LO https://github.com/jakefearsd/roller/releases/download/v<new-version>/docker-compose.prod.yml
+curl -LO https://github.com/jakefearsd/roller/releases/download/v<new-version>/deploy.sh
+chmod +x deploy.sh
+```
+
+`.env` is yours — re-downloading `env.example` and diffing it against your
+`.env` is worth doing on any release whose notes mention new `.env` keys, but
+never overwrite `.env` itself; it holds your secrets.
+
+**`umami` moved from a floating tag to a pinned digest this release.** The
+previous value was `postgresql-latest`, which — unlike every other image in
+this stack — was not digest-pinned, so a host that had recently pulled
+`latest` could already be running a newer Umami than the digest this release
+now pins, and applying this upgrade would *downgrade* it. Umami's own schema
+migrations are forward-only (they do not support a downgrade), so the
+symptom of that is a container that refuses to start — check `docker compose
+logs umami` — never silent data loss; if you hit it, stay on the newer image
+or restore Umami's database from a backup taken before the downgrade rather
+than trying to force the older image to run against the newer schema.
+
+Once the two files are in place:
 
 ```bash
 ./deploy.sh           # pull the images and deploy, or:
@@ -669,9 +733,7 @@ Edit `IMAGE_VERSION` in `.env` to the new release's version, then:
 
 (equivalently, `docker compose -f docker-compose.prod.yml pull && docker
 compose -f docker-compose.prod.yml up -d`.) There is no `git pull` — the host
-holds no checkout to update, only the two files from [Get the deploy files
-onto the host](#get-the-deploy-files-onto-the-host), and neither one changes
-between releases.
+holds no checkout to update.
 
 This is the same script used for [first run](#first-run) — running it again
 is safe and idempotent. Each run: pulls the images, brings the stack up (which
@@ -684,6 +746,69 @@ rather than leaving the stack in a half-upgraded state without telling you.
 
 Always have a recent, verified backup before upgrading across a schema
 change (see [Backup and restore](#backup-and-restore)).
+
+### Upgrading a deployment made before the image-only layout
+
+If this host has been running Roller since before the `provision.sh`/
+`analytics-views.sh`/image-only rework (i.e. it still has a
+`deploy/config/roller-production.properties` bind-mounted in, or a
+`ROLLER_DOMAIN`/`ROLLER_IMAGE` pair in `.env`), moving it onto a current
+release needs three changes, not just a version bump:
+
+1. **Replace `docker-compose.prod.yml`** with the current release's copy —
+   the old file bind-mounts a properties file and a Caddyfile that no longer
+   exist as separate artifacts; both are baked into the images now (see
+   "Development vs Production" in `CLAUDE.md` and the top of this document).
+2. **Rename two `.env` keys**: `ROLLER_DOMAIN` becomes `SITE_DOMAIN`, and
+   `ROLLER_IMAGE` becomes `IMAGE_VERSION` — and `IMAGE_VERSION` is a **bare
+   version tag** (e.g. `6.2.0`), not a full image reference the way
+   `ROLLER_IMAGE` used to be. Both were deliberately renamed off the
+   `ROLLER_` prefix: that prefix is now reserved for the app's own
+   configuration, and a stray `ROLLER_DOMAIN` would be overlaid onto the
+   app's properties as a junk key named `domain`.
+3. **Transcribe every setting from the old
+   `deploy/config/roller-production.properties`** into the `ROLLER_*` block
+   in `.env` — there is no properties file in the new image, so anything
+   that file used to set has to become a `ROLLER_*` environment variable or
+   it silently reverts to the app's built-in default. The mapping (old
+   property → new variable) is:
+
+   | Property | Environment variable |
+   |---|---|
+   | `database.jdbc.connectionURL` | `ROLLER_DATABASE_JDBC_CONNECTIONURL` |
+   | `database.jdbc.username` | `ROLLER_DATABASE_JDBC_USERNAME` |
+   | `database.jdbc.password` | `ROLLER_DATABASE_JDBC_PASSWORD` |
+   | `database.jdbc.driverClass` | `ROLLER_DATABASE_JDBC_DRIVERCLASS` |
+   | `database.configurationType` | `ROLLER_DATABASE_CONFIGURATIONTYPE` |
+   | `installation.type` | `ROLLER_INSTALLATION_TYPE` |
+   | `themes.dir` | `ROLLER_THEMES_DIR` |
+   | `mediafiles.storage.dir` | `ROLLER_MEDIAFILES_STORAGE_DIR` |
+   | `search.index.dir` | `ROLLER_SEARCH_INDEX_DIR` |
+   | `uploads.dir` | `ROLLER_UPLOADS_DIR` |
+   | `mail.configurationType` | `ROLLER_MAIL_CONFIGURATIONTYPE` |
+   | `mail.hostname` | `ROLLER_MAIL_HOSTNAME` |
+   | `mail.port` | `ROLLER_MAIL_PORT` |
+   | `mail.username` | `ROLLER_MAIL_USERNAME` |
+   | `mail.password` | `ROLLER_MAIL_PASSWORD` |
+   | `newsletter.listmonk.baseurl` | `ROLLER_NEWSLETTER_LISTMONK_BASEURL` |
+
+   (Same table as `docs/superpowers/specs/2026-08-14-container-push-deployment-design.md`
+   — reuse it rather than re-deriving it; it is the single source of truth
+   for this mapping.) The values fixed by the image's own layout
+   (`ROLLER_THEMES_DIR=/app/themes`, the three `/data/*` directories,
+   `ROLLER_INSTALLATION_TYPE=auto`, `ROLLER_DATABASE_CONFIGURATIONTYPE=jdbc`,
+   `ROLLER_DATABASE_JDBC_DRIVERCLASS`) already ship as defaults in
+   `env.example`, so you only need to add the ones that carry a real,
+   host-specific value.
+
+Every failure mode here is loud, not silent: compose refuses to start at all
+if `SITE_DOMAIN` or `IMAGE_VERSION` is unset (`${SITE_DOMAIN:?...}` /
+`${IMAGE_VERSION:?...}` in `docker-compose.prod.yml`), and a missing or wrong
+`ROLLER_DATABASE_*` block leaves the app unable to bootstrap — its health
+check never turns green and `deploy.sh` exits non-zero rather than reporting
+success. A mistake in this migration will not corrupt data; it will stop the
+stack from coming up, which is the failure mode you want while getting it
+right.
 
 ## Firewall
 
@@ -730,6 +855,19 @@ pointed at the host yet, or port 80 isn't reachable from the internet):
 ```bash
 docker compose -f docker-compose.prod.yml logs caddy
 ```
+
+**Caddy's logs are full of certificate errors for `analytics.invalid` /
+`newsletter.invalid`**
+
+Harmless if you never set `UMAMI_DOMAIN`/`LISTMONK_DOMAIN` — those are the
+`.invalid` defaults (deliberately unresolvable, so the consoles are
+unreachable rather than accidentally published on your blog's domain; see
+[Analytics](#analytics)/[Newsletter](#newsletter)), and Caddy still attempts
+and fails ACME issuance for each site block on every retry interval, forever,
+which fills the log with certificate errors that read like a
+misconfiguration. It is not one — set the corresponding `*_DOMAIN` variable
+(and point DNS at it) if you actually want that console reachable, or ignore
+the log noise if you don't.
 
 **App health check never turns green**
 

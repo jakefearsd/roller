@@ -1671,11 +1671,30 @@ Expected: `umami already exists.`, `listmonk already exists.`, migrate.sh report
 
 - [ ] **Step 6: Confirm the backup service can write**
 
+Run this through the `backup` container's actual entrypoint, `loop.sh` --
+**not** by `exec`-ing `backup.sh` directly. Calling `backup.sh` by hand is
+exactly what let a real defect through the first time this task was run: the
+container's real entrypoint chain (`docker-compose.prod.yml`'s
+`entrypoint: ["/app/backup/loop.sh"]` calling `backup.sh` internally) had a
+stale hardcoded path (`/backup.sh`, left over from when the scripts were
+bind-mounted at the container root) that a direct `exec backup.sh` call
+never exercises, because it bypasses `loop.sh` entirely. Set `BACKUP_HOUR` to
+the current UTC hour so the loop's first iteration fires immediately instead
+of waiting up to an hour:
+
 ```bash
-docker compose -f docker-compose.prod.yml exec -T -u 0 backup /app/backup/backup.sh
+sed -i "s/^BACKUP_HOUR=.*/BACKUP_HOUR=$(date -u +%H)/" .env
+docker compose -f docker-compose.prod.yml up -d backup
+sleep 15
+docker compose -f docker-compose.prod.yml logs backup
 docker compose -f docker-compose.prod.yml exec -T backup ls -l /backups
 ```
-Expected: a `roller-*.dump`, the two service dumps, and a `volumes-*.tar.gz`. This is the step that catches the volume-ownership trap the `user: "0:0"` setting exists for.
+Expected: `backup`'s own log shows the loop starting and `backup.sh`'s
+per-artifact lines ("database ->", the two service dumps, "volumes ->"),
+and `/backups` holds a `rollerdb-*.dump`, the two service dumps, and a
+`volumes-*.tar.gz`. This is the step that catches both the volume-ownership
+trap the `user: "0:0"` setting exists for AND any drift between what
+`loop.sh` actually calls and what the image actually bakes in.
 
 - [ ] **Step 7: Tear down**
 

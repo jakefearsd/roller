@@ -24,10 +24,14 @@ name: Release
 # image, docker-compose.prod.yml, .env.example, deploy.sh).
 #
 # This is the ONLY thing that publishes an image. `docker-compose.prod.yml`
-# defaults the app to ghcr.io/jakefearsd/roller:latest and `deploy/deploy.sh`
-# pulls it, so :latest now means "the last tagged release" rather than "the
-# last commit anyone pushed". To deploy an untagged tree, deploy.sh --build
-# builds from the checkout instead.
+# requires `IMAGE_VERSION` to be set in `.env` (`${IMAGE_VERSION:?...}`, no
+# floating default) and `deploy/deploy.sh` pulls whatever that names, so
+# `:latest` means "the last tagged release" rather than "the last commit
+# anyone pushed", and an operator who forgets to set it gets a loud compose
+# error, not a silent pull of the wrong image. `deploy.sh` no longer has a
+# `--build` flag -- there is nothing to build from on a deploy host that
+# holds no checkout; to deploy an untagged tree, build and push the images
+# yourself under a version you then set as `IMAGE_VERSION`.
 #
 # main.yml triggers on `push: branches: [master]`, which a tag push does not
 # match, so a tag alone would never wait on the unit suite -- the `test` job
@@ -58,6 +62,10 @@ jobs:
     name: Unit suite and coverage gates
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Only needs to check out the repo -- the workflow-level packages: write
+    # (for the release job's GHCR push) is not this job's to inherit.
+    permissions:
+      contents: read
     steps:
       - name: Checkout Project
         uses: actions/checkout@v6
@@ -166,7 +174,10 @@ jobs:
           docker cp "$cid:/app/roller.war" release-assets/roller.war
           docker rm "$cid"
           cp docker-compose.prod.yml release-assets/
-          cp deploy/.env.example release-assets/.env.example
+          # GitHub renames any release asset whose filename starts with a
+          # dot, so ".env.example" would not download as itself -- copy it
+          # to a dot-free name instead of shipping a runbook step that 404s.
+          cp deploy/.env.example release-assets/env.example
           cp deploy/deploy.sh release-assets/deploy.sh
           ls -l release-assets
 
@@ -179,6 +190,6 @@ jobs:
           files: |
             release-assets/roller.war
             release-assets/docker-compose.prod.yml
-            release-assets/.env.example
+            release-assets/env.example
             release-assets/deploy.sh
           fail_on_unmatched_files: true

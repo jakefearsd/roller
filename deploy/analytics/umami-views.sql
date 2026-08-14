@@ -17,10 +17,13 @@
 -- This file lives in the umami DATABASE, not the rollerdb migration chain
 -- -- PostgreSQL has no cross-database queries, so V017 could not create a
 -- view over website_event even though it owns everything else in the
--- contract. Applied by deploy/deploy.sh after migrate.sh (grafana_ro must
--- already exist) and after the ensure-service-databases step (the umami
--- database must already exist). CREATE OR REPLACE + GRANT are idempotent,
--- so re-running this on every deploy is a no-op, same contract migrate.sh
+-- contract. Applied by the one-shot `analytics-views` compose service
+-- (deploy/analytics-views.sh, baked into the app image), which runs AFTER
+-- umami has started and grafana_ro already exists (both created by
+-- provision.sh) -- website_event, the table this view selects from, does
+-- not exist until Umami's own first-boot migrations create it, so this
+-- cannot run any earlier. CREATE OR REPLACE + GRANT are idempotent, so
+-- re-running this on every deploy is a no-op, same contract migrate.sh
 -- gives the rollerdb chain. Versioned here (not hand-applied) so replacing
 -- Umami later means rewriting this one file, not any dashboard.
 --
@@ -38,13 +41,13 @@
 -- GRANT CONNECT ON DATABASE is deliberately NOT in this file. A migration
 -- (or a plain script like this one) cannot portably state its own
 -- database's name -- current_database() would need dynamic SQL to use
--- inside a GRANT -- so deploy.sh issues
+-- inside a GRANT -- so provision.sh issues
 -- `GRANT CONNECT ON DATABASE ... TO grafana_ro` for BOTH rollerdb and
--- umami right before/after this file is applied, where the real database
--- names are already known as env vars (see deploy.sh's analytics step and
--- V017's header for the same decision, restated on that side of the
--- split). This file's grants stay schema/table-level, which is all it can
--- state without knowing its own database's name.
+-- umami already, earlier in the same `docker compose up -d`, where the real
+-- database names are already known as env vars (see provision.sh's grant
+-- step and V017's header for the same decision, restated on that side of
+-- the split). This file's grants stay schema/table-level, which is all it
+-- can state without knowing its own database's name.
 
 CREATE OR REPLACE VIEW analytics_traffic AS
 SELECT we.website_id                                   AS website_id,

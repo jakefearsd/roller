@@ -39,8 +39,12 @@ import static org.junit.jupiter.api.Assertions.fail;
  * of the analytics contract (see {@code V017__analytics_contract.sql} for the
  * rollerdb half). That file is never exercised by {@link SchemaMigrationTest}
  * because it does not live in {@code bin/db/migrations}: it is applied to a
- * separate {@code umami} database by {@code deploy/deploy.sh}, not by
- * {@code migrate.sh} (PostgreSQL has no cross-database queries).
+ * separate {@code umami} database by the one-shot {@code analytics-views}
+ * compose service ({@code deploy/analytics-views.sh}, baked into the app
+ * image), not by {@code migrate.sh} (PostgreSQL has no cross-database
+ * queries). Runs after Umami's own first boot, on purpose -- see
+ * {@code deploy/analytics-views.sh}'s header for why it cannot run from
+ * {@code provision.sh} alongside the rest of provisioning.
  *
  * <p>This test builds a scratch database on the shared test container,
  * mirrors the slice of Umami v2's {@code website_event} table the view reads

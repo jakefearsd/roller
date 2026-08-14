@@ -19,7 +19,7 @@ cd "${SCRIPT_DIR}"
 
 DB_NAME="${DB_NAME:-rollerdb}"
 DB_APP_USER="${DB_APP_USER:-roller}"
-DB_PORT="${DB_PORT:-${ROLLER_DB_PORT:-5433}}"
+DB_PORT="${DB_PORT:-${DEV_DB_PORT:-5433}}"
 
 GREEN="\033[0;32m"
 RED="\033[0;31m"

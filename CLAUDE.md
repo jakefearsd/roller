@@ -453,17 +453,25 @@ Key domain entities:
 - **Production**: containerized end-to-end and **image-only** — the deploy host
   holds `docker-compose.prod.yml` and `.env` and nothing else. Two images ship
   per release tag: `ghcr.io/jakefearsd/roller` (WAR, themes, migrations,
-  `provision.sh`, `migrate.sh`, `umami-views.sql`, the backup scripts, and a
-  PostgreSQL client) and `ghcr.io/jakefearsd/roller-caddy` (Caddy with the
-  Caddyfile baked in). A one-shot `provision` service creates the umami and
-  listmonk databases, applies the migration chain, and installs the analytics
-  views; `app`, `umami` and `listmonk` declare
+  `provision.sh`, `analytics-views.sh`, `umami-views.sql`, `migrate.sh`, the
+  backup scripts, and a PostgreSQL client) and `ghcr.io/jakefearsd/roller-caddy`
+  (Caddy with the Caddyfile baked in). A one-shot `provision` service creates
+  the umami and listmonk databases, applies the migration chain, and grants
+  `grafana_ro`; `app`, `umami` and `listmonk` declare
   `depends_on: { provision: { condition: service_completed_successfully } }`,
   so the migrate-then-start ordering is compose's job, not a bash script's.
-  `deploy/deploy.sh` is now just pull/up/wait. **Nothing may be bind-mounted
-  from a checkout** — `ProductionComposeTest` fails the build if a bind mount,
-  a `build:` stanza, or a non-loopback published port other than 80/443
-  reappears. Full runbook: `docker_deployment.md`.
+  The analytics view (`analytics_traffic`) is installed by a **separate**
+  one-shot, `analytics-views` (`analytics-views.sh`), that runs after `umami`
+  has started and gates nothing — `analytics_traffic` is defined over
+  Umami's own `website_event` table, which does not exist until Umami's own
+  first-boot migrations create it, and `provision` runs entirely *before*
+  `umami` is allowed to start, so installing the view from `provision` was a
+  real bug (a fresh install deadlocked: neither service could go first) and
+  not a design that can be un-simplified back into one script. `deploy/deploy.sh`
+  is now just pull/up/wait. **Nothing may be bind-mounted from a checkout** —
+  `ProductionComposeTest` fails the build if a bind mount, a `build:` stanza,
+  or a non-loopback published port other than 80/443 reappears. Full runbook:
+  `docker_deployment.md`.
 
 ## Themes
 - A weblog runs either a **shared** theme (id from `themes/<id>/theme.xml`) or
@@ -1207,11 +1215,18 @@ outcomes; nothing is emitted that an admin typed.
   `bin/db/migrations/V017__analytics_contract.sql`. `analytics_traffic`
   (Umami's `website_event` rolled up to sessions/views by path and day)
   lives in Umami's own database, shipped by `deploy/analytics/umami-views.sql`
-  (baked into the app image at `/app/umami-views.sql`) and applied by the
-  one-shot `provision` compose service's `provision.sh` — it cannot live in
-  the migration chain, which only ever touches `rollerdb`. Grafana is the
-  thing that joins the two halves (two datasources, a panel-level join on
-  `website_id`); no
+  (baked into the app image at `/app/umami-views.sql`) and applied by a
+  **separate** one-shot compose service, `analytics-views`
+  (`deploy/analytics-views.sh`) — not `provision.sh`, and not the migration
+  chain, which only ever touches `rollerdb`. The split exists because
+  `analytics_traffic` is defined over `website_event`, a table Umami creates
+  on its own first boot, while `provision` runs entirely *before* `umami` is
+  allowed to start; applying the view from `provision` deadlocked every
+  fresh install (neither service could go first) until Task 10 split it out.
+  `analytics-views` runs after `umami` has started and gates nothing — a
+  failure there costs only the Grafana traffic panel, never the blog. Grafana
+  is the thing that joins the two halves (two datasources, a panel-level join
+  on `website_id`); no
   server-side query ever spans both. `page_slug`/`entry_anchor` on
   `analytics_events`' `FORM_SUBMITTED` rows are copied from the contact
   form's reader-controlled `source` field — untrusted display text, not
