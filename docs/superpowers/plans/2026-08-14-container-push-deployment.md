@@ -936,7 +936,10 @@ services:
       - internal
 
   umami:
-    image: docker.umami.is/umami-software/umami:postgresql-latest
+    # Digest-pinned like postgres and caddy. deploy.sh pulls on every run, so a
+    # moved tag could otherwise swap umami out mid-deploy; postgresql-latest is
+    # a floating tag and this stack's other third-party images are all pinned.
+    image: docker.umami.is/umami-software/umami@sha256:87312d334d009ee67ee0d2fba8fed01435547cc468e452243aef5133a9984d48
     depends_on:
       provision:
         condition: service_completed_successfully
@@ -952,7 +955,14 @@ services:
       - internal
 
   listmonk:
-    image: listmonk/listmonk:v3
+    # v6.2.0, digest-pinned. The previous value was `listmonk/listmonk:v3`,
+    # which DOES NOT EXIST on Docker Hub -- `docker compose pull` failed on it,
+    # so a fresh production deploy was already broken before this wave. The
+    # oldest tag still published is v6.0.0. The --install/--idempotent/
+    # --upgrade/--yes flags below are unchanged in v6.2.0 (verified against the
+    # image's own --help), so the command block needs no edit; listmonk runs
+    # its own schema upgrade on first boot.
+    image: listmonk/listmonk@sha256:f535d59e14991337a9f2d570273685378ae86b0d7698c3e00da444e3bc205286
     depends_on:
       provision:
         condition: service_completed_successfully
