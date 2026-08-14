@@ -179,13 +179,26 @@ docker compose -f docker-compose.prod.yml up -d
 There is no separate migration step and no ordering to get right: compose
 runs the one-shot `provision` service first (creates the `umami`/`listmonk`
 databases, applies the migration chain via `migrate.sh`, grants
-`grafana_ro`, installs the analytics views — see `deploy/provision.sh`), and
-`app`, `umami` and `listmonk` all declare
-`depends_on: { provision: { condition: service_completed_successfully } }`,
+`grafana_ro` — see `deploy/provision.sh`), and `app`, `umami` and `listmonk`
+all declare `depends_on: { provision: { condition: service_completed_successfully } }`,
 so none of them starts until provisioning has exited successfully. `deploy.sh`
 (see [Upgrades](#upgrades)) wraps this same `up -d` with a health-check wait
 and is safe to use for first run too, but the plain compose command above is
 equally correct.
+
+A second one-shot, `analytics-views`, installs the Grafana analytics
+contract's traffic view (`deploy/analytics-views.sh`) — but it runs *after*
+`umami` has started rather than as part of `provision`, and it gates nothing.
+The view it installs, `analytics_traffic`, is defined over `website_event`, a
+table Umami creates on its own first boot; applying it from `provision`
+(which runs entirely before `umami` is allowed to start) deadlocked every
+fresh install, since neither service could go first. `analytics-views` waits
+for `website_event` to appear, applies the view, and exits — if it fails or
+times out, the blog, Umami and Listmonk are all still up and serving; only
+the Grafana traffic view is missing, which is an operator dashboard concern,
+not an outage. Check `docker compose -f docker-compose.prod.yml logs
+analytics-views` if the Grafana dashboard's traffic panel comes up empty; the
+same `up -d analytics-views` re-run mentioned in its own log output is safe.
 
 When it finishes, browse to `https://<your-domain>/roller` (or
 `http://<host>/roller` in `:80` mode) and complete Roller's normal
@@ -364,7 +377,7 @@ split down that seam — each half lives with the data it reads:
 | --- | --- | --- | --- |
 | `analytics_events` | `rollerdb` | `bin/db/migrations/V017__analytics_contract.sql` (the migration chain) | First-party outcomes from `roller_event` — form submissions, newsletter subscriptions, entry publishes — grouped by weblog handle, event type, day |
 | `analytics_weblog_sites` | `rollerdb` | same migration | The join key: which Umami website UUID belongs to which weblog handle |
-| `analytics_traffic` | `${UMAMI_DB:-umami}` | `deploy/analytics/umami-views.sql` (baked into the app image as `/app/umami-views.sql`), applied by the `provision` service's `provision.sh` (not the migration chain — it can only reach `rollerdb`) | Umami's raw `website_event` rolled up to sessions/views by website, path and day |
+| `analytics_traffic` | `${UMAMI_DB:-umami}` | `deploy/analytics/umami-views.sql` (baked into the app image as `/app/umami-views.sql`), applied by the separate `analytics-views` one-shot (`deploy/analytics-views.sh`), not `provision` and not the migration chain (it can only reach `rollerdb`) — see [First run](#first-run) for why it runs after `umami` starts rather than before | Umami's raw `website_event` rolled up to sessions/views by website, path and day |
 
 Grafana joins the two halves itself: two PostgreSQL datasources (one per
 database, both authenticating as `grafana_ro`), with `analytics_traffic.website_id`

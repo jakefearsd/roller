@@ -3,9 +3,10 @@
 #
 # Runs as the `provision` service in docker-compose.prod.yml, from the app
 # image, after postgres reports healthy and before app/umami/listmonk start
-# (compose enforces both with depends_on conditions). Every step is
-# idempotent, so it runs on every `docker compose up -d` and is a no-op once
-# the stack is current.
+# (compose enforces both with depends_on conditions). Three steps: create the
+# umami/listmonk databases, apply the rollerdb migration chain, and grant
+# grafana_ro CONNECT on both databases. Every step is idempotent, so it runs
+# on every `docker compose up -d` and is a no-op once the stack is current.
 #
 # This replaces the equivalent steps that used to live in deploy/deploy.sh and
 # needed a git checkout on the host to copy migrate.sh and the migrations into
@@ -18,6 +19,14 @@
 # The one behavioural difference from the old version: this connects to
 # postgres over the compose network rather than running inside the postgres
 # container itself.
+#
+# The analytics views used to be applied here too, as a fourth step. They
+# moved to deploy/analytics-views.sh, a separate one-shot that runs AFTER
+# umami starts, because analytics_traffic is defined over website_event -- a
+# table umami creates on its own first boot -- and provision runs entirely
+# before umami is allowed to start. Applying it here deadlocked every fresh
+# install: provision waited on a table only umami could create, and umami
+# waited on provision to exit. See analytics-views.sh for the full story.
 set -euo pipefail
 
 export PGHOST="${PGHOST:-postgres}"
@@ -61,10 +70,5 @@ psql -d "${ROLLER_DB}" -v ON_ERROR_STOP=1 -c \
     "GRANT CONNECT ON DATABASE \"${ROLLER_DB}\" TO grafana_ro;"
 psql -d "${ROLLER_DB}" -v ON_ERROR_STOP=1 -c \
     "GRANT CONNECT ON DATABASE \"${UMAMI_DB}\" TO grafana_ro;"
-
-echo "==> Applying analytics views to ${UMAMI_DB}..."
-# analytics_traffic cannot live in the rollerdb migration chain: PostgreSQL has
-# no cross-database queries. CREATE OR REPLACE + GRANT are idempotent.
-psql -d "${UMAMI_DB}" --single-transaction -v ON_ERROR_STOP=1 -f /app/umami-views.sql
 
 echo "==> Provisioning complete."

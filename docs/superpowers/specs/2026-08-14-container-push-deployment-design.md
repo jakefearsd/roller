@@ -55,6 +55,7 @@ Two images, both built from this tree, both tagged with the release version.
   than the client, and the stack runs PostgreSQL 16)
 - `/app/migrations` (already present)
 - `/app/provision.sh` (new)
+- `/app/analytics-views.sh` (new)
 - `/app/umami-views.sql` (from `deploy/analytics/`)
 - `/app/bin/migrate.sh` (from `bin/db/`)
 - `/app/backup/backup.sh`, `/app/backup/loop.sh` (from `deploy/backup/`)
@@ -69,19 +70,21 @@ WAR or a PostgreSQL client.
 ### Compose topology
 
 A new one-shot `provision` service runs the app image with
-`entrypoint: /app/provision.sh` and `restart: "no"`. It performs exactly what
-`deploy.sh` does today, in the same order:
+`entrypoint: /app/provision.sh` and `restart: "no"`. It performs three of the
+four steps `deploy.sh` does today, in the same order:
 
 1. Create the umami and listmonk databases if they do not exist
 2. Run `migrate.sh` against `rollerdb`
 3. `GRANT CONNECT` on both databases to `grafana_ro`
-4. Apply `umami-views.sql` to the umami database
+
+(The fourth step, applying `umami-views.sql`, moved to a separate one-shot —
+see "The fresh-install deadlock, and its fix" below.)
 
 Ordering moves out of bash and into the compose file:
 
 ```
 postgres ──service_healthy──▶ provision ──service_completed_successfully──▶ app
-                                                                         ├──▶ umami
+                                                                         ├──▶ umami ──service_started──▶ analytics-views
                                                                          ├──▶ listmonk
                                                                          └──▶ caddy (via app)
 backup ──service_healthy(postgres)──▶
@@ -92,6 +95,39 @@ identically in both environments, and the migrate-then-start guarantee that
 `deploy.sh`'s header spends a paragraph explaining becomes declarative. It
 requires Compose v2.17 or newer for `service_completed_successfully`, which
 becomes a documented prerequisite.
+
+#### The fresh-install deadlock, and its fix
+
+Full-stack verification (running the whole compose file from clean volumes for
+the first time ever) found that the topology above, as originally specified,
+cannot complete a fresh install. Step 4 — applying `umami-views.sql`, which
+defines `analytics_traffic` as a `SELECT` over `website_event` — was originally
+folded into `provision.sh` as shown above. `website_event` is a table Umami
+creates on its own first boot, not one the migration chain or `provision`
+creates; but `provision` runs entirely *before* `umami` is allowed to start
+(`umami` gates on `provision` completing successfully, same as `app` and
+`listmonk`). Neither service can go first: `provision` fails on
+`relation "website_event" does not exist`, and because `umami` never starts,
+`website_event` never comes to exist either. This was not a regression
+introduced by this plan — the pre-rewrite `deploy.sh` applied
+`umami-views.sql` immediately after migrating and only started `umami` much
+later, so it had the identical bug. Nobody had run a truly fresh deploy of the
+whole stack before this plan's own verification task, which is exactly the
+kind of defect that task exists to catch.
+
+The fix splits step 4 out of `provision` into its own one-shot,
+`analytics-views` (`deploy/analytics-views.sh`), that depends on `provision`
+completing *and* on `umami` having merely **started** (`condition:
+service_started`, not `service_completed_successfully` — there is no
+compose-level "healthy" signal for Umami's own migrations to key off, so the
+script itself polls `to_regclass('public.website_event')` up to a
+configurable timeout before applying the view). Critically, **nothing depends
+on `analytics-views`**: it gates no other service, so a failure or timeout
+there leaves the blog, Umami and Listmonk all still up and serving — only the
+Grafana traffic view is missing, which is a dashboard concern, not an outage.
+`ProductionComposeTest` pins this non-dependency generically (no service's
+`depends_on` may name `analytics-views`), which is what keeps a future change
+from quietly reintroducing the deadlock by wiring something up to wait on it.
 
 `backup` switches from `postgres:16` with bind-mounted scripts to the app image
 with `entrypoint: /app/backup/loop.sh`. It needs `pg_dump`, `psql`, `tar`,

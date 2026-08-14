@@ -55,10 +55,12 @@ services:
       - internal
 
   # One-shot: creates the umami/listmonk databases, applies the rollerdb
-  # migration chain, grants grafana_ro, and installs the analytics views. Every
-  # step is idempotent, so this runs on every `up -d` and is a no-op once
-  # current. app/umami/listmonk wait for it to EXIT SUCCESSFULLY, which is what
-  # replaced deploy.sh's hand-rolled migrate-then-start ordering.
+  # migration chain, and grants grafana_ro. Every step is idempotent, so this
+  # runs on every `up -d` and is a no-op once current. app/umami/listmonk wait
+  # for it to EXIT SUCCESSFULLY, which is what replaced deploy.sh's hand-rolled
+  # migrate-then-start ordering. The analytics views are a separate one-shot
+  # (see `analytics-views` below) that runs after umami has started, because
+  # the view they install depends on a table only umami itself creates.
   provision:
     image: ghcr.io/jakefearsd/roller:${IMAGE_VERSION:?IMAGE_VERSION must be set in .env}
     entrypoint: ["/app/provision.sh"]
@@ -142,6 +144,30 @@ services:
       DISABLE_TELEMETRY: "1"
       TRACKER_SCRIPT_NAME: ${UMAMI_SCRIPT_NAME:-script.js}
     restart: unless-stopped
+    networks:
+      - internal
+
+  # Installs the Grafana analytics contract's traffic view. Separate from
+  # `provision` because analytics_traffic is defined over `website_event`, a
+  # table umami creates on its OWN first boot -- and provision runs before
+  # umami is allowed to start. Applying it there deadlocks a fresh install.
+  #
+  # Nothing declares depends_on against this service, deliberately: if it fails
+  # or times out, the blog is still up and only the Grafana traffic view is
+  # missing. ProductionComposeTest pins that nothing gates on it.
+  analytics-views:
+    image: ghcr.io/jakefearsd/roller:${IMAGE_VERSION:?IMAGE_VERSION must be set in .env}
+    entrypoint: ["/app/analytics-views.sh"]
+    restart: "no"
+    depends_on:
+      provision:
+        condition: service_completed_successfully
+      umami:
+        condition: service_started
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-roller}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      UMAMI_DB: ${UMAMI_DB:-umami}
     networks:
       - internal
 

@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -182,5 +183,24 @@ class ProductionComposeTest {
     void theAppTakesItsConfigurationFromEnvFile() {
         assertEquals(".env", String.valueOf(service("app").get("env_file")),
                 "the app's whole configuration arrives as ROLLER_* variables from .env");
+    }
+
+    @Test
+    void analyticsViewsGateNothing() {
+        assertNotNull(services().get("analytics-views"),
+                "the analytics views one-shot must exist");
+
+        for (Map.Entry<String, Object> entry : services().entrySet()) {
+            @SuppressWarnings("unchecked")
+            Object dependsOn = ((Map<String, Object>) entry.getValue()).get("depends_on");
+            if (dependsOn instanceof Map<?, ?> conditions) {
+                assertFalse(conditions.containsKey("analytics-views"),
+                        entry.getKey() + " must not wait on analytics-views: it installs a Grafana "
+                                + "dashboard view, and a failure there must never keep the blog down");
+            } else if (dependsOn instanceof List<?> list) {
+                assertFalse(list.contains("analytics-views"),
+                        entry.getKey() + " must not wait on analytics-views");
+            }
+        }
     }
 }
