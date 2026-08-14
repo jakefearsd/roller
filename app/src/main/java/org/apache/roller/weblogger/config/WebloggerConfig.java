@@ -22,7 +22,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.util.PropertyExpander;
@@ -37,6 +42,11 @@ public final class WebloggerConfig {
     private final static String custom_config = "/roller-custom.properties";
     private final static String junit_config = "/roller-junit.properties";
     private final static String custom_jvm_param = "roller.custom.config";
+
+    private final static String env_prefix = "ROLLER_";
+
+    private final static Pattern SECRET_KEY =
+            Pattern.compile("password|token|secret", Pattern.CASE_INSENSITIVE);
 
     private final static Properties config;
 
@@ -104,7 +114,12 @@ public final class WebloggerConfig {
                             custom_config_file.getAbsolutePath());
                 }
 
-            } 
+            }
+
+            // Highest-precedence layer: ROLLER_* environment variables. Placed
+            // before property expansion below so an env-supplied value can
+            // still carry ${...} references.
+            applyEnvironmentOverrides(config, System.getenv());
 
             // Now expand system properties for properties in the config.expandedProperties list,
             // replacing them by their expanded values.
@@ -148,7 +163,7 @@ public final class WebloggerConfig {
             Enumeration<Object> keys = config.keys();
             while(keys.hasMoreElements()) {
                 key = (String) keys.nextElement();
-                log.debug(key+"="+config.getProperty(key));
+                log.debug(key+"="+maskSecret(key, config.getProperty(key)));
             }
         }
 
@@ -157,6 +172,65 @@ public final class WebloggerConfig {
 
     // no, you may not instantiate this class :p
     private WebloggerConfig() {}
+
+    /**
+     * Overlay {@code ROLLER_*} environment variables onto the loaded
+     * configuration. This is the highest-precedence layer, which is what lets
+     * the production image take its whole configuration from the deploy host's
+     * .env with no properties file mounted (see
+     * docs/superpowers/specs/2026-08-14-container-push-deployment-design.md).
+     *
+     * <p>The name mapping strips the prefix, lowercases, and turns {@code _}
+     * into {@code .}. A derived name that matches an existing key
+     * case-insensitively is written to that key's ORIGINAL spelling, so
+     * {@code ROLLER_DATABASE_JDBC_DRIVERCLASS} reaches
+     * {@code database.jdbc.driverClass} instead of quietly creating a
+     * lowercase twin nothing reads. A derived name matching nothing is used
+     * as-is, which is required rather than incidental: {@code mail.port} has no
+     * entry in roller.properties and {@code uploads.dir} is commented out, so
+     * an allowlist of keys with active defaults could set neither.
+     *
+     * <p>Package-private and taking an explicit map so it can be tested;
+     * {@code System.getenv()} is unmodifiable and the caller below is a static
+     * initializer that runs once per JVM.
+     */
+    static void applyEnvironmentOverrides(Properties config, Map<String, String> env) {
+
+        Map<String, String> knownByLowerCase = new HashMap<>();
+        for (String key : config.stringPropertyNames()) {
+            String previous = knownByLowerCase.put(key.toLowerCase(Locale.ROOT), key);
+            if (previous != null && !previous.equals(key)) {
+                throw new IllegalStateException("Configuration keys '" + previous + "' and '"
+                        + key + "' differ only in case, so an environment override cannot "
+                        + "address them unambiguously.");
+            }
+        }
+
+        // Sorted for deterministic behaviour when two variables derive the same key.
+        for (Map.Entry<String, String> entry : new TreeMap<>(env).entrySet()) {
+            String name = entry.getKey();
+            if (!name.startsWith(env_prefix) || name.length() == env_prefix.length()) {
+                continue;
+            }
+            String derived = name.substring(env_prefix.length())
+                                 .toLowerCase(Locale.ROOT)
+                                 .replace('_', '.');
+            config.setProperty(knownByLowerCase.getOrDefault(derived, derived), entry.getValue());
+        }
+    }
+
+    /**
+     * Replace a secret's value with a fixed mask for logging. The debug dump
+     * below prints every key and value, and the environment overlay makes
+     * turning that on while diagnosing a configuration problem much more
+     * likely.
+     */
+    static String maskSecret(String key, String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        return SECRET_KEY.matcher(key).find() ? "********" : value;
+    }
 
     /**
      * Loads Roller's configuration.
