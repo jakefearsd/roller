@@ -159,8 +159,8 @@ services:
         condition: service_completed_successfully
     command: >
       sh -c "./listmonk --install --idempotent --yes --config ''
-             && ./listmonk --upgrade --yes --config ''
-             && ./listmonk --config ''"
+      && ./listmonk --upgrade --yes --config ''
+      && ./listmonk --config ''"
     environment:
       LISTMONK_app__address: "0.0.0.0:9000"
       LISTMONK_app__root_url: ${LISTMONK_ROOT_URL:-https://newsletter.invalid}
