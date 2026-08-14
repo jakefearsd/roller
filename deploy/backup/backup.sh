@@ -7,11 +7,12 @@
 # mid-write (OOM, container restart, disk full) leaves an orphaned .tmp
 # file rather than a truncated file sitting under the name a restore would
 # trust. Runs inside the `backup` service of
-# docker-compose.prod.yml (the postgres:16 image, so pg_dump/psql/tar are
-# already present); deploy/backup/loop.sh calls this once a day, or an
-# operator can run one cycle by hand:
+# docker-compose.prod.yml (the app image, which bakes in postgresql-client
+# for pg_dump/psql alongside tar from the base image, so all three are
+# already present); deploy/backup/loop.sh calls this once a day at
+# /app/backup/backup.sh, or an operator can run one cycle by hand:
 #
-#   docker compose -f docker-compose.prod.yml exec backup /backup.sh
+#   docker compose -f docker-compose.prod.yml exec backup /app/backup/backup.sh
 #
 # RESTORE
 # =======
