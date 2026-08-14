@@ -138,6 +138,11 @@ public final class WebloggerConfig {
 
         } catch (Exception e) {
             e.printStackTrace();
+            // A RuntimeException here is a programming or configuration
+            // error, not a missing optional file -- do not boot on it.
+            if (e instanceof RuntimeException re) {
+                throw re;
+            }
         }
 
         // tell log4j2 to use the optionally specified config file instead of Roller's,
