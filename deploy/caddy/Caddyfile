@@ -1,7 +1,12 @@
 # Caddy config for the production stack (docker-compose.prod.yml).
 #
-# {$ROLLER_DOMAIN} is substituted from the ROLLER_DOMAIN environment
-# variable (see deploy/.env.example). Two ways to run this:
+# {$SITE_DOMAIN} is substituted from the SITE_DOMAIN environment variable (see
+# deploy/.env.example). It is deliberately NOT named ROLLER_DOMAIN any more:
+# that prefix is reserved for app configuration, which the app container takes
+# wholesale from .env via WebloggerConfig's environment overlay, and a stray
+# ROLLER_DOMAIN would land there as a junk property named "domain".
+#
+# Two ways to run this:
 #
 #   - A real domain (e.g. blog.example.com): Caddy automatically obtains and
 #     renews a Let's Encrypt certificate for it and serves HTTPS on 443,
@@ -9,7 +14,7 @@
 #   - ":80" (LAN/local testing, no public domain/DNS): a bare port with no
 #     hostname is not a certificate-able name, so Caddy's automatic HTTPS
 #     never activates for it -- it just serves plain HTTP on port 80.
-{$ROLLER_DOMAIN} {
+{$SITE_DOMAIN} {
 	# Analytics, served from the BLOG's own origin.
 	#
 	# This is not a convenience. Every bundled theme head ships
