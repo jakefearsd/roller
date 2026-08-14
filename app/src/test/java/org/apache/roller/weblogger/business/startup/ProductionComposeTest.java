@@ -29,10 +29,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Pins the production stack's shape: the deploy host holds
@@ -74,6 +76,20 @@ class ProductionComposeTest {
     @Test
     @SuppressWarnings("unchecked")
     void noServiceBindMountsARepositoryPath() {
+        // A source is a named volume only if it is declared under the file's
+        // top-level `volumes:` key -- anything else is a bind mount, whether it
+        // is written in short syntax ("source:target") or long syntax
+        // ({type: bind, source: ..., target: ...}), and whether or not the
+        // source string happens to look like a path. Keying off the
+        // authoritative list here (rather than guessing from the source
+        // string's shape) is what catches BOTH a long-syntax bind mount --
+        // whose string form is a Map's "key=value" toString with no colon at
+        // all, so a colon-split never sees it -- AND a short-syntax relative
+        // path missing a leading "./", which still resolves as a bind mount to
+        // Compose even though it does not start with "." or "/".
+        Map<String, Object> topLevelVolumes = (Map<String, Object>) compose.get("volumes");
+        Set<String> namedVolumes = topLevelVolumes == null ? Set.of() : topLevelVolumes.keySet();
+
         List<String> offenders = new ArrayList<>();
         for (Map.Entry<String, Object> entry : services().entrySet()) {
             Object volumes = ((Map<String, Object>) entry.getValue()).get("volumes");
@@ -81,11 +97,19 @@ class ProductionComposeTest {
                 continue;
             }
             for (Object volume : list) {
-                String spec = String.valueOf(volume);
-                String source = spec.split(":", 2)[0];
-                // A named volume's source is a bare name; a bind mount's is a path.
-                if (source.startsWith(".") || source.startsWith("/")) {
-                    offenders.add(entry.getKey() + ": " + spec);
+                String source;
+                String display;
+                if (volume instanceof Map<?, ?> longForm) {
+                    Object src = longForm.get("source");
+                    source = src == null ? "" : String.valueOf(src);
+                    display = String.valueOf(longForm);
+                } else {
+                    String spec = String.valueOf(volume);
+                    source = spec.split(":", 2)[0];
+                    display = spec;
+                }
+                if (!source.isBlank() && !namedVolumes.contains(source)) {
+                    offenders.add(entry.getKey() + ": " + display);
                 }
             }
         }
@@ -111,13 +135,20 @@ class ProductionComposeTest {
                 "provision is a one-shot job, not a restarting service");
 
         for (String dependent : List.of("app", "umami", "listmonk")) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> dependsOn =
-                    (Map<String, Object>) service(dependent).get("depends_on");
-            assertNotNull(dependsOn, dependent + " must declare depends_on");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> condition = (Map<String, Object>) dependsOn.get("provision");
-            assertNotNull(condition, dependent + " must wait for provision");
+            Object dependsOnRaw = service(dependent).get("depends_on");
+            assertNotNull(dependsOnRaw, dependent + " must declare depends_on");
+            if (!(dependsOnRaw instanceof Map<?, ?> dependsOn)) {
+                fail(dependent + "'s depends_on must be the long map form (with a condition per "
+                        + "dependency), not a bare list: " + dependsOnRaw);
+                return;
+            }
+            Object conditionRaw = dependsOn.get("provision");
+            assertNotNull(conditionRaw, dependent + " must wait for provision");
+            if (!(conditionRaw instanceof Map<?, ?> condition)) {
+                fail(dependent + "'s depends_on.provision must be a map carrying a condition, "
+                        + "not: " + conditionRaw);
+                return;
+            }
             assertEquals("service_completed_successfully", condition.get("condition"),
                     dependent + " must start only after provisioning succeeds -- this is what "
                             + "replaced deploy.sh's migrate-then-start ordering");
@@ -133,7 +164,11 @@ class ProductionComposeTest {
                 continue;
             }
             assertEquals("caddy", entry.getKey(), "only caddy may publish ports");
-            for (Object port : (List<?>) ports) {
+            if (!(ports instanceof List<?> portList)) {
+                fail(entry.getKey() + "'s ports must be a list, not: " + ports);
+                return;
+            }
+            for (Object port : portList) {
                 String spec = String.valueOf(port);
                 boolean publicPort = spec.startsWith("80:") || spec.startsWith("443:");
                 assertTrue(publicPort || spec.startsWith("127.0.0.1:"),
