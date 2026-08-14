@@ -14,65 +14,30 @@
 # copyright in this work, please see the NOTICE file in the top level
 # directory of this distribution.
 
-# Production stack for Roller: app + postgres + caddy (TLS-terminating
-# reverse proxy) + backup (nightly pg_dump + volume snapshots).
+# Production stack for Roller: app + postgres + caddy (TLS-terminating reverse
+# proxy) + umami (analytics) + listmonk (newsletter) + backup.
+#
+# This file and .env are the ONLY things a production host needs. Nothing is
+# bind-mounted from a checkout: the Caddyfile lives in the roller-caddy image,
+# and provision.sh, migrate.sh, the migrations, umami-views.sql and the backup
+# scripts all live in the roller image. ProductionComposeTest fails the build
+# if a bind mount comes back.
+#
+# Requires Compose v2.17+ for depends_on: service_completed_successfully.
 #
 # First-time setup (see docker_deployment.md for the full runbook):
-#   cp deploy/.env.example .env
-#   cp deploy/config/roller-production.properties.example \
-#      deploy/config/roller-production.properties
-#   # edit both: real domain, real DB password (must match in both files),
-#   # real SMTP settings
+#   curl -LO <release-url>/docker-compose.prod.yml
+#   curl -L  <release-url>/.env.example -o .env
+#   # edit .env: real domain, real secrets, real SMTP
 #   docker compose -f docker-compose.prod.yml up -d
 #
-# Upgrades: see deploy/deploy.sh (Stage 1C Task 3).
-#
-# This file intentionally does NOT publish the app's own port or the
-# postgres port on the host -- caddy is the only public entrypoint (80/443),
-# and the app's management port (8090, actuator health) is reached only via
-# docker exec / the internal network, never published, per the runtime
-# contract (see Dockerfile).
+# Only caddy publishes off-host ports (80/443). 8081/8082 are loopback-bound
+# and inert in production -- they exist so the same file serves a local run
+# where UMAMI_DOMAIN/LISTMONK_DOMAIN are bare ports instead of hostnames.
 
 services:
 
-  app:
-    # Built by CI and published to GHCR when a v*.*.* tag is pushed, and
-    # only then (.github/workflows/release.yml) -- so :latest is the last
-    # tagged release, not the last commit on master. An untagged tree is
-    # deployed by building locally, not by pulling.
-    # ROLLER_IMAGE lets an operator pin a specific version tag; the
-    # `build:` section below lets this same file build from the local tree
-    # instead (`docker compose -f docker-compose.prod.yml build app`),
-    # which is what local verification and deploy.sh's --build flag use.
-    image: ${ROLLER_IMAGE:-ghcr.io/jakefearsd/roller:latest}
-    build:
-      context: .
-      dockerfile: Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      JAVA_OPTS: ${JAVA_OPTS:-}
-    volumes:
-      - ./deploy/config/roller-production.properties:/config/roller-production.properties:ro
-      - roller-mediafiles:/data/mediafiles
-      - roller-search-index:/data/search-index
-      - roller-uploads:/data/uploads
-    healthcheck:
-      # Runs inside the container, against the management-only port --
-      # curl is installed in the runtime image for exactly this (Dockerfile).
-      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - internal
-
   postgres:
-    # Same digest as the dev stack's postgres service (docker-compose.yml) --
-    # same major version discipline, see RollerPostgresContainer.
     image: postgres:16@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-rollerdb}
@@ -88,13 +53,55 @@ services:
     restart: unless-stopped
     networks:
       - internal
-    # No host port published by default: only the app and backup containers
-    # need to reach postgres, and they do so over the internal network. An
-    # operator who needs host access for one-off debugging can add a mapping
-    # in an override file rather than editing this one.
+
+  # One-shot: creates the umami/listmonk databases, applies the rollerdb
+  # migration chain, grants grafana_ro, and installs the analytics views. Every
+  # step is idempotent, so this runs on every `up -d` and is a no-op once
+  # current. app/umami/listmonk wait for it to EXIT SUCCESSFULLY, which is what
+  # replaced deploy.sh's hand-rolled migrate-then-start ordering.
+  provision:
+    image: ghcr.io/jakefearsd/roller:${IMAGE_VERSION:?IMAGE_VERSION must be set in .env}
+    entrypoint: ["/app/provision.sh"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rollerdb}
+      POSTGRES_USER: ${POSTGRES_USER:-roller}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      UMAMI_DB: ${UMAMI_DB:-umami}
+      LISTMONK_DB: ${LISTMONK_DB:-listmonk}
+    networks:
+      - internal
+
+  app:
+    image: ghcr.io/jakefearsd/roller:${IMAGE_VERSION:?IMAGE_VERSION must be set in .env}
+    depends_on:
+      provision:
+        condition: service_completed_successfully
+    # The app's entire configuration is the ROLLER_* block in .env, overlaid on
+    # the image's built-in defaults by WebloggerConfig. Everything else in .env
+    # simply has no ROLLER_ prefix and is ignored by the app.
+    env_file: .env
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS:-}
+    volumes:
+      - roller-mediafiles:/data/mediafiles
+      - roller-search-index:/data/search-index
+      - roller-uploads:/data/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - internal
 
   caddy:
-    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    image: ghcr.io/jakefearsd/roller-caddy:${IMAGE_VERSION:?IMAGE_VERSION must be set in .env}
     depends_on:
       - app
       - umami
@@ -102,84 +109,60 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # Inert in production: with real hostnames in UMAMI_DOMAIN/LISTMONK_DOMAIN
+      # Caddy serves those sites on 443 and nothing listens here. Locally those
+      # variables are ":8081"/":8082" and these are how you reach the consoles.
+      # Loopback-bound either way, so the 80/443-only rule still holds.
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:8082:8082"
     environment:
-      ROLLER_DOMAIN: ${ROLLER_DOMAIN:?ROLLER_DOMAIN must be set in .env (a real domain, or :80 for LAN/testing)}
-      # Hostname for the Umami dashboard. Defaults to a name that cannot
-      # resolve publicly, so an operator who has not set one gets a site Caddy
-      # never serves rather than an analytics console on their blog's domain.
+      SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN must be set in .env (a real domain, or :80 for LAN/testing)}
       UMAMI_DOMAIN: ${UMAMI_DOMAIN:-analytics.invalid}
-      # Hostname for the newsletter admin and its opt-in/unsubscribe pages.
-      # Same reasoning as UMAMI_DOMAIN: an unset value is a name that cannot
-      # resolve, not an admin console on the blog's domain.
       LISTMONK_DOMAIN: ${LISTMONK_DOMAIN:-newsletter.invalid}
     volumes:
-      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     restart: unless-stopped
     networks:
       - internal
 
-  # Self-hosted, cookie-free analytics. Shares the postgres instance rather
-  # than running a second engine: one database to back up, one to tune, and
-  # analytics traffic is trivial next to the blog's. deploy/deploy.sh creates
-  # the database if it is missing.
-  #
-  # ORIGIN MATTERS. Every bundled theme ships a Content-Security-Policy with
-  # script-src 'self' and connect-src 'self', so a tracker loaded from another
-  # hostname would simply be blocked. Caddy therefore serves the tracker script
-  # and the collect endpoint from the BLOG's own origin under /analytics/*
-  # (see deploy/caddy/Caddyfile); only the dashboard, which no theme CSP
-  # governs, lives on its own hostname. That is what keeps the policy -- pinned
-  # byte-for-byte by three rendering tests -- untouched by this feature.
   umami:
-    image: docker.umami.is/umami-software/umami:postgresql-latest
+    # Digest-pinned like postgres and caddy. deploy.sh pulls on every run, so a
+    # moved tag could otherwise swap umami out mid-deploy; postgresql-latest is
+    # a floating tag and this stack's other third-party images are all pinned.
+    image: docker.umami.is/umami-software/umami@sha256:87312d334d009ee67ee0d2fba8fed01435547cc468e452243aef5133a9984d48
     depends_on:
-      postgres:
-        condition: service_healthy
+      provision:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-roller}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}@postgres:5432/${UMAMI_DB:-umami}
       DATABASE_TYPE: postgresql
       APP_SECRET: ${UMAMI_APP_SECRET:?UMAMI_APP_SECRET must be set in .env (openssl rand -hex 32)}
-      # Caddy terminates TLS and is the only thing that talks to this service,
-      # so the client's real address arrives in X-Forwarded-For.
       CLIENT_IP_HEADER: X-Forwarded-For
       DISABLE_TELEMETRY: "1"
       TRACKER_SCRIPT_NAME: ${UMAMI_SCRIPT_NAME:-script.js}
     restart: unless-stopped
     networks:
       - internal
-    # No host port: Caddy reaches it over the internal network.
 
-  # Self-hosted newsletter. Like umami it shares the postgres instance in its
-  # own database, created by deploy/deploy.sh.
-  #
-  # Listmonk owns the subscriber list, the double opt-in flow and the sending;
-  # Roller stores no subscriber data at all, which keeps a whole class of
-  # retention and consent work out of the blog. Its UI and its opt-in and
-  # unsubscribe pages live on their own hostname ({$LISTMONK_DOMAIN}), because
-  # running listmonk under a sub-path is an open feature request upstream, not
-  # a supported configuration.
-  #
-  # The one thing served from the blog's own origin is the public subscribe
-  # API, routed by Caddy -- a subscribe form on a blog page has to reach a
-  # same-origin URL or the theme's own connect-src 'self' blocks it.
   listmonk:
-    image: listmonk/listmonk:v3
+    # v6.2.0, digest-pinned. The previous value was `listmonk/listmonk:v3`,
+    # which DOES NOT EXIST on Docker Hub -- `docker compose pull` failed on it,
+    # so a fresh production deploy was already broken before this wave. The
+    # oldest tag still published is v6.0.0. The --install/--idempotent/
+    # --upgrade/--yes flags below are unchanged in v6.2.0 (verified against the
+    # image's own --help), so the command block needs no edit; listmonk runs
+    # its own schema upgrade on first boot.
+    image: listmonk/listmonk@sha256:f535d59e14991337a9f2d570273685378ae86b0d7698c3e00da444e3bc205286
     depends_on:
-      postgres:
-        condition: service_healthy
-    # --install --idempotent creates the schema on a first run and does
-    # nothing on later ones, so this is safe on every deploy.
+      provision:
+        condition: service_completed_successfully
     command: >
       sh -c "./listmonk --install --idempotent --yes --config ''
              && ./listmonk --upgrade --yes --config ''
              && ./listmonk --config ''"
     environment:
       LISTMONK_app__address: "0.0.0.0:9000"
-      # Public URL listmonk builds its opt-in and unsubscribe links from.
-      # These are followed from an email client, so they are not subject to
-      # any theme CSP and can live on listmonk's own hostname.
       LISTMONK_app__root_url: ${LISTMONK_ROOT_URL:-https://newsletter.invalid}
       LISTMONK_db__host: postgres
       LISTMONK_db__port: "5432"
@@ -192,14 +175,17 @@ services:
     restart: unless-stopped
     networks:
       - internal
-    # No host port: Caddy reaches it over the internal network.
 
   backup:
-    # Reuses the postgres image for pg_dump/psql; the loop and single-shot
-    # scripts are bind-mounted rather than baked into a custom image, so the
-    # backup logic can be edited without a rebuild. See deploy/backup/backup.sh
-    # for the RESTORE procedure.
-    image: postgres:16@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20
+    # The app image, for pg_dump/psql plus the baked-in backup scripts. See
+    # /app/backup/backup.sh for the RESTORE procedure.
+    image: ghcr.io/jakefearsd/roller:${IMAGE_VERSION:?IMAGE_VERSION must be set in .env}
+    entrypoint: ["/app/backup/loop.sh"]
+    # Runs as root, unlike every other use of this image: the roller-backups
+    # volume is created root-owned, and the unprivileged `roller` user the image
+    # otherwise runs as cannot write into it. A backup that cannot write fails
+    # at 03:00, not at deploy time, so this is not a detail to leave implicit.
+    user: "0:0"
     depends_on:
       postgres:
         condition: service_healthy
@@ -208,19 +194,15 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-roller}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       PGHOST: postgres
-      # Dumped alongside the blog database; see deploy/backup/backup.sh.
       UMAMI_DB: ${UMAMI_DB:-umami}
       LISTMONK_DB: ${LISTMONK_DB:-listmonk}
       BACKUP_HOUR: ${BACKUP_HOUR:-3}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
     volumes:
-      - ./deploy/backup/backup.sh:/backup.sh:ro
-      - ./deploy/backup/loop.sh:/loop.sh:ro
       - roller-backups:/backups
       - roller-mediafiles:/data/mediafiles:ro
       - roller-search-index:/data/search-index:ro
       - roller-uploads:/data/uploads:ro
-    entrypoint: ["/loop.sh"]
     restart: unless-stopped
     networks:
       - internal
