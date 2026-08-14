@@ -1698,6 +1698,212 @@ git commit -m "deploy: fixes from full-stack verification"
 
 ---
 
+### Task 10: Break the fresh-install deadlock (added after Task 9)
+
+Task 9's full-stack verification found that a fresh `docker compose up -d` cannot
+complete. `umami-views.sql` defines `analytics_traffic` over `website_event` — a
+table Umami creates on its **own first boot** — but `provision.sh` applies it,
+and `umami` cannot start until `provision` exits successfully. Neither can go
+first. The pre-wave `deploy.sh` had the same ordering and would have failed the
+same way; nobody had run the stack end to end before.
+
+The fix splits the views out of provisioning into a one-shot that runs *after*
+Umami starts and **gates nothing**, so it can never block the stack.
+
+**Files:**
+- Create: `deploy/analytics-views.sh` (mode 755)
+- Modify: `deploy/provision.sh` (drop the views step, it becomes three steps)
+- Modify: `Dockerfile` (COPY + chmod the new script)
+- Modify: `docker-compose.prod.yml` (new `analytics-views` service)
+- Modify: `app/src/test/java/org/apache/roller/weblogger/business/startup/ProductionComposeTest.java`
+- Modify: `docker_deployment.md`, `docs/superpowers/specs/2026-08-14-container-push-deployment-design.md`
+
+**Interfaces:**
+- Consumes: `/app/umami-views.sql` (Task 3), the `provision` service (Task 5).
+- Produces: `/app/analytics-views.sh` in the image; a compose service named
+  `analytics-views` that **nothing** depends on.
+
+- [ ] **Step 1: Write the new script**
+
+Create `deploy/analytics-views.sh`:
+
+```bash
+#!/usr/bin/env bash
+# Install the Grafana analytics contract's traffic view into Umami's database.
+#
+# This is a SEPARATE one-shot from provision.sh, and the split is the whole
+# point. analytics_traffic is defined over `website_event` -- a table Umami
+# creates on its own first boot -- but provision.sh runs BEFORE umami is
+# allowed to start, because app/umami/listmonk all gate on provision exiting
+# successfully. Applying the view from provision.sh therefore deadlocks a fresh
+# install: provision waits for a table only umami can create, and umami waits
+# for provision to exit. The plan's full-stack verification is what surfaced
+# this; the pre-wave deploy.sh had the same ordering and would have failed the
+# same way.
+#
+# So this runs AFTER umami has started, waits for the table to appear, and
+# GATES NOTHING -- no service declares depends_on against it. If it fails or
+# times out, the stack is still up and serving; only the Grafana traffic view
+# is missing, which is an operator dashboard concern, not a blog outage.
+set -euo pipefail
+
+export PGHOST="${PGHOST:-postgres}"
+export PGPORT="${PGPORT:-5432}"
+export PGUSER="${POSTGRES_USER:?POSTGRES_USER must be set}"
+export PGPASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}"
+
+UMAMI_DB="${UMAMI_DB:-umami}"
+WAIT_SECONDS="${ANALYTICS_VIEWS_WAIT_SECONDS:-180}"
+
+echo "==> Waiting up to ${WAIT_SECONDS}s for Umami to create website_event in ${UMAMI_DB}..."
+# to_regclass returns NULL rather than raising when the table is absent, so
+# this probe never has to distinguish "missing" from "error"; an unreachable
+# database simply produces no output and the loop retries.
+deadline=$(( SECONDS + WAIT_SECONDS ))
+until psql -d "${UMAMI_DB}" --no-psqlrc --quiet -tAc \
+        "SELECT to_regclass('public.website_event') IS NOT NULL" 2>/dev/null | grep -qx t; do
+    if (( SECONDS >= deadline )); then
+        echo "website_event did not appear within ${WAIT_SECONDS}s; analytics views NOT installed." >&2
+        echo "The rest of the stack is unaffected. Re-run: docker compose -f docker-compose.prod.yml up -d analytics-views" >&2
+        exit 1
+    fi
+    sleep 3
+done
+echo "    website_event present."
+
+echo "==> Applying analytics views to ${UMAMI_DB}..."
+psql -d "${UMAMI_DB}" --single-transaction -v ON_ERROR_STOP=1 -f /app/umami-views.sql
+echo "==> Analytics views installed."
+```
+
+- [ ] **Step 2: Make it executable and syntax-check it**
+
+```bash
+chmod 755 deploy/analytics-views.sh
+bash -n deploy/analytics-views.sh && echo "syntax OK"
+```
+Expected: `syntax OK`.
+
+- [ ] **Step 3: Remove the views step from provision.sh**
+
+Delete the final `psql ... -f /app/umami-views.sql` step and its `echo`/comment
+block from `deploy/provision.sh`. Update its header comment, which currently
+describes four steps, to describe three: create the service databases, migrate
+`rollerdb`, grant `grafana_ro`. Add one sentence saying the analytics views moved
+to `analytics-views.sh` and why.
+
+**Keep the `GRANT CONNECT` step in provision.sh.** It only needs the umami
+*database* to exist (provision creates it) and the `grafana_ro` role to exist
+(V017 creates it during the migration step) — neither requires Umami to have
+booted.
+
+- [ ] **Step 4: Bake the script into the image**
+
+In `Dockerfile`, beside the existing `COPY deploy/provision.sh /app/provision.sh`:
+
+```dockerfile
+COPY deploy/analytics-views.sh /app/analytics-views.sh
+```
+
+and add `/app/analytics-views.sh` to the existing `chmod 755` list.
+
+- [ ] **Step 5: Add the compose service**
+
+In `docker-compose.prod.yml`, after the `umami` service:
+
+```yaml
+  # Installs the Grafana analytics contract's traffic view. Separate from
+  # `provision` because analytics_traffic is defined over `website_event`, a
+  # table umami creates on its OWN first boot -- and provision runs before
+  # umami is allowed to start. Applying it there deadlocks a fresh install.
+  #
+  # Nothing declares depends_on against this service, deliberately: if it fails
+  # or times out, the blog is still up and only the Grafana traffic view is
+  # missing. ProductionComposeTest pins that nothing gates on it.
+  analytics-views:
+    image: ghcr.io/jakefearsd/roller:${IMAGE_VERSION:?IMAGE_VERSION must be set in .env}
+    entrypoint: ["/app/analytics-views.sh"]
+    restart: "no"
+    depends_on:
+      provision:
+        condition: service_completed_successfully
+      umami:
+        condition: service_started
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-roller}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      UMAMI_DB: ${UMAMI_DB:-umami}
+    networks:
+      - internal
+```
+
+- [ ] **Step 6: Pin the non-blocking property with a test**
+
+Add to `ProductionComposeTest`:
+
+```java
+    @Test
+    void analyticsViewsGateNothing() {
+        assertNotNull(services().get("analytics-views"),
+                "the analytics views one-shot must exist");
+
+        for (Map.Entry<String, Object> entry : services().entrySet()) {
+            @SuppressWarnings("unchecked")
+            Object dependsOn = ((Map<String, Object>) entry.getValue()).get("depends_on");
+            if (dependsOn instanceof Map<?, ?> conditions) {
+                assertFalse(conditions.containsKey("analytics-views"),
+                        entry.getKey() + " must not wait on analytics-views: it installs a Grafana "
+                                + "dashboard view, and a failure there must never keep the blog down");
+            } else if (dependsOn instanceof List<?> list) {
+                assertFalse(list.contains("analytics-views"),
+                        entry.getKey() + " must not wait on analytics-views");
+            }
+        }
+    }
+```
+
+Add `import static org.junit.jupiter.api.Assertions.assertFalse;` if absent.
+
+- [ ] **Step 7: Run the test**
+
+Run: `mvn -q -pl app test -Dtest=ProductionComposeTest`
+Expected: PASS, 6 tests.
+
+- [ ] **Step 8: Verify the fresh-install path end to end**
+
+This is the point of the task — the previous arrangement failed exactly here.
+
+```bash
+docker build -t ghcr.io/jakefearsd/roller:local .
+mkdir -p /tmp/roller-t10 && cp docker-compose.prod.yml /tmp/roller-t10/
+# reuse the local .env recipe from Task 9 Step 2
+cd /tmp/roller-t10
+docker compose -f docker-compose.prod.yml down -v 2>/dev/null || true
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml ps -a
+docker compose -f docker-compose.prod.yml logs analytics-views
+```
+Expected: `up -d` completes **unassisted** from clean volumes. `provision` exits 0,
+`analytics-views` exits 0 having waited for and found `website_event`, and the
+app answers on `http://localhost/roller/`. Then confirm idempotency with a second
+`up -d`, and tear down with `down -v`.
+
+- [ ] **Step 9: Update the docs**
+
+In `docker_deployment.md`, wherever provisioning is described as four steps,
+correct it to three plus the separate `analytics-views` one-shot, and explain
+that a failure there leaves the blog serving. In the spec, add a paragraph to
+the compose-topology section recording the deadlock and this resolution.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add deploy/analytics-views.sh deploy/provision.sh Dockerfile docker-compose.prod.yml \
+        app/src/test/java/org/apache/roller/weblogger/business/startup/ProductionComposeTest.java \
+        docker_deployment.md docs/superpowers/specs/2026-08-14-container-push-deployment-design.md
+git commit -m "deploy: install analytics views after umami boots, not before"
+```
+
 ## Self-Review Notes
 
 **Spec coverage.** Every spec section maps to a task: images → 3, 4; compose topology → 5; env overlay and masking → 1; the mapping table → 6; local parity and both test procedures → 8 (documented), 9 (executed); release and deploy → 7, 6; both bug fixes → 2 (the `.env` expansion bug, fixed by deletion) and 5 Step 4 (the stale routing comment); testing → 1, 5, 9; risks → 3 (pg_dump assertion), 5 (`user: "0:0"`), 8 (Compose version floor).
