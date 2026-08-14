@@ -98,13 +98,20 @@ touching the rendering path call `CacheManager.clear()` in `@BeforeEach`
 - **CodeQL** (`codeql-analysis.yml`) is weekly + `workflow_dispatch`, not
   per push.
 
-**Publishing happens only on a `v*.*.*` tag** (`release.yml`): it builds the
-WAR, pushes `ghcr.io/jakefearsd/roller:<version>` **and** `:latest`, and
-cuts a GitHub Release with the WAR attached. Pushing to master publishes
-nothing. That matters because `docker-compose.prod.yml` defaults the app to
-`:latest` and `deploy/deploy.sh` pulls it — under the old publish-on-push
-setup, every commit silently became the image the next deploy would take.
-`deploy.sh --build` is how you deploy an untagged tree.
+**Publishing happens only on a `v*.*.*` tag** (`release.yml`): it builds and
+pushes both `ghcr.io/jakefearsd/roller:<version>` and
+`ghcr.io/jakefearsd/roller-caddy:<version>` (also `:latest` and `:sha-<short>`
+for each), extracts the release WAR from the built `roller` image, and cuts a
+GitHub Release with the WAR plus the deploy bundle
+(`docker-compose.prod.yml`, `.env.example`, `deploy.sh`) attached. Pushing to
+master publishes nothing. `docker-compose.prod.yml` requires `IMAGE_VERSION`
+to be set in `.env` — there is no floating default — so a deploy always names
+a specific tagged release rather than silently picking up whatever was last
+published. Testing an untagged tree locally is a `docker build` against the
+`Dockerfile`/`deploy/caddy/Dockerfile` directly (see docker_deployment.md's
+"Test a release locally before deploying it"), not a `deploy.sh` flag —
+`deploy.sh` only ever pulls, since `docker-compose.prod.yml` carries no
+`build:` stanza.
 
 **Known flake: `ReferenceError: EasyMDE is not defined`** on
 `entryEdit!firstSave.rol`, surfacing through `BrowserHealth`'s
@@ -443,18 +450,20 @@ Key domain entities:
 - **Development**: PostgreSQL via `docker-compose.yml` (postgres only; the
   app runs via `./roller dev` / `spring-boot:run`, not in a container),
   theme reload enabled, caching disabled.
-- **Production**: containerized end-to-end via `docker-compose.prod.yml` —
-  `app` (image built from `Dockerfile`, published to GHCR by CI only when a
-  `v*.*.*` tag is pushed — see CI below), `postgres:16`, `caddy` (auto-TLS
-  reverse proxy, the only
-  published ports), and `backup` (nightly `pg_dump` + volume snapshots,
-  atomic writes, rotation). One-command deploy/upgrade via
-  `deploy/deploy.sh` (pulls or builds the image, applies pending migrations
-  against `postgres` before starting `app`, waits for health, reconciles
-  the rest). Full fresh-VPS runbook: `docker_deployment.md`. As in dev, the
-  actuator health endpoint lives on management port 8090 and is never
-  published to the host — reachable only via `docker compose exec app curl
-  http://localhost:8090/actuator/health` or the container healthcheck.
+- **Production**: containerized end-to-end and **image-only** — the deploy host
+  holds `docker-compose.prod.yml` and `.env` and nothing else. Two images ship
+  per release tag: `ghcr.io/jakefearsd/roller` (WAR, themes, migrations,
+  `provision.sh`, `migrate.sh`, `umami-views.sql`, the backup scripts, and a
+  PostgreSQL client) and `ghcr.io/jakefearsd/roller-caddy` (Caddy with the
+  Caddyfile baked in). A one-shot `provision` service creates the umami and
+  listmonk databases, applies the migration chain, and installs the analytics
+  views; `app`, `umami` and `listmonk` declare
+  `depends_on: { provision: { condition: service_completed_successfully } }`,
+  so the migrate-then-start ordering is compose's job, not a bash script's.
+  `deploy/deploy.sh` is now just pull/up/wait. **Nothing may be bind-mounted
+  from a checkout** — `ProductionComposeTest` fails the build if a bind mount,
+  a `build:` stanza, or a non-loopback published port other than 80/443
+  reappears. Full runbook: `docker_deployment.md`.
 
 ## Themes
 - A weblog runs either a **shared** theme (id from `themes/<id>/theme.xml`) or
@@ -509,6 +518,16 @@ both of its branches in a single run.
 - **Startup (`roller.properties` / `roller-custom.properties`).** Read once via
   `WebloggerConfig`. Changing one needs a restart.
 - **Per-weblog** (`Weblog` columns, edited on Weblog Settings) and **per-entry**.
+- **Environment (`ROLLER_*` variables).** The highest-precedence layer, applied
+  by `WebloggerConfig.applyEnvironmentOverrides` over everything the properties
+  files set: strip the `ROLLER_` prefix, lowercase, turn `_` into `.`. A derived
+  name matching an existing key case-insensitively writes to that key's original
+  spelling, so `ROLLER_DATABASE_JDBC_DRIVERCLASS` reaches
+  `database.jdbc.driverClass` rather than creating a lowercase twin nothing
+  reads; a name matching nothing is used as derived, which is required rather
+  than incidental (`mail.port` has no entry in `roller.properties` and
+  `uploads.dir` is commented out). This is how the production image is
+  configured — there is no properties file in it.
 
 **Promoting a startup property to runtime** means adding a `<property-def>` and
 switching the call site to `WebloggerRuntimeConfig`. Three traps, all pinned by
@@ -1188,9 +1207,11 @@ outcomes; nothing is emitted that an admin typed.
   `bin/db/migrations/V017__analytics_contract.sql`. `analytics_traffic`
   (Umami's `website_event` rolled up to sessions/views by path and day)
   lives in Umami's own database, shipped by `deploy/analytics/umami-views.sql`
-  and applied by `deploy/deploy.sh` — it cannot live in the migration chain,
-  which only ever touches `rollerdb`. Grafana is the thing that joins the
-  two halves (two datasources, a panel-level join on `website_id`); no
+  (baked into the app image at `/app/umami-views.sql`) and applied by the
+  one-shot `provision` compose service's `provision.sh` — it cannot live in
+  the migration chain, which only ever touches `rollerdb`. Grafana is the
+  thing that joins the two halves (two datasources, a panel-level join on
+  `website_id`); no
   server-side query ever spans both. `page_slug`/`entry_anchor` on
   `analytics_events`' `FORM_SUBMITTED` rows are copied from the contact
   form's reader-controlled `source` field — untrusted display text, not
@@ -1234,8 +1255,9 @@ outcomes; nothing is emitted that an admin typed.
   migration cannot carry a secret) and grants `SELECT` on exactly the
   contract views, never the underlying tables. An operator enables it with
   `ALTER ROLE grafana_ro LOGIN PASSWORD '...'` over `docker compose exec
-  postgres psql` (`docker_deployment.md`); `deploy.sh` grants it `CONNECT`
-  on both databases so one password works for both Grafana datasources.
+  postgres psql` (`docker_deployment.md`); the `provision` service's
+  `provision.sh` grants it `CONNECT` on both databases so one password works
+  for both Grafana datasources.
   Postgres keeps no published host port in any compose file — access is
   tunnel-only, same as every other direct-DB debugging path in this repo.
 

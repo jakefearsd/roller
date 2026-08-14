@@ -13,26 +13,28 @@ public IP.
 ## Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Get the code onto the host](#get-the-code-onto-the-host)
+2. [Get the deploy files onto the host](#get-the-deploy-files-onto-the-host)
 3. [Configure `.env`](#configure-env)
-4. [Configure `roller-production.properties`](#configure-roller-production-properties)
-5. [DNS](#dns)
-6. [First run](#first-run)
-7. [TLS](#tls)
-8. [Health monitoring](#health-monitoring)
-9. [Analytics](#analytics)
-10. [Newsletter](#newsletter)
-11. [Backup and restore](#backup-and-restore)
+4. [DNS](#dns)
+5. [First run](#first-run)
+6. [TLS](#tls)
+7. [Health monitoring](#health-monitoring)
+8. [Analytics](#analytics)
+9. [Newsletter](#newsletter)
+10. [Backup and restore](#backup-and-restore)
+11. [Test a release locally before deploying it](#test-a-release-locally-before-deploying-it)
 12. [Upgrades](#upgrades)
 13. [Firewall](#firewall)
 14. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
-- A host with a public IP and a Docker Engine with the Compose plugin
-  (`docker compose version` should print v2.x). Any VPS-sized box works;
-  Roller plus Postgres is comfortable on 1 vCPU / 2GB RAM for a handful of
-  low-traffic blogs.
+- A host with a public IP and a Docker Engine with the Compose plugin,
+  **v2.17 or newer** (`docker compose version`) — the compose file uses
+  `depends_on: condition: service_completed_successfully`, which older
+  Compose rejects with a schema error rather than misbehaving quietly. Any
+  VPS-sized box works otherwise; Roller plus Postgres is comfortable on
+  1 vCPU / 2GB RAM for a handful of low-traffic blogs.
 - A domain name (e.g. `blog.example.com`) with an A/AAAA record you control,
   **or** none at all if you only want to run over plain HTTP on a LAN (see
   [DNS](#dns) — Caddy supports both modes).
@@ -51,87 +53,98 @@ public IP.
   yourself — Roller feature-detects the binary at startup and quietly falls
   back to a JPEG/PNG-only rendition ladder when it is missing.
 
-## Get the code onto the host
+## Get the deploy files onto the host
 
-`deploy/deploy.sh` and `docker-compose.prod.yml` both assume a full git
-checkout on the host — the compose file bind-mounts `deploy/config` and
-`deploy/caddy`, and `deploy.sh` reads `bin/db/migrate.sh` and
-`bin/db/migrations` out of the working tree to run migrations. Clone the
-repo directly on the deploy host:
+There is no git checkout on the deploy host at all. Everything the stack
+needs lives in two published images (`ghcr.io/jakefearsd/roller` and
+`ghcr.io/jakefearsd/roller-caddy`) — nothing is bind-mounted from a working
+tree. The host needs exactly three files, all attached to the GitHub Release
+for the version you're deploying: `docker-compose.prod.yml`, `.env.example`,
+and `deploy.sh`. Download them into one directory, e.g. `/opt/roller`:
 
 ```bash
-git clone https://github.com/jakefearsd/roller.git /opt/roller
-cd /opt/roller
+mkdir -p /opt/roller && cd /opt/roller
+curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/docker-compose.prod.yml
+curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/.env.example
+curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/deploy.sh
+chmod +x deploy.sh
+mv .env.example .env
 ```
 
-(If you maintain a different fork, clone that instead — the `ROLLER_IMAGE`
-value in your `.env` should then point at your fork's GHCR path; see below.)
+(If you maintain a different fork, the `IMAGE_VERSION` tag in your `.env`
+still resolves against `ghcr.io/jakefearsd/roller` unless you also edit the
+image names in `docker-compose.prod.yml` to point at your fork's GHCR path.)
 
 ## Configure `.env`
 
-`docker-compose.prod.yml` reads its variables from a `.env` file in the repo
-root (gitignored — it holds secrets). Copy the example and fill it in:
+`docker-compose.prod.yml` reads all of its configuration — infrastructure
+settings **and** the app's own runtime properties — from a `.env` file next
+to it (gitignored — it holds secrets). You already renamed the downloaded
+`.env.example` to `.env` above; edit it in place.
 
-```bash
-cp deploy/.env.example .env
-```
+`.env` has four parts:
 
-Edit `.env`:
-
-- `ROLLER_DOMAIN` — your real domain (e.g. `blog.example.com`) for
-  auto-TLS, or `:80` for a domain-less LAN/testing deployment with plain
-  HTTP only (see [TLS](#tls)).
-- `ROLLER_IMAGE` — defaults to `ghcr.io/jakefearsd/roller:latest`, published
-  by `.github/workflows/release.yml` when a `v*.*.*` tag is pushed — and
-  only then. `:latest` therefore means "the last tagged release", not "the
-  last commit on master"; pushing to master publishes nothing. Pin to a
-  `:<version>` tag for a reproducible deploy instead of floating on
-  `:latest`, or point it at your own fork's GHCR path if you cloned a fork.
-  This value is ignored if you deploy with `deploy/deploy.sh --build`, which
-  is how you deploy an untagged tree.
+- **Images.** `IMAGE_VERSION` is the tag shared by both
+  `ghcr.io/jakefearsd/roller` and `ghcr.io/jakefearsd/roller-caddy` — they are
+  published together from one release job and must move together. Published
+  only when a `v*.*.*` tag is pushed (`.github/workflows/release.yml`), so
+  this is always a specific release, never "whatever was on master." Pin it
+  to the version you intend to run rather than floating; see
+  [Upgrades](#upgrades) for how to move it forward deliberately.
 
   **After the first tagged release:** GHCR packages are private by default
-  the first time they're published, so an anonymous `docker pull` of
-  `ROLLER_IMAGE` will fail with "denied"/"unauthorized" until you do one of
-  the following: on GitHub, go to the package's own page (under your
-  account/org's Packages tab) → Package settings → Change visibility →
-  Public; or, keep it private and instead `docker login ghcr.io` on the VPS
-  with a PAT that has `read:packages`. Until either is done, deploy with
-  `deploy/deploy.sh --build` (builds from the local checkout, no pull
-  needed).
-- `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` — generate a real
-  password for `POSTGRES_PASSWORD` (e.g. `openssl rand -base64 24`). These
-  three are shared by the `app`, `postgres`, and `backup` services.
-- `BACKUP_HOUR` / `BACKUP_RETENTION_DAYS` — when (UTC hour, 0-23) the
-  nightly backup runs and how many days of backups to retain. Defaults
-  (`3`, `14`) are reasonable starting points.
-- `JAVA_OPTS` — optional extra JVM flags (e.g. `-Xmx1g`).
-
-## Configure `roller-production.properties`
-
-This is the app's runtime config, mounted read-only into the `app`
-container. Copy the example and fill it in:
-
-```bash
-cp deploy/config/roller-production.properties.example \
-   deploy/config/roller-production.properties
-```
-
-Edit `deploy/config/roller-production.properties`:
-
-- `database.jdbc.username` / `database.jdbc.password` — **must match**
-  `POSTGRES_USER` / `POSTGRES_PASSWORD` in `.env`. The two files are not
-  templated against each other; keep them in sync by hand.
-- `mail.hostname` / `mail.port` / (optional) `mail.username` /
-  `mail.password` — your SMTP relay.
-- Everything else in the example (`installation.type=auto`,
-  `database.configurationType=jdbc`, the `/data/*` directories,
-  `themes.dir=/app/themes`) matches the image's runtime contract and
-  normally doesn't need to change — see the comments in the example file
-  and `Dockerfile` if you do need to.
-
-This file is gitignored (`deploy/config/roller-production.properties`) —
-only the `.example` template is committed.
+  the first time they're published, so an anonymous `docker compose pull`
+  will fail with "denied"/"unauthorized" until you do one of the following:
+  on GitHub, go to the package's own page (under your account/org's Packages
+  tab) → Package settings → Change visibility → Public; or keep it private
+  and instead `docker login ghcr.io` on the VPS with a PAT that has
+  `read:packages`.
+- **`SITE_DOMAIN`** — your real domain (e.g. `blog.example.com`) for
+  auto-TLS, or `:80` for a domain-less LAN/testing deployment with plain
+  HTTP only (see [TLS](#tls)). Deliberately not named `ROLLER_DOMAIN`: that
+  prefix is reserved for app configuration (below), and a stray
+  `ROLLER_DOMAIN` would be overlaid onto the app's properties as a junk key
+  named `domain`.
+- **The `ROLLER_*` block — the app's entire runtime configuration.** There is
+  no properties file in the image; every property the app reads comes from
+  `ROLLER_*` variables in this file, overlaid onto the image's built-in
+  defaults by `WebloggerConfig.applyEnvironmentOverrides` at startup: strip
+  the `ROLLER_` prefix, lowercase the remainder, turn `_` into `.` to get the
+  property name — so `ROLLER_DATABASE_JDBC_USERNAME` sets
+  `database.jdbc.username`, `ROLLER_MAIL_HOSTNAME` sets `mail.hostname`, and
+  so on for any key documented in
+  `app/src/main/resources/org/apache/roller/weblogger/config/roller.properties`.
+  The variables `.env.example` ships (and their meaning) are:
+  - `ROLLER_INSTALLATION_TYPE=auto` — checks the schema at startup; by then
+    the `provision` service has already applied every pending migration (see
+    [First run](#first-run)).
+  - `ROLLER_DATABASE_CONFIGURATIONTYPE`, `ROLLER_DATABASE_JDBC_DRIVERCLASS`,
+    `ROLLER_DATABASE_JDBC_CONNECTIONURL` — fixed by the image's layout and the
+    compose network (the connection URL's host is the `postgres` service
+    name); normally leave these as shipped.
+  - `ROLLER_DATABASE_JDBC_USERNAME` / `ROLLER_DATABASE_JDBC_PASSWORD` — **must
+    match** `POSTGRES_USER` / `POSTGRES_PASSWORD` below. The two are not
+    templated against each other; keep them in sync by hand.
+  - `ROLLER_THEMES_DIR`, `ROLLER_MEDIAFILES_STORAGE_DIR`,
+    `ROLLER_SEARCH_INDEX_DIR`, `ROLLER_UPLOADS_DIR` — match the image's own
+    layout and the volumes `docker-compose.prod.yml` mounts; no reason to
+    change them.
+  - `ROLLER_MAIL_CONFIGURATIONTYPE`, `ROLLER_MAIL_HOSTNAME`,
+    `ROLLER_MAIL_PORT`, and optionally `ROLLER_MAIL_USERNAME` /
+    `ROLLER_MAIL_PASSWORD` — your SMTP relay, for password-reset and
+    notification mail. Roller runs fine without these set; those two
+    features just won't send anything.
+  - `ROLLER_NEWSLETTER_LISTMONK_BASEURL` — where `/newsletter/subscribe`
+    forwards to. Blank makes that endpoint return 503; see
+    [Newsletter](#newsletter).
+- **Postgres credentials, backup schedule, Analytics and Newsletter
+  settings** — `POSTGRES_DB`/`POSTGRES_USER`/`POSTGRES_PASSWORD` (shared by
+  `postgres`, `provision`, and `backup` — generate a real password, e.g.
+  `openssl rand -base64 24`), `BACKUP_HOUR`/`BACKUP_RETENTION_DAYS`
+  (defaults `3`, `14` are reasonable starting points), `JAVA_OPTS` (optional
+  extra JVM flags, e.g. `-Xmx1g`), and the `UMAMI_*`/`LISTMONK_*` variables
+  covered in their own sections below ([Analytics](#analytics),
+  [Newsletter](#newsletter)).
 
 ## DNS
 
@@ -150,52 +163,40 @@ it unset and the dashboard is simply unreachable; the blog still works and
 still collects nothing.
 
 If you don't have a domain (LAN deployment, quick local test of the
-production stack), set `ROLLER_DOMAIN=:80` in `.env` instead — Caddy then
+production stack), set `SITE_DOMAIN=:80` in `.env` instead — Caddy then
 serves plain HTTP on port 80 only and never attempts ACME/TLS (a bare port
 with no hostname isn't a certificate-able name, so automatic HTTPS simply
 doesn't activate for it). See `deploy/caddy/Caddyfile` for the exact logic.
 
 ## First run
 
-With `.env` and `deploy/config/roller-production.properties` filled in:
+With `.env` filled in:
 
 ```bash
-deploy/deploy.sh --build   # build the image from this checkout, or:
-deploy/deploy.sh           # pull ROLLER_IMAGE from GHCR instead
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-`deploy.sh` brings up `postgres`, waits for it to report healthy, applies
-any pending schema migrations directly against it (via
-`bin/db/migrate.sh`, copied into the postgres container and run there — no
-separate migration-tracking scheme; see the script's own header), *then*
-starts `app` and polls its health endpoint for up to 120s before starting
-`caddy` and `backup`. Migrations are deliberately applied before the app's
-first start: `installation.type=auto` makes the app check
-`WebloggerFactory.isBootstrapped()` once at startup, not on every request,
-so migrating-then-starting (rather than starting-then-migrating) means a
-fresh app container always sees a current schema.
+There is no separate migration step and no ordering to get right: compose
+runs the one-shot `provision` service first (creates the `umami`/`listmonk`
+databases, applies the migration chain via `migrate.sh`, grants
+`grafana_ro`, installs the analytics views — see `deploy/provision.sh`), and
+`app`, `umami` and `listmonk` all declare
+`depends_on: { provision: { condition: service_completed_successfully } }`,
+so none of them starts until provisioning has exited successfully. `deploy.sh`
+(see [Upgrades](#upgrades)) wraps this same `up -d` with a health-check wait
+and is safe to use for first run too, but the plain compose command above is
+equally correct.
 
 When it finishes, browse to `https://<your-domain>/roller` (or
 `http://<host>/roller` in `:80` mode) and complete Roller's normal
 first-run flow: register the first user account, which becomes the site
 administrator, then create a weblog.
 
-You can also start the stack directly with `docker compose` instead of
-`deploy.sh` for the very first run — `deploy.sh` is really the *upgrade*
-tool (it's also safe and idempotent for first-run, since a fresh database
-has no migrations to apply):
-
-```bash
-docker compose -f docker-compose.prod.yml --env-file .env up -d
-```
-
-If you do this, remember migrations won't run until you invoke
-`bin/db/migrate.sh` yourself or run `deploy/deploy.sh` at least once.
-
 ## TLS
 
-Handled entirely by Caddy (`deploy/caddy/Caddyfile`) — there is nothing to
-configure beyond setting `ROLLER_DOMAIN` to a real domain in `.env`. Caddy
+Handled entirely by Caddy (`deploy/caddy/Caddyfile`, baked into the
+`ghcr.io/jakefearsd/roller-caddy` image) — there is nothing to configure
+beyond setting `SITE_DOMAIN` to a real domain in `.env`. Caddy
 obtains a Let's Encrypt certificate for that domain on first use, renews it
 automatically well before expiry, and redirects HTTP to HTTPS. Certificate
 state lives in the `caddy-data` named volume, so it survives
@@ -297,9 +298,10 @@ dashboard, so this costs nothing.
 
 1. Set `UMAMI_APP_SECRET` (`openssl rand -hex 32`) and, if you want the
    dashboard, `UMAMI_DOMAIN` in `.env`.
-2. Run `./deploy/deploy.sh`. It creates the `umami` database inside the
-   existing Postgres instance if it is missing, and the nightly backup starts
-   dumping it alongside the blog's own.
+2. Run `./deploy.sh` (or `docker compose -f docker-compose.prod.yml up -d`).
+   The `provision` service creates the `umami` database inside the existing
+   Postgres instance if it is missing, and the nightly backup starts dumping
+   it alongside the blog's own.
 3. Open the dashboard and sign in with `admin` / `umami`. **Change that
    password immediately** — it is the documented default and the dashboard is
    on the public internet.
@@ -334,13 +336,14 @@ registered in Umami:
 builds the `<script defer src="…" data-website-id="…" data-host-url="…">`
 tag itself from the validated UUID plus two startup properties
 (`analytics.umami.basePath`, default `/analytics`; `analytics.umami.scriptName`,
-default `script.js`, in `roller-production.properties`) — nothing an
-operator or weblog admin types is ever emitted as raw HTML into the page
-head. That is precisely what lets this coexist with `weblogAdminsUntrusted`
-staying on: there is no admin-authored markup anywhere in the path. If you
+default `script.js`) — nothing an operator or weblog admin types is ever
+emitted as raw HTML into the page head. That is precisely what lets this
+coexist with `weblogAdminsUntrusted` staying on: there is no admin-authored
+markup anywhere in the path. If you
 set `UMAMI_SCRIPT_NAME` to something other than `script.js` when deploying
 (the cheapest defence against content blockers that match the default
-path), set `analytics.umami.scriptName` to the same value or the tag will
+path), also set `ROLLER_ANALYTICS_UMAMI_SCRIPTNAME` to the same value in
+`.env` or the tag will
 point at a script Caddy never serves.
 
 Nothing is emitted for a weblog whose Analytics website ID is blank, so this
@@ -361,7 +364,7 @@ split down that seam — each half lives with the data it reads:
 | --- | --- | --- | --- |
 | `analytics_events` | `rollerdb` | `bin/db/migrations/V017__analytics_contract.sql` (the migration chain) | First-party outcomes from `roller_event` — form submissions, newsletter subscriptions, entry publishes — grouped by weblog handle, event type, day |
 | `analytics_weblog_sites` | `rollerdb` | same migration | The join key: which Umami website UUID belongs to which weblog handle |
-| `analytics_traffic` | `${UMAMI_DB:-umami}` | `deploy/analytics/umami-views.sql`, applied by `deploy/deploy.sh` (not the migration chain — it can only reach `rollerdb`) | Umami's raw `website_event` rolled up to sessions/views by website, path and day |
+| `analytics_traffic` | `${UMAMI_DB:-umami}` | `deploy/analytics/umami-views.sql` (baked into the app image as `/app/umami-views.sql`), applied by the `provision` service's `provision.sh` (not the migration chain — it can only reach `rollerdb`) | Umami's raw `website_event` rolled up to sessions/views by website, path and day |
 
 Grafana joins the two halves itself: two PostgreSQL datasources (one per
 database, both authenticating as `grafana_ro`), with `analytics_traffic.website_id`
@@ -383,10 +386,10 @@ docker compose -f docker-compose.prod.yml exec postgres \
     -c "ALTER ROLE grafana_ro LOGIN PASSWORD 'choose-a-strong-password-here';"
 ```
 
-`deploy.sh` already grants `grafana_ro` `CONNECT` on both databases, so the
-one role/password pair you set above works for both Grafana datasources —
-just point one at `rollerdb` and the other at `${UMAMI_DB:-umami}`, same
-credentials.
+The `provision` service already grants `grafana_ro` `CONNECT` on both
+databases (see `deploy/provision.sh`), so the one role/password pair you set
+above works for both Grafana datasources — just point one at `rollerdb` and
+the other at `${UMAMI_DB:-umami}`, same credentials.
 
 **Access is tunnel-only.** Postgres never gets a published host port in this
 stack (see [Firewall](#firewall) — port 5432 is reachable only on the
@@ -418,7 +421,8 @@ what keeps consent and retention obligations out of the blog software.
    agree: listmonk builds its confirmation and unsubscribe links from
    `LISTMONK_ROOT_URL`, and those links are the only way a subscriber can
    confirm or leave.
-2. Run `./deploy/deploy.sh`. It creates the `listmonk` database, and listmonk
+2. Run `./deploy.sh` (or `docker compose -f docker-compose.prod.yml up -d`).
+   The `provision` service creates the `listmonk` database, and listmonk
    creates its own schema on first start.
 3. Sign in at `https://<LISTMONK_DOMAIN>/admin` with `admin` and the password
    you set.
@@ -426,13 +430,12 @@ what keeps consent and retention obligations out of the blog software.
    credentials live in listmonk's own database, not in `.env`.
 5. Create a list, set it to **double opt-in**, and copy its UUID.
 
-`deploy/config/roller-production.properties.example` already sets
-`newsletter.listmonk.baseurl=http://listmonk:9000` — that's the compose
-**service name**, reached over the internal Docker network, not
-`LISTMONK_DOMAIN` (which is for a browser reaching the opt-in/unsubscribe
-pages, not for Roller reaching the API). You normally don't need to touch it;
-blank (the `roller.properties` built-in default, what you'd have if you typed
-this key out by hand instead of copying the example) is what makes
+`.env.example` already sets `ROLLER_NEWSLETTER_LISTMONK_BASEURL=http://listmonk:9000`
+— that's the compose **service name**, reached over the internal Docker
+network, not `LISTMONK_DOMAIN` (which is for a browser reaching the
+opt-in/unsubscribe pages, not for Roller reaching the API). You normally
+don't need to touch it; blank (the `roller.properties` built-in default,
+what you'd have if the variable were unset entirely) is what makes
 `/newsletter/subscribe` return 503 in local dev, where no listmonk service
 exists — that's the intended fallback, not a bug.
 
@@ -471,15 +474,15 @@ event write with no error anywhere. The opt-in and unsubscribe pages still
 stay on `LISTMONK_DOMAIN` — those are followed from an email client, where no
 theme CSP applies, so routing them through the app buys nothing.
 
-> **Deployments running an older Caddyfile:** you must redeploy to pick up
-> the current one. `./deploy/deploy.sh` reconciles the `caddy` service
-> against whatever `deploy/caddy/Caddyfile` is checked out on every run (see
-> [Upgrades](#upgrades)), so `git pull` followed by `deploy/deploy.sh` is
-> enough. Until you do, the old rewrite keeps forwarding subscribe requests
-> straight to listmonk — Roller's own `/newsletter/subscribe` route is
-> registered and correct underneath, but Caddy never lets a request reach
+> **Deployments running an older Caddyfile:** the Caddyfile is baked into the
+> `ghcr.io/jakefearsd/roller-caddy` image now, not read from a checkout, so
+> picking up the current one means pulling a newer `IMAGE_VERSION` (see
+> [Upgrades](#upgrades)) — bump it in `.env` and run `./deploy.sh`. Until you
+> do, an old rewrite from before this design keeps forwarding subscribe
+> requests straight to listmonk — Roller's own `/newsletter/subscribe` route
+> is registered and correct underneath, but Caddy never lets a request reach
 > it, so the throttle and the `roller_event` write are silently bypassed the
-> whole time the stale Caddyfile is running.
+> whole time the stale image is running.
 
 A subscriber who is already on the list gets the same "check your email"
 message as a new one. That is deliberate: a different message would let anyone
@@ -498,14 +501,14 @@ credential than the public subscribe endpoint above: a listmonk **API user**.
    create/manage permissions) and set **Type** to *API*.
 3. Generate a token and copy both the username and the token immediately —
    listmonk shows the token exactly once.
-4. Put both in `deploy/config/roller-production.properties`:
+4. Put both in `.env`:
 
-   ```properties
-   newsletter.listmonk.apiuser=your-api-username
-   newsletter.listmonk.apitoken=the-generated-token
+   ```bash
+   ROLLER_NEWSLETTER_LISTMONK_APIUSER=your-api-username
+   ROLLER_NEWSLETTER_LISTMONK_APITOKEN=the-generated-token
    ```
 
-5. Redeploy. Leaving either blank disables only the "Send as newsletter"
+5. Redeploy (`./deploy.sh`). Leaving either blank disables only the "Send as newsletter"
    button (`newsletter.notConfigured`) — the public subscribe form keeps
    working regardless, since `ListmonkClient` checks the two credential tiers
    (`isUnconfigured()` for subscribe, `isCampaignConfigured()` for sending)
@@ -526,10 +529,14 @@ to retry on their behalf.
 
 ## Backup and restore
 
-The `backup` service (reuses the `postgres:16` image for `pg_dump`/`psql`/
-`tar`) runs `deploy/backup/loop.sh`, a cron-less scheduler that wakes hourly
-and, once a day at `BACKUP_HOUR` (UTC), runs `deploy/backup/backup.sh`. Each
-cycle:
+The `backup` service (the app image, which bakes in `postgresql-client` for
+`pg_dump`/`psql` alongside `tar` from the base image) runs
+`/app/backup/loop.sh` (baked in from `deploy/backup/loop.sh`), a cron-less
+scheduler that wakes hourly and, once a day at `BACKUP_HOUR` (UTC), runs
+`/app/backup/backup.sh` (`deploy/backup/backup.sh`). It runs as root (`user:
+"0:0"` in `docker-compose.prod.yml`), unlike every other use of the image —
+the `roller-backups` volume is root-owned, and the image's unprivileged
+`roller` user cannot write into it. Each cycle:
 
 1. `pg_dump -Fc` the database to `/backups/rollerdb-<timestamp>.dump`.
 2. `tar czf` the `mediafiles`/`search-index`/`uploads` volumes to
@@ -552,14 +559,15 @@ to wherever they land, both on this host and off it.
 Run a backup by hand at any time:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec backup /backup.sh
+docker compose -f docker-compose.prod.yml exec backup /app/backup/backup.sh
 docker compose -f docker-compose.prod.yml exec backup ls -la /backups
 ```
 
 ### Restore
 
 Full restore commands (with exact flags) live in the header comment of
-`deploy/backup/backup.sh` — read that before restoring for real. Summary:
+`deploy/backup/backup.sh` (baked into the image at `/app/backup/backup.sh`)
+— read that before restoring for real. Summary:
 
 **Database** (app must be stopped first):
 
@@ -569,7 +577,7 @@ the postgres container, exactly like below — `$POSTGRES_USER` /
 own environment (set by `docker-compose.prod.yml`). A double-quoted or
 unquoted command would instead expand them in your host shell, where
 they're unset, and `pg_restore` would silently get empty values (this is
-the same in-container pattern `deploy.sh` uses for migrations):
+the same in-container pattern `provision.sh` uses for migrations):
 
 ```bash
 docker compose -f docker-compose.prod.yml stop app
@@ -594,11 +602,11 @@ archive extracts to `/data/...` paths matching the volume mount points):
 
 The volume names below are Compose's default PROJECT-PREFIXED names, not
 the bare names declared in `docker-compose.prod.yml` — the project name is
-derived from the directory the compose file lives in (`roller` if you
-cloned to `/opt/roller` per [Get the code onto the
-host](#get-the-code-onto-the-host)), giving e.g. `roller_roller-mediafiles`.
-Run `docker volume ls` FIRST to confirm the exact names on your host and
-substitute them below if they differ:
+derived from the directory the compose file lives in (`roller` if you put
+the deploy files in `/opt/roller` per [Get the deploy files onto the
+host](#get-the-deploy-files-onto-the-host)), giving e.g.
+`roller_roller-mediafiles`. Run `docker volume ls` FIRST to confirm the
+exact names on your host and substitute them below if they differ:
 
 ```bash
 docker compose -f docker-compose.prod.yml down
@@ -615,37 +623,67 @@ docker compose -f docker-compose.prod.yml up -d
 Test your restore procedure at least once before you need it for real —
 against a scratch copy of the stack, not production.
 
-## Upgrades
+## Test a release locally before deploying it
+
+The deploy files and images are the same in both places; only `.env` differs.
+On your workstation, in a directory holding the same two files:
 
 ```bash
-cd /opt/roller
-git pull
-deploy/deploy.sh           # pull ROLLER_IMAGE and deploy it, or:
-deploy/deploy.sh --build   # build the new image from the checkout instead
-deploy/deploy.sh --prune   # either of the above, plus `docker image prune -f` after
+IMAGE_VERSION=6.2.1 docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-This is the same script used for [first run](#first-run) — running it
-again is safe and idempotent. Each run: pulls/builds the image, brings
-`postgres` up and waits healthy, applies any pending migrations (a no-op if
-there are none — `bin/db/migrate.sh` tracks what's already applied), starts
-`app` and waits for it to report healthy (up to 120s, exits non-zero if it
-doesn't), then reconciles `caddy` and `backup`. Nothing is silently
-swallowed: a failed pull, a failed migration, or an app that never goes
-healthy all cause `deploy.sh` to exit non-zero rather than leaving the
-stack in a half-upgraded state without telling you.
+with a local `.env` carrying `SITE_DOMAIN=:80`, `UMAMI_DOMAIN=:8081`,
+`LISTMONK_DOMAIN=:8082`, `LISTMONK_ROOT_URL=http://localhost:8082` and
+throwaway secrets. The blog is at `http://localhost/roller`, the analytics
+console at `http://localhost:8081`, the newsletter admin at
+`http://localhost:8082`.
+
+This pulls the exact images the server will pull, so it is the only form of
+local testing that is byte-identical to production. Building locally
+(`docker build -t ghcr.io/jakefearsd/roller:test .`) is faster and catches
+nearly everything, but CI runs its own build, so those bytes are merely
+equivalent rather than identical.
+
+## Upgrades
+
+Edit `IMAGE_VERSION` in `.env` to the new release's version, then:
+
+```bash
+./deploy.sh           # pull the images and deploy, or:
+./deploy.sh --prune   # the above, plus `docker image prune -f` after
+```
+
+(equivalently, `docker compose -f docker-compose.prod.yml pull && docker
+compose -f docker-compose.prod.yml up -d`.) There is no `git pull` — the host
+holds no checkout to update, only the two files from [Get the deploy files
+onto the host](#get-the-deploy-files-onto-the-host), and neither one changes
+between releases.
+
+This is the same script used for [first run](#first-run) — running it again
+is safe and idempotent. Each run: pulls the images, brings the stack up (which
+re-runs the now-current `provision` service — a no-op if every migration is
+already applied, since `migrate.sh` tracks what's applied in
+`schema_migrations`), and waits for `app` to report healthy (up to 120s,
+exits non-zero if it doesn't). Nothing is silently swallowed: a failed pull
+or an app that never goes healthy both cause `deploy.sh` to exit non-zero
+rather than leaving the stack in a half-upgraded state without telling you.
 
 Always have a recent, verified backup before upgrading across a schema
 change (see [Backup and restore](#backup-and-restore)).
 
 ## Firewall
 
-Only 80 and 443 need to be open to the internet — Caddy is the only service
-with a published port. Nothing else in `docker-compose.prod.yml` publishes
-a host port by default (`postgres` and the app's `8080`/`8090` are reachable
-only on the internal Docker network), so there's nothing else to explicitly
-block on a default-deny host firewall, but locking it down explicitly is
-still good practice:
+Only 80 and 443 need to be open to the internet. Caddy also publishes
+`127.0.0.1:8081` and `127.0.0.1:8082` (the local-testing path to the Umami
+and listmonk consoles — see [Test a release locally before deploying
+it](#test-a-release-locally-before-deploying-it)), but those are
+loopback-bound, unreachable from outside the host by construction, and need
+no firewall rule either way. Nothing else in `docker-compose.prod.yml`
+publishes a host port by default (`postgres` and the app's `8080`/`8090` are
+reachable only on the internal Docker network), so there's nothing else to
+explicitly block on a default-deny host firewall, but locking it down
+explicitly is still good practice:
 
 ```bash
 ufw default deny incoming
@@ -666,6 +704,7 @@ one-off DB access for debugging, use `docker compose exec postgres psql
 
 ```bash
 docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs provision
 docker compose -f docker-compose.prod.yml logs app
 docker compose -f docker-compose.prod.yml logs postgres
 ```
@@ -682,11 +721,14 @@ docker compose -f docker-compose.prod.yml logs caddy
 **App health check never turns green**
 
 The app needs a reachable, migrated Postgres to bootstrap
-(`WebloggerFactory.bootstrap()`). Confirm migrations have actually been
-applied (`deploy/deploy.sh` again, or `bin/db/migrate.sh` directly against
-the `postgres` container) and that
-`deploy/config/roller-production.properties`'s `database.jdbc.*` values
-match `.env`'s `POSTGRES_*` values exactly.
+(`WebloggerFactory.bootstrap()`), and it won't even start until the
+`provision` service has exited successfully — check
+`docker compose -f docker-compose.prod.yml logs provision` first. If
+provisioning succeeded, confirm `.env`'s
+`ROLLER_DATABASE_JDBC_USERNAME`/`ROLLER_DATABASE_JDBC_PASSWORD` match
+`POSTGRES_USER`/`POSTGRES_PASSWORD` exactly — the two are not templated
+against each other. Re-running `./deploy.sh` (or `docker compose up -d`) is
+safe and idempotent if you want to retry provisioning from scratch.
 
 **Disk filling up**
 

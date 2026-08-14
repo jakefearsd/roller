@@ -148,6 +148,20 @@ The `-Droller.custom.config` mechanism stays supported — `./roller dev` depend
 on it — but the production image's ENTRYPOINT stops passing it, since the file
 it pointed at no longer exists.
 
+### Config-load failure semantics
+
+`WebloggerConfig`'s static initializer wraps its whole config load — file
+reads, property expansion, and now the environment overlay — in a
+long-standing `catch (Exception e) { e.printStackTrace(); }`. That swallowed
+the new case-collision guard: two `ROLLER_*` variables colliding
+case-insensitively threw inside the overlay step, the catch printed a stack
+trace and moved on, and the app booted with the entire overlay silently
+skipped — the opposite of the fail-loud behaviour the guard exists to
+provide. The catch now rethrows when the caught exception is a
+`RuntimeException`, so the collision guard (and any other overlay bug) stops
+the boot as intended; checked exceptions — a missing optional properties
+file, an `IOException` — keep the original lenient handling.
+
 ### Secret masking
 
 The existing debug dump (`WebloggerConfig.java:144-153`) prints every key and
@@ -366,6 +380,17 @@ exits successfully rather than blocking the dependent services.
   misbehaviour, which is the acceptable failure mode.
 - **Secrets in `docker inspect`** for the app container, per the `env_file`
   tradeoff above.
+- **Inconsistent third-party image pinning — found and closed.** The
+  `listmonk` service was floating on `listmonk/listmonk:v3`, which does not
+  exist on Docker Hub at all: `docker compose pull` failed on it, so a fresh
+  production deploy was already broken before this wave, independent of
+  anything else it changed. It is now pinned by digest to v6.2.0 (the oldest
+  tag still published is v6.0.0), matching how `postgres` and `caddy` were
+  already pinned; `umami` is now digest-pinned the same way. listmonk runs
+  its own `--upgrade --yes` at container startup (see the `command:` block in
+  `docker-compose.prod.yml`), so an existing deployment migrates its own
+  schema automatically on first boot after the jump to v6.2.0 — no manual
+  migration step for listmonk itself.
 - **`docker_deployment.md` needs a substantial rewrite**, not a patch — the
   "Get the code onto the host", "Configure `roller-production.properties`",
   "First run" and "Upgrades" sections all describe a workflow that no longer
