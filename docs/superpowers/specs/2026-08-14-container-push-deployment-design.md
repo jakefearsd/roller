@@ -136,16 +136,21 @@ the Debian-based JRE base image.
 
 `provision.sh` must remain idempotent, which it is by construction: `createdb`
 is guarded by an existence check, `migrate.sh` tracks applied versions in
-`schema_migrations`, and the grants and views are `CREATE OR REPLACE` / `GRANT`.
+`schema_migrations`, and the `grafana_ro` grants are plain `GRANT`, which
+Postgres already treats as a no-op on repetition. `analytics-views.sh` has the
+same property for a different reason: the view is `CREATE OR REPLACE VIEW`,
+and the script re-waits for `website_event` and re-applies the view on every
+`up -d`, not just the first.
 
-Its environment contract, supplied by compose from `.env`: `POSTGRES_DB`,
-`POSTGRES_USER`, `POSTGRES_PASSWORD`, `UMAMI_DB`, `LISTMONK_DB`. It sets
-`PGHOST=postgres`, `PGPORT=5432`, `PGUSER=$POSTGRES_USER`,
-`PGPASSWORD=$POSTGRES_PASSWORD`, and invokes `migrate.sh` with
-`DB_NAME=$POSTGRES_DB` and `DB_APP_USER=$POSTGRES_USER`, matching the contract
-in `bin/db/migrate.sh`'s header. It connects over the compose network rather
-than over a socket, which is the one behavioural difference from today's
-version — that ran inside the postgres container itself.
+`provision.sh`'s environment contract, supplied by compose from `.env`:
+`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `UMAMI_DB`,
+`LISTMONK_DB`. It sets `PGHOST=postgres`, `PGPORT=5432`,
+`PGUSER=$POSTGRES_USER`, `PGPASSWORD=$POSTGRES_PASSWORD`, and invokes
+`migrate.sh` with `DB_NAME=$POSTGRES_DB` and `DB_APP_USER=$POSTGRES_USER`,
+matching the contract in `bin/db/migrate.sh`'s header. It connects over the
+compose network rather than over a socket, which is the one behavioural
+difference from today's version — that ran inside the postgres container
+itself.
 
 The `build:` stanza is removed from `docker-compose.prod.yml`. That file now
 lives on a host with no build context, and images are named purely from

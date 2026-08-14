@@ -168,6 +168,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-roller}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       UMAMI_DB: ${UMAMI_DB:-umami}
+      ANALYTICS_VIEWS_WAIT_SECONDS: ${ANALYTICS_VIEWS_WAIT_SECONDS:-180}
     networks:
       - internal
 
