@@ -327,29 +327,32 @@ Lines 257 and 261 use `"6.2.0"` as arbitrary mock data. It is not a real asserti
 
 - [ ] **Step 4: Reword the two lineage references in SchemaMigrationTest**
 
+**Corrected after Task 3's first review.** The original wording here said "removed when this fork diverged", which is false: `roller_share_link` (V020) and `roller_comment` (V022) were features **this fork itself added and later removed** — they did not exist at the divergence point at all. The removals span the fork's life; they are not an instant. The replacement text below says so.
+
 Line 68, from `Tables belonging to features removed in 6.2.0. The baseline must not` to:
 
 ```java
-     * Tables belonging to features removed when this fork diverged. The
-     * baseline must not
+     * Tables belonging to features this fork has removed since diverging from
+     * upstream. The baseline must not
 ```
 
 Line 132, from `"Table '" + removed + "' belongs to a feature removed in 6.2.0 and "` to:
 
 ```java
-                        "Table '" + removed + "' belongs to a feature removed when this fork "
-                                + "diverged from upstream and "
+                        "Table '" + removed + "' belongs to a feature this fork removed and "
 ```
 
-Keep the following line (`"must not be in the baseline schema"`) as it is, so the assembled message still reads as one sentence.
+Keep the following line (`"must not be in the baseline schema"`) as it is, so the assembled message still reads as one sentence: "Table 'x' belongs to a feature this fork removed and must not be in the baseline schema".
 
 - [ ] **Step 5: Reword RollerPostgresContainer's javadoc**
+
+**Corrected after Task 3's first review.** The original wording here claimed PostgreSQL-only status *since the divergence*, which contradicts the very next clause in the same sentence — "rather than the embedded Derby they used before" only makes sense if there was a period, inside this fork, when tests used Derby. CLAUDE.md's Database section confirms it: the Derby-in-test / PostgreSQL-in-prod split was something this fork ran with before the cutover. The claim must be a later event, not the divergence.
 
 Line 25, from `<p>Roller is PostgreSQL-only as of 6.2.0, and tests run against the same` to:
 
 ```java
- * <p>Roller has been PostgreSQL-only since this fork diverged from Apache
- * Roller 6.1.x, and tests run against the same
+ * <p>Roller became PostgreSQL-only during this fork's simplification, and
+ * tests run against the same
 ```
 
 - [ ] **Step 6: Run the affected tests**
