@@ -10,11 +10,15 @@ import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 
 /**
- * Views for the SEO and media audit endpoints. The whole point of these
- * endpoints is that they report the same thing the renderer and the admin
- * UI's own markers consider missing -- see {@link #gapsFor} and {@link
- * MediaDtos#isAltTextMissing}, both keyed off {@code StringUtils.isBlank}
- * rather than {@code == null} or EL's notion of {@code empty}.
+ * Views for the SEO and media audit endpoints.
+ *
+ * <p>The media side genuinely shares its definition of "missing" with the
+ * renderer and the admin UI's own marker: {@link MediaDtos#isAltTextMissing}
+ * is called directly by both, keyed off {@code StringUtils.isBlank}.
+ *
+ * <p>The SEO side ({@link #gapsFor}) is NOT proven to match the renderer --
+ * see that method's javadoc for the actual, checked relationship, which is
+ * "deliberately stricter than," not "identical to."
  */
 public final class AuditDtos {
 
@@ -36,31 +40,49 @@ public final class AuditDtos {
     }
 
     /**
-     * {@code directory} is the owning directory's NAME, not its id --
-     * unlike {@code MediaDtos.MediaView.directory}. An audit item is a
-     * human/agent work-list entry, not a round-trippable write payload (the
-     * fix goes through {@code mediaId} via {@code MediaApi.update}), so the
-     * readable name is more useful here than an id the caller would have to
-     * look up again. Null for a file not filed in any directory.
+     * {@code directoryName} is the owning directory's NAME, not its id --
+     * deliberately named differently from {@code MediaDtos.MediaView
+     * .directory}, which is an id, so the two media-shaped payloads in this
+     * API cannot be confused by a client author skimming both schemas and
+     * assuming a shared field name means shared semantics. An audit item is
+     * a human/agent work-list entry, not a round-trippable write payload
+     * (the fix goes through {@code mediaId} via {@code MediaApi.update}),
+     * so the readable name is more useful here than an id the caller would
+     * have to look up again. Null for a file not filed in any directory.
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record MediaGap(String mediaId, String name, String directory) {
+    public record MediaGap(String mediaId, String name, String directoryName) {
     }
 
     public record MediaAudit(int missingAltText, List<MediaGap> items) {
     }
 
     /**
-     * The SEO gaps for a single entry, in a stable order. Every field check
-     * is {@code StringUtils.isBlank}, matching the renderer's own
-     * isNotBlank-gated fallbacks (search description, meta title, featured
-     * image) rather than {@code == null} -- a whitespace-only value must
-     * report as missing here exactly as it does everywhere else, or the
-     * audit would quietly disagree with reality. {@code noindex} is the one
-     * gap that is not a blank-string check: it fires only when the entry is
-     * explicitly opted out of search, {@code Boolean.TRUE.equals(...)}
-     * rather than a null check, since {@code noindex} defaults to
-     * {@code Boolean.FALSE} and null must not be mistaken for "opted out".
+     * The SEO gaps for a single entry, in a stable order. Every text field
+     * check is {@code StringUtils.isBlank} rather than {@code == null} --
+     * whitespace is not a description, and this is deliberately the
+     * STRICTER of the two possible rules.
+     *
+     * <p><b>This is NOT proven to match {@code weblog.vm}'s current
+     * renderer, and the divergence is real, not hypothetical.</b>
+     * {@code #showSeoHead} gates on {@code $utils.isNotEmpty(...)}, and
+     * {@code UtilitiesModel.isNotEmpty} is backed by
+     * {@code StringUtils.isNotEmpty} -- not {@code isNotBlank} --  and
+     * exposes no blank-aware method to Velocity at all. So today, a
+     * whitespace-only {@code searchDescription} is treated as PRESENT by
+     * the renderer (it emits {@code <meta name="description" content="   ">})
+     * while this audit reports {@code missing_search_description}. Do not
+     * "fix" this by loosening the check to {@code isNotEmpty} to match the
+     * renderer -- {@code isBlank} is the correct rule for an audit; the
+     * renderer is the one with the gap. Fixing the renderer to also use
+     * {@code isNotBlank} would close the divergence without weakening this
+     * audit, but that is out of this task's scope.
+     *
+     * <p>{@code noindex} is the one gap that is not a blank-string check: it
+     * fires only when the entry is explicitly opted out of search,
+     * {@code Boolean.TRUE.equals(...)} rather than a null check, since
+     * {@code noindex} defaults to {@code Boolean.FALSE} and null must not be
+     * mistaken for "opted out".
      */
     public static List<String> gapsFor(WeblogEntry entry) {
         List<String> gaps = new ArrayList<>();

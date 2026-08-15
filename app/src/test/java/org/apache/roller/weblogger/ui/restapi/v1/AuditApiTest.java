@@ -136,23 +136,29 @@ class AuditApiTest {
         assertFalse(captor.getValue().isIncludeTrashed());
     }
 
-    /** ?status=TRASHED is the only way to widen the audit to the trash. */
+    /**
+     * Unlike EntriesApi.list, the SEO audit refuses status=TRASHED outright
+     * rather than widening to it. This is a to-do-list generator meant to be
+     * iterated (find a gap, fix it, re-run); handing that loop a trashed
+     * entry framed as "needs missing_meta_title fixed" invites writing
+     * metadata onto a deleted entry -- the side-door-resurrection class of
+     * bug this repo has already firefought once (see the Trash section of
+     * CLAUDE.md). Refused with an explicit 400 rather than silently ignored,
+     * since silently dropping a parameter the client asked for is its own
+     * trap. The manager is never even called.
+     */
     @Test
-    void seoAuditCanBeWidenedToTrashedByExplicitStatus() throws Exception {
+    void seoAuditRefusesStatusTrashed() throws Exception {
         Weblogger weblogger = mockedWeblogger();
-        when(weblogger.getWeblogEntryManager().getWeblogEntries(any())).thenReturn(List.of());
 
         mockMvc(controllerFor(weblogger))
                 .perform(get("/v1/weblogs/myblog/audit/seo")
                         .param("status", "TRASHED")
                         .requestAttr("actionWeblog", aWeblog()))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
-        ArgumentCaptor<WeblogEntrySearchCriteria> captor =
-                ArgumentCaptor.forClass(WeblogEntrySearchCriteria.class);
-        verify(weblogger.getWeblogEntryManager()).getWeblogEntries(captor.capture());
-        assertEquals(WeblogEntry.PubStatus.TRASHED, captor.getValue().getStatus());
-        assertTrue(captor.getValue().isIncludeTrashed());
+        verify(weblogger.getWeblogEntryManager(), never()).getWeblogEntries(any());
     }
 
     /** An unknown status answers 400, not a 500 from a bad enum lookup. */
@@ -286,7 +292,7 @@ class AuditApiTest {
         assertEquals(1, json.get("items").size());
         assertEquals("m2", json.get("items").get(0).get("mediaId").asString());
         assertEquals("dog.jpg", json.get("items").get(0).get("name").asString());
-        assertEquals("photos", json.get("items").get(0).get("directory").asString());
+        assertEquals("photos", json.get("items").get(0).get("directoryName").asString());
     }
 
     /**

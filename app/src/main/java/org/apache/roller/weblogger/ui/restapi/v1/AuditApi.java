@@ -42,10 +42,21 @@ public class AuditApi extends BaseApiController implements UISecurityEnforced {
     /**
      * Entries whose {@link AuditDtos#gapsFor} is non-empty, over
      * {@code PUBLISHED} entries by default -- an SEO audit is about what a
-     * reader can find, so widening it needs an explicit {@code ?status=},
-     * and {@code includeTrashed} only ever becomes true when that explicit
-     * status IS {@code TRASHED}. A caller who asks for nothing gets the
-     * safe default: a trashed entry can never surface as work to do.
+     * reader can find, so widening it needs an explicit {@code ?status=}.
+     *
+     * <p><b>{@code status=TRASHED} is refused with a 400, unlike
+     * {@code EntriesApi.list}'s otherwise-identical status filter.</b> That
+     * sibling is a general browsing/management endpoint where seeing the
+     * trash is legitimate (to restore or purge it). This endpoint is a
+     * to-do-list generator meant to be iterated -- find a gap, fix it,
+     * re-run, confirm the count dropped -- and handing that loop a trashed
+     * entry framed as "needs missing_meta_title fixed" invites writing
+     * metadata onto a deleted entry, the side-door-resurrection class of bug
+     * this repo has already firefought once (see CLAUDE.md's Trash
+     * section). The refusal is explicit rather than a silent
+     * {@code includeTrashed=false} override, because silently ignoring a
+     * parameter the client asked for is its own trap. A caller who asks for
+     * nothing at all gets the safe {@code PUBLISHED} default regardless.
      *
      * <p>{@code total}/{@code counts} are computed over every gappy entry
      * the search returns, not just the requested page -- an agent asking
@@ -75,12 +86,22 @@ public class AuditApi extends BaseApiController implements UISecurityEnforced {
         WeblogEntry.PubStatus filterStatus = (status == null || status.isBlank())
                 ? WeblogEntry.PubStatus.PUBLISHED
                 : EntryDtos.parseFilterStatus(status);
+        if (filterStatus == WeblogEntry.PubStatus.TRASHED) {
+            // Unlike EntriesApi.list, this endpoint never widens to the
+            // trash -- see the javadoc above for why. Refused before any
+            // criteria is built or the manager is called.
+            throw ApiException.badRequest(
+                    "The SEO audit does not cover trashed entries; status=TRASHED is not accepted here.");
+        }
 
         WeblogEntrySearchCriteria criteria = new WeblogEntrySearchCriteria();
         criteria.setWeblog(weblog);
         criteria.setStatus(filterStatus);
-        // The only way trash is ever visible: asking for it by name.
-        criteria.setIncludeTrashed(filterStatus == WeblogEntry.PubStatus.TRASHED);
+        // Unreachable false: filterStatus can never be TRASHED past the
+        // guard above, but this stays explicit (rather than omitted) so a
+        // future change to the guard cannot silently flip the default this
+        // relies on -- includeTrashed's own default is false regardless.
+        criteria.setIncludeTrashed(false);
 
         List<WeblogEntry> found = weblogger.getWeblogEntryManager().getWeblogEntries(criteria);
 
