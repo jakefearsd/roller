@@ -7,6 +7,7 @@ import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.restapi.ApiExceptionHandler;
 import org.apache.roller.weblogger.ui.restapi.auth.AdminScoped;
+import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -139,24 +141,38 @@ class WeblogsApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
 
+    /**
+     * WeblogPageCache has no CacheHandler and expires only lazily against
+     * weblog.lastModified -- CacheManager.invalidate is the only thing that
+     * bumps it (see WeblogsApi.update's javadoc), so a save with no
+     * corresponding invalidate call would leave a cached home page serving
+     * stale content indefinitely. CacheManager.invalidate is a static call,
+     * so it is verified with a MockedStatic rather than a Mockito mock.
+     */
     @Test
     void patchUpdatesTheGivenFieldsAndLeavesOthersAlone() throws Exception {
         Weblogger weblogger = mockedWeblogger();
         Weblog weblog = aWeblog("myblog");
         weblog.setTagline("original tagline");
 
-        String body = mockMvc(controllerFor(weblogger))
-                .perform(patch("/v1/weblogs/{handle}", "myblog")
-                        .requestAttr("actionWeblog", weblog)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"New Name\",\"active\":false}"))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+        String body;
+        try (org.mockito.MockedStatic<CacheManager> cache = mockStatic(CacheManager.class)) {
+            body = mockMvc(controllerFor(weblogger))
+                    .perform(patch("/v1/weblogs/{handle}", "myblog")
+                            .requestAttr("actionWeblog", weblog)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"New Name\",\"active\":false}"))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            cache.verify(() -> CacheManager.invalidate(weblog));
+        }
 
         verify(weblogger.getWeblogManager()).saveWeblog(weblog);
         assertEquals("New Name", weblog.getName());
         assertFalse(weblog.getActive());
         assertEquals("original tagline", weblog.getTagline(), "an omitted field must be left untouched");
+        verify(weblogger).flush();
 
         tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
         assertEquals("New Name", json.get("name").asString());
@@ -177,6 +193,7 @@ class WeblogsApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+        verify(weblogger, never()).flush();
     }
 
     /**

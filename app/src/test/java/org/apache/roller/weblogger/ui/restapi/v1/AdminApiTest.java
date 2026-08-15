@@ -326,6 +326,7 @@ class AdminApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getUserManager(), never()).saveUser(any());
+        verify(weblogger, never()).flush();
     }
 
     @Test
@@ -347,6 +348,7 @@ class AdminApiTest {
         assertFalse(user.getEnabled());
         assertEquals("New Name", user.getScreenName());
         assertEquals("new@example.test", user.getEmailAddress());
+        verify(weblogger).flush();
         tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
         assertFalse(json.get("enabled").asBoolean());
     }
@@ -462,6 +464,7 @@ class AdminApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getPropertiesManager(), never()).saveProperties(any());
+        verify(weblogger, never()).flush();
     }
 
     @Test
@@ -522,6 +525,7 @@ class AdminApiTest {
                 org.mockito.ArgumentCaptor.forClass(Map.class);
         verify(weblogger.getPropertiesManager()).saveProperties(captor.capture());
         assertEquals("true", captor.getValue().get("groupblogging.enabled").getValue());
+        verify(weblogger).flush();
 
         tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
         assertEquals(1, json.size());
