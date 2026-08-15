@@ -6,6 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Never commit or push unless explicitly asked.** Wait for the user to request a commit or push. Do not proactively create commits or push to remote.
 - **Work directly on `master`.** This is a solo-developer repo; do not create a feature branch before committing unless explicitly asked.
+- **All development is test-driven.** Write the failing test first, run it and
+  watch it fail for the reason you expect, then write the minimum code that
+  makes it pass. A test that has never been seen to fail has not been shown to
+  test anything — "I wrote the code and then added a test that passes" is not
+  TDD and is the specific thing this rule exists to prevent. The order is not
+  a formality: it is what makes the test a specification rather than a
+  description of whatever the code happens to do.
+- **Acceptance criteria live in the spec, not in the code review.** Any work
+  large enough to get a spec under `docs/superpowers/specs/` states there what
+  "done" means, in terms concrete enough to write a test against. A plan's
+  tasks then derive their tests from those criteria. If a requirement cannot
+  be phrased as something a test could check, it is not yet an acceptance
+  criterion — sharpen it or drop it.
+- **Characterisation tests are the exception that proves the rule.** When
+  extracting or refactoring existing behaviour, the test is written first and
+  is expected to pass immediately against the old code; it exists to prove the
+  refactor changed nothing. Say so in the test's javadoc, so a later reader
+  does not mistake a passing-on-arrival test for one that was written
+  backwards.
 
 ## Build and Development Commands
 
