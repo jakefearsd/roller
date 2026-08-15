@@ -145,15 +145,38 @@ cmd_auth_login() {
     printf 'machine %s\nlogin %s\npassword %s\n' "$host" "$user" "$password" > "$netrc_file"
     unset password
 
-    local token
-    token=$(curl -sS --fail-with-body \
+    # This used to be `token=$(curl ... | jq -r '.token')` -- a bare
+    # command-substitution assignment through a pipe, the exact shape
+    # media_upload's own comment above warns about. On any login failure
+    # (bad password, wrong URL, a 5xx) --fail-with-body makes curl exit 22;
+    # `jq -r '.token'` then parses the perfectly valid {"detail":...} error
+    # body, finds no .token, prints "null", and itself exits 0. `pipefail`
+    # still reports the PIPELINE's status as curl's 22, so `set -e` aborted
+    # the script right there -- before `rm -f`, before `die`, before
+    # anything reached the terminal, because the informative body had been
+    # captured into a variable instead of printed. Splitting the curl call
+    # out of the pipe (capture the raw body, THEN run jq on it as a second,
+    # separate step) and guarding the capture as an `if` condition fixes
+    # both problems at once: set -e cannot fire on it, and the body survives
+    # long enough to pull a `.detail` out of it for the error message.
+    local login_response
+    if ! login_response="$(curl -sS --fail-with-body \
         --netrc-file "$netrc_file" \
         -H "Content-Type: application/json" \
         -X POST "${url}/api/v1/tokens" \
-        -d "$(jq -n --arg label "roller-api cli" '{label: $label, role: "ADMIN"}')" \
-        | jq -r '.token')
-
+        -d "$(jq -n --arg label "roller-api cli" '{label: $label, role: "ADMIN"}')")"; then
+        rm -f "$netrc_file"
+        local detail
+        detail="$(printf '%s' "$login_response" | jq -r '.detail // empty' 2>/dev/null || true)"
+        if [ -n "$detail" ]; then
+            die "Login failed: $detail"
+        fi
+        die "Login failed."
+    fi
     rm -f "$netrc_file"
+
+    local token
+    token="$(printf '%s' "$login_response" | jq -r '.token // empty' 2>/dev/null || true)"
 
     [ -n "$token" ] && [ "$token" != "null" ] || die "Login failed."
 
@@ -964,8 +987,27 @@ main() {
     # a subcommand's own flags are parsed by that subcommand.
     while [ $# -gt 0 ]; do
         case "$1" in
-            --url)   ROLLER_API_URL="$2";   shift 2 ;;
-            --token) ROLLER_API_TOKEN="$2"; shift 2 ;;
+            --url|--token)
+                local flag="$1"
+                [ $# -ge 2 ] || die "$flag requires a value."
+                # A caller who forgot the value entirely --
+                # `roller-api --url auth login --weblog h` -- would otherwise
+                # silently set ROLLER_API_URL="auth", treat "login" as the
+                # top-level command, and fail with a generic usage message
+                # that never hints the flag ate the command. Refuse it here
+                # instead, while the actual mistake is still visible.
+                case "$2" in
+                    auth|entries|media|audit|admin)
+                        die "$flag is missing its value -- got the command '$2' instead. Did you forget the URL/token argument?"
+                        ;;
+                esac
+                if [ "$flag" = "--url" ]; then
+                    ROLLER_API_URL="$2"
+                else
+                    ROLLER_API_TOKEN="$2"
+                fi
+                shift 2
+                ;;
             *) break ;;
         esac
     done
