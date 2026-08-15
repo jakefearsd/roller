@@ -42,7 +42,7 @@ import java.util.Set;
  * table, so this class and {@code bin/db/migrate.sh} can be used
  * interchangeably: whichever runs first, the other skips what is already done.
  *
- * <p>This replaces the pre-fork design, which rendered vendor-specific DDL for
+ * <p>This replaces the earlier design, which rendered vendor-specific DDL for
  * seven databases from Velocity templates and walked a hardcoded
  * {@code upgradeTo400/500/510/520/610} chain keyed off a
  * {@code roller.database.version} row in {@code roller_properties}.
@@ -97,10 +97,10 @@ public class DatabaseInstaller {
     public boolean isCreationRequired() {
         try (Connection con = db.getConnection()) {
             if (!tableExists(con, TRACKING_TABLE)) {
-                // A database predating this fork has Roller tables but no
-                // tracking table. There is no upgrade path from upstream, so
-                // say so plainly rather than silently re-running the baseline
-                // over a populated schema.
+                // A database predating this fork's migration chain has Roller
+                // tables but no tracking table. There is no upgrade path from
+                // upstream, so say so plainly rather than silently re-running
+                // the baseline over a populated schema.
                 if (tableExists(con, "userrole") || tableExists(con, "roller_user")) {
                     throw new IllegalStateException(
                             "This database has Roller tables but no " + TRACKING_TABLE + " table, "

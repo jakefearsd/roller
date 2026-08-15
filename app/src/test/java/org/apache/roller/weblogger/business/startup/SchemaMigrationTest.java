@@ -65,10 +65,10 @@ public class SchemaMigrationTest {
             "weblogentry", "weblogentry_revision");
 
     /**
-     * Tables belonging to features this fork has removed since diverging from
-     * upstream. The baseline must not
-     * recreate them -- that was the whole point of dropping the old
-     * 610-to-620 upgrade script in favour of a clean baseline.
+     * Tables belonging to features this fork has removed since diverging
+     * from upstream. The baseline must not recreate them -- that was the
+     * whole point of dropping the old 610-to-620 upgrade script in favour
+     * of a clean baseline.
      */
     private static final List<String> REMOVED_FEATURE_TABLES = List.of(
             "rag_entry", "rag_group", "rag_group_subscription", "rag_planet",

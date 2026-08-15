@@ -14,12 +14,13 @@
 
 -- Migration: Roller baseline schema
 --
--- The complete Roller schema as of this fork's move to PostgreSQL. This replaces the
--- pre-fork createdb.vm Velocity template and the 310-to-400 ... 610-to-620
--- upgrade chain, which generated per-vendor DDL for seven databases. Roller is
--- now PostgreSQL-only and this is the baseline; there is no upgrade path from
--- 6.1.x, so the tables belonging to the removed Planet Aggregator,
--- Bookmarks/Blogroll and Pings/Trackbacks features simply never exist here.
+-- The complete Roller schema as of this fork's move to PostgreSQL. This
+-- replaces the createdb.vm Velocity template and the 310-to-400 ...
+-- 610-to-620 upgrade chain, which generated per-vendor DDL for seven
+-- databases. Roller is now PostgreSQL-only and this is the baseline; there
+-- is no upgrade path from 6.1.x, so the tables belonging to the removed
+-- Planet Aggregator, Bookmarks/Blogroll and Pings/Trackbacks features
+-- simply never exist here.
 --
 -- Tables are ordered by foreign-key dependency so every constraint can be
 -- declared inline. That keeps the whole migration idempotent using nothing
