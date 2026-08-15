@@ -212,6 +212,25 @@ Two things not to "fix" while here:
 - The German copy has a **one**-argument pattern (`{0}`) where the others have two. `footer.jsp` supplies both and `MessageFormat` ignores the surplus, so this is pre-existing and harmless.
 - The Japanese file escapes `=` and `:` as `\=` and `\:` throughout. Its replacement line above has neither character in the value, so no escaping is needed — but do not reformat anything else in that file.
 
+- [ ] **Step 4b: The install-wizard banner**
+
+Added after Task 2's first review, which caught this: `installer.bannerTitleLeft` is rendered by `WEB-INF/jsps/tiles/bannerInstallation.jsp:23` as the navbar brand on the install wizard — the first screen anyone deploying this ever sees. Four bundles carry it:
+
+```properties
+app/src/main/resources/ApplicationResources.properties:326       installer.bannerTitleLeft=Apache Roller
+app/src/main/resources/ApplicationResources_zh_CN.properties:283 installer.bannerTitleLeft=Apache Roller
+app/src/main/resources/ApplicationResources_de.properties:156    installer.bannerTitleLeft=Apache Roller Weblogger
+app/src/main/resources/ApplicationResources_ja.properties:809    installer.bannerTitleLeft=Apache Roller Weblogger
+```
+
+All four become:
+
+```properties
+installer.bannerTitleLeft=Roller
+```
+
+Also change the file-header comment at `ApplicationResources_ru.properties:20` from `# Russian messages for Apache Roller` to `# Russian messages for Roller`. It is a comment rather than shipped output, but leaving it means Step 6's acceptance grep can never reach zero, and an acceptance check that is expected to fail is worthless.
+
 - [ ] **Step 5: Fix the one test javadoc that quotes the old string**
 
 `RollerVersionTest.java:46` describes the failure it guards against as shipping "a footer that reads `Powered by Apache Roller Weblogger Version  ()`". That quotes the message Step 3 just rewrote. Change it to:
