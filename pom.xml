@@ -22,7 +22,7 @@ limitations under the License.
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.roller</groupId>
     <artifactId>roller-project</artifactId>
-    <version>6.2.0</version>
+    <version>0.1.0</version>
     <packaging>pom</packaging>
 
     <name>Roller</name>
@@ -43,7 +43,7 @@ limitations under the License.
         <jacoco-plugin.version>0.8.15</jacoco-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <roller.version>6.2.0</roller.version>
+        <roller.version>0.1.0</roller.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <maven-surefire.version>3.5.6</maven-surefire.version>
 
