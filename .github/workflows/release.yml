@@ -45,8 +45,8 @@ name: Release
 #   2. Run the browser ITs locally: mvn verify -Pit
 #      (still not run by this workflow -- see main.yml's integration-test
 #      job for why they stay off the push/tag path)
-#   3. git commit -am "release: 0.1.0"
-#   4. git tag v0.1.0 && git push origin master v0.1.0
+#   3. git commit -am "release: 0.1.1"
+#   4. git tag v0.1.1 && git push origin master v0.1.1
 
 on:
   push:
