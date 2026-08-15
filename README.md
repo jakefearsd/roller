@@ -1,6 +1,8 @@
 # Roller
 
-Roller is a Java-based, multi-user blog server. It is a fork of [Apache Roller](http://roller.apache.org), created in 2002 and maintained by the Apache Software Foundation, simplified substantially: PostgreSQL only, Markdown only, no comment subsystem, no Planet aggregator, and a Spring Boot executable WAR in place of the old servlet-container deployment.
+Roller is a Java-based, multi-user blog server, substantially simplified: PostgreSQL only, Markdown only, no comment subsystem, no Planet aggregator, and a Spring Boot executable WAR in place of the old servlet-container deployment.
+
+It is an independent fork of [Apache Roller](https://roller.apache.org), which was created in 2002 and is maintained by the Apache Software Foundation. This project is not affiliated with or endorsed by the ASF.
 
 **Current Version:** 0.1.0 | **License:** Apache 2.0 | **Java:** 25
 
@@ -113,7 +115,7 @@ and one-command upgrades — see the production stack
 | Path               | Description |
 |---------------------|-------------|
 | `app/`             | Main web application (executable WAR) — Spring MVC controllers, JSP admin pages, Velocity blog-rendering templates, business logic |
-| `docs/`            | Design system documentation and example configuration |
+| `docs/`            | Design system documentation, example configuration, and committed specs/implementation plans (`superpowers/`) |
 | `bin/db/`          | Schema migrations and the migrate/install scripts |
 | `deploy/`          | Production deploy script, Caddy/backup config for `docker-compose.prod.yml` |
 | `it-selenium/`     | Browser-driven integration tests, run against the packaged WAR via `mvn verify -Pit` |

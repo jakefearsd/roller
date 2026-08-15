@@ -39,9 +39,9 @@ name: Release
 # racing main.yml's copy on the same commit.
 #
 # To cut a release:
-#   1. mvn versions:set -DnewVersion=0.1.0 -DgenerateBackupPoms=false
-#      (only if the pom version is changing -- the tag drives the image tag
-#      either way)
+#   1. mvn -Pit versions:set -DnewVersion=0.1.1 -DgenerateBackupPoms=false
+#      (-Pit is required: it-selenium is a profile-only module, and without it
+#      its parent version silently stays behind)
 #   2. Run the browser ITs locally: mvn verify -Pit
 #      (still not run by this workflow -- see main.yml's integration-test
 #      job for why they stay off the push/tag path)

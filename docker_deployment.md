@@ -691,16 +691,11 @@ equivalent rather than identical.
 ## Upgrades
 
 Re-download `docker-compose.prod.yml` and `deploy.sh` from the new release
-alongside bumping `IMAGE_VERSION` in `.env` — the compose file and the script
-are **not** guaranteed to be unchanged between releases; this very release is
-a counterexample (it added the `provision` and `analytics-views` services,
-repinned three image digests, and moved the `backup` service from the
-`postgres:16` image onto the app image). Bumping `IMAGE_VERSION` alone runs
-last release's topology against this release's images, which is a real
-category of failure, not a hypothetical one: an operator who did exactly that
-across this same release would keep last release's `backup` service (still
-entrypoint-ed at the bind-mounted path the old compose file used) pointed at
-this release's app image, which does not carry a script at that path at all:
+alongside bumping `IMAGE_VERSION` in `.env`. The compose file and the script
+are **not** guaranteed to be unchanged between releases, so always re-download
+both rather than bumping `IMAGE_VERSION` alone. Keeping an older `backup`
+service definition against a newer app image, for instance, would point its
+entrypoint at a path the new image does not carry:
 
 ```bash
 curl -LO https://github.com/jakefearsd/roller/releases/download/v<new-version>/docker-compose.prod.yml
