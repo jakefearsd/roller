@@ -21,7 +21,7 @@ limitations under the License.
     - set the log4j.configurationFile system property via roller-custom.properties or -D JVM arg -->
 
 <!--useful for testing: monitorInterval="10" -->
-<Configuration status="warn" name="Apache Roller" >
+<Configuration status="warn" name="Roller" >
     
     <!-- folder is automatically created if needed -->
     <properties>

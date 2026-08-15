@@ -17,7 +17,7 @@ limitations under the License.
 -->
 
 <!-- logging config for tests -->
-<Configuration status="warn" name="Apache Roller" >
+<Configuration status="warn" name="Roller" >
     
     <properties>
         <property name="logging.dir">${project.build.directory}/logs</property>

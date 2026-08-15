@@ -152,7 +152,7 @@ test harness.
 
 ## Architecture Overview
 
-Apache Roller is a multi-user blog server built with:
+Roller is a multi-user blog server built with:
 - **Runtime**: Spring Boot 4.1 executable WAR (`java -jar app/target/roller.war`,
   or deployable to an external servlet container) on embedded Tomcat 11,
   targeting Java 25. Servlets/filters are registered in Java config

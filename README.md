@@ -1,4 +1,4 @@
-# Apache Roller
+# Roller
 
 Roller is a Java-based, multi-user blog server. It is a fork of [Apache Roller](http://roller.apache.org), created in 2002 and maintained by the Apache Software Foundation, simplified substantially: PostgreSQL only, Markdown only, no comment subsystem, no Planet aggregator, and a Spring Boot executable WAR in place of the old servlet-container deployment.
 
@@ -122,12 +122,8 @@ and one-command upgrades — see the production stack
 
 ## Documentation
 
-Detailed guides are available in the [`docs/`](docs/) directory:
-
-- **[Install Guide](docs/roller-install-guide.adoc)** — Server setup, database configuration, and deployment
-- **[User Guide](docs/roller-user-guide.adoc)** — Blogging, media management, and administration
-- **[Template Guide](docs/roller-template-guide.adoc)** — Theme creation, Velocity templates, and page models
 - **[Production Deployment Runbook](docker_deployment.md)** — Fresh-VPS Docker deployment, TLS, backups, upgrades
+- **[Design System](docs/design/design-system.md)** — the admin UI's tokens, type scale and layout rules
 
 ---
 
