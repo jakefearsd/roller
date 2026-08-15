@@ -29,6 +29,7 @@ import org.apache.roller.weblogger.ui.restapi.ApiProblemWriter;
 import org.apache.roller.weblogger.ui.restapi.auth.ApiAccessDeniedHandler;
 import org.apache.roller.weblogger.ui.restapi.auth.ApiAuthenticationEntryPoint;
 import org.apache.roller.weblogger.ui.restapi.auth.ApiTokenAuthFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -365,6 +366,47 @@ public class SecurityConfig {
     public ApiTokenAuthFilter apiTokenAuthFilter(ApiProblemWriter apiProblemWriter) {
         return new ApiTokenAuthFilter(
                 () -> WebloggerFactory.getWeblogger().getApiTokenManager(), apiProblemWriter);
+    }
+
+    /**
+     * Stops Boot from auto-registering {@code apiTokenAuthFilter} as a
+     * SECOND, container-wide servlet filter on {@code /*}.
+     *
+     * <p>Any bean whose type implements {@code jakarta.servlet.Filter} --
+     * {@code ApiTokenAuthFilter} does, via {@code OncePerRequestFilter} --
+     * gets auto-registered by Boot's own
+     * {@code ServletContextInitializerBeans} unless something else already
+     * claims that bean instance. {@code apiSecurityFilterChain}'s {@code
+     * .addFilterBefore(apiTokenAuthFilter, ...)} wires the SAME instance
+     * into Spring Security's OWN internal chain, scoped correctly by that
+     * chain's {@code securityMatcher("/api/**")} -- but it does not stop
+     * Boot's separate auto-registration, which knows nothing about Security
+     * matchers and maps to every URL. Both existed simultaneously: every
+     * request to the whole application -- JSP admin pages, static assets,
+     * webjars, everything -- ran this filter's throttle check a SECOND time,
+     * keyed by client IP for anything without a {@code Bearer} header. A
+     * single admin page load easily costs 120+ sub-resource requests, so
+     * this had the API's 60-second/120-request throttle answering 429 to
+     * ordinary page loads across the entire site, not just {@code /api/**}
+     * abuse -- caught by {@code ApiIT}, the only layer that boots a real
+     * embedded servlet container and therefore the only layer that can see
+     * Boot's own auto-registration behaviour at all.
+     *
+     * <p>{@code setEnabled(false)} on a {@link FilterRegistrationBean}
+     * wrapping the SAME filter instance is the standard fix: Boot sees the
+     * filter is already claimed by an explicit registration and skips its
+     * own auto-registration, and the explicit registration itself never
+     * maps the filter onto the servlet container either -- leaving
+     * {@code apiSecurityFilterChain}'s internal wiring as the only place
+     * this filter ever actually runs.
+     */
+    @Bean
+    public FilterRegistrationBean<ApiTokenAuthFilter> apiTokenAuthFilterRegistration(
+            ApiTokenAuthFilter apiTokenAuthFilter) {
+        FilterRegistrationBean<ApiTokenAuthFilter> registration =
+                new FilterRegistrationBean<>(apiTokenAuthFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean

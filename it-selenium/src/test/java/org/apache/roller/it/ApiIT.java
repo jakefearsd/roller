@@ -17,15 +17,20 @@
  */
 package org.apache.roller.it;
 
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.imageio.ImageIO;
 
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
@@ -38,16 +43,19 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * The automation API against the packaged, running WAR -- no browser.
  *
- * <p>MockMvc never runs a servlet container, so three things in this wave
- * have never been proved for real before this class: that the container
- * really strips the {@code /api} servlet-path prefix so a controller mapped
- * at {@code /v1/...} is reachable at {@code /api/v1/...}; that the real
- * Spring Security filter chain (not filters called directly with mocks, as
- * the unit tests do) answers an unauthenticated call with 401 and mints no
- * session; and, for the two tests added beyond the brief, that springdoc's
- * own auto-registered document mapping survives the same prefix rewrite and
- * that the full Basic-auth-mint / Bearer-auth-use bootstrap actually works
- * end to end against a real server.
+ * <p>MockMvc never runs a servlet container, so this class proves three
+ * things nothing before it could: that the container really strips the
+ * {@code /api} servlet-path prefix so a controller mapped at
+ * {@code /v1/...} is reachable at {@code /api/v1/...}; that the real Spring
+ * Security filter chain (not filters called directly with mocks, as the
+ * unit tests do) answers an unauthenticated call with 401, mints no
+ * session on either a failure or a success, and carries that statelessness
+ * through the full Basic-auth-mint / Bearer-auth-use / revoke bootstrap
+ * cycle end to end against a real server; and true multipart handling
+ * through the real Tomcat parser and rendition/EXIF/BlurHash pipeline, not
+ * {@code MockMultipartFile}. Also confirms (beyond the brief) that
+ * springdoc's own auto-registered document mapping survives the same
+ * prefix rewrite.
  *
  * <p>This is acceptance testing, not TDD: every behaviour here was already
  * driven out by a failing unit test in Tasks 1-17. A failure in this class
@@ -97,6 +105,12 @@ class ApiIT extends RollerIT {
         HttpResponse<String> response = get("/api/v1/ping", null);
         assertEquals(200, response.statusCode());
         assertTrue(response.body().contains("\"status\""));
+        // Statelessness is easiest to get wrong on a call that SUCCEEDS --
+        // that is exactly where Spring Security would otherwise persist the
+        // SecurityContext into a session. Asserting this only on the 401
+        // (below) would miss a misconfiguration that only shows up once
+        // authentication/authorization actually happens.
+        assertNoSessionCookie(response);
     }
 
     /**
@@ -113,14 +127,19 @@ class ApiIT extends RollerIT {
     void anUnauthenticatedRequestIsRefusedWithoutASessionCookie() throws Exception {
         HttpResponse<String> response = get("/api/v1/me", null);
         assertEquals(401, response.statusCode());
-        assertTrue(response.headers().allValues("Set-Cookie").stream()
-                        .noneMatch(c -> c.startsWith("JSESSIONID")),
-                "the API chain is stateless -- it must not mint a session");
+        assertNoSessionCookie(response);
     }
 
     @Test
     void aBadBearerTokenIsRefused() throws Exception {
-        assertEquals(401, get("/api/v1/me", "rlr_definitelynotreal").statusCode());
+        HttpResponse<String> response = get("/api/v1/me", "rlr_definitelynotreal");
+        assertEquals(401, response.statusCode());
+        // Status alone could pass against a container-level 401 (e.g. an
+        // HTML error page) that never reached ApiAuthenticationEntryPoint.
+        assertTrue(response.headers().firstValue("Content-Type").orElse("")
+                        .startsWith("application/problem+json"),
+                "a bad bearer token must be refused by the real API error path, "
+                        + "not by some other 401 that happens to share its status code");
     }
 
     @Test
@@ -160,28 +179,177 @@ class ApiIT extends RollerIT {
      * {@code SecurityContext} it built by hand, so nothing before this test
      * has proved that a token minted through the real HTTP surface is
      * actually usable on the real HTTP surface afterwards.
+     *
+     * <p>Also revokes the token it minted and re-checks {@code /v1/me} with
+     * it: {@code revoke()}'s {@code weblogger.flush()} is otherwise covered
+     * only by a mock {@code verify(weblogger).flush()}, which proves the
+     * call was made, not that it committed -- precisely the gap that let the
+     * {@code issue()} version of this same bug ship undetected. This also
+     * stops the run leaving a live, unscoped, ADMIN-role token behind every
+     * time it executes.
      */
     @Test
     void aTokenMintedThroughTheApiWorksOnASubsequentCall() throws Exception {
+        MintedToken minted = mintToken("ApiIT smoke token", "ADMIN");
+        assertNoSessionCookie(minted.mintResponse());
+
+        HttpResponse<String> me = get("/api/v1/me", minted.raw());
+        assertEquals(200, me.statusCode(), me.body());
+        assertEquals(ADMIN_USERNAME, extractJsonStringField(me.body(), "userName"),
+                "the minted token did not authenticate as " + ADMIN_USERNAME + ": " + me.body());
+
+        HttpRequest revoke = HttpRequest.newBuilder(URI.create(baseUrl() + "/api/v1/tokens/" + minted.id()))
+                .timeout(Duration.ofSeconds(20))
+                .header("Authorization", basicAuthHeader())
+                .DELETE()
+                .build();
+        HttpResponse<String> revokeResponse = client.send(revoke, HttpResponse.BodyHandlers.ofString());
+        assertEquals(204, revokeResponse.statusCode(), revokeResponse.body());
+
+        HttpResponse<String> meAfterRevoke = get("/api/v1/me", minted.raw());
+        assertEquals(401, meAfterRevoke.statusCode(),
+                "a revoked token must stop authenticating immediately, not after some later "
+                        + "unrelated request happens to flush the database write");
+    }
+
+    /**
+     * True multipart handling through the real rendition/EXIF/BlurHash
+     * pipeline -- the third thing named in this task's brief that only a
+     * real servlet container can prove, alongside prefix mapping and the
+     * real filter chain. {@code MediaApiTest} drives {@code upload()} with
+     * {@code MockMultipartFile}, which never touches Tomcat's multipart
+     * parser, {@code spring.servlet.multipart.max-request-size}, or a real
+     * image decode. A small but genuine JPEG, POSTed as real
+     * {@code multipart/form-data}, must come back 201 with a view carrying
+     * real rendition metadata (width/height from the decoded image,
+     * blurhash from the placeholder generator) -- not just echo the upload
+     * back unprocessed.
+     *
+     * <p>{@code uploads.enabled} is off in the seed IT fixture (see
+     * {@code ThemeMatrixIT}, the other class that needs it on), so this
+     * test drives the real Admin Settings page through the browser this
+     * class already inherits from {@code RollerIT} to flip it on and back
+     * off -- the same {@code loginAsAdmin()}/{@code setGlobalFlag()}/
+     * {@code finally}-restore discipline every other caller of a global
+     * runtime flag in this suite uses, since the flag is shared by the
+     * whole running instance.
+     */
+    @Test
+    void uploadingARealImageThroughRealMultipartReachesTheRenditionPipeline() throws Exception {
+        loginAsAdmin();
+        boolean uploadsWere = setGlobalFlag("uploads.enabled", true);
+        MintedToken minted = mintToken("ApiIT multipart token", "ADMIN");
+        try {
+            byte[] jpeg = tinyJpeg();
+            String boundary = "ApiITBoundary" + System.nanoTime();
+            byte[] body = multipartBody(boundary, "file", "apiit-tiny.jpg", "image/jpeg", jpeg);
+
+            HttpRequest upload = HttpRequest.newBuilder(
+                            URI.create(baseUrl() + "/api/v1/weblogs/" + WEBLOG_HANDLE + "/media"))
+                    .timeout(Duration.ofSeconds(30))
+                    .header("Authorization", "Bearer " + minted.raw())
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .POST(BodyPublishers.ofByteArray(body))
+                    .build();
+            HttpResponse<String> response = client.send(upload, HttpResponse.BodyHandlers.ofString());
+            assertEquals(201, response.statusCode(), response.body());
+
+            String uploadBody = response.body();
+            assertEquals("created", extractJsonStringField(uploadBody, "status"), uploadBody);
+            assertEquals("image/jpeg", extractJsonStringField(uploadBody, "contentType"), uploadBody);
+            assertTrue(extractJsonIntField(uploadBody, "width") > 0,
+                    "width must come from actually decoding the uploaded image: " + uploadBody);
+            assertTrue(extractJsonIntField(uploadBody, "height") > 0,
+                    "height must come from actually decoding the uploaded image: " + uploadBody);
+            assertFalse(extractJsonStringField(uploadBody, "blurhash").isBlank(),
+                    "a real upload always gets a BlurHash placeholder: " + uploadBody);
+
+            String mediaId = extractJsonStringField(uploadBody, "id");
+            HttpRequest delete = HttpRequest.newBuilder(URI.create(
+                            baseUrl() + "/api/v1/weblogs/" + WEBLOG_HANDLE + "/media/" + mediaId))
+                    .timeout(Duration.ofSeconds(20))
+                    .header("Authorization", "Bearer " + minted.raw())
+                    .DELETE()
+                    .build();
+            HttpResponse<String> deleteResponse = client.send(delete, HttpResponse.BodyHandlers.ofString());
+            assertEquals(204, deleteResponse.statusCode(), deleteResponse.body());
+        } finally {
+            revokeToken(minted.id());
+            setGlobalFlag("uploads.enabled", uploadsWere);
+            logout();
+        }
+    }
+
+    // ---------------------------------------------------------------- utils
+
+    private record MintedToken(String id, String raw, HttpResponse<String> mintResponse) { }
+
+    private MintedToken mintToken(String label, String role) throws Exception {
         HttpRequest mint = HttpRequest.newBuilder(URI.create(baseUrl() + "/api/v1/tokens"))
                 .timeout(Duration.ofSeconds(20))
                 .header("Authorization", basicAuthHeader())
                 .header("Content-Type", "application/json")
-                .POST(BodyPublishers.ofString("{\"label\":\"ApiIT smoke token\",\"role\":\"ADMIN\"}"))
+                .POST(BodyPublishers.ofString("{\"label\":\"" + label + "\",\"role\":\"" + role + "\"}"))
                 .build();
         HttpResponse<String> mintResponse = client.send(mint, HttpResponse.BodyHandlers.ofString());
         assertEquals(201, mintResponse.statusCode(), mintResponse.body());
 
-        String rawToken = extractJsonStringField(mintResponse.body(), "token");
-        assertFalse(rawToken.isBlank(), "mint response carried no raw token: " + mintResponse.body());
-
-        HttpResponse<String> me = get("/api/v1/me", rawToken);
-        assertEquals(200, me.statusCode(), me.body());
-        assertEquals(ADMIN_USERNAME, extractJsonStringField(me.body(), "userName"),
-                "the minted token did not authenticate as " + ADMIN_USERNAME + ": " + me.body());
+        String raw = extractJsonStringField(mintResponse.body(), "token");
+        assertFalse(raw.isBlank(), "mint response carried no raw token: " + mintResponse.body());
+        String id = extractJsonStringField(mintResponse.body(), "id");
+        return new MintedToken(id, raw, mintResponse);
     }
 
-    // ---------------------------------------------------------------- utils
+    private void revokeToken(String id) throws Exception {
+        HttpRequest revoke = HttpRequest.newBuilder(URI.create(baseUrl() + "/api/v1/tokens/" + id))
+                .timeout(Duration.ofSeconds(20))
+                .header("Authorization", basicAuthHeader())
+                .DELETE()
+                .build();
+        client.send(revoke, HttpResponse.BodyHandlers.discarding());
+    }
+
+    /** A minimal but genuine, decodable JPEG -- not a stub or a fixture file. */
+    private static byte[] tinyJpeg() throws Exception {
+        BufferedImage image = new BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB);
+        var graphics = image.getGraphics();
+        graphics.setColor(Color.RED);
+        graphics.fillRect(0, 0, 8, 8);
+        graphics.dispose();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", out);
+        return out.toByteArray();
+    }
+
+    /** Hand-built because {@code java.net.http.HttpClient} has no multipart body publisher. */
+    private static byte[] multipartBody(String boundary, String fieldName, String filename,
+            String contentType, byte[] content) {
+        String preamble = "--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"" + fieldName + "\"; filename=\"" + filename + "\"\r\n"
+                + "Content-Type: " + contentType + "\r\n\r\n";
+        String epilogue = "\r\n--" + boundary + "--\r\n";
+        byte[] preambleBytes = preamble.getBytes(StandardCharsets.UTF_8);
+        byte[] epilogueBytes = epilogue.getBytes(StandardCharsets.UTF_8);
+        byte[] body = new byte[preambleBytes.length + content.length + epilogueBytes.length];
+        System.arraycopy(preambleBytes, 0, body, 0, preambleBytes.length);
+        System.arraycopy(content, 0, body, preambleBytes.length, content.length);
+        System.arraycopy(epilogueBytes, 0, body, preambleBytes.length + content.length, epilogueBytes.length);
+        return body;
+    }
+
+    private static void assertNoSessionCookie(HttpResponse<?> response) {
+        assertTrue(response.headers().allValues("Set-Cookie").stream()
+                        .noneMatch(c -> c.startsWith("JSESSIONID")),
+                "the API chain is stateless -- it must not mint a session");
+    }
+
+    private static int extractJsonIntField(String json, String field) {
+        Matcher m = Pattern.compile("\"" + field + "\"\\s*:\\s*(-?\\d+)").matcher(json);
+        if (!m.find()) {
+            fail("integer field \"" + field + "\" not found in: " + json);
+        }
+        return Integer.parseInt(m.group(1));
+    }
 
     /**
      * Pulls a string field's value out of a JSON object body by regex rather

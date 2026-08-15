@@ -2,6 +2,7 @@ package org.apache.roller.weblogger.ui.restapi.auth;
 
 import jakarta.servlet.FilterChain;
 import org.apache.roller.weblogger.business.ApiTokenManager;
+import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.restapi.ApiProblemWriter;
@@ -75,6 +76,67 @@ class ApiTokenAuthFilterTest {
         // unauthenticated request reaches it and gets a 401 there.
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(chain).doFilter(any(), any());
+    }
+
+    /**
+     * This filter runs inside the security chain at order 40;
+     * {@code PersistenceSessionFilter} (the only thing that otherwise ever
+     * releases the current thread's persistence session) is order 60. When
+     * authenticate() does not establish a SecurityContext, the request is
+     * about to be refused by {@code authorizeHttpRequests} --
+     * {@code ExceptionTranslationFilter} hands the 401 straight to {@code
+     * ApiAuthenticationEntryPoint} without ever calling the outer chain, so
+     * order 60 never runs. Left unreleased, the EntityManager this filter's
+     * own digest lookup just bound to this Tomcat worker thread would stay
+     * open -- and bound to whatever persistence context it accumulated --
+     * until some unrelated later request on the same thread happened to
+     * reach order 60 and inherit it.
+     */
+    @Test
+    void aFailedAuthenticationReleasesThePersistenceSessionSinceOrder60NeverRuns() throws Exception {
+        MockWeblogger mocks = MockWeblogger.install();
+        try {
+            ApiTokenManager mgr = mock(ApiTokenManager.class);
+            when(mgr.authenticate(anyString())).thenReturn(null);
+
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/me");
+            request.addHeader("Authorization", "Bearer rlr_bad");
+            FilterChain chain = mock(FilterChain.class);
+
+            new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
+                    .doFilter(request, new MockHttpServletResponse(), chain);
+
+            verify(mocks.weblogger()).release();
+        } finally {
+            MockWeblogger.uninstall();
+        }
+    }
+
+    /**
+     * The converse of the test above, and just as load-bearing: a
+     * successful Bearer authentication means {@code authorizeHttpRequests}
+     * WILL allow the request through to order 60, so releasing here too
+     * would close the EntityManager out from under the controller that is
+     * about to run on it. Order 60 must stay the sole releaser on this path.
+     */
+    @Test
+    void aSuccessfulAuthenticationDoesNotReleaseHere() throws Exception {
+        MockWeblogger mocks = MockWeblogger.install();
+        try {
+            ApiTokenManager mgr = mock(ApiTokenManager.class);
+            when(mgr.authenticate("rlr_good")).thenReturn(token("testblog", ApiToken.Role.POST));
+
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/ping");
+            request.addHeader("Authorization", "Bearer rlr_good");
+            FilterChain chain = mock(FilterChain.class);
+
+            new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
+                    .doFilter(request, new MockHttpServletResponse(), chain);
+
+            verify(mocks.weblogger(), never()).release();
+        } finally {
+            MockWeblogger.uninstall();
+        }
     }
 
     @Test

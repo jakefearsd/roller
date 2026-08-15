@@ -104,6 +104,43 @@ class ApiTokenManagerTest {
     }
 
     /**
+     * lastUsedAt is read by an operator deciding whether a token is still in
+     * daily use before revoking it -- it must be durable the moment
+     * authenticate() stamps it, not depend on whatever request happened to
+     * carry it also calling flush(). A read-only endpoint (GET /api/v1/me)
+     * never flushes anything of its own, so before this test, a token used
+     * only for reads kept lastUsedAt null forever: the write happened in a
+     * transaction nobody ever committed, and {@code PersistenceSessionFilter}
+     * / {@code TestUtils.endSession(false)}'s end-of-request release() rolls
+     * back whatever is still open.
+     *
+     * <p>Simulates exactly that: authenticate() (which stamps lastUsedAt),
+     * then release() with NO flush -- then re-reads the token in a FRESH
+     * session (release() clears the thread-local EntityManager, so the next
+     * call opens a new one) to prove the stamp is durable in the database,
+     * not just visible in the persistence context that wrote it.
+     */
+    @Test
+    void authenticatingATokenMakesLastUsedAtDurableEvenWithoutTheCallerFlushing() throws Exception {
+        String raw = mgr.issueToken(user, "watched", null, ApiToken.Role.READ, null).rawToken();
+        TestUtils.endSession(true);
+
+        ApiToken found = mgr.authenticate(raw);
+        assertNotNull(found);
+        assertNotNull(found.getLastUsedAt(), "authenticate() should have stamped lastUsedAt");
+
+        // No flush: this is what a read-only request actually does.
+        TestUtils.endSession(false);
+
+        ApiToken reloaded = mgr.getTokens(user).stream()
+                .filter(t -> t.getId().equals(found.getId()))
+                .findFirst().orElseThrow();
+        assertNotNull(reloaded.getLastUsedAt(),
+                "lastUsedAt must survive a release() with no flush, or an operator reading it "
+                        + "would see null forever for a token used only for reads");
+    }
+
+    /**
      * A missing or blank id is client input, same as an unknown one -- it
      * must fail closed (false), not throw. EntityManager.find (behind
      * strategy.load) throws IllegalArgumentException on a null primary key,

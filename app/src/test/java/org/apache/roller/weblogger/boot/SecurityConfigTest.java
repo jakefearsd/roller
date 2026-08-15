@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -185,6 +186,33 @@ class SecurityConfigTest {
         if (context != null) {
             context.close();
         }
+    }
+
+    /**
+     * {@code ApiTokenAuthFilter} implements {@code jakarta.servlet.Filter}
+     * (via {@code OncePerRequestFilter}) and is exposed as a plain
+     * {@code @Bean} -- Boot auto-registers any such bean as a container-wide
+     * filter on {@code /*} unless something disables that. Without the
+     * {@code apiTokenAuthFilterRegistration} bean, the SAME filter instance
+     * ran twice per request: once (correctly) inside
+     * {@code apiSecurityFilterChain}'s own scoped chain, and once (wrongly)
+     * on every single request to the whole application -- JSP admin pages,
+     * static assets, everything -- applying the API's throttle keyed by
+     * client IP to ordinary page loads. A busy admin page's sub-resources
+     * alone are enough to cross the 120-request/60-second threshold and 429
+     * the whole site for that client, nothing to do with {@code /api/**}
+     * abuse. Only a real embedded servlet container running Boot's own
+     * {@code ServletContextInitializerBeans} logic can see this at all --
+     * {@code ApiIT} is what actually caught it, via a heavy admin-page
+     * browser flow tripping 429s on {@code roller.js} and webfont requests.
+     */
+    @Test
+    void apiTokenAuthFilterIsNotAutoRegisteredAsAContainerWideFilter() {
+        FilterRegistrationBean<?> registration =
+                context.getBean("apiTokenAuthFilterRegistration", FilterRegistrationBean.class);
+        assertFalse(registration.isEnabled(),
+                "apiTokenAuthFilter must not be auto-registered on /* -- it is already wired into "
+                        + "apiSecurityFilterChain, scoped to /api/**, via addFilterBefore");
     }
 
     // Route -> SecurityConfig#securityFilterChain pattern it pins:

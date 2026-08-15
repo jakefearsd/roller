@@ -87,6 +87,18 @@ public class JPAApiTokenManagerImpl implements ApiTokenManager {
      * Coarse on purpose: writing last_used_at on every call would make each
      * API read a write too. An hour's resolution is plenty for deciding
      * whether a token is still in use before revoking it.
+     *
+     * <p>{@code strategy.flush()} after the store is not optional. This
+     * write only begins a transaction; nothing commits it automatically
+     * (see {@code TokensApi}'s class javadoc for the same trap one layer
+     * up). {@code authenticate()} runs from {@code ApiTokenAuthFilter} on
+     * every Bearer-authenticated request, including plain reads (e.g.
+     * {@code GET /api/v1/me}) that never call {@code weblogger.flush()}
+     * anywhere in their own path -- without this flush, {@code lastUsedAt}
+     * committed only when the request happened to also reach a write
+     * endpoint, and stayed null forever for a token used exclusively for
+     * reads. That field is not decorative: an operator reads it to decide
+     * whether a token is still in daily use before revoking it.
      */
     private void touchLastUsed(ApiToken token) throws WebloggerException {
         long now = System.currentTimeMillis();
@@ -94,6 +106,7 @@ public class JPAApiTokenManagerImpl implements ApiTokenManager {
         if (last == null || now - last.getTime() > LAST_USED_RESOLUTION_MS) {
             token.setLastUsedAt(new Timestamp(now));
             strategy.store(token);
+            strategy.flush();
         }
     }
 

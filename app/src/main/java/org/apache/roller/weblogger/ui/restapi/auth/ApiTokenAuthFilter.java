@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.ApiTokenManager;
+import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.ApiProblem;
@@ -95,7 +96,40 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
         problemWriter.write(response, problem);
     }
 
+    /**
+     * This filter runs inside the security chain at order 40;
+     * {@code PersistenceSessionFilter} -- the only thing that otherwise
+     * ever releases the current request's persistence session -- is order
+     * 60. The digest lookup above (and, for a usable token, {@code
+     * touchLastUsed}'s write) binds an EntityManager to this Tomcat worker
+     * thread regardless of outcome. When this method fails to establish a
+     * SecurityContext, {@code authorizeHttpRequests} is about to refuse the
+     * request and {@code ExceptionTranslationFilter} hands the 401 straight
+     * to {@code ApiAuthenticationEntryPoint} without ever calling the outer
+     * chain -- order 60 never runs, and without the explicit release below
+     * the leaked EntityManager stays bound to this thread, with whatever
+     * persistence context it accumulated, until some unrelated later
+     * request on the same thread happens to reach order 60 and inherit it.
+     *
+     * <p>The converse matters just as much: on a SUCCESSFUL authentication
+     * this method must NOT release. {@code authorizeHttpRequests}' only
+     * rule is {@code anyRequest().authenticated()}, so setting the context
+     * here reliably means the request proceeds through the rest of the
+     * chain to order 60, whose release() is meant to be the one that runs
+     * -- the controller downstream is still going to use this same
+     * EntityManager. Releasing on both branches was considered and
+     * rejected; two other routes were also considered instead of this
+     * localized try/finally (see {@code TokensApi}'s class javadoc's
+     * cross-reference for the full writeup): reordering
+     * {@code PersistenceSessionFilter} ahead of the security chain would
+     * fix this cleanly in principle, but that filter's URL pattern is
+     * {@code /*} and its order is a single global number, not scoped to
+     * {@code /api/*} -- moving it changes behaviour for the JSP admin path's
+     * own early security rejections (bad login, CSRF) too, which is a
+     * bigger, differently-risky change than this task's scope covers.
+     */
     private void authenticate(String rawToken) {
+        boolean authenticated = false;
         try {
             ApiToken token = tokenManager.get().authenticate(rawToken);
             if (token == null) {
@@ -108,9 +142,14 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
                     userName, null, List.of(new SimpleGrantedAuthority("api")));
             auth.setDetails(principal);
             SecurityContextHolder.getContext().setAuthentication(auth);
+            authenticated = true;
         } catch (Exception e) {
             // Never let a lookup failure become an authenticated request.
             log.error("Error authenticating API token", e);
+        } finally {
+            if (!authenticated && WebloggerFactory.isBootstrapped()) {
+                WebloggerFactory.getWeblogger().release();
+            }
         }
     }
 }
