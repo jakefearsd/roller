@@ -357,6 +357,7 @@ git commit -m "startup: name upstream rather than a version this fork no longer 
 **Files:**
 - Modify: `README.md:3,5,58`
 - Modify: `CLAUDE.md:132`
+- Modify: `app/pom.xml:245` (a comment — the version elements were already handled in Task 1)
 - Modify: `bin/db/migrations/README.md:7,15`
 - Modify: `bin/db/migrations/V001__schema_migrations.sql:22`
 - Modify: `bin/db/migrations/V002__baseline_schema.sql:15,17,19-20`
@@ -396,6 +397,25 @@ Line 132, from `Roller is **PostgreSQL-only** as of 6.2.0. Development, test, an
 Roller is **PostgreSQL-only** since this fork diverged from Apache Roller 6.1.x.
 Development, test, and production all
 ```
+
+- [ ] **Step 2b: The comment in `app/pom.xml`**
+
+Task 1 changed this file's `<version>` elements but deliberately left its prose alone. Line 245 still reads:
+
+```xml
+        <!-- PostgreSQL is the only database Roller supports as of 6.2.0.
+```
+
+Change it to:
+
+```xml
+        <!-- PostgreSQL is the only database Roller supports since this fork
+             diverged from Apache Roller 6.1.x.
+```
+
+Keep the following two comment lines (`Version comes from Spring Boot's BOM; …`) exactly as they are, and mind the continuation indentation so the comment block still lines up.
+
+This step was added after Task 1's review: the original plan's sweep list missed this file, which would have made Step 8's verification fail with an unexplained third match.
 
 - [ ] **Step 3: The migrations README**
 
