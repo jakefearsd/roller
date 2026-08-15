@@ -113,7 +113,7 @@ and one-command upgrades — see the production stack
 | Path               | Description |
 |---------------------|-------------|
 | `app/`             | Main web application (executable WAR) — Spring MVC controllers, JSP admin pages, Velocity blog-rendering templates, business logic |
-| `docs/`            | Install, User, and Template guides in AsciiDoc format |
+| `docs/`            | Design system documentation and example configuration |
 | `bin/db/`          | Schema migrations and the migrate/install scripts |
 | `deploy/`          | Production deploy script, Caddy/backup config for `docker-compose.prod.yml` |
 | `it-selenium/`     | Browser-driven integration tests, run against the packaged WAR via `mvn verify -Pit` |
