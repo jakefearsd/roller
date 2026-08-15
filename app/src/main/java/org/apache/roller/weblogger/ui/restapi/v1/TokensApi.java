@@ -11,6 +11,7 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.auth.ApiPrincipal;
 import org.apache.roller.weblogger.ui.restapi.dto.TokenDtos;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -32,6 +33,38 @@ import org.springframework.web.bind.annotation.RestController;
  * why the chain cannot cleanly forbid a Bearer caller from reaching this
  * endpoint, and {@code TokensApiTest#aBearerAuthenticatedCallerCannotMintAToken}
  * for the test that would catch a regression.
+ *
+ * <p>{@code weblogger} is injected {@code @Lazy}, the same discipline every
+ * other business-bean dependency in this codebase follows (see
+ * {@code WebloggerBeanConfig} and {@code BaseApiController}): the manager
+ * chain behind {@link Weblogger} is only safe to construct after {@code
+ * WebloggerStartup.prepare()} has run, which happens on first request, not
+ * during Spring context refresh. An eager constructor parameter here once
+ * forced {@code DatabaseProvider} to instantiate during bean-graph wiring --
+ * before {@code prepare()} had ever run -- which failed the whole
+ * application context and meant the WAR never started at all;
+ * {@code ApiIT} (a real-servlet-container test, the only layer that boots
+ * the packaged WAR at all) is what caught it, since a MockMvc unit test
+ * builds this controller with {@code new TokensApi(...)} and never goes
+ * through Spring's bean graph in the first place.
+ *
+ * <p>{@link #issue} and {@link #revoke} each call {@code weblogger.flush()}
+ * after their write, the same as every other write endpoint in {@code
+ * ui.restapi.v1} ({@code CategoriesApi}, {@code PagesApi}, {@code
+ * EntriesWriteApi}, {@code MediaApi}, {@code AdminApi}, {@code WeblogsApi}).
+ * A JPA write here only begins a transaction ({@code
+ * JPAPersistenceStrategy}'s {@code beginTransactionIfNeeded}); nothing
+ * commits it automatically, and {@code PersistenceSessionFilter}'s
+ * end-of-request {@code release()} rolls back whatever is still open rather
+ * than committing it. Both methods here were missing the call: a token
+ * mint returned 201 with a real-looking secret that had already been rolled
+ * back by the time the response reached the caller, and a revoke answered
+ * 204 while leaving the token fully usable. {@code ApiIT
+ * .aTokenMintedThroughTheApiWorksOnASubsequentCall} is the end-to-end test
+ * that caught the mint half -- a token minted through Basic auth immediately
+ * failed to authenticate as a Bearer token on the very next request, which a
+ * MockMvc test cannot see because it never runs a real transaction boundary
+ * at all.
  */
 @RestController
 @RequestMapping("/v1/tokens")
@@ -39,7 +72,7 @@ public class TokensApi {
 
     private final Weblogger weblogger;
 
-    public TokensApi(Weblogger weblogger) {
+    public TokensApi(@Lazy Weblogger weblogger) {
         this.weblogger = weblogger;
     }
 
@@ -58,6 +91,7 @@ public class TokensApi {
 
         ApiTokenManager.Issued issued = weblogger.getApiTokenManager()
                 .issueToken(user, request.label(), request.weblog(), role, expiresAt);
+        weblogger.flush();
 
         TokenDtos.TokenView view = TokenDtos.toView(issued.token());
         return ResponseEntity.status(HttpStatus.CREATED).body(new TokenDtos.IssuedToken(issued.rawToken(), view));
@@ -91,6 +125,7 @@ public class TokensApi {
             // enumerate another's tokens.
             throw ApiException.notFound("No such token.");
         }
+        weblogger.flush();
         return ResponseEntity.noContent().build();
     }
 

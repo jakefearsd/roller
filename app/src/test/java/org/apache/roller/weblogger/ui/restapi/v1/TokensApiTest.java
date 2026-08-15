@@ -18,6 +18,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -194,6 +195,11 @@ class TokensApiTest {
         // The raw secret appears exactly once in the whole body -- nowhere
         // in the metadata view, under any field name.
         assertEquals(1, countOccurrences(response, rawToken));
+
+        // issueToken() only begins a transaction; without this the mint
+        // response above would be rolled back by the time the caller could
+        // ever use it. See TokensApi's class javadoc.
+        verify(weblogger).flush();
     }
 
     private static int countOccurrences(String haystack, String needle) {
@@ -204,6 +210,32 @@ class TokensApiTest {
             index += needle.length();
         }
         return count;
+    }
+
+    /**
+     * The success path for revoke() -- Basic-authenticated, owns the token,
+     * {@code ApiTokenManager.revoke} reports true. Nothing else in this
+     * class ever reaches a 204, so this is also the only unit test that
+     * exercises {@code weblogger.flush()} on this path: {@code revoke}, like
+     * {@code issue}, only begins a JPA transaction and does not commit it on
+     * its own ({@code JPAPersistenceStrategy}) -- omitting the flush left a
+     * "successful" revoke rolled back by {@code PersistenceSessionFilter}'s
+     * end-of-request release, so the answer was 204 while the token stayed
+     * fully usable. See {@code TokensApi}'s class javadoc.
+     */
+    @Test
+    void revokingYourOwnTokenSucceedsAndCommits() throws Exception {
+        authenticateWithBasicAuth();
+
+        Weblogger weblogger = mockedWeblogger();
+        when(weblogger.getUserManager().getUserByUserName("owner")).thenReturn(new User());
+        when(weblogger.getApiTokenManager().revoke(any(), anyString())).thenReturn(true);
+
+        mockMvc(new TokensApi(weblogger))
+                .perform(delete("/v1/tokens/{id}", "token-1"))
+                .andExpect(status().isNoContent());
+
+        verify(weblogger).flush();
     }
 
     @Test
