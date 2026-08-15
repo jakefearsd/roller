@@ -9,6 +9,7 @@ import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 import org.apache.roller.weblogger.ui.restapi.auth.ApiPrincipal;
 import org.apache.roller.weblogger.ui.restapi.dto.TokenDtos;
 import org.springframework.context.annotation.Lazy;
@@ -86,6 +87,15 @@ public class TokensApi {
         }
 
         ApiToken.Role role = parseRole(request.role());
+        // roller_api_token.label is VARCHAR(255) NOT NULL (V026) and
+        // issueToken copies it straight through -- parseRole above already
+        // degrades a missing role to a 400; label never got the equivalent,
+        // so a mint with no label reached the manager and died on the
+        // constraint, an opaque 500 on the bootstrap endpoint (how every
+        // token, including the very first one, comes into existence).
+        requireLabel(request.label());
+        ColumnLimits.requireMaxLength("label", request.label(), ColumnLimits.TOKEN_LABEL);
+        ColumnLimits.requireMaxLength("weblog", request.weblog(), ColumnLimits.TOKEN_WEBLOG);
         User user = requireUser();
         Timestamp expiresAt = request.expiresAt() == null ? null : Timestamp.from(request.expiresAt());
 
@@ -118,7 +128,7 @@ public class TokensApi {
         if (currentApiPrincipal() != null) {
             throw ApiException.forbidden("Token management requires Basic authentication.");
         }
-        User user = currentUser();
+        User user = requireUser();
         boolean revoked = weblogger.getApiTokenManager().revoke(user, id);
         if (!revoked) {
             // Not 403: that would confirm the id exists and let one user
@@ -127,6 +137,12 @@ public class TokensApi {
         }
         weblogger.flush();
         return ResponseEntity.noContent().build();
+    }
+
+    private static void requireLabel(String label) {
+        if (label == null || label.isBlank()) {
+            throw ApiException.badRequest("label is required.");
+        }
     }
 
     private static ApiToken.Role parseRole(String role) {

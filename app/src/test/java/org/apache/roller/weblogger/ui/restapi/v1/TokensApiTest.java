@@ -18,6 +18,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -245,5 +246,104 @@ class TokensApiTest {
                         .contentType("application/json")
                         .content("{\"label\":\"x\",\"role\":\"SUPERUSER\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * Whole-branch review, Must Fix 2: roller_api_token.label is VARCHAR(255)
+     * NOT NULL (V026) and issueToken copies it straight through --
+     * parseRole above already degrades a missing role to a 400; label never
+     * got the equivalent, so a mint with no label used to reach the manager
+     * and die on the NOT NULL constraint, an opaque 500 on the bootstrap
+     * endpoint (how every token, including the very first one, comes into
+     * existence).
+     */
+    @Test
+    void mintingWithABlankLabelIsBadRequest() throws Exception {
+        authenticateWithBasicAuth();
+        Weblogger weblogger = mockedWeblogger();
+        when(weblogger.getUserManager().getUserByUserName("owner")).thenReturn(new User());
+
+        mockMvc(new TokensApi(weblogger))
+                .perform(post("/v1/tokens")
+                        .contentType("application/json")
+                        .content("{\"label\":\"   \",\"role\":\"POST\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getApiTokenManager(), never()).issueToken(any(), anyString(), any(), any(), any());
+        verify(weblogger, never()).flush();
+    }
+
+    @Test
+    void mintingWithAMissingLabelIsBadRequest() throws Exception {
+        authenticateWithBasicAuth();
+        Weblogger weblogger = mockedWeblogger();
+        when(weblogger.getUserManager().getUserByUserName("owner")).thenReturn(new User());
+
+        mockMvc(new TokensApi(weblogger))
+                .perform(post("/v1/tokens")
+                        .contentType("application/json")
+                        .content("{\"role\":\"POST\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getApiTokenManager(), never()).issueToken(any(), anyString(), any(), any(), any());
+    }
+
+    /** roller_api_token.label is VARCHAR(255) -- the same guard, over-length rather than blank. */
+    @Test
+    void mintingWithALabelLongerThanTheColumnIsBadRequest() throws Exception {
+        authenticateWithBasicAuth();
+        Weblogger weblogger = mockedWeblogger();
+        when(weblogger.getUserManager().getUserByUserName("owner")).thenReturn(new User());
+        String tooLong = "a".repeat(256);
+
+        mockMvc(new TokensApi(weblogger))
+                .perform(post("/v1/tokens")
+                        .contentType("application/json")
+                        .content("{\"label\":\"" + tooLong + "\",\"role\":\"POST\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getApiTokenManager(), never()).issueToken(any(), anyString(), any(), any(), any());
+    }
+
+    /** roller_api_token.scope_weblog is VARCHAR(255) too. */
+    @Test
+    void mintingWithAWeblogLongerThanTheColumnIsBadRequest() throws Exception {
+        authenticateWithBasicAuth();
+        Weblogger weblogger = mockedWeblogger();
+        when(weblogger.getUserManager().getUserByUserName("owner")).thenReturn(new User());
+        String tooLong = "a".repeat(256);
+
+        mockMvc(new TokensApi(weblogger))
+                .perform(post("/v1/tokens")
+                        .contentType("application/json")
+                        .content("{\"label\":\"ok\",\"weblog\":\"" + tooLong + "\",\"role\":\"POST\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getApiTokenManager(), never()).issueToken(any(), anyString(), any(), any(), any());
+    }
+
+    /**
+     * Deferred item folded into Must Fix 2: revoke() used to read the caller
+     * with {@code currentUser()}, which returns null rather than throwing
+     * when there is no authentication at all -- a null then reached {@code
+     * ApiTokenManager.revoke} as its owner argument. {@code requireUser()}
+     * closes that: no authentication is a clean 403, not undefined manager
+     * behaviour on a null owner.
+     */
+    @Test
+    void revokeWithNoAuthenticationAtAllIsForbidden() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+
+        mockMvc(new TokensApi(weblogger))
+                .perform(delete("/v1/tokens/{id}", "some-id"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getApiTokenManager(), never()).revoke(any(), anyString());
+        verify(weblogger, never()).flush();
     }
 }
