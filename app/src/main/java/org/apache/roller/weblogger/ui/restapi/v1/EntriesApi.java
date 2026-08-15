@@ -8,6 +8,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
+import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.dto.EntryDtos;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,7 +31,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/weblogs/{handle}/entries")
 public class EntriesApi extends BaseApiController implements UISecurityEnforced {
 
-    /** Requested limits above this are silently capped, not rejected. */
+    /**
+     * Requested limits above this are silently capped, not rejected --
+     * unlike a limit below 1 or a negative offset, which are rejected with
+     * 400 rather than clamped (see the validation at the top of {@link #list}).
+     */
     private static final int MAX_LIMIT = 200;
 
     @GetMapping("")
@@ -43,6 +48,20 @@ public class EntriesApi extends BaseApiController implements UISecurityEnforced 
             @RequestParam(value = "locale", required = false) String locale,
             @RequestParam(value = "offset", defaultValue = "0") int offset,
             @RequestParam(value = "limit", defaultValue = "50") int limit) throws WebloggerException {
+
+        // Reject rather than silently clamp: a negative offset reaches JPA's
+        // setFirstResult and throws; limit=-1 reaches subList(0, -1) and
+        // throws; limit=-2 is worse -- Math.min(-2, MAX_LIMIT) is still -2,
+        // so maxResults becomes -1, and JPAWeblogEntryManagerImpl.setFirstMax
+        // treats -1 as NO LIMIT, running an unbounded read over every entry
+        // in the weblog before it would even reach the subList throw. All
+        // three are one query-string character away from any authenticated
+        // contributor, and the contract says client-supplied garbage is a
+        // 400, not a stack trace.
+        if (limit < 1 || offset < 0) {
+            throw ApiException.badRequest(
+                    "limit must be at least 1 and offset must not be negative.");
+        }
 
         Weblog weblog = requireActionWeblog(request);
         int boundedLimit = Math.min(limit, MAX_LIMIT);

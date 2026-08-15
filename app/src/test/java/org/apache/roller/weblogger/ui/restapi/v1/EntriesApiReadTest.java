@@ -245,6 +245,83 @@ class EntriesApiReadTest {
     }
 
     /**
+     * limit=-1 used to reach {@code found.subList(0, -1)} --
+     * IndexOutOfBoundsException, a 500. Rejected before any criteria is
+     * built: the manager is never even called.
+     */
+    @Test
+    void aNegativeLimitOfMinusOneIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+
+        mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/entries")
+                        .param("limit", "-1")
+                        .requestAttr("actionWeblog", aWeblog()))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), org.mockito.Mockito.never()).getWeblogEntries(any());
+    }
+
+    /**
+     * limit=-2 was the more dangerous of the two: {@code Math.min(-2, 200)}
+     * is -2, so {@code maxResults} became -1, and
+     * {@code JPAWeblogEntryManagerImpl.setFirstMax} treats -1 as NO LIMIT --
+     * an unbounded read over every entry in the weblog, not merely an
+     * exception. It still went on to throw on {@code subList(0, -2)}
+     * afterwards, but the unbounded query would already have run. Rejected
+     * up front the same as -1: the manager is never called at all, so
+     * there is no unbounded read to run.
+     */
+    @Test
+    void aNegativeLimitOfMinusTwoIsBadRequestRatherThanAnUnboundedQuery() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+
+        mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/entries")
+                        .param("limit", "-2")
+                        .requestAttr("actionWeblog", aWeblog()))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), org.mockito.Mockito.never()).getWeblogEntries(any());
+    }
+
+    /** limit=0 asks for a page of nothing, which is not a valid request either. */
+    @Test
+    void aZeroLimitIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+
+        mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/entries")
+                        .param("limit", "0")
+                        .requestAttr("actionWeblog", aWeblog()))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), org.mockito.Mockito.never()).getWeblogEntries(any());
+    }
+
+    /**
+     * offset=-1 used to reach {@code criteria.setOffset(-1)} and then
+     * {@code EntityManager.setFirstResult(-1)} -- an IllegalArgumentException
+     * from JPA, a 500.
+     */
+    @Test
+    void aNegativeOffsetIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+
+        mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/entries")
+                        .param("offset", "-1")
+                        .requestAttr("actionWeblog", aWeblog()))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), org.mockito.Mockito.never()).getWeblogEntries(any());
+    }
+
+    /**
      * One extra row over the requested limit is how hasMore is decided
      * without a second count query -- the extra row itself must never leak
      * into the returned page.
