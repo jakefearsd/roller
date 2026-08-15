@@ -178,8 +178,21 @@ shape before assuming a field exists.**
 
 ## Errors
 
-Every failure is [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
-`application/problem+json`:
+Every failure a controller method can see is [RFC
+9457](https://www.rfc-editor.org/rfc/rfc9457) `application/problem+json`.
+**Three ordinary failures never reach a controller method at all, so they
+are not:** `ApiExceptionHandler` is `@RestControllerAdvice(basePackages =
+"org.apache.roller.weblogger.ui.restapi")`, and package-scoped advice is
+only ever consulted once a request has been dispatched to a handler method
+in that package. A request to an unmapped path under `/api/...` (404), the
+right path with the wrong HTTP verb (405), or a `POST .../media` with no
+multipart body (415) never reaches a handler method to dispatch to in the
+first place — Spring answers all three itself, before `ApiExceptionHandler`
+is in the picture, and Boot's own `/error` renders them as plain
+`application/json`, not `application/problem+json`. Do not assume a client
+can branch on `Content-Type: application/problem+json` to detect an API
+error uniformly; check the status code, and expect these three to look
+different on the wire from every other failure in this document.
 
 ```json
 {
@@ -203,10 +216,13 @@ requires `errors` to be present; treat it as optional.
 | 400 | Malformed request: bad JSON, an out-of-range `limit`/`offset`, an unknown status/role, a missing required field. |
 | 401 | No credential, or a Bearer token that is missing, malformed, unknown, expired or revoked. |
 | 403 | Authenticated, but the token's own scope refuses this call (wrong role, or an admin-only route with a non-`ADMIN` token). |
-| 404 | The resource does not exist, **or the caller may not see it.** A weblog outside a token's pin, a foreign entry/category/page/media id, and a genuinely-missing id are all 404 — never 403, because a 403 there would confirm the resource exists under someone else's weblog. |
+| 404 | The resource does not exist, **or the caller may not see it.** A weblog outside a token's pin, a foreign entry/category/page/media id, and a genuinely-missing id are all 404 — never 403, because a 403 there would confirm the resource exists under someone else's weblog. Also what an unmapped path under `/api/...` answers — see the note above on why that one is plain `application/json`, not a problem body. |
+| 405 | The path exists but not for this HTTP verb (e.g. `DELETE` on a collection endpoint that only supports `GET`/`POST`). Plain `application/json` from Boot's own `/error`, not a problem body — see the note above. |
 | 409 | The request conflicts with the resource's current state: trashing an already-trashed entry, restoring one that isn't trashed, PATCHing a trashed entry (restore it first), a duplicate category/directory/page-slug name, deleting a weblog's last category. |
+| 415 | `POST .../media` without a `multipart/form-data` body. Plain `application/json`, not a problem body — see the note above. |
 | 429 | Throttled — see below. |
 | 500 | Unexpected server error. The response body never carries exception detail (message, stack trace, class name) — those are logged server-side only. |
+| 502 | An upstream dependency this endpoint depends on failed after the request itself already succeeded — today only `POST /api/v1/admin/users` when the account was created but its set-password email could not be sent; the account survives and is resendable, so this is not retried as a fresh create. |
 
 `ApiException` also has a `quotaExceeded()` factory that would answer 413,
 but **no endpoint calls it today** — a media upload that would exceed a
@@ -473,9 +489,17 @@ request never leaves a partial write behind.
 
 `GET/PATCH /api/v1/weblogs/{handle}` is **not** the same resource as
 `/api/v1/weblogs/{handle}/entries` etc. — those act only on the weblog a
-token is scoped to; this reaches **any** weblog on the site by handle,
-regardless of scope pin, because it requires `ADMIN` role, which this API
-treats as unrestricted by a weblog pin by design.
+token is scoped to; this one is meant to reach *any* weblog on the site by
+handle, since it requires `ADMIN` role. **A weblog-pinned token cannot
+actually reach it, `ADMIN` role or not.** `ApiScopeInterceptor` applies the
+token's weblog-scope check *before and independently of* the role check —
+if the token is pinned to a weblog, that pin is enforced against
+`{handle}` first, and a pin that doesn't match answers 404 regardless of
+role. Only an **unpinned** `ADMIN` token — one minted with no `weblog`
+scope at all — reaches every weblog on the site through this endpoint. An
+operator who wants that reach must mint the token unpinned; pinning it "to
+be safe" and expecting `ADMIN` role to still cross other weblogs is the
+opposite of what happens.
 
 ## Maintenance actions
 
