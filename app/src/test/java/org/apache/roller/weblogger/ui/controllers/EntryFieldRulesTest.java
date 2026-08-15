@@ -2,6 +2,7 @@ package org.apache.roller.weblogger.ui.controllers;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.TimeZone;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -61,7 +62,7 @@ class EntryFieldRulesTest {
      */
     @Test
     void anUnparseableValueThrowsRatherThanDefaultingToNow() {
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(DateTimeParseException.class,
                 () -> EntryFieldRules.parsePubTime("not a date", TimeZone.getTimeZone("UTC")));
     }
 

@@ -63,7 +63,7 @@ public final class EntryFieldRules {
      * {@code <input type="datetime-local">} submits -- as time in {@code
      * zone}. A blank value means "no time chosen" and returns null, which
      * callers read as "publish now". A non-blank value that will not parse
-     * throws {@link IllegalArgumentException} rather than being silently
+     * throws {@link DateTimeParseException} rather than being silently
      * discarded: a mistyped pubtime must surface as a validation error, not
      * quietly publish "now".
      */
@@ -71,12 +71,7 @@ public final class EntryFieldRules {
         if (StringUtils.isBlank(wallClock)) {
             return null;
         }
-        try {
-            LocalDateTime local = LocalDateTime.parse(wallClock.trim());
-            return Timestamp.from(local.atZone(zone.toZoneId()).toInstant());
-        } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException(
-                    "Unparseable pubtime '" + wallClock + "'", e);
-        }
+        LocalDateTime local = LocalDateTime.parse(wallClock.trim());
+        return Timestamp.from(local.atZone(zone.toZoneId()).toInstant());
     }
 }

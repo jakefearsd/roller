@@ -339,24 +339,11 @@ public class EntryBean {
      * the old dateString parser did -- a mistyped pubtime must surface as a
      * validation error, not quietly publish "now".
      *
-     * <p>Delegates to {@link EntryFieldRules#parsePubTime}, which is the
-     * single source of truth for this parsing (shared with the automation
-     * API). That shared method throws {@link IllegalArgumentException} --
-     * the contract a second caller should rely on -- so the
-     * {@code DateTimeParseException} this method has always thrown is
-     * recovered from the wrapped cause here, preserving this method's
-     * existing contract for {@code EntryEditController}'s catch clause
-     * and {@code EntryBeanTest}.
+     * <p>Delegates to {@link EntryFieldRules#parsePubTime}, the single
+     * source of truth for this parsing (shared with the automation API).
      */
     public Timestamp getPubTime(TimeZone timezone) {
-        try {
-            return EntryFieldRules.parsePubTime(pubTimeLocal, timezone);
-        } catch (IllegalArgumentException e) {
-            if (e.getCause() instanceof DateTimeParseException dtpe) {
-                throw dtpe;
-            }
-            throw e;
-        }
+        return EntryFieldRules.parsePubTime(pubTimeLocal, timezone);
     }
 
     public boolean isDraft() {
