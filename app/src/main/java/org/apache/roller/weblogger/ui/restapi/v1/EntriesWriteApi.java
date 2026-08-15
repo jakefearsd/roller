@@ -10,10 +10,12 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.ui.controllers.EntryDeletion;
 import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.dto.EntryDtos;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -85,6 +87,129 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
         weblogger.flush();
 
         return EntryDtos.toView(entry, permalink(entry));
+    }
+
+    /**
+     * Trash, not delete. Goes through the same seam the authoring UI uses --
+     * {@link EntryDeletion#trashEntryWithIndex} -- because the index removal
+     * and the {@code weblog.lastModified} bump are not optional now the row
+     * survives: a TRASHED entry left in Lucene is findable by site search
+     * and links to a permalink that 404s, and {@code WeblogPageCache} has no
+     * CacheHandler so {@code lastModified} is the only thing that expires
+     * the cached home page (see CLAUDE.md's Trash section). Both of those
+     * steps live in {@code WeblogEntryManager.trashWeblogEntry} and {@code
+     * EntryDeletion}, never reimplemented here.
+     *
+     * <p>Trashing an already-trashed entry is refused with 409 rather than
+     * silently re-running the trash dance -- {@code trashWeblogEntry} has no
+     * such guard of its own (it would just re-save the same TRASHED status),
+     * but a caller asking to trash something already trashed almost always
+     * means the caller's view of the entry is stale.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> trash(HttpServletRequest request,
+                                      @PathVariable("id") String id) throws WebloggerException {
+        WeblogEntry entry = requireEntry(request, id);
+        if (entry.getStatus() == WeblogEntry.PubStatus.TRASHED) {
+            throw ApiException.conflict("Entry is already trashed.");
+        }
+        EntryDeletion.trashEntryWithIndex(weblogger, entry);
+        weblogger.flush();
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Brings a trashed entry back -- always as a DRAFT, never back to
+     * PUBLISHED. {@code WeblogEntryManager.restoreWeblogEntry} enforces that
+     * itself and remembers no pre-trash status to restore instead, precisely
+     * so an undelete can never silently republish to feeds, the sitemap and
+     * every subscriber.
+     *
+     * <p>Restoring an entry that is not currently trashed is refused with
+     * 409: {@code restoreWeblogEntry} has no status guard of its own, and
+     * calling it on a live PUBLISHED entry would silently unpublish it to
+     * DRAFT -- exactly the side-door resurrection/demotion hazard {@code
+     * TrashController.trashedEntry} exists to close off on the JSP side.
+     */
+    @PostMapping("/{id}/restore")
+    public EntryDtos.EntryView restore(HttpServletRequest request,
+                                       @PathVariable("id") String id) throws WebloggerException {
+        WeblogEntry entry = requireEntry(request, id);
+        if (entry.getStatus() != WeblogEntry.PubStatus.TRASHED) {
+            throw ApiException.conflict("Entry is not trashed.");
+        }
+        weblogger.getWeblogEntryManager().restoreWeblogEntry(entry);
+        weblogger.flush();
+        return EntryDtos.toView(entry, permalink(entry));
+    }
+
+    /**
+     * Permanently deletes an already-trashed entry. Only reachable from the
+     * trash, the same way the JSP {@code trash!delete.rol} row action is --
+     * deleting forever is a second, deliberate step after trashing, never a
+     * shortcut around it, so a live entry's id here is a 409 rather than an
+     * undocumented hard-delete endpoint.
+     */
+    @PostMapping("/{id}/delete-forever")
+    public ResponseEntity<Void> deleteForever(HttpServletRequest request,
+                                              @PathVariable("id") String id) throws WebloggerException {
+        WeblogEntry entry = requireEntry(request, id);
+        if (entry.getStatus() != WeblogEntry.PubStatus.TRASHED) {
+            throw ApiException.conflict("Entry is not trashed; trash it first.");
+        }
+        EntryDeletion.deleteEntryForeverWithIndex(weblogger, entry);
+        weblogger.flush();
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Previews an existing entry's unsaved text. Reuses {@code
+     * EntryEditController.entryEditPreview}'s scratch-entry approach: the
+     * entry itself comes from the usual ownership-checked lookup, but its
+     * text is replaced with whatever the request carries and never saved.
+     * Only the server can expand shortcodes -- {@code [gallery]}, {@code
+     * [map]} -- so this is the only way an agent can see what it is about to
+     * publish before actually publishing it.
+     */
+    @PostMapping("/{id}/preview")
+    public EntryDtos.PreviewView previewExisting(
+            HttpServletRequest request, @PathVariable("id") String id,
+            @RequestBody EntryDtos.PreviewRequest body) throws WebloggerException {
+        WeblogEntry entry = requireEntry(request, id);
+        return renderPreview(entry, body);
+    }
+
+    /**
+     * Previews text for an entry that does not exist yet -- a brand-new,
+     * unsaved {@code WeblogEntry} owned by the action weblog, so its
+     * shortcodes resolve that weblog's own media and nothing is persisted.
+     * Same scratch-entry approach {@code EntryEditController} uses when its
+     * preview call carries no {@code id}.
+     */
+    @PostMapping("/preview")
+    public EntryDtos.PreviewView previewNew(
+            HttpServletRequest request,
+            @RequestBody EntryDtos.PreviewRequest body) throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+        User user = requireAuthenticatedUser(request);
+        WeblogEntry entry = new WeblogEntry();
+        entry.setWebsite(weblog);
+        entry.setCreatorUserName(user.getUserName());
+        return renderPreview(entry, body);
+    }
+
+    /**
+     * Sets the scratch entry's text and renders it through the real
+     * pipeline -- shortcode expansion, then Markdown, then sanitization --
+     * exactly as {@code WeblogEntry.getTransformedText()} does for a
+     * published entry, so a preview cannot disagree with what gets
+     * published. A missing or blank {@code text} renders an empty draft
+     * rather than failing: previewing a blank editor is a normal moment, not
+     * an error.
+     */
+    private EntryDtos.PreviewView renderPreview(WeblogEntry entry, EntryDtos.PreviewRequest body) {
+        entry.setText(body == null || body.text() == null ? "" : body.text());
+        return new EntryDtos.PreviewView(entry.getTransformedText());
     }
 
     /**

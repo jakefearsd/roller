@@ -34,6 +34,20 @@ public final class EntryDtos {
     }
 
     /**
+     * A preview request. {@code text} is nullable and null (or the whole
+     * body being absent -- {@code ApiExceptionHandler} turns that into a 400
+     * before a controller method ever runs) is treated as an empty draft
+     * rather than rejected: an author previewing a blank editor is a normal
+     * moment, not an error.
+     */
+    public record PreviewRequest(String text) {
+    }
+
+    /** The rendered HTML fragment a preview call returns. */
+    public record PreviewView(String html) {
+    }
+
+    /**
      * Titles are stored HTML-escaped (see CLAUDE.md's entry/page title
      * asymmetry), so the view carries the stored value through unchanged --
      * escaping it again here would send "&amp;amp;" to every client.

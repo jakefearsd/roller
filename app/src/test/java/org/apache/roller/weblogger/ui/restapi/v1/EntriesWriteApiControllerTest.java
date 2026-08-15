@@ -4,6 +4,7 @@ import java.util.List;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -23,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -50,6 +52,9 @@ class EntriesWriteApiControllerTest {
         WeblogEntryManager entryManager = mock(WeblogEntryManager.class);
         when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
         when(weblogger.getUrlStrategy()).thenReturn(mock(URLStrategy.class));
+        // EntryDeletion.trashEntryWithIndex/deleteEntryForeverWithIndex both
+        // reach the index manager before touching the entry manager.
+        when(weblogger.getIndexManager()).thenReturn(mock(IndexManager.class));
         return weblogger;
     }
 
@@ -424,5 +429,289 @@ class EntriesWriteApiControllerTest {
                 new EntriesWriteApi().requiredWeblogPermissionActions());
         assertTrue(new EntriesWriteApi().isUserRequired());
         assertTrue(new EntriesWriteApi().isWeblogRequired());
+    }
+
+    // ---- trash / restore / delete-forever / preview (Task 10) ----------
+
+    /**
+     * The happy path: DELETE removes the entry from the search index before
+     * trashing it -- the ordering {@code EntryDeletion.trashEntryWithIndex}
+     * exists to guarantee -- and never calls the permanent-delete manager
+     * method.
+     */
+    @Test
+    void deleteTrashesALiveEntryAndRemovesItFromTheIndexFirst() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setStatus(WeblogEntry.PubStatus.PUBLISHED);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(delete("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isNoContent());
+
+        verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
+        verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+    }
+
+    /** IDOR case: a foreign entry's id is 404, same as PATCH. */
+    @Test
+    void deleteIsNotFoundWhenTheEntryBelongsToAnotherWeblog() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog thisWeblog = aWeblog("myblog");
+        Weblog anotherWeblog = aWeblog("someoneelse");
+        WeblogEntry foreign = new WeblogEntry();
+        foreign.setId("entry-1");
+        foreign.setWebsite(anotherWeblog);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(foreign);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(delete("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", thisWeblog))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
+    }
+
+    /**
+     * Trashing an already-trashed entry is a 409, not a silent no-op re-save
+     * -- a caller asking to trash something already trashed has a stale view
+     * of the entry.
+     */
+    @Test
+    void deleteOnAnAlreadyTrashedEntryIsConflict() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setStatus(WeblogEntry.PubStatus.TRASHED);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(delete("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
+        verify(weblogger.getIndexManager(), never()).removeEntryIndexOperation(any());
+    }
+
+    /**
+     * Restore lands on DRAFT -- proved here by asserting the entry's
+     * in-memory status after the call, since {@code restoreWeblogEntry}
+     * itself is mocked and would otherwise leave TRASHED in place with no
+     * failure at all.
+     */
+    @Test
+    void restoreCallsManagerRestoreAndReturnsTheEntry() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        WeblogEntryManager entryManager = weblogger.getWeblogEntryManager();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setTitle("was trashed");
+        entry.setStatus(WeblogEntry.PubStatus.TRASHED);
+        when(entryManager.getWeblogEntry("entry-1")).thenReturn(entry);
+        doAnswer(invocation -> {
+            WeblogEntry e = invocation.getArgument(0);
+            e.setStatus(WeblogEntry.PubStatus.DRAFT);
+            return null;
+        }).when(entryManager).restoreWeblogEntry(entry);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/{id}/restore", "entry-1")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        verify(weblogger.getWeblogEntryManager()).restoreWeblogEntry(entry);
+        assertEquals(WeblogEntry.PubStatus.DRAFT, entry.getStatus());
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals("DRAFT", json.get("status").asString());
+    }
+
+    /**
+     * The side-door-resurrection guard: restoring a live PUBLISHED entry
+     * must never reach {@code restoreWeblogEntry}, which has no status
+     * check of its own and would silently demote it to DRAFT.
+     */
+    @Test
+    void restoringAnEntryThatIsNotTrashedIsConflict() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setStatus(WeblogEntry.PubStatus.PUBLISHED);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/{id}/restore", "entry-1")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).restoreWeblogEntry(any());
+        assertEquals(WeblogEntry.PubStatus.PUBLISHED, entry.getStatus());
+    }
+
+    /** Delete-forever on an already-trashed entry: index removal, then the real delete. */
+    @Test
+    void deleteForeverOnATrashedEntryRemovesItFromTheIndexAndCallsRemoveWeblogEntry() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setStatus(WeblogEntry.PubStatus.TRASHED);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/{id}/delete-forever", "entry-1")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isNoContent());
+
+        verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
+        verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(entry);
+        verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
+    }
+
+    /**
+     * Delete-forever is not a shortcut around trashing: a live entry's id is
+     * a 409, not an undocumented hard-delete endpoint.
+     */
+    @Test
+    void deleteForeverOnALiveEntryIsConflictAndNeverCallsRemoveWeblogEntry() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setStatus(WeblogEntry.PubStatus.DRAFT);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/{id}/delete-forever", "entry-1")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+        verify(weblogger.getIndexManager(), never()).removeEntryIndexOperation(any());
+    }
+
+    /** An unknown id for restore is 404, matching every other by-id endpoint. */
+    @Test
+    void restoreIsNotFoundForAnUnknownId() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("nope")).thenReturn(null);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/{id}/restore", "nope")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+
+    /**
+     * Preview against an existing entry runs the real shortcode/Markdown/
+     * sanitizer pipeline (no plugins registered in this standalone test, so
+     * that half of the pipeline is a no-op) and never persists anything.
+     */
+    @Test
+    void previewExistingEntryRendersSubmittedTextAndNeverSaves() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setText("old text, never rendered here");
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/{id}/preview", "entry-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"**bold draft**\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertTrue(json.get("html").asString().contains("<strong>bold draft</strong>"),
+                "was: " + json.get("html").asString());
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    /**
+     * Preview for a brand-new entry (no id yet) previews against a scratch
+     * entry owned by the action weblog rather than 404ing or 500ing for
+     * lack of one.
+     */
+    @Test
+    void previewNewEntryRendersAgainstAScratchEntryOwnedByTheActionWeblog() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/preview")
+                        .requestAttr("actionWeblog", weblog)
+                        .requestAttr("authenticatedUser", aUser("maiia"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"hello *world*\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertTrue(json.get("html").asString().contains("<em>world</em>"),
+                "was: " + json.get("html").asString());
+    }
+
+    /**
+     * Guard from the wave's recurring "ordinary client input must not 500"
+     * lesson: an empty request body renders an empty draft, not a 500 or an
+     * NPE from a null text field.
+     */
+    @Test
+    void previewWithAnEmptyBodyRendersAnEmptyDraftRatherThanFailing() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/preview")
+                        .requestAttr("actionWeblog", weblog)
+                        .requestAttr("authenticatedUser", aUser("maiia"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertNotNull(json.get("html"));
+    }
+
+    /** Malformed JSON on preview is 400, not the generic 500 handler. */
+    @Test
+    void previewWithMalformedJsonIsBadRequestNotAnOpaque500() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/preview")
+                        .requestAttr("actionWeblog", weblog)
+                        .requestAttr("authenticatedUser", aUser("maiia"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
 }

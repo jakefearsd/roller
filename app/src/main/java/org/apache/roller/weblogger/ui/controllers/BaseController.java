@@ -24,11 +24,8 @@ import java.util.Locale;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -42,7 +39,6 @@ import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
 import org.apache.roller.weblogger.ui.core.util.menu.MenuHelper;
-import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.ui.Model;
@@ -56,8 +52,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * for authentication, authorization, message resolution, and model population.
  */
 public abstract class BaseController implements UISecurityEnforced, UIActionPreparable {
-
-    private static final Log baseLog = LogFactory.getLog(BaseController.class);
 
     @Autowired
     protected MessageSource messageSource;
@@ -327,10 +321,15 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * <p>Indexing failures are logged and swallowed rather than aborting the
      * trash: an index that has fallen behind is repairable from the admin
      * screen, whereas a half-trashed entry is not.
+     *
+     * <p>Delegates to {@link EntryDeletion#trashEntryWithIndex} (Task 10) so
+     * the automation API's write controller -- which does not extend this
+     * class -- can reach the same seam without inheriting the JSP-only state
+     * ({@code MessageSource}, {@code Model}, flash-message helpers) this
+     * class carries.
      */
     protected void trashEntryWithIndex(WeblogEntry entry) throws WebloggerException {
-        deIndexAndInvalidate(entry);
-        weblogger.getWeblogEntryManager().trashWeblogEntry(entry);
+        EntryDeletion.trashEntryWithIndex(weblogger, entry);
     }
 
     /**
@@ -346,41 +345,12 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * re-runs the same dance rather than assuming that, since nothing
      * prevents a caller from reaching this on an entry that never went
      * through the trash path.
+     *
+     * <p>Delegates to {@link EntryDeletion#deleteEntryForeverWithIndex}, for
+     * the same reason {@link #trashEntryWithIndex} does.
      */
     protected void deleteEntryForeverWithIndex(WeblogEntry entry) throws WebloggerException {
-        deIndexAndInvalidate(entry);
-        weblogger.getWeblogEntryManager().removeWeblogEntry(entry);
-    }
-
-    /**
-     * The shared index/cache step {@link #trashEntryWithIndex} and
-     * {@link #deleteEntryForeverWithIndex} both need before their differing
-     * final step: take the entry out of the search index, then invalidate
-     * the render cache.
-     *
-     * <p>This used to flip the entry's in-memory status to DRAFT and hand it
-     * to {@code addEntryReIndexOperation} on the theory that a re-index
-     * would teach the index to drop it. That never worked: the re-index runs
-     * on a background thread and re-fetches the entry from the database by
-     * id before doing anything, so the caller's in-memory flip was discarded
-     * before the job ever ran, and the entry went right back into the index
-     * moments after this method returned -- a TRASHED entry, findable again
-     * by site search, linking to a page that 404s. The honest operation here
-     * is "remove this document from the index", not "re-index it as a draft
-     * and hope", so this now calls {@link IndexManager#removeEntryIndexOperation}
-     * directly and unconditionally. It runs synchronously (in the foreground,
-     * not scheduled on a background thread) and is safe to call on an entry
-     * that was never published -- deleting a document that was never indexed
-     * is a no-op.
-     */
-    private void deIndexAndInvalidate(WeblogEntry entry) {
-        try {
-            weblogger.getIndexManager().removeEntryIndexOperation(entry);
-        } catch (WebloggerException ex) {
-            baseLog.warn("Trouble removing entry from the search index for " + entry.getId(), ex);
-        }
-
-        CacheManager.invalidate(entry);
+        EntryDeletion.deleteEntryForeverWithIndex(weblogger, entry);
     }
 
     /**
