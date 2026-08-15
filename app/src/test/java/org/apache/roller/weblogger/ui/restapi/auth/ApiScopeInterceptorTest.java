@@ -189,4 +189,22 @@ class ApiScopeInterceptorTest {
 
         assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), NOT_EXEMPT));
     }
+
+    /**
+     * The exemption exists specifically for these two routes -- "an
+     * explicit allowlist of weblog-less routes that must still work:
+     * /v1/me and /v1/ping. A CLI self-check must never be locked out by
+     * its own scope." An annotation nobody applied is decorative, not an
+     * allowlist, so this pins that MetaApi's methods actually carry it.
+     */
+    @Test
+    void metaApiPingAndMeAreWeblogScopeExempt() throws NoSuchMethodException {
+        Class<?> metaApi = org.apache.roller.weblogger.ui.restapi.v1.MetaApi.class;
+
+        assertTrue(metaApi.getMethod("ping").isAnnotationPresent(WeblogScopeExempt.class),
+                "MetaApi.ping() must be reachable by a weblog-scoped token");
+        assertTrue(metaApi.getMethod("me", jakarta.servlet.http.HttpServletRequest.class)
+                        .isAnnotationPresent(WeblogScopeExempt.class),
+                "MetaApi.me() must be reachable by a weblog-scoped token");
+    }
 }
