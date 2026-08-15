@@ -27,18 +27,53 @@ class RollerApiCliTest {
                 "a partial run against a live blog is worse than no run");
     }
 
+    /**
+     * Whole-branch review, Must Fix 6: the original second conjunct tested
+     * for {@code >> "$CRED_FILE"}, which the script never uses (it writes
+     * with a plain {@code >}, see {@code theCredentialsFileIsCreatedPrivate}
+     * below) -- {@code A && false} is always false, so
+     * {@code assertFalse(...)} was vacuously true regardless of whether
+     * {@code password=} appeared anywhere. Rewritten to actually inspect
+     * every line that touches {@code $CRED_FILE} for any mention of the
+     * password, which is the property the test's name and the class javadoc
+     * both promise.
+     */
     @Test
     void thePasswordIsReadSilentlyAndNeverWrittenToTheCredentialsFile() throws Exception {
         String script = cli();
         assertTrue(script.contains("read -rs"), "the password must not echo");
-        assertFalse(script.contains("password=") && script.contains(">> \"$CRED_FILE\""),
-                "only the token is ever persisted");
+        for (String line : script.split("\n", -1)) {
+            if (line.contains("$CRED_FILE")) {
+                assertFalse(line.contains("password") || line.contains("$password"),
+                        "a line writing to $CRED_FILE must never mention the password: " + line);
+            }
+        }
     }
 
+    /**
+     * Whole-branch review, Must Fix 6: {@code "chmod 600"} occurs twice in
+     * the script -- once for the netrc temp file used during login, once for
+     * the credentials file this test is named for -- so a plain {@code
+     * contains("chmod 600")} stayed green even with the credentials-file
+     * chmod deleted entirely, landing the token world-readable. Asserts the
+     * chmod appears on the line immediately after the write to
+     * {@code $CRED_FILE} instead of merely appearing somewhere in the file.
+     */
     @Test
     void theCredentialsFileIsCreatedPrivate() throws Exception {
-        assertTrue(cli().contains("chmod 600"),
-                "a token in a world-readable file is a leaked credential");
+        String[] lines = cli().split("\n", -1);
+        int writeLine = -1;
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i].contains("> \"$CRED_FILE\"")) {
+                writeLine = i;
+                break;
+            }
+        }
+        assertTrue(writeLine >= 0, "must find the line that writes $CRED_FILE");
+        assertTrue(lines[writeLine + 1].trim().startsWith("chmod 600 \"$CRED_FILE\""),
+                "the line right after writing $CRED_FILE must chmod it 600 -- "
+                        + "a token in a world-readable file is a leaked credential: "
+                        + lines[writeLine + 1]);
     }
 
     @Test

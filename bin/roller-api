@@ -483,7 +483,7 @@ usage_media() {
   media list       --weblog H [--dir D]
   media get        --weblog H --id ID
   media upload     --weblog H [--dir-id D] FILE...
-  media patch      --weblog H --id ID [--alt-text TEXT] [--name N] [--focal-x X] [--focal-y Y]
+  media patch      --weblog H --id ID [--alt-text TEXT] [--name N] [--focal-x X] [--focal-y Y] [--dir-id D]
   media delete     --weblog H --id ID
   media dirs       --weblog H
   media create-dir --weblog H --name N [--description D]
@@ -963,7 +963,7 @@ roller-api -- Roller automation API client
   entries preview --weblog H --text-file F
 
   media upload --weblog H [--dir-id D] FILE...
-  media patch  --weblog H --id ID --alt-text TEXT
+  media patch  --weblog H --id ID --alt-text TEXT [--dir-id D]
 
   audit seo   --weblog H
   audit media --weblog H
