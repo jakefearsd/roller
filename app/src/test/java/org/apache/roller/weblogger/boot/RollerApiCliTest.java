@@ -47,4 +47,24 @@ class RollerApiCliTest {
         assertTrue(script.contains("command -v curl"));
         assertTrue(script.contains("command -v jq"));
     }
+
+    /**
+     * {@code curl -u user:password} puts the password on THIS PROCESS'S OWN
+     * command line -- readable by any other local user via {@code ps -ef} or
+     * {@code /proc/<pid>/cmdline} for the life of the request. The mint call
+     * must authenticate via a {@code --netrc-file} instead, never {@code -u},
+     * under any condition -- there is no fallback to pin against, so this
+     * asserts the absence of the leaking form and the presence of the safe
+     * one.
+     */
+    @Test
+    void thePasswordNeverReachesAProcessCommandLine() throws Exception {
+        String script = cli();
+        assertFalse(script.contains("-u \"${user}"),
+                "curl -u puts the password on the process command line, visible via ps/proc");
+        assertFalse(script.contains("-u \"${user}:${password}\""),
+                "curl -u puts the password on the process command line, visible via ps/proc");
+        assertTrue(script.contains("--netrc-file"),
+                "the mint request must authenticate via a netrc file, not -u");
+    }
 }

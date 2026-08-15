@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 # roller-api -- command-line client for Roller's automation API.
 #
-# Configuration precedence: flags, then ROLLER_API_URL / ROLLER_API_TOKEN,
-# then ~/.roller/credentials. The environment layer is what makes this usable
-# from CI without an interactive login.
+# Configuration precedence: --url/--token flags (highest), then
+# ROLLER_API_URL / ROLLER_API_TOKEN, then ~/.roller/credentials (lowest).
+# The environment layer is what makes this usable from CI without an
+# interactive login; the flags exist so a one-off call against a second
+# instance never has to touch either the environment or the credentials
+# file. Each of the two variables is resolved independently at that
+# precedence -- see load_credentials -- so supplying only one of them (e.g.
+# --url with no --token) still lets the other fall through to the
+# environment or the file rather than one present value dragging the other
+# down with it.
 #
 # A partial run against a live blog is worse than no run: set -euo pipefail
 # means any unset variable or failing command stops the script immediately
@@ -14,15 +21,45 @@ CRED_FILE="${ROLLER_CREDENTIALS:-$HOME/.roller/credentials}"
 
 die() { printf '%s\n' "$*" >&2; exit 1; }
 
+# Every temp file this script ever creates (a netrc file during login, an
+# upload response body during a multipart upload) is registered here and
+# removed on ANY exit path, including a set -e abort partway through --
+# a plain trailing `rm -f` only runs on the success path, which is exactly
+# the path least likely to leave a credential or a stale response sitting
+# in /tmp.
+_cleanup_files=()
+_register_cleanup() { _cleanup_files+=("$1"); }
+_run_cleanup() {
+    local f
+    if [ "${#_cleanup_files[@]}" -gt 0 ]; then
+        for f in "${_cleanup_files[@]}"; do
+            [ -n "$f" ] && rm -f "$f"
+        done
+    fi
+}
+trap _run_cleanup EXIT
+
 require_tools() {
     command -v curl >/dev/null 2>&1 || die "roller-api needs curl on PATH."
     command -v jq   >/dev/null 2>&1 || die "roller-api needs jq on PATH."
 }
 
+# Reads NAME's value out of the credentials file's own "NAME=value" lines
+# without sourcing the whole file -- sourcing would let a value the file
+# carries clobber one already supplied by a flag or the environment (both
+# higher precedence), instead of only filling in what is still missing.
+_cred_file_value() {
+    local name="$1"
+    [ -f "$CRED_FILE" ] || return 0
+    sed -n "s/^${name}=//p" "$CRED_FILE" | tail -n 1
+}
+
 load_credentials() {
-    if [ -z "${ROLLER_API_URL:-}" ] || [ -z "${ROLLER_API_TOKEN:-}" ]; then
-        # shellcheck source=/dev/null
-        [ -f "$CRED_FILE" ] && . "$CRED_FILE"
+    if [ -z "${ROLLER_API_URL:-}" ]; then
+        ROLLER_API_URL="$(_cred_file_value ROLLER_API_URL)"
+    fi
+    if [ -z "${ROLLER_API_TOKEN:-}" ]; then
+        ROLLER_API_TOKEN="$(_cred_file_value ROLLER_API_TOKEN)"
     fi
     : "${ROLLER_API_URL:?No API URL. Run 'roller-api auth login --url ...' first.}"
     : "${ROLLER_API_TOKEN:?No API token. Run 'roller-api auth login --url ...' first.}"
@@ -89,14 +126,34 @@ cmd_auth_login() {
     read -rs password
     printf '\n'
 
+    # `curl -u user:password` would put the password on THIS PROCESS'S OWN
+    # command line -- readable by any other local user via `ps -ef` or
+    # /proc/<pid>/cmdline for the life of the request. A .netrc-style file,
+    # created with a private mode and registered for cleanup on every exit
+    # path (including a set -e abort if curl itself fails), is what
+    # `curl --netrc-file` reads the credential from instead: the password
+    # never becomes an argv element anywhere. There is no `-u` fallback --
+    # not for a missing mktemp, not for anything.
+    local host netrc_file
+    host="${url#*://}"
+    host="${host%%/*}"
+    host="${host%%:*}"
+
+    netrc_file="$(mktemp "${TMPDIR:-/tmp}/roller-api-netrc.XXXXXX")"
+    chmod 600 "$netrc_file"
+    _register_cleanup "$netrc_file"
+    printf 'machine %s\nlogin %s\npassword %s\n' "$host" "$user" "$password" > "$netrc_file"
+    unset password
+
     local token
     token=$(curl -sS --fail-with-body \
-        -u "${user}:${password}" \
+        --netrc-file "$netrc_file" \
         -H "Content-Type: application/json" \
         -X POST "${url}/api/v1/tokens" \
         -d "$(jq -n --arg label "roller-api cli" '{label: $label, role: "ADMIN"}')" \
         | jq -r '.token')
-    unset password
+
+    rm -f "$netrc_file"
 
     [ -n "$token" ] && [ "$token" != "null" ] || die "Login failed."
 
@@ -331,7 +388,12 @@ entries_trash() {
     done
     [ -n "$weblog" ] || die "--weblog is required."
     [ -n "$id" ] || die "--id is required."
-    api DELETE "/weblogs/${weblog}/entries/${id}" -o /dev/null
+    # No -o /dev/null: a 409 (e.g. "Entry is already trashed.") carries a
+    # `detail` in its problem+json body that --fail-with-body exists to
+    # surface -- discarding the body here would defeat that on the one
+    # endpoint most likely to return a descriptive conflict. A successful
+    # DELETE has no body at all, so nothing extra prints on the happy path.
+    api DELETE "/weblogs/${weblog}/entries/${id}"
     printf 'Trashed %s\n' "$id"
 }
 
@@ -360,7 +422,10 @@ entries_delete_forever() {
     done
     [ -n "$weblog" ] || die "--weblog is required."
     [ -n "$id" ] || die "--id is required."
-    api POST "/weblogs/${weblog}/entries/${id}/delete-forever" -o /dev/null
+    # No -o /dev/null -- see entries_trash's comment; a 409 here ("Entry is
+    # not trashed; trash it first.") is exactly the kind of detail a caller
+    # needs to see, not discard.
+    api POST "/weblogs/${weblog}/entries/${id}/delete-forever"
     printf 'Permanently deleted %s\n' "$id"
 }
 
@@ -473,18 +538,37 @@ media_upload() {
     done
     [ -n "$dir_id" ] && form_args+=(-F "directoryId=${dir_id}")
 
-    local status body
-    status="$(api_raw POST "/weblogs/${weblog}/media" "${form_args[@]}" \
-        -o /tmp/roller-api-upload.$$.json -w '%{http_code}')"
-    body="$(cat /tmp/roller-api-upload.$$.json)"
-    rm -f /tmp/roller-api-upload.$$.json
+    # A non-2xx here (any failed file causes 207, and 207 is deliberately
+    # NOT curl's idea of success -- see the comment above -- but a hard
+    # 4xx/5xx is also possible) makes --fail-with-body return curl exit 22.
+    # A bare `status="$(cmd)"` assignment would let set -e abort the script
+    # on that exit code BEFORE the body is ever read or printed, leaving the
+    # real problem+json sitting unread in a temp file. Guarding the
+    # assignment as an `if` condition is what keeps set -e from firing here,
+    # the same way `load_credentials`'s `:` guard does elsewhere.
+    local response_file status
+    response_file="$(mktemp "${TMPDIR:-/tmp}/roller-api-upload.XXXXXX.json")"
+    _register_cleanup "$response_file"
+    if ! status="$(api_raw POST "/weblogs/${weblog}/media" "${form_args[@]}" \
+        -o "$response_file" -w '%{http_code}')"; then
+        : # curl's own non-2xx exit -- the body is still in $response_file.
+    fi
 
-    printf '%s\n' "$body" | jq .
+    local body
+    body="$(cat "$response_file")"
+    rm -f "$response_file"
+
+    # Printed on BOTH the success and failure path -- a caller must be able
+    # to see why an upload failed, not just that it did.
+    if ! printf '%s\n' "$body" | jq .; then
+        printf '%s\n' "$body" >&2
+    fi
 
     local failed
-    failed="$(printf '%s\n' "$body" | jq -r '.failed // 0')"
-    if [ "$status" = "207" ] || [ "${failed:-0}" != "0" ]; then
-        die "Upload had failures ($failed file(s)); see results above."
+    failed="$(printf '%s\n' "$body" | jq -r '.failed // 0' 2>/dev/null || echo 0)"
+    [ -n "$failed" ] || failed=0
+    if [ "${status#2}" = "$status" ] || [ "$failed" != "0" ]; then
+        die "Upload had failures (status $status, $failed file(s) failed); see results above."
     fi
 }
 
@@ -538,7 +622,8 @@ media_delete() {
     done
     [ -n "$weblog" ] || die "--weblog is required."
     [ -n "$id" ] || die "--id is required."
-    api DELETE "/weblogs/${weblog}/media/${id}" -o /dev/null
+    # No -o /dev/null -- see entries_trash's comment.
+    api DELETE "/weblogs/${weblog}/media/${id}"
     printf 'Deleted %s\n' "$id"
 }
 
@@ -840,6 +925,12 @@ usage() {
     cat <<'EOF'
 roller-api -- Roller automation API client
 
+  [--url URL] [--token TOKEN] <command> ...
+      Global overrides, parsed before the command -- highest-precedence
+      configuration tier, above ROLLER_API_URL/ROLLER_API_TOKEN and above
+      ~/.roller/credentials. Lets a one-off call reach a second instance
+      without touching the environment or the stored credentials file.
+
   auth login --url URL [--user NAME]   mint and store a token
   auth status                          show who the stored token belongs to
 
@@ -865,6 +956,20 @@ EOF
 
 main() {
     require_tools
+
+    # --url/--token are the highest-precedence configuration tier (see the
+    # file header), parsed here before the command name so any group can be
+    # reached against a one-off URL/token without touching the environment
+    # or ~/.roller/credentials. Only recognised in this leading position --
+    # a subcommand's own flags are parsed by that subcommand.
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --url)   ROLLER_API_URL="$2";   shift 2 ;;
+            --token) ROLLER_API_TOKEN="$2"; shift 2 ;;
+            *) break ;;
+        esac
+    done
+
     [ $# -gt 0 ] || { usage; exit 1; }
     local group="$1"; shift
     case "$group" in
