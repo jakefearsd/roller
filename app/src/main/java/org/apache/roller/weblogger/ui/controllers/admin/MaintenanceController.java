@@ -19,7 +19,6 @@
 package org.apache.roller.weblogger.ui.controllers.admin;
 
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,11 +26,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.search.IndexManager;
+import org.apache.roller.weblogger.business.MaintenanceService;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
-import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -133,10 +131,7 @@ public class MaintenanceController extends BaseController {
         }
 
         try {
-            weblog.setLastModified(new Date());
-            weblogger.getWeblogManager().saveWeblog(weblog);
-            weblogger.flush();
-            CacheManager.invalidate(weblog);
+            new MaintenanceService(weblogger).flushCache(weblog);
             addMessage(model, "maintenance.message.flushed", request);
         } catch (Exception ex) {
             log.error("Error saving weblog - " + weblog.getHandle(), ex);
@@ -160,8 +155,7 @@ public class MaintenanceController extends BaseController {
         }
 
         try {
-            IndexManager manager = weblogger.getIndexManager();
-            manager.rebuildWeblogIndex(weblog);
+            new MaintenanceService(weblogger).rebuildIndex(weblog);
             addMessage(model, "maintenance.message.indexed", request);
         } catch (Exception ex) {
             log.error("Error doing index rebuild", ex);
@@ -185,7 +179,7 @@ public class MaintenanceController extends BaseController {
         }
 
         try {
-            int count = weblogger.getMediaFileManager().regenerateRenditions(weblog);
+            int count = new MaintenanceService(weblogger).regenerateRenditions(weblog);
             addMessage(model, "maintenance.message.renditionsRegenerated",
                     String.valueOf(count), request);
         } catch (Exception ex) {
