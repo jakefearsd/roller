@@ -1,0 +1,110 @@
+package org.apache.roller.weblogger.ui.restapi.dto;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.List;
+import java.util.Locale;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntryTag;
+import org.apache.roller.weblogger.ui.restapi.ApiException;
+
+/**
+ * Views of a weblog entry for the automation API, plus the two status
+ * parsers every write/filter call site uses.
+ */
+public final class EntryDtos {
+
+    private EntryDtos() {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record EntryView(
+            String id, String anchor, String title, String summary, String text,
+            String status, String category, List<String> tags,
+            Instant pubTime, Instant updateTime, String permalink,
+            String metaTitle, String searchDescription, String canonicalUrl,
+            Boolean noindex, String featuredImageId, String ogImageId) {
+    }
+
+    public record EntryPage(List<EntryView> items, int offset, int limit, boolean hasMore) {
+    }
+
+    /**
+     * Titles are stored HTML-escaped (see CLAUDE.md's entry/page title
+     * asymmetry), so the view carries the stored value through unchanged --
+     * escaping it again here would send "&amp;amp;" to every client.
+     * {@code permalink} is passed in rather than read off {@code entry}
+     * because {@link WeblogEntry#getPermalink()} reaches the static
+     * {@code WebloggerFactory}, which this pure mapper has no business
+     * depending on.
+     */
+    public static EntryView toView(WeblogEntry entry, String permalink) {
+        return new EntryView(
+                entry.getId(),
+                entry.getAnchor(),
+                entry.getTitle(),
+                entry.getSummary(),
+                entry.getText(),
+                entry.getStatus() == null ? null : entry.getStatus().name(),
+                entry.getCategory() == null ? null : entry.getCategory().getName(),
+                entry.getTags().stream().map(WeblogEntryTag::getName).sorted().toList(),
+                instant(entry.getPubTime()),
+                instant(entry.getUpdateTime()),
+                permalink,
+                entry.getMetaTitle(),
+                entry.getSearchDescription(),
+                entry.getCanonicalUrl(),
+                entry.getNoindex(),
+                entry.getFeaturedImageId(),
+                entry.getOgImageId());
+    }
+
+    private static Instant instant(Timestamp ts) {
+        return ts == null ? null : ts.toInstant();
+    }
+
+    /**
+     * Parses a client-supplied status for a WRITE.
+     *
+     * <p>TRASHED is deliberately not writable: trashing and restoring go
+     * through their own endpoints, which are also the paths that keep the
+     * Lucene index consistent and bump weblog.lastModified. Letting a PATCH
+     * set TRASHED would skip both and leave a trashed entry findable by site
+     * search, linking to a permalink that 404s.
+     */
+    public static WeblogEntry.PubStatus parseWritableStatus(String raw) {
+        WeblogEntry.PubStatus status = parseStatus(raw);
+        if (status == WeblogEntry.PubStatus.TRASHED) {
+            throw ApiException.badRequest(
+                    "Use DELETE to trash an entry and POST .../restore to bring it back.");
+        }
+        return status;
+    }
+
+    /**
+     * Parses a client-supplied status for a FILTER -- the same four statuses
+     * as {@link #parseWritableStatus} plus TRASHED, because reading the
+     * trash is exactly what a trash listing is for.
+     *
+     * <p>Kept as a separate method rather than a boolean parameter on a
+     * shared parser: a write check must never be relaxed into a filter check
+     * by flipping an argument, so there is no argument that could flip it.
+     * {@link #parseWritableStatus}'s TRASHED rejection is unconditional and
+     * lives only in that method.
+     */
+    public static WeblogEntry.PubStatus parseFilterStatus(String raw) {
+        return parseStatus(raw);
+    }
+
+    private static WeblogEntry.PubStatus parseStatus(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw ApiException.badRequest("status is required.");
+        }
+        try {
+            return WeblogEntry.PubStatus.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw ApiException.badRequest("Unknown status '" + raw + "'.");
+        }
+    }
+}
