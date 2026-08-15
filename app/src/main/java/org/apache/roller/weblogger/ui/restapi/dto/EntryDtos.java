@@ -3,10 +3,13 @@ package org.apache.roller.weblogger.ui.restapi.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntryTag;
+import org.apache.roller.weblogger.ui.controllers.EntryFieldRules;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 
 /**
@@ -105,6 +108,76 @@ public final class EntryDtos {
             return WeblogEntry.PubStatus.valueOf(raw.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw ApiException.badRequest("Unknown status '" + raw + "'.");
+        }
+    }
+
+    /**
+     * A create or partial update. Every component is nullable and null means
+     * ABSENT, not "clear this" -- a PATCH that omits a field must leave the
+     * stored value alone. {@code category} and {@code tags} are read by the
+     * controller instead of {@link #applyWrite}, because both need a manager
+     * lookup this pure mapper has no business making.
+     */
+    public record EntryWrite(
+            String title, String summary, String text, String status,
+            String category, String pubTime, List<String> tags,
+            String metaTitle, String searchDescription, String canonicalUrl,
+            Boolean noindex, String featuredImageId, String ogImageId) {
+    }
+
+    /**
+     * Applies every field {@code write} actually carries onto {@code entry}.
+     * {@code category} and {@code tags} are deliberately left untouched here
+     * -- see {@link EntryWrite}'s javadoc -- the controller applies both
+     * itself after this call returns.
+     */
+    public static void applyWrite(WeblogEntry entry, EntryWrite write, Weblog weblog) {
+        if (write.title() != null) {
+            // The one place raw author input becomes escaped markup, shared
+            // with the JSP editor so the two cannot drift.
+            entry.setTitle(EntryFieldRules.escapeTitle(write.title()));
+        }
+        if (write.summary() != null) {
+            entry.setSummary(write.summary());
+        }
+        if (write.text() != null) {
+            entry.setText(write.text());
+        }
+        if (write.status() != null) {
+            entry.setStatus(parseWritableStatus(write.status()));
+        }
+        if (write.pubTime() != null) {
+            try {
+                entry.setPubTime(EntryFieldRules.parsePubTime(
+                        write.pubTime(), weblog.getTimeZoneInstance()));
+            } catch (DateTimeParseException e) {
+                // EntryFieldRules.parsePubTime throws DateTimeParseException,
+                // NOT IllegalArgumentException -- DateTimeParseException does
+                // not extend it, so catching the wrong type here would let a
+                // mistyped pubtime escape as an opaque 500 instead of the
+                // 400 this exists to produce.
+                throw ApiException.badRequest(
+                        "pubTime must be a wall-clock time in the weblog's zone, "
+                        + "for example 2026-03-01T09:30.");
+            }
+        }
+        if (write.metaTitle() != null) {
+            entry.setMetaTitle(write.metaTitle());
+        }
+        if (write.searchDescription() != null) {
+            entry.setSearchDescription(write.searchDescription());
+        }
+        if (write.canonicalUrl() != null) {
+            entry.setCanonicalUrl(write.canonicalUrl());
+        }
+        if (write.noindex() != null) {
+            entry.setNoindex(write.noindex());
+        }
+        if (write.featuredImageId() != null) {
+            entry.setFeaturedImageId(write.featuredImageId());
+        }
+        if (write.ogImageId() != null) {
+            entry.setOgImageId(write.ogImageId());
         }
     }
 }
