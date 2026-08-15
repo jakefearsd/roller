@@ -35,7 +35,7 @@
         #showFeedHistory($pager)
     #end
     <updated>$utils.formatIso8601Date($model.weblog.lastModified)</updated>
-    <generator uri="http://roller.apache.org" version="$config.rollerVersion">Apache Roller</generator>
+    <generator version="$config.rollerVersion">Roller</generator>
     #showEntriesAtom10($pager.items)
 </feed>
 
