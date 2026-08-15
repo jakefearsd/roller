@@ -13,6 +13,7 @@ import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.EntryDeletion;
 import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 import org.apache.roller.weblogger.ui.restapi.dto.EntryDtos;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -55,6 +56,7 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
         applyCategory(entry, weblog, body.category());
         applyTags(entry, body.tags());
         applyPublishNowDefault(entry);
+        requireScheduledHasPubTime(entry);
 
         // No explicit category fallback needed here:
         // JPAWeblogEntryManagerImpl.saveWeblogEntry already defaults a
@@ -86,6 +88,7 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
         applyCategory(entry, weblog, body.category());
         applyTags(entry, body.tags());
         applyPublishNowDefault(entry);
+        requireScheduledHasPubTime(entry);
 
         weblogger.getWeblogEntryManager().saveWeblogEntry(entry);
         weblogger.flush();
@@ -242,6 +245,25 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
     }
 
     /**
+     * The sibling of {@link #applyPublishNowDefault}: PUBLISHED with no
+     * pubTime means "now" and gets one, but SCHEDULED with no pubTime has no
+     * sensible default -- "schedule this for right now" is not what a caller
+     * asking for SCHEDULED meant. Left alone, the entry would save with a
+     * NULL pubtime and {@code ScheduledEntriesTask} (which promotes a
+     * SCHEDULED entry once {@code pubtime <= now}) can never satisfy that
+     * comparison against NULL, so the entry would stay SCHEDULED forever --
+     * stuck, and invisible to every listing that does not explicitly ask for
+     * that status. Checked after {@code applyWrite} has had its chance to set
+     * an explicit pubTime, so an update that leaves a previously-set pubTime
+     * untouched is never refused.
+     */
+    private void requireScheduledHasPubTime(WeblogEntry entry) {
+        if (entry.getStatus() == WeblogEntry.PubStatus.SCHEDULED && entry.getPubTime() == null) {
+            throw ApiException.badRequest("pubTime is required when status is SCHEDULED.");
+        }
+    }
+
+    /**
      * {@code title} and {@code text} are NOT NULL columns
      * (V002__baseline_schema.sql) and a brand-new WeblogEntry defaults both
      * to null, so an omitted one used to reach weblogger.flush() and die on
@@ -298,6 +320,9 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
     private void applyTags(WeblogEntry entry, List<String> tags) throws WebloggerException {
         if (tags == null) {
             return;
+        }
+        for (String tag : tags) {
+            ColumnLimits.requireMaxLength("tag", tag, ColumnLimits.TAG_NAME);
         }
         entry.setTagsAsString(String.join(" ", tags));
     }

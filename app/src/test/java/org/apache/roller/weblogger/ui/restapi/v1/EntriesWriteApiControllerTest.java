@@ -118,6 +118,12 @@ class EntriesWriteApiControllerTest {
         assertEquals("maiia", captor.getValue().getCreatorUserName());
         assertEquals(travel, captor.getValue().getCategory());
         assertSame(weblog, captor.getValue().getWebsite());
+        // saveWeblogEntry only begins a JPA transaction; without flush() the
+        // created entry would be rolled back by PersistenceSessionFilter's
+        // end-of-request release despite the 201 (whole-branch review, Must
+        // Fix 7 -- every write call site in this API was missing this
+        // assertion, not just the one where the bug shipped, TokensApi).
+        verify(weblogger).flush();
 
         tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
         assertEquals("Cats &amp; Dogs", json.get("title").asString());
@@ -162,6 +168,7 @@ class EntriesWriteApiControllerTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+        verify(weblogger, never()).flush();
     }
 
     /** A mistyped pubTime is a 400 end to end through the controller, not an opaque 500. */
@@ -243,6 +250,7 @@ class EntriesWriteApiControllerTest {
         assertEquals("kept", entry.getTitle());
         assertEquals("new body", entry.getText());
         verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(entry);
+        verify(weblogger).flush();
         tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
         assertEquals("kept", json.get("title").asString());
     }
@@ -271,6 +279,33 @@ class EntriesWriteApiControllerTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    /**
+     * roller_weblogentrytag.name is varchar(255) (V002__baseline_schema.sql)
+     * -- checked per tag, before the join, so one oversized tag in a batch
+     * is refused before any of them reach setTagsAsString.
+     */
+    @Test
+    void patchWithATagLongerThanTheColumnIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tags\":[\"travel\",\"" + tooLong + "\"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+        verify(weblogger, never()).flush();
     }
 
     /** Tags go through WeblogEntry's own tag-setting path, space-joined. */
@@ -349,6 +384,101 @@ class EntriesWriteApiControllerTest {
         verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(entry);
         tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
         assertNotNull(json.get("pubTime"));
+    }
+
+    /**
+     * Whole-branch review, Must Fix 3: SCHEDULED with no pubTime creates an
+     * entry that can never publish. {@code applyPublishNowDefault} only
+     * defaults a pubTime for PUBLISHED; ScheduledEntriesTask promotes a
+     * SCHEDULED entry only once {@code pubtime <= now}, and NULL never
+     * satisfies that, so the entry would be stuck SCHEDULED forever and
+     * invisible to every listing that does not explicitly ask for that
+     * status. Must be a 400, not a silently-broken create.
+     */
+    @Test
+    void postWithScheduledStatusAndNoPubTimeIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries")
+                        .requestAttr("actionWeblog", weblog)
+                        .requestAttr("authenticatedUser", aUser("maiia"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"x\",\"text\":\"y\",\"status\":\"SCHEDULED\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    /** Same guard, PATCH side. */
+    @Test
+    void patchWithScheduledStatusAndNoPubTimeIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setTitle("existing");
+        entry.setText("existing body");
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"SCHEDULED\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    /** SCHEDULED with an explicit pubTime must succeed -- the guard rejects only the NULL case. */
+    @Test
+    void postWithScheduledStatusAndAnExplicitPubTimeSucceeds() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries")
+                        .requestAttr("actionWeblog", weblog)
+                        .requestAttr("authenticatedUser", aUser("maiia"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"x\",\"text\":\"y\",\"status\":\"SCHEDULED\","
+                                + "\"pubTime\":\"2099-01-01T09:30\"}"))
+                .andExpect(status().isCreated());
+
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(any());
+    }
+
+    /**
+     * A PATCH that leaves an already-SCHEDULED entry's stored pubTime
+     * untouched must not be refused -- the guard reads the entry's final
+     * pubTime after applyWrite, not just whatever this one request supplied.
+     */
+    @Test
+    void patchOnAnAlreadyScheduledEntryThatDoesNotTouchPubTimeIsNotRejected() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setTitle("existing");
+        entry.setText("existing body");
+        entry.setStatus(WeblogEntry.PubStatus.SCHEDULED);
+        entry.setPubTime(new java.sql.Timestamp(System.currentTimeMillis() + 86_400_000L));
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"summary\":\"just a summary update\"}"))
+                .andExpect(status().isOk());
+
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(entry);
     }
 
     /**
@@ -457,6 +587,7 @@ class EntriesWriteApiControllerTest {
         verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
         verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
         verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+        verify(weblogger).flush();
     }
 
     /** IDOR case: a foreign entry's id is 404, same as PATCH. */
@@ -502,6 +633,7 @@ class EntriesWriteApiControllerTest {
 
         verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
         verify(weblogger.getIndexManager(), never()).removeEntryIndexOperation(any());
+        verify(weblogger, never()).flush();
     }
 
     /**
@@ -535,6 +667,7 @@ class EntriesWriteApiControllerTest {
 
         verify(weblogger.getWeblogEntryManager()).restoreWeblogEntry(entry);
         assertEquals(WeblogEntry.PubStatus.DRAFT, entry.getStatus());
+        verify(weblogger).flush();
         tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
         assertEquals("DRAFT", json.get("status").asString());
     }
@@ -562,6 +695,7 @@ class EntriesWriteApiControllerTest {
 
         verify(weblogger.getWeblogEntryManager(), never()).restoreWeblogEntry(any());
         assertEquals(WeblogEntry.PubStatus.PUBLISHED, entry.getStatus());
+        verify(weblogger, never()).flush();
     }
 
     /** Delete-forever on an already-trashed entry: index removal, then the real delete. */
@@ -583,6 +717,7 @@ class EntriesWriteApiControllerTest {
         verify(weblogger.getIndexManager()).removeEntryIndexOperation(entry);
         verify(weblogger.getWeblogEntryManager()).removeWeblogEntry(entry);
         verify(weblogger.getWeblogEntryManager(), never()).trashWeblogEntry(any());
+        verify(weblogger).flush();
     }
 
     /**
@@ -607,6 +742,7 @@ class EntriesWriteApiControllerTest {
 
         verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
         verify(weblogger.getIndexManager(), never()).removeEntryIndexOperation(any());
+        verify(weblogger, never()).flush();
     }
 
     /** An unknown id for restore is 404, matching every other by-id endpoint. */
@@ -650,6 +786,10 @@ class EntriesWriteApiControllerTest {
         assertTrue(json.get("html").asString().contains("<strong>bold draft</strong>"),
                 "was: " + json.get("html").asString());
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+        // renderPreview's own javadoc names flush() as the hazard: nothing on
+        // this path may ever call it, or a preview would silently persist
+        // over the stored entry (whole-branch review, Must Fix 7).
+        verify(weblogger, never()).flush();
     }
 
     /**
