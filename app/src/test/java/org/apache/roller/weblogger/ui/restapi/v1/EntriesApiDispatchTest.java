@@ -6,6 +6,7 @@ import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
+import org.apache.roller.weblogger.testsupport.DispatchProbeController;
 import org.apache.roller.weblogger.ui.restapi.ApiExceptionHandler;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -24,6 +25,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
@@ -51,6 +53,25 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
  * what these tests exercise is squarely {@code RollerHandlerInterceptor}'s
  * own {@code UISecurityEnforced} enforcement -- the piece Task 5's review
  * left unconfirmed.
+ *
+ * <p><b>Fix round 1:</b> this class is also what caught the bug it was
+ * written to catch. {@code RollerHandlerInterceptor} used to answer every
+ * permission failure with a 302 redirect to a JSP page
+ * ({@code LOGIN_URL}/{@code ACCESS_DENIED_URL}) regardless of who was
+ * asking -- correct for a browser, but an automation client following that
+ * redirect gets an HTTP 200 carrying an HTML login form: a *success* status
+ * with no data, which is worse to debug than a clean error and can be
+ * mistaken for an empty result. {@code RollerHandlerInterceptor} now
+ * decides from the {@code HandlerMethod}'s bean-type package -- the same
+ * discriminator {@code ApiScopeInterceptor}'s {@code @AdminScoped} check
+ * already uses, and not a URI string test, which Task 5's review showed can
+ * be defeated by encoding -- and throws {@code ApiException.unauthorized}/
+ * {@code .forbidden} for a handler under {@code ui.restapi} instead of
+ * redirecting. {@link DispatchProbeController} (package {@code
+ * testsupport}, deliberately neither {@code ui.restapi} nor {@code
+ * ui.controllers} -- see its own javadoc for why both are avoided) pins
+ * that every other, JSP-era handler still gets the original redirect
+ * unchanged.
  */
 class EntriesApiDispatchTest {
 
@@ -69,6 +90,11 @@ class EntriesApiDispatchTest {
         @Bean
         EntriesApi entriesApi() {
             return new EntriesApi();
+        }
+
+        @Bean
+        DispatchProbeController dispatchProbeController() {
+            return new DispatchProbeController();
         }
 
         @Bean
@@ -151,12 +177,9 @@ class EntriesApiDispatchTest {
      * WeblogPermission EntriesApi declares must be refused before the
      * handler runs, on a real {@code {handle}}-carrying REST route -- not
      * merely in a unit test of WeblogOwnership or ApiException in
-     * isolation. RollerHandlerInterceptor answers a redirect to
-     * access-denied.rol (its existing JSP-era behaviour, unchanged by this
-     * task) rather than a 403 problem+json body; that mismatch for an API
-     * caller is a pre-existing characteristic of the shared interceptor,
-     * not something Task 8 introduces, and is called out in the task
-     * report rather than silently patched here.
+     * isolation. Refused with a clean 403 problem+json, NOT a 3xx redirect
+     * to an HTML page an automation client cannot parse -- the fix round 1
+     * bug this test was rewritten to catch (see the class javadoc).
      */
     @Test
     void aCallerLackingTheRequiredWeblogPermissionIsRefused() throws Exception {
@@ -165,18 +188,57 @@ class EntriesApiDispatchTest {
 
         mockMvc.perform(get("/api/v1/weblogs/myblog/entries")
                         .servletPath("/api").pathInfo("/v1/weblogs/myblog/entries"))
-                .andExpect(status().is3xxRedirection());
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
 
     /**
-     * Control: an unauthenticated request is refused even earlier (redirect
-     * to login), proving the 200 above is the permission check actually
-     * deciding something rather than every request passing regardless.
+     * Control: an unauthenticated request is refused even earlier (401, not
+     * a redirect to a login page), proving the 200 above is the permission
+     * check actually deciding something rather than every request passing
+     * regardless.
      */
     @Test
     void anUnauthenticatedCallerIsRefused() throws Exception {
         mockMvc.perform(get("/api/v1/weblogs/myblog/entries")
                         .servletPath("/api").pathInfo("/v1/weblogs/myblog/entries"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+
+    /**
+     * The redirect-preservation half of fix round 1: a JSP-era handler
+     * (a package outside {@code ui.restapi}) must keep redirecting exactly
+     * as before. Proving this pinned, rather than merely assumed, is the
+     * point -- the whole admin UI depends on it.
+     */
+    @Test
+    void aNonApiHandlerStillRedirectsOnAuthenticationFailure() throws Exception {
+        mockMvc.perform(get("/roller-ui/dispatchProbe"))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    /**
+     * A third branch beyond the two the fix round was scoped around: a
+     * {@code {handle}} that resolves to no weblog at all (typo, deleted
+     * weblog) is neither "unauthenticated" nor "authenticated but lacking a
+     * permission" -- there is no weblog to check a permission against in
+     * the first place. 404, not 403, mirrors
+     * {@code BaseApiController.requireActionWeblog}'s identical contract
+     * for the same condition, and matches this wave's existing convention
+     * of not letting a 403 confirm a resource's existence
+     * ({@code ApiScopeInterceptor.checkWeblogScope} makes the same choice
+     * for its own weblog-scope mismatch). Added on my own judgment rather
+     * than the coordinator's literal instruction, which named only the
+     * other two branches -- called out explicitly in the task report.
+     */
+    @Test
+    void anUnresolvableHandleIsNotFoundRatherThanRedirected() throws Exception {
+        authenticateAs("contributor");
+
+        mockMvc.perform(get("/api/v1/weblogs/nosuchblog/entries")
+                        .servletPath("/api").pathInfo("/v1/weblogs/nosuchblog/entries"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
 }

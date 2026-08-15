@@ -79,6 +79,77 @@ class EntriesApiReadTest {
                 () -> EntryDtos.parseFilterStatus("BANANA"));
     }
 
+    /**
+     * Jackson v3 (tools.jackson.*) round-trip check for
+     * {@code @JsonInclude(NON_NULL)} on a record -- flagged as unverified
+     * twice in this wave (Task 2's deferred minor on {@code ApiProblem},
+     * then again as this task's own concern), and the stakes are higher
+     * than usual because the annotation lives in
+     * {@code com.fasterxml.jackson.annotation} while serialization runs
+     * through {@code tools.jackson.databind}, a package split nobody in
+     * this wave had exercised end to end before now. One DTO settles it for
+     * every DTO in the wave that carries the same annotation: if nulls were
+     * NOT elided, every "absent when unset" contract documented on those
+     * views would be silently false, and the wave's error-body contract
+     * (which leans on the same annotation via {@code ApiProblem}) would be
+     * suspect too.
+     *
+     * <p>Uses a bare {@code new ObjectMapper()} rather than a Spring-wired
+     * bean deliberately: nothing in this codebase configures Jackson beyond
+     * the default (no {@code spring.jackson.*} property, no {@code
+     * ObjectMapper} {@code @Bean} override anywhere in {@code
+     * org.apache.roller.weblogger}), so a bare mapper here is exactly what
+     * {@code ApiProblemWriter}'s Boot-autowired one resolves to at runtime.
+     */
+    @Test
+    void nullFieldsAreElidedFromTheSerializedView() throws Exception {
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setAnchor("hello");
+        entry.setTitle("Hello");
+        // WeblogEntry itself defaults status to DRAFT and noindex to FALSE
+        // (see WeblogEntry.java:97/107) -- null them explicitly so this test
+        // measures Jackson's elision, not the entity's own field defaults.
+        entry.setStatus(null);
+        entry.setNoindex(null);
+        // Everything else -- summary, text, category, pubTime, updateTime,
+        // metaTitle, searchDescription, canonicalUrl, featuredImageId,
+        // ogImageId -- is left unset (null) by construction.
+
+        EntryDtos.EntryView view = EntryDtos.toView(entry, null);
+
+        tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
+        tools.jackson.databind.JsonNode node = mapper.readTree(mapper.writeValueAsString(view));
+
+        // Present: non-null fields, plus permalink (explicitly null, but
+        // still passed positionally -- see the next block for why that's
+        // the more interesting assertion) and tags (an empty List, never
+        // null, so its presence is expected and NOT itself proof of
+        // elision).
+        assertTrue(node.has("id"));
+        assertTrue(node.has("anchor"));
+        assertTrue(node.has("title"));
+        assertTrue(node.has("tags"));
+        assertEquals(0, node.get("tags").size());
+
+        // Absent: every field left null on the source entry. If
+        // @JsonInclude(NON_NULL) were silently ignored under Jackson v3,
+        // every one of these would fail instead.
+        assertFalse(node.has("summary"));
+        assertFalse(node.has("text"));
+        assertFalse(node.has("status"));
+        assertFalse(node.has("category"));
+        assertFalse(node.has("pubTime"));
+        assertFalse(node.has("updateTime"));
+        assertFalse(node.has("permalink"));
+        assertFalse(node.has("metaTitle"));
+        assertFalse(node.has("searchDescription"));
+        assertFalse(node.has("canonicalUrl"));
+        assertFalse(node.has("noindex"));
+        assertFalse(node.has("featuredImageId"));
+        assertFalse(node.has("ogImageId"));
+    }
+
     // -----------------------------------------------------------------
     // Controller-level tests. The DTO tests above prove EntryDtos alone;
     // these prove routing, status codes, permission-independent business

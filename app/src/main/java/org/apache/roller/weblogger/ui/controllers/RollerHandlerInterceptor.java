@@ -29,6 +29,7 @@ import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -102,10 +103,14 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
         // --- 3. Enforce security if controller implements UISecurityEnforced ---
         if (controller instanceof UISecurityEnforced secured) {
             UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+            boolean apiHandler = isApiHandler(handlerMethod);
 
             // Check if user is required
             if (secured.isUserRequired()) {
                 if (authenticatedUser == null) {
+                    if (apiHandler) {
+                        throw ApiException.unauthorized("Authentication required.");
+                    }
                     log.debug("DENIED: required user not found, redirecting to login");
                     response.sendRedirect(request.getContextPath() + LOGIN_URL);
                     return false;
@@ -122,6 +127,9 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
                                     "DENIED: user %s does not have global permission = %s",
                                     authenticatedUser.getUserName(), perm));
                         }
+                        if (apiHandler) {
+                            throw forbidden();
+                        }
                         response.sendRedirect(request.getContextPath() + ACCESS_DENIED_URL);
                         return false;
                     }
@@ -135,6 +143,14 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
                                     "User %s unable to process action because no weblog was defined "
                                             + "(check that the form provides the weblog value).",
                                     authenticatedUser.getUserName()));
+                        }
+                        if (apiHandler) {
+                            // Not found, not forbidden: no weblog was even
+                            // resolved to check a permission against, so
+                            // there is nothing to be "forbidden" from --
+                            // matches BaseApiController.requireActionWeblog's
+                            // identical contract for the same condition.
+                            throw ApiException.notFound("No such weblog.");
                         }
                         response.sendRedirect(request.getContextPath() + ACCESS_DENIED_URL);
                         return false;
@@ -151,6 +167,9 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
                                 log.debug(String.format(
                                         "DENIED: user %s does not have weblog permission = %s",
                                         authenticatedUser.getUserName(), required));
+                            }
+                            if (apiHandler) {
+                                throw forbidden();
                             }
                             response.sendRedirect(request.getContextPath() + ACCESS_DENIED_URL);
                             return false;
@@ -207,6 +226,50 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
             return handle;
         }
         return null;
+    }
+
+    /** The package every REST API controller lives under. */
+    private static final String API_PACKAGE_PREFIX = "org.apache.roller.weblogger.ui.restapi";
+
+    /**
+     * True when a permission failure on this request must be answered as
+     * problem+json rather than a browser redirect.
+     *
+     * <p>Decided from the handler's own bean-type package, never the
+     * request URI -- the same discriminator {@code ApiScopeInterceptor}'s
+     * {@code @AdminScoped} check already uses, and for the same reason
+     * (see that class's javadoc): {@code getRequestURI()} is undecoded per
+     * the servlet spec while Spring routes on the decoded path, so a
+     * string test like {@code startsWith("/api/")} can be defeated by
+     * encoding while the request still reaches an API-mapped controller.
+     *
+     * <p>This is the fix for a real bug, not speculative hardening: before
+     * this method existed, EVERY permission failure -- API or JSP alike --
+     * was answered with a 302 redirect to a login/access-denied JSP page.
+     * An automation client following that redirect receives an HTTP 200
+     * carrying an HTML form: a *success* status with no data, which is
+     * worse to debug than a clean 401/403 and can be mistaken for an empty
+     * result. {@code EntriesApiDispatchTest} is what caught this, end to
+     * end, through a real dispatch -- exactly the class of bug a unit test
+     * of {@code WeblogOwnership}/{@code ApiException} in isolation cannot
+     * see.
+     */
+    private static boolean isApiHandler(HandlerMethod handlerMethod) {
+        String pkg = handlerMethod.getBeanType().getPackageName();
+        // startsWith(prefix + ".") rather than a bare startsWith(prefix): a
+        // sibling package that merely shares the string prefix (e.g. a
+        // hypothetical "ui.restapiv2") must not be misclassified.
+        return pkg.equals(API_PACKAGE_PREFIX) || pkg.startsWith(API_PACKAGE_PREFIX + ".");
+    }
+
+    /**
+     * A permission failure's detail is intentionally generic -- it must
+     * never name the weblog, the permission, or the user, any of which
+     * would tell an unauthorized caller more than "no" about a resource
+     * they cannot act on.
+     */
+    private static ApiException forbidden() {
+        return ApiException.forbidden("You do not have permission to perform this action.");
     }
 
     /**
