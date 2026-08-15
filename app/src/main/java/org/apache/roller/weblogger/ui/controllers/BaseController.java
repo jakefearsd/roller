@@ -24,7 +24,6 @@ import java.util.Locale;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -278,22 +277,7 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * the caller, so a probe cannot map one weblog's entry ids from another.
      */
     protected WeblogEntry lookupEntry(String id, HttpServletRequest request) {
-        // Blank as well as null: an empty id names nothing, and some managers
-        // read an empty string as a wildcard rather than a miss.
-        if (id == null || id.isBlank()) {
-            return null;
-        }
-        try {
-            WeblogEntry entry = weblogger.getWeblogEntryManager().getWeblogEntry(id);
-            if (entry == null || entry.getWebsite() == null
-                    || !entry.getWebsite().equals(getActionWeblog(request))) {
-                return null;
-            }
-            return entry;
-        } catch (WebloggerException ex) {
-            baseLog.error("Error looking up entry by id - " + id, ex);
-        }
-        return null;
+        return WeblogOwnership.entry(weblogger, id, getActionWeblog(request));
     }
 
     /**
@@ -413,22 +397,7 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * <p>An unknown id and a foreign one are deliberately indistinguishable.
      */
     protected WeblogTemplate lookupTemplate(String id, HttpServletRequest request) {
-        // Blank as well as null: an empty id names nothing, and some managers
-        // read an empty string as a wildcard rather than a miss.
-        if (id == null || id.isBlank()) {
-            return null;
-        }
-        try {
-            WeblogTemplate template = weblogger.getWeblogManager().getTemplate(id);
-            if (template == null || template.getWeblog() == null
-                    || !template.getWeblog().equals(getActionWeblog(request))) {
-                return null;
-            }
-            return template;
-        } catch (WebloggerException ex) {
-            baseLog.error("Error looking up template by id - " + id, ex);
-        }
-        return null;
+        return WeblogOwnership.template(weblogger, id, getActionWeblog(request));
     }
 
     /**
@@ -445,22 +414,7 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * <p>An unknown id and a foreign one are deliberately indistinguishable.
      */
     protected WeblogCategory lookupCategory(String id, HttpServletRequest request) {
-        // Blank as well as null: an empty id names nothing, and some managers
-        // read an empty string as a wildcard rather than a miss.
-        if (id == null || id.isBlank()) {
-            return null;
-        }
-        try {
-            WeblogCategory category = weblogger.getWeblogEntryManager().getWeblogCategory(id);
-            if (category == null || category.getWeblog() == null
-                    || !category.getWeblog().equals(getActionWeblog(request))) {
-                return null;
-            }
-            return category;
-        } catch (WebloggerException ex) {
-            baseLog.error("Error looking up category by id - " + id, ex);
-        }
-        return null;
+        return WeblogOwnership.category(weblogger, id, getActionWeblog(request));
     }
 
     /**
@@ -477,20 +431,7 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      * pinned through the controller's own {@code edit}/{@code save} methods.
      */
     public WeblogPage lookupPage(String id, HttpServletRequest request) {
-        if (StringUtils.isBlank(id)) {
-            return null;
-        }
-        try {
-            WeblogPage page = weblogger.getWeblogPageManager().getPage(id);
-            if (page == null || page.getWeblog() == null
-                    || !page.getWeblog().equals(getActionWeblog(request))) {
-                return null;
-            }
-            return page;
-        } catch (WebloggerException ex) {
-            baseLog.error("Error looking up page by id - " + id, ex);
-        }
-        return null;
+        return WeblogOwnership.page(weblogger, id, getActionWeblog(request));
     }
 
     // --- Configuration property helpers ---
