@@ -196,6 +196,19 @@ public class ServletRegistrationConfig {
      */
     static final String[] NEWSLETTER_URL_PATTERNS = {"/newsletter/*"};
 
+    /**
+     * Routes the automation API ({@code ui.restapi.v1}) to the dispatcher.
+     *
+     * <p>A legal servlet-spec <em>prefix</em> mapping, with the same Spring
+     * MVC consequence {@code NEWSLETTER_URL_PATTERNS} documents above: the
+     * servlet path prefix is stripped from the lookup path, so every API
+     * controller is mapped relative to {@code /api} -- {@code /v1/...}, not
+     * {@code /api/v1/...}. The {@code api} path root is reserved in
+     * {@code rendering.weblogMapper.rollerProtectedUrls} so no weblog handle
+     * can shadow it.
+     */
+    public static final String[] API_URL_PATTERNS = {"/api/*"};
+
     @Bean
     public DispatcherServletRegistrationBean dispatcherServletRegistration(
             DispatcherServlet dispatcherServlet,
@@ -207,6 +220,7 @@ public class ServletRegistrationConfig {
                         super.configure(servletRegistration);
                         servletRegistration.addMapping(SEO_URL_PATTERNS);
                         servletRegistration.addMapping(NEWSLETTER_URL_PATTERNS);
+                        servletRegistration.addMapping(API_URL_PATTERNS);
                     }
                 };
         registration.setName("springMvc");
