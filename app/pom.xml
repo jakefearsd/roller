@@ -112,6 +112,22 @@ limitations under the License.
              `provided`-scope deps into WEB-INF/lib-provided and puts them on the
              launcher classpath), but they must not double up with an external
              Tomcat's own copies when the WAR is deployed unpacked instead. -->
+        <!-- Serves the machine-readable OpenAPI document the automation API's
+             docs page (docs/api/README.md) points clients at
+             (/api/v1/openapi.json, see application.properties). Version
+             pinned explicitly (springdoc is not part of the
+             spring-boot-dependencies BOM) to 3.1.0, the release whose own
+             parent POM targets spring-boot-starter-parent 4.1.0, matching
+             ${spring-boot.version} above. The starter's own UI
+             (springdoc-openapi-starter-webmvc-ui) is deliberately NOT pulled
+             in: this is an automation API for scripts and agents, not a
+             browser explorer. -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-tomcat</artifactId>

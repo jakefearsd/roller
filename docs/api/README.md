@@ -1,0 +1,473 @@
+# Roller Automation API
+
+Roller's automation API (`/api/v1`) lets a script or an agent create and edit
+entries, upload media, run SEO/media audits, and administer weblogs and
+users — everything the JSP admin UI can do, callable without a browser.
+
+> **`/api/v1` is unstable while Roller is 0.x.** Paths, fields and status
+> codes here can change release to release with no deprecation window. Pin a
+> Roller version if you automate against this; do not assume forward
+> compatibility.
+
+There is **no web UI for minting a token**. The only route in is the CLI:
+
+```
+bin/roller-api auth login --url http://localhost:8083/roller
+```
+
+Everything below assumes a Roller running at that URL (the default for
+`./roller dev`; see the repository's `CLAUDE.md`). In production, substitute
+your site's own origin.
+
+## Contents
+
+- [Getting a token](#getting-a-token)
+- [Token scopes](#token-scopes)
+- [Making a request](#making-a-request)
+- [Pagination](#pagination)
+- [Errors](#errors)
+- [The throttle](#the-throttle)
+- [Entries](#entries)
+- [Categories and tags](#categories-and-tags)
+- [Media](#media)
+- [Pages](#pages)
+- [Audits](#audits)
+- [Site administration](#site-administration)
+- [Maintenance actions](#maintenance-actions)
+- [The OpenAPI document](#the-openapi-document)
+- [`bin/roller-api`](#binroller-api)
+
+## Getting a token
+
+`POST /api/v1/tokens` is the **only** endpoint that accepts HTTP Basic
+authentication (your Roller username and password); every other endpoint in
+this API requires a Bearer token. This is deliberate and enforced in code,
+not just convention: a token cannot be used to mint another token, so a
+leaked Bearer credential can never turn itself into a permanent replacement.
+
+```bash
+curl -sS -u alice:hunter2 \
+  -H 'Content-Type: application/json' \
+  -X POST http://localhost:8083/roller/api/v1/tokens \
+  -d '{"label": "seo-agent", "role": "POST", "weblog": "myblog"}'
+```
+
+```json
+{
+  "token": "rlr_9f3a1c...",
+  "info": {
+    "id": "a1b2c3...",
+    "label": "seo-agent",
+    "scopeWeblog": "myblog",
+    "scopeRole": "POST",
+    "created": "2026-08-15T12:00:00Z"
+  }
+}
+```
+
+The raw secret is in the **`token`** field, and it is shown exactly once —
+neither this endpoint nor `GET /api/v1/tokens` will ever show it again. The
+`info` object is a `TokenView`, the same shape `GET`/`DELETE` on this
+resource return. (An earlier plan draft called this field `token_info`; the
+shipped field name is `info` — check the response shape, not this document,
+if the two ever disagree.)
+
+`role` is one of `READ`, `POST`, `ADMIN` (see [Token scopes](#token-scopes)).
+`weblog` is optional; omit it for a token that may act on every weblog its
+owning user can already reach. `expiresAt` is an optional ISO-8601 instant;
+omitted, the token never expires on its own — revoke it instead
+(`DELETE /api/v1/tokens/{id}`, Basic-auth only, same as list/issue).
+
+`bin/roller-api auth login` wraps exactly this call (minting an `ADMIN`-role
+token under the label `roller-api cli`) and writes the URL and token to
+`~/.roller/credentials` (`chmod 600`). Every other `roller-api` subcommand
+reads that file, or `ROLLER_API_URL`/`ROLLER_API_TOKEN` if set, so it never
+asks for a password again.
+
+## Token scopes
+
+A token's scope is **a ceiling, never a grant.** It can only narrow what the
+owning user could already do through the ordinary permission system
+(`GlobalPermission`/`WeblogPermission`) — it can never let a token reach
+something its owner cannot. Two independent things are checked on every
+request: the token's `role`, and its `weblog` pin.
+
+**Role** (`ApiToken.Role`):
+
+| Role    | May do |
+|---------|--------|
+| `READ`  | GET only. |
+| `POST`  | GET, plus writes (POST/PATCH/DELETE) on ordinary content endpoints — entries, media, categories, pages. |
+| `ADMIN` | Everything `POST` can, plus every `/api/v1/admin/**` endpoint and `/api/v1/weblogs` (the site-wide weblog list/administration resource, not the per-weblog content APIs) and the Maintenance actions. |
+
+A non-write method (`GET`/`HEAD`) never needs more than `READ`. Anything else
+needs `POST` or `ADMIN`; a `READ`-role token gets a 403
+(`This token is not scoped for administration.` /
+`This token is read-only.`) on a write, never a silent downgrade.
+
+**Weblog pin.** A token minted with `--weblog myblog` (or
+`"weblog": "myblog"` in the mint request) may only act on that one weblog.
+Naming a *different* weblog's handle in the path answers **404, not 403** —
+a 403 would confirm the other weblog exists. A token minted with no weblog
+pin may act on every weblog its owning user can reach, subject to that
+user's own `WeblogPermission` on each one.
+
+A handful of routes name no weblog at all (`GET /api/v1/ping`,
+`GET /api/v1/me`) and are exempt from the weblog-pin check by design — a
+weblog-scoped token must still be able to ask who it is. Every other route
+that resolves no weblog (`POST /api/v1/tokens`, `/api/v1/admin/**`) is
+**ADMIN-only** by a separate, explicit annotation on the controller, not by
+this exemption.
+
+## Making a request
+
+Every non-mint call is Bearer-authenticated:
+
+```bash
+curl -sS -H "Authorization: Bearer $ROLLER_API_TOKEN" \
+  http://localhost:8083/roller/api/v1/weblogs/myblog/entries
+```
+
+`Content-Type: application/json` on every request carrying a JSON body
+(everything except the multipart media upload — see [Media](#media)).
+
+## Pagination
+
+List endpoints (`GET .../entries`, `GET .../audit/seo`,
+`GET /api/v1/admin/users`, `GET /api/v1/weblogs`) accept `?offset=` and
+`?limit=`. **Out-of-range values are a 400, never silently clamped or
+wrapped**: `limit` below 1, or a negative `offset`, is rejected outright
+before any query runs — a permissive endpoint would otherwise let
+`limit=-2` reach the database layer's "no limit" sentinel and read the
+entire table. A `limit` above the endpoint's cap (200, uniformly) is
+silently capped rather than rejected — the one place this API *does*
+clamp instead of refusing.
+
+Every page response reports `hasMore`, computed by fetching one row past the
+requested page — a client should page until `hasMore` is `false`, not until
+a short page arrives.
+
+## Errors
+
+Every failure is [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
+`application/problem+json`:
+
+```json
+{
+  "type": "https://roller.invalid/problems/not-found",
+  "title": "Not found",
+  "status": 404,
+  "detail": "No such entry.",
+  "instance": "/api/v1/weblogs/myblog/entries/does-not-exist"
+}
+```
+
+A validation failure additionally carries an `errors` array of
+`{"field": ..., "message": ...}`.
+
+| Status | Meaning |
+|--------|---------|
+| 400 | Malformed request: bad JSON, an out-of-range `limit`/`offset`, an unknown status/role, a missing required field. |
+| 401 | No credential, or a Bearer token that is missing, malformed, unknown, expired or revoked. |
+| 403 | Authenticated, but the token's own scope refuses this call (wrong role, or an admin-only route with a non-`ADMIN` token). |
+| 404 | The resource does not exist, **or the caller may not see it.** A weblog outside a token's pin, a foreign entry/category/page/media id, and a genuinely-missing id are all 404 — never 403, because a 403 there would confirm the resource exists under someone else's weblog. |
+| 409 | The request conflicts with the resource's current state: trashing an already-trashed entry, restoring one that isn't trashed, PATCHing a trashed entry (restore it first), a duplicate category/directory/page-slug name, deleting a weblog's last category. |
+| 413 | An upload would exceed a configured size/quota limit. |
+| 429 | Throttled — see below. |
+| 500 | Unexpected server error. The response body never carries exception detail (message, stack trace, class name) — those are logged server-side only. |
+
+## The throttle
+
+Every request to `/api/**` is rate-limited: **120 requests per 60-second
+window** by default (`api.throttle.threshold` / `api.throttle.interval` in
+`roller.properties`; the on/off switch, `api.throttle.enabled`, is a runtime
+property changeable from Admin Settings without a restart). The key is the
+token's own SHA-256 digest for a Bearer-authenticated request, or the client
+IP for the unauthenticated mint call — so throttling is per-credential once
+you have one, per-source-address before that. A throttled request gets a
+429 `application/problem+json` body identical in shape to every other error
+here, built and written outside the normal Spring MVC dispatch path (the
+throttle check runs in a servlet filter, ahead of authentication) so a
+throttled client sees the same error contract as everywhere else, not a
+bare connection reset or an HTML error page.
+
+## Entries
+
+```
+GET    /api/v1/weblogs/{handle}/entries                 list (filterable, paged)
+GET    /api/v1/weblogs/{handle}/entries/{id}             get one
+POST   /api/v1/weblogs/{handle}/entries                  create
+PATCH  /api/v1/weblogs/{handle}/entries/{id}              partial update
+DELETE /api/v1/weblogs/{handle}/entries/{id}              trash (not delete)
+POST   /api/v1/weblogs/{handle}/entries/{id}/restore      restore (always to DRAFT)
+POST   /api/v1/weblogs/{handle}/entries/{id}/delete-forever   permanent delete
+POST   /api/v1/weblogs/{handle}/entries/{id}/preview       preview unsaved text
+POST   /api/v1/weblogs/{handle}/entries/preview            preview text for a new entry
+```
+
+Reads need `READ`; writes need `POST` or `ADMIN`.
+
+**Create:**
+
+```bash
+curl -sS -H "Authorization: Bearer $ROLLER_API_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -X POST http://localhost:8083/roller/api/v1/weblogs/myblog/entries \
+  -d '{
+        "title": "Hello, automation",
+        "text": "Written by a script.",
+        "status": "PUBLISHED",
+        "category": "General",
+        "tags": ["automation", "test"]
+      }'
+```
+
+`title` and `text` are required on create (they are `NOT NULL` columns; an
+entry with neither is not a resource this API will create). `status`
+defaults to whatever a brand-new `WeblogEntry` defaults to (`DRAFT`) when
+omitted; publishing with no `pubTime` supplied means "now", not an error.
+`category` names a category **by name**, not id — the same shape
+`EntryView.category` reads back — and an unknown name is a 400. `pubTime` is
+a wall-clock string in **the weblog's own timezone**, e.g. `2026-03-01T09:30`
+(see the repository's `CLAUDE.md`, "Entry editing", for why this is the
+weblog's zone specifically and not the caller's).
+
+**The four writable statuses are `DRAFT`, `PUBLISHED`, `PENDING` and
+`SCHEDULED`. `TRASHED` is not among them — a PATCH or create body carrying
+`"status": "TRASHED"` is a 400** (`Use DELETE to trash an entry and POST
+.../restore to bring it back.`). Trashing and restoring have their own
+endpoints because both do more than flip a column: trashing removes the
+entry from the search index and bumps the weblog's cache-invalidation
+timestamp so a cached home page stops serving a post whose permalink now
+404s; restoring reverses only the removal, never the cache bump (nothing
+needs re-adding to a live page).
+
+**PATCH on an already-trashed entry is refused with 409**, not resurrected
+by a side door — `{"status": "PUBLISHED"}` against a trashed entry's id does
+not un-trash and publish it in one call. **Restore always lands the entry
+on `DRAFT`, never back on `PUBLISHED`** — an undelete that silently
+republishes to feeds, the sitemap and every subscriber is worse than one
+extra click, and no column remembers the pre-trash status to restore
+instead. Getting a trashed entry back onto the site is therefore always two
+calls: `restore`, then a `PATCH` setting `status` to `PUBLISHED` yourself,
+never one.
+
+`GET .../entries` accepts `?status=`, `?category=`, `?tags=` (repeatable),
+`?text=` (free-text search), `?locale=`, plus `offset`/`limit`. Naming no
+`status` at all excludes the trash by construction (`?status=TRASHED` is the
+only way to see it — see the repository's `CLAUDE.md`, "Trash", for why the
+whole API's trash-safety property lives in that one default).
+
+**Preview** (`POST .../entries/{id}/preview` or `.../entries/preview` for an
+entry that does not exist yet) renders `{"text": "..."}` through the real
+pipeline — shortcode expansion, then Markdown, then sanitization — the exact
+sequence a saved entry goes through, so what you preview cannot disagree
+with what gets published. Nothing is persisted; this is the only way to see
+`[gallery]`/`[map]`/etc. expand before committing to a save.
+
+## Categories and tags
+
+```
+GET    /api/v1/weblogs/{handle}/categories
+POST   /api/v1/weblogs/{handle}/categories
+PATCH  /api/v1/weblogs/{handle}/categories/{id}
+DELETE /api/v1/weblogs/{handle}/categories/{id}?moveTo={id}
+GET    /api/v1/weblogs/{handle}/tags
+```
+
+`POST`-role required for all of these (category structure is blog-wide, not
+a single draft's business). Deleting the weblog's last remaining category is
+a 409 — a weblog with zero categories can never save an entry again.
+Deleting a category that has entries is also a 409 *unless* `moveTo` names
+another category to move them into first (and `moveTo` naming the category
+being deleted is itself a 400). `GET .../tags` has no pagination — a
+per-weblog tag cloud has never been large enough to need it.
+
+## Media
+
+```
+GET    /api/v1/weblogs/{handle}/media[?dir={directoryId}]
+GET    /api/v1/weblogs/{handle}/media/{id}
+POST   /api/v1/weblogs/{handle}/media           multipart upload, one or more files
+PATCH  /api/v1/weblogs/{handle}/media/{id}
+DELETE /api/v1/weblogs/{handle}/media/{id}
+GET    /api/v1/weblogs/{handle}/media/directories
+POST   /api/v1/weblogs/{handle}/media/directories
+```
+
+**Upload is a batch, and a batch is not a transaction.** Send one or more
+`file` parts (`multipart/form-data`), optionally `directoryId` to file them
+somewhere other than the weblog's default directory:
+
+```bash
+curl -sS -H "Authorization: Bearer $ROLLER_API_TOKEN" \
+  -X POST http://localhost:8083/roller/api/v1/weblogs/myblog/media \
+  -F 'file=@photo1.jpg' -F 'file=@photo2.jpg'
+```
+
+The response is a `results` array, one entry per file, each with its own
+`status` (`"created"`, `"quota_exceeded"`, `"forbidden_extension"`, or
+`"error"`) and, only for a created file, its `MediaView`. **The HTTP status
+is 201 only when every file in the batch landed; the moment any one file
+fails, the whole response is 207 (Multi-Status)** — check the status code
+before assuming success, and check `results[].status` (not just the
+presence of a 2xx) to see which files actually made it, because 207 is
+still a 2xx.
+
+`MediaView.directory` is the owning directory's **id**, not its name —
+deliberately the opposite of `EntryView.category`, which is a name. The read
+side matches the corresponding write side in each case: `EntryWrite.category`
+is a name (so round-tripping an `EntryView` back into a write needs no
+lookup), while `MediaPatch.directoryId` is an id (so round-tripping a
+`MediaView` back into a patch likewise needs no lookup). Do not assume the
+two fields share a shape because they occupy the same conceptual slot.
+
+`PATCH` updates `altText` (an explicit empty string `""` *is* a real value —
+"decorative image", set on purpose — distinct from omitting the field
+entirely), `focalX`/`focalY`, `name` (present-but-blank is rejected, not
+stored — unlike `altText`, there is no legitimate "deliberately unnamed"
+file), and `directoryId` (moves the file; a foreign or unknown directory id
+is a 404, checked before anything else in the request is applied).
+
+## Pages
+
+```
+GET    /api/v1/weblogs/{handle}/pages
+GET    /api/v1/weblogs/{handle}/pages/{id}
+POST   /api/v1/weblogs/{handle}/pages
+PATCH  /api/v1/weblogs/{handle}/pages/{id}
+DELETE /api/v1/weblogs/{handle}/pages/{id}
+```
+
+`POST`-role required. `status` is one of `DRAFT`/`PUBLISHED` only — pages
+have no trash, no PENDING/SCHEDULED states, and no scheduling story at all
+(see the repository's `CLAUDE.md`, "Pages", for why pages are a separate
+entity from entries and deliberately excluded from the trash design). `slug`
+is validated against the same reserved-word list (`ReservedSlugs`) the
+renderer's own URL parser uses, and checked for a duplicate against the
+weblog, before either ever reaches the database — both are 400/409 here
+rather than an opaque 500. Unlike an entry title, **a page title is stored
+raw, not HTML-escaped** — this API does not double-encode it, matching how
+every bundled theme's page template escapes it at render time instead (see
+CLAUDE.md's title-escaping asymmetry note if you are consuming both
+`EntryView.title` and `PageView.title` in the same client).
+
+## Audits
+
+```
+GET /api/v1/weblogs/{handle}/audit/seo[?status=&offset=&limit=]
+GET /api/v1/weblogs/{handle}/audit/media
+```
+
+These turn "improve SEO" / "describe your images" into a work list an agent
+can loop over: find a gap, fix it, re-run, confirm the count dropped.
+`READ`-role is enough — both are reads.
+
+**`audit/seo`** reports entries missing a search description, a meta title,
+or a featured image, plus entries explicitly marked `noindex` — over
+`PUBLISHED` entries by default. `total`/`counts` describe every gappy entry
+found, not just the current page, so an agent can see the shape of the
+problem without paging through everything; only the `entries` array itself
+is paged.
+
+**`?status=TRASHED` is refused here with a 400 — unlike `GET .../entries`,
+which accepts it.** This is deliberate, not an oversight: the entries list
+is a general browsing/management endpoint where seeing the trash is
+legitimate (you're there to restore or purge it). The audit is a to-do-list
+generator meant to be blindly iterated, and handing that loop a trashed
+entry framed as "needs a meta title" is exactly the side-door-resurrection
+shape this codebase has already had to fix once (writing real metadata onto
+an entry that's supposed to be gone). Asking for no status at all still gets
+you the safe `PUBLISHED` default either way.
+
+**`audit/media`** reports every media file with missing or whitespace-only
+alt text, using the identical definition the renderer and the admin UI's own
+"no alt text" marker use — this list can never disagree with what a reader
+actually sees. Each item's `directoryName` is the owning directory's
+**name**, not its id — deliberately different from `MediaView.directory`
+(an id), so the two media-shaped payloads in this API cannot be confused by
+assuming a shared field name implies shared semantics. An audit item is a
+work-list entry for a human or agent to read, not a round-trippable write
+payload (the actual fix goes through `MediaApi`'s `PATCH .../media/{mediaId}`
+using `mediaId`, not the directory), so a readable name serves the reader
+better than an id they would only have to look up again.
+
+## Site administration
+
+`ADMIN` scope only, for all of the below.
+
+```
+GET   /api/v1/admin/users[?enabled=&offset=&limit=]
+POST  /api/v1/admin/users
+PATCH /api/v1/admin/users/{userName}
+
+GET   /api/v1/admin/config
+PATCH /api/v1/admin/config
+
+GET   /api/v1/weblogs[?offset=&limit=]
+GET   /api/v1/weblogs/{handle}
+PATCH /api/v1/weblogs/{handle}
+```
+
+**`POST /api/v1/admin/users` never accepts a password.** The account is
+created disabled, with a random password nobody is ever told, and a
+set-password link is emailed — the same mechanism the JSP admin's own "send
+set-password link" action uses. No plaintext password ever crosses this
+API, and the call fails outright (400) if mail is not configured, rather
+than creating an account with no way to ever reach a usable password.
+
+`GET/PATCH /api/v1/admin/config` reads and writes Roller's runtime
+properties (`runtimeConfigDefs.xml` is the allowlist — a name that file
+doesn't declare, including anything startup-scoped, is a 400). `PATCH` takes
+a flat `{"name": "value", ...}` map, not a list of typed objects — the type
+is declared server-side, not asserted by the caller — and every name and
+value in the request is validated *before* anything is saved, so a bad
+request never leaves a partial write behind.
+
+`GET/PATCH /api/v1/weblogs/{handle}` is **not** the same resource as
+`/api/v1/weblogs/{handle}/entries` etc. — those act only on the weblog a
+token is scoped to; this reaches **any** weblog on the site by handle,
+regardless of scope pin, because it requires `ADMIN` role, which this API
+treats as unrestricted by a weblog pin by design.
+
+## Maintenance actions
+
+```
+POST /api/v1/admin/weblogs/{handle}/actions/flush-cache
+POST /api/v1/admin/weblogs/{handle}/actions/rebuild-index
+POST /api/v1/admin/weblogs/{handle}/actions/regenerate-renditions
+```
+
+`ADMIN` scope only — the same three actions the Maintenance screen offers,
+reachable without a browser. All three answer **202 Accepted**, not 200:
+rebuilding the index and regenerating renditions are asynchronous
+background work that has only just started when the response returns, and
+flushing the cache — while synchronous — shares the same status code so a
+caller never has to special-case one of the three.
+
+## The OpenAPI document
+
+```bash
+curl -sS -H "Authorization: Bearer $ROLLER_API_TOKEN" \
+  http://localhost:8083/roller/api/v1/openapi.json
+```
+
+A machine-readable OpenAPI 3 document describing every endpoint above, for
+generating a client or importing into API tooling. **It requires
+authentication like everything else under `/api/**`** (Basic or Bearer) —
+there is no anonymous browser UI for it (`springdoc-openapi`'s Swagger UI is
+deliberately not installed; see `application.properties`), and it is not
+exempt from the site-wide `/api/**` security chain the way `GET
+/api/v1/ping` is. If you want to browse it visually, fetch it with `curl`
+and open it in any external OpenAPI viewer/editor.
+
+## `bin/roller-api`
+
+A thin `curl`+`jq` wrapper covering most of the above:
+`auth login`/`auth status`, `entries {list,get,create,patch,trash,restore,
+delete-forever,preview}`, `media {list,get,upload,patch,delete,dirs,
+create-dir}`, `audit {seo,media}`, and `admin {reindex,flush-cache,
+regenerate-renditions,users,config,weblogs}`. Run any group with no
+subcommand (e.g. `bin/roller-api entries`) to see that group's full usage.
+It does not yet wrap categories, tags or pages — call those with `curl`
+directly, using the paths documented above, until a subcommand exists.

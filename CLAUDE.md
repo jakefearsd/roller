@@ -6,6 +6,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Never commit or push unless explicitly asked.** Wait for the user to request a commit or push. Do not proactively create commits or push to remote.
 - **Work directly on `master`.** This is a solo-developer repo; do not create a feature branch before committing unless explicitly asked.
+- **Ship work; don't let agents sit idle.** The goal is finished, verified
+  work, not a tidy queue. Default to dispatching the next piece rather than
+  waiting for the current one to be fully wrapped up: reviews are read-only, so
+  the next task's implementer runs alongside the previous task's reviewer.
+  Prepare briefs and fix instructions ahead of time so a dispatch is instant
+  when a slot frees. If you find yourself with nothing in flight, that is a
+  planning failure, not a pause.
+  **The one hard serialisation is the build.** Implementers share
+  `app/target/`, so two concurrent `mvn -pl app test` runs clobber each other's
+  classes and surefire output — never run two builds at once in the same
+  working tree. Everything that does not build (reviews, briefs, rulings,
+  ledger writes, greps) overlaps freely. To check whether a build is already
+  running, the pattern must be **bracketed and scoped to this repo**:
+
+  ```bash
+  pgrep -f "[s]urefirebooter.*source/roller" >/dev/null && echo BUSY || echo CLEAR
+  ```
+
+  Both details are load-bearing, and getting either wrong has already cost a
+  stalled agent here. An unbracketed `pgrep -f surefirebooter` matches the
+  checking command's own command line — including a `while pgrep …; do sleep;
+  done` loop, which then waits on itself forever (the same self-match that
+  makes `pkill -f "spring-boot:run"` kill its own shell; use `[s]pring-boot`
+  there too). An unscoped pattern matches builds in *other* checkouts on this
+  machine, which are irrelevant and may run for an hour. Never poll for a lock
+  as a separate background step and stop — inline the wait in the same command
+  as the build, or you have traded a stall for a longer stall.
 - **All development is test-driven.** Write the failing test first, run it and
   watch it fail for the reason you expect, then write the minimum code that
   makes it pass. A test that has never been seen to fail has not been shown to
@@ -1349,3 +1376,88 @@ unknown names and malformed input pass through byte-for-byte. New handlers
 implement `ShortcodeHandler` and register in `defaultExpander()`; the interface
 also requires a `ShortcodeCard` (label + snippet), which is what the editor's
 Insert menu is generated from, so a new shortcode cannot ship undiscoverable.
+
+## Automation API
+`org.apache.roller.weblogger.ui.restapi` (`/api/v1`) is a REST surface for
+scripts and agents — entries, media, categories, pages, SEO/media audits,
+and site administration — everything alongside the JSP admin UI, not a
+replacement for it. Full endpoint reference, curl examples and the error
+contract: `docs/api/README.md` — the API's actual front door, since there is
+no UI for minting a token (`bin/roller-api auth login` is the only route
+in). `/api/v1` is explicitly unstable while Roller is 0.x.
+
+- **The `/api` prefix is a servlet-spec prefix mapping, not part of any
+  `@RequestMapping`.** `ServletRegistrationConfig.API_URL_PATTERNS` (`/api/*`)
+  registers on the *same* `DispatcherServlet` instance as `*.rol`, the SEO
+  patterns, and `/newsletter/*` — for a prefix-matched request, Spring strips
+  the matched servlet-path prefix from the lookup path before routing, so
+  every controller under `ui.restapi.v1` is written relative to `/v1/...`
+  (`TokensApi` is `@RequestMapping("/v1/tokens")`, not `/api/v1/tokens`) the
+  same way `NewsletterController` is written relative to `/newsletter`, not
+  `/newsletter/subscribe`. Getting this wrong compiles fine and 404s at
+  runtime — there is no test that catches a controller mapped with the `/api`
+  segment still on it beyond noticing every request to it fails. `api` and
+  `newsletter` are both reserved path roots in
+  `rendering.weblogMapper.rollerProtectedUrls`, specifically so no weblog
+  handle can ever shadow either prefix.
+- **The API and the JSP admin UI share exactly one authorization path:
+  `RollerHandlerInterceptor`.** Every `*Api` controller implements
+  `UISecurityEnforced` — the same interface `CategoryEditController`,
+  `WeblogConfigController` and the rest of the JSP admin controllers
+  implement — and declares its required `GlobalPermission`/
+  `WeblogPermission` exactly the way they do. There is no separate
+  API-side permission system to keep in sync with the UI's; a permission
+  change made once in `RollerHandlerInterceptor` or in a shared manager
+  method is enforced identically on both surfaces. `ApiScopeInterceptor`
+  (registered *after* `RollerHandlerInterceptor` in `WebMvcConfig` — order is
+  load-bearing, see its own javadoc) is an independent, API-only layer on
+  top of that shared path: it narrows what an authenticated request may do
+  based on the token's own scope, but never substitutes for the permission
+  check underneath it. A token can only ever narrow what its owning user
+  could already do through the ordinary permission system — see the next
+  point.
+- **`ApiToken.Role` (`READ`/`POST`/`ADMIN`) and the optional weblog pin are a
+  ceiling, never a grant.** Nothing about minting a token, at any role,
+  widens what the owning user is permitted to do — `ApiScopeInterceptor`
+  runs strictly on top of `RollerHandlerInterceptor`'s own
+  `GlobalPermission`/`WeblogPermission` check, refusing a request the scope
+  disallows, never approving one the underlying permission system would
+  have refused. A `READ`-scoped token held by a `GlobalPermission.ADMIN`
+  user still cannot POST anything; a token pinned to one weblog cannot act
+  on another even if its owner could, through the ordinary UI, edit both.
+- **`EntryFieldRules` and `WeblogOwnership`
+  (`org.apache.roller.weblogger.ui.controllers`) exist so entry-field rules
+  and by-id ownership checks have exactly one home each, shared by the JSP
+  editor and the API rather than reimplemented for it.** `EntryFieldRules`
+  is where an author's raw entry input becomes a stored value — title
+  HTML-escaping (`EntryBean` and `EntryDtos.applyWrite` both call
+  `EntryFieldRules.escapeTitle`) and weblog-timezone pubTime parsing
+  (`EntryFieldRules.parsePubTime`, used the same way by both) — so the two
+  surfaces cannot drift on either rule the way they would if the API had
+  grown its own copy. `WeblogOwnership` is this codebase's one IDOR defense
+  for a by-id lookup (see Categories above): `BaseController.lookupEntry`/
+  `lookupTemplate`/`lookupCategory`/`lookupPage` on the JSP side and
+  `BaseApiController.requireEntry`/`CategoriesApi`/`PagesApi` on the API
+  side both delegate to the same `WeblogOwnership.entry`/`category`/
+  `template`/`page` methods, rather than each surface trusting a
+  client-supplied id against its own weblog independently.
+- **A resource the caller may not see is 404, never 403** — across every
+  `*Api` controller, not just one: a weblog outside a token's pin, a foreign
+  entry/category/media/page id, and a genuinely-missing id are indistinguishable
+  responses, because a 403 would itself leak that the resource exists under
+  someone else's weblog. `ApiScopeInterceptor.checkWeblogScope` and every
+  `requireX` helper in `BaseApiController` follow this rule uniformly.
+- **The OpenAPI document is machine-readable, not a browser explorer.**
+  `springdoc-openapi-starter-webmvc-api` serves `GET /api/v1/openapi.json`
+  (configured relative to `/v1/openapi.json` in `application.properties`,
+  per the prefix-mapping point above), scoped to scan only
+  `ui.restapi.v1` so the document never leaks the JSP admin surface. The
+  UI half of springdoc is not even a dependency — `springdoc.swagger-ui
+  .enabled=false` is defence in depth against a future dependency change
+  re-adding it by accident, not the primary control. The document sits
+  behind the same `apiSecurityFilterChain` as everything else under
+  `/api/**` (Basic or Bearer); it is not exempted the way `GET
+  /api/v1/ping` is. `OpenApiDocumentTest` pins two claims in
+  `docs/api/README.md` as text — that v1 is unstable, and that
+  `roller-api auth login` is the bootstrap path — because both are things a
+  reader cannot recover on their own from the OpenAPI document itself.
