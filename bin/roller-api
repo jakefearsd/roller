@@ -1,0 +1,885 @@
+#!/usr/bin/env bash
+# roller-api -- command-line client for Roller's automation API.
+#
+# Configuration precedence: flags, then ROLLER_API_URL / ROLLER_API_TOKEN,
+# then ~/.roller/credentials. The environment layer is what makes this usable
+# from CI without an interactive login.
+#
+# A partial run against a live blog is worse than no run: set -euo pipefail
+# means any unset variable or failing command stops the script immediately
+# rather than continuing on with half-applied state.
+set -euo pipefail
+
+CRED_FILE="${ROLLER_CREDENTIALS:-$HOME/.roller/credentials}"
+
+die() { printf '%s\n' "$*" >&2; exit 1; }
+
+require_tools() {
+    command -v curl >/dev/null 2>&1 || die "roller-api needs curl on PATH."
+    command -v jq   >/dev/null 2>&1 || die "roller-api needs jq on PATH."
+}
+
+load_credentials() {
+    if [ -z "${ROLLER_API_URL:-}" ] || [ -z "${ROLLER_API_TOKEN:-}" ]; then
+        # shellcheck source=/dev/null
+        [ -f "$CRED_FILE" ] && . "$CRED_FILE"
+    fi
+    : "${ROLLER_API_URL:?No API URL. Run 'roller-api auth login --url ...' first.}"
+    : "${ROLLER_API_TOKEN:?No API token. Run 'roller-api auth login --url ...' first.}"
+}
+
+# Issues one authenticated request against /api/v1<path>. Extra args (e.g.
+# -d, --data-binary, -F) are forwarded to curl verbatim, before the URL.
+# --fail-with-body means an API error body (a problem+json document) is
+# printed rather than swallowed -- a CLI that prints nothing on a 400 is
+# useless for debugging.
+api() {
+    local method="$1" path="$2"; shift 2
+    curl -sS --fail-with-body \
+        -X "$method" \
+        -H "Authorization: Bearer ${ROLLER_API_TOKEN:-}" \
+        -H "Content-Type: application/json" \
+        "$@" \
+        "${ROLLER_API_URL}/api/v1${path}"
+}
+
+# Like api(), but does not force Content-Type: application/json -- used for
+# the multipart upload, where curl's -F sets its own multipart content type.
+api_raw() {
+    local method="$1" path="$2"; shift 2
+    curl -sS --fail-with-body \
+        -X "$method" \
+        -H "Authorization: Bearer ${ROLLER_API_TOKEN:-}" \
+        "$@" \
+        "${ROLLER_API_URL}/api/v1${path}"
+}
+
+# Reads --text-file F's content, or stdin when F is "-". Entry/preview bodies
+# always flow through here rather than a shell argument, so large content
+# (and content containing quotes, backslashes or newlines) never goes
+# through shell argument handling.
+read_text_file() {
+    local file="$1"
+    [ -n "$file" ] || die "--text-file is required."
+    if [ "$file" = "-" ]; then
+        cat
+    else
+        [ -f "$file" ] || die "No such file: $file"
+        cat "$file"
+    fi
+}
+
+# ------------------------------------------------------------------- auth
+
+cmd_auth_login() {
+    local url="" user=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --url)  url="$2";  shift 2 ;;
+            --user) user="$2"; shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$url" ] || die "--url is required."
+    [ -n "$user" ] || { printf 'Username: '; read -r user; }
+
+    # The password is read silently, sent once, and never stored. Only the
+    # returned token is persisted -- the same shape as `gh auth login`.
+    printf 'Password: '
+    read -rs password
+    printf '\n'
+
+    local token
+    token=$(curl -sS --fail-with-body \
+        -u "${user}:${password}" \
+        -H "Content-Type: application/json" \
+        -X POST "${url}/api/v1/tokens" \
+        -d "$(jq -n --arg label "roller-api cli" '{label: $label, role: "ADMIN"}')" \
+        | jq -r '.token')
+    unset password
+
+    [ -n "$token" ] && [ "$token" != "null" ] || die "Login failed."
+
+    mkdir -p "$(dirname "$CRED_FILE")"
+    umask 077
+    printf 'ROLLER_API_URL=%s\nROLLER_API_TOKEN=%s\n' "$url" "$token" > "$CRED_FILE"
+    chmod 600 "$CRED_FILE"
+    printf 'Saved credentials to %s\n' "$CRED_FILE"
+}
+
+cmd_auth_status() {
+    load_credentials
+    api GET /me | jq .
+}
+
+# ---------------------------------------------------------------- entries
+
+usage_entries() {
+    cat <<'EOF'
+  entries list    --weblog H [--status S] [--category C] [--tags T,T] [--limit N] [--offset N]
+  entries get     --weblog H --id ID
+  entries create  --weblog H --title T --text-file F [--status S] [--category C] [--tags T,T]
+  entries patch   --weblog H --id ID [--title T] [--text-file F] [--status S] [--category C]
+                  [--tags T,T] [--meta-title T] [--search-description D] [--canonical-url U]
+                  [--noindex true|false] [--featured-image-id ID] [--og-image-id ID]
+  entries trash   --weblog H --id ID
+  entries restore --weblog H --id ID
+  entries delete-forever --weblog H --id ID
+  entries preview --weblog H --text-file F [--id ID]
+EOF
+}
+
+cmd_entries() {
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        list)    entries_list "$@" ;;
+        get)     entries_get "$@" ;;
+        create)  entries_create "$@" ;;
+        patch)   entries_patch "$@" ;;
+        trash)   entries_trash "$@" ;;
+        restore) entries_restore "$@" ;;
+        delete-forever) entries_delete_forever "$@" ;;
+        preview) entries_preview "$@" ;;
+        *) usage_entries; exit 1 ;;
+    esac
+}
+
+entries_list() {
+    local weblog="" status="" category="" tags="" text="" locale="" offset="" limit=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog)   weblog="$2";   shift 2 ;;
+            --status)   status="$2";   shift 2 ;;
+            --category) category="$2"; shift 2 ;;
+            --tags)     tags="$2";     shift 2 ;;
+            --text)     text="$2";     shift 2 ;;
+            --locale)   locale="$2";   shift 2 ;;
+            --offset)   offset="$2";   shift 2 ;;
+            --limit)    limit="$2";    shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+
+    local args=(-G)
+    [ -n "$status" ]   && args+=(--data-urlencode "status=$status")
+    [ -n "$category" ] && args+=(--data-urlencode "category=$category")
+    if [ -n "$tags" ]; then
+        IFS=',' read -ra tag_array <<< "$tags"
+        for t in "${tag_array[@]}"; do
+            args+=(--data-urlencode "tags=$t")
+        done
+    fi
+    [ -n "$text" ]     && args+=(--data-urlencode "text=$text")
+    [ -n "$locale" ]   && args+=(--data-urlencode "locale=$locale")
+    [ -n "$offset" ]   && args+=(--data-urlencode "offset=$offset")
+    [ -n "$limit" ]    && args+=(--data-urlencode "limit=$limit")
+
+    api GET "/weblogs/${weblog}/entries" "${args[@]}" | jq .
+}
+
+entries_get() {
+    local weblog="" id=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            --id)     id="$2";     shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$id" ] || die "--id is required."
+    api GET "/weblogs/${weblog}/entries/${id}" | jq .
+}
+
+# Builds the shared create/patch JSON body with jq -n --arg, never string
+# concatenation -- an entry body containing a quote, a newline or a backslash
+# is normal input, not an edge case, and concatenation would corrupt it
+# silently.
+entries_write_body() {
+    local title="$1" text_file="$2" status="$3" category="$4" tags="$5" \
+          pub_time="$6" meta_title="$7" search_description="$8" canonical_url="$9"
+    shift 9
+    local noindex="$1" featured_image_id="$2" og_image_id="$3"
+
+    local text=""
+    [ -n "$text_file" ] && text="$(read_text_file "$text_file")"
+
+    local tags_json="null"
+    if [ -n "$tags" ]; then
+        IFS=',' read -ra tag_array <<< "$tags"
+        tags_json="$(printf '%s\n' "${tag_array[@]}" | jq -R . | jq -s .)"
+    fi
+
+    local noindex_json="null"
+    if [ -n "$noindex" ]; then
+        case "$noindex" in
+            true|false) noindex_json="$noindex" ;;
+            *) die "--noindex must be true or false." ;;
+        esac
+    fi
+
+    jq -n \
+        --arg title "$title" \
+        --arg text "$text" \
+        --arg status "$status" \
+        --arg category "$category" \
+        --argjson tags "$tags_json" \
+        --arg pubTime "$pub_time" \
+        --arg metaTitle "$meta_title" \
+        --arg searchDescription "$search_description" \
+        --arg canonicalUrl "$canonical_url" \
+        --argjson noindex "$noindex_json" \
+        --arg featuredImageId "$featured_image_id" \
+        --arg ogImageId "$og_image_id" \
+        '{
+            title: (if $title == "" then null else $title end),
+            text: (if $text == "" then null else $text end),
+            status: (if $status == "" then null else $status end),
+            category: (if $category == "" then null else $category end),
+            tags: $tags,
+            pubTime: (if $pubTime == "" then null else $pubTime end),
+            metaTitle: (if $metaTitle == "" then null else $metaTitle end),
+            searchDescription: (if $searchDescription == "" then null else $searchDescription end),
+            canonicalUrl: (if $canonicalUrl == "" then null else $canonicalUrl end),
+            noindex: $noindex,
+            featuredImageId: (if $featuredImageId == "" then null else $featuredImageId end),
+            ogImageId: (if $ogImageId == "" then null else $ogImageId end)
+        }'
+}
+
+entries_create() {
+    local weblog="" title="" text_file="" publish="" status="" category="" tags="" \
+          pub_time="" meta_title="" search_description="" canonical_url="" \
+          noindex="" featured_image_id="" og_image_id=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog)             weblog="$2";             shift 2 ;;
+            --title)              title="$2";              shift 2 ;;
+            --text-file)          text_file="$2";           shift 2 ;;
+            --publish)            publish=1;                shift 1 ;;
+            --status)             status="$2";              shift 2 ;;
+            --category)           category="$2";            shift 2 ;;
+            --tags)               tags="$2";                shift 2 ;;
+            --pub-time)           pub_time="$2";             shift 2 ;;
+            --meta-title)         meta_title="$2";           shift 2 ;;
+            --search-description) search_description="$2";   shift 2 ;;
+            --canonical-url)      canonical_url="$2";        shift 2 ;;
+            --noindex)            noindex="$2";              shift 2 ;;
+            --featured-image-id)  featured_image_id="$2";    shift 2 ;;
+            --og-image-id)        og_image_id="$2";          shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$title" ] || die "--title is required."
+    [ -n "$text_file" ] || die "--text-file is required."
+    if [ -n "$publish" ] && [ -z "$status" ]; then
+        status="PUBLISHED"
+    fi
+
+    local body
+    body="$(entries_write_body "$title" "$text_file" "$status" "$category" "$tags" \
+        "$pub_time" "$meta_title" "$search_description" "$canonical_url" \
+        "$noindex" "$featured_image_id" "$og_image_id")"
+
+    api POST "/weblogs/${weblog}/entries" -d "$body" | jq .
+}
+
+entries_patch() {
+    local weblog="" id="" title="" text_file="" status="" category="" tags="" \
+          pub_time="" meta_title="" search_description="" canonical_url="" \
+          noindex="" featured_image_id="" og_image_id=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog)             weblog="$2";             shift 2 ;;
+            --id)                 id="$2";                  shift 2 ;;
+            --title)              title="$2";               shift 2 ;;
+            --text-file)          text_file="$2";           shift 2 ;;
+            --status)             status="$2";              shift 2 ;;
+            --category)           category="$2";            shift 2 ;;
+            --tags)               tags="$2";                shift 2 ;;
+            --pub-time)           pub_time="$2";             shift 2 ;;
+            --meta-title)         meta_title="$2";           shift 2 ;;
+            --search-description) search_description="$2";   shift 2 ;;
+            --canonical-url)      canonical_url="$2";        shift 2 ;;
+            --noindex)            noindex="$2";              shift 2 ;;
+            --featured-image-id)  featured_image_id="$2";    shift 2 ;;
+            --og-image-id)        og_image_id="$2";          shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$id" ] || die "--id is required."
+
+    local body
+    body="$(entries_write_body "$title" "$text_file" "$status" "$category" "$tags" \
+        "$pub_time" "$meta_title" "$search_description" "$canonical_url" \
+        "$noindex" "$featured_image_id" "$og_image_id")"
+
+    api PATCH "/weblogs/${weblog}/entries/${id}" -d "$body" | jq .
+}
+
+entries_trash() {
+    local weblog="" id=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            --id)     id="$2";     shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$id" ] || die "--id is required."
+    api DELETE "/weblogs/${weblog}/entries/${id}" -o /dev/null
+    printf 'Trashed %s\n' "$id"
+}
+
+entries_restore() {
+    local weblog="" id=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            --id)     id="$2";     shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$id" ] || die "--id is required."
+    api POST "/weblogs/${weblog}/entries/${id}/restore" | jq .
+}
+
+entries_delete_forever() {
+    local weblog="" id=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            --id)     id="$2";     shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$id" ] || die "--id is required."
+    api POST "/weblogs/${weblog}/entries/${id}/delete-forever" -o /dev/null
+    printf 'Permanently deleted %s\n' "$id"
+}
+
+entries_preview() {
+    local weblog="" id="" text_file=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog)    weblog="$2";    shift 2 ;;
+            --id)        id="$2";        shift 2 ;;
+            --text-file) text_file="$2"; shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$text_file" ] || die "--text-file is required."
+
+    local text body
+    text="$(read_text_file "$text_file")"
+    body="$(jq -n --arg text "$text" '{text: $text}')"
+
+    if [ -n "$id" ]; then
+        api POST "/weblogs/${weblog}/entries/${id}/preview" -d "$body" | jq -r '.html'
+    else
+        api POST "/weblogs/${weblog}/entries/preview" -d "$body" | jq -r '.html'
+    fi
+}
+
+# ------------------------------------------------------------------ media
+
+usage_media() {
+    cat <<'EOF'
+  media list       --weblog H [--dir D]
+  media get        --weblog H --id ID
+  media upload     --weblog H [--dir-id D] FILE...
+  media patch      --weblog H --id ID [--alt-text TEXT] [--name N] [--focal-x X] [--focal-y Y]
+  media delete     --weblog H --id ID
+  media dirs       --weblog H
+  media create-dir --weblog H --name N [--description D]
+EOF
+}
+
+cmd_media() {
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        list)       media_list "$@" ;;
+        get)        media_get "$@" ;;
+        upload)     media_upload "$@" ;;
+        patch)      media_patch "$@" ;;
+        delete)     media_delete "$@" ;;
+        dirs)       media_dirs "$@" ;;
+        create-dir) media_create_dir "$@" ;;
+        *) usage_media; exit 1 ;;
+    esac
+}
+
+media_list() {
+    local weblog="" dir=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            --dir)    dir="$2";    shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    if [ -n "$dir" ]; then
+        api GET "/weblogs/${weblog}/media" -G --data-urlencode "dir=$dir" | jq .
+    else
+        api GET "/weblogs/${weblog}/media" | jq .
+    fi
+}
+
+media_get() {
+    local weblog="" id=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            --id)     id="$2";     shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$id" ] || die "--id is required."
+    api GET "/weblogs/${weblog}/media/${id}" | jq .
+}
+
+# Multipart batch upload -- POST /v1/weblogs/{h}/media with one or more
+# `file` parts. Responds 201 only when every file landed; 207 the moment any
+# one did not. --fail-with-body only trips curl's own failure on 4xx/5xx, and
+# 207 is a 2xx status, so a 207 body must be inspected for its own `failed`
+# count -- this must NOT report success just because curl did not fail.
+media_upload() {
+    local weblog="" dir_id="" files=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            --dir-id) dir_id="$2"; shift 2 ;;
+            --) shift; while [ $# -gt 0 ]; do files+=("$1"); shift; done ;;
+            -*) die "Unknown option: $1" ;;
+            *) files+=("$1"); shift ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ "${#files[@]}" -gt 0 ] || die "At least one file is required."
+
+    local form_args=()
+    for f in "${files[@]}"; do
+        [ -f "$f" ] || die "No such file: $f"
+        form_args+=(-F "file=@${f}")
+    done
+    [ -n "$dir_id" ] && form_args+=(-F "directoryId=${dir_id}")
+
+    local status body
+    status="$(api_raw POST "/weblogs/${weblog}/media" "${form_args[@]}" \
+        -o /tmp/roller-api-upload.$$.json -w '%{http_code}')"
+    body="$(cat /tmp/roller-api-upload.$$.json)"
+    rm -f /tmp/roller-api-upload.$$.json
+
+    printf '%s\n' "$body" | jq .
+
+    local failed
+    failed="$(printf '%s\n' "$body" | jq -r '.failed // 0')"
+    if [ "$status" = "207" ] || [ "${failed:-0}" != "0" ]; then
+        die "Upload had failures ($failed file(s)); see results above."
+    fi
+}
+
+media_patch() {
+    local weblog="" id="" alt_text="" name="" focal_x="" focal_y="" dir_id=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog)   weblog="$2";   shift 2 ;;
+            --id)       id="$2";       shift 2 ;;
+            --alt-text) alt_text="$2"; shift 2 ;;
+            --name)     name="$2";     shift 2 ;;
+            --focal-x)  focal_x="$2";  shift 2 ;;
+            --focal-y)  focal_y="$2";  shift 2 ;;
+            --dir-id)   dir_id="$2";   shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$id" ] || die "--id is required."
+
+    local focal_x_json="null" focal_y_json="null"
+    [ -n "$focal_x" ] && focal_x_json="$focal_x"
+    [ -n "$focal_y" ] && focal_y_json="$focal_y"
+
+    local body
+    body="$(jq -n \
+        --arg altText "$alt_text" \
+        --arg name "$name" \
+        --arg directoryId "$dir_id" \
+        --argjson focalX "$focal_x_json" \
+        --argjson focalY "$focal_y_json" \
+        '{
+            altText: (if $altText == "" then null else $altText end),
+            name: (if $name == "" then null else $name end),
+            directoryId: (if $directoryId == "" then null else $directoryId end),
+            focalX: $focalX,
+            focalY: $focalY
+        }')"
+
+    api PATCH "/weblogs/${weblog}/media/${id}" -d "$body" | jq .
+}
+
+media_delete() {
+    local weblog="" id=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            --id)     id="$2";     shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$id" ] || die "--id is required."
+    api DELETE "/weblogs/${weblog}/media/${id}" -o /dev/null
+    printf 'Deleted %s\n' "$id"
+}
+
+media_dirs() {
+    local weblog=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    api GET "/weblogs/${weblog}/media/directories" | jq .
+}
+
+media_create_dir() {
+    local weblog="" name="" description=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog)      weblog="$2";      shift 2 ;;
+            --name)        name="$2";        shift 2 ;;
+            --description) description="$2"; shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    [ -n "$name" ] || die "--name is required."
+
+    local body
+    body="$(jq -n --arg name "$name" --arg description "$description" \
+        '{name: $name, description: (if $description == "" then null else $description end)}')"
+    api POST "/weblogs/${weblog}/media/directories" -d "$body" | jq .
+}
+
+# ------------------------------------------------------------------ audit
+
+usage_audit() {
+    cat <<'EOF'
+  audit seo   --weblog H [--status S] [--offset N] [--limit N]
+  audit media --weblog H
+EOF
+}
+
+cmd_audit() {
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        seo)   audit_seo "$@" ;;
+        media) audit_media "$@" ;;
+        *) usage_audit; exit 1 ;;
+    esac
+}
+
+audit_seo() {
+    local weblog="" status="" offset="" limit=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            --status) status="$2"; shift 2 ;;
+            --offset) offset="$2"; shift 2 ;;
+            --limit)  limit="$2";  shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+
+    local args=(-G)
+    [ -n "$status" ] && args+=(--data-urlencode "status=$status")
+    [ -n "$offset" ] && args+=(--data-urlencode "offset=$offset")
+    [ -n "$limit" ]  && args+=(--data-urlencode "limit=$limit")
+
+    api GET "/weblogs/${weblog}/audit/seo" "${args[@]}" | jq .
+}
+
+audit_media() {
+    local weblog=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    api GET "/weblogs/${weblog}/audit/media" | jq .
+}
+
+# ------------------------------------------------------------------ admin
+
+usage_admin() {
+    cat <<'EOF'
+  admin reindex --weblog H
+  admin flush-cache --weblog H
+  admin regenerate-renditions --weblog H
+  admin users list [--enabled true|false] [--offset N] [--limit N]
+  admin users create --user-name N --email E [--screen-name S]
+  admin users patch --user-name N [--email E] [--screen-name S] [--enabled true|false]
+  admin config list
+  admin config set NAME=VALUE [NAME=VALUE ...]
+  admin weblogs list [--offset N] [--limit N]
+  admin weblogs get --weblog H
+  admin weblogs patch --weblog H [--name N] [--tagline T] [--active true|false]
+EOF
+}
+
+cmd_admin() {
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        reindex)                 admin_action rebuild-index "$@" ;;
+        flush-cache)             admin_action flush-cache "$@" ;;
+        regenerate-renditions)   admin_action regenerate-renditions "$@" ;;
+        users)   admin_users "$@" ;;
+        config)  admin_config "$@" ;;
+        weblogs) admin_weblogs "$@" ;;
+        *) usage_admin; exit 1 ;;
+    esac
+}
+
+admin_action() {
+    local action="$1"; shift
+    local weblog=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    api POST "/admin/weblogs/${weblog}/actions/${action}" | jq .
+}
+
+admin_users() {
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        list)   admin_users_list "$@" ;;
+        create) admin_users_create "$@" ;;
+        patch)  admin_users_patch "$@" ;;
+        *) usage_admin; exit 1 ;;
+    esac
+}
+
+admin_users_list() {
+    local enabled="" offset="" limit=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --enabled) enabled="$2"; shift 2 ;;
+            --offset)  offset="$2";  shift 2 ;;
+            --limit)   limit="$2";   shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    local args=(-G)
+    [ -n "$enabled" ] && args+=(--data-urlencode "enabled=$enabled")
+    [ -n "$offset" ]  && args+=(--data-urlencode "offset=$offset")
+    [ -n "$limit" ]   && args+=(--data-urlencode "limit=$limit")
+    api GET "/admin/users" "${args[@]}" | jq .
+}
+
+admin_users_create() {
+    local user_name="" email="" screen_name=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --user-name)   user_name="$2";   shift 2 ;;
+            --email)       email="$2";       shift 2 ;;
+            --screen-name) screen_name="$2"; shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$user_name" ] || die "--user-name is required."
+    [ -n "$email" ] || die "--email is required."
+
+    local body
+    body="$(jq -n --arg userName "$user_name" --arg emailAddress "$email" --arg screenName "$screen_name" \
+        '{userName: $userName, emailAddress: $emailAddress, screenName: (if $screenName == "" then null else $screenName end)}')"
+    api POST "/admin/users" -d "$body" | jq .
+}
+
+admin_users_patch() {
+    local user_name="" email="" screen_name="" enabled=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --user-name)   user_name="$2";   shift 2 ;;
+            --email)       email="$2";       shift 2 ;;
+            --screen-name) screen_name="$2"; shift 2 ;;
+            --enabled)     enabled="$2";     shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$user_name" ] || die "--user-name is required."
+
+    local enabled_json="null"
+    [ -n "$enabled" ] && enabled_json="$enabled"
+
+    local body
+    body="$(jq -n --arg emailAddress "$email" --arg screenName "$screen_name" --argjson enabled "$enabled_json" \
+        '{emailAddress: (if $emailAddress == "" then null else $emailAddress end),
+          screenName: (if $screenName == "" then null else $screenName end),
+          enabled: $enabled}')"
+    api PATCH "/admin/users/${user_name}" -d "$body" | jq .
+}
+
+admin_config() {
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        list) api GET "/admin/config" | jq . ;;
+        set)
+            [ $# -gt 0 ] || die "admin config set needs at least one NAME=VALUE."
+            local body="{}"
+            for pair in "$@"; do
+                case "$pair" in
+                    *=*) : ;;
+                    *) die "Expected NAME=VALUE, got: $pair" ;;
+                esac
+                local name="${pair%%=*}" value="${pair#*=}"
+                body="$(printf '%s' "$body" | jq --arg name "$name" --arg value "$value" '. + {($name): $value}')"
+            done
+            api PATCH "/admin/config" -d "$body" | jq .
+            ;;
+        *) usage_admin; exit 1 ;;
+    esac
+}
+
+admin_weblogs() {
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        list)  admin_weblogs_list "$@" ;;
+        get)   admin_weblogs_get "$@" ;;
+        patch) admin_weblogs_patch "$@" ;;
+        *) usage_admin; exit 1 ;;
+    esac
+}
+
+admin_weblogs_list() {
+    local offset="" limit=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --offset) offset="$2"; shift 2 ;;
+            --limit)  limit="$2";  shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    local args=(-G)
+    [ -n "$offset" ] && args+=(--data-urlencode "offset=$offset")
+    [ -n "$limit" ]  && args+=(--data-urlencode "limit=$limit")
+    api GET "/weblogs" "${args[@]}" | jq .
+}
+
+admin_weblogs_get() {
+    local weblog=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog) weblog="$2"; shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+    api GET "/weblogs/${weblog}" | jq .
+}
+
+admin_weblogs_patch() {
+    local weblog="" name="" tagline="" active="" locale="" timezone="" entry_display_count="" email=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --weblog)              weblog="$2";              shift 2 ;;
+            --name)                name="$2";                shift 2 ;;
+            --tagline)             tagline="$2";              shift 2 ;;
+            --active)              active="$2";               shift 2 ;;
+            --locale)              locale="$2";               shift 2 ;;
+            --timezone)            timezone="$2";             shift 2 ;;
+            --entry-display-count) entry_display_count="$2";  shift 2 ;;
+            --email)               email="$2";                shift 2 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+    done
+    [ -n "$weblog" ] || die "--weblog is required."
+
+    local active_json="null" count_json="null"
+    [ -n "$active" ] && active_json="$active"
+    [ -n "$entry_display_count" ] && count_json="$entry_display_count"
+
+    local body
+    body="$(jq -n \
+        --arg name "$name" --arg tagline "$tagline" --arg locale "$locale" \
+        --arg timeZone "$timezone" --arg emailAddress "$email" \
+        --argjson active "$active_json" --argjson entryDisplayCount "$count_json" \
+        '{
+            name: (if $name == "" then null else $name end),
+            tagline: (if $tagline == "" then null else $tagline end),
+            locale: (if $locale == "" then null else $locale end),
+            timeZone: (if $timeZone == "" then null else $timeZone end),
+            emailAddress: (if $emailAddress == "" then null else $emailAddress end),
+            active: $active,
+            entryDisplayCount: $entryDisplayCount
+        }')"
+    api PATCH "/weblogs/${weblog}" -d "$body" | jq .
+}
+
+# -------------------------------------------------------------------- misc
+
+usage() {
+    cat <<'EOF'
+roller-api -- Roller automation API client
+
+  auth login --url URL [--user NAME]   mint and store a token
+  auth status                          show who the stored token belongs to
+
+  entries list    --weblog H [--status S] [--limit N]
+  entries create  --weblog H --title T --text-file F [--publish]
+  entries patch   --weblog H --id ID [--search-description D] [--meta-title T]
+  entries preview --weblog H --text-file F
+
+  media upload --weblog H [--dir-id D] FILE...
+  media patch  --weblog H --id ID --alt-text TEXT
+
+  audit seo   --weblog H
+  audit media --weblog H
+
+  admin reindex --weblog H
+  admin flush-cache --weblog H
+  admin regenerate-renditions --weblog H
+
+Run 'roller-api <group> --help'-shaped usage (e.g. `roller-api entries`
+with no subcommand) to see every subcommand of a group.
+EOF
+}
+
+main() {
+    require_tools
+    [ $# -gt 0 ] || { usage; exit 1; }
+    local group="$1"; shift
+    case "$group" in
+        auth)
+            local sub="${1:-}"; shift || true
+            case "$sub" in
+                login)  cmd_auth_login "$@" ;;
+                status) cmd_auth_status ;;
+                *) usage; exit 1 ;;
+            esac
+            ;;
+        entries|media|audit|admin) load_credentials; "cmd_${group}" "$@" ;;
+        -h|--help|help) usage ;;
+        *) usage; exit 1 ;;
+    esac
+}
+
+main "$@"
