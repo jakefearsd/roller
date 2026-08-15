@@ -64,6 +64,21 @@ class PagesApiTest {
                 () -> PageDtos.requireUsableSlug("  "));
     }
 
+    /**
+     * JPAWeblogPageManagerImpl.savePage separately refuses a slug containing
+     * '/' -- a check ReservedSlugs.isReserved does not make, since it only
+     * tests membership in a fixed set of whole names. Without mirroring this
+     * here, a slug like "foo/bar" reaches savePage, which throws a bare
+     * WebloggerException the generic handler can only render as an opaque
+     * 500 -- the same class of gap requireUsableSlug already closes for
+     * blank and reserved slugs.
+     */
+    @Test
+    void aSlugContainingASlashIsRefused() {
+        assertThrows(org.apache.roller.weblogger.ui.restapi.ApiException.class,
+                () -> PageDtos.requireUsableSlug("foo/bar"));
+    }
+
     // -----------------------------------------------------------------
     // Controller-level tests: routing, status codes, the ownership check
     // and JSON shape -- none of which the unit tests above can see. These
@@ -222,6 +237,27 @@ class PagesApiTest {
         verify(weblogger.getWeblogPageManager(), never()).savePage(any());
     }
 
+    /**
+     * The controller-level counterpart to aSlugContainingASlashIsRefused --
+     * exercised end to end through real HTTP dispatch, proving requireUsableSlug
+     * is actually wired into create, not just correct in isolation.
+     */
+    @Test
+    void postWithASlashInTheSlugIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/pages")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"slug\":\"foo/bar\",\"title\":\"Nope\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogPageManager(), never()).savePage(any());
+    }
+
     @Test
     void patchUpdatesAPageFoundThroughOwnership() throws Exception {
         Weblogger weblogger = mockedWeblogger();
@@ -307,6 +343,25 @@ class PagesApiTest {
                 .andExpect(status().isOk());
 
         verify(weblogger.getWeblogPageManager()).savePage(page);
+    }
+
+    @Test
+    void patchWithASlashInTheSlugIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogPage page = aPage(weblog, "page-1", "about", "About");
+        when(weblogger.getWeblogPageManager().getPage("page-1")).thenReturn(page);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/pages/{id}", "page-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"slug\":\"foo/bar\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogPageManager(), never()).savePage(any());
+        assertEquals("about", page.getSlug(), "the in-memory page must be untouched on refusal");
     }
 
     @Test

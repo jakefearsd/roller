@@ -106,6 +106,15 @@ public final class PageDtos {
      * collided with a routed context would make the page unreachable at its
      * own URL.
      *
+     * <p>Also mirrors {@code JPAWeblogPageManagerImpl.savePage}'s separate
+     * refusal of a slug containing {@code '/'} -- a rule {@code
+     * ReservedSlugs.isReserved} does not and should not express, since it
+     * only tests membership in a fixed set of whole names, not shape. There
+     * is no shared constant on the manager side for this one to delegate to
+     * (the manager expresses it as an inline {@code indexOf('/') >= 0}), so
+     * it is restated here; if a future change touches that check, this is
+     * the second place to update.
+     *
      * @return the trimmed, usable slug
      */
     public static String requireUsableSlug(String slug) {
@@ -113,6 +122,10 @@ public final class PageDtos {
         if (ReservedSlugs.isReserved(trimmed)) {
             throw ApiException.badRequest(
                     "slug is blank or reserved: '" + slug + "'.");
+        }
+        if (trimmed.indexOf('/') >= 0) {
+            throw ApiException.badRequest(
+                    "slug may not contain '/': '" + slug + "'.");
         }
         return trimmed;
     }
