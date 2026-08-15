@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Properties;
 
 import jakarta.mail.Address;
+import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.MimeMessage;
@@ -65,6 +66,37 @@ public final class MockMailProvider {
                 recorder.recipients.add(invocation.getArgument(1));
                 return null;
             }).when(transport).sendMessage(Mockito.any(), Mockito.any());
+        } catch (Exception e) {
+            throw new IllegalStateException("could not stub the transport", e);
+        }
+
+        MailProvider provider = Mockito.mock(MailProvider.class);
+        Mockito.when(provider.getSession()).thenReturn(session);
+        try {
+            Mockito.when(provider.getTransport()).thenReturn(transport);
+        } catch (Exception e) {
+            throw new IllegalStateException("could not stub the provider", e);
+        }
+
+        previousProvider = WebloggerStartup.currentMailProvider();
+        WebloggerStartup.installMailProvider(provider);
+        return recorder;
+    }
+
+    /**
+     * A provider whose transport always throws on send -- for proving a
+     * caller's failure handling when mail is configured but delivery itself
+     * fails (as opposed to {@link #install()}'s always-succeeds transport).
+     * Restore with {@link #uninstall()}, same as {@link #install()}.
+     */
+    public static MockMailProvider installFailing() {
+        MockMailProvider recorder = new MockMailProvider();
+
+        Session session = Session.getInstance(new Properties());
+        Transport transport = Mockito.mock(Transport.class);
+        try {
+            Mockito.doThrow(new MessagingException("simulated delivery failure"))
+                    .when(transport).sendMessage(Mockito.any(), Mockito.any());
         } catch (Exception e) {
             throw new IllegalStateException("could not stub the transport", e);
         }

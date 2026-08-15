@@ -9,6 +9,7 @@ import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 import org.apache.roller.weblogger.ui.restapi.auth.AdminScoped;
 import org.apache.roller.weblogger.ui.restapi.dto.AdminDtos;
 import org.apache.roller.weblogger.util.cache.CacheManager;
@@ -87,18 +88,24 @@ public class WeblogsApi extends BaseApiController implements UISecurityEnforced 
             if (name.isBlank()) {
                 throw ApiException.badRequest("name cannot be blank.");
             }
+            ColumnLimits.requireMaxLength("name", name, ColumnLimits.WEBLOG_NAME);
             weblog.setName(name);
         }
         if (body.tagline() != null) {
+            ColumnLimits.requireMaxLength("tagline", body.tagline(), ColumnLimits.TAGLINE);
             weblog.setTagline(body.tagline());
         }
         if (body.emailAddress() != null) {
+            ColumnLimits.requireMaxLength(
+                    "emailAddress", body.emailAddress(), ColumnLimits.WEBLOG_EMAIL_ADDRESS);
             weblog.setEmailAddress(body.emailAddress());
         }
         if (body.locale() != null) {
+            ColumnLimits.requireMaxLength("locale", body.locale(), ColumnLimits.LOCALE);
             weblog.setLocale(body.locale());
         }
         if (body.timeZone() != null) {
+            ColumnLimits.requireMaxLength("timeZone", body.timeZone(), ColumnLimits.TIME_ZONE);
             weblog.setTimeZone(body.timeZone());
         }
         if (body.entryDisplayCount() != null) {

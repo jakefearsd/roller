@@ -148,6 +148,27 @@ class AdminApiTest {
         verify(weblogger.getUserManager(), never()).getUsers(any(), any(), any(), anyInt(), anyInt());
     }
 
+    /**
+     * Review round 1, Minor, exercised end to end (real dispatch through
+     * {@code ApiExceptionHandler}, not just a unit test of the handler in
+     * isolation) rather than only in {@code ApiExceptionHandlerTest}: {@code
+     * limit} binds to an {@code int}, so a non-numeric value used to fall
+     * through {@code MethodArgumentTypeMismatchException} all the way to the
+     * generic {@code handleUnexpected} -- an opaque 500 for a query-string
+     * typo, on every list endpoint in the wave, not just this one.
+     */
+    @Test
+    void listUsersRejectsANonNumericLimitAsBadRequestNotAnOpaque500() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+
+        mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/admin/users").param("limit", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getUserManager(), never()).getUsers(any(), any(), any(), anyInt(), anyInt());
+    }
+
     @Test
     void postRejectsABlankUserName() throws Exception {
         Weblogger weblogger = mockedWeblogger();
@@ -173,6 +194,72 @@ class AdminApiTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
+        verify(weblogger.getUserManager(), never()).addUser(any());
+    }
+
+    /**
+     * Review round 1, Important 2: roller_user.username is varchar(255).
+     * Past that, store() reaches Postgres and "value too long" comes back
+     * wrapped in a bare WebloggerException -- an unguarded 500.
+     */
+    @Test
+    void postRejectsAUserNameLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        String tooLong = "a".repeat(256);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/admin/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userName\":\"" + tooLong + "\",\"emailAddress\":\"a@example.test\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andReturn().getResponse().getContentAsString();
+
+        // Asserted on the message, not just the status code: this class
+        // bootstraps a real Weblogger in @BeforeAll, and
+        // PasswordLinkMailer.isReady() reads live ambient site.adminemail
+        // state through that same static WebloggerFactory shim regardless
+        // of controller.weblogger being a mock -- an unrelated "mail is not
+        // configured" 400 would make this test pass for the wrong reason if
+        // it only checked the status.
+        assertTrue(body.contains("255 characters"), "must be refused for its length, not some other reason");
+        verify(weblogger.getUserManager(), never()).addUser(any());
+    }
+
+    @Test
+    void postRejectsAScreenNameLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        String tooLong = "a".repeat(256);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/admin/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userName\":\"alice\",\"emailAddress\":\"a@example.test\","
+                                + "\"screenName\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertTrue(body.contains("255 characters"), "must be refused for its length, not some other reason");
+        verify(weblogger.getUserManager(), never()).addUser(any());
+    }
+
+    @Test
+    void postRejectsAnEmailAddressLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        // Still matches EMAIL_PATTERN (local@domain.tld) but overflows
+        // roller_user.emailaddress's 255 characters.
+        String tooLong = "a".repeat(250) + "@example.test";
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/admin/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userName\":\"alice\",\"emailAddress\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertTrue(body.contains("255 characters"), "must be refused for its length, not some other reason");
         verify(weblogger.getUserManager(), never()).addUser(any());
     }
 
@@ -274,6 +361,40 @@ class AdminApiTest {
                 .perform(patch("/v1/admin/users/{userName}", "alice")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"emailAddress\":\"not-an-email\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getUserManager(), never()).saveUser(any());
+    }
+
+    @Test
+    void patchRejectsAScreenNameLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        User user = aUser("alice");
+        when(weblogger.getUserManager().getUserByUserName("alice", null)).thenReturn(user);
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/admin/users/{userName}", "alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"screenName\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getUserManager(), never()).saveUser(any());
+    }
+
+    @Test
+    void patchRejectsAnEmailAddressLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        User user = aUser("alice");
+        when(weblogger.getUserManager().getUserByUserName("alice", null)).thenReturn(user);
+        String tooLong = "a".repeat(250) + "@example.test";
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/admin/users/{userName}", "alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"emailAddress\":\"" + tooLong + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
@@ -603,5 +724,47 @@ class AdminApiTest {
                 "the email must carry a set-password link, never a password");
         assertFalse(sent.getContent().toString().toLowerCase().contains("password="),
                 "the email must never carry a plaintext password parameter");
+    }
+
+    /**
+     * Review round 1, Important 1: when mail IS configured but the actual
+     * send throws, the account still exists (disabled, resendable) -- but a
+     * 400 told an automation client its REQUEST was malformed, inviting a
+     * retry that then hits 409 "already exists" and reads as a failed
+     * creation that in fact succeeded. 502 says "your request was fine, an
+     * upstream dependency failed", which is both accurate and does not
+     * invite that retry-into-conflict trap.
+     */
+    @Test
+    void postWhenMailSendFailsReportsUpstreamFailureButKeepsTheAccount() throws Exception {
+        mail = MockMailProvider.installFailing();
+        setAdminEmail("admin@example.test");
+        installNoopPasswordEncoder();
+        User baseline = TestUtils.setupUser("adminapiitsendfail");
+        baselineUserName = baseline.getUserName();
+        String userName = "adminapiitsendfailuser";
+
+        AdminApi controller = new AdminApi();
+        controller.weblogger = WebloggerFactory.getWeblogger();
+
+        var response = mockMvc(controller)
+                .perform(post("/v1/admin/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userName\":\"" + userName + "\","
+                                + "\"emailAddress\":\"sendfail@example.test\"}"))
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andReturn().getResponse();
+        createdUserName = userName;
+
+        assertEquals(502, response.getStatus(),
+                "the request itself was fine -- an upstream mail dependency failed, not a client error");
+        String body = response.getContentAsString();
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertTrue(json.get("detail").asString().toLowerCase().contains("created"),
+                "the error must tell the caller the account survived, not just that something failed");
+
+        User stored = WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(userName, null);
+        assertNotNull(stored, "the account must exist even though the email could not be sent");
+        assertFalse(stored.getEnabled());
     }
 }

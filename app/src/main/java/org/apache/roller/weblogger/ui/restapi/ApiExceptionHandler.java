@@ -10,6 +10,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * The only place an API error body is built. Scoped to the restapi package so
@@ -53,6 +54,30 @@ public class ApiExceptionHandler {
         log.info("Malformed request body at " + request.getRequestURI() + ": " + ex.getMessage());
         return handleApiException(
                 ApiException.badRequest("The request body could not be parsed as JSON."), request);
+    }
+
+    /**
+     * A query parameter or path variable that will not convert to the type
+     * the handler method declares -- {@code ?limit=abc} against an {@code
+     * int limit} -- fires during argument resolution, before any controller
+     * method runs, the same "no controller can catch it itself" shape as
+     * {@link #handleMalformedBody}. Without this handler it fell through to
+     * {@link #handleUnexpected}: a 500 for a client mistake as ordinary as a
+     * non-numeric {@code limit}, on every list endpoint in the wave that
+     * takes a typed {@code @RequestParam}/{@code @PathVariable}, not just
+     * one controller. The parameter NAME is fine to echo back (it is part of
+     * this API's own published contract); the rejected VALUE and the
+     * conversion exception's own message are not, for the same leak-risk
+     * reason {@link #handleMalformedBody} withholds the parser's message.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiProblem> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                          HttpServletRequest request) {
+        log.info("Type mismatch for parameter '" + ex.getName() + "' at " + request.getRequestURI(),
+                ex);
+        return handleApiException(
+                ApiException.badRequest("'" + ex.getName() + "' is not a valid value for this parameter."),
+                request);
     }
 
     /**

@@ -112,6 +112,43 @@ class ApiExceptionHandlerTest {
                 "the parser's own message must never reach the client");
     }
 
+    /**
+     * Review round 1, Minor: {@code GET /v1/admin/users?limit=abc} used to
+     * 500 -- Spring throws MethodArgumentTypeMismatchException while binding
+     * the query parameter, before any controller method runs (the same
+     * "fires during argument resolution" shape as the malformed-JSON-body
+     * case above), and with no handler for it here it fell through to
+     * {@link #handleUnexpected}. Affects every {@code offset}/{@code limit}
+     * (or any other typed {@code @RequestParam}/{@code @PathVariable}) query
+     * parameter across the whole wave, not just AdminApi's.
+     */
+    @Test
+    void aTypeMismatchedQueryParameterBecomesA400WithoutLeakingParserDetail() throws NoSuchMethodException {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/admin/users");
+
+        MethodParameter methodParameter = new MethodParameter(
+                ApiExceptionHandlerTest.class.getDeclaredMethod("dummyTypedTarget", int.class), 0);
+        org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex =
+                new org.springframework.web.method.annotation.MethodArgumentTypeMismatchException(
+                        "abc", int.class, "limit", methodParameter,
+                        new NumberFormatException("For input string: \"abc\""));
+
+        ResponseEntity<ApiProblem> response = handler.handleTypeMismatch(ex, request);
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals(MediaType.APPLICATION_PROBLEM_JSON, response.getHeaders().getContentType());
+        ApiProblem body = response.getBody();
+        assertNotNull(body);
+        assertFalse(body.detail().contains("For input string"),
+                "the parser's own message must never reach the client");
+        assertFalse(body.detail().contains("NumberFormatException"),
+                "the exception's own class name must never reach the client");
+        assertTrue(body.detail().contains("limit"), "the offending parameter name is fine to name back");
+    }
+
     @SuppressWarnings("unused")
     private void dummyValidationTarget(String arg) { }
+
+    @SuppressWarnings("unused")
+    private void dummyTypedTarget(int arg) { }
 }

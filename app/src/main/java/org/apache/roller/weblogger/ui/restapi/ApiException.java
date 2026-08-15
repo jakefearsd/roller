@@ -62,6 +62,18 @@ public class ApiException extends RuntimeException {
         return new ApiException(429, TYPE_BASE + "throttled", "Too many requests", detail);
     }
 
+    /**
+     * The request was well-formed and the work it asked for may already be
+     * partly or fully done, but a dependency this API does not control (an
+     * outbound mail send, for example) failed. Deliberately not 400: a
+     * client that treats 502 as "my request was fine, something else broke"
+     * will not retry with a different body and misread the resulting 409 as
+     * proof the original request never took effect.
+     */
+    public static ApiException badGateway(String detail) {
+        return new ApiException(502, TYPE_BASE + "upstream-failure", "Upstream failure", detail);
+    }
+
     public int getStatus() {
         return status;
     }

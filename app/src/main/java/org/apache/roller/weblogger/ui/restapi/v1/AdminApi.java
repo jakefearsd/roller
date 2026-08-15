@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.CharSetUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -24,6 +26,7 @@ import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
 import org.apache.roller.weblogger.ui.controllers.core.PasswordLinkMailer;
 import org.apache.roller.weblogger.ui.controllers.util.UIUtils;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 import org.apache.roller.weblogger.ui.restapi.auth.AdminScoped;
 import org.apache.roller.weblogger.ui.restapi.dto.AdminDtos;
 import org.apache.roller.weblogger.util.TokenGenerator;
@@ -63,6 +66,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/admin")
 @AdminScoped
 public class AdminApi extends BaseApiController implements UISecurityEnforced {
+
+    private static final Log log = LogFactory.getLog(AdminApi.class);
 
     private static final int MAX_LIMIT = 200;
 
@@ -106,6 +111,7 @@ public class AdminApi extends BaseApiController implements UISecurityEnforced {
         if (StringUtils.isBlank(userName)) {
             throw ApiException.badRequest("userName is required.");
         }
+        ColumnLimits.requireMaxLength("userName", userName, ColumnLimits.USERNAME);
         String allowed = WebloggerConfig.getProperty("username.allowedChars");
         if (StringUtils.isBlank(allowed)) {
             allowed = UIUtils.DEFAULT_ALLOWED_CHARS;
@@ -118,8 +124,10 @@ public class AdminApi extends BaseApiController implements UISecurityEnforced {
         if (StringUtils.isBlank(emailAddress) || !EMAIL_PATTERN.matcher(emailAddress).matches()) {
             throw ApiException.badRequest("A valid emailAddress is required.");
         }
+        ColumnLimits.requireMaxLength("emailAddress", emailAddress, ColumnLimits.USER_EMAIL_ADDRESS);
 
         String screenName = StringUtils.isBlank(body.screenName()) ? userName : body.screenName().trim();
+        ColumnLimits.requireMaxLength("screenName", screenName, ColumnLimits.SCREEN_NAME);
 
         UserManager mgr = weblogger.getUserManager();
         // Checked with enabled=null (any status) rather than relying on
@@ -163,12 +171,21 @@ public class AdminApi extends BaseApiController implements UISecurityEnforced {
             weblogger.flush();
             PasswordLinkMailer.sendLink(user, raw, "Set your Roller password");
         } catch (MessagingException e) {
-            // The account exists either way -- an admin can resend the link
-            // from the JSP UserAdmin screen's own action. Reported as a
-            // 502-shaped client-visible failure rather than swallowed, since
-            // the caller needs to know delivery did not happen.
-            throw ApiException.badRequest(
-                    "The account was created, but the set-password link could not be sent.");
+            // The account exists either way -- disabled and resendable from
+            // the JSP UserAdmin screen's "send set-password link" action --
+            // so this is caught and logged rather than left to bubble as an
+            // opaque 500, the same convention CLAUDE.md's Audience section
+            // describes for best-effort side work. Unlike that convention,
+            // though, the request is NOT allowed to read as an ordinary
+            // success: 502, not 400 or 201, because a 400 reads as "your
+            // request was malformed" (inviting a retry that then 409s on the
+            // account that already exists) and a bare 201 would silently
+            // hide that the one thing this endpoint exists to do -- get a
+            // usable link to the new account -- did not happen.
+            log.error("Set-password link could not be sent for new user " + userName, e);
+            throw ApiException.badGateway(
+                    "The account was created (disabled), but the set-password link could not be sent. "
+                            + "Resend it from the UserAdmin screen's \"send set-password link\" action.");
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(AdminDtos.toView(user, roles(user)));
@@ -192,6 +209,7 @@ public class AdminApi extends BaseApiController implements UISecurityEnforced {
             if (!EMAIL_PATTERN.matcher(emailAddress).matches()) {
                 throw ApiException.badRequest("emailAddress is not a valid address.");
             }
+            ColumnLimits.requireMaxLength("emailAddress", emailAddress, ColumnLimits.USER_EMAIL_ADDRESS);
             user.setEmailAddress(emailAddress);
         }
         if (body.screenName() != null) {
@@ -199,6 +217,7 @@ public class AdminApi extends BaseApiController implements UISecurityEnforced {
             if (screenName.isBlank()) {
                 throw ApiException.badRequest("screenName cannot be blank.");
             }
+            ColumnLimits.requireMaxLength("screenName", screenName, ColumnLimits.SCREEN_NAME);
             user.setScreenName(screenName);
         }
         if (body.enabled() != null) {

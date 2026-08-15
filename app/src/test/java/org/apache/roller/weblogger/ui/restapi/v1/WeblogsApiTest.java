@@ -202,6 +202,97 @@ class WeblogsApiTest {
         verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
     }
 
+    /**
+     * Review round 1, Important 2: weblog.locale is varchar(20) -- the
+     * shortest-typed column any patchable field in this API lands in.
+     * "pt-BR-x-something-plausible" clears 20 characters without looking
+     * remotely hostile.
+     */
+    @Test
+    void patchRejectsALocaleLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(21);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/{handle}", "myblog")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void patchRejectsATimeZoneLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(51);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/{handle}", "myblog")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"timeZone\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void patchRejectsANameLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/{handle}", "myblog")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void patchRejectsAnEmailAddressLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(250) + "@example.test";
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/{handle}", "myblog")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"emailAddress\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void patchRejectsATaglineLongerThanTheColumn() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/{handle}", "myblog")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tagline\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
     @Test
     void patchIsNotFoundWhenNoActionWeblogWasResolved() throws Exception {
         Weblogger weblogger = mockedWeblogger();
