@@ -29,6 +29,7 @@ import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
+import org.apache.roller.weblogger.ui.controllers.EntryFieldRules;
 import org.apache.roller.weblogger.util.Utilities;
 
 import java.sql.Timestamp;
@@ -337,13 +338,25 @@ public class EntryBean {
      * DateTimeParseException} rather than being silently discarded the way
      * the old dateString parser did -- a mistyped pubtime must surface as a
      * validation error, not quietly publish "now".
+     *
+     * <p>Delegates to {@link EntryFieldRules#parsePubTime}, which is the
+     * single source of truth for this parsing (shared with the automation
+     * API). That shared method throws {@link IllegalArgumentException} --
+     * the contract a second caller should rely on -- so the
+     * {@code DateTimeParseException} this method has always thrown is
+     * recovered from the wrapped cause here, preserving this method's
+     * existing contract for {@code EntryEditController}'s catch clause
+     * and {@code EntryBeanTest}.
      */
     public Timestamp getPubTime(TimeZone timezone) {
-        if (StringUtils.isBlank(pubTimeLocal)) {
-            return null;
+        try {
+            return EntryFieldRules.parsePubTime(pubTimeLocal, timezone);
+        } catch (IllegalArgumentException e) {
+            if (e.getCause() instanceof DateTimeParseException dtpe) {
+                throw dtpe;
+            }
+            throw e;
         }
-        LocalDateTime local = LocalDateTime.parse(pubTimeLocal.trim());
-        return Timestamp.from(local.atZone(timezone.toZoneId()).toInstant());
     }
 
     public boolean isDraft() {
@@ -364,7 +377,7 @@ public class EntryBean {
     
     public void copyTo(WeblogEntry entry) throws WebloggerException {
         
-        entry.setTitle(StringEscapeUtils.escapeHtml4(getTitle()));
+        entry.setTitle(EntryFieldRules.escapeTitle(getTitle()));
         entry.setStatus(PubStatus.valueOf(getStatus()));
         entry.setLocale(getLocale());
         entry.setSummary(getSummary());

@@ -1,0 +1,82 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+
+package org.apache.roller.weblogger.ui.controllers;
+
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.TimeZone;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
+
+/**
+ * The rules that turn an author's raw entry input into stored values.
+ *
+ * <p>Shared by {@code EntryBean} (the JSP editor) and the automation API so
+ * the two cannot drift. Two rules matter more than the rest:
+ *
+ * <ul>
+ *   <li>An entry title is stored HTML-escaped. This is the only place raw
+ *       author input becomes escaped markup for an entry, which is why
+ *       {@code WeblogEntry.getTitle()} returns entity-escaped text and every
+ *       theme emits {@code $entry.title} bare. A PAGE title is the opposite --
+ *       stored raw, escaped at render -- so copying this rule to the page side
+ *       double-encodes and copying the page rule here is stored XSS.</li>
+ *   <li>A pubtime is wall-clock time in the WEBLOG's zone. Blank means
+ *       "publish now"; an unparseable non-blank value throws, so a mistyped
+ *       time blocks the save instead of silently publishing immediately.</li>
+ * </ul>
+ */
+public final class EntryFieldRules {
+
+    private EntryFieldRules() {
+        // static rules only
+    }
+
+    /**
+     * HTML-escapes an entry title for storage. Null-safe: a null title
+     * (never entered) stays null rather than becoming the literal string
+     * {@code "null"}.
+     */
+    public static String escapeTitle(String rawTitle) {
+        return StringEscapeUtils.escapeHtml4(rawTitle);
+    }
+
+    /**
+     * Parses a {@code datetime-local} wall-clock string -- what an
+     * {@code <input type="datetime-local">} submits -- as time in {@code
+     * zone}. A blank value means "no time chosen" and returns null, which
+     * callers read as "publish now". A non-blank value that will not parse
+     * throws {@link IllegalArgumentException} rather than being silently
+     * discarded: a mistyped pubtime must surface as a validation error, not
+     * quietly publish "now".
+     */
+    public static Timestamp parsePubTime(String wallClock, TimeZone zone) {
+        if (StringUtils.isBlank(wallClock)) {
+            return null;
+        }
+        try {
+            LocalDateTime local = LocalDateTime.parse(wallClock.trim());
+            return Timestamp.from(local.atZone(zone.toZoneId()).toInstant());
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "Unparseable pubtime '" + wallClock + "'", e);
+        }
+    }
+}
