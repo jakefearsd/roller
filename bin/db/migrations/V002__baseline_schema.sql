@@ -14,7 +14,7 @@
 
 -- Migration: Roller baseline schema
 --
--- The complete Roller schema as of this fork's divergence. This replaces the
+-- The complete Roller schema as of this fork's move to PostgreSQL. This replaces the
 -- pre-fork createdb.vm Velocity template and the 310-to-400 ... 610-to-620
 -- upgrade chain, which generated per-vendor DDL for seven databases. Roller is
 -- now PostgreSQL-only and this is the baseline; there is no upgrade path from

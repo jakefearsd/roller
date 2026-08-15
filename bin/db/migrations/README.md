@@ -4,7 +4,7 @@ This directory holds the canonical, ordered schema definition for the Roller
 PostgreSQL database. Every schema change ships as a numbered, idempotent
 migration so databases can be brought forward safely and repeatably.
 
-Roller is **PostgreSQL-only** since this fork diverged. The pre-fork scheme — Velocity
+Roller is **PostgreSQL-only**. The pre-fork scheme — Velocity
 templates rendered by Texen into vendor-specific DDL for seven databases, with
 a hardcoded `upgradeToNNN()` chain in `DatabaseInstaller` keyed off a
 `roller.database.version` row in `roller_properties` — has been removed.

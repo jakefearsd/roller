@@ -55,7 +55,7 @@ Roller is a Java-based, multi-user blog server. It is a fork of [Apache Roller](
 |------------|----------|
 | PostgreSQL | Development, testing, and production |
 
-Roller has been PostgreSQL-only since this fork diverged. Earlier upstream releases generated vendor-specific
+Roller is PostgreSQL-only. Earlier upstream releases generated vendor-specific
 DDL for DB2, Derby, HSQLDB, SQL Server, MySQL and Oracle; that layer has been
 removed in favour of a single, tested schema.
 

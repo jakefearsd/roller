@@ -674,8 +674,7 @@ IMAGE_VERSION=0.1.1 docker compose -f docker-compose.prod.yml up -d
 `IMAGE_VERSION=0.1.1` prefix on the `pull` line alone only scopes the
 override to that one command, so `up -d` would fall back to whatever
 `IMAGE_VERSION` is already in `.env`, silently defeating the point of this
-snippet. Matches the same snippet in
-`docs/superpowers/specs/2026-08-14-container-push-deployment-design.md`.)
+snippet.)
 
 with a local `.env` carrying `SITE_DOMAIN=:80`, `UMAMI_DOMAIN=:8081`,
 `LISTMONK_DOMAIN=:8082`, `LISTMONK_ROOT_URL=http://localhost:8082` and
