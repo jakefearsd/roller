@@ -293,6 +293,138 @@ class CategoriesApiTest {
         verify(weblogger.getWeblogEntryManager(), never()).removeWeblogCategory(any());
     }
 
+    /**
+     * The last-category guard, previously asserted only by construction
+     * (every other DELETE test deliberately keeps a second category around
+     * so this path never fires). saveWeblogEntry() falls back to "the first
+     * category found" for an entry with none, so a weblog left with zero
+     * categories can no longer accept a save at all.
+     */
+    @Test
+    void deleteRefusesToRemoveTheWeblogsLastCategory() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogCategory category = aCategory(weblog, "OnlyOne");
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(category);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(delete("/v1/weblogs/myblog/categories/{id}", "cat-1")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogCategory(any());
+        verify(weblogger.getWeblogEntryManager(), never()).moveWeblogCategoryContents(any(), any());
+    }
+
+    /**
+     * The in-use-without-moveTo guard, previously asserted only by
+     * construction (the sibling test stubs isWeblogCategoryInUse false so
+     * this path never fires). Without it, removeWeblogCategory would throw
+     * a bare WebloggerException that ApiExceptionHandler can only turn into
+     * an opaque 500.
+     */
+    @Test
+    void deleteWithoutMoveToOnACategoryStillInUseIsConflict() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogCategory category = aCategory(weblog, "InUse");
+        aCategory(weblog, "Other"); // so the last-category guard cannot also fire
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(category);
+        when(weblogger.getWeblogEntryManager().isWeblogCategoryInUse(category)).thenReturn(true);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(delete("/v1/weblogs/myblog/categories/{id}", "cat-1")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogCategory(any());
+    }
+
+    /**
+     * moveTo naming the SAME category being deleted: WeblogOwnership.category
+     * happily resolves it (it genuinely belongs to the calling weblog),
+     * moveWeblogCategoryContents would be a self-move no-op, and
+     * removeWeblogCategory would then throw because the category still holds
+     * its own entries -- the same opaque-500 shape the other two DELETE
+     * guards exist to intercept. Refused before either manager call runs.
+     */
+    @Test
+    void deleteWithMoveToNamingTheSameCategoryIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogCategory category = aCategory(weblog, "Doomed");
+        aCategory(weblog, "Other"); // so the last-category guard cannot also fire
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(category);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(delete("/v1/weblogs/myblog/categories/{id}", "cat-1")
+                        .param("moveTo", "cat-1")
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).moveWeblogCategoryContents(any(), any());
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogCategory(any());
+    }
+
+    /**
+     * The PATCH-rename duplicate guard, previously asserted only by
+     * construction (the ownership test renames to a name nothing else
+     * holds). This one matters more than a typical "duplicate name" check:
+     * JPAWeblogEntryManagerImpl.saveWeblogCategory only duplicate-checks
+     * NEW categories (its own `exists` flag short-circuits the check for a
+     * category that already has an id), so without this guard a rename
+     * collision would not even 500 -- it would silently succeed, leaving two
+     * categories sharing a name.
+     */
+    @Test
+    void patchRenamingToAnExistingCategoryNameIsConflict() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogCategory category = aCategory(weblog, "Old Name");
+        WeblogCategory taken = aCategory(weblog, "Taken");
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(category);
+        when(weblogger.getWeblogEntryManager().getWeblogCategoryByName(weblog, "Taken")).thenReturn(taken);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/categories/{id}", "cat-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Taken\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
+        assertEquals("Old Name", category.getName(), "the in-memory category must be untouched on refusal");
+    }
+
+    /**
+     * Wave-level gap (Finding 3): a malformed JSON body throws
+     * HttpMessageNotReadableException during argument resolution, before any
+     * handler method runs. Before ApiExceptionHandler grew a dedicated
+     * handler for it, this fell through to handleUnexpected and answered an
+     * opaque 500 on every *Api controller in the wave, not just this one --
+     * proven here through CategoriesApi's own real MockMvc dispatch rather
+     * than only a unit test of the handler in isolation.
+     */
+    @Test
+    void aMalformedRequestBodyIsBadRequestNotAnOpaque500() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/categories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
+    }
+
     @Test
     void tagsReturnsTheWeblogsTagsWithCounts() throws Exception {
         Weblogger weblogger = mockedWeblogger();

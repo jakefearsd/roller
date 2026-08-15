@@ -84,6 +84,34 @@ class ApiExceptionHandlerTest {
                 "a field error with no default message must still be reported, with a null message");
     }
 
+    /**
+     * Wave-level gap: HttpMessageNotReadableException (malformed/empty JSON
+     * body) fires during argument resolution, before any controller method
+     * runs, and used to fall through to handleUnexpected -- a 500 on every
+     * *Api controller for a client mistake as ordinary as a trailing comma.
+     * The parser's own message can echo fragments of the request body and
+     * internal type names, so it must never reach the client, only the log.
+     */
+    @Test
+    void aMalformedRequestBodyBecomesA400WithoutLeakingParserDetail() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/weblogs/x/categories");
+        org.springframework.http.converter.HttpMessageNotReadableException ex =
+                new org.springframework.http.converter.HttpMessageNotReadableException(
+                        "JSON parse error: Unexpected end-of-input at [Source: (String)\"{\"; line: 1, column: 1]",
+                        new org.springframework.mock.http.MockHttpInputMessage(new byte[0]));
+
+        ResponseEntity<ApiProblem> response = handler.handleMalformedBody(ex, request);
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals(MediaType.APPLICATION_PROBLEM_JSON, response.getHeaders().getContentType());
+        ApiProblem body = response.getBody();
+        assertNotNull(body);
+        assertFalse(body.detail().contains("Unexpected end-of-input"),
+                "the parser's own message must never reach the client");
+        assertFalse(body.detail().contains("Source:"),
+                "the parser's own message must never reach the client");
+    }
+
     @SuppressWarnings("unused")
     private void dummyValidationTarget(String arg) { }
 }

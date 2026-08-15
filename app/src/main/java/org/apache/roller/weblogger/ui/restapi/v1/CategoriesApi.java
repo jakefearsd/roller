@@ -89,7 +89,14 @@ public class CategoriesApi extends BaseApiController implements UISecurityEnforc
                 throw ApiException.badRequest("name cannot be blank.");
             }
             if (!name.equals(category.getName())) {
-                WeblogCategory existing = weblog.getWeblogCategory(name);
+                // Weblog.getWeblogCategory(name) reaches the static
+                // WebloggerFactory shim rather than this controller's
+                // injected weblogger -- fine in production (same singleton
+                // either way) but untestable and an unnecessary second path
+                // to the same data, so go straight through the manager
+                // instead, same as every other lookup in this controller.
+                WeblogCategory existing =
+                        weblogger.getWeblogEntryManager().getWeblogCategoryByName(weblog, name);
                 if (existing != null && !existing.getId().equals(category.getId())) {
                     throw ApiException.conflict("A category named '" + name + "' already exists.");
                 }
@@ -135,6 +142,16 @@ public class CategoriesApi extends BaseApiController implements UISecurityEnforc
 
         WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
         if (moveTo != null && !moveTo.isBlank()) {
+            // moveTo naming the SAME category being deleted passes
+            // WeblogOwnership.category (it genuinely belongs to this
+            // weblog), so without this check moveWeblogCategoryContents
+            // would be a self-move no-op and removeWeblogCategory would
+            // then throw a bare WebloggerException -- the same opaque-500
+            // shape the last-category and in-use guards above exist to
+            // intercept.
+            if (moveTo.equals(id)) {
+                throw ApiException.badRequest("moveTo cannot name the category being deleted.");
+            }
             WeblogCategory target = WeblogOwnership.category(weblogger, moveTo, weblog);
             if (target == null) {
                 throw ApiException.notFound("No such category to move entries to.");

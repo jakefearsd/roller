@@ -6,6 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -34,6 +35,24 @@ public class ApiExceptionHandler {
                 .toList();
         return handleApiException(
                 ApiException.validation("One or more fields are invalid.", errors), request);
+    }
+
+    /**
+     * A malformed or empty request body -- Spring throws this during
+     * argument resolution, before any controller method runs, so no
+     * controller can catch it itself. Without this handler it fell through
+     * to {@link #handleUnexpected}: an opaque 500 for a client mistake as
+     * ordinary as a trailing comma, on every {@code *Api} controller in the
+     * wave. The parser's own message can echo fragments of the request body
+     * and internal type names, so -- same rule as {@link #handleUnexpected}
+     * -- it is logged, never returned.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiProblem> handleMalformedBody(HttpMessageNotReadableException ex,
+                                                           HttpServletRequest request) {
+        log.info("Malformed request body at " + request.getRequestURI() + ": " + ex.getMessage());
+        return handleApiException(
+                ApiException.badRequest("The request body could not be parsed as JSON."), request);
     }
 
     /**
