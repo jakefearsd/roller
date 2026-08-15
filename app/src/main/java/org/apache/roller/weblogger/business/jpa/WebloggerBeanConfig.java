@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.business.jpa;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.ApiTokenManager;
 import org.apache.roller.weblogger.business.DatabaseProvider;
 import org.apache.roller.weblogger.business.EventManager;
 import org.apache.roller.weblogger.business.FileContentManager;
@@ -141,6 +142,11 @@ public class WebloggerBeanConfig {
     }
 
     @Bean
+    public ApiTokenManager apiTokenManager(JPAPersistenceStrategy strategy) {
+        return new JPAApiTokenManagerImpl(strategy);
+    }
+
+    @Bean
     public IndexManager indexManager(@Lazy Weblogger weblogger) {
         return new LuceneIndexManager(weblogger);
     }
@@ -170,6 +176,7 @@ public class WebloggerBeanConfig {
             EventManager eventManager,
             FormSubmissionManager formSubmissionManager,
             UserTokenManager userTokenManager,
+            ApiTokenManager apiTokenManager,
             PluginManager pluginManager,
             PropertiesManager propertiesManager,
             ThemeManager themeManager,
@@ -187,6 +194,7 @@ public class WebloggerBeanConfig {
                 eventManager,
                 formSubmissionManager,
                 userTokenManager,
+                apiTokenManager,
                 pluginManager,
                 propertiesManager,
                 themeManager,

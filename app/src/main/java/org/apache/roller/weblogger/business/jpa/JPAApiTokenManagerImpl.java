@@ -1,0 +1,122 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.business.jpa;
+
+import java.sql.Timestamp;
+import java.util.List;
+
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.TypedQuery;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.ApiTokenManager;
+import org.apache.roller.weblogger.pojos.ApiToken;
+import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.util.TokenGenerator;
+
+/**
+ * JPA implementation of {@link ApiTokenManager}.
+ */
+public class JPAApiTokenManagerImpl implements ApiTokenManager {
+
+    private static final Log log = LogFactory.getLog(JPAApiTokenManagerImpl.class);
+
+    private static final long LAST_USED_RESOLUTION_MS = 60L * 60L * 1000L;
+
+    private final JPAPersistenceStrategy strategy;
+
+    protected JPAApiTokenManagerImpl(JPAPersistenceStrategy strategy) {
+        log.debug("Instantiating JPA API Token Manager");
+        this.strategy = strategy;
+    }
+
+    @Override
+    public String issueToken(User user, String label, String scopeWeblog,
+                             ApiToken.Role role, Timestamp expiresAt) throws WebloggerException {
+        String raw = ApiTokenManager.TOKEN_PREFIX + TokenGenerator.newToken();
+        ApiToken token = new ApiToken();
+        token.setUser(user);
+        token.setLabel(label);
+        token.setTokenSha256(TokenGenerator.sha256Hex(raw));
+        token.setScopeWeblog(scopeWeblog);
+        token.setScopeRole(role);
+        token.setCreated(new Timestamp(System.currentTimeMillis()));
+        token.setExpiresAt(expiresAt);
+        strategy.store(token);
+        return raw;
+    }
+
+    @Override
+    public ApiToken authenticate(String rawToken) throws WebloggerException {
+        if (rawToken == null || rawToken.isBlank()) {
+            return null;
+        }
+        TypedQuery<ApiToken> query = strategy.getNamedQuery("ApiToken.getByDigest", ApiToken.class);
+        query.setParameter(1, TokenGenerator.sha256Hex(rawToken));
+        ApiToken token;
+        try {
+            token = query.getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
+        if (!token.isUsable()) {
+            return null;
+        }
+        touchLastUsed(token);
+        return token;
+    }
+
+    /**
+     * Coarse on purpose: writing last_used_at on every call would make each
+     * API read a write too. An hour's resolution is plenty for deciding
+     * whether a token is still in use before revoking it.
+     */
+    private void touchLastUsed(ApiToken token) throws WebloggerException {
+        long now = System.currentTimeMillis();
+        Timestamp last = token.getLastUsedAt();
+        if (last == null || now - last.getTime() > LAST_USED_RESOLUTION_MS) {
+            token.setLastUsedAt(new Timestamp(now));
+            strategy.store(token);
+        }
+    }
+
+    @Override
+    public List<ApiToken> getTokens(User user) throws WebloggerException {
+        TypedQuery<ApiToken> query = strategy.getNamedQuery("ApiToken.getByUser", ApiToken.class);
+        query.setParameter(1, user);
+        return query.getResultList();
+    }
+
+    @Override
+    public boolean revoke(User user, String tokenId) throws WebloggerException {
+        ApiToken token = (ApiToken) strategy.load(ApiToken.class, tokenId);
+        // Ownership check, not a convenience: tokenId is client input and this
+        // is a global by-id load, so without it any user could revoke any
+        // other user's tokens.
+        if (token == null || !token.getUser().getId().equals(user.getId())) {
+            return false;
+        }
+        if (token.getRevokedAt() == null) {
+            token.setRevokedAt(new Timestamp(System.currentTimeMillis()));
+            strategy.store(token);
+        }
+        return true;
+    }
+}

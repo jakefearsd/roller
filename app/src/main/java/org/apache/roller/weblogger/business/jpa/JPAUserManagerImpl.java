@@ -86,6 +86,11 @@ public class JPAUserManagerImpl implements UserManager {
         removeTokens.setParameter(1, user);
         removeTokens.executeUpdate();
 
+        // roller_api_token rows FK the user with no cascade, same reason
+        Query removeApiTokens = strategy.getNamedUpdate("ApiToken.removeByUser");
+        removeApiTokens.setParameter(1, user);
+        removeApiTokens.executeUpdate();
+
         this.strategy.remove(user);
 
         // remove entry from cache mapping

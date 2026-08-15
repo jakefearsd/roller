@@ -113,6 +113,12 @@ public interface Weblogger {
     UserTokenManager getUserTokenManager();
 
     /**
+     * Get the ApiTokenManager, which handles long-lived, revocable
+     * credentials for the automation API.
+     */
+    ApiTokenManager getApiTokenManager();
+
+    /**
      * Get the URLStrategy used to build all urls in the system.
      */
     URLStrategy getUrlStrategy();

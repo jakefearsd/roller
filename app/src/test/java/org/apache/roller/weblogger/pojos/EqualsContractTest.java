@@ -220,7 +220,10 @@ class EqualsContractTest {
                         formSubmission("submission-b")),
 
                 new Specimen("UserToken (keyed on id)",
-                        userToken("token-a"), userToken("token-a"), userToken("token-b")));
+                        userToken("token-a"), userToken("token-a"), userToken("token-b")),
+
+                new Specimen("ApiToken (keyed on id)",
+                        apiToken("token-a"), apiToken("token-a"), apiToken("token-b")));
     }
 
     private static FormSubmission formSubmission(String id) {
@@ -231,6 +234,12 @@ class EqualsContractTest {
 
     private static UserToken userToken(String id) {
         UserToken token = new UserToken();
+        token.setId(id);
+        return token;
+    }
+
+    private static ApiToken apiToken(String id) {
+        ApiToken token = new ApiToken();
         token.setId(id);
         return token;
     }

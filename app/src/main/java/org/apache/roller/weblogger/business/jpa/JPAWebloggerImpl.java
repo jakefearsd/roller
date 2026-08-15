@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.business.jpa;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.ApiTokenManager;
 import org.apache.roller.weblogger.business.EventManager;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.FormSubmissionManager;
@@ -57,6 +58,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
         EventManager         eventManager,
         FormSubmissionManager formSubmissionManager,
         UserTokenManager     userTokenManager,
+        ApiTokenManager      apiTokenManager,
         PluginManager        pluginManager,
         PropertiesManager    propertiesManager,
         ThemeManager         themeManager,
@@ -74,6 +76,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
             eventManager,
             formSubmissionManager,
             userTokenManager,
+            apiTokenManager,
             pluginManager,
             propertiesManager,
             themeManager,
