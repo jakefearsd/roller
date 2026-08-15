@@ -39,11 +39,20 @@ your site's own origin.
 
 ## Getting a token
 
-`POST /api/v1/tokens` is the **only** endpoint that accepts HTTP Basic
-authentication (your Roller username and password); every other endpoint in
-this API requires a Bearer token. This is deliberate and enforced in code,
-not just convention: a token cannot be used to mint another token, so a
-leaked Bearer credential can never turn itself into a permanent replacement.
+`POST /api/v1/tokens` (mint), plus `GET`/`DELETE` on the same resource
+(list/revoke), is where you use HTTP Basic authentication — your Roller
+username and password — because minting your first token can't itself
+require a token to prove who you are. Every other endpoint in this API is
+Bearer-only in practice. **A Bearer-authenticated caller (an existing API
+token) is explicitly refused on all three `/v1/tokens` operations**,
+regardless of that token's own role — a leaked token can never mint itself
+a replacement, list its owner's other tokens, or revoke one, which would
+otherwise turn a single leaked credential into a permanent, self-renewing
+one. This refusal is enforced by `TokensApi` itself, not by Spring Security
+routing — Basic credentials are in fact accepted on every `/api/**` request,
+not just this resource, so do not rely on Basic being *rejected* elsewhere;
+it is simply undocumented and unnecessary anywhere else once you hold a
+token.
 
 ```bash
 curl -sS -u alice:hunter2 \
@@ -114,10 +123,18 @@ user's own `WeblogPermission` on each one.
 
 A handful of routes name no weblog at all (`GET /api/v1/ping`,
 `GET /api/v1/me`) and are exempt from the weblog-pin check by design — a
-weblog-scoped token must still be able to ask who it is. Every other route
-that resolves no weblog (`POST /api/v1/tokens`, `/api/v1/admin/**`) is
-**ADMIN-only** by a separate, explicit annotation on the controller, not by
-this exemption.
+weblog-scoped token must still be able to ask who it is. The two are not
+otherwise equivalent: `GET /api/v1/ping` is the one route in the whole API
+that needs **no credential at all** (`permitAll` in `SecurityConfig`, a bare
+liveness check), while `GET /api/v1/me` still requires a valid Bearer or
+Basic credential — it answers who *that* credential is, so an unauthenticated
+call to it is a 401 like anywhere else. Every other route
+that resolves no weblog defaults to **deny**, not "unlimited because there
+was nothing to check": `/api/v1/admin/**` and the site-wide
+`/api/v1/weblogs` resource require `ADMIN` role via a separate, explicit
+annotation on the controller (not the weblog-pin exemption above), and the
+whole `/v1/tokens` resource (mint/list/revoke) refuses a Bearer-authenticated
+caller outright regardless of role — see the next section.
 
 ## Making a request
 
@@ -143,9 +160,21 @@ entire table. A `limit` above the endpoint's cap (200, uniformly) is
 silently capped rather than rejected — the one place this API *does*
 clamp instead of refusing.
 
-Every page response reports `hasMore`, computed by fetching one row past the
-requested page — a client should page until `hasMore` is `false`, not until
-a short page arrives.
+**The page envelope is not uniform across these four endpoints — check the
+shape before assuming a field exists.**
+
+- `GET .../entries` returns an `EntryPage`: `{items, offset, limit, hasMore}`.
+  `hasMore` is computed by fetching one row past the requested page — page
+  until it is `false`, not until a short page arrives.
+- `GET .../audit/seo` returns a `SeoAudit`: `{total, counts, entries}`. There
+  is no `hasMore`; `total` (and `counts`, the same per-gap-type tally) cover
+  **every** gappy entry the search found, not just the current page, so an
+  agent can read the shape of the problem without paging through it —
+  `entries` alone is the `offset`/`limit`-sliced page.
+- `GET /api/v1/admin/users` and `GET /api/v1/weblogs` return a **bare JSON
+  array**, `[UserView, ...]` / `[WeblogView, ...]` — no envelope, no
+  `total`, no `hasMore` at all. Getting fewer items back than the requested
+  `limit` is the only signal that you have reached the end.
 
 ## Errors
 
@@ -162,8 +191,12 @@ Every failure is [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
 }
 ```
 
-A validation failure additionally carries an `errors` array of
-`{"field": ..., "message": ...}`.
+The problem type carries an `errors` array of `{"field": ..., "message":
+...}` when the failure came from `@Valid` bean-validation — but as of this
+writing **no `*Api` controller method actually declares `@Valid`**, so in
+practice every 400 you will see from this API today carries only a plain
+`detail` string, never an `errors` array. Do not build a client that
+requires `errors` to be present; treat it as optional.
 
 | Status | Meaning |
 |--------|---------|
@@ -172,9 +205,15 @@ A validation failure additionally carries an `errors` array of
 | 403 | Authenticated, but the token's own scope refuses this call (wrong role, or an admin-only route with a non-`ADMIN` token). |
 | 404 | The resource does not exist, **or the caller may not see it.** A weblog outside a token's pin, a foreign entry/category/page/media id, and a genuinely-missing id are all 404 — never 403, because a 403 there would confirm the resource exists under someone else's weblog. |
 | 409 | The request conflicts with the resource's current state: trashing an already-trashed entry, restoring one that isn't trashed, PATCHing a trashed entry (restore it first), a duplicate category/directory/page-slug name, deleting a weblog's last category. |
-| 413 | An upload would exceed a configured size/quota limit. |
 | 429 | Throttled — see below. |
 | 500 | Unexpected server error. The response body never carries exception detail (message, stack trace, class name) — those are logged server-side only. |
+
+`ApiException` also has a `quotaExceeded()` factory that would answer 413,
+but **no endpoint calls it today** — a media upload that would exceed a
+quota is not a whole-request 413, it is a per-file `"quota_exceeded"`
+`status` string inside that file's own `results[]` entry (see
+[Media](#media)). Don't build a client that branches on 413 for a quota
+refusal; check `results[].status` instead.
 
 ## The throttle
 
@@ -182,9 +221,12 @@ Every request to `/api/**` is rate-limited: **120 requests per 60-second
 window** by default (`api.throttle.threshold` / `api.throttle.interval` in
 `roller.properties`; the on/off switch, `api.throttle.enabled`, is a runtime
 property changeable from Admin Settings without a restart). The key is the
-token's own SHA-256 digest for a Bearer-authenticated request, or the client
-IP for the unauthenticated mint call — so throttling is per-credential once
-you have one, per-source-address before that. A throttled request gets a
+token's own SHA-256 digest for a request carrying `Authorization: Bearer
+...`, or the caller's IP address for any request that does not — in
+practice that means Basic-authenticated calls to `/v1/tokens` (Basic is
+accepted chain-wide, but this resource is the only one actually documented
+to use it), so throttling is per-credential once you hold a token,
+per-source-address before that. A throttled request gets a
 429 `application/problem+json` body identical in shape to every other error
 here, built and written outside the normal Spring MVC dispatch path (the
 throttle check runs in a servlet filter, ahead of authentication) so a
@@ -380,17 +422,22 @@ shape this codebase has already had to fix once (writing real metadata onto
 an entry that's supposed to be gone). Asking for no status at all still gets
 you the safe `PUBLISHED` default either way.
 
-**`audit/media`** reports every media file with missing or whitespace-only
-alt text, using the identical definition the renderer and the admin UI's own
-"no alt text" marker use — this list can never disagree with what a reader
-actually sees. Each item's `directoryName` is the owning directory's
-**name**, not its id — deliberately different from `MediaView.directory`
+**`audit/media`** returns a `MediaAudit`: `{missingAltText, items}` — no
+pagination at all (it matches `GET .../media`'s own precedent of returning
+everything unpaged, not an oversight specific to this endpoint).
+`missingAltText` is the count; `items` is every media file with missing or
+whitespace-only alt text, using the identical definition the renderer and
+the admin UI's own "no alt text" marker use — this list can never disagree
+with what a reader actually sees. Each item's `directoryName` is the owning
+directory's **name**, not its id — deliberately different from `MediaView.directory`
 (an id), so the two media-shaped payloads in this API cannot be confused by
 assuming a shared field name implies shared semantics. An audit item is a
 work-list entry for a human or agent to read, not a round-trippable write
-payload (the actual fix goes through `MediaApi`'s `PATCH .../media/{mediaId}`
-using `mediaId`, not the directory), so a readable name serves the reader
-better than an id they would only have to look up again.
+payload (the actual fix goes through `PATCH /api/v1/weblogs/{handle}/media/{id}`,
+substituting this item's own `mediaId` field for `{id}` — nothing about the
+directory is involved in making the fix), so a readable directory name
+serves a reader better here than an id they would only have to look up
+again.
 
 ## Site administration
 
@@ -471,3 +518,6 @@ regenerate-renditions,users,config,weblogs}`. Run any group with no
 subcommand (e.g. `bin/roller-api entries`) to see that group's full usage.
 It does not yet wrap categories, tags or pages — call those with `curl`
 directly, using the paths documented above, until a subcommand exists.
+A leading `--url URL`/`--token TOKEN`, before the command name, overrides
+`ROLLER_API_URL`/`ROLLER_API_TOKEN` and `~/.roller/credentials` for a single
+one-off call against a different instance, without touching either.
