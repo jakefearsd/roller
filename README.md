@@ -68,7 +68,7 @@ removed in favour of a single, tested schema.
 ### Option 1: Dev server (Spring Boot, embedded Tomcat)
 
 ```bash
-git clone https://github.com/apache/roller.git
+git clone https://github.com/jakefearsd/roller.git
 cd roller
 mvn -DskipTests=true install
 ./roller dev     # starts PostgreSQL, applies migrations, runs spring-boot:run
@@ -95,7 +95,7 @@ No Maven plugin or IDE involved — the WAR embeds Tomcat and runs standalone
 ### Option 3: Docker / production stack
 
 ```bash
-git clone https://github.com/apache/roller.git
+git clone https://github.com/jakefearsd/roller.git
 cd roller
 docker compose up -d   # starts PostgreSQL only, for local dev
 ./roller dev            # applies migrations, runs the app
@@ -153,7 +153,8 @@ and one-command upgrades — see the production stack
 
 ## Contributing
 
-- Dev mailing list: dev@roller.apache.org
-- [How to build and run Roller](https://cwiki.apache.org/confluence/x/EM4)
-- [How to contribute](https://cwiki.apache.org/confluence/x/2hsB)
-- [Developer resources](https://cwiki.apache.org/confluence/x/D84)
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). This is a personal fork, maintained
+independently and not affiliated with or endorsed by the Apache Software
+Foundation — upstream's mailing lists and wiki serve
+[Apache Roller](https://roller.apache.org), not this project, so questions about
+this fork do not belong there.

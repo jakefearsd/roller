@@ -805,6 +805,63 @@ opens by calling load-bearing. Now `mvn -Pit versions:set -DnewVersion=0.1.1`,
 with the reason inline. A renumbering plan has to leave the *next* renumbering
 correct, not just this one.
 
+**7. The sweep greps were scoped to the wrong axis, and it hid three more.**
+Every check in this plan looks for the capitalised phrase `Apache Roller`
+repo-wide, or for `roller.apache.org` **only under `app/src/main/webapp/`**.
+Neither shape matches a bare lowercase URL outside the webapp, so three
+identity claims sat in plain sight until a final repo-wide URL sweep:
+
+- `pom.xml`'s `<url>` and `<scm>` declared `roller.apache.org` and
+  `github.com/apache/roller` as *this project's* homepage and repository.
+- `README.md`'s two Quick Start blocks told a developer to
+  `git clone https://github.com/apache/roller.git` — not a branding slip but a
+  **functional** defect: following this project's own README gets you
+  upstream's code, not this codebase.
+- `README.md`'s Contributing section listed `dev@roller.apache.org` and three
+  `cwiki.apache.org` links as if the ASF's channels served this fork, which
+  `CONTRIBUTING.md` explicitly disclaims.
+
+The lesson generalises past branding: **sweep by identifier, not by prose.**
+The three checks that would have caught all of it are
+
+```bash
+git grep -n "roller\.apache\.org" -- . ':!docs/superpowers'
+git grep -n "github\.com/apache" -- . ':!docs/superpowers'
+git grep -niE "cwiki\.apache|dev@roller" -- . ':!docs/superpowers'
+```
+
+Two `apache.org` references are correct and must survive these greps:
+`WEB-INF/jsps/taglibs-spring.jsp:7` + `WEB-INF/rollerConfig.tld:9` are a
+matched TLD-URI pair (an XML identifier, invisible to users, and breakable if
+only one side is edited), and `app/pom.xml:437` cites Maven's own
+`issues.apache.org/jira/browse/MNG-1977`, which has nothing to do with Roller.
+Same trap as the listmonk `6.2.0` pin: an `apache.org` string that is not an
+identity claim. `CONTRIBUTING.md`'s cwiki link is also deliberate — it points
+contributors at upstream's process for contributing *to upstream*.
+
+**8. The install wizard still sent deployers to the ASF's mailing list, in five
+bundles.** `installer.whatHappenedUnknown` ends with "Follow the instructions on
+the Roller wiki and seek help from the *Roller user mailing list*", linking
+`cwiki.apache.org` — shipped, user-visible text on the same install screen whose
+banner Step 4b fixed, telling someone deploying *this* fork to go and email the
+ASF about it. It survived every check because the string contains neither
+`Apache Roller` nor `roller.apache.org`.
+
+The referral clause is now cut from all five (`ApplicationResources`, `_de`,
+`_ja`, `_ko`, `_zh_CN`), keeping each translation's actionable first half
+("look at your server's log files and diagnose the problem yourself"). `_ko` is
+notable: **no earlier task in this plan touched it at all**, so a bundle outside
+the edited set still carried branding — when sweeping resource bundles, sweep
+*all* of `ApplicationResources*`, not the subset a previous step happened to
+name.
+
+These files are `native2ascii`-encoded and must stay pure ASCII, so the three
+`\uXXXX` bundles were edited by exact substring match on the raw file text
+rather than by hand, and verified afterwards with
+`LC_ALL=C grep -cP '[^\x00-\x7F]'` against the same count at `HEAD`. (`_de` has
+one pre-existing non-ASCII line at 388 and `_fr` has 236; both counts are
+unchanged.)
+
 ---
 
 ## Self-Review Notes

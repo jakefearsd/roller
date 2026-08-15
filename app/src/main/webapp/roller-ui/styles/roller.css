@@ -587,7 +587,6 @@ label,
 .roller-footer {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
     font-family: var(--font-ui);
     font-size: 12px;
     color: var(--ink-soft);
