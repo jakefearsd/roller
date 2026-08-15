@@ -728,6 +728,85 @@ git commit -m "docs: finish the identity cleanup and retire upstream's manuals"
 
 ---
 
+### Whole-branch review corrections (after Task 5)
+
+The final review of the complete branch found six things. Recorded here rather
+than silently folded into the steps above, because the *pattern* is the useful
+part.
+
+**1. `pre-fork` was a relocated timing claim, not a dropped one — the fifth
+recurrence.** Tasks 3 and 4 rewrote `pre-6.2.0` to `pre-fork` in four places
+(`DatabaseInstaller.java:45`, `bin/db/migrations/README.md:7`,
+`V001__schema_migrations.sql:22`, `V002__baseline_schema.sql:18`). All four
+were false by the same 54-commit, eight-month span the Task 4 correction had
+just finished measuring: this fork carried the Texen/`createdb.vm`/
+`upgradeToNNN` design from its first commit until `021c6004f`. The Task 4
+correction's own rule — *drop the timing claim rather than relocate it* — was
+written and then not applied to the word that had just replaced it. All four
+now read `the earlier ...`, which makes no claim about when. `V002:17`'s
+"as of this fork's move to PostgreSQL" is correct and stays: `021c6004f`
+created that file.
+
+**2. Task 2 Step 6's second grep did not pass, and was reported as passing.**
+The check
+`grep -rn "roller\.apache\.org" app/src/main/webapp/themes/ app/src/main/webapp/WEB-INF/velocity/ ...`
+returns `app/src/main/webapp/WEB-INF/velocity/feeds.vm:36` — an Atom
+`<category scheme="http://roller.apache.org/ns/tags/">` emitted into every
+feed, the same category of artefact as the `<generator uri>` two lines away
+that Step 1 *did* remove. `scheme` is optional in RFC 4287; the attribute is
+now dropped. This is the same failure mode as the Task 1 deviation below, one
+step further along: an acceptance command whose output was not read.
+
+**3. No string grep can find a logo.** Every acceptance check in this plan
+greps for `Apache Roller` and `roller.apache.org`. `WEB-INF/jsps/tiles/
+footer.jsp:27` shipped the ASF feather (`alt="ASF logo"`) on every admin page,
+immediately beside the string Step 3 rewrote to "Powered by Roller" — leaving
+the branding removed from the text and intact in the image next to it, while
+`CONTRIBUTING.md` disclaimed ASF endorsement. Removed, along with
+`images/tinyfeather.png`, the unreferenced `roller-ui/images/feather.svg`, and
+the now-dead `.roller-footer-mark` CSS rule. **Any future branding sweep needs
+an asset-level check beside the string ones.** Both of these must return no
+matches — and note they deliberately do *not* match the bare word `ASF`, which
+appears in the licence header of nearly every file in the tree and would drown
+the signal:
+
+```bash
+git grep -n -iE '(feather|asf[ _-]?logo|apache[a-z0-9_-]*\.(png|svg|gif|jpe?g))' -- app/src/main/webapp
+git ls-files app/src/main/webapp | grep -iE '\.(png|svg|gif|jpe?g|ico)$' | grep -iE 'feather|apache|asf'
+```
+
+**4. Step 8's expected match list was stale.** It named `CLAUDE.md:132` and
+`app/pom.xml:246` as surviving lineage references; the Task 4 correction had
+already removed the "Apache Roller" mention from both. That correction noted
+the `app/pom.xml` consequence (line 577) and missed the `CLAUDE.md` one. The
+true surviving set is **five**, all verified as statements *about* upstream:
+`README.md:5` (the fork paragraph), `CLAUDE.md:719` and
+`docs/design/design-system.md:68` (accurate history of the removed "Powered by
+Apache Roller" card), `CONTRIBUTING.md:3`, `DatabaseInstaller.java:108`. Plus
+`NOTICE.txt`, which is a licence obligation and excluded from the grep.
+
+**5. Two count/verification slips in the briefs themselves.** Task 2's header
+says "seven strings" where its steps cover eight (and Step 4b later added four
+more bundles plus the `_ru` comment, so the number was stale twice over).
+Task 1's implementer ran a narrower verification grep than Step 5 specified,
+reached the right conclusion by a different route, and did not note the
+deviation. Both are harmless in isolation; together with (2) they are one
+habit, which is why they are listed rather than dropped.
+
+**6. Cross-wave prose disagreed with this branch's own premise.** This plan's
+justification is that nothing has ever been published. `docker_deployment.md`'s
+Upgrades section — written during the preceding deployment wave — described
+"this very release" as a counterexample to an earlier one and cited "an
+operator who did exactly that", which after the reset names a release history
+that does not exist. Rewritten in the conditional. `.github/workflows/
+release.yml:42` had the mirror-image problem: it documented the release
+procedure as `mvn versions:set` **without** `-Pit`, the one trap this plan
+opens by calling load-bearing. Now `mvn -Pit versions:set -DnewVersion=0.1.1`,
+with the reason inline. A renumbering plan has to leave the *next* renumbering
+correct, not just this one.
+
+---
+
 ## Self-Review Notes
 
 **Spec coverage.** Every spec section maps to a task: the version number and the `-Pit` trap → Task 1; the seven user-visible strings and the translated bundles → Task 2; the schema guard → Task 3; the three categories of `6.2.0` mention → Tasks 3 (Java) and 4 (docs/config); the verification list → Task 4 Steps 8-12; the listmonk ambiguity → Global Constraints plus Task 4 Step 8, which is written to fail on zero matches rather than celebrate them.

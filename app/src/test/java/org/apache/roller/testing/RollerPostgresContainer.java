@@ -25,9 +25,9 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  * <p>Roller became PostgreSQL-only during this fork's simplification, and
  * tests run against the same database engine as production rather than
  * the embedded Derby they used before. The container's schema is built by
- * applying the real
- * {@code bin/db/migrations} chain (see {@link RollerDatabaseExtension}), so
- * there is no second, hand-maintained test schema to drift out of sync.
+ * applying the real {@code bin/db/migrations} chain (see
+ * {@link RollerDatabaseExtension}), so there is no second, hand-maintained
+ * test schema to drift out of sync.
  *
  * <p>One container per JVM, not per class: starting Postgres costs a second or
  * two, and {@link RollerDatabaseExtension} gives each test a clean database by
