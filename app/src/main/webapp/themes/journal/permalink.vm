@@ -35,9 +35,36 @@
     #set($pager = $model.getWeblogEntriesPager())
     #showWeblogEntriesPager($pager)
 
-    <nav class="qj-pager">
-        #showNextPrevEntriesControl($pager)
+    ## Rendered here rather than through #showNextPrevEntriesControl, which
+    ## emits a single "&laquo; a | Main | b &raquo;" line and truncates each
+    ## neighbour's title to 15-20 characters ("Why We Stopped Publi..."). That
+    ## is right for a one-line strip and wrong for a reading view, where the
+    ## neighbour deserves its own line and its real title. The pager's
+    ## prevEntry/nextEntry accessors exist for exactly this.
+    ##
+    ## Older on the left, newer on the right, reading order matching time's
+    ## direction. Titles are stored HTML-escaped (EntryBean.copyTo), so they
+    ## are emitted bare like every other $entry.title in this theme.
+    #set($older = $pager.prevEntry)
+    #set($newer = $pager.nextEntry)
+    #if($older || $newer)
+    <nav class="qj-pager qj-steps" aria-label="More entries">
+        #if($older)
+        <a class="qj-step qj-step-back" href="$url.entry($older.anchor)" rel="prev">
+            <span class="qj-step-label">Older</span>
+            <span class="qj-step-title">$older.title</span>
+        </a>
+        #else
+        <span class="qj-step qj-step-empty"></span>
+        #end
+        #if($newer)
+        <a class="qj-step qj-step-fwd" href="$url.entry($newer.anchor)" rel="next">
+            <span class="qj-step-label">Newer</span>
+            <span class="qj-step-title">$newer.title</span>
+        </a>
+        #end
     </nav>
+    #end
 </main>
 
 <footer class="qj-footer">

@@ -12,10 +12,11 @@
 #if($model.permalink)
     #foreach($entry in $entries)
     <article class="qj-reading">
-        ## $model.weblog.name is pre-escaped by WeblogWrapper#getName
-        ## (StringEscapeUtils.escapeHtml4) -- emit it bare, or it double-encodes
-        ## ("&amp;" -> "&amp;amp;"), same as frontpage/weblog.vm's $blog.name.
-        <p class="qj-crumb"><a href="$url.home">$model.weblog.name</a> &middot; $utils.escapeHTML($entry.category.name)</p>
+        ## Category only. The weblog's name is already the first thing on the
+        ## page -- one line above, in qj-head, and itself a link home -- so
+        ## repeating it here next to the category nav stated the same thing
+        ## three times inside 100px.
+        <p class="qj-crumb">$utils.escapeHTML($entry.category.name)</p>
         <h1 class="qj-h1">$entry.title</h1>
         <p class="qj-byline">
             <span>By $utils.escapeHTML($entry.creator.screenName)</span>
@@ -27,13 +28,30 @@
 #else
 #foreach($entry in $entries)
 <article class="qj-entry">
-    <p class="qj-date">$utils.formatDate($entry.pubTime, "MMM dd")<br>$utils.formatDate($entry.pubTime, "yyyy")</p>
+    <p class="qj-date">$utils.formatDate($entry.pubTime, "MMM dd")<br><span class="y">$utils.formatDate($entry.pubTime, "yyyy")</span></p>
     <div>
         <h3 class="qj-title"><a href="$url.entry($entry.anchor)">$entry.title</a></h3>
+        ## Every row gets a line of prose. The search description is the author's
+        ## own summary and wins when set, but most entries never get one, and a
+        ## row that collapses to a bare title breaks the list's rhythm -- two of
+        ## eight rows were half the height of their neighbours before this
+        ## fallback existed. removeHTML first: displayContent is rendered markup,
+        ## and truncating that directly can cut inside a tag.
         #if($utils.isNotEmpty($entry.searchDescription))
         <p class="qj-sum">$utils.escapeHTML($entry.searchDescription)</p>
+        #else
+        ## Emitted bare, unlike the searchDescription branch above. displayContent
+        ## is already-rendered, already-sanitized HTML, so removeHTML returns text
+        ## whose entities are already escaped ("I don&#39;t know"). Running
+        ## escapeHTML over that escapes the ampersands a second time and the
+        ## reader sees the entity source instead of the apostrophe.
+        <p class="qj-sum">$utils.truncateNicely($utils.removeHTML($entry.displayContent), 120, 165, "…")</p>
         #end
-        <p class="qj-meta">In <b>$utils.escapeHTML($entry.category.name)</b></p>
+        ## No "In" prefix and no <b>: the category is the least important thing
+        ## in the row, and emphasising it made the only colour on the page point
+        ## at the metadata rather than the writing. The accent belongs to the
+        ## title's hover state, which is the one thing here you can act on.
+        <p class="qj-meta">$utils.escapeHTML($entry.category.name)</p>
     </div>
 </article>
 #end

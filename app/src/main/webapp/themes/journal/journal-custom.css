@@ -172,15 +172,21 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 .qj-entry:hover { border-left-color: var(--qj-accent); }
 .qj-entry:hover .qj-title a { color: var(--qj-accent); }
 
+/* The date is this theme's signature move, so it has to read as an anchor
+ * rather than as faded furniture. The day sits at full ink; only the year --
+ * which repeats down the whole column and is the part you rarely need -- drops
+ * back to ink-soft. Previously both lines were ink-soft and the marginalia was
+ * too quiet to do the job it exists for. */
 .qj-date {
     margin: 0;
     padding-top: .3rem;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: .75rem;
-    color: var(--qj-ink-soft);
+    color: var(--qj-ink);
     font-variant-numeric: tabular-nums;
     line-height: 1.5;
 }
+.qj-date .y { color: var(--qj-ink-soft); }
 
 .qj-title {
     margin: 0;
@@ -201,8 +207,19 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
     max-width: 58ch;
 }
 
-.qj-meta { font-size: .75rem; color: var(--qj-ink-soft); margin: .5rem 0 0; }
-.qj-meta b { color: var(--qj-accent); font-weight: 600; }
+/* The category, set as a quiet caps label rather than an accent-coloured link.
+ * It was the only colour in the row, which put the strongest visual pull on the
+ * least useful thing in it -- the summary sells the entry, the category does
+ * not. The accent now appears in the row only on hover, on the title. */
+.qj-meta {
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--qj-ink-soft);
+    margin: .5rem 0 0;
+}
 
 @media (max-width: 560px) {
     .qj-entry { grid-template-columns: 1fr; }
@@ -211,24 +228,78 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 
 /* ---- pager / footer ---- */
 
-.qj-pager { max-width: 46rem; margin: 0 auto; padding: 0 1.25rem; }
+/* Entry-to-entry navigation on the permalink: two halves of a rule, older on
+ * the left, newer on the right, each with a caps label over the neighbour's
+ * real title. This replaces #showNextPrevEntriesControl's "&laquo; a | Main |
+ * b &raquo;" strip -- see permalink.vm for why the theme renders its own. */
+.qj-pager {
+    max-width: 46rem;
+    margin: 2.5rem auto 0;
+    padding: 1.25rem 1.25rem 0;
+    border-top: 1px solid var(--qj-line);
+}
+/* The two-up grid is scoped to qj-steps, not qj-pager, on purpose: both
+ * templates share the qj-pager container, and if the grid lived there any
+ * template still emitting #showNextPrevEntriesControl's inline "a | Main | b"
+ * strip would have its pipes dealt into grid cells and stack vertically. */
+.qj-steps {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+.qj-step { text-decoration: none; display: block; min-width: 0; }
+.qj-step-fwd { text-align: right; grid-column: 2; }
+.qj-step-label {
+    display: block;
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--qj-ink-soft);
+}
+.qj-step-title {
+    display: block;
+    margin-top: .25rem;
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: .90625rem;
+    line-height: 1.4;
+    color: var(--qj-ink);
+    text-wrap: balance;
+}
+.qj-step:hover .qj-step-title { color: var(--qj-accent); }
+
+@media (max-width: 560px) {
+    .qj-steps { grid-template-columns: 1fr; gap: 1.25rem; }
+    .qj-step-fwd { text-align: left; grid-column: 1; }
+    .qj-step-empty { display: none; }
+}
 
 .qj-footer {
     max-width: 46rem;
-    margin: 0 auto;
-    padding: 1.5rem 1.25rem 3rem;
+    margin: 3rem auto 0;
+    padding: 1.5rem 1.25rem 4rem;
     border-top: 1px solid var(--qj-line);
 }
+/* A rule the caret sits on, not a rounded box floating in white space. The
+ * boxed input was the one control on the page that looked like the browser's
+ * default rather than part of the theme. */
+.qj-search { margin: 0; }
 .qj-search input {
     width: 100%;
-    max-width: 22rem;
-    padding: .5rem .7rem;
-    border: 1px solid var(--qj-line);
-    border-radius: var(--qj-radius);
-    background: var(--qj-surface);
+    max-width: 20rem;
+    padding: .35rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--qj-line);
+    border-radius: 0;
+    background: transparent;
     color: var(--qj-ink);
-    font: inherit;
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: .90625rem;
 }
+.qj-search input::placeholder { color: var(--qj-ink-soft); }
+/* The accent underline is an extra affordance, not a replacement: body.qj's
+ * :focus-visible ring still applies, so keyboard focus stays visible. */
+.qj-search input:focus { border-bottom-color: var(--qj-accent); }
 
 /* ---- reading view (permalink) ----
  * Visual source of truth: docs/design/journal/journal-permalink.html (the
@@ -256,7 +327,10 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
     font-weight: 600;
     line-height: 1.25;
     text-wrap: balance;
-    max-width: 24ch;
+    /* 24ch forced a two-line break on titles of six or seven words ("The Cabin
+     * at the End / of the Forestry Track"). Wide enough now that balance gets
+     * to choose the break rather than the cap forcing one. */
+    max-width: 30ch;
 }
 
 .qj-byline {

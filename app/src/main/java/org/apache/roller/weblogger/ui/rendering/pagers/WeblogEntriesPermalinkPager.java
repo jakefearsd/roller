@@ -136,7 +136,18 @@ public class WeblogEntriesPermalinkPager extends AbstractWeblogEntriesPager {
     }
     
     
-    private WeblogEntry getNextEntry() {
+    /**
+     * The newer neighbouring entry, or null at the top of the weblog.
+     *
+     * <p>Public so a theme can render its own next/previous affordance from the
+     * real entry. {@link #getNextName()} is not a substitute: it truncates the
+     * title to 15-20 characters, which is fine for the shared
+     * {@code #showNextPrevEntriesControl} macro's one-line "&laquo; a | Main |
+     * b &raquo;" strip but produces "Why We Stopped Publi..." in a theme that
+     * gives the neighbour a line of its own. The journal theme renders this
+     * directly; see themes/journal/permalink.vm.
+     */
+    public WeblogEntry getNextEntry() {
         if (nextEntry == null) {
             try {
                 Weblogger roller = WebloggerFactory.getWeblogger();
@@ -156,7 +167,8 @@ public class WeblogEntriesPermalinkPager extends AbstractWeblogEntriesPager {
     }
     
     
-    private WeblogEntry getPrevEntry() {
+    /** The older neighbouring entry, or null at the foot of the weblog. Public for the same reason as {@link #getNextEntry()}. */
+    public WeblogEntry getPrevEntry() {
         if (prevEntry == null) {
             try {
                 Weblogger roller = WebloggerFactory.getWeblogger();

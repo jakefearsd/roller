@@ -39,9 +39,29 @@
     <div class="qj-entries">
         #showWeblogEntriesPager($pager)
     </div>
-    <nav class="qj-pager">
-        #showNextPrevEntriesControl($pager)
+    ## Same treatment as the permalink's entry-to-entry navigation, for the same
+    ## reason: #showNextPrevEntriesControl emits "&laquo; a | Main | b &raquo;",
+    ## which is furniture from a different decade. Here the links are pages of
+    ## the archive rather than single entries, so the labels name the direction
+    ## and the pager supplies nothing worth printing as a title.
+    #if($pager.prevLink || $pager.nextLink)
+    <nav class="qj-pager qj-steps" aria-label="More entries">
+        #if($pager.prevLink)
+        <a class="qj-step qj-step-back" href="$pager.prevLink" rel="prev">
+            <span class="qj-step-label">Older</span>
+            <span class="qj-step-title">Earlier entries</span>
+        </a>
+        #else
+        <span class="qj-step qj-step-empty"></span>
+        #end
+        #if($pager.nextLink)
+        <a class="qj-step qj-step-fwd" href="$pager.nextLink" rel="next">
+            <span class="qj-step-label">Newer</span>
+            <span class="qj-step-title">More recent entries</span>
+        </a>
+        #end
     </nav>
+    #end
 </main>
 
 <footer class="qj-footer">
