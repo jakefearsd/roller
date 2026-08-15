@@ -42,6 +42,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import tools.jackson.databind.ObjectMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -157,6 +158,16 @@ class SecurityConfigTest {
     @EnableWebSecurity
     @Import({SecurityConfig.class, StubController.class})
     static class TestConfig {
+
+        /**
+         * Spring Boot autoconfigures this in the running application;
+         * this hand-assembled context has no autoconfiguration at all, so
+         * apiTokenAuthFilter's ObjectMapper dependency needs a stand-in.
+         */
+        @Bean
+        ObjectMapper objectMapper() {
+            return new ObjectMapper();
+        }
     }
 
     @BeforeAll

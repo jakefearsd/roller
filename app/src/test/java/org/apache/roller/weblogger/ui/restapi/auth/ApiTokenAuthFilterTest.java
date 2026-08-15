@@ -10,10 +10,14 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ApiTokenAuthFilterTest {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @AfterEach
     void clearContext() {
@@ -39,7 +43,7 @@ class ApiTokenAuthFilterTest {
         request.addHeader("Authorization", "Bearer rlr_good");
         FilterChain chain = mock(FilterChain.class);
 
-        new ApiTokenAuthFilter(() -> mgr)
+        new ApiTokenAuthFilter(() -> mgr, OBJECT_MAPPER)
                 .doFilter(request, new MockHttpServletResponse(), chain);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -62,7 +66,7 @@ class ApiTokenAuthFilterTest {
         request.addHeader("Authorization", "Bearer rlr_bad");
         FilterChain chain = mock(FilterChain.class);
 
-        new ApiTokenAuthFilter(() -> mgr)
+        new ApiTokenAuthFilter(() -> mgr, OBJECT_MAPPER)
                 .doFilter(request, new MockHttpServletResponse(), chain);
 
         // The filter never rejects; authorization is the chain's job, so an
@@ -78,10 +82,44 @@ class ApiTokenAuthFilterTest {
         request.addHeader("Authorization", "Basic am9objpwdw==");
         FilterChain chain = mock(FilterChain.class);
 
-        new ApiTokenAuthFilter(() -> mgr)
+        new ApiTokenAuthFilter(() -> mgr, OBJECT_MAPPER)
                 .doFilter(request, new MockHttpServletResponse(), chain);
 
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verifyNoInteractions(mgr);
+    }
+
+    /**
+     * A ServletFilter runs outside DispatcherServlet's reach, so
+     * ApiExceptionHandler's @RestControllerAdvice can never see an exception
+     * thrown from here -- a throttled request must get its problem+json body
+     * written directly by the filter, and must never reach the chain.
+     */
+    @Test
+    void aThrottledCallerGetsAProblemJsonResponseAndNeverReachesTheChain() throws Exception {
+        ApiTokenManager mgr = mock(ApiTokenManager.class);
+        when(mgr.authenticate(anyString())).thenReturn(null);
+        // threshold 1: the first call is allowed through, the second is not.
+        ApiThrottle throttle = ApiThrottle.forTesting(1, 60);
+        ApiTokenAuthFilter filter = new ApiTokenAuthFilter(() -> mgr, throttle, OBJECT_MAPPER);
+
+        MockHttpServletRequest first = new MockHttpServletRequest("GET", "/api/v1/ping");
+        first.addHeader("Authorization", "Bearer rlr_same");
+        FilterChain firstChain = mock(FilterChain.class);
+        filter.doFilter(first, new MockHttpServletResponse(), firstChain);
+        verify(firstChain).doFilter(any(), any());
+
+        MockHttpServletRequest second = new MockHttpServletRequest("GET", "/api/v1/ping");
+        second.addHeader("Authorization", "Bearer rlr_same");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain secondChain = mock(FilterChain.class);
+
+        filter.doFilter(second, response, secondChain);
+
+        assertEquals(429, response.getStatus());
+        assertEquals("application/problem+json", response.getContentType());
+        JsonNode body = OBJECT_MAPPER.readTree(response.getContentAsByteArray());
+        assertEquals(429, body.get("status").asInt());
+        verifyNoInteractions(secondChain);
     }
 }

@@ -43,6 +43,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Java-config replacement for {@code security.xml} (deleted by this class,
@@ -294,9 +295,17 @@ public class SecurityConfig {
      * narrowness is the point; a matcher-scoped chain disables CSRF only where
      * no cookie-authenticated request can reach.
      *
-     * <p>Stateless: an API call must never mint a session cookie. HTTP Basic
-     * is reachable only at POST /api/v1/tokens -- a Bearer caller must not be
-     * able to mint another token, or any leaked token becomes a permanent one.
+     * <p>Stateless: an API call must never mint a session cookie. {@code
+     * httpBasic()} is enabled chain-wide because POST /api/v1/tokens -- the
+     * mint endpoint, which by definition cannot require an existing token to
+     * prove identity -- needs it; this chain does not, and cannot cleanly,
+     * restrict Basic to that one path or forbid it to a Bearer-authenticated
+     * caller. "A Bearer caller must not be able to mint another token" is a
+     * real requirement (a leaked token could otherwise mint itself a
+     * replacement forever), but it is enforced in {@code TokensApi} instead,
+     * where the request's {@code ApiPrincipal} is readable and the
+     * authentication mechanism can actually be inspected -- see {@code
+     * TokensApiTest#aBearerAuthenticatedCallerCannotMintAToken}.
      */
     @Bean
     @Order(1)
@@ -323,9 +332,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public ApiTokenAuthFilter apiTokenAuthFilter() {
+    public ApiTokenAuthFilter apiTokenAuthFilter(ObjectMapper objectMapper) {
         return new ApiTokenAuthFilter(
-                () -> WebloggerFactory.getWeblogger().getApiTokenManager());
+                () -> WebloggerFactory.getWeblogger().getApiTokenManager(), objectMapper);
     }
 
     /**

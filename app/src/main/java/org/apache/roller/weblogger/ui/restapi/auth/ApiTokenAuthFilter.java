@@ -12,19 +12,23 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.ApiTokenManager;
 import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ApiProblem;
 import org.apache.roller.weblogger.util.TokenGenerator;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Turns {@code Authorization: Bearer rlr_...} into an authenticated
  * SecurityContext.
  *
- * <p>Never rejects a request: an absent or bad token simply leaves the
- * context empty and the security chain answers 401. Keeping rejection in one
- * place means the API cannot grow two different unauthenticated responses.
+ * <p>Never rejects an authentication failure: an absent or bad token simply
+ * leaves the context empty and the security chain answers 401. Keeping
+ * rejection in one place means the API cannot grow two different
+ * unauthenticated responses.
  *
  * <p>The manager arrives through a Supplier because the business tier is
  * built lazily at {@code WebloggerFactory.bootstrap()}, after this filter
@@ -37,14 +41,17 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
 
     private final Supplier<ApiTokenManager> tokenManager;
     private final ApiThrottle throttle;
+    private final ObjectMapper objectMapper;
 
-    public ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager) {
-        this(tokenManager, ApiThrottle.create());
+    public ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager, ObjectMapper objectMapper) {
+        this(tokenManager, ApiThrottle.create(), objectMapper);
     }
 
-    ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager, ApiThrottle throttle) {
+    ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager, ApiThrottle throttle,
+                       ObjectMapper objectMapper) {
         this.tokenManager = tokenManager;
         this.throttle = throttle;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -61,13 +68,34 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
         // is a credential store nobody meant to build.
         String key = bearer ? TokenGenerator.sha256Hex(rawToken) : request.getRemoteAddr();
         if (throttle.isThrottled(key)) {
-            throw ApiException.throttled("Too many requests. Slow down and retry.");
+            writeThrottled(request, response);
+            return;
         }
 
         if (bearer) {
             authenticate(rawToken);
         }
         chain.doFilter(request, response);
+    }
+
+    /**
+     * A ServletFilter runs before, and entirely outside, DispatcherServlet --
+     * so {@code ApiExceptionHandler}'s {@code @RestControllerAdvice} can never
+     * see an exception thrown from here. This is therefore the one place an
+     * API error body is assembled by hand instead of through that machinery,
+     * and it must keep matching {@code ApiExceptionHandler}'s shape exactly:
+     * it still builds the body via {@code ApiException.throttled(...)
+     * .toProblem(...)} rather than a hand-rolled {@code ApiProblem}, so the
+     * two error shapes cannot drift apart.
+     */
+    private void writeThrottled(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        ApiProblem problem = ApiException
+                .throttled("Too many requests. Slow down and retry.")
+                .toProblem(request.getRequestURI());
+        response.setStatus(problem.status());
+        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        objectMapper.writeValue(response.getOutputStream(), problem);
     }
 
     private void authenticate(String rawToken) {
