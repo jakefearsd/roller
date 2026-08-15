@@ -99,7 +99,7 @@ class EntriesWriteApiControllerTest {
                         .requestAttr("actionWeblog", weblog)
                         .requestAttr("authenticatedUser", aUser("maiia"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"Cats & Dogs\",\"category\":\"Travel\"}"))
+                        .content("{\"title\":\"Cats & Dogs\",\"text\":\"body\",\"category\":\"Travel\"}"))
                 .andExpect(status().isCreated())
                 .andReturn();
         String location = result.getResponse().getHeader("Location");
@@ -131,7 +131,7 @@ class EntriesWriteApiControllerTest {
                         .requestAttr("actionWeblog", weblog)
                         .requestAttr("authenticatedUser", aUser("maiia"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"No category here\"}"))
+                        .content("{\"title\":\"No category here\",\"text\":\"body\"}"))
                 .andExpect(status().isCreated());
 
         ArgumentCaptor<WeblogEntry> captor = ArgumentCaptor.forClass(WeblogEntry.class);
@@ -152,7 +152,7 @@ class EntriesWriteApiControllerTest {
                         .requestAttr("actionWeblog", weblog)
                         .requestAttr("authenticatedUser", aUser("maiia"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"x\",\"category\":\"Nope\"}"))
+                        .content("{\"title\":\"x\",\"text\":\"y\",\"category\":\"Nope\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
@@ -170,7 +170,7 @@ class EntriesWriteApiControllerTest {
                         .requestAttr("actionWeblog", weblog)
                         .requestAttr("authenticatedUser", aUser("maiia"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"x\",\"pubTime\":\"yesterday-ish\"}"))
+                        .content("{\"title\":\"x\",\"text\":\"y\",\"pubTime\":\"yesterday-ish\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
@@ -286,6 +286,136 @@ class EntriesWriteApiControllerTest {
                 .andExpect(status().isOk());
 
         assertEquals("food travel", entry.getTagsAsString());
+    }
+
+    /**
+     * CRITICAL fix round 1: publishing with no pubTime is the single most
+     * likely automation call ("publish this now") and must not 500.
+     * {@code applyWrite} only sets pubTime when the client supplied one, and
+     * {@code JPAWeblogEntryManagerImpl.saveWeblogEntry} evaluates {@code
+     * entry.getPubTime().after(...)} unconditionally whenever status is
+     * PUBLISHED -- an NPE the JSP editor's {@code EntryEditController.doSave}
+     * already guards against immediately before every save. This controller
+     * ported that same guard.
+     */
+    @Test
+    void postWithPublishedStatusAndNoPubTimeDefaultsToNowRatherThanFailing() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries")
+                        .requestAttr("actionWeblog", weblog)
+                        .requestAttr("authenticatedUser", aUser("maiia"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"x\",\"text\":\"y\",\"status\":\"PUBLISHED\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        ArgumentCaptor<WeblogEntry> captor = ArgumentCaptor.forClass(WeblogEntry.class);
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(captor.capture());
+        assertNotNull(captor.getValue().getPubTime());
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertNotNull(json.get("pubTime"));
+    }
+
+    /** Same guard, PATCH side: publishing a draft with no stored pubTime must not 500 either. */
+    @Test
+    void patchWithPublishedStatusAndNoPubTimeDefaultsToNowRatherThanFailing() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setTitle("existing");
+        entry.setText("existing body");
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"PUBLISHED\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertNotNull(entry.getPubTime());
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(entry);
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertNotNull(json.get("pubTime"));
+    }
+
+    /**
+     * IMPORTANT fix round 1: title and text are NOT NULL columns
+     * (V002__baseline_schema.sql) and WeblogEntry defaults both to null, so
+     * an omitted title used to reach weblogger.flush() and die on the
+     * constraint -- an opaque 500 from the generic handler. Validated the
+     * same way CategoriesApi.create validates {@code name}: before the
+     * manager is ever called.
+     */
+    @Test
+    void postWithoutATitleIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries")
+                        .requestAttr("actionWeblog", weblog)
+                        .requestAttr("authenticatedUser", aUser("maiia"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"y\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    /** Same guard, the other NOT NULL column. */
+    @Test
+    void postWithoutTextIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries")
+                        .requestAttr("actionWeblog", weblog)
+                        .requestAttr("authenticatedUser", aUser("maiia"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"x\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
+    /**
+     * The validation added to create() must NOT reach update(): an existing
+     * entry already satisfies the NOT NULL constraint, and applyWrite's
+     * "null means absent" contract must keep leaving prior values alone
+     * rather than suddenly demanding a title on every PATCH.
+     */
+    @Test
+    void patchWithoutATitleLeavesTheStoredTitleUntouchedAndIsNotRejected() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setTitle("kept title");
+        entry.setText("kept body");
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"summary\":\"just a summary update\"}"))
+                .andExpect(status().isOk());
+
+        assertEquals("kept title", entry.getTitle());
+        assertEquals("kept body", entry.getText());
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(entry);
     }
 
     @Test

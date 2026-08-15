@@ -2,6 +2,7 @@ package org.apache.roller.weblogger.ui.restapi.v1;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
+import java.sql.Timestamp;
 import java.util.List;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.User;
@@ -42,6 +43,8 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
         Weblog weblog = requireActionWeblog(request);
         User user = requireAuthenticatedUser(request);
 
+        requireTitleAndText(body);
+
         WeblogEntry entry = new WeblogEntry();
         entry.setWebsite(weblog);
         entry.setCreatorUserName(user.getUserName());
@@ -49,6 +52,7 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
         EntryDtos.applyWrite(entry, body, weblog);
         applyCategory(entry, weblog, body.category());
         applyTags(entry, body.tags());
+        applyPublishNowDefault(entry);
 
         // No explicit category fallback needed here:
         // JPAWeblogEntryManagerImpl.saveWeblogEntry already defaults a
@@ -75,11 +79,47 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
         EntryDtos.applyWrite(entry, body, weblog);
         applyCategory(entry, weblog, body.category());
         applyTags(entry, body.tags());
+        applyPublishNowDefault(entry);
 
         weblogger.getWeblogEntryManager().saveWeblogEntry(entry);
         weblogger.flush();
 
         return EntryDtos.toView(entry, permalink(entry));
+    }
+
+    /**
+     * "Publish this now" -- an entry going to PUBLISHED with no pubTime
+     * supplied -- must mean now, not a null that reaches
+     * {@code JPAWeblogEntryManagerImpl.saveWeblogEntry}'s unconditional
+     * {@code entry.getPubTime().after(...)} and NPEs. The JSP editor already
+     * carries this exact guard, unconditionally, immediately before every
+     * save ({@code EntryEditController.doSave}); this ports it rather than
+     * inventing a new rule. Applied to both create and update, after
+     * {@code applyWrite} has had its chance to set an explicit pubTime and
+     * before the manager is ever called.
+     */
+    private void applyPublishNowDefault(WeblogEntry entry) {
+        if (entry.isPublished() && entry.getPubTime() == null) {
+            entry.setPubTime(new Timestamp(System.currentTimeMillis()));
+        }
+    }
+
+    /**
+     * {@code title} and {@code text} are NOT NULL columns
+     * (V002__baseline_schema.sql) and a brand-new WeblogEntry defaults both
+     * to null, so an omitted one used to reach weblogger.flush() and die on
+     * the constraint -- an opaque 500 from the generic handler. Checked only
+     * on create: an existing entry already satisfies the constraint, and a
+     * PATCH omitting either must leave the stored value alone per
+     * applyWrite's "null means absent" contract, not suddenly demand one.
+     */
+    private void requireTitleAndText(EntryDtos.EntryWrite body) {
+        if (body.title() == null || body.title().isBlank()) {
+            throw ApiException.badRequest("title is required.");
+        }
+        if (body.text() == null || body.text().isBlank()) {
+            throw ApiException.badRequest("text is required.");
+        }
     }
 
     /**
