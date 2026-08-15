@@ -213,18 +213,29 @@ class ControllerMetadataTest {
         return null;
     }
 
-    /** Every controller class in the application, found on the classpath. */
+    /**
+     * Every controller class in the application, found on the classpath.
+     *
+     * <p>Rooted at {@code ui} rather than {@code ui/controllers} so the same
+     * walk also covers {@code ui.restapi} -- the JSP admin controllers
+     * ({@code *Controller.java}) and the REST API controllers
+     * ({@code *Api.java}) are two naming conventions for the same hazard:
+     * both bind {@code @PathVariable}/{@code @RequestParam} without the
+     * {@code -parameters} compiler flag, so both need this one gate rather
+     * than a second, parallel scan that could drift from this one.
+     */
     private static List<Class<?>> controllerClasses() throws Exception {
-        java.nio.file.Path root = java.nio.file.Paths.get("src/main/java/org/apache/roller/"
-                + "weblogger/ui/controllers");
+        java.nio.file.Path root = java.nio.file.Paths.get("src/main/java/org/apache/roller/weblogger/ui");
         assertTrue(java.nio.file.Files.isDirectory(root), "Expected " + root.toAbsolutePath());
 
         List<Class<?>> classes = new java.util.ArrayList<>();
         try (var paths = java.nio.file.Files.walk(root)) {
             for (java.nio.file.Path file : paths.filter(java.nio.file.Files::isRegularFile)
-                    .filter(f -> f.toString().endsWith("Controller.java")).toList()) {
+                    .filter(f -> f.toString().endsWith("Controller.java")
+                            || f.toString().endsWith("Api.java"))
+                    .toList()) {
                 String relative = root.relativize(file).toString();
-                String className = "org.apache.roller.weblogger.ui.controllers."
+                String className = "org.apache.roller.weblogger.ui."
                         + relative.substring(0, relative.length() - ".java".length())
                                 .replace(java.io.File.separatorChar, '.');
                 classes.add(Class.forName(className));
