@@ -112,21 +112,45 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
      * request on the same thread happens to reach order 60 and inherit it.
      *
      * <p>The converse matters just as much: on a SUCCESSFUL authentication
-     * this method must NOT release. {@code authorizeHttpRequests}' only
-     * rule is {@code anyRequest().authenticated()}, so setting the context
-     * here reliably means the request proceeds through the rest of the
-     * chain to order 60, whose release() is meant to be the one that runs
-     * -- the controller downstream is still going to use this same
-     * EntityManager. Releasing on both branches was considered and
-     * rejected; two other routes were also considered instead of this
-     * localized try/finally (see {@code TokensApi}'s class javadoc's
-     * cross-reference for the full writeup): reordering
-     * {@code PersistenceSessionFilter} ahead of the security chain would
-     * fix this cleanly in principle, but that filter's URL pattern is
-     * {@code /*} and its order is a single global number, not scoped to
-     * {@code /api/*} -- moving it changes behaviour for the JSP admin path's
-     * own early security rejections (bad login, CSRF) too, which is a
-     * bigger, differently-risky change than this task's scope covers.
+     * this method must NOT release. {@code SecurityConfig.apiSecurityFilterChain}'s
+     * {@code authorizeHttpRequests} actually has three rules -- {@code POST
+     * /api/v1/tokens} and {@code /api/v1/ping} each get their own
+     * ({@code authenticated()} and {@code permitAll()} respectively), then
+     * {@code anyRequest().authenticated()} covers everything else -- and
+     * setting the context here reliably means the request proceeds through
+     * the rest of the chain to order 60 REGARDLESS of which rule applies:
+     * an authenticated caller obviously satisfies {@code authenticated()},
+     * and {@code permitAll()} lets the request through independent of
+     * authentication either way. Order 60's release() is meant to be the
+     * one that runs on this path -- the controller downstream is still
+     * going to use this same EntityManager.
+     *
+     * <p>Releasing here is safe on the FAILURE branch even for a
+     * {@code permitAll()} route like {@code /api/v1/ping}: unlike the
+     * {@code authenticated()} routes, a failed authentication there does
+     * NOT get refused -- the request still proceeds to order 60 regardless.
+     * That is not a problem, because {@code release()} only clears this
+     * thread's bound EntityManager; nothing downstream is left without one
+     * -- {@code getEntityManager(...)} lazily opens a fresh one on demand,
+     * and order 60's own release() immediately afterward is a harmless
+     * no-op (open-then-close an EntityManager nothing used). Releasing on
+     * BOTH branches unconditionally was considered and rejected instead,
+     * specifically because the SUCCESS branch's release() would be wrong on
+     * every non-{@code permitAll} route: the controller downstream still
+     * needs the same EntityManager, and order 60 -- guaranteed to run
+     * whenever authentication succeeded -- already owns closing it.
+     *
+     * <p>Two other routes were considered instead of this localized
+     * try/finally (see {@code TokensApi}'s class javadoc's cross-reference
+     * for the full writeup): reordering {@code PersistenceSessionFilter}
+     * ahead of the security chain would fix this cleanly in principle, but
+     * that filter's URL pattern is {@code /*} and its order is a single
+     * global number -- {@code spring.security.filter.order} names one
+     * position for the whole app, not a per-chain setting -- so scoping a
+     * reorder to just {@code /api/*} was never actually possible; moving it
+     * changes behaviour for the JSP admin path's own early security
+     * rejections (bad login, CSRF) too, a bigger, differently-risky change
+     * than this task's scope covers.
      */
     private void authenticate(String rawToken) {
         boolean authenticated = false;

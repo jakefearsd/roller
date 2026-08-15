@@ -237,9 +237,18 @@ class ApiIT extends RollerIT {
     @Test
     void uploadingARealImageThroughRealMultipartReachesTheRenditionPipeline() throws Exception {
         loginAsAdmin();
-        boolean uploadsWere = setGlobalFlag("uploads.enabled", true);
-        MintedToken minted = mintToken("ApiIT multipart token", "ADMIN");
+        boolean uploadsWere = false;
+        MintedToken minted = null;
         try {
+            // Both the flag flip and the mint must be inside this try: if
+            // either one succeeds and something AFTER it throws (the mint
+            // failing right after the flag flip did, say), the flag has to
+            // still be restored in the finally below -- it is shared by the
+            // whole running IT instance, and a failure here must not leave
+            // uploads on for every test that runs after this one.
+            uploadsWere = setGlobalFlag("uploads.enabled", true);
+            minted = mintToken("ApiIT multipart token", "ADMIN");
+
             byte[] jpeg = tinyJpeg();
             String boundary = "ApiITBoundary" + System.nanoTime();
             byte[] body = multipartBody(boundary, "file", "apiit-tiny.jpg", "image/jpeg", jpeg);
@@ -274,7 +283,9 @@ class ApiIT extends RollerIT {
             HttpResponse<String> deleteResponse = client.send(delete, HttpResponse.BodyHandlers.ofString());
             assertEquals(204, deleteResponse.statusCode(), deleteResponse.body());
         } finally {
-            revokeToken(minted.id());
+            if (minted != null) {
+                revokeToken(minted.id());
+            }
             setGlobalFlag("uploads.enabled", uploadsWere);
             logout();
         }

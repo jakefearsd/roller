@@ -114,10 +114,16 @@ class ApiTokenAuthFilterTest {
 
     /**
      * The converse of the test above, and just as load-bearing: a
-     * successful Bearer authentication means {@code authorizeHttpRequests}
-     * WILL allow the request through to order 60, so releasing here too
-     * would close the EntityManager out from under the controller that is
-     * about to run on it. Order 60 must stay the sole releaser on this path.
+     * successful Bearer authentication always reaches order 60, regardless
+     * of which of {@code authorizeHttpRequests}' three rules
+     * ({@code POST /api/v1/tokens}'s {@code authenticated()}, {@code
+     * /api/v1/ping}'s {@code permitAll()}, or the {@code
+     * anyRequest().authenticated()} fallback) applies to the path -- an
+     * authenticated caller satisfies {@code authenticated()} outright, and
+     * {@code permitAll()} lets the request through independent of
+     * authentication either way. So releasing here too would close the
+     * EntityManager out from under the controller that is about to run on
+     * it. Order 60 must stay the sole releaser on this path.
      */
     @Test
     void aSuccessfulAuthenticationDoesNotReleaseHere() throws Exception {
