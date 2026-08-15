@@ -65,8 +65,8 @@ public class SchemaMigrationTest {
             "weblogentry", "weblogentry_revision");
 
     /**
-     * Tables belonging to features removed when this fork diverged. The
-     * baseline must not
+     * Tables belonging to features this fork has removed since diverging from
+     * upstream. The baseline must not
      * recreate them -- that was the whole point of dropping the old
      * 610-to-620 upgrade script in favour of a clean baseline.
      */
@@ -130,8 +130,7 @@ public class SchemaMigrationTest {
 
             for (String removed : REMOVED_FEATURE_TABLES) {
                 assertFalse(tables.contains(removed),
-                        "Table '" + removed + "' belongs to a feature removed when this fork "
-                                + "diverged from upstream and "
+                        "Table '" + removed + "' belongs to a feature this fork removed and "
                                 + "must not be in the baseline schema");
             }
         } finally {
