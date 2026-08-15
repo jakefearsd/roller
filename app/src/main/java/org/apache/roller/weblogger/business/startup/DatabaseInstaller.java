@@ -42,7 +42,7 @@ import java.util.Set;
  * table, so this class and {@code bin/db/migrate.sh} can be used
  * interchangeably: whichever runs first, the other skips what is already done.
  *
- * <p>This replaces the pre-6.2.0 design, which rendered vendor-specific DDL for
+ * <p>This replaces the pre-fork design, which rendered vendor-specific DDL for
  * seven databases from Velocity templates and walked a hardcoded
  * {@code upgradeTo400/500/510/520/610} chain keyed off a
  * {@code roller.database.version} row in {@code roller_properties}.
@@ -97,15 +97,17 @@ public class DatabaseInstaller {
     public boolean isCreationRequired() {
         try (Connection con = db.getConnection()) {
             if (!tableExists(con, TRACKING_TABLE)) {
-                // A pre-6.2.0 database has Roller tables but no tracking table.
-                // There is no upgrade path from 6.1.x, so say so plainly rather
-                // than silently re-running the baseline over a populated schema.
+                // A database predating this fork has Roller tables but no
+                // tracking table. There is no upgrade path from upstream, so
+                // say so plainly rather than silently re-running the baseline
+                // over a populated schema.
                 if (tableExists(con, "userrole") || tableExists(con, "roller_user")) {
                     throw new IllegalStateException(
                             "This database has Roller tables but no " + TRACKING_TABLE + " table, "
-                            + "so it predates 6.2.0. Roller 6.2.0 dropped support for in-place "
-                            + "upgrades from 6.1.x and for databases other than PostgreSQL. "
-                            + "Export your content and load it into a fresh 6.2.0 database.");
+                            + "so it predates this fork's migration chain. There is no in-place "
+                            + "upgrade path from Apache Roller 6.1.x or earlier, nor from any "
+                            + "database other than PostgreSQL. Export your content and load it "
+                            + "into a fresh database.");
                 }
                 return true;
             }

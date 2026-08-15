@@ -254,11 +254,11 @@ class ConfigModelTest {
 
     @Test
     void buildDetailsComeFromTheRunningWebloggerInstance() {
-        when(weblogger.getVersion()).thenReturn("6.2.0");
+        when(weblogger.getVersion()).thenReturn("0.1.0");
         when(weblogger.getBuildTime()).thenReturn("2026-07-31T12:00:00Z");
         when(weblogger.getBuildUser()).thenReturn("release-bot");
 
-        assertEquals("6.2.0", model.getRollerVersion(),
+        assertEquals("0.1.0", model.getRollerVersion(),
                 "$config.rollerVersion is rendered in the footer of every bundled theme.");
         assertEquals("2026-07-31T12:00:00Z", model.getRollerBuildTimestamp(),
                 "$config.rollerBuildTimestamp reports the build time.");

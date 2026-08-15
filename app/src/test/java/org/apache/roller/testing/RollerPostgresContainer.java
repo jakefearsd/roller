@@ -22,7 +22,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 /**
  * Lazily started PostgreSQL container shared by every test in the JVM.
  *
- * <p>Roller is PostgreSQL-only as of 6.2.0, and tests run against the same
+ * <p>Roller has been PostgreSQL-only since this fork diverged from Apache
+ * Roller 6.1.x, and tests run against the same
  * database engine as production rather than the embedded Derby they used
  * before. The container's schema is built by applying the real
  * {@code bin/db/migrations} chain (see {@link RollerDatabaseExtension}), so
