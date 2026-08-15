@@ -25,6 +25,30 @@
 - **Errors are `application/problem+json`, produced only by `ApiExceptionHandler`.** No controller builds its own error body.
 - **404, not 403, for a resource the caller may not see.** A 403 confirms existence.
 - Run the whole unit suite with `mvn -pl app test`. Run one class with `mvn -pl app test -Dtest=ClassName`. Tests need Docker (Testcontainers PostgreSQL, one container per JVM).
+- **Test first, and watch it fail for the reason you expect.** A step that says "watch it fail" is not paperwork: if it passes, or fails for a different reason, stop and find out why before writing any implementation.
+- **Every task that ships a controller ships a MockMvc test for that controller, written before it.** Testing the DTO helper alone is not enough — it leaves routing, status codes, permission wiring and JSON shape unproven, which is where API bugs actually live. Standalone setup needs no container:
+
+```java
+    // Pattern for every *ApiTest that covers a controller. standaloneSetup
+    // runs no container, so it cannot see the /api prefix stripping (ApiIT
+    // covers that) -- but it does exercise routing, status codes, argument
+    // binding and the problem+json advice, none of which a DTO test touches.
+    private MockMvc mockMvc(Object controller) {
+        return MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
+    }
+
+    @Test
+    void anUnknownEntryIs404WithProblemJson() throws Exception {
+        mockMvc(new EntriesApi(/* mocked Weblogger */))
+                .perform(get("/v1/weblogs/testblog/entries/no-such-id"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+```
+
+- **A characterisation test is the one test expected to pass on arrival.** When a task extracts or moves existing behaviour (Tasks 6, 7, 10's manager assertions, 11's ownership assertion), the test still comes first, and its javadoc must say it is characterising existing behaviour — so a later reader does not mistake a passing-on-arrival test for one written backwards. If a characterisation test *fails*, the behaviour was not what the plan assumed: stop, do not "fix" it to match.
 
 ---
 
@@ -535,55 +559,13 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
     - `boolean revoke(User user, String tokenId) throws WebloggerException`
   - `Weblogger.getApiTokenManager()`.
 
-- [ ] **Step 1: Write the migration**
+**Order note:** the manager test comes first and the migration is written to
+make it pass. Writing the schema first and then running the pre-existing
+`SchemaMigrationTest` would be a pass-to-pass check — it never fails, so it
+proves nothing about this table. The manager test cannot pass without the
+table, which is what makes it the real gate.
 
-```sql
--- V026: API tokens for the automation surface.
---
--- Deliberately a separate table from roller_user_token rather than a new
--- UserToken.Purpose: that entity is single-use with a one-hour TTL and an
--- atomic consume, all of which are wrong for a long-lived credential.
---
--- Only the SHA-256 digest is stored. The secret is high-entropy random, so
--- there is nothing to brute-force and authentication must stay a single
--- indexed lookup -- a slow KDF would be wrong on both counts.
-
-CREATE TABLE IF NOT EXISTS roller_api_token (
-    id            VARCHAR(48)  NOT NULL PRIMARY KEY,
-    userid        VARCHAR(48)  NOT NULL,
-    label         VARCHAR(255) NOT NULL,
-    token_sha256  VARCHAR(64)  NOT NULL,
-    scope_weblog  VARCHAR(255),
-    scope_role    VARCHAR(16)  NOT NULL,
-    created       TIMESTAMP    NOT NULL,
-    last_used_at  TIMESTAMP,
-    expires_at    TIMESTAMP,
-    revoked_at    TIMESTAMP
-);
-
-DO $$
-BEGIN
-    ALTER TABLE roller_api_token
-        ADD CONSTRAINT roller_api_token_userid_fk
-        FOREIGN KEY (userid) REFERENCES roller_user (id);
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-    WHEN duplicate_table THEN NULL;
-END $$;
-
-CREATE UNIQUE INDEX IF NOT EXISTS roller_api_token_digest_uq
-    ON roller_api_token (token_sha256);
-
-CREATE INDEX IF NOT EXISTS roller_api_token_userid_idx
-    ON roller_api_token (userid);
-```
-
-- [ ] **Step 2: Run the migration test to confirm it applies and is idempotent**
-
-Run: `mvn -pl app test -Dtest=SchemaMigrationTest`
-Expected: PASS. This suite applies the whole chain twice; a non-idempotent statement fails here.
-
-- [ ] **Step 3: Write the failing manager test**
+- [ ] **Step 1: Write the failing manager test**
 
 ```java
 package org.apache.roller.weblogger.business;
@@ -690,12 +672,55 @@ class ApiTokenManagerTest {
 }
 ```
 
-- [ ] **Step 4: Run it and watch it fail**
+- [ ] **Step 2: Run it and watch it fail**
 
 Run: `mvn -pl app test -Dtest=ApiTokenManagerTest`
 Expected: FAIL — `ApiToken`, `ApiTokenManager` and `getApiTokenManager()` do not exist.
 
-- [ ] **Step 5: Write the `ApiToken` entity**
+- [ ] **Step 3: Write the migration**
+
+```sql
+-- V026: API tokens for the automation surface.
+--
+-- Deliberately a separate table from roller_user_token rather than a new
+-- UserToken.Purpose: that entity is single-use with a one-hour TTL and an
+-- atomic consume, all of which are wrong for a long-lived credential.
+--
+-- Only the SHA-256 digest is stored. The secret is high-entropy random, so
+-- there is nothing to brute-force and authentication must stay a single
+-- indexed lookup -- a slow KDF would be wrong on both counts.
+
+CREATE TABLE IF NOT EXISTS roller_api_token (
+    id            VARCHAR(48)  NOT NULL PRIMARY KEY,
+    userid        VARCHAR(48)  NOT NULL,
+    label         VARCHAR(255) NOT NULL,
+    token_sha256  VARCHAR(64)  NOT NULL,
+    scope_weblog  VARCHAR(255),
+    scope_role    VARCHAR(16)  NOT NULL,
+    created       TIMESTAMP    NOT NULL,
+    last_used_at  TIMESTAMP,
+    expires_at    TIMESTAMP,
+    revoked_at    TIMESTAMP
+);
+
+DO $$
+BEGIN
+    ALTER TABLE roller_api_token
+        ADD CONSTRAINT roller_api_token_userid_fk
+        FOREIGN KEY (userid) REFERENCES roller_user (id);
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+    WHEN duplicate_table THEN NULL;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS roller_api_token_digest_uq
+    ON roller_api_token (token_sha256);
+
+CREATE INDEX IF NOT EXISTS roller_api_token_userid_idx
+    ON roller_api_token (userid);
+```
+
+- [ ] **Step 4: Write the `ApiToken` entity**
 
 Model it on `pojos/UserToken.java`: `private String id = UUIDGenerator.generateUUID();` plus `User user`, `String label`, `String tokenSha256`, `String scopeWeblog`, `Role scopeRole`, `Timestamp created`, `lastUsedAt`, `expiresAt`, `revokedAt`, each with a getter and setter, `equals`/`hashCode` on `id`, and:
 
@@ -714,7 +739,7 @@ Model it on `pojos/UserToken.java`: `private String id = UUIDGenerator.generateU
 
 `toString()` must **not** include `tokenSha256`.
 
-- [ ] **Step 6: Write `ApiToken.orm.xml`**
+- [ ] **Step 5: Write `ApiToken.orm.xml`**
 
 Copy the structure of `UserToken.orm.xml`, table `roller_api_token`, `access="PROPERTY"`, `metadata-complete="true"`, with:
 
@@ -738,7 +763,7 @@ Register it in `persistence.xml` after the `UserToken.orm.xml` line:
     <mapping-file>org/apache/roller/weblogger/pojos/ApiToken.orm.xml</mapping-file>
 ```
 
-- [ ] **Step 7: Write the manager interface and implementation**
+- [ ] **Step 6: Write the manager interface and implementation**
 
 ```java
 package org.apache.roller.weblogger.business;
@@ -849,7 +874,7 @@ public interface ApiTokenManager {
     }
 ```
 
-- [ ] **Step 8: Wire the bean and the facade**
+- [ ] **Step 7: Wire the bean and the facade**
 
 In `WebloggerBeanConfig`, after the `userTokenManager` bean:
 
@@ -862,12 +887,12 @@ In `WebloggerBeanConfig`, after the `userTokenManager` bean:
 
 Add `ApiTokenManager getApiTokenManager();` to `Weblogger` (with javadoc matching the neighbours' style), add the constructor parameter and field to `WebloggerImpl`, and add the argument at the `WebloggerImpl` construction site in `WebloggerBeanConfig` (the `weblogger(...)` bean method, which already takes every other manager).
 
-- [ ] **Step 9: Run the manager test**
+- [ ] **Step 8: Run the manager test**
 
 Run: `mvn -pl app test -Dtest=ApiTokenManagerTest`
 Expected: PASS, 6 tests.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add bin/db/migrations/V026__api_tokens.sql \
@@ -1602,7 +1627,94 @@ In that class's `addInterceptors`, add after the existing registration:
         registry.addInterceptor(new ApiScopeInterceptor()).addPathPatterns("/api/**");
 ```
 
-- [ ] **Step 9: Write the token DTOs and endpoints**
+- [ ] **Step 9: Write the failing TokensApi test**
+
+```java
+package org.apache.roller.weblogger.ui.restapi.v1;
+
+import org.apache.roller.weblogger.pojos.ApiToken;
+import org.apache.roller.weblogger.ui.restapi.ApiExceptionHandler;
+import org.apache.roller.weblogger.ui.restapi.auth.ApiPrincipal;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import java.util.List;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+/**
+ * Token-mints-token is a privilege-escalation path: it turns any leaked token
+ * into a permanent one, and into one whose scope the thief chooses. Minting is
+ * therefore Basic-only, and this is the test that says so -- the security
+ * chain permits Basic on this path, so nothing else would catch a regression
+ * here.
+ */
+class TokensApiTest {
+
+    @AfterEach
+    void clear() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private MockMvc mockMvc(TokensApi controller) {
+        return MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
+    }
+
+    private void authenticateWithABearerToken() {
+        var auth = new UsernamePasswordAuthenticationToken("agent", null, List.of());
+        auth.setDetails(new ApiPrincipal("agent", null, ApiToken.Role.ADMIN));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @Test
+    void aBearerAuthenticatedCallerCannotMintAToken() throws Exception {
+        authenticateWithABearerToken();
+
+        mockMvc(new TokensApi(/* mocked Weblogger */))
+                .perform(post("/v1/tokens")
+                        .contentType("application/json")
+                        .content("{\"label\":\"escalation\",\"role\":\"ADMIN\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+
+    /**
+     * Revoking an id the caller does not own answers 404, not 403 -- a 403
+     * would confirm the id exists and let one user enumerate another's tokens.
+     */
+    @Test
+    void revokingSomeoneElsesTokenIs404() throws Exception {
+        authenticateWithABearerToken();
+
+        mockMvc(new TokensApi(/* mocked Weblogger whose revoke returns false */))
+                .perform(delete("/v1/tokens/{id}", "someone-elses-id"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void anUnknownRoleIsRejected() throws Exception {
+        mockMvc(new TokensApi(/* mocked Weblogger */))
+                .perform(post("/v1/tokens")
+                        .contentType("application/json")
+                        .content("{\"label\":\"x\",\"role\":\"SUPERUSER\"}"))
+                .andExpect(status().isBadRequest());
+    }
+}
+```
+
+Mock `Weblogger` with Mockito the way the existing `*ControllerTest`s do — check one first with `grep -n "mock(" app/src/test/java/org/apache/roller/weblogger/ui/controllers/editor/MembersControllerTest.java | head`.
+
+- [ ] **Step 10: Run it and watch it fail**
+
+Run: `mvn -pl app test -Dtest=TokensApiTest`
+Expected: FAIL — `TokensApi` does not exist.
+
+- [ ] **Step 11: Write the token DTOs and endpoints**
 
 `TokenDtos`:
 
@@ -1674,15 +1786,15 @@ Add to `MetaApi`:
 
 If `User` has no `hasGlobalPermission` helper, check the global permission the way `RollerHandlerInterceptor` does — `new GlobalPermission(List.of(GlobalPermission.ADMIN))` passed to `UserManager.checkPermission`.
 
-- [ ] **Step 10: Run the scope test and the full suite**
+- [ ] **Step 12: Run the scope test, the token test, and the full suite**
 
-Run: `mvn -pl app test -Dtest=ApiScopeInterceptorTest`
-Expected: PASS, 5 tests.
+Run: `mvn -pl app test -Dtest=ApiScopeInterceptorTest+TokensApiTest`
+Expected: PASS, 8 tests.
 
 Run: `mvn -pl app test`
 Expected: PASS — no regression in the ~3122 existing tests.
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 13: Commit**
 
 ```bash
 git add app/src/main/java/org/apache/roller/weblogger/ui/restapi/ \
@@ -2446,10 +2558,12 @@ class EntriesApiTrashTest {
 
 Check `TestUtils` for a managed-weblog helper; if there is none, re-fetch with `WeblogManager.getWeblogByHandle`.
 
-- [ ] **Step 2: Run it and watch it fail or pass**
+- [ ] **Step 2: Run it — this one is expected to PASS**
 
 Run: `mvn -pl app test -Dtest=EntriesApiTrashTest`
-Expected: PASS if the managers already behave this way — these two assertions characterise existing behaviour that the API must route through rather than reimplement. If either fails, stop: the API must not be built on a broken invariant.
+Expected: PASS. This is a characterisation test, deliberately not a red step: it pins manager behaviour that already exists and that the API must route *through* rather than reimplement. Its javadoc says so.
+
+**If either assertion fails, stop and escalate.** A red result here does not mean "write code until it is green" — it means the trash invariants are not what this plan assumed, and every later task built on them is suspect.
 
 - [ ] **Step 3: Add the four endpoints**
 
@@ -2571,10 +2685,10 @@ class CategoriesApiTest {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail or pass**
+- [ ] **Step 2: Run it — this one is expected to PASS**
 
 Run: `mvn -pl app test -Dtest=CategoriesApiTest`
-Expected: PASS — this characterises `WeblogOwnership` from Task 7 and guards the endpoint written next.
+Expected: PASS. Characterisation again: it pins `WeblogOwnership` from Task 7, which already exists. The red step for this task is the controller test in Step 3.
 
 - [ ] **Step 3: Write the DTO and controller**
 
@@ -3261,7 +3375,9 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: the packaged WAR started by the `it-selenium` module's antrun `app-start`.
 - Produces: nothing consumed by later tasks.
 
-These three cannot be proved by MockMvc: MockMvc does not run the servlet container, so it cannot see prefix-mapping path resolution, the real filter chain, or true multipart handling.
+These cannot be proved by MockMvc: it does not run a servlet container, so it cannot see prefix-mapping path resolution, the real filter chain, or true multipart handling.
+
+**This task is acceptance testing, not TDD, and the distinction is deliberate.** Every behaviour here was driven out by a failing unit test in Tasks 1-17; these ITs confirm the assembled artifact still exhibits it. They cannot be written test-first against nothing, because the thing they test is the *packaging*. Do not treat a green run as evidence the unit tests were unnecessary, and do not weaken an IT to make it pass — a failure here means the WAR does not behave like the unit tests said it would, which is exactly the discovery this task exists to make.
 
 - [ ] **Step 1: Read how an existing IT reaches the running app**
 
@@ -3589,7 +3705,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: every controller written so far.
 - Produces: `/api/v1/openapi.json`.
 
-- [ ] **Step 1: Add springdoc and write the failing test**
+- [ ] **Step 1: Write the failing docs test**
 
 ```java
 package org.apache.roller.weblogger.ui.restapi;
