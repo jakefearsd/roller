@@ -173,6 +173,44 @@ class PagesApiTest {
         assertEquals("about", json.get("slug").asString());
         // Stored raw: no escaping happened on the way in.
         assertEquals("About Us & More", json.get("title").asString());
+        verify(weblogger).flush();
+    }
+
+    /** roller_weblogpage.slug/title are both varchar(255) NOT NULL (V014__weblog_pages.sql). */
+    @Test
+    void postWithASlugLongerThanTheColumnIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/pages")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"slug\":\"" + tooLong + "\",\"title\":\"About\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogPageManager(), never()).savePage(any());
+        verify(weblogger, never()).flush();
+    }
+
+    @Test
+    void postWithATitleLongerThanTheColumnIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/pages")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"slug\":\"about\",\"title\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogPageManager(), never()).savePage(any());
+        verify(weblogger, never()).flush();
     }
 
     @Test
@@ -189,6 +227,7 @@ class PagesApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getWeblogPageManager(), never()).savePage(any());
+        verify(weblogger, never()).flush();
     }
 
     /**
@@ -279,6 +318,7 @@ class PagesApiTest {
         // been re-validated or re-looked-up: absent means absent.
         verify(weblogger.getWeblogPageManager(), never()).getPageBySlug(any(), any());
         verify(weblogger.getWeblogPageManager()).savePage(page);
+        verify(weblogger).flush();
     }
 
     @Test
@@ -395,6 +435,7 @@ class PagesApiTest {
                 .andExpect(status().isNoContent());
 
         verify(weblogger.getWeblogPageManager()).removePage(page);
+        verify(weblogger).flush();
     }
 
     @Test
@@ -412,6 +453,7 @@ class PagesApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getWeblogPageManager(), never()).removePage(any());
+        verify(weblogger, never()).flush();
     }
 
     /**

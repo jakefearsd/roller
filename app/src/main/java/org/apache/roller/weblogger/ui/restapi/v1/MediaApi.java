@@ -15,6 +15,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 import org.apache.roller.weblogger.ui.restapi.dto.MediaDtos;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.apache.roller.weblogger.util.Utilities;
@@ -158,8 +159,24 @@ public class MediaApi extends BaseApiController implements UISecurityEnforced {
         if (upload.isEmpty()) {
             return new MediaDtos.UploadResult(fileName, "error", "The file is empty.", null);
         }
+        if (fileName.length() > ColumnLimits.MEDIA_NAME) {
+            return new MediaDtos.UploadResult(fileName, "error",
+                    "File name must be " + ColumnLimits.MEDIA_NAME + " characters or fewer.", null);
+        }
 
         MediaFile created = buildMediaFile(upload, weblog, directory, fileName);
+        // roller_mediafile.content_type is varchar(50) -- a real-world MIME
+        // type (a .docx's, for one, is 73 characters) can overflow it. Left
+        // unchecked this reached the manager and threw a bare
+        // WebloggerException that the caller (upload()'s per-file loop) does
+        // not catch, killing the WHOLE batch's 207 rather than failing just
+        // this one row -- the opposite of the isolation the rest of this
+        // method exists to guarantee.
+        if (created.getContentType() != null && created.getContentType().length() > ColumnLimits.MEDIA_CONTENT_TYPE) {
+            return new MediaDtos.UploadResult(fileName, "error",
+                    "Content type '" + created.getContentType() + "' is longer than "
+                            + ColumnLimits.MEDIA_CONTENT_TYPE + " characters.", null);
+        }
         int before = messages.getErrorCount();
         mfm.createMediaFile(weblog, created, messages);
         if (before != messages.getErrorCount()) {
@@ -288,8 +305,12 @@ public class MediaApi extends BaseApiController implements UISecurityEnforced {
         if ("default".equals(normalized)) {
             throw ApiException.badRequest("'default' is a reserved directory name.");
         }
+        ColumnLimits.requireMaxLength("name", normalized, ColumnLimits.DIRECTORY_NAME);
         if (weblog.hasMediaFileDirectory(normalized)) {
             throw ApiException.conflict("A directory named '" + normalized + "' already exists.");
+        }
+        if (body.description() != null) {
+            ColumnLimits.requireMaxLength("description", body.description(), ColumnLimits.DIRECTORY_DESCRIPTION);
         }
 
         MediaFileDirectory directory = weblogger.getMediaFileManager().createMediaFileDirectory(weblog, name);

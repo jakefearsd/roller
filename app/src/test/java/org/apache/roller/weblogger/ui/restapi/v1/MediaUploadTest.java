@@ -179,6 +179,11 @@ class MediaUploadTest {
 
         verify(weblogger.getMediaFileManager(), times(2))
                 .createMediaFile(eq(weblog), any(MediaFile.class), any(RollerMessages.class));
+        // upload() only begins a JPA transaction; without flush() a
+        // "successful" 201 batch would be rolled back by
+        // PersistenceSessionFilter's end-of-request release (whole-branch
+        // review, Must Fix 7).
+        verify(weblogger).flush();
     }
 
     /**
@@ -241,6 +246,7 @@ class MediaUploadTest {
 
         verify(weblogger.getMediaFileManager(), never())
                 .createMediaFile(any(), any(), any());
+        verify(weblogger, never()).flush();
     }
 
     /**
@@ -374,5 +380,80 @@ class MediaUploadTest {
 
         verify(weblogger.getMediaFileManager(), never())
                 .createMediaFile(any(), any(), any());
+    }
+
+    /**
+     * Whole-branch review, Must Fix 1: roller_mediafile.name is varchar(255)
+     * NOT NULL. A batch is not a transaction (see class javadoc) -- one
+     * oversized filename must be reported as that ONE file's failure, not
+     * reach the manager and not affect the other files in the same batch.
+     */
+    @Test
+    void uploadWithAFileNameLongerThanTheColumnIsReportedAsAnErrorWithoutReachingTheManager() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "default");
+        when(weblogger.getMediaFileManager().getDefaultMediaFileDirectory(weblog)).thenReturn(dir);
+        String tooLong = "a".repeat(300) + ".jpg";
+
+        MockMultipartFile good = new MockMultipartFile("file", "good.jpg", "image/jpeg", "aaa".getBytes());
+        MockMultipartFile huge = new MockMultipartFile("file", tooLong, "image/jpeg", "bbb".getBytes());
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(multipart("/v1/weblogs/myblog/media").file(good).file(huge)
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isMultiStatus())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals(1, json.get("created").asInt());
+        assertEquals(1, json.get("failed").asInt());
+        assertEquals("error", json.get("results").get(1).get("status").asString());
+
+        verify(weblogger.getMediaFileManager(), never())
+                .createMediaFile(eq(weblog), org.mockito.ArgumentMatchers.argThat(
+                        f -> tooLong.equals(f.getName())), any(RollerMessages.class));
+    }
+
+    /**
+     * Whole-branch review, Must Fix 1: roller_mediafile.content_type is
+     * varchar(50) -- much shorter than name/description -- and a real
+     * browser-supplied MIME type for an ordinary document (e.g. a .docx's,
+     * 73 characters) overflows it. Before this guard, that reached
+     * createMediaFile and threw a bare WebloggerException that upload()'s
+     * per-file loop does not catch, killing the WHOLE batch's 207 rather
+     * than failing just this one row -- the opposite of the isolation every
+     * other guard in this class exists to prove. Must be a per-file
+     * UploadResult, not a request-level 400.
+     */
+    @Test
+    void uploadWithAContentTypeLongerThanTheColumnIsReportedAsAnErrorWithoutReachingTheManager() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "default");
+        when(weblogger.getMediaFileManager().getDefaultMediaFileDirectory(weblog)).thenReturn(dir);
+        String longContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.extra";
+        assertTrue(longContentType.length() > 50, "fixture must actually overflow content_type varchar(50)");
+
+        MockMultipartFile good = new MockMultipartFile("file", "good.jpg", "image/jpeg", "aaa".getBytes());
+        MockMultipartFile odd = new MockMultipartFile("file", "report.docx", longContentType, "bbb".getBytes());
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(multipart("/v1/weblogs/myblog/media").file(good).file(odd)
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isMultiStatus())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals(1, json.get("created").asInt());
+        assertEquals(1, json.get("failed").asInt());
+        assertEquals("good.jpg", json.get("results").get(0).get("fileName").asString());
+        assertEquals("created", json.get("results").get(0).get("status").asString());
+        assertEquals("report.docx", json.get("results").get(1).get("fileName").asString());
+        assertEquals("error", json.get("results").get(1).get("status").asString());
+
+        verify(weblogger.getMediaFileManager(), never())
+                .createMediaFile(eq(weblog), org.mockito.ArgumentMatchers.argThat(
+                        f -> "report.docx".equals(f.getName())), any(RollerMessages.class));
     }
 }

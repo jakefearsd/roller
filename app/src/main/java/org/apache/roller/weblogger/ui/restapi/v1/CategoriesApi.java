@@ -13,6 +13,7 @@ import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
 import org.apache.roller.weblogger.ui.controllers.WeblogOwnership;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 import org.apache.roller.weblogger.ui.restapi.dto.CategoryDtos;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +63,10 @@ public class CategoriesApi extends BaseApiController implements UISecurityEnforc
         if (name == null || name.isBlank()) {
             throw ApiException.badRequest("name is required.");
         }
+        ColumnLimits.requireMaxLength("name", name, ColumnLimits.CATEGORY_NAME);
+        if (body.description() != null) {
+            ColumnLimits.requireMaxLength("description", body.description(), ColumnLimits.CATEGORY_DESCRIPTION);
+        }
         if (weblog.hasCategory(name)) {
             throw ApiException.conflict("A category named '" + name + "' already exists.");
         }
@@ -88,6 +93,7 @@ public class CategoriesApi extends BaseApiController implements UISecurityEnforc
             if (name.isBlank()) {
                 throw ApiException.badRequest("name cannot be blank.");
             }
+            ColumnLimits.requireMaxLength("name", name, ColumnLimits.CATEGORY_NAME);
             if (!name.equals(category.getName())) {
                 // Weblog.getWeblogCategory(name) reaches the static
                 // WebloggerFactory shim rather than this controller's
@@ -104,6 +110,7 @@ public class CategoriesApi extends BaseApiController implements UISecurityEnforc
             }
         }
         if (body.description() != null) {
+            ColumnLimits.requireMaxLength("description", body.description(), ColumnLimits.CATEGORY_DESCRIPTION);
             category.setDescription(body.description());
         }
 

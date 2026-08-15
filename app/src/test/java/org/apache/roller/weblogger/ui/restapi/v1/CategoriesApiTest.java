@@ -163,6 +163,44 @@ class CategoriesApiTest {
         assertEquals("Recipes", json.get("name").asString());
         assertEquals("Food stuff", json.get("description").asString());
         assertTrue(weblog.hasCategory("Recipes"));
+        verify(weblogger).flush();
+    }
+
+    /** weblogcategory.name/description are both varchar(255) (V002__baseline_schema.sql). */
+    @Test
+    void postWithANameLongerThanTheColumnIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/categories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
+        verify(weblogger, never()).flush();
+    }
+
+    @Test
+    void postWithADescriptionLongerThanTheColumnIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/categories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Recipes\",\"description\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
+        verify(weblogger, never()).flush();
     }
 
     /** A duplicate name is a 409, never a 500 from a bubbled constraint violation. */
@@ -181,6 +219,7 @@ class CategoriesApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
+        verify(weblogger, never()).flush();
     }
 
     @Test
@@ -201,6 +240,49 @@ class CategoriesApiTest {
         tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
         assertEquals("New Name", json.get("name").asString());
         verify(weblogger.getWeblogEntryManager()).saveWeblogCategory(category);
+        verify(weblogger).flush();
+    }
+
+    /** weblogcategory.name/description are both varchar(255) -- PATCH side. */
+    @Test
+    void patchWithANameLongerThanTheColumnIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogCategory category = aCategory(weblog, "Old Name");
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(category);
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/categories/{id}", "cat-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
+        verify(weblogger, never()).flush();
+        assertEquals("Old Name", category.getName(), "the in-memory category must be untouched on refusal");
+    }
+
+    @Test
+    void patchWithADescriptionLongerThanTheColumnIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogCategory category = aCategory(weblog, "Old Name");
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(category);
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/categories/{id}", "cat-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
+        verify(weblogger, never()).flush();
     }
 
     /**
@@ -244,6 +326,7 @@ class CategoriesApiTest {
 
         verify(weblogger.getWeblogEntryManager()).removeWeblogCategory(category);
         verify(weblogger.getWeblogEntryManager(), never()).moveWeblogCategoryContents(any(), any());
+        verify(weblogger).flush();
     }
 
     @Test
@@ -263,6 +346,11 @@ class CategoriesApiTest {
 
         verify(weblogger.getWeblogEntryManager()).moveWeblogCategoryContents(category, target);
         verify(weblogger.getWeblogEntryManager()).removeWeblogCategory(category);
+        // Two flush()es in this path -- one after the move, one after the
+        // remove (see CategoriesApi.delete) -- so at least one call must be
+        // observed; verify(times(1)) would over-specify an implementation
+        // detail this test does not care about.
+        verify(weblogger, org.mockito.Mockito.atLeastOnce()).flush();
     }
 
     /**
@@ -315,6 +403,7 @@ class CategoriesApiTest {
 
         verify(weblogger.getWeblogEntryManager(), never()).removeWeblogCategory(any());
         verify(weblogger.getWeblogEntryManager(), never()).moveWeblogCategoryContents(any(), any());
+        verify(weblogger, never()).flush();
     }
 
     /**

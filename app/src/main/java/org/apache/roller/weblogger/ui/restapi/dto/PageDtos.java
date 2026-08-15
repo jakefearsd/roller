@@ -7,6 +7,7 @@ import java.util.Locale;
 import org.apache.roller.weblogger.pojos.ReservedSlugs;
 import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 
 /**
  * Views of a weblog static page for the automation API.
@@ -70,6 +71,7 @@ public final class PageDtos {
             page.setSlug(write.slug());
         }
         if (write.title() != null) {
+            ColumnLimits.requireMaxLength("title", write.title(), ColumnLimits.PAGE_TITLE);
             page.setTitle(write.title());
         }
         if (write.text() != null) {
@@ -127,6 +129,7 @@ public final class PageDtos {
             throw ApiException.badRequest(
                     "slug may not contain '/': '" + slug + "'.");
         }
+        ColumnLimits.requireMaxLength("slug", trimmed, ColumnLimits.PAGE_SLUG);
         return trimmed;
     }
 }

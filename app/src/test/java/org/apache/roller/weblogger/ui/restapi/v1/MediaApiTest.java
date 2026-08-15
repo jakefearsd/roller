@@ -77,6 +77,36 @@ class MediaApiTest {
     }
 
     /**
+     * Whole-branch review, Must Fix 1: roller_mediafile carries no dedicated
+     * alt-text column width of its own in this table -- {@code alt_text} is
+     * varchar(255) (V024__media_alt_text.sql) -- and model-written
+     * descriptions routinely exceed 255 characters, so this is the highest
+     * -value guard in the whole sweep: AuditApi hands an agent exactly this
+     * field to fix, and without this guard the audit's own output breaks the
+     * audit's own fix path.
+     */
+    @Test
+    void anAltTextLongerThanTheColumnIsRejected() {
+        MediaFile file = new MediaFile();
+        String tooLong = "a".repeat(300);
+
+        ApiException ex = assertThrows(ApiException.class, () -> MediaDtos.applyPatch(
+                file, new MediaDtos.MediaPatch(tooLong, null, null, null, null)));
+
+        assertEquals(400, ex.getStatus());
+        assertNull(file.getAltText(), "the in-memory file must be untouched on refusal");
+    }
+
+    /** A 255-character altText, exactly at the column limit, must be accepted. */
+    @Test
+    void anAltTextAtExactlyTheColumnLimitIsAccepted() {
+        MediaFile file = new MediaFile();
+        String atLimit = "a".repeat(255);
+        MediaDtos.applyPatch(file, new MediaDtos.MediaPatch(atLimit, null, null, null, null));
+        assertEquals(255, file.getAltText().length());
+    }
+
+    /**
      * Unlike altText, a blank name is never a real value -- there is no
      * "decorative filename" concept a cleared name could mean, only a
      * silently broken one. Deliberately different handling from altText's
@@ -295,6 +325,34 @@ class MediaApiTest {
         assertEquals("A good dog", json.get("altText").asString());
         verify(weblogger.getMediaFileManager()).updateMediaFile(weblog, file);
         verify(weblogger.getMediaFileManager(), never()).moveMediaFile(any(), any());
+        verify(weblogger).flush();
+    }
+
+    /**
+     * Controller-level twin of the DTO-level {@code
+     * anAltTextLongerThanTheColumnIsRejected}: exercised end to end through
+     * real HTTP dispatch, proving the guard is actually wired into the PATCH
+     * endpoint, not just correct in {@code MediaDtos.applyPatch} isolation.
+     */
+    @Test
+    void patchWithAnAltTextLongerThanTheColumnIsBadRequestAndNothingIsPersisted() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "default");
+        MediaFile file = aMediaFile(dir, "dog.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(file);
+        String tooLong = "a".repeat(300);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/media/{id}", "file-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"altText\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
+        assertNull(file.getAltText(), "the in-memory file must be untouched on refusal");
     }
 
     /**
@@ -319,6 +377,7 @@ class MediaApiTest {
 
         verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
         assertEquals("dog.jpg", file.getName(), "the in-memory file must be untouched on refusal");
+        verify(weblogger, never()).flush();
     }
 
     @Test
@@ -339,6 +398,7 @@ class MediaApiTest {
                 .andExpect(status().isOk());
 
         verify(weblogger.getMediaFileManager()).moveMediaFile(file, target);
+        verify(weblogger).flush();
     }
 
     /**
@@ -370,6 +430,7 @@ class MediaApiTest {
 
         verify(weblogger.getMediaFileManager(), never()).moveMediaFile(any(), any());
         verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
+        verify(weblogger, never()).flush();
     }
 
     @Test
@@ -385,6 +446,7 @@ class MediaApiTest {
                 .andExpect(status().isNoContent());
 
         verify(weblogger.getMediaFileManager()).removeMediaFile(weblog, file);
+        verify(weblogger).flush();
     }
 
     @Test
@@ -402,6 +464,7 @@ class MediaApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getMediaFileManager(), never()).removeMediaFile(any(), any());
+        verify(weblogger, never()).flush();
     }
 
     @Test
@@ -444,6 +507,7 @@ class MediaApiTest {
         tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
         assertEquals("newdir", json.get("name").asString());
         verify(weblogger.getMediaFileManager()).createMediaFileDirectory(weblog, "newdir");
+        verify(weblogger).flush();
     }
 
     /**
@@ -468,6 +532,7 @@ class MediaApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
+        verify(weblogger, never()).flush();
     }
 
     @Test
@@ -532,6 +597,49 @@ class MediaApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
+    }
+
+    /**
+     * roller_mediafiledir.name/description are both varchar(255)
+     * (V002__baseline_schema.sql) -- whole-branch review, Must Fix 1. Checked
+     * against the NORMALISED name (leading slash stripped), the same value
+     * the manager would actually store, matching the blank/reserved/
+     * duplicate pre-checks right above.
+     */
+    @Test
+    void createDirectoryWithANameLongerThanTheColumnIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/media/directories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
+        verify(weblogger, never()).flush();
+    }
+
+    @Test
+    void createDirectoryWithADescriptionLongerThanTheColumnIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        String tooLong = "a".repeat(256);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/media/directories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"newdir\",\"description\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
+        verify(weblogger, never()).flush();
     }
 
     /**

@@ -11,9 +11,10 @@ package org.apache.roller.weblogger.ui.restapi;
  * column's width has exactly one place to update and every {@code *Api}
  * controller checks the same numbers.
  *
- * <p>This is currently wired into {@code AdminApi}/{@code WeblogsApi} only
- * (review round 1, Important 2). The rest of {@code ui.restapi} has the same
- * gap and is recorded for the wave's whole-branch sweep, not fixed here.
+ * <p>Wired into every controller in {@code ui.restapi.v1} that accepts a
+ * patchable string field (whole-branch review round, Must Fix 1) --
+ * originally only {@code AdminApi}/{@code WeblogsApi} (review round 1,
+ * Important 2).
  */
 public final class ColumnLimits {
 
@@ -32,6 +33,37 @@ public final class ColumnLimits {
     public static final int WEBLOG_EMAIL_ADDRESS = 255;
     public static final int LOCALE = 20;
     public static final int TIME_ZONE = 50;
+
+    // weblogentry (V002__baseline_schema.sql, V006__media_metadata_and_entry_seo.sql)
+    public static final int ENTRY_TITLE = 255;
+    public static final int META_TITLE = 255;
+    public static final int SEARCH_DESCRIPTION = 255;
+    public static final int CANONICAL_URL = 255;
+    public static final int FEATURED_IMAGE_ID = 48;
+    public static final int OG_IMAGE_ID = 48;
+
+    // roller_weblogentrytag (V002__baseline_schema.sql)
+    public static final int TAG_NAME = 255;
+
+    // roller_mediafile / roller_mediafiledir (V002__baseline_schema.sql,
+    // V024__media_alt_text.sql)
+    public static final int MEDIA_NAME = 255;
+    public static final int MEDIA_ALT_TEXT = 255;
+    public static final int MEDIA_CONTENT_TYPE = 50;
+    public static final int DIRECTORY_NAME = 255;
+    public static final int DIRECTORY_DESCRIPTION = 255;
+
+    // weblogcategory (V002__baseline_schema.sql)
+    public static final int CATEGORY_NAME = 255;
+    public static final int CATEGORY_DESCRIPTION = 255;
+
+    // roller_weblogpage (V014__weblog_pages.sql)
+    public static final int PAGE_SLUG = 255;
+    public static final int PAGE_TITLE = 255;
+
+    // roller_api_token (V026__api_tokens.sql)
+    public static final int TOKEN_LABEL = 255;
+    public static final int TOKEN_WEBLOG = 255;
 
     /**
      * Throws a 400 {@link ApiException} naming {@code field} when

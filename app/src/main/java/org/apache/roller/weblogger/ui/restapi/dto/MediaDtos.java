@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 import org.apache.roller.weblogger.util.RollerMessages;
 
 /**
@@ -174,6 +175,7 @@ public final class MediaDtos {
      */
     public static void applyPatch(MediaFile file, MediaPatch patch) {
         if (patch.altText() != null) {
+            ColumnLimits.requireMaxLength("altText", patch.altText(), ColumnLimits.MEDIA_ALT_TEXT);
             file.setAltText(patch.altText());
         }
         if (patch.focalX() != null) {
@@ -187,6 +189,7 @@ public final class MediaDtos {
             if (name.isEmpty()) {
                 throw ApiException.badRequest("name cannot be blank.");
             }
+            ColumnLimits.requireMaxLength("name", name, ColumnLimits.MEDIA_NAME);
             file.setName(name);
         }
     }

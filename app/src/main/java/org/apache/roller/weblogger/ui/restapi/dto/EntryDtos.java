@@ -11,6 +11,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntryTag;
 import org.apache.roller.weblogger.ui.controllers.EntryFieldRules;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 
 /**
  * Views of a weblog entry for the automation API, plus the two status
@@ -148,8 +149,14 @@ public final class EntryDtos {
     public static void applyWrite(WeblogEntry entry, EntryWrite write, Weblog weblog) {
         if (write.title() != null) {
             // The one place raw author input becomes escaped markup, shared
-            // with the JSP editor so the two cannot drift.
-            entry.setTitle(EntryFieldRules.escapeTitle(write.title()));
+            // with the JSP editor so the two cannot drift. Checked AFTER
+            // escaping, not before: escapeHtml4 can grow a title up to 5x
+            // (every '&' becomes "&amp;"), so a raw value under the column
+            // limit can still overflow it once stored -- a guard on the raw
+            // input would pass and still 500 on save.
+            String escaped = EntryFieldRules.escapeTitle(write.title());
+            ColumnLimits.requireMaxLength("title", escaped, ColumnLimits.ENTRY_TITLE);
+            entry.setTitle(escaped);
         }
         if (write.summary() != null) {
             entry.setSummary(write.summary());
@@ -176,21 +183,28 @@ public final class EntryDtos {
             }
         }
         if (write.metaTitle() != null) {
+            ColumnLimits.requireMaxLength("metaTitle", write.metaTitle(), ColumnLimits.META_TITLE);
             entry.setMetaTitle(write.metaTitle());
         }
         if (write.searchDescription() != null) {
+            ColumnLimits.requireMaxLength(
+                    "searchDescription", write.searchDescription(), ColumnLimits.SEARCH_DESCRIPTION);
             entry.setSearchDescription(write.searchDescription());
         }
         if (write.canonicalUrl() != null) {
+            ColumnLimits.requireMaxLength("canonicalUrl", write.canonicalUrl(), ColumnLimits.CANONICAL_URL);
             entry.setCanonicalUrl(write.canonicalUrl());
         }
         if (write.noindex() != null) {
             entry.setNoindex(write.noindex());
         }
         if (write.featuredImageId() != null) {
+            ColumnLimits.requireMaxLength(
+                    "featuredImageId", write.featuredImageId(), ColumnLimits.FEATURED_IMAGE_ID);
             entry.setFeaturedImageId(write.featuredImageId());
         }
         if (write.ogImageId() != null) {
+            ColumnLimits.requireMaxLength("ogImageId", write.ogImageId(), ColumnLimits.OG_IMAGE_ID);
             entry.setOgImageId(write.ogImageId());
         }
     }
