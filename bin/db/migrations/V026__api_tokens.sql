@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS roller_api_token (
     token_sha256  VARCHAR(64)  NOT NULL,
     scope_weblog  VARCHAR(255),
     scope_role    VARCHAR(16)  NOT NULL,
-    created       TIMESTAMP    NOT NULL,
-    last_used_at  TIMESTAMP,
-    expires_at    TIMESTAMP,
-    revoked_at    TIMESTAMP
+    created       timestamp(3) with time zone NOT NULL,
+    last_used_at  timestamp(3) with time zone,
+    expires_at    timestamp(3) with time zone,
+    revoked_at    timestamp(3) with time zone
 );
 
 DO $$
