@@ -593,11 +593,6 @@ label,
     color: var(--ink-soft);
 }
 
-.roller-footer-mark {
-    vertical-align: middle;
-    opacity: .7;
-}
-
 .date-form {
     margin: 10px;
 }
