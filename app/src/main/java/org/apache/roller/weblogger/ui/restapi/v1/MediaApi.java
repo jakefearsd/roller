@@ -1,0 +1,233 @@
+package org.apache.roller.weblogger.ui.restapi.v1;
+
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.MediaFileDirectory;
+import org.apache.roller.weblogger.pojos.MediaFileFilter;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
+import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.ui.restapi.dto.MediaDtos;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Media read, patch, delete and directory listing/creation.
+ * {@code UISecurityEnforced} declares {@code WeblogPermission.POST} -- media
+ * management is blog-wide structure, the same level {@code CategoriesApi}
+ * requires -- and {@code RollerHandlerInterceptor} is what actually enforces
+ * it; this controller adds no permission checking of its own.
+ *
+ * <p>Private directories are a pure visibility flag with no bypass of any
+ * kind (see CLAUDE.md's Media Pipeline section): they 404 on the public
+ * media path for everyone except a signed-in editor of the owning weblog. A
+ * caller holding a weblog-scoped token for this weblog already IS such an
+ * editor -- {@code RollerHandlerInterceptor} would not have let the request
+ * through otherwise -- so nothing here excludes a private directory or its
+ * files from a caller who reached this controller at all.
+ */
+@RestController
+@RequestMapping("/v1/weblogs/{handle}/media")
+public class MediaApi extends BaseApiController implements UISecurityEnforced {
+
+    /**
+     * The weblog's media files. With {@code dir}, only that directory's
+     * files (ownership-checked, 404 for an unknown or foreign directory
+     * id); without it, every file in the weblog regardless of directory,
+     * via the same {@code searchMediaFiles} path the JSP search screen
+     * uses with an otherwise-empty filter. Sorted by name for a stable,
+     * deterministic order -- neither source guarantees one on its own.
+     */
+    @GetMapping("")
+    public List<MediaDtos.MediaView> list(
+            HttpServletRequest request,
+            @RequestParam(value = "dir", required = false) String dir) throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+
+        List<MediaFile> files;
+        if (StringUtils.isNotBlank(dir)) {
+            files = new ArrayList<>(requireDirectory(request, dir).getMediaFiles());
+        } else {
+            // Copied into a mutable list -- searchMediaFiles's contract
+            // makes no promise the returned list supports sort(), and this
+            // controller needs a deterministic order regardless.
+            files = new ArrayList<>(weblogger.getMediaFileManager().searchMediaFiles(weblog, new MediaFileFilter()));
+        }
+        files.sort(Comparator.comparing(MediaFile::getName, Comparator.nullsLast(String::compareToIgnoreCase)));
+
+        return files.stream().map(f -> MediaDtos.toView(f, url(weblog, f))).toList();
+    }
+
+    @GetMapping("/{id}")
+    public MediaDtos.MediaView get(HttpServletRequest request, @PathVariable("id") String id)
+            throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+        MediaFile file = requireMedia(request, id);
+        return MediaDtos.toView(file, url(weblog, file));
+    }
+
+    /**
+     * {@code directoryId} is resolved (ownership-checked) BEFORE anything
+     * is applied or persisted -- a foreign directory id must refuse the
+     * whole request untouched, not patch the file's metadata and only then
+     * discover the move target does not belong to this weblog. Once
+     * resolved, the move itself happens after the metadata update,
+     * matching the order {@code MediaFileEditController.save} uses.
+     */
+    @PatchMapping("/{id}")
+    public MediaDtos.MediaView update(
+            HttpServletRequest request, @PathVariable("id") String id,
+            @RequestBody MediaDtos.MediaPatch body) throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+        MediaFile file = requireMedia(request, id);
+        MediaFileDirectory target = body.directoryId() == null ? null : requireDirectory(request, body.directoryId());
+
+        MediaDtos.applyPatch(file, body);
+        weblogger.getMediaFileManager().updateMediaFile(weblog, file);
+
+        if (target != null && (file.getDirectory() == null || !target.getId().equals(file.getDirectory().getId()))) {
+            weblogger.getMediaFileManager().moveMediaFile(file, target);
+        }
+
+        weblogger.flush();
+        return MediaDtos.toView(file, url(weblog, file));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(HttpServletRequest request, @PathVariable("id") String id)
+            throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+        MediaFile file = requireMedia(request, id);
+        weblogger.getMediaFileManager().removeMediaFile(weblog, file);
+        weblogger.flush();
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/directories")
+    public List<MediaDtos.DirectoryView> directories(HttpServletRequest request) throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+        List<MediaFileDirectory> directories = weblogger.getMediaFileManager().getMediaFileDirectories(weblog);
+        return directories.stream()
+                .sorted(Comparator.comparing(
+                        MediaFileDirectory::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .map(MediaDtos::toView)
+                .toList();
+    }
+
+    /**
+     * The duplicate-name check runs before the manager call, mirroring
+     * {@code CategoriesApi.create} -- {@code
+     * JPAMediaFileManagerImpl.createMediaFileDirectory} throws a bare
+     * {@code WebloggerException} ("Directory exists") on collision, which
+     * {@code ApiExceptionHandler} could only turn into an opaque 500.
+     */
+    @PostMapping("/directories")
+    public ResponseEntity<MediaDtos.DirectoryView> createDirectory(
+            HttpServletRequest request, @RequestBody MediaDtos.DirectoryWrite body) throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+        String name = body.name() == null ? null : body.name().trim();
+        if (name == null || name.isBlank()) {
+            throw ApiException.badRequest("name is required.");
+        }
+        if (weblog.hasMediaFileDirectory(name)) {
+            throw ApiException.conflict("A directory named '" + name + "' already exists.");
+        }
+
+        MediaFileDirectory directory = weblogger.getMediaFileManager().createMediaFileDirectory(weblog, name);
+        if (body.description() != null) {
+            directory.setDescription(body.description());
+        }
+        weblogger.flush();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(MediaDtos.toView(directory));
+    }
+
+    /**
+     * The media file with this id, but only when it belongs to the action
+     * weblog. There is no {@code WeblogOwnership.media} member -- ownership
+     * for a media file is read off its containing directory's weblog,
+     * falling back to the file's own weblog column for a file not yet
+     * filed anywhere, the same rule {@code MediaFileBase.ownedMediaFile}
+     * applies for the JSP admin UI. That helper lives on a different
+     * controller hierarchy ({@code BaseController}, not
+     * {@code BaseApiController}), so this is a small local duplicate of the
+     * same shape rather than a shared extraction with only one other
+     * caller.
+     */
+    private MediaFile requireMedia(HttpServletRequest request, String id) throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+        if (StringUtils.isBlank(id)) {
+            throw ApiException.notFound("No such media file.");
+        }
+        MediaFile file = weblogger.getMediaFileManager().getMediaFile(id);
+        if (file == null || !belongsTo(file, weblog)) {
+            throw ApiException.notFound("No such media file.");
+        }
+        return file;
+    }
+
+    private boolean belongsTo(MediaFile file, Weblog weblog) {
+        Weblog owner = file.getDirectory() != null && file.getDirectory().getWeblog() != null
+                ? file.getDirectory().getWeblog()
+                : file.getWeblog();
+        return owner != null && owner.getId() != null && owner.getId().equals(weblog.getId());
+    }
+
+    /**
+     * The directory with this id, but only when it belongs to the action
+     * weblog; 404 for a blank, unknown, or foreign id -- {@code
+     * getMediaFileDirectory} is a global by-id lookup, and both the {@code
+     * dir} filter and a PATCH's {@code directoryId} are client input.
+     */
+    private MediaFileDirectory requireDirectory(HttpServletRequest request, String id) throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+        if (StringUtils.isBlank(id)) {
+            throw ApiException.notFound("No such directory.");
+        }
+        MediaFileDirectory directory = weblogger.getMediaFileManager().getMediaFileDirectory(id);
+        if (directory == null || directory.getWeblog() == null
+                || !directory.getWeblog().getId().equals(weblog.getId())) {
+            throw ApiException.notFound("No such directory.");
+        }
+        return directory;
+    }
+
+    private String url(Weblog weblog, MediaFile file) {
+        return weblogger.getUrlStrategy().getMediaFileURL(weblog, file.getId(), true);
+    }
+
+    @Override
+    public boolean isUserRequired() {
+        return true;
+    }
+
+    @Override
+    public boolean isWeblogRequired() {
+        return true;
+    }
+
+    @Override
+    public List<String> requiredWeblogPermissionActions() {
+        return List.of(WeblogPermission.POST);
+    }
+
+    @Override
+    public List<String> requiredGlobalPermissionActions() {
+        return List.of();
+    }
+}

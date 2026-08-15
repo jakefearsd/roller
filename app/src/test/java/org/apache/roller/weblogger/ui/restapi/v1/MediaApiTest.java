@@ -1,0 +1,479 @@
+package org.apache.roller.weblogger.ui.restapi.v1;
+
+import java.util.List;
+import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.MediaFileDirectory;
+import org.apache.roller.weblogger.pojos.MediaFileFilter;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.ui.restapi.ApiExceptionHandler;
+import org.apache.roller.weblogger.ui.restapi.dto.MediaDtos;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+class MediaApiTest {
+
+    /**
+     * Blank counts as absent for altText at every consumer -- an author who
+     * cleared the field did not thereby declare the image decorative. The
+     * audit endpoint and the UI marker both use isNotBlank, so the DTO must
+     * report the same thing rather than EL's notion of empty.
+     */
+    @Test
+    void whitespaceOnlyAltTextIsReportedAsMissing() {
+        MediaFile file = new MediaFile();
+        file.setAltText("   ");
+        assertTrue(MediaDtos.isAltTextMissing(file));
+
+        file.setAltText("");
+        assertTrue(MediaDtos.isAltTextMissing(file));
+
+        file.setAltText(null);
+        assertTrue(MediaDtos.isAltTextMissing(file));
+
+        file.setAltText("A cat on a wall");
+        assertFalse(MediaDtos.isAltTextMissing(file));
+    }
+
+    /** A patch that omits altText must not erase it. */
+    @Test
+    void anAbsentAltTextInAPatchLeavesTheStoredValue() {
+        MediaFile file = new MediaFile();
+        file.setAltText("kept");
+        MediaDtos.applyPatch(file, new MediaDtos.MediaPatch(null, 0.5, 0.5, null, null));
+        assertEquals("kept", file.getAltText());
+    }
+
+    /**
+     * An explicitly empty altText is a real edit -- the author cleared the
+     * field -- so it is stored, and the audit endpoint then reports it as
+     * missing. That is the intended loop, not a contradiction.
+     */
+    @Test
+    void anExplicitlyEmptyAltTextIsStored() {
+        MediaFile file = new MediaFile();
+        file.setAltText("was here");
+        MediaDtos.applyPatch(file, new MediaDtos.MediaPatch("", null, null, null, null));
+        assertEquals("", file.getAltText());
+    }
+
+    // -----------------------------------------------------------------
+    // Controller-level tests: routing, status codes, the ownership checks
+    // and JSON shape -- none of which the DTO-only tests above can see.
+    // actionWeblog is injected as a request attribute rather than resolved
+    // by a real interceptor, matching CategoriesApiTest/EntriesApiReadTest's
+    // standalone style. These run against a Mockito-mocked Weblogger, not
+    // the DB fixtures.
+    // -----------------------------------------------------------------
+
+    private MockMvc mockMvc(MediaApi controller) {
+        return MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
+    }
+
+    private Weblogger mockedWeblogger() {
+        Weblogger weblogger = mock(Weblogger.class);
+        MediaFileManager mediaFileManager = mock(MediaFileManager.class);
+        URLStrategy urlStrategy = mock(URLStrategy.class);
+        when(weblogger.getMediaFileManager()).thenReturn(mediaFileManager);
+        when(weblogger.getUrlStrategy()).thenReturn(urlStrategy);
+        when(urlStrategy.getMediaFileURL(any(), any(), org.mockito.ArgumentMatchers.anyBoolean()))
+                .thenAnswer(inv -> "https://example.invalid/media/" + inv.getArgument(1));
+        return weblogger;
+    }
+
+    private MediaApi controllerFor(Weblogger weblogger) {
+        MediaApi controller = new MediaApi();
+        controller.weblogger = weblogger;
+        return controller;
+    }
+
+    private static Weblog aWeblog(String handle) {
+        Weblog weblog = new Weblog();
+        weblog.setId(handle + "-id");
+        weblog.setHandle(handle);
+        return weblog;
+    }
+
+    private static MediaFileDirectory aDirectory(Weblog weblog, String name) {
+        return new MediaFileDirectory(weblog, name, null);
+    }
+
+    private static MediaFile aMediaFile(MediaFileDirectory directory, String name) {
+        MediaFile file = new MediaFile();
+        file.setId(name + "-id");
+        file.setName(name);
+        file.setDirectory(directory);
+        return file;
+    }
+
+    @Test
+    void listReturnsMediaViewsAcrossTheWeblogWhenNoDirIsGiven() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "default");
+        MediaFile file = aMediaFile(dir, "cat.jpg");
+        file.setAltText("A cat");
+        when(weblogger.getMediaFileManager()
+                        .searchMediaFiles(org.mockito.ArgumentMatchers.eq(weblog), any(MediaFileFilter.class)))
+                .thenReturn(List.of(file));
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/media").requestAttr("actionWeblog", weblog))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals(1, json.size());
+        assertEquals("cat.jpg", json.get(0).get("name").asString());
+        assertEquals("A cat", json.get(0).get("altText").asString());
+        assertEquals(dir.getId(), json.get(0).get("directory").asString());
+        assertTrue(json.get(0).get("url").asString().endsWith("/cat.jpg-id"));
+    }
+
+    @Test
+    void listFiltersToASingleOwnedDirectoryWhenDirIsGiven() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "gallery");
+        MediaFile file = aMediaFile(dir, "beach.jpg");
+        dir.getMediaFiles().add(file);
+        when(weblogger.getMediaFileManager().getMediaFileDirectory(dir.getId())).thenReturn(dir);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/media").param("dir", dir.getId())
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals(1, json.size());
+        assertEquals("beach.jpg", json.get(0).get("name").asString());
+        verify(weblogger.getMediaFileManager(), never()).searchMediaFiles(any(), any());
+    }
+
+    /**
+     * Private directories are a visibility flag with no bypass, but a
+     * caller holding a weblog-scoped token already IS an authorized editor
+     * of the owning weblog -- listing a private directory through the API
+     * is the access such a caller already has, not a new hole. Nothing here
+     * should exclude it.
+     */
+    @Test
+    void listIncludesFilesFromAPrivateDirectoryForAnAuthorizedCaller() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "private-shoot");
+        dir.setPrivate(true);
+        MediaFile file = aMediaFile(dir, "secret.jpg");
+        dir.getMediaFiles().add(file);
+        when(weblogger.getMediaFileManager().getMediaFileDirectory(dir.getId())).thenReturn(dir);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/media").param("dir", dir.getId())
+                        .requestAttr("actionWeblog", weblog))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals(1, json.size());
+        assertEquals("secret.jpg", json.get(0).get("name").asString());
+    }
+
+    /**
+     * The IDOR case for the {@code dir} filter: a directory id belonging to
+     * another weblog must read as absent, exactly like WeblogOwnership's
+     * by-id lookups for entries/categories/templates/pages.
+     */
+    @Test
+    void listWithAForeignDirIsNotFound() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog thisWeblog = aWeblog("myblog");
+        Weblog anotherWeblog = aWeblog("someoneelse");
+        MediaFileDirectory foreign = aDirectory(anotherWeblog, "secret");
+        when(weblogger.getMediaFileManager().getMediaFileDirectory(foreign.getId())).thenReturn(foreign);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/media").param("dir", foreign.getId())
+                        .requestAttr("actionWeblog", thisWeblog))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+
+    @Test
+    void getReturnsAMediaViewForAnOwnedFile() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "default");
+        MediaFile file = aMediaFile(dir, "sun.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(file);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/media/{id}", "file-1").requestAttr("actionWeblog", weblog))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals("sun.jpg", json.get("name").asString());
+    }
+
+    /**
+     * getMediaFile is a global by-id lookup; a media file owned by another
+     * weblog must read as absent here, the same as every other by-id lookup
+     * this wave defends.
+     */
+    @Test
+    void getIsNotFoundWhenTheMediaFileBelongsToAnotherWeblog() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog thisWeblog = aWeblog("myblog");
+        Weblog anotherWeblog = aWeblog("someoneelse");
+        MediaFileDirectory foreignDir = aDirectory(anotherWeblog, "default");
+        MediaFile foreign = aMediaFile(foreignDir, "hidden.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(foreign);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/media/{id}", "file-1").requestAttr("actionWeblog", thisWeblog))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+
+    @Test
+    void patchAppliesFieldsAndPersistsThroughTheManager() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "default");
+        MediaFile file = aMediaFile(dir, "dog.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(file);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/media/{id}", "file-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"altText\":\"A good dog\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals("A good dog", json.get("altText").asString());
+        verify(weblogger.getMediaFileManager()).updateMediaFile(weblog, file);
+        verify(weblogger.getMediaFileManager(), never()).moveMediaFile(any(), any());
+    }
+
+    @Test
+    void patchWithADirectoryIdMovesToTheOwnedDirectory() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory source = aDirectory(weblog, "source");
+        MediaFileDirectory target = aDirectory(weblog, "target");
+        MediaFile file = aMediaFile(source, "dog.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(file);
+        when(weblogger.getMediaFileManager().getMediaFileDirectory(target.getId())).thenReturn(target);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/media/{id}", "file-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"directoryId\":\"" + target.getId() + "\"}"))
+                .andExpect(status().isOk());
+
+        verify(weblogger.getMediaFileManager()).moveMediaFile(file, target);
+    }
+
+    /**
+     * Guard: a directoryId naming another weblog's directory must be
+     * refused before anything is moved or persisted, the same shape as
+     * CategoriesApi's foreign-moveTo guard. Per CLAUDE.md's guardrail on
+     * self-added guards, this was verified to actually fail when the
+     * ownership check is bypassed -- see the task report.
+     */
+    @Test
+    void patchWithAForeignDirectoryIdIsNotFoundAndNothingIsChanged() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog thisWeblog = aWeblog("myblog");
+        Weblog anotherWeblog = aWeblog("someoneelse");
+        MediaFileDirectory source = aDirectory(thisWeblog, "source");
+        MediaFile file = aMediaFile(source, "dog.jpg");
+        MediaFileDirectory foreignTarget = aDirectory(anotherWeblog, "target");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(file);
+        when(weblogger.getMediaFileManager().getMediaFileDirectory(foreignTarget.getId()))
+                .thenReturn(foreignTarget);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/media/{id}", "file-1")
+                        .requestAttr("actionWeblog", thisWeblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"directoryId\":\"" + foreignTarget.getId() + "\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).moveMediaFile(any(), any());
+        verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
+    }
+
+    @Test
+    void deleteRemovesTheFileAndReturnsNoContent() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "default");
+        MediaFile file = aMediaFile(dir, "old.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(file);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(delete("/v1/weblogs/myblog/media/{id}", "file-1").requestAttr("actionWeblog", weblog))
+                .andExpect(status().isNoContent());
+
+        verify(weblogger.getMediaFileManager()).removeMediaFile(weblog, file);
+    }
+
+    @Test
+    void deleteIsNotFoundWhenTheMediaFileBelongsToAnotherWeblog() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog thisWeblog = aWeblog("myblog");
+        Weblog anotherWeblog = aWeblog("someoneelse");
+        MediaFileDirectory foreignDir = aDirectory(anotherWeblog, "default");
+        MediaFile foreign = aMediaFile(foreignDir, "hidden.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(foreign);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(delete("/v1/weblogs/myblog/media/{id}", "file-1").requestAttr("actionWeblog", thisWeblog))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).removeMediaFile(any(), any());
+    }
+
+    @Test
+    void directoriesReturnsDirectoryViewsForTheWeblog() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "gallery");
+        when(weblogger.getMediaFileManager().getMediaFileDirectories(weblog)).thenReturn(List.of(dir));
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(get("/v1/weblogs/myblog/media/directories").requestAttr("actionWeblog", weblog))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals(1, json.size());
+        assertEquals("gallery", json.get(0).get("name").asString());
+        assertEquals(0, json.get(0).get("fileCount").asInt());
+    }
+
+    @Test
+    void createDirectoryReturnsCreated() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        // Constructed against a throwaway weblog so it does not register
+        // itself into `weblog`'s own directory set -- that set is what the
+        // duplicate-name guard below checks, and this is exercising the
+        // success path, not the guard.
+        MediaFileDirectory created = aDirectory(aWeblog("shadow"), "newdir");
+        when(weblogger.getMediaFileManager().createMediaFileDirectory(weblog, "newdir")).thenReturn(created);
+
+        String body = mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/media/directories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"newdir\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode json = new tools.jackson.databind.ObjectMapper().readTree(body);
+        assertEquals("newdir", json.get("name").asString());
+        verify(weblogger.getMediaFileManager()).createMediaFileDirectory(weblog, "newdir");
+    }
+
+    /**
+     * Guard: a duplicate directory name is a 409, never the bare
+     * WebloggerException ("Directory exists") that
+     * JPAMediaFileManagerImpl.createMediaFileDirectory throws, which
+     * ApiExceptionHandler could only turn into an opaque 500. Mirrors
+     * CategoriesApi.create's duplicate-name check.
+     */
+    @Test
+    void createDirectoryWithADuplicateNameIsConflict() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        aDirectory(weblog, "existing"); // registers into weblog's own directory set
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/media/directories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"existing\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
+    }
+
+    @Test
+    void createDirectoryWithABlankNameIsBadRequest() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/media/directories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
+    }
+
+    /**
+     * Wave-level gap (Finding 3, see CategoriesApiTest): a malformed JSON
+     * body must be a 400, not the opaque 500 it would be without
+     * ApiExceptionHandler's dedicated HttpMessageNotReadableException
+     * handler.
+     */
+    @Test
+    void aMalformedRequestBodyIsBadRequestNotAnOpaque500() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/media/{id}", "file-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
+    }
+
+    /**
+     * MediaApi declares UISecurityEnforced.requiredWeblogPermissionActions
+     * as POST -- media management is blog-wide structure, the same level
+     * CategoriesApi requires, not the looser EDIT_DRAFT entry reads use.
+     */
+    @Test
+    void declaresPostAsTheRequiredWeblogPermission() {
+        assertEquals(List.of(WeblogPermission.POST), new MediaApi().requiredWeblogPermissionActions());
+        assertTrue(new MediaApi().isUserRequired());
+        assertTrue(new MediaApi().isWeblogRequired());
+    }
+}
