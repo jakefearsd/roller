@@ -53,4 +53,29 @@ public abstract class BaseApiController {
         }
         return entry;
     }
+
+    /**
+     * The entry with this id, but refusing one that is currently TRASHED --
+     * the API counterpart to {@code BaseController.lookupNonTrashedEntry} on
+     * the JSP side, and to {@code TrashController.trashedEntry}'s converse
+     * check.
+     *
+     * <p>{@link #requireEntry} carries no status filter, which is exactly
+     * right for the three trash-aware endpoints ({@code trash}, {@code
+     * restore}, {@code delete-forever}) that must be able to see a TRASHED
+     * entry to operate on it -- but wrong for every other write, where it is
+     * a side door: a PATCH (or a preview) against a trashed entry's id would
+     * otherwise reach {@code saveWeblogEntry} directly, bypassing {@code
+     * restore}'s DRAFT-only rule entirely and able to publish a trashed
+     * entry in one call while {@code trashedAt} stays populated on the row.
+     * Every write or preview endpoint that is not itself trash-aware must
+     * call this instead of {@link #requireEntry}.
+     */
+    protected WeblogEntry requireLiveEntry(HttpServletRequest request, String id) {
+        WeblogEntry entry = requireEntry(request, id);
+        if (entry.getStatus() == WeblogEntry.PubStatus.TRASHED) {
+            throw ApiException.conflict("Entry is trashed. Restore it before editing.");
+        }
+        return entry;
+    }
 }

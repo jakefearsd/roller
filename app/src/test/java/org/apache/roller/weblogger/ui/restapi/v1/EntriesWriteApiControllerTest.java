@@ -714,4 +714,108 @@ class EntriesWriteApiControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
+
+    // ---- fix round 1: PATCH/preview must not resurrect a trashed entry,
+    // and delete-forever/preview need their own IDOR coverage -----------
+
+    /**
+     * IMPORTANT 1: {@code requireEntry} carries no status filter, so PATCH
+     * on a TRASHED entry used to reach {@code saveWeblogEntry} directly --
+     * a side door around {@code restore} that could publish a trashed entry
+     * in one call, with {@code trashedAt} still populated on the row. This
+     * is exactly the hazard {@code BaseController.lookupNonTrashedEntry}'s
+     * javadoc names for the JSP side; the API needs the same closed door.
+     */
+    @Test
+    void patchOnATrashedEntryIsRefusedRatherThanResurrectingIt() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setStatus(WeblogEntry.PubStatus.TRASHED);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"PUBLISHED\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+        assertEquals(WeblogEntry.PubStatus.TRASHED, entry.getStatus());
+    }
+
+    /**
+     * Same door, the preview side: previewing a trashed entry's unsaved text
+     * is refused rather than silently rendering as though the entry were
+     * live -- previewExisting uses the same live-entry guard as PATCH.
+     */
+    @Test
+    void previewExistingOnATrashedEntryIsConflict() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        entry.setStatus(WeblogEntry.PubStatus.TRASHED);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/{id}/preview", "entry-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"x\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+
+    /**
+     * IMPORTANT 2: delete-forever permanently destroys data and had no
+     * ownership test at all -- its correctness rested on inspection of
+     * {@code requireEntry} alone. A foreign entry's id must be 404, exactly
+     * like every other by-id endpoint.
+     */
+    @Test
+    void deleteForeverIsNotFoundWhenTheEntryBelongsToAnotherWeblog() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog thisWeblog = aWeblog("myblog");
+        Weblog anotherWeblog = aWeblog("someoneelse");
+        WeblogEntry foreign = new WeblogEntry();
+        foreign.setId("entry-1");
+        foreign.setWebsite(anotherWeblog);
+        foreign.setStatus(WeblogEntry.PubStatus.TRASHED);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(foreign);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/{id}/delete-forever", "entry-1")
+                        .requestAttr("actionWeblog", thisWeblog))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getWeblogEntryManager(), never()).removeWeblogEntry(any());
+        verify(weblogger.getIndexManager(), never()).removeEntryIndexOperation(any());
+    }
+
+    /** Same IDOR coverage for preview, which had none either. */
+    @Test
+    void previewExistingIsNotFoundWhenTheEntryBelongsToAnotherWeblog() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog thisWeblog = aWeblog("myblog");
+        Weblog anotherWeblog = aWeblog("someoneelse");
+        WeblogEntry foreign = new WeblogEntry();
+        foreign.setId("entry-1");
+        foreign.setWebsite(anotherWeblog);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(foreign);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/entries/{id}/preview", "entry-1")
+                        .requestAttr("actionWeblog", thisWeblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"x\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
 }

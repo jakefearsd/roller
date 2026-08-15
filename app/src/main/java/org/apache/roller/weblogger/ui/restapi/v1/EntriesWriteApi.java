@@ -76,7 +76,11 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
             HttpServletRequest request, @PathVariable("id") String id,
             @RequestBody EntryDtos.EntryWrite body) throws WebloggerException {
         Weblog weblog = requireActionWeblog(request);
-        WeblogEntry entry = requireEntry(request, id);
+        // requireLiveEntry, not requireEntry: a trashed entry's id here
+        // would otherwise reach saveWeblogEntry directly, resurrecting it
+        // (to DRAFT or straight to PUBLISHED) by a side door that bypasses
+        // restore's DRAFT-only rule entirely. See requireLiveEntry's javadoc.
+        WeblogEntry entry = requireLiveEntry(request, id);
 
         EntryDtos.applyWrite(entry, body, weblog);
         applyCategory(entry, weblog, body.category());
@@ -165,17 +169,20 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
     /**
      * Previews an existing entry's unsaved text. Reuses {@code
      * EntryEditController.entryEditPreview}'s scratch-entry approach: the
-     * entry itself comes from the usual ownership-checked lookup, but its
-     * text is replaced with whatever the request carries and never saved.
-     * Only the server can expand shortcodes -- {@code [gallery]}, {@code
-     * [map]} -- so this is the only way an agent can see what it is about to
-     * publish before actually publishing it.
+     * entry itself comes from the usual ownership-checked lookup (refusing a
+     * TRASHED entry the same way {@code update} does -- previewing "as
+     * though live" a trashed entry is the same side door, just read-only
+     * instead of a resurrection), but its text is replaced with whatever the
+     * request carries and never saved. Only the server can expand
+     * shortcodes -- {@code [gallery]}, {@code [map]} -- so this is the only
+     * way an agent can see what it is about to publish before actually
+     * publishing it.
      */
     @PostMapping("/{id}/preview")
     public EntryDtos.PreviewView previewExisting(
             HttpServletRequest request, @PathVariable("id") String id,
             @RequestBody EntryDtos.PreviewRequest body) throws WebloggerException {
-        WeblogEntry entry = requireEntry(request, id);
+        WeblogEntry entry = requireLiveEntry(request, id);
         return renderPreview(entry, body);
     }
 
@@ -208,6 +215,11 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
      * an error.
      */
     private EntryDtos.PreviewView renderPreview(WeblogEntry entry, EntryDtos.PreviewRequest body) {
+        // Mutates a JPA-managed entity (when entry came from requireLiveEntry
+        // rather than the previewNew scratch path) without saving. Safe only
+        // because nothing on this request path calls weblogger.flush() or
+        // saveWeblogEntry -- a future change adding either here would
+        // silently persist preview text over the stored entry.
         entry.setText(body == null || body.text() == null ? "" : body.text());
         return new EntryDtos.PreviewView(entry.getTransformedText());
     }
