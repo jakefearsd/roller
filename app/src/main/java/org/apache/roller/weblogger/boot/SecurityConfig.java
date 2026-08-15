@@ -19,13 +19,17 @@ package org.apache.roller.weblogger.boot;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.ui.core.security.RollerRememberMeAuthenticationProvider;
 import org.apache.roller.weblogger.ui.core.security.RollerRememberMeServices;
 import org.apache.roller.weblogger.ui.core.security.RollerUserDetailsService;
+import org.apache.roller.weblogger.ui.restapi.auth.ApiTokenAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
@@ -33,9 +37,11 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 /**
@@ -217,6 +223,7 @@ public class SecurityConfig {
      * </ul>
      */
     @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http, AuthenticationManager authenticationManager,
             RollerRememberMeServices rememberMeServices) throws Exception {
@@ -277,6 +284,48 @@ public class SecurityConfig {
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
         return http.build();
+    }
+
+    /**
+     * The automation API's own chain.
+     *
+     * <p>Separate from the UI chain rather than folded into it. The UI chain's
+     * csrf.ignoringRequestMatchers list holds exactly one narrow entry and its
+     * narrowness is the point; a matcher-scoped chain disables CSRF only where
+     * no cookie-authenticated request can reach.
+     *
+     * <p>Stateless: an API call must never mint a session cookie. HTTP Basic
+     * is reachable only at POST /api/v1/tokens -- a Bearer caller must not be
+     * able to mint another token, or any leaked token becomes a permanent one.
+     */
+    @Bean
+    @Order(1)
+    public SecurityFilterChain apiSecurityFilterChain(
+            HttpSecurity http, ApiTokenAuthFilter apiTokenAuthFilter,
+            AuthenticationManager authenticationManager) throws Exception {
+
+        http
+            .securityMatcher("/api/**")
+            .authenticationManager(authenticationManager)
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session ->
+                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.POST, "/api/v1/tokens").authenticated()
+                .requestMatchers("/api/v1/ping").permitAll()
+                .anyRequest().authenticated())
+            .httpBasic(basic -> { })
+            .addFilterBefore(apiTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .logout(AbstractHttpConfigurer::disable)
+            .rememberMe(AbstractHttpConfigurer::disable);
+
+        return http.build();
+    }
+
+    @Bean
+    public ApiTokenAuthFilter apiTokenAuthFilter() {
+        return new ApiTokenAuthFilter(
+                () -> WebloggerFactory.getWeblogger().getApiTokenManager());
     }
 
     /**

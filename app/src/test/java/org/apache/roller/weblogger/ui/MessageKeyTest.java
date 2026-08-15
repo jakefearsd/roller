@@ -150,7 +150,11 @@ public class MessageKeyTest {
      *       entirely rather than becoming a new orphan.) The W5 trash wave's
      *       Task 4 added {@code configForm.entryTrashRetentionDays} for the
      *       new {@code entry.trash.retention.days} runtime property, taking
-     *       this bucket from 28 to 29.</li>
+     *       this bucket from 28 to 29. The automation API wave's Task 4 added
+     *       {@code configForm.apiSettings} (the new display-group's key) and
+     *       {@code configForm.apiThrottleEnabled} (the {@code
+     *       api.throttle.enabled} property-def) for the new API Settings
+     *       group, taking this bucket from 29 to 31.</li>
      *   <li>16 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
      *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
      *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
@@ -193,11 +197,11 @@ public class MessageKeyTest {
 
     /**
      * Keys the text scan cannot see: {@code runtimeConfigDefs.xml} {@code key=}
-     * attributes (29) + {@code admin-menu.xml}/{@code editor-menu.xml}
+     * attributes (31) + {@code admin-menu.xml}/{@code editor-menu.xml}
      * {@code name=} attributes (16) + 2 unexplained pre-existing orphans. See
      * the javadoc on {@link #reportsBundleKeysNoJspOrControllerUses()}.
      */
-    private static final int KNOWN_DYNAMIC_KEY_COUNT = 47;
+    private static final int KNOWN_DYNAMIC_KEY_COUNT = 49;
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();
