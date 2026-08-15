@@ -1,11 +1,13 @@
 package org.apache.roller.weblogger.ui.restapi.v1;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.MediaFileFilter;
@@ -14,7 +16,10 @@ import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.dto.MediaDtos;
+import org.apache.roller.weblogger.util.RollerMessages;
+import org.apache.roller.weblogger.util.Utilities;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Media read, patch, delete and directory listing/creation.
@@ -79,6 +85,121 @@ public class MediaApi extends BaseApiController implements UISecurityEnforced {
         Weblog weblog = requireActionWeblog(request);
         MediaFile file = requireMedia(request, id);
         return MediaDtos.toView(file, url(weblog, file));
+    }
+
+    /**
+     * Multipart batch upload. A batch is not a transaction --
+     * {@code createMediaFile} reports quota/forbidden-extension refusals
+     * through {@code RollerMessages} WITHOUT throwing (see CLAUDE.md's
+     * Media Pipeline / bulk-upload note -- one bad file used to suppress
+     * the entire success list before W4 fixed it the same way this does),
+     * so every file's error count is snapshotted individually around its
+     * own call; the absence of an exception proves nothing about whether
+     * that one file landed. Responds 201 only when every file in the batch
+     * landed, 207 the moment any one did not, so a caller can always tell
+     * partial success from total failure from the status code alone,
+     * before parsing the body.
+     *
+     * <p>{@code file} is deliberately {@code required = false}: an empty or
+     * entirely absent batch is ordinary client input (an unselected file
+     * input still submits an empty part), and letting Spring's
+     * missing-required-parameter machinery handle it would surface as an
+     * opaque 500 -- {@code ApiExceptionHandler} has no mapping for that
+     * exception. This method rejects it itself, as a 400.
+     */
+    @PostMapping(value = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<MediaDtos.UploadResponse> upload(
+            HttpServletRequest request,
+            @RequestParam(value = "file", required = false) MultipartFile[] files,
+            @RequestParam(value = "directoryId", required = false) String directoryId) throws WebloggerException {
+        Weblog weblog = requireActionWeblog(request);
+        if (files == null || files.length == 0) {
+            throw ApiException.badRequest("At least one file is required.");
+        }
+
+        MediaFileManager mfm = weblogger.getMediaFileManager();
+        MediaFileDirectory directory = StringUtils.isNotBlank(directoryId)
+                ? requireDirectory(request, directoryId)
+                : defaultDirectory(weblog, mfm);
+
+        RollerMessages messages = new RollerMessages();
+        List<MediaDtos.UploadResult> results = new ArrayList<>();
+        for (MultipartFile upload : files) {
+            results.add(processUpload(upload, weblog, directory, mfm, messages));
+        }
+        weblogger.flush();
+
+        MediaDtos.UploadResponse response = MediaDtos.summarise(results);
+        return ResponseEntity
+                .status(response.failed() == 0 ? HttpStatus.CREATED : HttpStatus.MULTI_STATUS)
+                .body(response);
+    }
+
+    /**
+     * One file's outcome, isolated from the rest of the batch. A blank or
+     * missing original filename, or a zero-byte file, never reaches the
+     * manager at all -- both are ordinary client mistakes, and a blank
+     * filename reaching {@code FileContentManagerImpl.canSave}'s extension
+     * check throws a bare {@code NullPointerException} (it calls {@code
+     * fileName.toLowerCase()} unconditionally once any allow/forbid list is
+     * configured), an opaque 500 for input this ordinary rather than a
+     * refusal {@code MediaDtos.refusal} could map. Anything else {@code
+     * createMediaFile} itself refuses is read back from the shared {@code
+     * RollerMessages} collector via the before/after error-count snapshot
+     * -- see {@link #upload}'s javadoc.
+     */
+    private MediaDtos.UploadResult processUpload(MultipartFile upload, Weblog weblog,
+            MediaFileDirectory directory, MediaFileManager mfm, RollerMessages messages) throws WebloggerException {
+        String fileName = upload.getOriginalFilename();
+        if (StringUtils.isBlank(fileName)) {
+            return new MediaDtos.UploadResult(
+                    fileName == null ? "(unnamed)" : fileName, "error", "A file name is required.", null);
+        }
+        if (upload.isEmpty()) {
+            return new MediaDtos.UploadResult(fileName, "error", "The file is empty.", null);
+        }
+
+        MediaFile created = buildMediaFile(upload, weblog, directory, fileName);
+        int before = messages.getErrorCount();
+        mfm.createMediaFile(weblog, created, messages);
+        if (before != messages.getErrorCount()) {
+            return MediaDtos.refusal(fileName, messages);
+        }
+        return new MediaDtos.UploadResult(fileName, "created", null, MediaDtos.toView(created, url(weblog, created)));
+    }
+
+    private MediaFile buildMediaFile(MultipartFile upload, Weblog weblog, MediaFileDirectory directory,
+            String fileName) throws WebloggerException {
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setName(fileName);
+        mediaFile.setDirectory(directory);
+        mediaFile.setWeblog(weblog);
+        mediaFile.setLength(upload.getSize());
+        try {
+            mediaFile.setInputStream(upload.getInputStream());
+        } catch (IOException e) {
+            throw new WebloggerException(e);
+        }
+
+        String contentType = upload.getContentType();
+        if (contentType == null || contentType.endsWith("/octet-stream")) {
+            String detected = Utilities.getContentTypeFromFileName(fileName);
+            if (detected != null) {
+                contentType = detected;
+            }
+        }
+        mediaFile.setContentType(contentType);
+        return mediaFile;
+    }
+
+    /**
+     * The weblog's default upload directory, created on first use -- the
+     * same fallback {@code MediaFileAddController.resolveDirectory} applies
+     * when the admin UI's upload form is not given an explicit directory.
+     */
+    private MediaFileDirectory defaultDirectory(Weblog weblog, MediaFileManager mfm) throws WebloggerException {
+        MediaFileDirectory directory = mfm.getDefaultMediaFileDirectory(weblog);
+        return directory != null ? directory : mfm.createDefaultMediaFileDirectory(weblog);
     }
 
     /**

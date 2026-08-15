@@ -1,10 +1,13 @@
 package org.apache.roller.weblogger.ui.restapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
+import org.apache.roller.weblogger.util.RollerMessages;
 
 /**
  * Views of a media file and a media file directory, for the automation API.
@@ -52,6 +55,72 @@ public final class MediaDtos {
      * this record.
      */
     public record DirectoryWrite(String name, String description) {
+    }
+
+    /**
+     * One uploaded file's outcome. {@code file} is populated only when
+     * {@code status} is {@code "created"} -- a refused file was never
+     * persisted, so there is nothing to return a view of.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record UploadResult(String fileName, String status, String detail, MediaView file) {
+    }
+
+    /**
+     * The whole batch's outcome. {@code created}/{@code failed} are always
+     * derived from {@code results} by {@link #summarise} rather than
+     * threaded through independently, so they can never drift out of sync
+     * with the list a caller would count by hand.
+     */
+    public record UploadResponse(List<UploadResult> results, int created, int failed) {
+    }
+
+    public static UploadResponse summarise(List<UploadResult> results) {
+        int created = (int) results.stream().filter(r -> "created".equals(r.status())).count();
+        return new UploadResponse(results, created, results.size() - created);
+    }
+
+    /**
+     * Reads the newest (most recently added) error out of {@code messages}
+     * -- the one {@code createMediaFile}/{@code canSave} just added for
+     * THIS file -- and maps its key onto one of the three refusal statuses
+     * the API promises. {@code FileContentManagerImpl.canSave} is the only
+     * source of these keys today: {@code error.upload.dirmax} (the
+     * weblog's total quota) and {@code error.upload.filemax} (the per-file
+     * size cap) are both a size limit from the caller's point of view, so
+     * both map to {@code "quota_exceeded"}; {@code error.upload.forbiddenFile}
+     * maps to {@code "forbidden_extension"}; anything else (chiefly
+     * {@code error.upload.disabled}, and defensively any key this method
+     * has never seen) is {@code "error"}.
+     */
+    public static UploadResult refusal(String fileName, RollerMessages messages) {
+        RollerMessages.RollerMessage last = null;
+        Iterator<RollerMessages.RollerMessage> it = messages.getErrors();
+        while (it.hasNext()) {
+            last = it.next();
+        }
+        if (last == null) {
+            return new UploadResult(fileName, "error", "Upload failed.", null);
+        }
+        String status = switch (last.getKey()) {
+            case "error.upload.dirmax", "error.upload.filemax" -> "quota_exceeded";
+            case "error.upload.forbiddenFile" -> "forbidden_extension";
+            default -> "error";
+        };
+        return new UploadResult(fileName, status, detailFor(last), null);
+    }
+
+    private static String detailFor(RollerMessages.RollerMessage msg) {
+        String[] args = msg.getArgs();
+        return switch (msg.getKey()) {
+            case "error.upload.dirmax" -> "Adding this file would exceed this weblog's "
+                    + (args != null && args.length > 0 ? args[0] : "configured") + " MB storage limit.";
+            case "error.upload.filemax" -> "This file is larger than the "
+                    + (args != null && args.length > 1 ? args[1] : "configured") + " MB per-file limit.";
+            case "error.upload.forbiddenFile" -> "Files of this type may not be uploaded.";
+            case "error.upload.disabled" -> "File upload is disabled for this site.";
+            default -> "Upload failed: " + msg.getKey();
+        };
     }
 
     public static MediaView toView(MediaFile file, String url) {
