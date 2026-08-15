@@ -34,6 +34,10 @@ public class ApiException extends RuntimeException {
         return new ApiException(404, TYPE_BASE + "not-found", "Not found", detail);
     }
 
+    public static ApiException unauthorized(String detail) {
+        return new ApiException(401, TYPE_BASE + "unauthorized", "Unauthorized", detail);
+    }
+
     public static ApiException forbidden(String detail) {
         return new ApiException(403, TYPE_BASE + "forbidden", "Forbidden", detail);
     }

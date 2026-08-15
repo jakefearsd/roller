@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import org.apache.roller.weblogger.business.ApiTokenManager;
 import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.ui.restapi.ApiProblemWriter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -18,6 +19,7 @@ import static org.mockito.Mockito.*;
 class ApiTokenAuthFilterTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ApiProblemWriter PROBLEM_WRITER = new ApiProblemWriter(OBJECT_MAPPER);
 
     @AfterEach
     void clearContext() {
@@ -43,7 +45,7 @@ class ApiTokenAuthFilterTest {
         request.addHeader("Authorization", "Bearer rlr_good");
         FilterChain chain = mock(FilterChain.class);
 
-        new ApiTokenAuthFilter(() -> mgr, OBJECT_MAPPER)
+        new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
                 .doFilter(request, new MockHttpServletResponse(), chain);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -66,7 +68,7 @@ class ApiTokenAuthFilterTest {
         request.addHeader("Authorization", "Bearer rlr_bad");
         FilterChain chain = mock(FilterChain.class);
 
-        new ApiTokenAuthFilter(() -> mgr, OBJECT_MAPPER)
+        new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
                 .doFilter(request, new MockHttpServletResponse(), chain);
 
         // The filter never rejects; authorization is the chain's job, so an
@@ -82,7 +84,7 @@ class ApiTokenAuthFilterTest {
         request.addHeader("Authorization", "Basic am9objpwdw==");
         FilterChain chain = mock(FilterChain.class);
 
-        new ApiTokenAuthFilter(() -> mgr, OBJECT_MAPPER)
+        new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
                 .doFilter(request, new MockHttpServletResponse(), chain);
 
         assertNull(SecurityContextHolder.getContext().getAuthentication());
@@ -101,7 +103,7 @@ class ApiTokenAuthFilterTest {
         when(mgr.authenticate(anyString())).thenReturn(null);
         // threshold 1: the first call is allowed through, the second is not.
         ApiThrottle throttle = ApiThrottle.forTesting(1, 60);
-        ApiTokenAuthFilter filter = new ApiTokenAuthFilter(() -> mgr, throttle, OBJECT_MAPPER);
+        ApiTokenAuthFilter filter = new ApiTokenAuthFilter(() -> mgr, throttle, PROBLEM_WRITER);
 
         MockHttpServletRequest first = new MockHttpServletRequest("GET", "/api/v1/ping");
         first.addHeader("Authorization", "Bearer rlr_same");

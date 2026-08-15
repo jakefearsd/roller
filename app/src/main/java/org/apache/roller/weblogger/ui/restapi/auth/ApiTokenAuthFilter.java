@@ -13,13 +13,12 @@ import org.apache.roller.weblogger.business.ApiTokenManager;
 import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.ApiProblem;
+import org.apache.roller.weblogger.ui.restapi.ApiProblemWriter;
 import org.apache.roller.weblogger.util.TokenGenerator;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Turns {@code Authorization: Bearer rlr_...} into an authenticated
@@ -41,17 +40,17 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
 
     private final Supplier<ApiTokenManager> tokenManager;
     private final ApiThrottle throttle;
-    private final ObjectMapper objectMapper;
+    private final ApiProblemWriter problemWriter;
 
-    public ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager, ObjectMapper objectMapper) {
-        this(tokenManager, ApiThrottle.create(), objectMapper);
+    public ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager, ApiProblemWriter problemWriter) {
+        this(tokenManager, ApiThrottle.create(), problemWriter);
     }
 
     ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager, ApiThrottle throttle,
-                       ObjectMapper objectMapper) {
+                       ApiProblemWriter problemWriter) {
         this.tokenManager = tokenManager;
         this.throttle = throttle;
-        this.objectMapper = objectMapper;
+        this.problemWriter = problemWriter;
     }
 
     @Override
@@ -81,21 +80,19 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
     /**
      * A ServletFilter runs before, and entirely outside, DispatcherServlet --
      * so {@code ApiExceptionHandler}'s {@code @RestControllerAdvice} can never
-     * see an exception thrown from here. This is therefore the one place an
-     * API error body is assembled by hand instead of through that machinery,
-     * and it must keep matching {@code ApiExceptionHandler}'s shape exactly:
-     * it still builds the body via {@code ApiException.throttled(...)
-     * .toProblem(...)} rather than a hand-rolled {@code ApiProblem}, so the
-     * two error shapes cannot drift apart.
+     * see an exception thrown from here. Building the body via {@code
+     * ApiException.throttled(...).toProblem(...)} and handing it to the
+     * shared {@link ApiProblemWriter} (also used by {@link
+     * ApiAuthenticationEntryPoint} and {@link ApiAccessDeniedHandler}, the
+     * other two writers that run outside this same reach) is what keeps this
+     * error shape from drifting from {@code ApiExceptionHandler}'s.
      */
     private void writeThrottled(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         ApiProblem problem = ApiException
                 .throttled("Too many requests. Slow down and retry.")
                 .toProblem(request.getRequestURI());
-        response.setStatus(problem.status());
-        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        objectMapper.writeValue(response.getOutputStream(), problem);
+        problemWriter.write(response, problem);
     }
 
     private void authenticate(String rawToken) {

@@ -25,6 +25,9 @@ import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.ui.core.security.RollerRememberMeAuthenticationProvider;
 import org.apache.roller.weblogger.ui.core.security.RollerRememberMeServices;
 import org.apache.roller.weblogger.ui.core.security.RollerUserDetailsService;
+import org.apache.roller.weblogger.ui.restapi.ApiProblemWriter;
+import org.apache.roller.weblogger.ui.restapi.auth.ApiAccessDeniedHandler;
+import org.apache.roller.weblogger.ui.restapi.auth.ApiAuthenticationEntryPoint;
 import org.apache.roller.weblogger.ui.restapi.auth.ApiTokenAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -306,11 +309,26 @@ public class SecurityConfig {
      * where the request's {@code ApiPrincipal} is readable and the
      * authentication mechanism can actually be inspected -- see {@code
      * TokensApiTest#aBearerAuthenticatedCallerCannotMintAToken}.
+     *
+     * <p>{@code exceptionHandling(...)} is not optional here. Without an
+     * explicit {@code AuthenticationEntryPoint}/{@code AccessDeniedHandler},
+     * Spring Security's defaults commit the response themselves -- a Basic
+     * challenge, or Boot's own {@code /error} page -- entirely outside
+     * {@code DispatcherServlet}, so every ordinary 401 (a missing, malformed,
+     * unknown, expired or revoked Bearer token: {@code ApiTokenAuthFilter}
+     * never rejects, it just leaves the context empty for this chain's
+     * {@code authorizeHttpRequests} to answer) and every 403 would bypass
+     * {@code ApiExceptionHandler} and not be problem+json. This is the exact
+     * same structural bug the throttle write above exists to avoid, just one
+     * layer further out -- see {@link ApiAuthenticationEntryPoint}/
+     * {@link ApiAccessDeniedHandler}.
      */
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(
             HttpSecurity http, ApiTokenAuthFilter apiTokenAuthFilter,
+            ApiAuthenticationEntryPoint apiAuthenticationEntryPoint,
+            ApiAccessDeniedHandler apiAccessDeniedHandler,
             AuthenticationManager authenticationManager) throws Exception {
 
         http
@@ -323,6 +341,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/tokens").authenticated()
                 .requestMatchers("/api/v1/ping").permitAll()
                 .anyRequest().authenticated())
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(apiAuthenticationEntryPoint)
+                .accessDeniedHandler(apiAccessDeniedHandler))
             .httpBasic(basic -> { })
             .addFilterBefore(apiTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .logout(AbstractHttpConfigurer::disable)
@@ -331,10 +352,29 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Shared by every writer outside {@code ApiExceptionHandler}'s reach --
+     * see {@link ApiProblemWriter}'s own javadoc for the full why.
+     */
     @Bean
-    public ApiTokenAuthFilter apiTokenAuthFilter(ObjectMapper objectMapper) {
+    public ApiProblemWriter apiProblemWriter(ObjectMapper objectMapper) {
+        return new ApiProblemWriter(objectMapper);
+    }
+
+    @Bean
+    public ApiTokenAuthFilter apiTokenAuthFilter(ApiProblemWriter apiProblemWriter) {
         return new ApiTokenAuthFilter(
-                () -> WebloggerFactory.getWeblogger().getApiTokenManager(), objectMapper);
+                () -> WebloggerFactory.getWeblogger().getApiTokenManager(), apiProblemWriter);
+    }
+
+    @Bean
+    public ApiAuthenticationEntryPoint apiAuthenticationEntryPoint(ApiProblemWriter apiProblemWriter) {
+        return new ApiAuthenticationEntryPoint(apiProblemWriter);
+    }
+
+    @Bean
+    public ApiAccessDeniedHandler apiAccessDeniedHandler(ApiProblemWriter apiProblemWriter) {
+        return new ApiAccessDeniedHandler(apiProblemWriter);
     }
 
     /**
