@@ -106,6 +106,9 @@ public class JPAApiTokenManagerImpl implements ApiTokenManager {
 
     @Override
     public boolean revoke(User user, String tokenId) throws WebloggerException {
+        if (tokenId == null || tokenId.isBlank()) {
+            return false;
+        }
         ApiToken token = (ApiToken) strategy.load(ApiToken.class, tokenId);
         // Ownership check, not a convenience: tokenId is client input and this
         // is a global by-id load, so without it any user could revoke any

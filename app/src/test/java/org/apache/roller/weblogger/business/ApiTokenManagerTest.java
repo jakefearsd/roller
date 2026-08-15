@@ -99,4 +99,16 @@ class ApiTokenManagerTest {
         assertNull(mgr.authenticate(null));
         assertNull(mgr.authenticate("   "));
     }
+
+    /**
+     * A missing or blank id is client input, same as an unknown one -- it
+     * must fail closed (false), not throw. EntityManager.find (behind
+     * strategy.load) throws IllegalArgumentException on a null primary key,
+     * which revoke must not let escape.
+     */
+    @Test
+    void revokeRefusesAMissingOrBlankTokenId() throws Exception {
+        assertFalse(mgr.revoke(user, null));
+        assertFalse(mgr.revoke(user, "   "));
+    }
 }
