@@ -9,6 +9,7 @@ import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.MediaFileFilter;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.ApiExceptionHandler;
 import org.apache.roller.weblogger.ui.restapi.dto.MediaDtos;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,24 @@ class MediaApiTest {
         file.setAltText("was here");
         MediaDtos.applyPatch(file, new MediaDtos.MediaPatch("", null, null, null, null));
         assertEquals("", file.getAltText());
+    }
+
+    /**
+     * Unlike altText, a blank name is never a real value -- there is no
+     * "decorative filename" concept a cleared name could mean, only a
+     * silently broken one. Deliberately different handling from altText's
+     * empty-string-is-real-and-stored rule right above.
+     */
+    @Test
+    void aBlankNameInAPatchIsRejected() {
+        MediaFile file = new MediaFile();
+        file.setName("original.jpg");
+
+        ApiException ex = assertThrows(ApiException.class, () -> MediaDtos.applyPatch(
+                file, new MediaDtos.MediaPatch(null, null, null, null, "   ")));
+
+        assertEquals(400, ex.getStatus());
+        assertEquals("original.jpg", file.getName(), "the in-memory file must be untouched on refusal");
     }
 
     // -----------------------------------------------------------------
@@ -278,6 +297,30 @@ class MediaApiTest {
         verify(weblogger.getMediaFileManager(), never()).moveMediaFile(any(), any());
     }
 
+    /**
+     * Controller-level twin of the DTO-level {@code aBlankNameInAPatchIsRejected}:
+     * a blank-but-present name must never reach the manager.
+     */
+    @Test
+    void patchWithABlankNameIsBadRequestAndNothingIsPersisted() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "default");
+        MediaFile file = aMediaFile(dir, "dog.jpg");
+        when(weblogger.getMediaFileManager().getMediaFile("file-1")).thenReturn(file);
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/media/{id}", "file-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).updateMediaFile(any(), any());
+        assertEquals("dog.jpg", file.getName(), "the in-memory file must be untouched on refusal");
+    }
+
     @Test
     void patchWithADirectoryIdMovesToTheOwnedDirectory() throws Exception {
         Weblogger weblogger = mockedWeblogger();
@@ -437,6 +480,77 @@ class MediaApiTest {
                         .requestAttr("actionWeblog", weblog)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
+    }
+
+    /**
+     * Regression: {@code JPAMediaFileManagerImpl.createMediaFileDirectory}
+     * strips a single leading slash BEFORE validating -- "/" normalises to
+     * "" and the manager throws a bare {@code WebloggerException("Invalid
+     * name!")}, which {@code ApiExceptionHandler} could only turn into an
+     * opaque 500 for input this ordinary. The pre-check must perform the
+     * same normalisation the manager performs, not just check the raw
+     * string, or it lets exactly this input through untouched.
+     */
+    @Test
+    void createDirectoryWithASlashOnlyNameIsBadRequestNotAnOpaque500() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/media/directories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"/\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
+    }
+
+    /**
+     * Regression, the other half: a name that only collides with an
+     * existing directory AFTER the manager's leading-slash normalisation
+     * must be a 409, not a 500 -- the duplicate pre-check has to see the
+     * same normalised name the manager would.
+     */
+    @Test
+    void createDirectoryWithASlashPrefixedDuplicateNameIsConflictNotAnOpaque500() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        aDirectory(weblog, "existing"); // registers into weblog's own directory set
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/media/directories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"/existing\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
+    }
+
+    /**
+     * "default" is reserved by the manager (it is what
+     * {@code createDefaultMediaFileDirectory} names the weblog's own
+     * default folder) -- {@code createMediaFileDirectory(weblog, "default")}
+     * always throws, even on a weblog with no directory literally named
+     * "default" yet. Must be a 400, not a 500.
+     */
+    @Test
+    void createDirectoryWithNameDefaultIsBadRequestNotAnOpaque500() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(post("/v1/weblogs/myblog/media/directories")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"default\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 

@@ -130,11 +130,26 @@ public class MediaApi extends BaseApiController implements UISecurityEnforced {
     }
 
     /**
-     * The duplicate-name check runs before the manager call, mirroring
-     * {@code CategoriesApi.create} -- {@code
-     * JPAMediaFileManagerImpl.createMediaFileDirectory} throws a bare
-     * {@code WebloggerException} ("Directory exists") on collision, which
-     * {@code ApiExceptionHandler} could only turn into an opaque 500.
+     * The blank/reserved/duplicate pre-checks run against the SAME
+     * normalised name {@code JPAMediaFileManagerImpl.createMediaFileDirectory}
+     * will itself compute -- it strips one leading slash before validating,
+     * so a raw pre-check against the client's literal string sees different
+     * input than the manager does. {@code "/"} passes a raw blank check
+     * ("/".isBlank() is false) and a raw duplicate check, then normalises to
+     * "" inside the manager and throws a bare {@code WebloggerException}
+     * ("Invalid name!") that {@code ApiExceptionHandler} can only turn into
+     * an opaque 500; {@code "/existing"} passes the same way and only
+     * collides with an existing "existing" directory AFTER normalisation.
+     * Note this is NOT the same shape as {@code CategoriesApi.create}'s
+     * duplicate guard, despite looking similar -- that guard's manager-side
+     * counterpart (`WeblogCategory`'s constructor) does no normalisation of
+     * its own, so a raw pre-check there really does see what the manager
+     * sees. Here it does not, unless this method replicates the manager's
+     * one normalisation step first. Replicated rather than caught-and-mapped
+     * because the transformation (strip a single leading slash) and the one
+     * reserved name ("default") are small and stable enough that duplicating
+     * them here is lower-risk than parsing the manager's free-text exception
+     * messages to tell "Invalid name!" apart from "Directory exists".
      */
     @PostMapping("/directories")
     public ResponseEntity<MediaDtos.DirectoryView> createDirectory(
@@ -144,8 +159,16 @@ public class MediaApi extends BaseApiController implements UISecurityEnforced {
         if (name == null || name.isBlank()) {
             throw ApiException.badRequest("name is required.");
         }
-        if (weblog.hasMediaFileDirectory(name)) {
-            throw ApiException.conflict("A directory named '" + name + "' already exists.");
+
+        String normalized = name.startsWith("/") ? name.substring(1) : name;
+        if (normalized.isEmpty()) {
+            throw ApiException.badRequest("name is required.");
+        }
+        if ("default".equals(normalized)) {
+            throw ApiException.badRequest("'default' is a reserved directory name.");
+        }
+        if (weblog.hasMediaFileDirectory(normalized)) {
+            throw ApiException.conflict("A directory named '" + normalized + "' already exists.");
         }
 
         MediaFileDirectory directory = weblogger.getMediaFileManager().createMediaFileDirectory(weblog, name);

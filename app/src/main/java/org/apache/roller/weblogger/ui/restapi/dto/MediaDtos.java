@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
+import org.apache.roller.weblogger.ui.restapi.ApiException;
 
 /**
  * Views of a media file and a media file directory, for the automation API.
@@ -93,9 +94,14 @@ public final class MediaDtos {
 
     /**
      * Applies every field {@code patch} actually carries onto {@code file}.
-     * {@code altText}, {@code focalX}, {@code focalY} and {@code name} are
-     * plain field assignments; {@code directoryId} is deliberately left
-     * untouched here -- see {@link MediaPatch}'s javadoc.
+     * {@code altText}, {@code focalX} and {@code focalY} are plain field
+     * assignments; {@code directoryId} is deliberately left untouched here --
+     * see {@link MediaPatch}'s javadoc. {@code name} is null-means-absent
+     * like the others, but a PRESENT, blank value is rejected rather than
+     * stored -- unlike {@code altText}, where an explicit empty string is a
+     * real "the author cleared it" value, there is no equivalent "the file
+     * is deliberately unnamed" concept a blank name could mean, only a
+     * silently broken one.
      */
     public static void applyPatch(MediaFile file, MediaPatch patch) {
         if (patch.altText() != null) {
@@ -108,7 +114,11 @@ public final class MediaDtos {
             file.setFocalY(patch.focalY());
         }
         if (patch.name() != null) {
-            file.setName(patch.name());
+            String name = patch.name().trim();
+            if (name.isEmpty()) {
+                throw ApiException.badRequest("name cannot be blank.");
+            }
+            file.setName(name);
         }
     }
 }
