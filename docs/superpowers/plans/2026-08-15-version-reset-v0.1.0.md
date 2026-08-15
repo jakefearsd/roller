@@ -564,6 +564,170 @@ git commit -m "docs: renumber to 0.1.0 and name upstream as lineage, not identit
 
 ---
 
+### Task 4 corrections (after review) — stop making timing claims
+
+Task 4's review verified against git history that the fork's first commit sat at version `6.1.5`, and PostgreSQL-only arrived at `021c6004f` — **54 commits and about eight months later**, after the Jakarta EE migration, the Struts2→Spring MVC rewrite, and the Planet/Bookmarks/Pings removals. So "PostgreSQL-only since this fork diverged" is false by that entire span, and "the schema as of this fork's divergence" is false for the same reason: V002 already reflects months of fork-only feature removal.
+
+This is the third time in this plan that lineage prose anchored an event at the divergence point when it happened later. **The rule going forward is to drop the timing claim rather than relocate it** — the migrations README's own successful rewording ("the complete baseline schema", no date at all) is the pattern to copy.
+
+Corrected text, replacing what Steps 1, 2, 2b, 3 and 4 originally prescribed:
+
+- `README.md:58` → `Roller is PostgreSQL-only. Earlier upstream releases generated vendor-specific`
+- `CLAUDE.md:132` → `Roller is **PostgreSQL-only**. Development, test, and production all`
+- `app/pom.xml:245` → `<!-- PostgreSQL is the only database Roller supports.` (keep the following two comment lines unchanged). Note this removes app/pom.xml's "Apache Roller" mention entirely, which lowers Task 5's expected match count by one.
+- `bin/db/migrations/README.md:7` → `Roller is **PostgreSQL-only**. The pre-fork scheme — Velocity`
+- `bin/db/migrations/V002__baseline_schema.sql:17` → `-- The complete Roller schema as of this fork's move to PostgreSQL. This replaces the` (accurate: V002 was created by that commit)
+
+Also correct the cross-reference the review found broken: `docker_deployment.md` claims its `IMAGE_VERSION` snippet "Matches the same snippet in `docs/superpowers/specs/2026-08-14-container-push-deployment-design.md`". That spec is on the do-not-touch list and still says `6.2.1`, so the claim is now false. Delete the "matches" sentence rather than edit the spec — a historical record should not be rewritten to preserve a cross-reference.
+
+### Task 5: Finish the identity cleanup (added after Task 4)
+
+Task 4's verification found 23 surviving "Apache Roller" mentions where the plan predicted 3 — the Step 9 grep scans the whole repository, not just shipped output, and the plan's expectation was wrong. The implementer escalated rather than reinterpreting, which is what surfaced this.
+
+Triage of the 23:
+- **4 are correct** and stay: the deliberate lineage references in `README.md:3`, `CLAUDE.md:132`, `app/pom.xml:246`, `DatabaseInstaller.java:108`. Each says the fork *came from* Apache Roller, which is true and required.
+- **2 are accurate history** and stay: `CLAUDE.md:720` and `docs/design/design-system.md:68` describe the admin rail as replacing the old "Powered by Apache Roller" card. True statements about what was removed.
+- **The remaining 17** are this task.
+
+**Files:**
+- Modify: `README.md:1`, `README.md:124-129`
+- Modify: `CLAUDE.md:156`
+- Modify: `CONTRIBUTING.md:1-3`
+- Modify: `.github/workflows/main.yml:18`
+- Modify: `app/src/main/resources/log4j2.xml:24`
+- Modify: `app/src/test/resources/log4j2.xml:20`
+- Modify: `app/src/main/resources/org/apache/roller/weblogger/config/roller.properties:273`
+- Modify: `docs/README.md:5-7`
+- Delete: `docs/roller-install-guide.adoc`, `docs/roller-template-guide.adoc`, `docs/roller-user-guide.adoc`
+- Delete: `docs/images/` (42 files, 3.8MB)
+
+**Interfaces:** consumes Tasks 1-4; produces the final state.
+
+- [ ] **Step 1: README's H1 and CLAUDE.md's identity line**
+
+`README.md:1`, from `# Apache Roller` to:
+
+```markdown
+# Roller
+```
+
+`CLAUDE.md:156`, from `Apache Roller is a multi-user blog server built with:` to:
+
+```markdown
+Roller is a multi-user blog server built with:
+```
+
+Both are identity claims — they say this software *is* Apache Roller. `README.md:3`'s "It is a fork of [Apache Roller]" stays exactly as it is; that one is lineage.
+
+- [ ] **Step 2: The three infrastructure names**
+
+`.github/workflows/main.yml:18`, from `name: Apache Roller` to:
+
+```yaml
+name: Roller
+```
+
+`app/src/main/resources/log4j2.xml:24` and `app/src/test/resources/log4j2.xml:20`, both from `<Configuration status="warn" name="Apache Roller" >` to:
+
+```xml
+<Configuration status="warn" name="Roller" >
+```
+
+- [ ] **Step 3: The properties comment**
+
+`app/src/main/resources/org/apache/roller/weblogger/config/roller.properties:273`, from `# Authentication method for Apache Roller. Use 'db' for database-based authentication.` to:
+
+```properties
+# Authentication method for Roller. Use 'db' for database-based authentication.
+```
+
+- [ ] **Step 4: CONTRIBUTING.md**
+
+It is currently three lines: a title carrying the ASF's registered trademark, and a pointer to Apache's contribution wiki — upstream's process, not this fork's. Replace the whole file with:
+
+```markdown
+# Contributing to Roller
+
+This is a personal fork of [Apache Roller](https://roller.apache.org), simplified
+substantially and maintained independently. It is not affiliated with or endorsed
+by the Apache Software Foundation.
+
+To contribute to the upstream project instead, see
+[How to contribute to Roller](https://cwiki.apache.org/confluence/x/2hsB).
+```
+
+The trademark symbol goes with it: "Apache Roller®" on a fork's contributing guide reads as a claim to be the upstream project.
+
+- [ ] **Step 5: Delete the three legacy guides**
+
+```bash
+git rm docs/roller-install-guide.adoc docs/roller-template-guide.adoc docs/roller-user-guide.adoc
+```
+
+These are upstream's manuals. They document Derby, the comment subsystem, the Planet aggregator, Bookmarks/Blogroll, Pings/Trackbacks and vendor-specific DDL — every one of which this fork has removed. They are not merely misnamed; a reader following them is actively misled.
+
+- [ ] **Step 6: Delete the orphaned screenshots**
+
+```bash
+git rm -r docs/images
+```
+
+All 42 files (3.8MB) are referenced only by the three guides just deleted — verified by grepping every filename against the rest of the tree. They are also screenshots of an admin UI this fork rebuilt (see CLAUDE.md's Admin UI section), so they were doubly stale.
+
+Leave `docs/readme-images/` alone. Nothing references it either, but it is unrelated to the guides and its removal is not this task's decision.
+
+- [ ] **Step 7: Fix the now-dangling references**
+
+`README.md`'s Documentation section currently links all three deleted guides. Replace lines 124-129 — from `Detailed guides are available in the [`docs/`](docs/) directory:` through the Template Guide bullet — with:
+
+```markdown
+- **[Production Deployment Runbook](docker_deployment.md)** — Fresh-VPS Docker deployment, TLS, backups, upgrades
+- **[Design System](docs/design/design-system.md)** — the admin UI's tokens, type scale and layout rules
+```
+
+Keep the existing Production Deployment Runbook bullet rather than duplicating it — the result should list exactly those two entries.
+
+`docs/README.md`, replace the three guide bullets (lines 5-7) so the file reads:
+
+```markdown
+# docs/README.md
+
+In this directory you'll find design documentation and various examples.
+
+* `design/` - the admin UI design system and approved component mockups
+* `examples/` - example configuration and script files
+```
+
+- [ ] **Step 8: Verify**
+
+```bash
+git grep -n "Apache Roller" -- . ':!docs/superpowers' ':!LICENSE.txt' ':!NOTICE.txt'
+```
+
+Expected: **exactly 6 matches** — the four lineage references (`README.md:3`, `CLAUDE.md:132`, `app/pom.xml:246`, `DatabaseInstaller.java:108`), the two accurate historical ones (`CLAUDE.md:720`, `docs/design/design-system.md:68`), and the new `CONTRIBUTING.md` lineage sentences. Note `CONTRIBUTING.md` adds two, so **8 is also correct** if its replacement text mentions Apache Roller twice; count by reading, not by number alone. Every surviving match must be a statement *about* upstream, never a claim to *be* upstream.
+
+```bash
+git grep -n "roller-install-guide\|roller-template-guide\|roller-user-guide" -- . ':!docs/superpowers'
+```
+Expected: no matches. A dangling link to a deleted file is worse than the stale file was.
+
+```bash
+mvn -ntp clean install
+```
+Expected: BUILD SUCCESS. The log4j2 config name change touches both the main and test logging configuration, so this confirms logging still initialises.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add -A README.md CLAUDE.md CONTRIBUTING.md docs/README.md .github/workflows/main.yml \
+        app/src/main/resources/log4j2.xml app/src/test/resources/log4j2.xml \
+        app/src/main/resources/org/apache/roller/weblogger/config/roller.properties \
+        docs/roller-install-guide.adoc docs/roller-template-guide.adoc docs/roller-user-guide.adoc docs/images
+git commit -m "docs: finish the identity cleanup and retire upstream's manuals"
+```
+
+---
+
 ## Self-Review Notes
 
 **Spec coverage.** Every spec section maps to a task: the version number and the `-Pit` trap → Task 1; the seven user-visible strings and the translated bundles → Task 2; the schema guard → Task 3; the three categories of `6.2.0` mention → Tasks 3 (Java) and 4 (docs/config); the verification list → Task 4 Steps 8-12; the listmonk ambiguity → Global Constraints plus Task 4 Step 8, which is written to fail on zero matches rather than celebrate them.
