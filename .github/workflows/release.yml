@@ -39,14 +39,14 @@ name: Release
 # racing main.yml's copy on the same commit.
 #
 # To cut a release:
-#   1. mvn versions:set -DnewVersion=6.2.0 -DgenerateBackupPoms=false
+#   1. mvn versions:set -DnewVersion=0.1.0 -DgenerateBackupPoms=false
 #      (only if the pom version is changing -- the tag drives the image tag
 #      either way)
 #   2. Run the browser ITs locally: mvn verify -Pit
 #      (still not run by this workflow -- see main.yml's integration-test
 #      job for why they stay off the push/tag path)
-#   3. git commit -am "release: 6.2.0"
-#   4. git tag v6.2.0 && git push origin master v6.2.0
+#   3. git commit -am "release: 0.1.0"
+#   4. git tag v0.1.0 && git push origin master v0.1.0
 
 on:
   push:
@@ -83,7 +83,7 @@ jobs:
 
       # main.yml triggers on `push: branches: [master]`, which a TAG push does
       # not match -- so in the documented release flow
-      # (`git push origin master v6.2.0`) the unit suite and this workflow race,
+      # (`git push origin master v0.1.0`) the unit suite and this workflow race,
       # with no dependency between them. Without this job a tag on a commit that
       # never passed build-test publishes anyway. `install` runs `verify`, so
       # this covers the JaCoCo floors too.
@@ -107,7 +107,7 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # v6.2.0 -> 6.2.0
+          # v0.1.0 -> 0.1.0
           echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 

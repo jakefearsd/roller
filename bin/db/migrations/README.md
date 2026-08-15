@@ -4,7 +4,7 @@ This directory holds the canonical, ordered schema definition for the Roller
 PostgreSQL database. Every schema change ships as a numbered, idempotent
 migration so databases can be brought forward safely and repeatably.
 
-Roller is **PostgreSQL-only** as of 6.2.0. The pre-6.2.0 scheme — Velocity
+Roller is **PostgreSQL-only** since this fork diverged. The pre-fork scheme — Velocity
 templates rendered by Texen into vendor-specific DDL for seven databases, with
 a hardcoded `upgradeToNNN()` chain in `DatabaseInstaller` keyed off a
 `roller.database.version` row in `roller_properties` — has been removed.
@@ -12,7 +12,7 @@ a hardcoded `upgradeToNNN()` chain in `DatabaseInstaller` keyed off a
 ## Files
 
 - `V001__schema_migrations.sql` — tracking table used by `migrate.sh`
-- `V002__baseline_schema.sql` — the complete 6.2.0 schema (20 tables)
+- `V002__baseline_schema.sql` — the complete baseline schema (20 tables)
 
 The companion scripts live one directory up (`bin/db/`):
 

@@ -129,7 +129,8 @@ conflict, not a test failure. `docker rm -f roller-it-postgres` and re-run.
 
 ### Database
 
-Roller is **PostgreSQL-only** as of 6.2.0. Development, test, and production all
+Roller is **PostgreSQL-only** since this fork diverged from Apache Roller 6.1.x.
+Development, test, and production all
 run the same engine; the previous Derby-in-test / PostgreSQL-in-prod split and
 the Velocity/Texen layer that generated DDL for seven vendors are gone.
 

@@ -1,8 +1,8 @@
 # Apache Roller
 
-[Apache Roller](http://roller.apache.org) is a Java-based, full-featured, multi-user and group-blog server suitable for blog sites of any size. First created in 2002 and maintained by the Apache Software Foundation, Roller powers everything from personal blogs to multi-tenant blogging platforms.
+Roller is a Java-based, multi-user blog server. It is a fork of [Apache Roller](http://roller.apache.org), created in 2002 and maintained by the Apache Software Foundation, simplified substantially: PostgreSQL only, Markdown only, no comment subsystem, no Planet aggregator, and a Spring Boot executable WAR in place of the old servlet-container deployment.
 
-**Current Version:** 6.2.0 | **License:** Apache 2.0 | **Java:** 25
+**Current Version:** 0.1.0 | **License:** Apache 2.0 | **Java:** 25
 
 ---
 
@@ -55,7 +55,7 @@
 |------------|----------|
 | PostgreSQL | Development, testing, and production |
 
-Roller is PostgreSQL-only as of 6.2.0. Earlier releases generated vendor-specific
+Roller has been PostgreSQL-only since this fork diverged. Earlier upstream releases generated vendor-specific
 DDL for DB2, Derby, HSQLDB, SQL Server, MySQL and Oracle; that layer has been
 removed in favour of a single, tested schema.
 

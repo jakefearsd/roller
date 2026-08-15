@@ -64,9 +64,9 @@ and `deploy.sh`. Download them into one directory, e.g. `/opt/roller`:
 
 ```bash
 mkdir -p /opt/roller && cd /opt/roller
-curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/docker-compose.prod.yml
-curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/env.example
-curl -LO https://github.com/jakefearsd/roller/releases/download/v6.2.0/deploy.sh
+curl -LO https://github.com/jakefearsd/roller/releases/download/v0.1.0/docker-compose.prod.yml
+curl -LO https://github.com/jakefearsd/roller/releases/download/v0.1.0/env.example
+curl -LO https://github.com/jakefearsd/roller/releases/download/v0.1.0/deploy.sh
 chmod +x deploy.sh
 mv env.example .env
 ```
@@ -666,12 +666,12 @@ The deploy files and images are the same in both places; only `.env` differs.
 On your workstation, in a directory holding the same two files:
 
 ```bash
-IMAGE_VERSION=6.2.1 docker compose -f docker-compose.prod.yml pull
-IMAGE_VERSION=6.2.1 docker compose -f docker-compose.prod.yml up -d
+IMAGE_VERSION=0.1.1 docker compose -f docker-compose.prod.yml pull
+IMAGE_VERSION=0.1.1 docker compose -f docker-compose.prod.yml up -d
 ```
 
 (The prefix has to be on **both** lines, or `export`ed first — an
-`IMAGE_VERSION=6.2.1` prefix on the `pull` line alone only scopes the
+`IMAGE_VERSION=0.1.1` prefix on the `pull` line alone only scopes the
 override to that one command, so `up -d` would fall back to whatever
 `IMAGE_VERSION` is already in `.env`, silently defeating the point of this
 snippet. Matches the same snippet in
@@ -761,7 +761,7 @@ release needs three changes, not just a version bump:
    "Development vs Production" in `CLAUDE.md` and the top of this document).
 2. **Rename two `.env` keys**: `ROLLER_DOMAIN` becomes `SITE_DOMAIN`, and
    `ROLLER_IMAGE` becomes `IMAGE_VERSION` — and `IMAGE_VERSION` is a **bare
-   version tag** (e.g. `6.2.0`), not a full image reference the way
+   version tag** (e.g. `0.1.0`), not a full image reference the way
    `ROLLER_IMAGE` used to be. Both were deliberately renamed off the
    `ROLLER_` prefix: that prefix is now reserved for the app's own
    configuration, and a stray `ROLLER_DOMAIN` would be overlaid onto the

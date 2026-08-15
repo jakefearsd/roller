@@ -242,7 +242,8 @@ limitations under the License.
             <version>${eclipse-link.version}</version>
         </dependency>
 
-        <!-- PostgreSQL is the only database Roller supports as of 6.2.0.
+        <!-- PostgreSQL is the only database Roller supports since this fork
+             diverged from Apache Roller 6.1.x.
              Version comes from Spring Boot's BOM; it-selenium runs its IT
              Postgres as a Docker image (${it.postgres.image}), not this JDBC
              driver, so nothing else needs a shared property here. -->

@@ -19,7 +19,7 @@
 -- migrations have already been applied. This migration always runs first;
 -- it is idempotent and self-registering.
 --
--- This replaces the pre-6.2.0 scheme, which stored a single
+-- This replaces the pre-fork scheme, which stored a single
 -- 'roller.database.version' row in roller_properties and drove a hardcoded
 -- upgradeToNNN() chain in DatabaseInstaller.
 

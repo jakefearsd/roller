@@ -12,12 +12,12 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
--- Migration: Roller 6.2.0 baseline schema
+-- Migration: Roller baseline schema
 --
--- The complete Roller schema as of 6.2.0. This replaces the pre-6.2.0
--- createdb.vm Velocity template and the 310-to-400 ... 610-to-620 upgrade
--- chain, which generated per-vendor DDL for seven databases. Roller is now
--- PostgreSQL-only and 6.2.0 is the baseline; there is no upgrade path from
+-- The complete Roller schema as of this fork's divergence. This replaces the
+-- pre-fork createdb.vm Velocity template and the 310-to-400 ... 610-to-620
+-- upgrade chain, which generated per-vendor DDL for seven databases. Roller is
+-- now PostgreSQL-only and this is the baseline; there is no upgrade path from
 -- 6.1.x, so the tables belonging to the removed Planet Aggregator,
 -- Bookmarks/Blogroll and Pings/Trackbacks features simply never exist here.
 --
