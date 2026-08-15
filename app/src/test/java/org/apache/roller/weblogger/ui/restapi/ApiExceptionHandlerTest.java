@@ -1,10 +1,14 @@
 package org.apache.roller.weblogger.ui.restapi;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ApiExceptionHandlerTest {
@@ -45,4 +49,41 @@ class ApiExceptionHandlerTest {
         assertFalse(body.detail().contains("com.example"),
                 "internal detail must never reach the client");
     }
+
+    /**
+     * The third promised behavior: a bean-validation failure becomes a 400
+     * problem+json whose errors array names every invalid field. Covers a
+     * field with a message and one with a null getDefaultMessage(), which
+     * Spring produces for a rejected value that carries no message.
+     */
+    @Test
+    void aValidationFailureBecomesA400ListingEachFieldError() throws NoSuchMethodException {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/weblogs/x/entries");
+
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "target");
+        bindingResult.addError(new FieldError("target", "title", "must not be blank"));
+        bindingResult.addError(new FieldError("target", "slug", null));
+        MethodParameter methodParameter = new MethodParameter(
+                ApiExceptionHandlerTest.class.getDeclaredMethod("dummyValidationTarget", String.class), 0);
+        MethodArgumentNotValidException ex =
+                new MethodArgumentNotValidException(methodParameter, bindingResult);
+
+        ResponseEntity<ApiProblem> response = handler.handleValidation(ex, request);
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals(MediaType.APPLICATION_PROBLEM_JSON, response.getHeaders().getContentType());
+        ApiProblem body = response.getBody();
+        assertNotNull(body);
+        assertNotNull(body.errors());
+        assertEquals(2, body.errors().size());
+        assertTrue(body.errors().stream()
+                        .anyMatch(fe -> "title".equals(fe.field()) && "must not be blank".equals(fe.message())),
+                "title's field error must carry its message");
+        assertTrue(body.errors().stream()
+                        .anyMatch(fe -> "slug".equals(fe.field()) && fe.message() == null),
+                "a field error with no default message must still be reported, with a null message");
+    }
+
+    @SuppressWarnings("unused")
+    private void dummyValidationTarget(String arg) { }
 }
