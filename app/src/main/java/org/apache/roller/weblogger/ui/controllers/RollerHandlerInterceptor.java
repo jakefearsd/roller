@@ -171,26 +171,40 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
     /**
      * The action weblog's handle for this request.
      *
-     * <p>The JSP UI submits it as a {@code weblog} request parameter; the REST
-     * API carries it as a {@code handle} URI template variable. Spring MVC
-     * populates URI_TEMPLATE_VARIABLES_ATTRIBUTE during getHandler(), before
-     * any interceptor runs, so both are readable here -- which is what lets
-     * one interceptor enforce permissions for both surfaces instead of the API
-     * growing a second, divergent implementation.
+     * <p>The JSP UI submits it as a {@code weblog} request parameter and has
+     * no {@code {handle}} URI template variable on any of its routes; the
+     * REST API carries it as a {@code {handle}} template variable, and a
+     * REST handler method reads that same variable directly to decide what
+     * it acts on. Spring MVC populates URI_TEMPLATE_VARIABLES_ATTRIBUTE
+     * during getHandler(), before any interceptor runs, so both are readable
+     * here -- which is what lets one interceptor enforce permissions for
+     * both surfaces instead of the API growing a second, divergent
+     * implementation.
+     *
+     * <p><b>The path variable wins when both are present.</b> A {@code
+     * weblog=} query parameter is JSP vocabulary, not REST vocabulary --
+     * nothing in a {@code {handle}}-carrying route's own handler reads it.
+     * Preferring the parameter would let this resolver (and therefore
+     * RollerHandlerInterceptor's permission check and
+     * ApiScopeInterceptor's scope ceiling) agree with each other while both
+     * disagree with the handler method actually invoked, which reads {@code
+     * {handle}} directly -- a caller could then pass permission and scope
+     * checks for one weblog while the handler acted on a different one
+     * named only in the query string.
      *
      * <p>Package-visible and static so it can be tested without a container.
      */
     static String resolveWeblogHandle(HttpServletRequest request) {
-        String handle = request.getParameter("weblog");
-        if (handle != null && !handle.isBlank()) {
-            return handle;
-        }
         Object vars = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
         if (vars instanceof Map<?, ?> map) {
             Object fromPath = map.get("handle");
             if (fromPath instanceof String s && !s.isBlank()) {
                 return s;
             }
+        }
+        String handle = request.getParameter("weblog");
+        if (handle != null && !handle.isBlank()) {
+            return handle;
         }
         return null;
     }

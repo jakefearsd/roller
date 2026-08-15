@@ -49,12 +49,17 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
  *
  * <p>It also exercises {@code ApiScopeInterceptor} reading
  * {@code request.getAttribute("actionWeblog")} rather than re-deriving the
- * weblog from the path: {@code aTokenCannotEscapeItsScopeViaTheWeblogQueryParameter}
- * sends a request whose {@code {handle}} path variable and {@code weblog}
- * query parameter name two different weblogs, and only passes if the
- * ceiling agrees with whichever one {@code RollerHandlerInterceptor} (which
- * runs first -- see below) actually resolved and would enforce permissions
- * against.
+ * weblog from the path directly, AND that the weblog
+ * {@code RollerHandlerInterceptor.resolveWeblogHandle} resolves is the one
+ * the handler method itself will act on. The two tests sending a request
+ * whose {@code {handle}} path variable and {@code weblog} query parameter
+ * name two different weblogs pin that the path variable always wins: a
+ * {@code weblog=} query parameter is JSP vocabulary a REST handler never
+ * reads, so it must not be able to move the ceiling, the permission check,
+ * or the handler's own answer to a different weblog than the one named in
+ * the path -- see {@code RollerHandlerInterceptorPathVariableTest} for the
+ * resolver-level version of the same pin, and its javadoc for why the
+ * precedence is this way round and not the other.
  *
  * <p><b>Registration order.</b> {@code WebMvcConfig.addInterceptors}
  * registers {@code RollerHandlerInterceptor} before
@@ -171,37 +176,47 @@ class ApiScopeInterceptorDispatchTest {
     }
 
     /**
-     * Important-2: the ceiling must track the SAME weblog the permission
-     * check resolved and will enforce against, not re-derive its own answer
-     * from the path. {@code weblog=A} wins over the path's {@code {handle}=B}
-     * (RollerHandlerInterceptor.resolveWeblogHandle prefers the request
-     * parameter), so a token scoped to B must be refused here even though
-     * the path segment literally says B -- the real, permission-checked
-     * target is A, and B is not what this token may touch.
+     * A mismatched {@code weblog=} query parameter cannot manufacture a
+     * false match: the path names B, the token is scoped to B, so this
+     * passes regardless of what the query string claims -- because the
+     * query parameter is simply not consulted once a path variable is
+     * present. This is the safe twin of a real vulnerability the ceiling
+     * used to have: comparing against the query-preferred weblog (A) while
+     * the handler itself reads {@code {handle}} (B) directly meant the
+     * ceiling and the handler could be evaluating two different targets.
+     * Now both always agree with the path, so the query string is inert
+     * here either way.
      */
     @Test
-    void aTokenCannotEscapeItsScopeViaTheWeblogQueryParameter() throws Exception {
+    void theWeblogQueryParameterIsIgnoredWhenThePathNamesTheWeblog() throws Exception {
         authenticateWithScope("B", ApiToken.Role.POST);
-
-        mockMvc.perform(get("/api/v1/weblogs/B/entries?weblog=A")
-                        .servletPath("/api").pathInfo("/v1/weblogs/B/entries"))
-                .andExpect(status().isNotFound());
-    }
-
-    /**
-     * The mirror image of the case above: a token scoped to A, reached via
-     * a path segment that says B but a weblog= query parameter that says A,
-     * must be ALLOWED -- because the effective, permission-checked target is
-     * A, which the token really is scoped for. A naive path-only ceiling
-     * would wrongly compare "A" against the path's "B" and refuse this.
-     */
-    @Test
-    void aTokenScopedToTheQueryParameterWeblogIsNotBlockedByADifferentPathHandle() throws Exception {
-        authenticateWithScope("A", ApiToken.Role.POST);
 
         mockMvc.perform(get("/api/v1/weblogs/B/entries?weblog=A")
                         .servletPath("/api").pathInfo("/v1/weblogs/B/entries"))
                 .andExpect(status().isOk())
                 .andExpect(result -> assertEquals("ok:B", result.getResponse().getContentAsString()));
+    }
+
+    /**
+     * The unsafe twin, and the one this round of fixes exists for: a token
+     * scoped to A must not be able to reach weblog B's resources by naming A
+     * in the query string while the path -- what the handler actually reads
+     * and acts on -- says B. Before the precedence fix, the query parameter
+     * won: the ceiling and the permission check both agreed to compare
+     * against A (a match, since the token really is scoped to A) while
+     * {@code ProbeApi.entries(@PathVariable("handle") String handle)} --
+     * exactly the shape the real Task 8-17 weblog-scoped controllers will
+     * be written in -- received {@code handle="B"} and acted on B. That was
+     * asserted green. It no longer is: refused with 404 no matter what the
+     * query parameter says, because the path is now the only thing this
+     * resolves to.
+     */
+    @Test
+    void aTokenScopedToADifferentWeblogIsRefusedNoMatterWhatTheQueryParameterSays() throws Exception {
+        authenticateWithScope("A", ApiToken.Role.POST);
+
+        mockMvc.perform(get("/api/v1/weblogs/B/entries?weblog=A")
+                        .servletPath("/api").pathInfo("/v1/weblogs/B/entries"))
+                .andExpect(status().isNotFound());
     }
 }
