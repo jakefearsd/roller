@@ -47,13 +47,22 @@ public final class RenderingTestSupport {
 
     public static synchronized void ensureRenderingRuntime() throws Exception {
         TestUtils.setupWeblogger();
+        // The context URLs are JVM-global static state on WebloggerRuntimeConfig,
+        // and three unrelated test classes null the absolute one out in their
+        // teardown (URLModelTest, PreviewModelsTest, SiteModelTest, all under
+        // ui.rendering.model) rather than restoring the prior value the way
+        // PageModelTest does. If any of those runs before a rendering test in
+        // this JVM, the guard below would otherwise skip re-setting the URLs
+        // and every rendering test after it would render null-prefixed links.
+        // So these two calls run on every invocation, not just the first --
+        // do not move them back inside the runtimeReady guard.
+        WebloggerRuntimeConfig.setAbsoluteContextURL("http://localhost:8080/roller");
+        WebloggerRuntimeConfig.setRelativeContextURL("/roller");
         if (runtimeReady) {
             return;
         }
         installServletContext();
         JspFactory.setDefaultFactory(new MapBackedJspFactory());
-        WebloggerRuntimeConfig.setAbsoluteContextURL("http://localhost:8080/roller");
-        WebloggerRuntimeConfig.setRelativeContextURL("/roller");
         runtimeReady = true;
     }
 
