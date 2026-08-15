@@ -7,7 +7,6 @@ import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.restapi.ApiExceptionHandler;
 import org.apache.roller.weblogger.ui.restapi.auth.ApiPrincipal;
-import org.apache.roller.weblogger.util.TokenGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -86,17 +85,59 @@ class TokensApiTest {
     /**
      * Revoking an id the caller does not own answers 404, not 403 -- a 403
      * would confirm the id exists and let one user enumerate another's tokens.
+     *
+     * <p>Basic-authenticated, not Bearer: a Bearer caller is refused before
+     * ownership is even checked (see {@code aBearerAuthenticatedCallerCannotRevokeATokenEither}).
      */
     @Test
     void revokingSomeoneElsesTokenIs404() throws Exception {
-        authenticateWithABearerToken();
+        authenticateWithBasicAuth();
 
         Weblogger weblogger = mockedWeblogger();
+        when(weblogger.getUserManager().getUserByUserName("owner")).thenReturn(new User());
         when(weblogger.getApiTokenManager().revoke(any(), anyString())).thenReturn(false);
 
         mockMvc(new TokensApi(weblogger))
                 .perform(delete("/v1/tokens/{id}", "someone-elses-id"))
                 .andExpect(status().isNotFound());
+    }
+
+    /**
+     * A leaked, merely-POST-scoped token must not be able to reshape its
+     * owner's whole token set -- enumerate every token via GET, or revoke
+     * any of them (including an ADMIN one) via DELETE -- any more than it
+     * can mint a new one. The whole {@code /v1/tokens} resource is
+     * Basic-only, the same as issue().
+     */
+    @Test
+    void aBearerAuthenticatedCallerCannotListTokens() throws Exception {
+        authenticateWithABearerToken();
+        // The Bearer caller resolves to a real, valid user -- so the only
+        // way this can 403 is the explicit Basic-only guard, not an
+        // incidental user-lookup miss.
+        Weblogger weblogger = mockedWeblogger();
+        when(weblogger.getUserManager().getUserByUserName("agent")).thenReturn(new User());
+
+        mockMvc(new TokensApi(weblogger))
+                .perform(get("/v1/tokens"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+
+    @Test
+    void aBearerAuthenticatedCallerCannotRevokeATokenEither() throws Exception {
+        authenticateWithABearerToken();
+        // The Bearer caller resolves to a real user AND owns the token being
+        // revoked -- so the only way this can 403 (rather than a 204
+        // success) is the explicit Basic-only guard.
+        Weblogger weblogger = mockedWeblogger();
+        when(weblogger.getUserManager().getUserByUserName("agent")).thenReturn(new User());
+        when(weblogger.getApiTokenManager().revoke(any(), anyString())).thenReturn(true);
+
+        mockMvc(new TokensApi(weblogger))
+                .perform(delete("/v1/tokens/{id}", "some-id"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
 
     /**
@@ -108,6 +149,12 @@ class TokensApiTest {
      * must appear exactly once, in {@code token}, and never inside {@code
      * info} -- a token echoed into both would be a real leak that a looser
      * assertion (e.g. just checking {@code token} is present) would miss.
+     *
+     * <p>{@code issueToken} returns the persisted row directly (an {@code
+     * ApiTokenManager.Issued}), not just the raw secret -- there is no
+     * digest read-back here to go wrong, on purpose: that read-back used to
+     * be able to miss and NPE away an already-committed, now-undiscoverable
+     * credential (see {@code ApiTokenManager.Issued}'s own javadoc).
      */
     @Test
     void mintingATokenReturnsTheSecretOnceAndNeverInTheMetadataView() throws Exception {
@@ -120,19 +167,16 @@ class TokensApiTest {
         when(weblogger.getUserManager().getUserByUserName("owner")).thenReturn(owner);
 
         String rawToken = "rlr_knownRawSecretForTest";
-        when(weblogger.getApiTokenManager()
-                .issueToken(any(), anyString(), any(), any(), any()))
-                .thenReturn(rawToken);
-
         ApiToken persisted = new ApiToken();
         persisted.setId("token-1");
         persisted.setUser(owner);
         persisted.setLabel("seo-agent");
-        persisted.setTokenSha256(TokenGenerator.sha256Hex(rawToken));
         persisted.setScopeWeblog("testblog");
         persisted.setScopeRole(ApiToken.Role.POST);
         persisted.setCreated(new Timestamp(System.currentTimeMillis()));
-        when(weblogger.getApiTokenManager().getTokens(owner)).thenReturn(List.of(persisted));
+        when(weblogger.getApiTokenManager()
+                .issueToken(any(), anyString(), any(), any(), any()))
+                .thenReturn(new ApiTokenManager.Issued(rawToken, persisted));
 
         String response = mockMvc(new TokensApi(weblogger))
                 .perform(post("/v1/tokens")

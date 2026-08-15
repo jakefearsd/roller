@@ -35,10 +35,23 @@ public interface ApiTokenManager {
     String TOKEN_PREFIX = "rlr_";
 
     /**
-     * Mints a token and returns the raw secret. This is the only time the
-     * secret exists outside the caller's hands -- only its digest is stored.
+     * The result of minting a token: the one-time raw secret (never stored,
+     * never retrievable again) alongside the persisted row it belongs to.
+     * Returning both avoids a caller having to read the row back by some
+     * other key just to describe what it minted -- a read-back that can
+     * miss (see {@code ApiTokenManager.issueToken}'s history: a caller once
+     * matched the digest of the raw secret against {@code getTokens(user)}
+     * to find it again, which meant a miss null-dereferenced a live,
+     * already-committed credential the raw secret for which had already
+     * been discarded).
      */
-    String issueToken(User user, String label, String scopeWeblog,
+    record Issued(String rawToken, ApiToken token) { }
+
+    /**
+     * Mints a token. {@link Issued#rawToken()} is the only time the secret
+     * exists outside the caller's hands -- only its digest is stored.
+     */
+    Issued issueToken(User user, String label, String scopeWeblog,
                       ApiToken.Role role, Timestamp expiresAt) throws WebloggerException;
 
     /** The token behind this secret, or null if unknown, expired or revoked. */

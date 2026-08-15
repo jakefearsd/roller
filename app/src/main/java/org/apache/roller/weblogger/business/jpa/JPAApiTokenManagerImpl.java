@@ -48,7 +48,7 @@ public class JPAApiTokenManagerImpl implements ApiTokenManager {
     }
 
     @Override
-    public String issueToken(User user, String label, String scopeWeblog,
+    public Issued issueToken(User user, String label, String scopeWeblog,
                              ApiToken.Role role, Timestamp expiresAt) throws WebloggerException {
         String raw = ApiTokenManager.TOKEN_PREFIX + TokenGenerator.newToken();
         ApiToken token = new ApiToken();
@@ -60,7 +60,7 @@ public class JPAApiTokenManagerImpl implements ApiTokenManager {
         token.setCreated(new Timestamp(System.currentTimeMillis()));
         token.setExpiresAt(expiresAt);
         strategy.store(token);
-        return raw;
+        return new Issued(raw, token);
     }
 
     @Override

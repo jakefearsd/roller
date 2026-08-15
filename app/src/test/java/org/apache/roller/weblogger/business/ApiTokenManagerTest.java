@@ -30,10 +30,13 @@ class ApiTokenManagerTest {
 
     @Test
     void anIssuedTokenAuthenticatesAndCarriesItsScope() throws Exception {
-        String raw = mgr.issueToken(user, "seo-agent", "testblog", ApiToken.Role.POST, null);
+        ApiTokenManager.Issued issued = mgr.issueToken(user, "seo-agent", "testblog", ApiToken.Role.POST, null);
         TestUtils.endSession(true);
 
+        String raw = issued.rawToken();
         assertTrue(raw.startsWith("rlr_"), "tokens are prefixed so they are recognisable in logs");
+        assertEquals("testblog", issued.token().getScopeWeblog(),
+                "the returned row is the same one that was persisted");
 
         ApiToken found = mgr.authenticate(raw);
         assertNotNull(found);
@@ -44,7 +47,7 @@ class ApiTokenManagerTest {
     /** A database read must never yield a working credential. */
     @Test
     void theRawTokenIsNeverStored() throws Exception {
-        String raw = mgr.issueToken(user, "label", null, ApiToken.Role.READ, null);
+        String raw = mgr.issueToken(user, "label", null, ApiToken.Role.READ, null).rawToken();
         TestUtils.endSession(true);
 
         ApiToken stored = mgr.authenticate(raw);
@@ -56,7 +59,7 @@ class ApiTokenManagerTest {
     @Test
     void anExpiredTokenDoesNotAuthenticate() throws Exception {
         Timestamp past = new Timestamp(System.currentTimeMillis() - 1000L);
-        String raw = mgr.issueToken(user, "expired", null, ApiToken.Role.READ, past);
+        String raw = mgr.issueToken(user, "expired", null, ApiToken.Role.READ, past).rawToken();
         TestUtils.endSession(true);
 
         assertNull(mgr.authenticate(raw));
@@ -64,7 +67,7 @@ class ApiTokenManagerTest {
 
     @Test
     void aRevokedTokenDoesNotAuthenticate() throws Exception {
-        String raw = mgr.issueToken(user, "doomed", null, ApiToken.Role.ADMIN, null);
+        String raw = mgr.issueToken(user, "doomed", null, ApiToken.Role.ADMIN, null).rawToken();
         TestUtils.endSession(true);
 
         ApiToken issued = mgr.authenticate(raw);
@@ -80,7 +83,7 @@ class ApiTokenManagerTest {
     void revokeRefusesATokenOwnedBySomeoneElse() throws Exception {
         User other = TestUtils.setupUser("apitokenotheruser");
         TestUtils.endSession(true);
-        String raw = mgr.issueToken(user, "mine", null, ApiToken.Role.READ, null);
+        String raw = mgr.issueToken(user, "mine", null, ApiToken.Role.READ, null).rawToken();
         TestUtils.endSession(true);
         ApiToken mine = mgr.authenticate(raw);
         assertNotNull(mine);

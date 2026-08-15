@@ -2,13 +2,13 @@ package org.apache.roller.weblogger.ui.restapi.auth;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
 import org.apache.roller.weblogger.pojos.ApiToken;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.web.servlet.HandlerMapping;
 
 /**
  * Applies the token's ceiling on top of the permission checks
@@ -16,6 +16,22 @@ import org.springframework.web.servlet.HandlerMapping;
  *
  * <p>This narrows; it never grants. A request that passes here still has to
  * satisfy the caller's real GlobalPermission/WeblogPermission.
+ *
+ * <p><b>Must be registered (see {@code WebMvcConfig}) AFTER
+ * RollerHandlerInterceptor.</b> The weblog-scope check below reads
+ * {@code request.getAttribute("actionWeblog")} -- the SAME weblog
+ * RollerHandlerInterceptor resolved and will enforce permissions against --
+ * rather than re-deriving its own answer from the {@code {handle}} URI
+ * template variable. Comparing against the path directly would let a
+ * request whose {@code weblog} query parameter names a DIFFERENT weblog
+ * than its path segment pass the ceiling check while the permission check
+ * (and the business logic behind it) acts on the query-parameter weblog
+ * instead: the ceiling and the enforcement would be looking at two
+ * different targets, and a token scoped to weblog B could act on weblog A
+ * by naming B in the path and A in {@code ?weblog=}.
+ * {@code ApiScopeInterceptorDispatchTest} dispatches real requests through
+ * the real {@code WebMvcConfig} registration and pins both the ordering and
+ * this exact scenario.
  */
 public class ApiScopeInterceptor implements HandlerInterceptor {
 
@@ -27,22 +43,40 @@ public class ApiScopeInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String handle = pathHandle(request);
-        if (principal.scopeWeblog() != null
-                && handle != null
-                && !principal.scopeWeblog().equals(handle)) {
-            // 404 rather than 403: a 403 confirms the weblog exists.
-            throw ApiException.notFound("No such weblog.");
+        if (principal.scopeWeblog() != null) {
+            checkWeblogScope(request, handler, principal.scopeWeblog());
         }
 
         ApiToken.Role role = principal.scopeRole();
-        if (isAdminPath(request) && role != ApiToken.Role.ADMIN) {
+        if (isAdminScoped(handler) && role != ApiToken.Role.ADMIN) {
             throw ApiException.forbidden("This token is not scoped for administration.");
         }
-        if (!isRead(request) && role == ApiToken.Role.READ) {
+        if (isWrite(request) && !mayWrite(role)) {
             throw ApiException.forbidden("This token is read-only.");
         }
         return true;
+    }
+
+    /**
+     * A scoped token is a ceiling, so a route this check cannot evaluate
+     * must not silently become unlimited. If RollerHandlerInterceptor
+     * resolved a weblog, the token's scope must match it (404, not 403 -- a
+     * 403 would confirm the weblog exists). If it resolved none at all --
+     * the route names its resource some other way, as {@code /v1/tokens}
+     * does -- the default is deny, with an explicit, narrow exception for
+     * the handful of routes that must work for every token regardless of
+     * scope (see {@link WeblogScopeExempt}).
+     */
+    private static void checkWeblogScope(HttpServletRequest request, Object handler, String scopeWeblog) {
+        if (request.getAttribute("actionWeblog") instanceof Weblog weblog) {
+            if (!scopeWeblog.equals(weblog.getHandle())) {
+                throw ApiException.notFound("No such weblog.");
+            }
+            return;
+        }
+        if (!isWeblogScopeExempt(handler)) {
+            throw ApiException.notFound("No such weblog.");
+        }
     }
 
     private static ApiPrincipal currentPrincipal() {
@@ -53,21 +87,36 @@ public class ApiScopeInterceptor implements HandlerInterceptor {
         return auth.getDetails() instanceof ApiPrincipal p ? p : null;
     }
 
-    private static String pathHandle(HttpServletRequest request) {
-        Object vars = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-        if (vars instanceof Map<?, ?> map && map.get("handle") instanceof String s && !s.isBlank()) {
-            return s;
-        }
-        return null;
+    /**
+     * Decided from the resolved handler, never the request URI.
+     * {@code getRequestURI()} is undecoded per the servlet spec while Spring
+     * routes on decoded, semicolon-stripped segments, so a string match
+     * (e.g. {@code startsWith("/v1/admin/")}) can be defeated by
+     * {@code /v1/%61dmin/users} or {@code /v1/admin;x=1/users} while the
+     * request still reaches a controller mapped at {@code /v1/admin/users}.
+     */
+    private static boolean isAdminScoped(Object handler) {
+        return handler instanceof HandlerMethod handlerMethod
+                && handlerMethod.getBeanType().isAnnotationPresent(AdminScoped.class);
     }
 
-    private static boolean isAdminPath(HttpServletRequest request) {
-        String path = request.getRequestURI().substring(request.getContextPath().length());
-        return path.startsWith("/api/v1/admin/");
+    private static boolean isWeblogScopeExempt(Object handler) {
+        return handler instanceof HandlerMethod handlerMethod
+                && handlerMethod.getMethod().isAnnotationPresent(WeblogScopeExempt.class);
     }
 
-    private static boolean isRead(HttpServletRequest request) {
+    /**
+     * Allowlist, not denylist: only a role affirmatively known to write is
+     * treated as permitted to. A denylist keyed on {@code role == READ}
+     * defaults an unexpected {@code null} or a future enum value to
+     * write-permitted; this defaults it to read-only instead.
+     */
+    private static boolean mayWrite(ApiToken.Role role) {
+        return role == ApiToken.Role.POST || role == ApiToken.Role.ADMIN;
+    }
+
+    private static boolean isWrite(HttpServletRequest request) {
         String method = request.getMethod();
-        return "GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method);
+        return !("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method));
     }
 }

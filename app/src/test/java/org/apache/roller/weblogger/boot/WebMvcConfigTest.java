@@ -61,8 +61,18 @@ class WebMvcConfigTest {
 
     /**
      * The scope interceptor narrows the token's ceiling on top of whatever
-     * RollerHandlerInterceptor already decided, so it must run for /api/**
+     * RollerHandlerInterceptor already decided, so it must run for /v1/**
      * -- and only there, since it has nothing to enforce on the JSP UI.
+     *
+     * <p><b>"/v1/**", not "/api/**".</b> ServletRegistrationConfig's
+     * {@code API_URL_PATTERNS} ("/api/*") is a servlet-spec prefix mapping,
+     * so the container strips "/api" before the request reaches Spring
+     * MVC's lookup path -- {@code addPathPatterns} matches against that same
+     * stripped path. "/api/**" shipped here once and matched nothing, ever;
+     * this test only pins the string the code passes, which is exactly why
+     * it did not catch that. {@link ApiScopeInterceptorDispatchTest} is the
+     * real gate -- it dispatches an actual request through this exact
+     * registration and would have failed.
      */
     @Test
     void addsTheApiScopeInterceptorScopedToApiPaths() {
@@ -74,7 +84,7 @@ class WebMvcConfigTest {
         config.addInterceptors(registry);
 
         verify(registry).addInterceptor(org.mockito.ArgumentMatchers.isA(ApiScopeInterceptor.class));
-        verify(registration).addPathPatterns("/api/**");
+        verify(registration).addPathPatterns("/v1/**");
     }
 
     @Test

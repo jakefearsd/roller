@@ -1,6 +1,9 @@
 package org.apache.roller.weblogger.ui.restapi.auth;
 
+import java.lang.reflect.Method;
+import java.util.List;
 import org.apache.roller.weblogger.pojos.ApiToken;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -8,11 +11,19 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.servlet.HandlerMapping;
-import java.util.List;
-import java.util.Map;
+import org.springframework.web.method.HandlerMethod;
+
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * {@code ApiScopeInterceptorDispatchTest} is the end-to-end gate (a real
+ * request through the real {@code WebMvcConfig} registration and a real
+ * {@code {handle}}-carrying route). This class is the fast, precise unit
+ * coverage of {@link ApiScopeInterceptor}'s own decision logic in isolation
+ * -- in particular the {@link AdminScoped}/{@link WeblogScopeExempt}
+ * annotation checks, which need a real resolved {@link HandlerMethod} (not a
+ * URI) to have anything to inspect.
+ */
 class ApiScopeInterceptorTest {
 
     private final ApiScopeInterceptor interceptor = new ApiScopeInterceptor();
@@ -22,12 +33,55 @@ class ApiScopeInterceptorTest {
         SecurityContextHolder.clearContext();
     }
 
-    private static MockHttpServletRequest request(String method, String uri, String handle,
+    // ---- stand-in controllers, wrapped as real HandlerMethods so the
+    // annotation checks (read off the resolved handler, never the URI) have
+    // something real to inspect ----
+
+    static class PlainApi {
+        void handle() { }
+    }
+
+    @AdminScoped
+    static class AdminApi {
+        void handle() { }
+    }
+
+    static class WeblogLessApi {
+        @WeblogScopeExempt
+        void exempt() { }
+        void notExempt() { }
+    }
+
+    private static final HandlerMethod PLAIN = handlerMethod(new PlainApi(), "handle");
+    private static final HandlerMethod ADMIN = handlerMethod(new AdminApi(), "handle");
+    private static final HandlerMethod EXEMPT = handlerMethod(new WeblogLessApi(), "exempt");
+    private static final HandlerMethod NOT_EXEMPT = handlerMethod(new WeblogLessApi(), "notExempt");
+
+    private static HandlerMethod handlerMethod(Object bean, String methodName) {
+        try {
+            Method method = bean.getClass().getDeclaredMethod(methodName);
+            return new HandlerMethod(bean, method);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static Weblog weblog(String handle) {
+        Weblog weblog = new Weblog();
+        weblog.setHandle(handle);
+        return weblog;
+    }
+
+    /**
+     * {@code actionWeblog} is the request attribute RollerHandlerInterceptor
+     * sets, not a URI template variable -- see the class javadoc on
+     * {@link ApiScopeInterceptor} for why the check reads it from there.
+     */
+    private static MockHttpServletRequest request(String method, Weblog actionWeblog,
                                                   String scopeWeblog, ApiToken.Role role) {
-        MockHttpServletRequest request = new MockHttpServletRequest(method, uri);
-        if (handle != null) {
-            request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE,
-                    Map.of("handle", handle));
+        MockHttpServletRequest request = new MockHttpServletRequest(method, "/v1/probe");
+        if (actionWeblog != null) {
+            request.setAttribute("actionWeblog", actionWeblog);
         }
         var auth = new UsernamePasswordAuthenticationToken("agent", null, List.of());
         auth.setDetails(new ApiPrincipal("agent", scopeWeblog, role));
@@ -37,42 +91,60 @@ class ApiScopeInterceptorTest {
 
     @Test
     void aTokenScopedToOneWeblogCannotReachAnother() {
-        MockHttpServletRequest request =
-                request("GET", "/api/v1/weblogs/other/entries", "other", "testblog", ApiToken.Role.POST);
+        MockHttpServletRequest request = request("GET", weblog("other"), "testblog", ApiToken.Role.POST);
 
         ApiException thrown = assertThrows(ApiException.class,
-                () -> interceptor.preHandle(request, new MockHttpServletResponse(), new Object()));
+                () -> interceptor.preHandle(request, new MockHttpServletResponse(), PLAIN));
         // 404, not 403: a 403 would confirm that 'other' exists.
         assertEquals(404, thrown.getStatus());
     }
 
     @Test
+    void aTokenScopedToTheResolvedWeblogPasses() {
+        MockHttpServletRequest request = request("GET", weblog("testblog"), "testblog", ApiToken.Role.READ);
+
+        assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), PLAIN));
+    }
+
+    @Test
     void aReadTokenCannotWrite() {
-        MockHttpServletRequest request =
-                request("POST", "/api/v1/weblogs/testblog/entries", "testblog", "testblog", ApiToken.Role.READ);
+        MockHttpServletRequest request = request("POST", weblog("testblog"), "testblog", ApiToken.Role.READ);
 
         ApiException thrown = assertThrows(ApiException.class,
-                () -> interceptor.preHandle(request, new MockHttpServletResponse(), new Object()));
+                () -> interceptor.preHandle(request, new MockHttpServletResponse(), PLAIN));
+        assertEquals(403, thrown.getStatus());
+    }
+
+    /**
+     * The allowlist fix: a null role must not default to write-permitted.
+     * Under the old {@code role == READ} denylist, {@code null == READ} is
+     * false, so a null role was wrongly treated as permitted to write.
+     */
+    @Test
+    void aNullRoleCannotWrite() {
+        MockHttpServletRequest request = request("POST", weblog("testblog"), "testblog", null);
+
+        ApiException thrown = assertThrows(ApiException.class,
+                () -> interceptor.preHandle(request, new MockHttpServletResponse(), PLAIN));
         assertEquals(403, thrown.getStatus());
     }
 
     @Test
-    void aPostTokenMayWriteContentButNotReachAdminPaths() throws Exception {
-        assertTrue(interceptor.preHandle(
-                request("POST", "/api/v1/weblogs/testblog/entries", "testblog", "testblog", ApiToken.Role.POST),
-                new MockHttpServletResponse(), new Object()));
+    void aPostTokenMayWriteContentButNotReachAnAdminScopedController() {
+        MockHttpServletRequest write = request("POST", weblog("testblog"), "testblog", ApiToken.Role.POST);
+        assertTrue(interceptor.preHandle(write, new MockHttpServletResponse(), PLAIN));
 
-        ApiException thrown = assertThrows(ApiException.class, () -> interceptor.preHandle(
-                request("POST", "/api/v1/admin/users", null, null, ApiToken.Role.POST),
-                new MockHttpServletResponse(), new Object()));
+        MockHttpServletRequest adminRequest = request("POST", null, null, ApiToken.Role.POST);
+        ApiException thrown = assertThrows(ApiException.class, () ->
+                interceptor.preHandle(adminRequest, new MockHttpServletResponse(), ADMIN));
         assertEquals(403, thrown.getStatus());
     }
 
     @Test
-    void anUnscopedAdminTokenPasses() throws Exception {
-        assertTrue(interceptor.preHandle(
-                request("POST", "/api/v1/admin/users", null, null, ApiToken.Role.ADMIN),
-                new MockHttpServletResponse(), new Object()));
+    void anUnscopedAdminTokenPasses() {
+        MockHttpServletRequest request = request("POST", null, null, ApiToken.Role.ADMIN);
+
+        assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), ADMIN));
     }
 
     /**
@@ -81,8 +153,40 @@ class ApiScopeInterceptorTest {
      * ceiling -- it defers entirely to RollerHandlerInterceptor.
      */
     @Test
-    void aRequestWithNoApiPrincipalIsLeftAlone() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/ping");
-        assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), new Object()));
+    void aRequestWithNoApiPrincipalIsLeftAlone() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/ping");
+        assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), PLAIN));
+    }
+
+    /**
+     * A scoped token is a ceiling: a route with no weblog for the ceiling to
+     * check against must deny by default, not allow by accident. This is
+     * the fail-open shape that let a POST-scoped token reach {@code
+     * /v1/tokens} (no weblog anywhere in that route) and enumerate or
+     * revoke every token its owner held, including an ADMIN one.
+     */
+    @Test
+    void aScopedTokenIsDeniedOnARouteWithNoWeblogToCheck() {
+        MockHttpServletRequest request = request("GET", null, "testblog", ApiToken.Role.READ);
+
+        ApiException thrown = assertThrows(ApiException.class,
+                () -> interceptor.preHandle(request, new MockHttpServletResponse(), NOT_EXEMPT));
+        assertEquals(404, thrown.getStatus());
+    }
+
+    /** The explicit, narrow exception: a route marked @WeblogScopeExempt still works. */
+    @Test
+    void aScopedTokenReachesAnExplicitlyExemptWeblogLessRoute() {
+        MockHttpServletRequest request = request("GET", null, "testblog", ApiToken.Role.READ);
+
+        assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), EXEMPT));
+    }
+
+    /** An unscoped token was never limited by the weblog check; the exemption is irrelevant to it. */
+    @Test
+    void anUnscopedTokenReachesAWeblogLessRouteRegardless() {
+        MockHttpServletRequest request = request("GET", null, null, ApiToken.Role.READ);
+
+        assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), NOT_EXEMPT));
     }
 }

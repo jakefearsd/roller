@@ -56,7 +56,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new RollerHandlerInterceptor());
-        registry.addInterceptor(new ApiScopeInterceptor()).addPathPatterns("/api/**");
+        // "/v1/**", not "/api/**": ServletRegistrationConfig.API_URL_PATTERNS
+        // ("/api/*") is a servlet-spec PREFIX mapping, so the container
+        // strips "/api" before the request ever reaches Spring MVC's lookup
+        // path -- the same reason every API controller is @RequestMapping'd
+        // at "/v1/...", not "/api/v1/...". addPathPatterns matches against
+        // that same stripped path, so "/api/**" here never matches anything
+        // and the whole ceiling was inert. See ApiScopeInterceptorDispatchTest,
+        // which dispatches a real request through this exact registration
+        // (not a mock) and is what would have caught this.
+        registry.addInterceptor(new ApiScopeInterceptor()).addPathPatterns("/v1/**");
     }
 
     /**
