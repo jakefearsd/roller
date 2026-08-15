@@ -34,6 +34,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.HandlerMapping;
+
+import java.util.Map;
 
 /**
  * Spring MVC interceptor that replaces the Struts 2 UISecurityInterceptor,
@@ -80,8 +83,8 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
             request.setAttribute("authenticatedUser", authenticatedUser);
         }
 
-        // --- 2. Resolve weblog from request parameter ---
-        String weblogHandle = request.getParameter("weblog");
+        // --- 2. Resolve weblog from request parameter or URI template ---
+        String weblogHandle = resolveWeblogHandle(request);
         Weblog actionWeblog = null;
         if (weblogHandle != null && !weblogHandle.isBlank()) {
             try {
@@ -163,6 +166,33 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
         }
 
         return true;
+    }
+
+    /**
+     * The action weblog's handle for this request.
+     *
+     * <p>The JSP UI submits it as a {@code weblog} request parameter; the REST
+     * API carries it as a {@code handle} URI template variable. Spring MVC
+     * populates URI_TEMPLATE_VARIABLES_ATTRIBUTE during getHandler(), before
+     * any interceptor runs, so both are readable here -- which is what lets
+     * one interceptor enforce permissions for both surfaces instead of the API
+     * growing a second, divergent implementation.
+     *
+     * <p>Package-visible and static so it can be tested without a container.
+     */
+    static String resolveWeblogHandle(HttpServletRequest request) {
+        String handle = request.getParameter("weblog");
+        if (handle != null && !handle.isBlank()) {
+            return handle;
+        }
+        Object vars = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (vars instanceof Map<?, ?> map) {
+            Object fromPath = map.get("handle");
+            if (fromPath instanceof String s && !s.isBlank()) {
+                return s;
+            }
+        }
+        return null;
     }
 
     /**

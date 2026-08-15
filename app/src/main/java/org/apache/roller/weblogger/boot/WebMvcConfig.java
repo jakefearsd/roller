@@ -18,6 +18,7 @@ package org.apache.roller.weblogger.boot;
 
 import org.apache.roller.weblogger.ui.controllers.RollerHandlerInterceptor;
 import org.apache.roller.weblogger.ui.controllers.RollerViewResolver;
+import org.apache.roller.weblogger.ui.restapi.auth.ApiScopeInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -55,6 +56,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new RollerHandlerInterceptor());
+        registry.addInterceptor(new ApiScopeInterceptor()).addPathPatterns("/api/**");
     }
 
     /**

@@ -21,8 +21,10 @@ import java.util.Set;
 
 import org.apache.roller.weblogger.ui.controllers.RollerHandlerInterceptor;
 import org.apache.roller.weblogger.ui.controllers.RollerViewResolver;
+import org.apache.roller.weblogger.ui.restapi.auth.ApiScopeInterceptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -48,10 +50,31 @@ class WebMvcConfigTest {
     @Test
     void addsTheRollerHandlerInterceptor() {
         InterceptorRegistry registry = mock(InterceptorRegistry.class);
+        InterceptorRegistration registration = mock(InterceptorRegistration.class);
+        when(registry.addInterceptor(org.mockito.ArgumentMatchers.isA(ApiScopeInterceptor.class)))
+                .thenReturn(registration);
 
         config.addInterceptors(registry);
 
         verify(registry).addInterceptor(org.mockito.ArgumentMatchers.isA(RollerHandlerInterceptor.class));
+    }
+
+    /**
+     * The scope interceptor narrows the token's ceiling on top of whatever
+     * RollerHandlerInterceptor already decided, so it must run for /api/**
+     * -- and only there, since it has nothing to enforce on the JSP UI.
+     */
+    @Test
+    void addsTheApiScopeInterceptorScopedToApiPaths() {
+        InterceptorRegistry registry = mock(InterceptorRegistry.class);
+        InterceptorRegistration registration = mock(InterceptorRegistration.class);
+        when(registry.addInterceptor(org.mockito.ArgumentMatchers.isA(ApiScopeInterceptor.class)))
+                .thenReturn(registration);
+
+        config.addInterceptors(registry);
+
+        verify(registry).addInterceptor(org.mockito.ArgumentMatchers.isA(ApiScopeInterceptor.class));
+        verify(registration).addPathPatterns("/api/**");
     }
 
     @Test
