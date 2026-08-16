@@ -1461,3 +1461,12 @@ in). `/api/v1` is explicitly unstable while Roller is 0.x.
   `docs/api/README.md` as text — that v1 is unstable, and that
   `roller-api auth login` is the bootstrap path — because both are things a
   reader cannot recover on their own from the OpenAPI document itself.
+- **`RollerHandlerInterceptor`'s `import ...ui.restapi.ApiException` is the
+  ONE permitted import from `ui.restapi` into `ui.controllers`, and it must
+  stay the only one.** The dependency points the wrong way on purpose: the
+  interceptor is genuinely shared by both surfaces, and the alternative — a
+  second interceptor for `/api/**` — is exactly the parallel authorization
+  path this wave exists to avoid. Anything *else* that wants REST types in
+  the JSP packages is a signal the seam is being drawn in the wrong place.
+  `grep -r "import org.apache.roller.weblogger.ui.restapi" app/src/main/java/
+  org/apache/roller/weblogger/ui/controllers/` must return exactly one line.
