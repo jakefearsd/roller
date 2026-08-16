@@ -70,10 +70,31 @@ limitations under the License.
 
         <it.context.path>roller</it.context.path>
 
-        <!-- start-app.sh/stop-app.sh bookkeeping. -->
+        <!-- ONE ID PER RUN, stamped into every process, file, directory and
+             container this module creates. It is what makes cleanup
+             identity-based rather than pidfile-based: an app JVM carries it as
+             -Droller.it.run=<id> on its command line, so it can be found again
+             after any file has been lost, and a container carries it in its
+             name, so "whose is this?" always has an answer. See
+             src/test/script/it-harness-lib.sh.
+
+             Timestamp plus the reserved HTTP port: the timestamp separates
+             sequential runs (whose ports may repeat), the port separates
+             concurrent ones (which share a second). -->
+        <maven.build.timestamp.format>yyyyMMdd-HHmmss</maven.build.timestamp.format>
+        <it.build.timestamp>${maven.build.timestamp}</it.build.timestamp>
+        <it.run.id>${it.build.timestamp}-${it.http.port}</it.run.id>
+
+        <!-- Per-run, never shared. A single fixed app.pid was truncated by
+             every run, so run N+1 destroyed the only record of run N's leaked
+             JVM; a single fixed app.log destroyed its diagnostics the same
+             way. start-app.sh symlinks it-work/app-latest.log at the newest
+             one for convenience. -->
+        <it.work.dir>${project.build.directory}/it-work</it.work.dir>
         <it.app.war>${project.basedir}/../app/target/roller.war</it.app.war>
-        <it.app.pidfile>${project.build.directory}/it-work/app.pid</it.app.pidfile>
-        <it.app.log>${project.build.directory}/it-work/app.log</it.app.log>
+        <it.app.pidfile>${it.work.dir}/app-${it.run.id}.pid</it.app.pidfile>
+        <it.app.log>${it.work.dir}/app-${it.run.id}.log</it.app.log>
+        <it.db.container-name>${it.db.container-alias}-${it.run.id}</it.db.container-name>
     </properties>
 
     <dependencies>
@@ -159,29 +180,68 @@ limitations under the License.
                 </executions>
             </plugin>
 
-            <!-- app-stop, via maven-antrun-plugin rather than exec-maven-plugin
-                 (which does the launching below): both this and docker-maven-plugin
-                 bind an execution to post-integration-test, and Maven runs same-phase
-                 executions in the order their owning <plugin> elements appear in this
-                 file, so app-stop must be declared before docker-maven-plugin to win
-                 that race; the app process (and its DB connections) must be gone
-                 before pg-stop tears down the container it is talking to. exec-maven-
-                 plugin cannot be reused for this: it already appears later in this file
-                 (bound to pre-integration-test, where its executions must instead run
-                 AFTER docker-maven-plugin's pg-start), and declaring the same plugin
-                 GAV twice does not give two independently-positioned instances: Maven
-                 merges duplicate <plugin> declarations into one, scheduled at the
-                 position of the *first* occurrence, which would then run every
-                 exec-maven-plugin execution (including the pre-integration-test ones
-                 declared in the second block) before docker-maven-plugin's pg-start.
-                 Confirmed via `mvn help:effective-pom`: the merge silently reorders
-                 pg-wait-ready ahead of pg-start. A different plugin artifact avoids the
-                 merge entirely. -->
+            <!-- Everything that must bracket docker-maven-plugin, via
+                 maven-antrun-plugin rather than exec-maven-plugin (which does the
+                 launching below): Maven runs same-phase executions in the order their
+                 owning <plugin> elements appear in this file, so a plugin declared
+                 before docker-maven-plugin wins both ends of the race: its
+                 pre-integration-test executions run before pg-start, and its
+                 post-integration-test app-stop runs before pg-stop, which matters
+                 because the app (and its DB connections) must be gone before the
+                 container it is talking to. exec-maven-plugin cannot be reused for
+                 this: it already appears later in this file (bound to
+                 pre-integration-test, where its executions must instead run AFTER
+                 pg-start), and declaring the same plugin GAV twice does not give two
+                 independently-positioned instances: Maven merges duplicate <plugin>
+                 declarations into one, scheduled at the position of the *first*
+                 occurrence, which would then run every exec-maven-plugin execution
+                 (including the pre-integration-test ones declared in the second block)
+                 before docker-maven-plugin's pg-start. Confirmed via
+                 `mvn help:effective-pom`: the merge silently reorders pg-wait-ready
+                 ahead of pg-start. A different plugin artifact avoids the merge
+                 entirely. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>${antrun.plugin.version}</version>
                 <executions>
+                    <!-- FIRST thing in the phase, before a container exists: reap what
+                         earlier runs leaked and report it. Nothing else in this build
+                         detects staleness, because build-helper hands out a free port every
+                         run, so leaked app servers never collide and the suite passes
+                         over the top of them, which is how they accumulated unnoticed. -->
+                    <execution>
+                        <id>it-sweep-stale</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <exec executable="${project.basedir}/src/test/script/sweep-stale.sh" failonerror="true">
+                                    <arg value="${it.run.id}"/>
+                                    <arg value="${it.work.dir}"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <!-- Started before pg-start, so it covers every abort from here on:
+                         a pg-wait-ready timeout, a migrate.sh or seed failure, an
+                         app-start timeout, or a Ctrl-C. None of those reach
+                         post-integration-test, where the ordinary cleanup lives. It
+                         detaches immediately and outlives the build. -->
+                    <execution>
+                        <id>it-supervisor</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <exec executable="${project.basedir}/src/test/script/supervise-run.sh" failonerror="true">
+                                    <arg value="${it.run.id}"/>
+                                    <arg value="${it.db.container-name}"/>
+                                    <arg value="${it.work.dir}"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>app-stop</id>
                         <phase>post-integration-test</phase>
@@ -190,6 +250,7 @@ limitations under the License.
                             <target>
                                 <exec executable="${project.basedir}/src/test/script/stop-app.sh" failonerror="true">
                                     <arg value="${it.app.pidfile}"/>
+                                    <arg value="${it.run.id}"/>
                                 </exec>
                             </target>
                         </configuration>
@@ -207,7 +268,13 @@ limitations under the License.
                             <alias>${it.db.container-alias}</alias>
                             <name>${it.postgres.image}</name>
                             <run>
-                                <containerNamePattern>%a</containerNamePattern>
+                                <!-- Per-run name, not the bare alias: two runs on one
+                                     machine used to collide on a single fixed container
+                                     name (a 409 from the daemon, which CLAUDE.md told
+                                     operators to clear by hand), and a fixed name gives
+                                     the sweep no way to tell a corpse from a concurrent
+                                     run's live container. -->
+                                <containerNamePattern>${it.db.container-name}</containerNamePattern>
                                 <ports>
                                     <port>${it.db.port}:5432</port>
                                 </ports>
@@ -245,6 +312,14 @@ limitations under the License.
                         <id>pg-stop</id>
                         <phase>post-integration-test</phase>
                         <goals><goal>stop</goal></goals>
+                        <configuration>
+                            <!-- postgres:16 declares VOLUME /var/lib/postgresql/data, so
+                                 Docker creates an anonymous volume for every IT run.
+                                 removeVolumes defaults to false, which means a
+                                 *successful* run also orphaned one: the only leak here
+                                 that did not need an abort to happen. -->
+                            <removeVolumes>true</removeVolumes>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -340,6 +415,7 @@ limitations under the License.
                                 <argument>${project.build.testOutputDirectory}/roller-it.properties</argument>
                                 <argument>${it.app.pidfile}</argument>
                                 <argument>${it.app.log}</argument>
+                                <argument>${it.run.id}</argument>
                             </arguments>
                         </configuration>
                     </execution>

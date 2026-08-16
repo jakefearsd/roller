@@ -17,6 +17,7 @@
  */
 package org.apache.roller.testing;
 
+import org.testcontainers.lifecycle.Startable;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
@@ -32,6 +33,14 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  * <p>One container per JVM, not per class: starting Postgres costs a second or
  * two, and {@link RollerDatabaseExtension} gives each test a clean database by
  * truncating rather than by recreating the container.
+ *
+ * <p>Nothing stops it, by design: the container lives as long as the JVM does,
+ * and Testcontainers' Ryuk sidecar removes it afterwards. The shutdown hook
+ * below does not change that contract, it just stops relying on Ryuk being the
+ * <em>only</em> thing that can clean up. Ryuk is a single process that can be
+ * absent, and orphaned testcontainers containers with no Ryuk in existence
+ * have been seen on developer machines. The hook covers every exit the JVM
+ * gets to observe; Ryuk still covers the ones it does not (SIGKILL, a crash).
  */
 public final class RollerPostgresContainer {
 
@@ -39,6 +48,8 @@ public final class RollerPostgresContainer {
     private static final String IMAGE = "postgres:16";
 
     private static volatile PostgreSQLContainer container;
+
+    private static volatile Thread shutdownHook;
 
     private RollerPostgresContainer() {
     }
@@ -52,11 +63,35 @@ public final class RollerPostgresContainer {
                             .withUsername("roller")
                             .withPassword("roller");
                     started.start();
+                    Thread hook = new Thread(() -> stopQuietly(started), "roller-postgres-container-stop");
+                    Runtime.getRuntime().addShutdownHook(hook);
+                    shutdownHook = hook;
                     container = started;
                 }
             }
         }
         return container;
+    }
+
+    /** The registered hook, or null if the container has never been started. */
+    static Thread shutdownHook() {
+        return shutdownHook;
+    }
+
+    /**
+     * Stops a container without letting anything escape into JVM shutdown. By
+     * the time this runs the daemon may be gone, the container may already have
+     * been removed by Ryuk, or the network may be torn down; none of that is
+     * worth a stack trace on the way out, and a hook that throws can mask why
+     * the JVM is exiting.
+     */
+    static void stopQuietly(Startable target) {
+        try {
+            target.stop();
+        } catch (RuntimeException | Error problem) {
+            System.err.println("RollerPostgresContainer: could not stop the test container on shutdown ("
+                    + problem + "); Testcontainers' Ryuk sidecar should remove it.");
+        }
     }
 
     public static String getJdbcUrl() {

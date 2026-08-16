@@ -169,9 +169,68 @@ on rerun. Before assuming flake, confirm the `<script>` is still unconditional:
 if someone widens that `<c:if>` to cover EasyMDE, the identical error becomes a
 real breakage on every screen the condition excludes.
 
-A stale `roller-it-postgres` container from a killed IT run makes
-`mvn verify -Pit` fail at `docker-maven-plugin:start` with a 409 name
-conflict, not a test failure. `docker rm -f roller-it-postgres` and re-run.
+### The IT harness cleans up by identity, not by pidfile
+
+Every process, file, directory and container an IT run creates carries that
+run's id (`${it.run.id}` = build timestamp + the reserved HTTP port). The app
+JVM carries it on its own command line as `-Droller.it.run=<id>`, alongside
+`-Droller.it.owner=<pid>@<start time>` naming the Maven build that owns it.
+That is what makes cleanup work when nothing else survives, and it replaced a
+scheme that leaked an app JVM (~840 MB each), a chromedriver and a Docker
+volume on every abnormal run, silently — `build-helper:reserve-network-port`
+hands out a *free* port each time, so leaked servers never collided and no
+build ever failed because of one. Four app JVMs and thirteen chromedrivers
+accumulated that way before anyone looked.
+
+Five things hold it together, all in `it-selenium/src/test/script/`:
+
+- **`start-app.sh` kills what it started on every failure path** (`trap
+  cleanup EXIT`, plus INT/TERM turned into exits). Its readiness timeout used
+  to `exit 1` with the JVM still running, and because it runs in
+  `pre-integration-test`, that exit aborts the build *before*
+  `post-integration-test` — so `app-stop` never ran. Guaranteed permanent leak.
+- **`sweep-stale.sh` runs first in `pre-integration-test`** and reaps what
+  earlier runs left, **reporting every pid and container it takes**. Silence
+  was the actual defect; the reaping only bounds it.
+- **`supervise-run.sh` starts before `pg-start`, detaches, and outlives the
+  build.** Failsafe's split-goal design already protects cleanup from *test*
+  failures; what it cannot protect against is an *infrastructure* failure
+  earlier in `pre-integration-test` (`pg-wait-ready`, `migrate.sh`, the seed,
+  `app-start`) or a Ctrl-C, both of which skip `post-integration-test`
+  entirely. The supervisor kills the run's app, the chromedrivers it recorded
+  while their JVM was alive (they are unattributable afterwards), and the
+  container — `docker rm -f -v`, always with `-v`.
+- **Staleness is decided by the owning build, never by "an IT process
+  exists".** A concurrent `mvn verify -Pit` is legitimate — the random port
+  reservation is what makes it possible — and its processes must survive
+  another run's sweep.
+- **The supervisor marks itself `-Droller.it.supervisor=`, not
+  `-Droller.it.run=`, and the split is load-bearing.** A forked shell subshell
+  (command substitution, either side of a pipeline) shows its *parent's*
+  command line in `ps`, so a supervisor marked as a member of its own run
+  finds its own subshells while enumerating what to kill, and kills those.
+  Observed, not theoretical; `ItHarnessLeakTest` pins it.
+
+Consequences worth knowing: the container is `roller-it-postgres-<run id>`, so
+two runs no longer collide on one fixed name (the 409 that used to need a
+manual `docker rm`), `pg-stop` passes `<removeVolumes>true</removeVolumes>`
+(its default of false orphaned an anonymous volume on *successful* runs too,
+since `postgres:16` declares `VOLUME /var/lib/postgresql/data`), and pidfiles,
+logs and the search/media work dirs are per-run — a shared `app.log` and a
+shared `app.pid` were truncated by the next run, destroying exactly the
+evidence of the run that had just leaked. `it-work/app-latest.log` symlinks
+the newest.
+
+`RollerPostgresContainer` (the unit suite's shared container, which is
+deliberately never stopped) now also registers a JVM shutdown hook as defence
+in depth *behind* Ryuk, not instead of it: Ryuk is one process that can be
+missing, and SIGKILL still leaves it as the only line of defence.
+
+Tests: `ItHarnessLeakTest` (behavioural — drives the real scripts against fake
+processes), `ItHarnessPomTest` (the wiring: `removeVolumes`, per-run names,
+and the plugin declaration order that schedules `app-stop` before `pg-stop`),
+`RollerPostgresContainerTest`. All three are in the fast suite, not under
+`-Pit`, so the harness is covered on every push.
 
 ### Database
 

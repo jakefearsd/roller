@@ -1,36 +1,50 @@
 #!/usr/bin/env bash
-# Stops the Roller process started by start-app.sh: TERM, wait, then KILL if
-# it hasn't exited. Missing/stale pidfile is not a build failure -- the app
-# may never have started (e.g. start-app.sh itself failed first).
+# Stops the Roller process started by start-app.sh: TERM, wait, then KILL if it
+# hasn't exited.
 #
-# Usage: stop-app.sh <pidfile>
+# Works from the run id, not only from the pidfile. A pidfile is a hint that may
+# be missing (the app never started), stale (the pid has been recycled) or --
+# the case that actually bit -- overwritten, back when every run wrote the same
+# app.pid and run N+1 destroyed the only record of run N's leaked JVM. The run
+# marker on the process's own command line cannot be lost that way, so the
+# pidfile is now belt and the marker is braces.
+#
+# Usage: stop-app.sh <pidfile> <run-id>
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=it-harness-lib.sh
+. "$SCRIPT_DIR/it-harness-lib.sh"
+
 PIDFILE="$1"
+RUN_ID="${2:-}"
 
-if [ ! -f "$PIDFILE" ]; then
-    echo "stop-app.sh: no pidfile at $PIDFILE, nothing to stop"
-    exit 0
-fi
+FAILED=0
 
-PID="$(cat "$PIDFILE")"
-
-if ! kill -0 "$PID" 2>/dev/null; then
-    echo "stop-app.sh: pid $PID from $PIDFILE is not running, nothing to stop"
-    rm -f "$PIDFILE"
-    exit 0
-fi
-
-kill -TERM "$PID" 2>/dev/null || true
-
-for i in $(seq 1 30); do
-    if ! kill -0 "$PID" 2>/dev/null; then
-        rm -f "$PIDFILE"
-        exit 0
+stop_pid() {
+    local pid="$1" why="$2"
+    ps -p "$pid" >/dev/null 2>&1 || return 0
+    echo "stop-app.sh: stopping pid $pid ($why)"
+    echo "  $(it_describe_pid "$pid")"
+    if it_kill_pids 30 "$pid"; then
+        echo "stop-app.sh: reaped pid $pid"
+    else
+        echo "stop-app.sh: pid $pid survived SIGKILL" >&2
+        FAILED=1
     fi
-    sleep 1
-done
+}
 
-echo "stop-app.sh: pid $PID did not exit within 30s of SIGTERM; sending SIGKILL" >&2
-kill -KILL "$PID" 2>/dev/null || true
-rm -f "$PIDFILE"
+if [ -f "$PIDFILE" ]; then
+    stop_pid "$(cat "$PIDFILE")" "from $PIDFILE"
+    rm -f "$PIDFILE"
+else
+    echo "stop-app.sh: no pidfile at $PIDFILE"
+fi
+
+if [ -n "$RUN_ID" ]; then
+    for pid in $(it_pids_for_run "$RUN_ID" "$$"); do
+        stop_pid "$pid" "run $RUN_ID, found by marker"
+    done
+fi
+
+exit "$FAILED"
