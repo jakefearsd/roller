@@ -196,12 +196,15 @@ cmd_auth_status() {
 
 usage_entries() {
     cat <<'EOF'
-  entries list    --weblog H [--status S] [--category C] [--tags T,T] [--limit N] [--offset N]
+  entries list    --weblog H [--status S] [--category C] [--tags T,T] [--text S] [--locale L]
+                  [--limit N] [--offset N]
   entries get     --weblog H --id ID
   entries create  --weblog H --title T --text-file F [--status S] [--category C] [--tags T,T]
+                  [--pub-time T]
   entries patch   --weblog H --id ID [--title T] [--text-file F] [--status S] [--category C]
-                  [--tags T,T] [--meta-title T] [--search-description D] [--canonical-url U]
-                  [--noindex true|false] [--featured-image-id ID] [--og-image-id ID]
+                  [--tags T,T] [--pub-time T] [--meta-title T] [--search-description D]
+                  [--canonical-url U] [--noindex true|false] [--featured-image-id ID]
+                  [--og-image-id ID]
   entries trash   --weblog H --id ID
   entries restore --weblog H --id ID
   entries delete-forever --weblog H --id ID
@@ -746,7 +749,8 @@ usage_admin() {
   admin config set NAME=VALUE [NAME=VALUE ...]
   admin weblogs list [--offset N] [--limit N]
   admin weblogs get --weblog H
-  admin weblogs patch --weblog H [--name N] [--tagline T] [--active true|false]
+  admin weblogs patch --weblog H [--name N] [--tagline T] [--active true|false] [--locale L]
+                       [--timezone Z] [--entry-display-count N] [--email E]
 EOF
 }
 

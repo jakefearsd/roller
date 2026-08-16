@@ -176,4 +176,69 @@ class RollerApiCliTest {
         assertTrue(script.contains("auth|entries|media|audit|admin)"),
                 "a --url/--token flag with no value must not silently swallow the next command name");
     }
+
+    /**
+     * Parked item: {@code --dir-id} was found parsed but undocumented and
+     * fixed one flag at a time, which does nothing to stop the NEXT one
+     * drifting. This closes the class instead of the instance -- every
+     * {@code --flag)} (or {@code --flag|--other)}) case-arm label anywhere
+     * in the script must appear in SOME usage heredoc (a subcommand's own
+     * {@code usage_<group>}, or the abbreviated top-level {@code usage()}),
+     * not necessarily the same one. A boundary check (no trailing
+     * letter/digit/hyphen) keeps {@code --user} from being satisfied by a
+     * documented {@code --user-name} that merely starts with it, and the
+     * pattern requires a letter right after the leading {@code --}, so the
+     * end-of-options marker ({@code --)} in {@code media_upload}) never
+     * counts as a flag needing documentation.
+     */
+    @Test
+    void everyFlagCaseLabelIsDocumentedInSomeUsageHeredoc() throws Exception {
+        String script = cli();
+        String[] lines = script.split("\n", -1);
+
+        StringBuilder docs = new StringBuilder();
+        boolean inHeredoc = false;
+        for (String line : lines) {
+            if (!inHeredoc && line.trim().equals("cat <<'EOF'")) {
+                inHeredoc = true;
+                continue;
+            }
+            if (inHeredoc && line.equals("EOF")) {
+                inHeredoc = false;
+                continue;
+            }
+            if (inHeredoc) {
+                docs.append(line).append('\n');
+            }
+        }
+        assertTrue(docs.length() > 0, "must find at least one usage heredoc to check against");
+
+        java.util.regex.Pattern caseLabel = java.util.regex.Pattern.compile(
+                "^(--[a-zA-Z][a-zA-Z0-9-]*(?:\\|--[a-zA-Z][a-zA-Z0-9-]*)*)\\)");
+        java.util.Set<String> flags = new java.util.TreeSet<>();
+        for (String line : lines) {
+            java.util.regex.Matcher m = caseLabel.matcher(line.trim());
+            if (m.find()) {
+                for (String flag : m.group(1).split("\\|")) {
+                    flags.add(flag);
+                }
+            }
+        }
+        assertTrue(flags.size() > 20,
+                "sanity check: the extraction pattern found implausibly few flags (" + flags.size()
+                        + ") -- it likely stopped matching the script's actual shape");
+
+        java.util.List<String> missing = new java.util.ArrayList<>();
+        for (String flag : flags) {
+            java.util.regex.Pattern mention = java.util.regex.Pattern.compile(
+                    java.util.regex.Pattern.quote(flag) + "(?![a-zA-Z0-9-])");
+            if (!mention.matcher(docs).find()) {
+                missing.add(flag);
+            }
+        }
+        assertTrue(missing.isEmpty(),
+                "flags the script parses but no usage heredoc documents: " + missing
+                        + " -- add them to the relevant usage_<group> heredoc (never delete a "
+                        + "working flag just to make this pass)");
+    }
 }
