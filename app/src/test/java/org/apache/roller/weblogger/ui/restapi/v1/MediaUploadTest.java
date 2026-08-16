@@ -12,9 +12,11 @@ import org.apache.roller.weblogger.ui.restapi.dto.MediaDtos;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.multipart.MultipartFile;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -455,5 +457,45 @@ class MediaUploadTest {
         verify(weblogger.getMediaFileManager(), never())
                 .createMediaFile(eq(weblog), org.mockito.ArgumentMatchers.argThat(
                         f -> "report.docx".equals(f.getName())), any(RollerMessages.class));
+    }
+
+    /**
+     * Parked-item fix: {@code buildMediaFile} opens {@code
+     * upload.getInputStream()} unconditionally, and it used to run BEFORE
+     * the content-type-length refusal above -- a disk-backed multipart part
+     * that gets refused for its content type held an open file descriptor
+     * until GC, the only per-file refusal in this class that opened the
+     * stream at all. Driven through the controller method directly (not
+     * MockMvc's {@code multipart()}, which only accepts a real body) so a
+     * Mockito mock of {@code MultipartFile} can prove {@code
+     * getInputStream()} is never called on the refused file -- the other
+     * file in the same batch still lands, so the refusal is still a
+     * per-file {@code UploadResult}, not a request-level failure.
+     */
+    @Test
+    void uploadWithATooLongContentTypeNeverOpensThatFilesInputStream() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        MediaFileDirectory dir = aDirectory(weblog, "default");
+        when(weblogger.getMediaFileManager().getDefaultMediaFileDirectory(weblog)).thenReturn(dir);
+        String longContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.extra";
+        assertTrue(longContentType.length() > 50, "fixture must actually overflow content_type varchar(50)");
+
+        MockMultipartFile good = new MockMultipartFile("file", "good.jpg", "image/jpeg", "aaa".getBytes());
+        MultipartFile odd = mock(MultipartFile.class);
+        when(odd.getOriginalFilename()).thenReturn("report.docx");
+        when(odd.isEmpty()).thenReturn(false);
+        when(odd.getContentType()).thenReturn(longContentType);
+        when(odd.getSize()).thenReturn(3L);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute("actionWeblog", weblog);
+
+        var response = controllerFor(weblogger).upload(request, new MultipartFile[] { good, odd }, null);
+
+        assertEquals(org.springframework.http.HttpStatus.MULTI_STATUS, response.getStatusCode());
+        assertEquals(1, response.getBody().created());
+        assertEquals(1, response.getBody().failed());
+        verify(odd, never()).getInputStream();
     }
 }

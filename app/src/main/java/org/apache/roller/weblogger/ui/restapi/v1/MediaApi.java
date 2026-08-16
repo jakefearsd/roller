@@ -164,19 +164,26 @@ public class MediaApi extends BaseApiController implements UISecurityEnforced {
                     "File name must be " + ColumnLimits.MEDIA_NAME + " characters or fewer.", null);
         }
 
-        MediaFile created = buildMediaFile(upload, weblog, directory, fileName);
         // roller_mediafile.content_type is varchar(50) -- a real-world MIME
         // type (a .docx's, for one, is 73 characters) can overflow it. Left
         // unchecked this reached the manager and threw a bare
         // WebloggerException that the caller (upload()'s per-file loop) does
         // not catch, killing the WHOLE batch's 207 rather than failing just
         // this one row -- the opposite of the isolation the rest of this
-        // method exists to guarantee.
-        if (created.getContentType() != null && created.getContentType().length() > ColumnLimits.MEDIA_CONTENT_TYPE) {
+        // method exists to guarantee. Computed and checked BEFORE
+        // buildMediaFile (which is what opens upload.getInputStream()) so
+        // this refusal returns on the same side of the stream-opening as
+        // every other per-file guard above -- it used to run after,
+        // leaking a disk-backed part's file descriptor until GC on the one
+        // refusal path that opened the stream at all.
+        String contentType = effectiveContentType(upload, fileName);
+        if (contentType != null && contentType.length() > ColumnLimits.MEDIA_CONTENT_TYPE) {
             return new MediaDtos.UploadResult(fileName, "error",
-                    "Content type '" + created.getContentType() + "' is longer than "
+                    "Content type '" + contentType + "' is longer than "
                             + ColumnLimits.MEDIA_CONTENT_TYPE + " characters.", null);
         }
+
+        MediaFile created = buildMediaFile(upload, weblog, directory, fileName, contentType);
         int before = messages.getErrorCount();
         mfm.createMediaFile(weblog, created, messages);
         if (before != messages.getErrorCount()) {
@@ -185,8 +192,27 @@ public class MediaApi extends BaseApiController implements UISecurityEnforced {
         return new MediaDtos.UploadResult(fileName, "created", null, MediaDtos.toView(created, url(weblog, created)));
     }
 
+    /**
+     * The browser-supplied content type, falling back to a filename-derived
+     * guess when the browser sent none or the generic {@code
+     * octet-stream}. Deliberately independent of the multipart body itself
+     * (no {@code getInputStream()} call) so the too-long refusal in {@link
+     * #processUpload} can be decided BEFORE {@link #buildMediaFile} opens
+     * the file's input stream, not after.
+     */
+    private String effectiveContentType(MultipartFile upload, String fileName) {
+        String contentType = upload.getContentType();
+        if (contentType == null || contentType.endsWith("/octet-stream")) {
+            String detected = Utilities.getContentTypeFromFileName(fileName);
+            if (detected != null) {
+                contentType = detected;
+            }
+        }
+        return contentType;
+    }
+
     private MediaFile buildMediaFile(MultipartFile upload, Weblog weblog, MediaFileDirectory directory,
-            String fileName) throws WebloggerException {
+            String fileName, String contentType) throws WebloggerException {
         MediaFile mediaFile = new MediaFile();
         mediaFile.setName(fileName);
         mediaFile.setDirectory(directory);
@@ -196,14 +222,6 @@ public class MediaApi extends BaseApiController implements UISecurityEnforced {
             mediaFile.setInputStream(upload.getInputStream());
         } catch (IOException e) {
             throw new WebloggerException(e);
-        }
-
-        String contentType = upload.getContentType();
-        if (contentType == null || contentType.endsWith("/octet-stream")) {
-            String detected = Utilities.getContentTypeFromFileName(fileName);
-            if (detected != null) {
-                contentType = detected;
-            }
         }
         mediaFile.setContentType(contentType);
         return mediaFile;
