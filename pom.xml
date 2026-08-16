@@ -97,13 +97,24 @@ limitations under the License.
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.13.0</version>
+                    <version>3.15.0</version>
                     <configuration>
+                        <!-- Java 25. Also asserted by maven-enforcer below (which
+                             checks the JVM actually running the build, not just
+                             the bytecode target), by the CI matrix in
+                             .github/workflows/main.yml, and by the digest-pinned
+                             temurin-25 images in Dockerfile. Moving the language
+                             level means moving all four. -->
                         <release>25</release>
                         <fork>true</fork>
                         <compilerArgs>
                             <arg>-Xlint:all</arg>
-                            <!-- Disable warnings from Struts TagAnnotationProcessor which doesn't support Java 11+ -->
+                            <!-- -options silences the bootclasspath/release advisory;
+                                 -processing silences "no processor claimed this token"
+                                 for the annotations only frameworks read at runtime.
+                                 (This pair predates the Spring MVC migration and was
+                                 attributed to Struts' TagAnnotationProcessor, which
+                                 has not been a dependency since.) -->
                             <arg>-Xlint:-options</arg>
                             <arg>-Xlint:-processing</arg>
                         </compilerArgs>
@@ -135,6 +146,35 @@ limitations under the License.
         </pluginManagement>
 
         <plugins>
+            <!-- Pins the JDK the build actually RUNS on. maven-compiler-plugin's
+                 <release>25</release> only fixes the language level and bytecode
+                 target: a JDK 26 or 30 toolchain compiles release-25 sources
+                 happily and then runs the whole test suite on a JVM nobody
+                 verified, which is how a green local build ships behaviour CI
+                 never saw. [25,26) fails that at validate, with a message, rather
+                 than at some puzzling runtime difference later. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.6.2</version>
+                <executions>
+                    <execution>
+                        <id>enforce-jdk-25</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[25,26)</version>
+                                    <message>Roller builds on JDK 25 only. See maven-compiler-plugin's &lt;release&gt;25&lt;/release&gt; above, the CI matrix in .github/workflows/main.yml, and the temurin-25 images in Dockerfile.</message>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>

@@ -44,7 +44,7 @@ limitations under the License.
     <properties>
         <!-- Versions match the sibling jspwiki/wikantik Selenide suite. -->
         <selenide.version>7.17.0</selenide.version>
-        <selenium.version>4.46.0</selenium.version>
+        <selenium.version>4.47.0</selenium.version>
         <!-- This module isn't a Spring Boot artifact and imports no BOM, so
              junit-jupiter needs an explicit pin (app/pom.xml gets its JUnit
              version for free from Spring Boot's dependencyManagement import;
@@ -55,12 +55,12 @@ limitations under the License.
                mvn -ntp -pl app dependency:tree -Dincludes=org.junit.jupiter:junit-jupiter-api
              (currently resolves to 6.0.3, matching the pin below). -->
         <junit-jupiter.version>6.0.3</junit-jupiter.version>
-        <docker.plugin.version>0.48.1</docker.plugin.version>
-        <build-helper.version>3.6.0</build-helper.version>
+        <docker.plugin.version>0.49.0</docker.plugin.version>
+        <build-helper.version>3.6.1</build-helper.version>
         <exec.plugin.version>3.6.3</exec.plugin.version>
         <!-- app-stop only; see the plugin comment below for why it cannot share the
              exec-maven-plugin declaration used for app-start and the pg-* steps. -->
-        <antrun.plugin.version>3.1.0</antrun.plugin.version>
+        <antrun.plugin.version>3.2.0</antrun.plugin.version>
 
         <it.db.name>roller_it</it.db.name>
         <it.db.user>roller</it.db.user>
