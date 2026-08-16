@@ -30,6 +30,8 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.core.RollerLoginSessionManager;
 import org.apache.roller.weblogger.ui.core.RollerSession;
+import org.apache.roller.weblogger.TestUtils;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,7 +71,7 @@ class UserEditControllerTest {
     @BeforeEach
     void setUp() {
         weblogger = MockWeblogger.install();
-        previousPasswordEncoder = ControllerTestFixture.installNoopPasswordEncoder();
+        previousPasswordEncoder = ControllerTestFixture.installBcryptPasswordEncoder();
         previousAllowedChars = ControllerTestFixture.setConfigProperty(ALLOWED_CHARS, "A-Za-z0-9");
         controller = ControllerTestFixture.withMessages(new UserEditController());
         model = new ExtendedModelMap();
@@ -223,7 +225,9 @@ class UserEditControllerTest {
         assertEquals(Boolean.TRUE, user.getEnabled());
         assertNotNull(user.getDateCreated(), "creation date is set by the controller, not the form");
         // Encoded by the configured PasswordEncoder -- the plaintext must not survive.
-        assertEquals("{noop}secret", user.getPassword());
+        assertTrue(new BCryptPasswordEncoder().matches(
+                        "secret", user.getPassword().substring("{bcrypt}".length())),
+                "the submitted password should verify against the stored hash");
 
         verify(weblogger.weblogger()).flush();
         assertEquals(List.of("createUser.add.success[newbie]"), ControllerTestFixture.messages(model));
@@ -428,7 +432,9 @@ class UserEditControllerTest {
 
         controller.modifyUserSave(ControllerTestFixture.requestFor(user("admin", "a@example.com")), model, bean);
 
-        assertEquals("{noop}newpass", stored.getPassword());
+        assertTrue(new BCryptPasswordEncoder().matches(
+                        "newpass", stored.getPassword().substring("{bcrypt}".length())),
+                "the updated password should verify against the stored hash");
         assertNull(RollerLoginSessionManager.getInstance().get("jake"),
                 "whoever is logged in with the old password must be forced to re-authenticate");
     }

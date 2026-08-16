@@ -330,7 +330,7 @@ class AdminApiTest {
         when(weblogger.getUserTokenManager()).thenReturn(tokenManager);
         when(tokenManager.issueToken(any(User.class), eq(UserToken.Purpose.PASSWORD_SET)))
                 .thenReturn("raw-token-value");
-        installNoopPasswordEncoder();
+        installBcryptPasswordEncoder();
 
         try (MockedStatic<PasswordLinkMailer> mailer = mockStatic(PasswordLinkMailer.class)) {
             mailer.when(PasswordLinkMailer::isReady).thenReturn(true);
@@ -662,11 +662,13 @@ class AdminApiTest {
      * which never runs in this MockMvc-standalone test. Without installing
      * one here, {@code resetPassword} throws a bare NPE.
      */
-    @SuppressWarnings("deprecation") // NoOpPasswordEncoder -- fine for a test double, never production
-    private void installNoopPasswordEncoder() {
+    private void installBcryptPasswordEncoder() {
         previousPasswordEncoder = org.apache.roller.weblogger.ui.core.RollerContext.getPasswordEncoder();
         org.apache.roller.weblogger.ui.core.RollerContext.setPasswordEncoder(
-                org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance());
+                new org.springframework.security.crypto.password.DelegatingPasswordEncoder(
+                        "bcrypt",
+                        java.util.Map.of("bcrypt",
+                                new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder())));
         passwordEncoderInstalled = true;
     }
 
@@ -739,7 +741,7 @@ class AdminApiTest {
     void postCreatesADisabledAccountAndEmailsASetPasswordLink() throws Exception {
         mail = MockMailProvider.install();
         setAdminEmail("admin@example.test");
-        installNoopPasswordEncoder();
+        installBcryptPasswordEncoder();
         // JPAUserManagerImpl.addUser force-enables (and admin-roles) the
         // FIRST user ever added when users.firstUserAdmin is set -- real
         // bootstrap behaviour this API can never actually hit in production
@@ -793,7 +795,7 @@ class AdminApiTest {
     void postWhenMailSendFailsReportsUpstreamFailureButKeepsTheAccount() throws Exception {
         mail = MockMailProvider.installFailing();
         setAdminEmail("admin@example.test");
-        installNoopPasswordEncoder();
+        installBcryptPasswordEncoder();
         User baseline = TestUtils.setupUser("adminapiitsendfail");
         baselineUserName = baseline.getUserName();
         String userName = "adminapiitsendfailuser";

@@ -22,6 +22,8 @@ import java.util.List;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.TestUtils;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,7 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -57,7 +60,7 @@ class ProfileControllerTest {
     @BeforeEach
     void setUp() {
         weblogger = MockWeblogger.install();
-        previousPasswordEncoder = ControllerTestFixture.installNoopPasswordEncoder();
+        previousPasswordEncoder = ControllerTestFixture.installBcryptPasswordEncoder();
         controller = ControllerTestFixture.withMessages(new ProfileController());
         model = new ExtendedModelMap();
         redirectAttributes = new RedirectAttributesModelMap();
@@ -136,7 +139,7 @@ class ProfileControllerTest {
     @Test
     void aConfirmedPasswordIsStoredEncoded() throws Exception {
         User user = user("jake");
-        user.setPassword("{noop}old");
+        user.setPassword(TestUtils.TEST_PASSWORD_HASH);
         ProfileBean bean = new ProfileBean();
         bean.setPasswordText("newpassword");
         bean.setPasswordConfirm("newpassword");
@@ -144,7 +147,9 @@ class ProfileControllerTest {
         String view = controller.save(ControllerTestFixture.requestFor(user), model, bean, redirectAttributes);
 
         assertEquals("redirect:/roller-ui/menu.rol", view);
-        assertEquals("{noop}newpassword", user.getPassword());
+        assertTrue(new BCryptPasswordEncoder().matches(
+                        "newpassword", user.getPassword().substring("{bcrypt}".length())),
+                "the new password should verify against the stored hash");
         verify(weblogger.userManager()).saveUser(user);
     }
 
@@ -152,13 +157,13 @@ class ProfileControllerTest {
     void leavingBothPasswordFieldsEmptyKeepsTheCurrentPassword() throws Exception {
         // Saving a profile change must not be a way to blank out a password.
         User user = user("jake");
-        user.setPassword("{noop}old");
+        user.setPassword(TestUtils.TEST_PASSWORD_HASH);
         ProfileBean bean = new ProfileBean();
         bean.setScreenName("Jake");
 
         controller.save(ControllerTestFixture.requestFor(user), model, bean, redirectAttributes);
 
-        assertEquals("{noop}old", user.getPassword());
+        assertEquals(TestUtils.TEST_PASSWORD_HASH, user.getPassword());
         verify(weblogger.userManager()).saveUser(user);
     }
 

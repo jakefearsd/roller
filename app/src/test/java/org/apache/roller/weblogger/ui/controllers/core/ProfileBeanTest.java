@@ -18,8 +18,11 @@
 package org.apache.roller.weblogger.ui.controllers.core;
 
 import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.TestUtils;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -59,11 +62,11 @@ class ProfileBeanTest {
 
         User user = new User();
         user.setUserName("jake");
-        user.setPassword("{noop}original");
+        user.setPassword(TestUtils.TEST_PASSWORD_HASH);
         bean.copyTo(user);
 
         assertEquals("jake", user.getUserName());
-        assertEquals("{noop}original", user.getPassword());
+        assertEquals(TestUtils.TEST_PASSWORD_HASH, user.getPassword());
     }
 
     @Test
@@ -72,7 +75,7 @@ class ProfileBeanTest {
         User user = new User();
         user.setId("u1");
         user.setUserName("jake");
-        user.setPassword("{noop}secret");
+        user.setPassword(TestUtils.TEST_PASSWORD_HASH);
         user.setScreenName("Jake");
         user.setFullName("Jake Fear");
         user.setEmailAddress("jake@example.com");

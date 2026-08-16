@@ -64,7 +64,7 @@ class UserEditPasswordLinkTest {
     void setUp() throws Exception {
         weblogger = MockWeblogger.install();
         mail = MockMailProvider.install();
-        previousPasswordEncoder = ControllerTestFixture.installNoopPasswordEncoder();
+        previousPasswordEncoder = ControllerTestFixture.installBcryptPasswordEncoder();
         previousAllowedChars = ControllerTestFixture.setConfigProperty(ALLOWED_CHARS, "A-Za-z0-9");
         controller = ControllerTestFixture.withMessages(new UserEditController());
         model = new ExtendedModelMap();

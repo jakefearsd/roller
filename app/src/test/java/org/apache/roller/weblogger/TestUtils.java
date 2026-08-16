@@ -55,6 +55,22 @@ public final class TestUtils {
     // Username prefix we are using (simplifies local testing)
     public static final String JUNIT_PREFIX = "junit_";
 
+    /** Plaintext of {@link #TEST_PASSWORD_HASH}. */
+    public static final String TEST_PASSWORD = "password";
+
+    /**
+     * A precomputed bcrypt hash of {@link #TEST_PASSWORD}.
+     *
+     * <p>Precomputed rather than encoded on demand because bcrypt is
+     * deliberately slow and {@link #setupUser} has ~106 call sites; hashing per
+     * call would add roughly ten seconds to the suite. Storing a real hash is
+     * what lets a unit test authenticate a fixture user at all -- this used to
+     * be the bare string {@code "password"}, written through the raw setter,
+     * which no encoder could ever match.
+     */
+    public static final String TEST_PASSWORD_HASH =
+            "{bcrypt}$2a$10$Vav4tnxZRN4O9Uh/gMr0Se5fn4grMKMdIaFYgd68hgGaRXs9UPfni";
+
 
     public static void setupWeblogger() throws Exception {
 
@@ -104,7 +120,7 @@ public final class TestUtils {
 
         User testUser = new User();
         testUser.setUserName(userName);
-        testUser.setPassword("password");
+        testUser.setPassword(TEST_PASSWORD_HASH);
         testUser.setScreenName("Test User Screen Name");
         testUser.setFullName("Test User");
         testUser.setEmailAddress("TestUser@dev.null");

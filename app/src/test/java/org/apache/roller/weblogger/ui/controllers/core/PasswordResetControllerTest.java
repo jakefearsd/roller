@@ -26,6 +26,8 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.UserToken;
 import org.apache.roller.weblogger.ui.core.RollerLoginSessionManager;
 import org.apache.roller.weblogger.ui.core.RollerSession;
+import org.apache.roller.weblogger.TestUtils;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +69,7 @@ class PasswordResetControllerTest {
     void setUp() throws Exception {
         mocks = MockWeblogger.install();
         mail = MockMailProvider.install();
-        previousPasswordEncoder = ControllerTestFixture.installNoopPasswordEncoder();
+        previousPasswordEncoder = ControllerTestFixture.installBcryptPasswordEncoder();
         controller = ControllerTestFixture.withMessages(new PasswordResetController());
         model = new ExtendedModelMap();
 
@@ -419,7 +421,7 @@ class PasswordResetControllerTest {
     void aValidTokenWithMatchingPasswordsChangesThePasswordConsumesTheTokenAndEndsSessions()
             throws Exception {
         User user = user("dana", "dana@example.invalid");
-        user.setPassword("{noop}old");
+        user.setPassword(TestUtils.TEST_PASSWORD_HASH);
         UserToken token = new UserToken();
         when(mocks.getUserTokenManager().validate("good-token")).thenReturn(token);
         when(mocks.getUserTokenManager().consume("good-token")).thenReturn(user);
@@ -432,7 +434,9 @@ class PasswordResetControllerTest {
                 redirectAttributes, "good-token", "newpassword1", "newpassword1");
 
         assertEquals("redirect:/roller-ui/login.rol", view);
-        assertEquals("{noop}newpassword1", user.getPassword());
+        assertTrue(new BCryptPasswordEncoder().matches(
+                        "newpassword1", user.getPassword().substring("{bcrypt}".length())),
+                "the reset password should verify against the stored hash");
         verify(mocks.getUserManager()).saveUser(user);
         assertEquals(List.of("resetPassword.done"), ControllerTestFixture.flashMessages(redirectAttributes));
         assertNull(RollerLoginSessionManager.getInstance().get("dana"),

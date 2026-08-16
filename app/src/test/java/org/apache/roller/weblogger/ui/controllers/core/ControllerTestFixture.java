@@ -40,8 +40,8 @@ import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.springframework.context.MessageSource;
 import org.springframework.context.MessageSourceResolvable;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -146,19 +146,18 @@ final class ControllerTestFixture {
     }
 
     /**
-     * Installs the password encoder that {@code RollerContext} normally creates
+     * Installs a real bcrypt encoder, as {@code RollerContext} normally creates
      * at servlet-context startup. Without it {@code User.resetPassword} throws
      * NPE, so no test could reach the password-handling branches.
      *
      * @return the encoder previously installed, to be handed back to
      *         {@link #restorePasswordEncoder} when the test ends
      */
-    @SuppressWarnings("deprecation")
-    static Object installNoopPasswordEncoder() {
+    static Object installBcryptPasswordEncoder() {
         Object previous = getStaticField(RollerContext.class, "encoder");
-        PasswordEncoder noop = NoOpPasswordEncoder.getInstance();
         setStaticField(RollerContext.class, "encoder",
-                new DelegatingPasswordEncoder("noop", Map.of("noop", noop)));
+                new DelegatingPasswordEncoder("bcrypt",
+                        Map.of("bcrypt", new BCryptPasswordEncoder())));
         return previous;
     }
 

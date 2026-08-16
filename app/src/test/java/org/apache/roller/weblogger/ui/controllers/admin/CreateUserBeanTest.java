@@ -23,6 +23,8 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.TestUtils;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,11 +89,11 @@ class CreateUserBeanTest {
 
         User user = new User();
         user.setUserName("victim");
-        user.setPassword("{noop}original");
+        user.setPassword(TestUtils.TEST_PASSWORD_HASH);
         bean.copyTo(user);
 
         assertEquals("victim", user.getUserName());
-        assertEquals("{noop}original", user.getPassword());
+        assertEquals(TestUtils.TEST_PASSWORD_HASH, user.getPassword());
     }
 
     @Test
@@ -99,7 +101,7 @@ class CreateUserBeanTest {
         User user = new User();
         user.setId("u1");
         user.setUserName("jake");
-        user.setPassword("{noop}secret");
+        user.setPassword(TestUtils.TEST_PASSWORD_HASH);
         user.setScreenName("Jake");
         user.setFullName("Jake Fear");
         user.setEmailAddress("jake@example.com");
@@ -113,7 +115,7 @@ class CreateUserBeanTest {
 
         assertEquals("u1", bean.getId());
         assertEquals("jake", bean.getUserName());
-        assertEquals("{noop}secret", bean.getPassword());
+        assertEquals(TestUtils.TEST_PASSWORD_HASH, bean.getPassword());
         assertEquals("Jake", bean.getScreenName());
         assertEquals("Jake Fear", bean.getFullName());
         assertEquals("jake@example.com", bean.getEmailAddress());
