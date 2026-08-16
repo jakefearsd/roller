@@ -15,6 +15,7 @@ import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
 import org.apache.roller.weblogger.ui.restapi.dto.EntryDtos;
+import org.apache.roller.weblogger.util.Utilities;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -316,15 +317,25 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
      * stored tags untouched; a non-null EMPTY list is a real instruction to
      * clear every tag, distinguishable from absence exactly as {@code
      * applyWrite} distinguishes them for every other field.
+     *
+     * <p>The length guard is checked AFTER splitting the joined string on
+     * {@link Utilities#TAG_SPLIT_CHARS} -- the same split {@code
+     * WeblogEntry.setTagsAsString} performs internally -- rather than per
+     * list element. A single list element can itself carry several
+     * space/comma-separated tags whose COMBINED length exceeds the column
+     * even though every tag actually stored (one row per split token) is
+     * short; checking before the split measured the wrong thing and
+     * over-rejected that case.
      */
     private void applyTags(WeblogEntry entry, List<String> tags) throws WebloggerException {
         if (tags == null) {
             return;
         }
-        for (String tag : tags) {
+        String joined = String.join(" ", tags);
+        for (String tag : Utilities.splitStringAsTags(joined)) {
             ColumnLimits.requireMaxLength("tag", tag, ColumnLimits.TAG_NAME);
         }
-        entry.setTagsAsString(String.join(" ", tags));
+        entry.setTagsAsString(joined);
     }
 
     /**

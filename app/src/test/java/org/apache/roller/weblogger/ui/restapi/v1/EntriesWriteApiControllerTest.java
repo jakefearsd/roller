@@ -283,8 +283,13 @@ class EntriesWriteApiControllerTest {
 
     /**
      * roller_weblogentrytag.name is varchar(255) (V002__baseline_schema.sql)
-     * -- checked per tag, before the join, so one oversized tag in a batch
-     * is refused before any of them reach setTagsAsString.
+     * -- checked per tag, AFTER splitting on the same characters {@code
+     * WeblogEntry.setTagsAsString} splits on (see {@code applyTags}'s
+     * javadoc), so one oversized tag in a batch is refused before any of
+     * them reach it. This fixture has no split characters in it, so
+     * splitting is a no-op and the whole 256-char string is refused as one
+     * tag either way -- see the sibling test below for the case that only
+     * the post-split check gets right.
      */
     @Test
     void patchWithATagLongerThanTheColumnIsBadRequest() throws Exception {
@@ -306,6 +311,39 @@ class EntriesWriteApiControllerTest {
 
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
         verify(weblogger, never()).flush();
+    }
+
+    /**
+     * Parked-item fix: a single list element may itself carry several
+     * space/comma-separated tags ({@code applyTags} joins the whole list
+     * with a space before {@code setTagsAsString} splits it again on
+     * {@code Utilities.TAG_SPLIT_CHARS}), and their COMBINED length can
+     * exceed the column even though every tag actually stored -- one row
+     * per split token -- is short. Checking length before the split
+     * over-rejects this case; checking after it (what this test pins)
+     * measures what {@code setTagsAsString} really stores.
+     */
+    @Test
+    void patchWithASingleTagsElementCarryingManyShortTagsWhoseCombinedLengthExceedsTheColumnIsAccepted()
+            throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        Weblog weblog = aWeblog("myblog");
+        WeblogEntry entry = new WeblogEntry();
+        entry.setId("entry-1");
+        entry.setWebsite(weblog);
+        when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-1")).thenReturn(entry);
+        String manyShortTags = String.join(",", java.util.Collections.nCopies(40, "abcdefghij"));
+        assertTrue(manyShortTags.length() > 255,
+                "fixture must overflow the column taken as one string, though no split tag does");
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/weblogs/myblog/entries/{id}", "entry-1")
+                        .requestAttr("actionWeblog", weblog)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tags\":[\"" + manyShortTags + "\"]}"))
+                .andExpect(status().isOk());
+
+        verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(entry);
     }
 
     /** Tags go through WeblogEntry's own tag-setting path, space-joined. */
