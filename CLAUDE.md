@@ -616,6 +616,50 @@ live callers; only the on/off switch is hot.
   hot would mean either always paying for the index or serving search over one
   that does not exist.
 
+## Passwords
+- **Password encryption is not configurable at all any more, and cannot be
+  turned off.** Four paths could once put plaintext in
+  `roller_user.passphrase`, and the dev server used one of them by default:
+  `passwds.encryption.enabled=false` (which flipped the
+  `DelegatingPasswordEncoder`'s *encoding* id to `noop`), the unconditional
+  `noop` encoder registration (so a `{noop}` value authenticated however the
+  flag was set), `lazyUpgradeFrom=plaintext` (a no-op encoder on the **null**
+  prefix, so an *unprefixed* stored string authenticated), and the
+  `enabled=false` lines in `roller-boot-dev.properties` /
+  `roller-custom.properties`. All four are gone. Only
+  `passwds.encryption.algorithm` remains (bcrypt/pbkdf2/scrypt/argon2). An
+  explicitly-set `passwds.encryption.enabled` — by file or by
+  `ROLLER_PASSWDS_ENCRYPTION_ENABLED` — **throws at startup** rather than being
+  ignored, the same convention as an unsupported `authentication.method`; a
+  deploy must not boot looking configured while behaving otherwise.
+  `PasswordEncodingTest` fails if any of this regresses. A `{noop}` row does
+  not merely fail to match now — Spring refuses the unknown id outright.
+- **`TestUtils.setupUser` stores a precomputed `{bcrypt}` constant**
+  (`TestUtils.TEST_PASSWORD` / `TEST_PASSWORD_HASH`), not a live `encode()`
+  call: bcrypt is deliberately slow and there are ~106 call sites. It used to
+  write the bare string `"password"` through the raw setter, so fixture users
+  could never authenticate at all.
+- **The dev admin credential lives in `.roller-dev-secret`** — git-ignored,
+  generated with `umask 077` on the first `./roller db|dev|reset` and printed
+  once. `bin/db/seed-dev-data.sql` applies it, hashing with **pgcrypto inside
+  Postgres** so no host bcrypt tool is needed. It is **not** under
+  `bin/db/migrations/` and so never reaches production. The file is the source
+  of truth: a password changed through the web UI is reverted by the next seed,
+  deliberately.
+- **The seed's `ON CONFLICT` guard must stay a `CASE`.** `crypt()` raises
+  `ERROR: invalid salt` on a second argument that is not a usable salt, and
+  PostgreSQL does **not** guarantee short-circuit evaluation inside `OR` — so
+  an `OR` chain aborts the seed on exactly the `{noop}`/truncated row it exists
+  to repair. `DevSeedTest` runs the *shipped file* over every row shape and
+  catches the flattened form; an earlier version reimplemented the guard inline
+  and happily passed against the broken SQL.
+- **`./roller token`** mints an API token for that admin via
+  `roller-api auth login --password-stdin`. Manual API testing is `./roller
+  dev`, `./roller token`, call endpoints. In `./roller`, never generate the
+  secret with `tr -dc … </dev/urandom | head -c N`: under `set -o pipefail`
+  `head` exiting early SIGPIPEs `tr` and the script dies at exit 141 with no
+  message.
+
 Browser tests permute global runtime properties via `RollerIT.setGlobalFlag`
 (or `setGlobalFlags` for several in one save), which drives the real Admin
 Settings page and returns the previous value. **These are global and the suite

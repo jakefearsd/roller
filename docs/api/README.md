@@ -19,6 +19,32 @@ Everything below assumes a Roller running at that URL (the default for
 `./roller dev`; see the repository's `CLAUDE.md`). In production, substitute
 your site's own origin.
 
+### Local development
+
+Two commands, no password to remember:
+
+```bash
+./roller dev      # starts postgres, seeds the dev admin, runs the app
+./roller token    # mints a bearer token for that admin
+```
+
+The dev admin password lives in `.roller-dev-secret`, generated with mode 0600
+on the first `./roller db|dev|reset` and printed once at that moment. It is
+git-ignored and is the source of truth: the seed re-applies it on every run, so
+a password changed through the web UI is reverted next time. Edit the file to
+choose your own.
+
+### Non-interactive login
+
+`auth login` prompts for a password by default. `--password-stdin` reads it
+from stdin instead — never an argv entry, never an environment variable, so it
+is safe in CI:
+
+```bash
+printf '%s\n' "$PASSWORD" | bin/roller-api auth login \
+    --url https://example.com/roller --user admin --password-stdin
+```
+
 ## Contents
 
 - [Getting a token](#getting-a-token)

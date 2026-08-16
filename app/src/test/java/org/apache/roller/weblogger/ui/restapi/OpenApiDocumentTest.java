@@ -33,4 +33,18 @@ class OpenApiDocumentTest {
         assertTrue(docs().contains("roller-api auth login"),
                 "there is no UI for minting a token -- the CLI is the only route");
     }
+
+    /**
+     * The local path matters as much as the general one: there is no UI for
+     * minting a token, and the dev credential is generated rather than typed,
+     * so a reader cannot guess either from the OpenAPI document.
+     */
+    @Test
+    void theLocalBootstrapPathIsDocumented() throws Exception {
+        String text = docs();
+        assertTrue(text.contains("./roller token"),
+                "the README must record how to get a token locally");
+        assertTrue(text.contains(".roller-dev-secret"),
+                "the README must say where the dev credential lives");
+    }
 }

@@ -17,6 +17,7 @@ package org.apache.roller.weblogger.ui.core;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mockStatic;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -27,7 +28,9 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
@@ -185,6 +188,36 @@ class PasswordEncodingTest {
             return Files.readString(p);
         } catch (IOException e) {
             throw new UncheckedIOException("could not read " + p, e);
+        }
+    }
+
+    /**
+     * The two algorithm refusals. Both predate this change but became
+     * unconditional when the enabled/noop branch around them was deleted, so
+     * they are now the only thing standing between a typo and a boot with an
+     * encoder nobody chose.
+     */
+    @Test
+    void anOutdatedAlgorithmIsRefused() {
+        try (MockedStatic<WebloggerConfig> mocked = mockStatic(WebloggerConfig.class)) {
+            mocked.when(() -> WebloggerConfig.getProperty("passwds.encryption.algorithm"))
+                    .thenReturn("SHA");
+            RuntimeException e = assertThrows(RuntimeException.class,
+                    RollerContext::createPasswordEncoder,
+                    "SHA must be refused, not silently used");
+            assertTrue(e.getMessage().contains("outdated"), e.getMessage());
+        }
+    }
+
+    @Test
+    void anUnsupportedAlgorithmIsRefused() {
+        try (MockedStatic<WebloggerConfig> mocked = mockStatic(WebloggerConfig.class)) {
+            mocked.when(() -> WebloggerConfig.getProperty("passwds.encryption.algorithm"))
+                    .thenReturn("rot13");
+            RuntimeException e = assertThrows(RuntimeException.class,
+                    RollerContext::createPasswordEncoder,
+                    "an unknown algorithm must be refused");
+            assertTrue(e.getMessage().contains("not supported"), e.getMessage());
         }
     }
 }
