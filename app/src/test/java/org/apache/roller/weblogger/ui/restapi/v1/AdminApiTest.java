@@ -52,8 +52,11 @@ class AdminApiTest {
 
     @Test
     void securityInvariantsAreNotSettable() {
+        // passwds.encryption.enabled used to head this list. It is not merely
+        // un-promotable now -- the property no longer exists at any layer, so
+        // there is nothing left to promote. See PasswordEncodingTest.
         for (String name : new String[] {
-                "weblogAdminsUntrusted", "passwds.encryption.enabled",
+                "weblogAdminsUntrusted",
                 "rememberme.enabled", "themes.reload.mode",
                 "users.firstUserAdmin", "search.enabled" }) {
             assertThrows(ApiException.class,

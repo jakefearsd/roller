@@ -343,6 +343,14 @@ class SecurityConfigTest {
     void authenticationManagerAddsTheRememberMeProviderWhenEnabled() {
         try (MockedStatic<WebloggerConfig> mocked = mockStatic(WebloggerConfig.class)) {
             mocked.when(() -> WebloggerConfig.getBooleanProperty("rememberme.enabled")).thenReturn(true);
+            // Password encoding is not what these tests are about, but
+            // passwordEncoder() reads the algorithm and a mockStatic returns
+            // null for anything unstubbed. This used to pass only because the
+            // mock's default `false` for the (now removed)
+            // passwds.encryption.enabled sent it down the noop branch.
+            mocked.when(() -> WebloggerConfig.getProperty("passwds.encryption.algorithm"))
+                    .thenReturn("bcrypt");
+
             // RollerRememberMeAuthenticationProvider's own constructor refuses to
             // build with rememberme.enabled=true and the "springRocks" default
             // key (see its class-level guard) -- give it a real-looking one.
@@ -366,6 +374,13 @@ class SecurityConfigTest {
     void authenticationManagerOmitsTheRememberMeProviderWhenDisabled() {
         try (MockedStatic<WebloggerConfig> mocked = mockStatic(WebloggerConfig.class)) {
             mocked.when(() -> WebloggerConfig.getBooleanProperty("rememberme.enabled")).thenReturn(false);
+            // Password encoding is not what these tests are about, but
+            // passwordEncoder() reads the algorithm and a mockStatic returns
+            // null for anything unstubbed. This used to pass only because the
+            // mock's default `false` for the (now removed)
+            // passwds.encryption.enabled sent it down the noop branch.
+            mocked.when(() -> WebloggerConfig.getProperty("passwds.encryption.algorithm"))
+                    .thenReturn("bcrypt");
 
             SecurityConfig config = new SecurityConfig();
             PasswordEncoder encoder = config.passwordEncoder();

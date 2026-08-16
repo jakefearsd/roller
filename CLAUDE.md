@@ -604,9 +604,11 @@ startup-scoped — it dimensions a fixed cache that cannot be resized under
 live callers; only the on/off switch is hot.
 
 **Deliberately NOT promoted**, and not to be promoted without a decision:
-- `weblogAdminsUntrusted` and `passwds.encryption.enabled` — promoting these
-  would put "disable HTML sanitization" and "stop hashing passwords" on a web
-  form. Security invariants stay at boot scope.
+- `weblogAdminsUntrusted` — promoting it would put "disable HTML sanitization"
+  on a web form. Security invariants stay at boot scope.
+  (`passwds.encryption.enabled` used to sit here too. It is not merely
+  un-promotable now — the property no longer exists at any layer; see
+  Passwords below.)
 - `rememberme.enabled`, `themes.reload.mode`, `users.firstUserAdmin` —
   structurally boot-scoped (filter chain, Velocity engine config, first-user
   bootstrap).

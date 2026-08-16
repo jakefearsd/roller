@@ -155,18 +155,47 @@ public class RollerContext {
      * instead of going through a by-name Spring bean lookup that no longer
      * exists now that {@code security.xml} is gone.
      */
-    @SuppressWarnings("deprecation")
+    /**
+     * The property that used to make this method register a no-op encoder.
+     *
+     * <p>Removed outright: encryption is not optional. Named here only so that
+     * an explicitly-set value fails loudly rather than being ignored.
+     */
+    static final String REMOVED_ENCRYPTION_FLAG = "passwds.encryption.enabled";
+
+    /**
+     * Fails when a deployer explicitly sets the removed encryption flag.
+     *
+     * <p>Silently ignoring it is the failure mode this exists to prevent: a
+     * deploy carrying {@code ROLLER_PASSWDS_ENCRYPTION_ENABLED=false} would
+     * boot looking configured while behaving differently than its operator
+     * believes. Same convention as an unsupported {@code authentication.method}.
+     *
+     * @param configuredValue the raw configured value, or null when absent
+     */
+    static void rejectRemovedEncryptionFlag(String configuredValue) {
+        if (configuredValue != null) {
+            throw new IllegalStateException(REMOVED_ENCRYPTION_FLAG
+                    + " is no longer supported and must be removed from your configuration."
+                    + " Password encryption is always on; choose the algorithm with"
+                    + " passwds.encryption.algorithm.");
+        }
+    }
+
     public static DelegatingPasswordEncoder createPasswordEncoder() {
+
+        rejectRemovedEncryptionFlag(WebloggerConfig.getProperty(REMOVED_ENCRYPTION_FLAG));
 
         Map<String, PasswordEncoder> encoders = new HashMap<>();
 
-        // outdated digest encoder used for lazy upgrades from pws encoded by old roller versions.
+        // Outdated digest encoders, for lazy upgrade from pws encoded by old
+        // roller versions. `plaintext` is deliberately NOT accepted: it
+        // registered a no-op encoder against the null prefix, which made an
+        // unprefixed stored string authenticate as plaintext.
         String migrateFrom = WebloggerConfig.getProperty("passwds.encryption.lazyUpgradeFrom");
-        
+
         if(migrateFrom == null || migrateFrom.isEmpty()) {
             log.debug("lazy pw upgrade disabled");
-        } else if (migrateFrom.equals("plaintext")) {
-            encoders.put(null, org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance());
         } else if (migrateFrom.equals("MD5")) {
             encoders.put(null, new org.springframework.security.crypto.password.MessageDigestPasswordEncoder("MD5"));
         } else if (migrateFrom.equals("SHA")) {
@@ -182,26 +211,17 @@ public class RollerContext {
         encoders.put("scrypt", SCryptPasswordEncoder.defaultsForSpringSecurity_v5_8());
         encoders.put("argon2", Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8());
 
-        // just for testing
-        encoders.put("noop", org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance());
-        
         String algorithm = WebloggerConfig.getProperty("passwds.encryption.algorithm");
-        
-        if (WebloggerConfig.getBooleanProperty("passwds.encryption.enabled")) {
-            
-            if ("SHA".equals(algorithm) || "MD5".equals(algorithm)) {
-                throw new RuntimeException("passwds.encryption.algorithm="+algorithm+" is outdated,"
-                        + " please set passwds.encryption.algorithm to 'bcrypt' for automatic lazy upgrade.");
-            }
-            
-            if (!encoders.containsKey(algorithm)) {
-                throw new RuntimeException("passwds.encryption.algorithm="+algorithm+" is not supported.");
-            }
-        } else {
-            log.warn("New passwords are stored in plain text!");
-            algorithm = "noop";
+
+        if ("SHA".equals(algorithm) || "MD5".equals(algorithm)) {
+            throw new RuntimeException("passwds.encryption.algorithm="+algorithm+" is outdated,"
+                    + " please set passwds.encryption.algorithm to 'bcrypt' for automatic lazy upgrade.");
         }
-        
+
+        if (!encoders.containsKey(algorithm)) {
+            throw new RuntimeException("passwds.encryption.algorithm="+algorithm+" is not supported.");
+        }
+
         log.info("Password Encryption Algorithm set to '" + algorithm + "'");
         
         return new DelegatingPasswordEncoder(algorithm, encoders);
