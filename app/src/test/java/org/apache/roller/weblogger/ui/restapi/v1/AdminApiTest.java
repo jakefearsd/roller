@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.UserManager;
+import org.apache.roller.weblogger.business.UserTokenManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.PropertiesManager;
@@ -12,6 +13,8 @@ import org.apache.roller.weblogger.business.startup.MockMailProvider;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.pojos.UserToken;
+import org.apache.roller.weblogger.ui.controllers.core.PasswordLinkMailer;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.ApiExceptionHandler;
 import org.apache.roller.weblogger.ui.restapi.auth.AdminScoped;
@@ -19,6 +22,7 @@ import org.apache.roller.weblogger.ui.restapi.dto.AdminDtos;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -26,8 +30,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -297,6 +304,49 @@ class AdminApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
         verify(weblogger.getUserManager(), never()).addUser(any());
+    }
+
+    /**
+     * The two {@code weblogger.flush()} calls in {@code createUser}'s
+     * success path were unpinned: the class's other success tests
+     * (below) run against the REAL bootstrapped {@code Weblogger}, and
+     * EclipseLink satisfies a same-EntityManager read-back from the
+     * UnitOfWork whether or not a flush happened -- so deleting either
+     * {@code flush()} left the whole suite green. This test runs against
+     * a Mockito-mocked {@code Weblogger}, matching every other test in
+     * this section, so {@code verify(weblogger, times(2)).flush()} is the
+     * only thing standing between "flushes twice" and a silent regression.
+     * {@code PasswordLinkMailer} is static-mocked rather than exercising
+     * the real mail/ambient-config machinery the integration tests below
+     * need -- {@code isReady()} stubbed true so the success path is
+     * actually reached, {@code sendLink} left a no-op so the second flush
+     * (which happens BEFORE the send, per {@code createUser}'s own
+     * ordering) is proven independent of whether the send succeeds.
+     */
+    @Test
+    void postFlushesAfterAddUserAndAfterIssuingTheSetPasswordToken() throws Exception {
+        Weblogger weblogger = mockedWeblogger();
+        UserTokenManager tokenManager = mock(UserTokenManager.class);
+        when(weblogger.getUserTokenManager()).thenReturn(tokenManager);
+        when(tokenManager.issueToken(any(User.class), eq(UserToken.Purpose.PASSWORD_SET)))
+                .thenReturn("raw-token-value");
+        installNoopPasswordEncoder();
+
+        try (MockedStatic<PasswordLinkMailer> mailer = mockStatic(PasswordLinkMailer.class)) {
+            mailer.when(PasswordLinkMailer::isReady).thenReturn(true);
+
+            mockMvc(controllerFor(weblogger))
+                    .perform(post("/v1/admin/users")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"userName\":\"alice\",\"emailAddress\":\"a@example.test\"}"))
+                    .andExpect(status().isCreated());
+
+            mailer.verify(() -> PasswordLinkMailer.sendLink(any(User.class), eq("raw-token-value"), any()));
+        }
+
+        verify(weblogger.getUserManager()).addUser(any(User.class));
+        verify(tokenManager).issueToken(any(User.class), eq(UserToken.Purpose.PASSWORD_SET));
+        verify(weblogger, times(2)).flush();
     }
 
     /**
