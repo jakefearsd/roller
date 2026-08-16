@@ -107,6 +107,42 @@ class PasswordEncodingTest {
         }
     }
 
+    /**
+     * The dev seed carries a password, so it must never be a migration; and no
+     * migration may carry one at all. Both halves matter: the first keeps the
+     * dev credential out of production, the second keeps any credential out of
+     * the chain that production actually applies.
+     */
+    @Test
+    void noMigrationCarriesAPasswordAndNoDbSqlCarriesAPlaintextOne() throws IOException {
+        try (Stream<Path> files = Files.walk(repoRoot().resolve("bin/db"))) {
+            List<String> offenders = files
+                    .filter(p -> p.toString().endsWith(".sql"))
+                    .filter(p -> {
+                        String body = read(p);
+                        if (p.toString().contains("/migrations/")) {
+                            return body.contains("passphrase")
+                                    && body.toLowerCase().contains("insert into roller_user");
+                        }
+                        // Comments are stripped first: the dev seed legitimately
+                        // *mentions* {noop} while explaining which rows it
+                        // repairs. Only a {noop} in executable SQL is a defect.
+                        String sql = body.lines()
+                                .map(line -> {
+                                    int c = line.indexOf("--");
+                                    return c < 0 ? line : line.substring(0, c);
+                                })
+                                .reduce("", (x, y) -> x + "\n" + y);
+                        return sql.contains("{noop}") || sql.contains("{plaintext}");
+                    })
+                    .map(Path::toString)
+                    .sorted()
+                    .toList();
+            assertTrue(offenders.isEmpty(),
+                    "SQL under bin/db carries a password it should not: " + offenders);
+        }
+    }
+
     private static String read(Path p) {
         try {
             return Files.readString(p);
