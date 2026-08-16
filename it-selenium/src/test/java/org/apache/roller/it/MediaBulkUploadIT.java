@@ -18,6 +18,7 @@
 package org.apache.roller.it;
 
 import com.codeborne.selenide.Selenide;
+import com.codeborne.selenide.WebDriverRunner;
 import com.codeborne.selenide.SelenideElement;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ import java.time.Duration;
 import static com.codeborne.selenide.CollectionCondition.size;
 import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
+import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.value;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
@@ -117,6 +119,39 @@ class MediaBulkUploadIT extends RollerIT {
         $("img[alt='" + nameA + "']").should(exist);
         $("img[alt='" + nameB + "']").should(exist);
         $("img[alt='" + nameC + "']").should(exist);
+    }
+
+    /**
+     * The success page's Cancel must return to the media view.
+     *
+     * <p>It used to be a typeless {@code <button onclick='window.load(url)'>}
+     * inside an action-less POST form, so it threw a TypeError and then
+     * submitted the form back to the upload endpoint -- the opposite of
+     * cancelling. Only a click proves this; the page renders fine either way,
+     * which is why the bug survived a passing IT suite.
+     */
+    @Test
+    void cancelOnTheSuccessPageReturnsToTheMediaView() throws IOException {
+        String name = "cancel-" + System.nanoTime() + ".png";
+
+        enableUploads();
+        openPath(MEDIA_ADD);
+        $("#uploadedFiles").should(exist).uploadFile(newImageFile(name, 20, 20, "png"));
+        $("#uploadButton").click();
+        $$("input[name='selectedImages']").shouldHave(size(1));
+
+        // Found by TEXT among both element types inside the form, deliberately.
+        // An earlier version of this test selected a[href*='mediaFileView.rol']
+        // page-wide, which matched a nav link in the surrounding chrome -- it
+        // passed against the broken page by clicking something else entirely.
+        // Matching either <a> or <button> keeps the assertion about behaviour
+        // (does Cancel navigate?) rather than markup, which the unit test pins.
+        $$("#entry a, #entry button").findBy(text("Cancel")).should(exist).click();
+
+        assertTrue(WebDriverRunner.url().contains("mediaFileView.rol"),
+                "Cancel must land on the media view, not re-post the upload; was: "
+                        + WebDriverRunner.url());
+        $("img[alt='" + name + "']").should(exist);
     }
 
     @Test

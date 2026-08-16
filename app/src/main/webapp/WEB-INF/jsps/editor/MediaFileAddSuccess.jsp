@@ -163,13 +163,22 @@
 
         <button type="submit" id="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryAddWithMediaFile.rol"><spring:message code="mediaFileSuccess.createPost"/></button>
 
-        <button class="btn btn-secondary" onclick='window.load("${mediaFileAddURL}")'>
+        <%-- Anchors, not buttons. These two navigate; only "create post" above
+             submits. As typeless <button>s inside this action-less form they
+             defaulted to type="submit", so each one re-POSTed to the upload
+             endpoint -- and their onclick called window.load(), which is not a
+             function, so they threw first and submitted anyway (an uncaught
+             handler exception does not prevent the default action). Cancel
+             therefore did the opposite of cancelling. Same idiom as
+             UserEdit.jsp's cancel link: an anchor cannot submit, and works
+             with JavaScript disabled. --%>
+        <a href="${mediaFileAddURL}" class="btn btn-secondary">
             <spring:message code="mediaFileSuccess.uploadMore"/>
-        </button>
+        </a>
 
-        <button class="btn" onclick='window.load("${mediaFileViewURL}")'>
+        <a href="${mediaFileViewURL}" class="btn">
             <spring:message code="generic.cancel"/>
-        </button>
+        </a>
     </div>
 
 <sec:csrfInput/>

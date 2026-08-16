@@ -151,4 +151,45 @@ class MediaFileAddWiringTest {
                 "drop must call preventDefault(), or the browser navigates away to the "
                         + "dropped file");
     }
+
+    private static final Path MEDIA_FILE_ADD_SUCCESS =
+            Paths.get("src/main/webapp/WEB-INF/jsps/editor/MediaFileAddSuccess.jsp");
+
+    /**
+     * The success page's "upload more" and "cancel" controls must navigate, not
+     * submit.
+     *
+     * <p>They were {@code <button onclick='window.load(url)'>} with no
+     * {@code type}, inside {@code <form id="entry" method="post">} which carries
+     * no {@code action}. Three things compounded: {@code window.load} is not a
+     * function, so the handler threw; an uncaught handler exception does not
+     * prevent the default action; and a typeless button in a form defaults to
+     * {@code type="submit"}. So Cancel threw a TypeError and then re-POSTed to
+     * the upload endpoint instead of returning to the media view -- it did the
+     * opposite of cancelling.
+     *
+     * <p>Anchors styled as buttons are the idiom already used for in-form
+     * navigation (see {@code UserEdit.jsp}'s cancel link); they cannot submit
+     * and work without JavaScript.
+     */
+    @Test
+    void theSuccessPageNavigationControlsAreLinksNotFormSubmits() throws IOException {
+        // JSP comments are stripped first: the fix's own comment explains what
+        // window.load() did wrong, and a naive scan flags that explanation.
+        String jsp = read(MEDIA_FILE_ADD_SUCCESS)
+                .replaceAll("(?s)<%--.*?--%>", "");
+
+        assertFalse(jsp.contains("window.load("),
+                "window.load is not a function; these controls must navigate via an anchor");
+
+        Matcher m = Pattern.compile("<button(?![^>]*\\btype\\s*=)[^>]*>", Pattern.CASE_INSENSITIVE)
+                .matcher(jsp);
+        assertFalse(m.find(),
+                "a <button> inside this form with no type= defaults to submit: " + (m.reset().find() ? m.group() : ""));
+
+        assertTrue(jsp.contains("href=\"${mediaFileAddURL}\""),
+                "the 'upload more' control must link to mediaFileAddURL");
+        assertTrue(jsp.contains("href=\"${mediaFileViewURL}\""),
+                "the 'cancel' control must link to mediaFileViewURL");
+    }
 }
