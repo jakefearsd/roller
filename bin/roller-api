@@ -109,22 +109,35 @@ read_text_file() {
 # ------------------------------------------------------------------- auth
 
 cmd_auth_login() {
-    local url="" user=""
+    local url="" user="" password_stdin=0
     while [ $# -gt 0 ]; do
         case "$1" in
             --url)  url="$2";  shift 2 ;;
             --user) user="$2"; shift 2 ;;
+            --password-stdin) password_stdin=1; shift ;;
             *) die "Unknown option: $1" ;;
         esac
     done
     [ -n "$url" ] || die "--url is required."
     [ -n "$user" ] || { printf 'Username: '; read -r user; }
 
-    # The password is read silently, sent once, and never stored. Only the
-    # returned token is persisted -- the same shape as `gh auth login`.
-    printf 'Password: '
-    read -rs password
-    printf '\n'
+    # The password is read once, sent once, and never stored. Only the returned
+    # token is persisted -- the same shape as `gh auth login`.
+    #
+    # --password-stdin is the standard non-interactive idiom (`docker login`
+    # uses it). The password crosses on stdin: never an argv entry, never an
+    # environment variable, so it is safe for CI as well as for `./roller
+    # token`. IFS= and -r keep leading/trailing whitespace and backslashes
+    # intact -- a password is bytes, not a shell word.
+    local password
+    if [ "$password_stdin" -eq 1 ]; then
+        IFS= read -r password || die "--password-stdin was given but stdin was empty."
+        [ -n "$password" ] || die "--password-stdin read an empty password."
+    else
+        printf 'Password: '
+        read -rs password
+        printf '\n'
+    fi
 
     # `curl -u user:password` would put the password on THIS PROCESS'S OWN
     # command line -- readable by any other local user via `ps -ef` or
@@ -958,7 +971,10 @@ roller-api -- Roller automation API client
       ~/.roller/credentials. Lets a one-off call reach a second instance
       without touching the environment or the stored credentials file.
 
-  auth login --url URL [--user NAME]   mint and store a token
+  auth login --url URL [--user NAME] [--password-stdin]
+                                       mint and store a token; --password-stdin
+                                       reads the password from stdin instead of
+                                       prompting, for scripts and CI
   auth status                          show who the stored token belongs to
 
   entries list    --weblog H [--status S] [--limit N]

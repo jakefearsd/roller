@@ -241,4 +241,38 @@ class RollerApiCliTest {
                         + " -- add them to the relevant usage_<group> heredoc (never delete a "
                         + "working flag just to make this pass)");
     }
+
+    /**
+     * --password-stdin is what lets ./roller token (and CI) log in without a
+     * terminal. It must be a real case label, not just a line of usage text.
+     */
+    @Test
+    void passwordStdinReadsThePasswordWithoutPrompting() throws Exception {
+        String body = cli();
+        int flagAt = body.indexOf("--password-stdin)");
+        assertTrue(flagAt > 0,
+                "--password-stdin must be a case label in auth login, not just documentation");
+        String branch = body.substring(flagAt, Math.min(body.length(), flagAt + 600));
+        assertTrue(branch.contains("read -r"),
+                "the --password-stdin branch must read the password from stdin");
+    }
+
+    /**
+     * The non-interactive path must not weaken the guarantee the interactive
+     * one already has: the credential reaches curl through a netrc file, never
+     * argv, where any local user could read it from /proc.
+     */
+    @Test
+    void theStdinPasswordStillNeverReachesACommandLine() throws Exception {
+        // Comment lines are dropped first: the script legitimately *explains*
+        // why it avoids `curl -u`, right above the netrc handling that replaces it.
+        String code = cli().lines()
+                .filter(line -> !line.strip().startsWith("#"))
+                .reduce("", (a, b) -> a + "\n" + b);
+        assertFalse(code.contains("curl -u "),
+                "the password must go through --netrc-file, never curl's -u argument");
+        String body = cli();
+        assertTrue(body.contains("--netrc-file"),
+                "login must keep using a netrc file for the credential");
+    }
 }
