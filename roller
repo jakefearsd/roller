@@ -8,6 +8,7 @@
 #   ./roller status     show which migrations have been applied
 #   ./roller stop       stop the dev database (data is preserved)
 #   ./roller reset      DESTROY the dev database volume, then recreate it
+#   ./roller token      mint an API token for the dev admin (needs ./roller dev running)
 #
 # The dev database is the `postgres` service in docker-compose.yml. Its data
 # lives in the roller-pgdata named volume and survives restarts; only
@@ -55,6 +56,47 @@ start_db() {
     exit 1
 }
 
+DEV_SECRET_FILE="${SCRIPT_DIR}/.roller-dev-secret"
+
+# Loads .roller-dev-secret, generating it on first use.
+#
+# There is deliberately no branch that stops and asks: a fresh checkout runs
+# ./roller dev and gets a working login plus the credential printed once. The
+# file is git-ignored and is the source of truth for the dev admin password --
+# a password changed through the UI is reverted by the next seed, which is the
+# intended behaviour for a disposable local database whose whole purpose is a
+# KNOWN credential.
+load_dev_secret() {
+    if [ ! -f "${DEV_SECRET_FILE}" ]; then
+        local generated
+        # `tr -dc ... </dev/urandom | head -c 32` is the obvious spelling and is
+        # wrong here: head exits after 32 bytes, tr dies of SIGPIPE, and
+        # `set -o pipefail` turns that into a silent exit 141 immediately after
+        # migrations -- no error, no seed. Reading a bounded amount FIRST means
+        # every stage sees EOF normally.
+        generated="$(head -c 24 /dev/urandom | base64 | LC_ALL=C tr -dc 'A-Za-z0-9')"
+        ( umask 077; printf 'ROLLER_DEV_ADMIN_PASSWORD=%s\n' "${generated}" > "${DEV_SECRET_FILE}" )
+        print_ok "Generated ${DEV_SECRET_FILE} (mode 600, git-ignored)"
+        echo "  Dev admin login:  admin / ${generated}"
+        echo "  This is the only time it is printed. Edit the file to change it."
+    fi
+    # shellcheck disable=SC1090
+    . "${DEV_SECRET_FILE}"
+    : "${ROLLER_DEV_ADMIN_PASSWORD:?${DEV_SECRET_FILE} has no ROLLER_DEV_ADMIN_PASSWORD}"
+}
+
+# Applies bin/db/seed-dev-data.sql. The password goes in as a psql variable,
+# never interpolated into SQL text.
+seed_dev_data() {
+    load_dev_secret
+    PGPASSWORD="${DB_APP_USER}" psql \
+        --no-psqlrc --quiet --set ON_ERROR_STOP=1 \
+        -h localhost -p "${DB_PORT}" -U "${DB_APP_USER}" -d "${DB_NAME}" \
+        -v devpw="${ROLLER_DEV_ADMIN_PASSWORD}" \
+        -f "${SCRIPT_DIR}/bin/db/seed-dev-data.sql" >/dev/null
+    print_ok "Dev admin seeded (user: admin)"
+}
+
 run_migrations() {
     DB_NAME="${DB_NAME}" DB_APP_USER="${DB_APP_USER}" \
         PGHOST=localhost PGPORT="${DB_PORT}" PGUSER="${DB_APP_USER}" \
@@ -69,10 +111,12 @@ case "${1:-dev}" in
     db)
         start_db
         run_migrations
+        seed_dev_data
         ;;
     dev)
         start_db
         run_migrations
+        seed_dev_data
         print_ok "Starting Roller on http://localhost:8083/roller"
         # process-test-resources runs first so roller-boot-dev.properties is
         # filtered into target/test-classes before spring-boot:run starts the
@@ -102,7 +146,16 @@ case "${1:-dev}" in
         compose down -v
         start_db
         run_migrations
+        seed_dev_data
         print_ok "Dev database recreated"
+        ;;
+    token)
+        load_dev_secret
+        printf '%s\n' "${ROLLER_DEV_ADMIN_PASSWORD}" | \
+            bin/roller-api auth login \
+                --url http://localhost:8083/roller \
+                --user admin \
+                --password-stdin
         ;;
     *)
         print_err "Unknown command: ${1}"

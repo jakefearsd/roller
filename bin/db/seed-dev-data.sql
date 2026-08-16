@@ -31,6 +31,10 @@
 -- what repairs a database still holding a pre-bcrypt {noop} password, with no
 -- reset and no manual SQL.
 
+-- IF NOT EXISTS still emits a NOTICE when the extension is already there, and
+-- this file runs on every ./roller db. Warnings and errors still surface.
+SET client_min_messages = warning;
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 INSERT INTO roller_user (id, username, passphrase, screenname, fullname,

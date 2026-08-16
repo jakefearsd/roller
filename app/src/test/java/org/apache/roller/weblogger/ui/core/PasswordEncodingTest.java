@@ -143,6 +143,43 @@ class PasswordEncodingTest {
         }
     }
 
+    @Test
+    void theDevSecretIsGitIgnoredAndNotTracked() throws IOException {
+        Path root = repoRoot();
+        assertTrue(read(root.resolve(".gitignore")).contains(".roller-dev-secret"),
+                ".roller-dev-secret must be git-ignored before anything writes it");
+        assertFalse(isTrackedByGit(root, ".roller-dev-secret"),
+                ".roller-dev-secret is tracked by git -- it holds a credential");
+    }
+
+    private static boolean isTrackedByGit(Path root, String relative) {
+        try {
+            Process p = new ProcessBuilder("git", "ls-files", "--error-unmatch", relative)
+                    .directory(root.toFile())
+                    .redirectErrorStream(true)
+                    .start();
+            return p.waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * The dev credential must never become an argv entry: {@code ./roller} hands
+     * it to psql as a variable and to roller-api on stdin.
+     */
+    @Test
+    void theRollerScriptSeedsWithoutPuttingThePasswordInAnArgv() throws IOException {
+        String body = read(repoRoot().resolve("roller"));
+        assertTrue(body.contains("seed-dev-data.sql"), "./roller must apply the dev seed");
+        assertTrue(body.contains("-v devpw="),
+                "the seed must receive the password as a psql variable, not inlined SQL");
+        assertTrue(body.contains("umask 077"),
+                ".roller-dev-secret must be created with a restrictive umask");
+        assertTrue(body.contains("--password-stdin"),
+                "./roller token must pipe the password rather than pass it as an argument");
+    }
+
     private static String read(Path p) {
         try {
             return Files.readString(p);
