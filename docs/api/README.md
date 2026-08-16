@@ -180,19 +180,23 @@ shape before assuming a field exists.**
 
 Every failure a controller method can see is [RFC
 9457](https://www.rfc-editor.org/rfc/rfc9457) `application/problem+json`.
-**Three ordinary failures never reach a controller method at all, so they
+**Four ordinary failures never reach a controller method at all, so they
 are not:** `ApiExceptionHandler` is `@RestControllerAdvice(basePackages =
 "org.apache.roller.weblogger.ui.restapi")`, and package-scoped advice is
 only ever consulted once a request has been dispatched to a handler method
 in that package. A request to an unmapped path under `/api/...` (404), the
-right path with the wrong HTTP verb (405), or a `POST .../media` with no
-multipart body (415) never reaches a handler method to dispatch to in the
-first place — Spring answers all three itself, before `ApiExceptionHandler`
-is in the picture, and Boot's own `/error` renders them as plain
-`application/json`, not `application/problem+json`. Do not assume a client
-can branch on `Content-Type: application/problem+json` to detect an API
-error uniformly; check the status code, and expect these three to look
-different on the wire from every other failure in this document.
+right path with the wrong HTTP verb (405), a `POST .../media` with no
+multipart body (415), or a multipart body exceeding
+`spring.servlet.multipart.max-request-size` (1GB; 413) never reaches a
+handler method to dispatch to in the first place — Spring answers all four
+itself, before `ApiExceptionHandler` is in the picture, and Boot's own
+`/error` renders them as plain `application/json`, not
+`application/problem+json`. The 413 case is `MaxUploadSizeExceededException`,
+raised by `DispatcherServlet.checkMultipart` before handler mapping even
+runs, same as the other three. Do not assume a client can branch on
+`Content-Type: application/problem+json` to detect an API error uniformly;
+check the status code, and expect these four to look different on the wire
+from every other failure in this document.
 
 ```json
 {
@@ -219,6 +223,7 @@ requires `errors` to be present; treat it as optional.
 | 404 | The resource does not exist, **or the caller may not see it.** A weblog outside a token's pin, a foreign entry/category/page/media id, and a genuinely-missing id are all 404 — never 403, because a 403 there would confirm the resource exists under someone else's weblog. Also what an unmapped path under `/api/...` answers — see the note above on why that one is plain `application/json`, not a problem body. |
 | 405 | The path exists but not for this HTTP verb (e.g. `DELETE` on a collection endpoint that only supports `GET`/`POST`). Plain `application/json` from Boot's own `/error`, not a problem body — see the note above. |
 | 409 | The request conflicts with the resource's current state: trashing an already-trashed entry, restoring one that isn't trashed, PATCHing a trashed entry (restore it first), a duplicate category/directory/page-slug name, deleting a weblog's last category. |
+| 413 | A multipart request body larger than `spring.servlet.multipart.max-request-size` (1GB). Plain `application/json` from Boot's own `/error`, not a problem body — see the note above. Distinct from the per-file media-quota refusal below, which is never a whole-request 413. |
 | 415 | `POST .../media` without a `multipart/form-data` body. Plain `application/json`, not a problem body — see the note above. |
 | 429 | Throttled — see below. |
 | 500 | Unexpected server error. The response body never carries exception detail (message, stack trace, class name) — those are logged server-side only. |
@@ -229,7 +234,11 @@ but **no endpoint calls it today** — a media upload that would exceed a
 quota is not a whole-request 413, it is a per-file `"quota_exceeded"`
 `status` string inside that file's own `results[]` entry (see
 [Media](#media)). Don't build a client that branches on 413 for a quota
-refusal; check `results[].status` instead.
+refusal; check `results[].status` instead. The 413 you *can* actually get
+is the framework-level one in the table above — a request body over
+`spring.servlet.multipart.max-request-size` — which is a different
+mechanism entirely (enforced by `DispatcherServlet` before any handler
+runs) and carries no `results[]` body at all.
 
 ## The throttle
 
