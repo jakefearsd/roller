@@ -801,10 +801,16 @@ excused whatever its type.
   drift.
 - **The tiles system** is homegrown, not Apache Tiles: `ViewDefinition`
   (layout JSP + named attribute JSPs, e.g. `content`, `menu`) is resolved by
-  `RollerViewResolver`, which registers seven base layouts
+  `RollerViewResolver`, which registers eight base layouts
   (`.tiles-mainmenupage`, `.tiles-tabbedpage`, `.tiles-simplepage`,
   `.tiles-loginpage`, `.tiles-installpage`, `.tiles-errorpage`,
-  `.tiles-popuppage`) in `init()`. `tiles-tabbedpage.jsp`/
+  `.tiles-popuppage`, `.tiles-barepage`) in `init()`. `.tiles-barepage` is
+  chrome-free — content, no head — and exists for exactly one consumer,
+  `.MediaFileEditSuccess`: that document only calls `parent.onEditSuccess()`
+  and is destroyed by the parent's re-submit milliseconds later, so rendering
+  it through the full admin head made the browser abort its webfont fetch
+  mid-flight on every media rename (the `GalleryIT` "font ERR_ABORTED" flake).
+  It is a fix, not a spare layout — do not reuse it for a page a human reads. `tiles-tabbedpage.jsp`/
   `tiles-mainmenupage.jsp` are the two that render `#adminRail` (weblog context block, then tool
   groups from the `navMenu` model under caps-labels, with `.rail-active` —
   a 2px inset accent rule — on the current tab) in place of the old

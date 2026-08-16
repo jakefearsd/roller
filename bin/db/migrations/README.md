@@ -18,6 +18,12 @@ The companion scripts live one directory up (`bin/db/`):
 
 - `../migrate.sh` — apply any pending migrations to an existing database
 - `../install-fresh.sh` — create a new DB + application role, then migrate
+- `../seed-dev-data.sql` — the local dev admin row. **Deliberately not in this
+  directory**, because everything here is applied to production: by
+  `migrate.sh`, by `DatabaseInstaller`, and by the test harness. A file that
+  carries a credential must stay outside that set. `./roller db|dev|reset`
+  applies it separately, and `PasswordEncodingTest` fails the build if any
+  `V*.sql` here grows a password.
 
 ## Naming convention
 

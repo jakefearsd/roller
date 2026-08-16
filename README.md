@@ -38,7 +38,10 @@ It is an independent fork of [Apache Roller](https://roller.apache.org), which w
 ### Security and Authentication
 - Database-backed authentication only; the enum kept for LDAP/OpenID/container-managed values now fails loudly at startup instead of silently degrading (`AuthMethod`)
 - Spring Security 7 with role-based access control at global, weblog, and object levels
-- BCrypt password hashing with configurable strength
+- Password hashing is mandatory and cannot be switched off: the algorithm is
+  selectable (`passwds.encryption.algorithm` — bcrypt by default, or pbkdf2 /
+  scrypt / argon2), but there is no setting, in any file or environment
+  variable, that stores a password in plain text
 - Spring Security's built-in CSRF protection on all POST forms
 
 ### Administration
@@ -71,10 +74,23 @@ removed in favour of a single, tested schema.
 git clone https://github.com/jakefearsd/roller.git
 cd roller
 mvn -DskipTests=true install
-./roller dev     # starts PostgreSQL, applies migrations, runs spring-boot:run
+./roller dev     # starts PostgreSQL, applies migrations, seeds an admin,
+                 # runs spring-boot:run
 ```
 
-Browse to http://localhost:8083/roller
+Browse to http://localhost:8083/roller and sign in as `admin`.
+
+The password is generated on that first run, printed once, and stored in
+`.roller-dev-secret` (mode 0600, git-ignored) — `cat` it any time. Edit that
+file to choose your own; the next `./roller db|dev|reset` applies it. Nothing
+is ever committed, and no configuration can make Roller store a password in
+plain text.
+
+To drive the REST API locally:
+
+```bash
+./roller token   # mints a bearer token for that admin
+```
 
 Optional: install `cwebp` (package `webp` on Debian/Ubuntu, `libwebp-tools`
 on Fedora, `brew install webp` on macOS) to get WebP renditions of uploaded

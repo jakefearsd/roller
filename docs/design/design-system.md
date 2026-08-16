@@ -123,7 +123,7 @@ admin-side `EntryEdit.jsp` rebuild was built against — drawn alongside the
 JSP like the journal/frontpage cards above rather than ahead of it, because
 the editor is admin chrome, not a public theme, and its rail is a shape
 ("writing surface
-+ 252px publish rail": Publish/Organize boxes, SEO/Comments drawers, quiet
++ 252px publish rail": Publish/Organize boxes, an SEO drawer, quiet
 newsletter/revisions boxes, a text-link delete) other admin edit screens with
 a lot of secondary metadata may want to reuse. Same `@dsCard` header
 convention as the twelve preview cards; treat it as the worked example for
@@ -136,22 +136,26 @@ Two screens were too far off-spec to fix by restyling, and the repo's rule is
 that a card comes first. These are those cards; the JSPs are rebuilt against
 them, not the other way round.
 
-- `tables/`comments-moderation.html — group="Tables" — `Comments.jsp` today
-  renders each comment as a **nested `<table class="innertable">` inside a
-  `<td>`**, using four classes (`details`, `viewdetails`, `actionrow`,
-  `tablenav`) that have no CSS rules at all. The card replaces that with one
-  comment per row on one surface: a single metadata line (name in 600 — plain
-  text, since there is no commenter URL field and never will be again), mono
-  email and date, the entry it belongs to, a status pill, and the body as
-  prose. Selection bar per `tables/`tables-list.html so bulk actions read the
-  same here as on entries. Pending rows carry a `--warn` wash; there is no
-  spam state, because marking spam means deleting.
-- `forms/`settings-with-rail.html — group="Forms" — `WeblogConfig.jsp` is 23
-  fields across 9 groups with a single Save buried at the bottom. The card
-  applies the editor's two-column shape to a settings form: the fields on the
-  left, and a 252px rail holding a section index (the spine marks where you
-  are, exactly as the nav rail does) plus a Save that is always reachable. The
-  delete action is a quiet text link, matching the editor.
+One of the two shipped. The other was overtaken by events and is recorded here
+so nobody redraws it.
+
+- `forms/`settings-with-rail.html — group="Forms" — **still pending.**
+  `WeblogConfig.jsp` today carries `.form-stacked` from the Task 7 sweep, so
+  its labels sit above its fields, but it has no rail: one Save at the bottom
+  and no section index. The card applies the editor's two-column shape to a
+  settings form — fields on the left, and a 252px rail holding a section index
+  (the spine marks where you are, exactly as the nav rail does) plus a Save
+  that is always reachable. The delete action is a quiet text link, matching
+  the editor.
+- **A comment-moderation table card once sat here, and was withdrawn.** It was
+  drawn against `Comments.jsp`, and the entire comment subsystem was removed in
+  W1 — servlet, manager, moderation screens, pojos, schema and all. It is not
+  coming back (see CLAUDE.md's Comments section for why: the feature was
+  unreachable by design, not unused by accident). The card file was deleted
+  along with it; the reader-facing channels are the contact form and the
+  newsletter now. Deliberately not naming the old filename here —
+  `DesignCardsTest` fails the build when this spec names a card that is not on
+  disk, and that check is worth more than the breadcrumb.
 
 ## Quality bar
 
