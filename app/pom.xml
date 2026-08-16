@@ -382,11 +382,17 @@ limitations under the License.
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>jquery</artifactId>
-            <!-- Held at 3.x deliberately. jQuery 4 removes .bind()/.unbind(),
-                 which MediaFileSidebar.jsp still uses; jquery-ui 1.14.x and
-                 jquery-validation are also not certified against it. Moving
-                 to 4 is a piece of work, not a version bump. -->
-            <version>3.7.1</version>
+            <!-- jQuery 4. The migration removed the APIs 4.x drops: .bind() ->
+                 .on(), jQuery.trim() -> String.prototype.trim() (every call site
+                 passed an <input>.value, always a string), and the
+                 $(element).ready()/$().ready() forms -> $(document).ready().
+                 All of them were in MediaFileSidebar.jsp except two $().ready()
+                 in EntryEdit/PageEdit.
+                 jquery-ui 1.14.x ships jquery-patch.js for exactly this jQuery
+                 line, and jquery-validation 1.21.0 supports it; the browser ITs
+                 are what actually prove it, since BrowserHealth fails a page
+                 that logs a console error or throws. -->
+            <version>4.0.0</version>
         </dependency>
 
         <dependency>

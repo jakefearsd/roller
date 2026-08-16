@@ -19,7 +19,7 @@
 
 <%-- Prevent annoying scrolling when a collapse toggle's href is "#". --%>
 <script type="text/javascript">
-    $().ready(function () {
+    $(document).ready(function () {
         $("a[href='#'][data-bs-toggle='collapse']").click(function (e) {
             e.preventDefault();
         });

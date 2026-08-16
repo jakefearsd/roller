@@ -9,7 +9,7 @@ mismatch 404s the asset on every page that includes this file.
 
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<script src="<c:url value='/webjars/jquery/3.7.1/jquery.min.js'/>"></script>
+<script src="<c:url value='/webjars/jquery/4.0.0/jquery.min.js'/>"></script>
 
 <script src="<c:url value='/webjars/jquery-ui/1.14.2/jquery-ui.min.js'/>"></script>
 <link href="<c:url value='/webjars/jquery-ui/1.14.2/jquery-ui.css'/>" rel="stylesheet" />

@@ -115,26 +115,26 @@
         document.mediaFileViewForm.submit();
     }
 
-    $("#newDirectoryButton").ready(function () {
-        $("#newDirectoryName").bind("keyup", maintainDirectoryButtonState);
+    $(document).ready(function () {
+        $("#newDirectoryName").on("keyup", maintainDirectoryButtonState);
         $("#newDirectoryButton").attr("disabled", true);
     });
 
     function maintainDirectoryButtonState(e) {
-        if (jQuery.trim($("#newDirectoryName").get(0).value).length === 0) {
+        if ($("#newDirectoryName").get(0).value.trim().length === 0) {
             $("#newDirectoryButton").attr("disabled", true);
         } else {
             $("#newDirectoryButton").attr("disabled", false);
         }
     }
 
-    $("#searchButton").ready(function () {
+    $(document).ready(function () {
 
         maintainSearchButtonState();
-        $("input").bind("keyup", maintainSearchButtonState);
-        $("select").bind("change", maintainSearchButtonState);
+        $("input").on("keyup", maintainSearchButtonState);
+        $("select").on("change", maintainSearchButtonState);
 
-        $("#resetButton").bind("click", function () {
+        $("#resetButton").on("click", function () {
             <c:url var="mediaFileViewURL" value="/roller-ui/authoring/mediaFileView.rol">
             <c:param name="weblog" value="${actionWeblog.handle}"/>
             </c:url>
@@ -146,9 +146,9 @@
         var beanSize = $("#beanSize").get(0).value;
         var beanType = $("#beanType").get(0).value;
 
-        if (jQuery.trim($("#beanName").get(0).value).length === 0
-            && jQuery.trim($("#beanTags").get(0).value).length === 0
-            && (jQuery.trim(beanSize).length === 0 || beanSize === 0)
+        if ($("#beanName").get(0).value.trim().length === 0
+            && $("#beanTags").get(0).value.trim().length === 0
+            && (beanSize.trim().length === 0 || beanSize === 0)
             && (beanType.length === 0 || beanType === "mediaFileView.any")) {
             $("#searchButton").attr("disabled", true);
         } else {

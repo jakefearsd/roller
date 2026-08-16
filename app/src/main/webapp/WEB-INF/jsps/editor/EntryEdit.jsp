@@ -19,7 +19,7 @@
 
 <%-- Prevent annoying scrolling. taken from http://stackoverflow.com/a/10548809/3591946 --%>
 <script type="text/javascript">
-    $().ready(function () {
+    $(document).ready(function () {
         $("a[href='#'][data-bs-toggle='collapse']").click(function (e) {
             e.preventDefault();
         });
