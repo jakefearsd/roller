@@ -27,7 +27,6 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -91,15 +90,21 @@ public class URLModel implements Model {
     }
     
     
-    /** Absolute URL of Roller, e.g. http://localhost:8080/roller */
+    /**
+     * Absolute URL of Roller, e.g. http://localhost:8080/roller.
+     *
+     * <p>$url.absoluteSite means the SITE, and every caller (the frontpage
+     * theme's brand/menu links, the atom feeds' stylesheet href and site
+     * &lt;id&gt;, error-page.vm) is a site-level or control-plane link. By this
+     * wave's own design the control plane lives on the site host, so none of
+     * those may follow a weblog's custom domain -- a weblog's own urls come
+     * from the URL strategy (see MultiWeblogURLStrategy.getWeblogURL), not
+     * from this model method. This used to also check the per-weblog
+     * "weblog.absoluteurl.&lt;handle&gt;" property; that branch is gone with the
+     * property itself.
+     */
     public String getAbsoluteSite() {
-        String weblogAbsoluteURL =
-            WebloggerConfig.getProperty("weblog.absoluteurl." + weblog.getHandle());
-        if (weblogAbsoluteURL != null) {
-            return weblogAbsoluteURL;
-        } else {
-            return WebloggerRuntimeConfig.getAbsoluteContextURL();
-        }
+        return WebloggerRuntimeConfig.getAbsoluteContextURL();
     }
     
     

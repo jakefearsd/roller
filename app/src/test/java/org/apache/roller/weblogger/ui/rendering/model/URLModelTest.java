@@ -195,17 +195,22 @@ class URLModelTest {
     }
 
     @Test
-    void aWeblogCanOverrideTheAbsoluteSiteUrlWithItsOwnDomain() {
-        // weblog.absoluteurl.<handle> in roller-custom.properties is how a blog
-        // gets served from a vanity domain. Feed and e-mail links have to use
-        // that host, not the installation's.
+    void absoluteSiteIgnoresTheRetiredPerWeblogPropertyEvenIfSomethingStillSetsIt() {
+        // weblog.absoluteurl.<handle> used to let a weblog override $url.absoluteSite
+        // with a vanity domain. That branch is gone: $url.absoluteSite means the SITE,
+        // and every caller (the frontpage theme's brand/menu links, the atom feeds'
+        // stylesheet href and site <id>, error-page.vm) is a site-level or
+        // control-plane link that must stay on the installation's own host regardless
+        // of any weblog's custom domain. A weblog's own urls come from
+        // MultiWeblogURLStrategy, not this model method.
         try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class)) {
             config.when(() -> WebloggerConfig.getProperty("weblog.absoluteurl.testblog"))
                     .thenReturn("https://vanity.example.com");
 
-            assertEquals("https://vanity.example.com", model.getAbsoluteSite(),
-                    "A weblog with its own absolute URL configured must use it in "
-                            + "preference to the installation's.");
+            assertEquals(ABSOLUTE_SITE, model.getAbsoluteSite(),
+                    "getAbsoluteSite must no longer read the per-weblog property at all.");
+
+            config.verifyNoInteractions();
         }
     }
 

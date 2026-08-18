@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.URLUtilities;
@@ -46,7 +45,18 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
     
     
     /**
-     * Get root url for a given weblog.  Optionally for a certain locale.
+     * Get root url for a given weblog. Optionally for a certain locale.
+     *
+     * <p>Every other weblog url on this strategy roots here, so this is the one
+     * place virtual hosting changes url generation.
+     *
+     * <p>The custom domain is read off the WEBLOG, never off the request. The
+     * render caches key on the weblog handle and not the host, so one weblog
+     * reachable at two hostnames shares a single cached rendering -- and
+     * #showSeoHead bakes absolute canonical/og:url values into those bytes.
+     * Request-derived urls would let whichever host rendered first stamp its
+     * own canonical onto the other's response; weblog-derived urls make the
+     * bytes identical by construction.
      */
     @Override
     public String getWeblogURL(Weblog weblog,
@@ -54,19 +64,23 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
                                             boolean absolute) {
 
         StringBuilder url = new StringBuilder();
-        if (absolute) {
-            String weblogAbsoluteURL =
-                WebloggerConfig.getProperty("weblog.absoluteurl." + weblog.getHandle());
-            if (weblogAbsoluteURL != null) {
-                url.append(weblogAbsoluteURL);
-            } else {
-                url.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
-            }
-        } else {
-            url.append(WebloggerRuntimeConfig.getRelativeContextURL());
-        }
+        String customDomain = weblog == null ? null : weblog.getCustomDomain();
 
-        url.append('/').append(weblog.getHandle()).append('/');
+        if (customDomain != null && !customDomain.isBlank()) {
+            // The weblog owns this hostname, so its root IS the site root:
+            // no context path and no handle segment.
+            if (absolute) {
+                url.append("https://").append(customDomain);
+            }
+            url.append('/');
+        } else {
+            if (absolute) {
+                url.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
+            } else {
+                url.append(WebloggerRuntimeConfig.getRelativeContextURL());
+            }
+            url.append('/').append(weblog.getHandle()).append('/');
+        }
 
         if (locale != null) {
             url.append(locale).append('/');
