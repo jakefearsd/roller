@@ -510,6 +510,24 @@ class WeblogRequestMapperTest {
     }
 
     /**
+     * The mirror of protectedPathsAreStillDeclinedOnACustomDomain: a weblog
+     * request CONTEXT is reserved on the site host only because it sits behind
+     * a handle there. On a custom domain it is the first segment and must
+     * reach the weblog -- /page/<theme>.css is the theme stylesheet on every
+     * single page, so declining it renders every vhost page unstyled.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"page", "search", "resource"})
+    void weblogRequestContextsAreNotReservedOnACustomDomain(String context) throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(vhostUrl("GET", "/" + context + "/x"), response),
+                context + " must reach the weblog on a custom domain");
+        assertNotNull(response.getForwardedUrl());
+    }
+
+    /**
      * The custom domain is the single canonical address, so the old path form
      * permanently redirects to it -- which is what keeps already-indexed urls
      * and existing inbound links working after a weblog gains a hostname.

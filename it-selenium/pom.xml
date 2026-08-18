@@ -455,6 +455,12 @@ limitations under the License.
                              localhost to ::1 first, so the browser gets connection-refused
                              against a server that is demonstrably listening. -->
                         <it.base.url>http://127.0.0.1:${it.http.port}/${it.context.path}</it.base.url>
+                        <!-- VirtualHostIT simulates a custom domain by sending an explicit Host
+                             header (there is no real DNS in this environment). java.net.http.HttpClient
+                             refuses to set Host unless the JVM was started with this property;
+                             it is read when the HttpClient classes initialise, so it must be set on
+                             the failsafe-forked JVM itself, not from test code. -->
+                        <jdk.httpclient.allowRestrictedHeaders>host</jdk.httpclient.allowRestrictedHeaders>
                     </systemPropertyVariables>
                     <trimStackTrace>false</trimStackTrace>
                 </configuration>

@@ -57,26 +57,50 @@ public class WeblogRequestMapper implements RequestMapper {
 
     // url patterns that are not allowed to be considered weblog handles
     Set<String> restricted = null;
-    
-    
+
+    // Reserved on a custom domain. See appProtectedUrls' comment in
+    // roller.properties for why this is a strict subset of `restricted`.
+    Set<String> appRestricted = null;
+
+
     public WeblogRequestMapper() {
-        
+
         this.restricted = new HashSet<>();
-        
+
         // build roller restricted list
-        String restrictList = 
+        String restrictList =
                 WebloggerConfig.getProperty("rendering.weblogMapper.rollerProtectedUrls");
         if(restrictList != null && !restrictList.isBlank()) {
             String[] restrict = restrictList.split(",");
             this.restricted.addAll(Arrays.asList(restrict));
         }
-        
+
         // add user restricted list
-        restrictList = 
+        restrictList =
                 WebloggerConfig.getProperty("rendering.weblogMapper.userProtectedUrls");
         if(restrictList != null && !restrictList.isBlank()) {
             String[] restrict = restrictList.split(",");
             this.restricted.addAll(Arrays.asList(restrict));
+        }
+
+        this.appRestricted = new HashSet<>();
+
+        // build app-level restricted list -- the subset reserved on a
+        // custom domain (see appProtectedUrls' comment in roller.properties)
+        String appRestrictList =
+                WebloggerConfig.getProperty("rendering.weblogMapper.appProtectedUrls");
+        if(appRestrictList != null && !appRestrictList.isBlank()) {
+            String[] restrict = appRestrictList.split(",");
+            this.appRestricted.addAll(Arrays.asList(restrict));
+        }
+
+        // add user restricted list -- app-level by definition, so it applies
+        // on a custom domain too
+        restrictList =
+                WebloggerConfig.getProperty("rendering.weblogMapper.userProtectedUrls");
+        if(restrictList != null && !restrictList.isBlank()) {
+            String[] restrict = restrictList.split(",");
+            this.appRestricted.addAll(Arrays.asList(restrict));
         }
     }
     
@@ -147,13 +171,22 @@ public class WeblogRequestMapper implements RequestMapper {
 
         log.debug("potential weblog handle = "+weblogHandle);
 
-        // The protected-url list applies in BOTH modes. On a custom domain the
-        // mapper would otherwise claim every path on that host -- /themes/**,
-        // /webjars/**, /roller-ui/rendering/**, /newsletter/**, /robots.txt and
-        // /sitemap.xml included -- and forward them all to the page servlet.
-        // Only the isWeblog() half is skippable: a host-resolved handle is a
-        // weblog by construction.
-        if (restricted.contains(firstSegment)) {
+        // The protected-url list applies in BOTH modes, but which list differs.
+        // On the site host a context is always the SECOND segment
+        // (/<handle>/page/x), so the full `restricted` set (application paths
+        // PLUS weblog request contexts) is tested against the first segment,
+        // which is always the candidate handle. On a custom domain the whole
+        // path is weblog-relative and the first segment is content -- a
+        // context there is the FIRST segment (/page/x) -- so only
+        // APPLICATION paths are reserved: /themes/**, /webjars/**,
+        // /roller-ui/rendering/**, /newsletter/**, /robots.txt and
+        // /sitemap.xml still must not be swallowed, but reserving the weblog
+        // request contexts here would kill /page/<theme>.css (the theme
+        // stylesheet on every single page), /search and /resource/<file> on
+        // every vhost page. Only the isWeblog() half is skippable: a
+        // host-resolved handle is a weblog by construction.
+        Set<String> reserved = (vhostHandle != null) ? appRestricted : restricted;
+        if (reserved.contains(firstSegment)) {
             log.debug("SKIPPED " + firstSegment);
             return false;
         }
