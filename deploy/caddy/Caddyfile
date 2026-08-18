@@ -66,9 +66,23 @@
 # (VirtualHostRegistry), the same way it does for {$SITE_DOMAIN} above -- this
 # block proxies to the identical upstream and carries no weblog-specific
 # routing of its own.
+#
+# It also needs the SAME handle_path /analytics/* block {$SITE_DOMAIN} has,
+# and for the identical reason (see the comment on that block above):
+# #showAnalyticsTrackingCode emits a root-relative /analytics/script.js and
+# posts its beacon to /analytics/api/send regardless of which hostname served
+# the page, so without this here too, every custom-domain weblog's analytics
+# silently 404 at the app (same-origin, so no CSP error; same-server, so no
+# proxy error either) -- exactly the weblogs this feature exists to
+# instrument. Umami keys collection on data-website-id, not on origin, so
+# many hostnames posting to one website id is fine.
 *.{$VHOST_ZONE} {
 	tls {
 		dns cloudflare {$VHOST_DNS_API_TOKEN}
+	}
+
+	handle_path /analytics/* {
+		reverse_proxy umami:3000
 	}
 
 	handle {

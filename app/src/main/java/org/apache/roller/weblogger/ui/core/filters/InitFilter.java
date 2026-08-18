@@ -31,6 +31,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.validator.routines.UrlValidator;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 
 /**
@@ -59,8 +60,19 @@ public class InitFilter implements Filter {
                             new String[]{"http", "https"},
                             UrlValidator.ALLOW_LOCAL_URLS); // for integration tests
 
-            if(validator.isValid(request.getRequestURL().toString())) {
-                
+            // I2 (optional half): a request that arrived on a weblog's OWN
+            // custom domain must never be the one that latches the site's
+            // absolute context url -- that would make every domain-less
+            // weblog inherit THIS weblog's hostname in its own canonical
+            // url/og:url/feed id/sitemap/robots.txt/password-reset links
+            // until a request on a non-custom-domain host happens to arrive
+            // (which "initialized" staying false here still allows: this
+            // skips latching for THIS request only, not permanently).
+            boolean onACustomDomain =
+                    VirtualHostRegistry.handleFor(request.getHeader("Host")) != null;
+
+            if (!onACustomDomain && validator.isValid(request.getRequestURL().toString())) {
+
                 // determine absolute and relative url paths to the app
                 String relPath = request.getContextPath();
                 String absPath = this.getAbsoluteUrl(request);

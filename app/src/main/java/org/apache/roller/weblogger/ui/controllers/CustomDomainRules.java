@@ -1,5 +1,7 @@
 package org.apache.roller.weblogger.ui.controllers;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -81,5 +83,44 @@ public final class CustomDomainRules {
             }
         }
         return true;
+    }
+
+    /**
+     * True when {@code normalisedHost} names the SAME host as the site's own
+     * {@code site.absoluteurl} (I4b). Nothing else rejects a weblog claiming
+     * the site's own hostname as its custom domain, and once claimed,
+     * {@code VirtualHostRegistry.handleFor} resolves that host to the
+     * claiming weblog for every request -- including {@code /roller-ui/**},
+     * which {@code ControlPlaneHostFilter} then redirects back to the site
+     * host it just arrived on once {@code site.absoluteurl} is set,
+     * producing an infinite redirect loop on the admin UI with no route back
+     * except a manual {@code UPDATE weblog SET custom_domain = NULL}.
+     *
+     * <p>Compared on host only: scheme, port and any path in {@code
+     * siteAbsoluteUrl} are irrelevant to a DNS/{@code Host}-header match, and
+     * {@code normalisedHost} (from {@link #normalise}) never carries any of
+     * those anyway.
+     *
+     * @param siteAbsoluteUrl the configured {@code site.absoluteurl} value
+     *                        (see {@link org.apache.roller.weblogger.config.WebloggerRuntimeConfig#getPropertyWithConfigFallback}),
+     *                        or null/blank when unset -- in which case there
+     *                        is no site host to collide with and this
+     *                        returns false
+     */
+    public static boolean isSiteHost(String normalisedHost, String siteAbsoluteUrl) {
+        if (normalisedHost == null || siteAbsoluteUrl == null || siteAbsoluteUrl.isBlank()) {
+            return false;
+        }
+        String siteHost = hostOf(siteAbsoluteUrl.trim());
+        return siteHost != null && normalisedHost.equals(siteHost);
+    }
+
+    private static String hostOf(String absoluteUrl) {
+        try {
+            String host = new URI(absoluteUrl).getHost();
+            return host == null ? null : host.toLowerCase(Locale.ROOT);
+        } catch (URISyntaxException e) {
+            return null;
+        }
     }
 }

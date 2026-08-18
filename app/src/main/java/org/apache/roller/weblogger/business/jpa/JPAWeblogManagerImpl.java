@@ -90,9 +90,21 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         weblog.setLastModified(new java.util.Date());
         strategy.store(weblog);
 
-        // The host map is derived from this column, so any save may change it.
-        // Cheap: the map is rebuilt lazily on the next read, not here.
+        // The host map is derived from this column, so any save may change
+        // it. Cheap: the map is rebuilt lazily on the next read, not here.
+        //
+        // This pre-commit invalidate() alone is not enough (I5): the actual
+        // commit happens later, in the caller's weblogger.flush(). A
+        // concurrent request in that window can rebuild the map from the
+        // still-uncommitted (pre-change) row and cache it, and with nothing
+        // left to invalidate it again once the commit lands, that stale map
+        // would stay cached until an unrelated weblog save happened to
+        // invalidate it, or the JVM restarted -- while this save's own
+        // caller sees "Saved changes". runAfterCommit() is what closes that
+        // window: it re-invalidates once the surrounding transaction has
+        // actually committed.
         VirtualHostRegistry.invalidate();
+        strategy.runAfterCommit(VirtualHostRegistry::invalidate);
     }
 
     @Override
@@ -102,9 +114,12 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         this.removeWeblogContents(weblog);
         this.strategy.remove(weblog);
 
-        // The host map is derived from this column, so any save may change it.
-        // Cheap: the map is rebuilt lazily on the next read, not here.
+        // The host map is derived from this column, so any save may change
+        // it. Cheap: the map is rebuilt lazily on the next read, not here.
+        // See saveWeblog's comment above for why this alone is not enough
+        // (I5) and runAfterCommit() is needed too.
         VirtualHostRegistry.invalidate();
+        strategy.runAfterCommit(VirtualHostRegistry::invalidate);
 
         // remove entry from cache mapping
         this.weblogHandleToIdMap.remove(weblog.getHandle());
@@ -454,7 +469,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         if (whereClause.length() > 0) {
             fullQuery.append(" WHERE").append(whereClause);
         }
-        fullQuery.append(" ORDER BY w.dateCreated DESC");
+        fullQuery.append(" ORDER BY w.dateCreated DESC, w.handle");
 
         TypedQuery<Weblog> query = strategy.getDynamicQuery(fullQuery.toString(), Weblog.class);
         if (offset != 0) {

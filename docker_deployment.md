@@ -280,8 +280,20 @@ single URL an HTTP challenge could be served from. That's why
 `caddy:*`: DNS-01 needs a provider-specific module compiled into the binary,
 and `ProductionComposeTest` fails the build if that stops being true.
 
-Four steps, in order:
+Five steps, in order:
 
+0. **Set `site.absoluteurl`** (Admin → Global Config → Site URL, or
+   `ROLLER_SITE_ABSOLUTEURL` in `.env`) to the site's own address, e.g.
+   `https://blog.example.com`. This becomes required the moment ANY weblog
+   has a custom domain — with it blank, `InitFilter` latches the absolute
+   context URL from whichever request happens to arrive first after boot,
+   and if that is a custom domain, every weblog WITHOUT one inherits that
+   domain's hostname in its own canonical url, `og:url`, feed id, sitemap,
+   `robots.txt` and password-reset links. It is also what lets
+   `ControlPlaneHostFilter` send `/roller-ui/**` and `/api/**` requests that
+   arrive on a custom domain back to the site host, rather than serving the
+   admin UI/API on the weblog's own domain; startup logs a warning if it
+   finds a weblog with a domain and this still unset.
 1. **Tell the app which domains are covered**, so a mistyped custom domain is
    caught on Weblog Settings instead of surfacing later as a browser TLS
    error. `vhost.cert.zones` is a startup property (`roller.properties`), not

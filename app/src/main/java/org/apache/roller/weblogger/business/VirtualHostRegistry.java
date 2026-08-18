@@ -98,8 +98,21 @@ public final class VirtualHostRegistry {
             // Before bootstrap there is nothing to read and no weblog can have
             // a domain, so an empty map is correct rather than an error. Do
             // NOT cache it in that case, or the map stays empty for the life
-            // of the JVM.
-            log.debug("Virtual-host map unavailable yet; treating as empty", e);
+            // of the JVM -- that part of the handling is unchanged either way
+            // (M9 only changes the log LEVEL, never the breadth of what is
+            // caught or the decision not to cache).
+            //
+            // Once bootstrapped, though, this is not the expected steady
+            // state: it means every custom domain has stopped resolving
+            // site-wide, silently, at whatever level "debug" happens to be
+            // -- which is off by default. Warn instead so a live failure is
+            // actually visible.
+            if (WebloggerFactory.isBootstrapped()) {
+                log.warn("Virtual-host map rebuild failed; every custom domain will fail to "
+                        + "resolve until this is fixed and something invalidates the map again", e);
+            } else {
+                log.debug("Virtual-host map unavailable yet; treating as empty", e);
+            }
             return Collections.emptyMap();
         }
         Map<String, String> immutable = Collections.unmodifiableMap(built);

@@ -2,11 +2,13 @@ package org.apache.roller.weblogger.ui.restapi.v1;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.dto.AdminDtos;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,17 +35,23 @@ class WeblogsApiCustomDomainTest {
 
     private WeblogsApi weblogsApi;
     private WeblogManager weblogManager;
+    private MockWeblogger mocks;
     private Weblog vhostblog;
     private Weblog plainblog;
 
     @BeforeEach
     void setUp() throws WebloggerException {
-        Weblogger weblogger = mock(Weblogger.class);
-        weblogManager = mock(WeblogManager.class);
-        when(weblogger.getWeblogManager()).thenReturn(weblogManager);
+        // Installed into the static WebloggerFactory (not just this
+        // controller's own field) because CustomDomainRules.isSiteHost (I4b)
+        // is checked against WebloggerRuntimeConfig.getPropertyWithConfigFallback,
+        // which reaches the business tier through WebloggerFactory.getWeblogger()
+        // rather than through weblogsApi.weblogger -- the same seam
+        // EditorControllerTestSupport's givenRuntimeProperty relies on.
+        mocks = MockWeblogger.install();
+        weblogManager = mocks.getWeblogManager();
 
         weblogsApi = new WeblogsApi();
-        weblogsApi.weblogger = weblogger;
+        weblogsApi.weblogger = mocks.weblogger();
 
         vhostblog = aWeblog("vhostblog");
         vhostblog.setCustomDomain("vhost.example.com");
@@ -53,6 +61,17 @@ class WeblogsApiCustomDomainTest {
         // hostname legitimately returns null (nobody holds it), matching a
         // fresh Mockito stub's default.
         when(weblogManager.getWeblogByCustomDomain("vhost.example.com")).thenReturn(vhostblog);
+    }
+
+    @AfterEach
+    void tearDown() {
+        MockWeblogger.uninstall();
+    }
+
+    /** Stubs the site.absoluteurl runtime property, same helper shape as EditorControllerTestSupport. */
+    private void givenRuntimeProperty(String name, String value) throws WebloggerException {
+        when(mocks.getPropertiesManager().getProperty(name))
+                .thenReturn(new RuntimeConfigProperty(name, value));
     }
 
     private static Weblog aWeblog(String handle) {
@@ -125,5 +144,30 @@ class WeblogsApiCustomDomainTest {
                 new AdminDtos.WeblogPatch(null, null, null, null, null, null, null,
                         "vhost.example.com"));
         assertEquals("vhost.example.com", view.customDomain());
+    }
+
+    /**
+     * I4b: claiming the site's own hostname as a weblog's custom domain must
+     * be rejected here too, not just in the JSP editor -- both surfaces call
+     * CustomDomainRules.isSiteHost so the rule cannot drift between them.
+     */
+    @Test
+    void aPatchClaimingTheSitesOwnHostnameIsA400() throws Exception {
+        givenRuntimeProperty("site.absoluteurl", "https://blog.example.com");
+
+        ApiException thrown = assertThrows(ApiException.class, () ->
+                patch("plainblog",
+                        new AdminDtos.WeblogPatch(null, null, null, null, null, null, null,
+                                "blog.example.com")));
+        assertEquals(400, thrown.getStatus());
+    }
+
+    /** With no site.absoluteurl configured, there is no site host to collide with. */
+    @Test
+    void aPatchIsNotRejectedAsTheSiteHostWhenSiteAbsoluteUrlIsUnconfigured() throws Exception {
+        AdminDtos.WeblogView view = patch("plainblog",
+                new AdminDtos.WeblogPatch(null, null, null, null, null, null, null,
+                        "blog.example.com"));
+        assertEquals("blog.example.com", view.customDomain());
     }
 }

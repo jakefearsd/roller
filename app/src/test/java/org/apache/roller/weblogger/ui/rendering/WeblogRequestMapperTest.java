@@ -656,6 +656,45 @@ class WeblogRequestMapperTest {
         assertNull(response.getRedirectedUrl());
     }
 
+    /**
+     * I3: a locale-shaped first segment with nothing after it
+     * ({@code weblogRequestContext} stays null, since {@code isLocale}
+     * matches but the split has no second element) triggers the
+     * trailing-slash redirect branch. On the site host that branch's target
+     * legitimately carries the handle -- but on a custom domain the handle
+     * was never in the path to begin with, so appending it here leaked it
+     * back into a url that only 404s: {@code /roller/mapperblog/de/} on a
+     * host that resolves the ENTIRE path as weblog-relative.
+     */
+    @Test
+    void aLocaleShapedFirstSegmentOnACustomDomainRedirectsWithoutTheHandle() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(vhostUrl("GET", "/de"), response));
+        assertEquals("/de/", response.getRedirectedUrl(),
+                "the redirect target must omit the handle on a custom domain");
+    }
+
+    /**
+     * The trailing-slash sibling of the test above: with the slash already
+     * present, {@code trailingSlash} is true, so the redirect branch never
+     * fires and this instead falls straight through to the homepage forward
+     * in the "de" locale -- unaffected by the I3 fix, but worth pinning at
+     * the same intersection (locale segment x vhost) the redirect test
+     * covers, since the class had locale tests and vhost tests and none at
+     * this intersection before.
+     */
+    @Test
+    void aLocaleShapedFirstSegmentWithATrailingSlashOnACustomDomainForwardsHome() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(vhostUrl("GET", "/de/"), response));
+        assertNull(response.getRedirectedUrl());
+        assertEquals("/roller-ui/rendering/page/mapperblog/de", response.getForwardedUrl());
+    }
+
     private void givenCustomDomain(String host) throws Exception {
         Weblog stored = WebloggerFactory.getWeblogger().getWeblogManager()
                 .getWeblogByHandle("mapperblog");

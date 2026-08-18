@@ -80,6 +80,27 @@ public final class WebloggerRuntimeConfig {
     
     
     /**
+     * Retrieve a property, checking the runtime (database) config first and
+     * falling through to the static (roller.properties / environment)
+     * config when unset or blank -- the same two-step lookup {@link
+     * #getBooleanProperty} already applies below, generalised for callers
+     * that need the raw string rather than a boolean. {@code
+     * site.absoluteurl} is the motivating caller: it is a runtime property
+     * an operator can also set via {@code ROLLER_SITE_ABSOLUTEURL} (which
+     * lands in the static config, not the database row), and callers that
+     * need to know "is this actually configured, by either route" must
+     * check both rather than reimplementing this fallback each time.
+     */
+    public static String getPropertyWithConfigFallback(String name) {
+        String value = WebloggerRuntimeConfig.getProperty(name);
+        if (value == null || value.isBlank()) {
+            value = WebloggerConfig.getProperty(name);
+        }
+        return value;
+    }
+
+
+    /**
      * Retrieve a property as a boolean ... defaults to false if there is an error
      **/
     public static boolean getBooleanProperty(String name) {

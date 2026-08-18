@@ -888,8 +888,13 @@ Replace `MultiWeblogURLStrategy.getWeblogURL` in full:
         String customDomain = weblog == null ? null : weblog.getCustomDomain();
 
         if (customDomain != null && !customDomain.isBlank()) {
-            // The weblog owns this hostname, so its root IS the site root:
-            // no context path and no handle segment.
+            // A custom domain replaces the HANDLE segment and nothing else.
+            // The context path, the locale segment, and every reserved path
+            // root are unchanged (see the final-review spec correction:
+            // three real defects -- the protected-path swallow, the
+            // context-path drop, and WeblogRequestMapper's locale-only
+            // redirect -- traced to the earlier, wrong "no context path and
+            // no handle segment" phrasing of this rule).
             if (absolute) {
                 url.append("https://").append(customDomain);
             }

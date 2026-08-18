@@ -76,7 +76,13 @@ public class JPAPersistenceStrategy {
      * The thread local EntityManager.
      */
     private final ThreadLocal<EntityManager> threadLocalEntityManager = new ThreadLocal<>();
-    
+
+    /**
+     * Callbacks queued to run once the CURRENT unit of work actually
+     * commits -- see {@link #runAfterCommit} and {@link #flush()}.
+     */
+    private final ThreadLocal<List<Runnable>> pendingPostCommitActions = new ThreadLocal<>();
+
     /**
      * The EntityManagerFactory for this Roller instance.
      */
@@ -480,15 +486,54 @@ public class JPAPersistenceStrategy {
         }
     }
     /**
+     * Registers a callback to run once the CURRENT unit of work actually
+     * commits, i.e. after {@link #flush()}'s {@code commit()} call succeeds
+     * -- not immediately.
+     *
+     * <p>Exists for state cached OUTSIDE the database (the motivating caller
+     * is {@code VirtualHostRegistry}): invalidating such a cache the moment
+     * a change is made, rather than once it is durable, leaves a window in
+     * which a concurrent reader on a different connection can rebuild and
+     * cache the cache from the still-uncommitted (pre-change) row -- and
+     * with nothing invalidating it again afterward, that stale cache would
+     * otherwise never be corrected. Queued rather than run immediately
+     * because the actual commit happens later, in {@code flush()}, usually
+     * called by the controller after one or more manager calls in the same
+     * request.
+     */
+    public void runAfterCommit(Runnable action) {
+        List<Runnable> actions = pendingPostCommitActions.get();
+        if (actions == null) {
+            actions = new ArrayList<>();
+            pendingPostCommitActions.set(actions);
+        }
+        actions.add(action);
+    }
+
+    /**
      * Flush changes to the datastore, commit transaction, release em.
      * @throws org.apache.roller.weblogger.WebloggerException on any error
      */
     public void flush() throws WebloggerException {
+        // Snapshot and clear BEFORE attempting the commit -- regardless of
+        // whether it succeeds, these actions must not survive to leak into
+        // whatever this thread does next (a pooled request-handling thread
+        // reused for an unrelated later request). They are only actually run
+        // below once the commit has genuinely succeeded.
+        List<Runnable> actions = pendingPostCommitActions.get();
+        pendingPostCommitActions.remove();
+
         try {
             EntityManager em = getEntityManager(true);
             em.getTransaction().commit();
         } catch (PersistenceException pe) {
             throw new WebloggerException(pe);
+        }
+
+        if (actions != null) {
+            for (Runnable action : actions) {
+                action.run();
+            }
         }
     }
     
@@ -506,6 +551,13 @@ public class JPAPersistenceStrategy {
      * logged at ERROR on every graceful stop.
      */
     public void release() {
+        // Whatever this thread's transaction did or did not commit, any
+        // post-commit actions queued via runAfterCommit() and never drained
+        // by a flush() call (an exception before the controller reached it,
+        // or simply no save this request) must not survive to run against a
+        // LATER, unrelated transaction on a thread a pool hands out again.
+        pendingPostCommitActions.remove();
+
         if (emf == null || !emf.isOpen()) {
             threadLocalEntityManager.remove();
             return;

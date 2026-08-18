@@ -16,15 +16,20 @@
  */
 package org.apache.roller.weblogger.boot;
 
+import java.util.List;
+
 import jakarta.servlet.ServletContext;
 
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.BootstrapException;
 import org.apache.roller.weblogger.business.InitializationException;
 import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -311,6 +316,106 @@ class RollerLifecycleTest {
                     "BootstrapException must be logged and swallowed, same as every other failure "
                             + "mode start() absorbs rather than aborting SpringApplication.run()");
 
+            assertTrue(lifecycle.isRunning());
+        } finally {
+            MockWeblogger.uninstall();
+        }
+    }
+
+    // ------------------------------------------- I2: site.absoluteurl warning
+
+    /**
+     * {@link RollerLifecycle#needsSiteAbsoluteUrlWarning}, tested directly
+     * rather than by driving {@code start()} and capturing log output: it is
+     * pure decision logic (no logging itself), taking the already-resolved
+     * {@code site.absoluteurl} value as a parameter rather than reading it
+     * via the static {@code WebloggerFactory}/{@code WebloggerRuntimeConfig}
+     * seam {@code start()} itself uses -- the same reasoning that keeps
+     * {@code CustomDomainRules} pure (see its own javadoc): resolving
+     * configuration is the caller's job, deciding what to do with it is
+     * this method's.
+     */
+    @Test
+    void needsSiteAbsoluteUrlWarningIsTrueWhenAWeblogHasADomainAndSiteAbsoluteUrlIsBlank() throws Exception {
+        Weblogger weblogger = mock(Weblogger.class);
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        when(weblogger.getWeblogManager()).thenReturn(weblogManager);
+        Weblog withDomain = new Weblog();
+        withDomain.setCustomDomain("vhost.example.com");
+        when(weblogManager.getWeblogs(null, null, null, null, 0, -1))
+                .thenReturn(List.of(withDomain));
+
+        assertTrue(RollerLifecycle.needsSiteAbsoluteUrlWarning(weblogger, null));
+        assertTrue(RollerLifecycle.needsSiteAbsoluteUrlWarning(weblogger, "   "));
+    }
+
+    @Test
+    void needsSiteAbsoluteUrlWarningIsFalseWhenSiteAbsoluteUrlIsConfigured() throws Exception {
+        Weblogger weblogger = mock(Weblogger.class);
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        when(weblogger.getWeblogManager()).thenReturn(weblogManager);
+        Weblog withDomain = new Weblog();
+        withDomain.setCustomDomain("vhost.example.com");
+        when(weblogManager.getWeblogs(null, null, null, null, 0, -1))
+                .thenReturn(List.of(withDomain));
+
+        assertFalse(RollerLifecycle.needsSiteAbsoluteUrlWarning(
+                weblogger, "https://blog.example.com"));
+    }
+
+    @Test
+    void needsSiteAbsoluteUrlWarningIsFalseWhenNoWeblogHasACustomDomain() throws Exception {
+        Weblogger weblogger = mock(Weblogger.class);
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        when(weblogger.getWeblogManager()).thenReturn(weblogManager);
+        when(weblogManager.getWeblogs(null, null, null, null, 0, -1))
+                .thenReturn(List.of(new Weblog()));
+
+        assertFalse(RollerLifecycle.needsSiteAbsoluteUrlWarning(weblogger, null));
+    }
+
+    /** A failed check must not itself abort or otherwise disrupt startup. */
+    @Test
+    void needsSiteAbsoluteUrlWarningIsFalseWhenTheWeblogQueryFails() throws Exception {
+        Weblogger weblogger = mock(Weblogger.class);
+        WeblogManager weblogManager = mock(WeblogManager.class);
+        when(weblogger.getWeblogManager()).thenReturn(weblogManager);
+        when(weblogManager.getWeblogs(null, null, null, null, 0, -1))
+                .thenThrow(new WebloggerException("database down"));
+
+        assertFalse(RollerLifecycle.needsSiteAbsoluteUrlWarning(weblogger, null));
+    }
+
+    /**
+     * The integration point: {@code start()} must call the check (and
+     * therefore be ABLE to warn) once the business tier has bootstrapped,
+     * without upsetting anything else {@code start()} already does. A plain
+     * {@code mock(Weblogger.class)}'s {@code getWeblogManager()} returns
+     * null here (unstubbed), which is exactly what proves the check's own
+     * failure handling (see the test above) rather than the log-content
+     * itself, which this suite does not capture -- see {@code
+     * RollerLifecycleTest}'s class javadoc for why a full log-driving test
+     * belongs in the live end-to-end runs instead.
+     */
+    @Test
+    void startChecksForCustomDomainsNeedingSiteAbsoluteUrlWithoutDisruptingBootstrap() throws Exception {
+        when(servletContext.getRealPath("/")).thenReturn("/tmp/roller-lifecycle-test");
+        Weblogger mockWeblogger = mock(Weblogger.class);
+        when(applicationContext.getBean(Weblogger.class)).thenReturn(mockWeblogger);
+
+        MockWeblogger.installNotBootstrapped();
+        try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class);
+                MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
+
+            startup.when(WebloggerStartup::prepare).thenAnswer(inv -> null);
+            startup.when(WebloggerStartup::isPrepared).thenReturn(true);
+            config.when(() -> WebloggerConfig.getProperty("installation.type")).thenReturn("manual");
+
+            assertDoesNotThrow(() -> lifecycle.start(),
+                    "the site.absoluteurl check must never itself abort startup, whatever it finds");
+
+            verify(mockWeblogger).initialize();
+            verify(mockWeblogger).release();
             assertTrue(lifecycle.isRunning());
         } finally {
             MockWeblogger.uninstall();

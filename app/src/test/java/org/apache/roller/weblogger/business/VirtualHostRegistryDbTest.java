@@ -101,6 +101,67 @@ class VirtualHostRegistryDbTest {
     }
 
     /**
+     * I5: {@code saveWeblog}'s {@code invalidate()} runs right after {@code
+     * strategy.store(weblog)}, BEFORE the surrounding transaction actually
+     * commits -- the commit happens later, in {@code weblogger.flush()}
+     * (called by the controller, or by {@code TestUtils.endSession(true)}
+     * here). In the window between them, a genuinely concurrent request on a
+     * DIFFERENT connection (a different thread here -- {@code
+     * JPAPersistenceStrategy}'s EntityManager is thread-local, so a new
+     * thread gets its own, and under Postgres's default READ_COMMITTED
+     * isolation it cannot see this thread's still-uncommitted write) rebuilds
+     * the map from the PRE-COMMIT row and caches it. If nothing invalidates
+     * the registry again once the commit actually lands, that stale
+     * (no-domain) map stays cached for the life of the JVM, or until some
+     * UNRELATED weblog save happens to invalidate it -- meanwhile the author
+     * who just saved sees "Saved changes" for a domain that never resolves.
+     *
+     * <p>An earlier version of this test rebuilt the map on the SAME thread
+     * instead of a background one, expecting {@code getWeblogs}'s {@code
+     * FlushModeType.COMMIT} query to skip the pending write. It does skip
+     * the auto-flush, but JPA's identity map still hands back the SAME
+     * managed {@code Weblog} instance already sitting in this thread's
+     * persistence context -- carrying the in-memory, not-yet-flushed
+     * {@code customDomain} regardless of the query's flush mode -- so that
+     * version proved nothing about cross-request staleness. A real second
+     * connection is what a real concurrent request is.
+     */
+    @Test
+    void aReaderOnAnotherThreadThatCachesTheMapBeforeCommitSeesItInvalidatedAfterCommit() throws Exception {
+        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        Weblog stored = mgr.getWeblogByHandle("vhostdbblog");
+        stored.setCustomDomain("race.example.com");
+        mgr.saveWeblog(stored); // pre-commit invalidate() runs here; not yet committed on THIS thread
+
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        Thread reader = new Thread(() -> {
+            try {
+                assertNull(VirtualHostRegistry.handleFor("race.example.com"),
+                        "sanity: a genuinely concurrent reader on its own connection must not "
+                                + "observe the still-uncommitted domain");
+            } catch (Throwable t) {
+                failure.set(t);
+            } finally {
+                // Closes this thread's own EntityManager/connection so the
+                // test does not leak one from the pool per run.
+                WebloggerFactory.getWeblogger().release();
+            }
+        });
+        reader.start();
+        reader.join();
+        if (failure.get() != null) {
+            throw new AssertionError(failure.get());
+        }
+
+        // The write actually commits now, on the original thread.
+        TestUtils.endSession(true);
+
+        assertEquals("vhostdbblog", VirtualHostRegistry.handleFor("race.example.com"),
+                "the registry must be invalidated again after commit -- otherwise the stale "
+                        + "pre-commit map stays cached until an unrelated save invalidates it");
+    }
+
+    /**
      * Covers the {@code removeWeblog} call site: a removed weblog's domain
      * must stop resolving. Uses its own weblog/user, torn down inside the
      * test, rather than the shared fixture -- the class-level

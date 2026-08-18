@@ -235,6 +235,95 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogManager()).saveWeblog(weblog);
     }
 
+    /**
+     * I4: {@code BaseController.initBeanBinder} sets {@code
+     * setFieldDefaultPrefix("bean.")}, so any {@code bean.<property>} POST
+     * parameter binds -- including {@code bean.handle}, which the JSP never
+     * renders. Before this fix the uniqueness check compared the claimant to
+     * the SUBMITTED {@code bean.getHandle()} rather than the real action
+     * weblog, so an attacker posting {@code bean.handle=<the claimant's own
+     * handle>} alongside a taken {@code customDomain} made the check
+     * trivially pass (the claimant's handle equals itself) -- the V027
+     * unique index still caught the actual write, but this validation gate
+     * must not be foolable by a field the form never exposes.
+     */
+    @Test
+    void theUniquenessCheckComparesAgainstTheRealActionWeblogNotTheSubmittedHandle() throws Exception {
+        Weblog claimant = new Weblog();
+        claimant.setHandle("victim");
+        when(weblogger.getWeblogManager().getWeblogByCustomDomain("taken.example.com"))
+                .thenReturn(claimant);
+        bean.setCustomDomain("taken.example.com");
+        // Stands in for an attacker directly posting bean.handle=victim; the
+        // JSP itself never renders this field.
+        bean.setHandle(claimant.getHandle());
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("websiteSettings.customDomain.taken"),
+                "Expected a taken-domain error even though the submitted bean.handle "
+                        + "matched the claimant's own handle, got: " + errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    /**
+     * I4b: nothing rejected setting customDomain to the site's own hostname.
+     * Once claimed, VirtualHostRegistry resolves that host to the claiming
+     * weblog for every request -- including /roller-ui/**, which
+     * ControlPlaneHostFilter then redirects back to the very host it just
+     * arrived on once site.absoluteurl is set, an infinite loop on the admin
+     * UI with no route back except a manual database edit.
+     */
+    @Test
+    void claimingTheSitesOwnHostnameAsACustomDomainIsRejected() throws Exception {
+        givenRuntimeProperty("site.absoluteurl", "https://blog.example.com");
+        bean.setCustomDomain("blog.example.com");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("websiteSettings.customDomain.isSiteHost"),
+                "Expected a site-host rejection, got: " + errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    /** Scheme and path in site.absoluteurl must not defeat the host comparison. */
+    @Test
+    void claimingTheSitesOwnHostnameIsRejectedRegardlessOfSchemeOrPath() throws Exception {
+        givenRuntimeProperty("site.absoluteurl", "https://blog.example.com/roller");
+        bean.setCustomDomain("blog.example.com");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("websiteSettings.customDomain.isSiteHost"),
+                "Expected a site-host rejection, got: " + errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    /** A hostname that merely differs from the site host must still be allowed. */
+    @Test
+    void aHostnameOtherThanTheSitesOwnIsNotRejectedAsTheSiteHost() throws Exception {
+        givenRuntimeProperty("site.absoluteurl", "https://blog.example.com");
+        bean.setCustomDomain("vhost.example.com");
+
+        controller.save(request, model, bean);
+
+        assertFalse(errors(model).contains("websiteSettings.customDomain.isSiteHost"),
+                "Expected no site-host rejection, got: " + errors(model));
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
+    /** With site.absoluteurl unset there is no site host to collide with. */
+    @Test
+    void withNoSiteAbsoluteUrlConfiguredNoHostnameIsRejectedAsTheSiteHost() throws Exception {
+        bean.setCustomDomain("blog.example.com");
+
+        controller.save(request, model, bean);
+
+        assertFalse(errors(model).contains("websiteSettings.customDomain.isSiteHost"),
+                "Expected no site-host rejection, got: " + errors(model));
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
     @Test
     void aWebloggerExceptionDuringTheUniquenessCheckIsReportedAsInvalid() throws Exception {
         when(weblogger.getWeblogManager().getWeblogByCustomDomain("vhost.example.com"))

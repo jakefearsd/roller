@@ -30,6 +30,7 @@ import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -148,6 +149,24 @@ public class RollerLifecycle implements SmartLifecycle {
                 weblogger = WebloggerFactory.getWeblogger();
                 weblogger.initialize();
 
+                // I2: site.absoluteurl becomes required the moment any
+                // weblog has a custom domain (see needsSiteAbsoluteUrlWarning's
+                // javadoc for the mechanism) -- warn once at startup rather
+                // than relying solely on ControlPlaneHostFilter's own
+                // warning, which fires only once a control-plane request
+                // actually arrives on a custom domain, by which point
+                // InitFilter may already have latched the wrong host.
+                if (needsSiteAbsoluteUrlWarning(weblogger,
+                        WebloggerRuntimeConfig.getPropertyWithConfigFallback("site.absoluteurl"))) {
+                    log.warn("At least one weblog has a custom domain but site.absoluteurl is "
+                            + "unset -- every weblog WITHOUT a custom domain will inherit "
+                            + "whichever hostname the first request after boot happens to "
+                            + "arrive on (InitFilter's latch) in its canonical url, og:url, "
+                            + "feed id, sitemap, robots.txt and password-reset links. Set "
+                            + "site.absoluteurl (Admin -> Global Config, or "
+                            + "ROLLER_SITE_ABSOLUTEURL) to the site's own address.");
+                }
+
             } catch (BootstrapException ex) {
                 log.fatal("Roller Weblogger bootstrap failed", ex);
             } catch (WebloggerException ex) {
@@ -249,6 +268,32 @@ public class RollerLifecycle implements SmartLifecycle {
     @Override
     public boolean isRunning() {
         return running;
+    }
+
+    /**
+     * True when {@code site.absoluteurl} is unset (or blank) AND at least
+     * one weblog already has a custom domain -- the condition {@link
+     * #start()} warns about once at startup (I2). Pure decision logic,
+     * package-private so it can be unit tested directly with the already-
+     * resolved config value as a parameter, rather than needing to drive
+     * {@link #start()} end to end or capture log output to prove it.
+     *
+     * <p>A failure reading the weblog list (no schema yet, a transient
+     * database error) is treated as "nothing to warn about" -- this check
+     * exists to help an operator, not to become a second way startup can
+     * fail.
+     */
+    static boolean needsSiteAbsoluteUrlWarning(Weblogger weblogger, String configuredSiteAbsoluteUrl) {
+        if (configuredSiteAbsoluteUrl != null && !configuredSiteAbsoluteUrl.isBlank()) {
+            return false;
+        }
+        try {
+            return weblogger.getWeblogManager()
+                    .getWeblogs(null, null, null, null, 0, -1).stream()
+                    .anyMatch(w -> w.getCustomDomain() != null);
+        } catch (WebloggerException | RuntimeException ex) {
+            return false;
+        }
     }
 
     /**

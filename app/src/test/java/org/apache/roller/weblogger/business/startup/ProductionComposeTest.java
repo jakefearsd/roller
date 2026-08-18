@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -288,5 +289,79 @@ class ProductionComposeTest {
                 "the xcaddy-built binary must be copied into a separate runtime stage -- "
                         + "shipping the builder stage itself would ship Go toolchain and "
                         + "source into production");
+    }
+
+    /**
+     * C1: the wildcard {@code *.{$VHOST_ZONE}} site block (per-weblog custom
+     * domains) proxies to {@code app:8080} the same way the
+     * {@code {$SITE_DOMAIN}} block does, but had no {@code handle_path
+     * /analytics/*} block in front of it. {@code #showAnalyticsTrackingCode}
+     * emits a root-relative {@code /analytics/script.js} and posts its beacon
+     * to {@code /analytics/api/send}; on a custom domain those paths reach
+     * the app directly (nothing proxies them to Umami), where the mapper is
+     * in vhost mode and {@code analytics} is not a protected path, so both
+     * requests 404 -- silently, since it is same-origin (no CSP error) and
+     * same-server (no proxy error). Reading the Caddyfile as plain text, the
+     * same idiom {@link #caddyDockerfileBuildsWithXcaddyAndNamesADnsProviderModule}
+     * uses on the sibling Dockerfile: every top-level site block that
+     * reverse-proxies to the app must also carry the analytics handle, so the
+     * two cannot silently drift apart again.
+     */
+    @Test
+    void everySiteBlockThatProxiesToTheAppAlsoHandlesAnalytics() throws IOException {
+        Path caddyfile = Paths.get("../deploy/caddy/Caddyfile");
+        assertTrue(Files.exists(caddyfile), "missing " + caddyfile.toAbsolutePath());
+        String text = Files.readString(caddyfile, StandardCharsets.UTF_8);
+
+        List<String> offenders = new ArrayList<>();
+        for (String block : topLevelCaddyBlocks(text)) {
+            if (block.contains("reverse_proxy app:8080") && !block.contains("handle_path /analytics/*")) {
+                offenders.add(firstNonBlankLine(block));
+            }
+        }
+        assertTrue(offenders.isEmpty(),
+                "every Caddyfile site block that reverse-proxies to app:8080 must also carry "
+                        + "the handle_path /analytics/* block placed before it, or Umami "
+                        + "collection silently 404s for every request on that host -- "
+                        + "offending block(s) starting near: " + offenders);
+    }
+
+    /**
+     * Splits a Caddyfile into its top-level {@code { ... }} site blocks by
+     * brace depth. Caddy's own {@code {$VAR}} environment-substitution syntax
+     * uses braces that are NOT block delimiters (e.g. {@code {$SITE_DOMAIN}},
+     * {@code {$VHOST_DNS_API_TOKEN}} nested inside the {@code tls} block), so
+     * those are blanked out first -- otherwise they would desync the brace
+     * count and either merge blocks together or split one apart.
+     */
+    private static List<String> topLevelCaddyBlocks(String text) {
+        String withoutPlaceholders = Pattern.compile("\\{\\$[^}]*}").matcher(text).replaceAll("");
+
+        List<String> blocks = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < withoutPlaceholders.length(); i++) {
+            char c = withoutPlaceholders.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    blocks.add(withoutPlaceholders.substring(start, i + 1));
+                    start = i + 1;
+                }
+            }
+        }
+        return blocks;
+    }
+
+    private static String firstNonBlankLine(String block) {
+        for (String line : block.split("\n")) {
+            String trimmed = line.trim();
+            if (!trimmed.isEmpty()) {
+                return trimmed;
+            }
+        }
+        return block.trim();
     }
 }

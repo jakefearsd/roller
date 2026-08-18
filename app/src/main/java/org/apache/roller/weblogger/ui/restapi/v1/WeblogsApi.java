@@ -137,6 +137,16 @@ public class WeblogsApi extends BaseApiController implements UISecurityEnforced 
                 if (!CustomDomainRules.isWellFormed(customDomain)) {
                     throw ApiException.badRequest("customDomain must be a well-formed hostname.");
                 }
+                // Same I4b rule as WeblogConfigController.myValidate for the
+                // JSP editor -- reject the site's own hostname, or
+                // VirtualHostRegistry resolves it to this weblog for every
+                // request, including /roller-ui/**, which
+                // ControlPlaneHostFilter then redirects back to the host it
+                // just arrived on: an infinite loop with no route back.
+                if (CustomDomainRules.isSiteHost(customDomain,
+                        WebloggerRuntimeConfig.getPropertyWithConfigFallback("site.absoluteurl"))) {
+                    throw ApiException.badRequest("customDomain must not be the site's own hostname.");
+                }
                 Weblog claimant = weblogger.getWeblogManager().getWeblogByCustomDomain(customDomain);
                 if (claimant != null && !claimant.getHandle().equals(weblog.getHandle())) {
                     throw ApiException.conflict("customDomain is already in use by another weblog.");

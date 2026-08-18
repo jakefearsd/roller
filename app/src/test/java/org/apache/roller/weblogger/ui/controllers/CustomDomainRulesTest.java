@@ -106,4 +106,43 @@ class CustomDomainRulesTest {
         assertFalse(CustomDomainRules.isOutsideCertZones("anything.example.com", ""));
         assertFalse(CustomDomainRules.isOutsideCertZones("anything.example.com", null));
     }
+
+    // ------------------------------------------------------- isSiteHost
+
+    @Test
+    void aHostMatchingTheSiteAbsoluteUrlIsTheSiteHost() {
+        assertTrue(CustomDomainRules.isSiteHost(
+                "blog.example.com", "https://blog.example.com"));
+    }
+
+    /** Scheme, port and any path in site.absoluteurl do not matter -- only the host. */
+    @Test
+    void schemePortAndPathAreIgnoredWhenComparingToTheSiteHost() {
+        assertTrue(CustomDomainRules.isSiteHost(
+                "blog.example.com", "http://blog.example.com:8080/roller"));
+    }
+
+    @Test
+    void aDifferentHostIsNotTheSiteHost() {
+        assertFalse(CustomDomainRules.isSiteHost(
+                "vhost.example.com", "https://blog.example.com"));
+    }
+
+    @Test
+    void aBlankOrUnsetSiteAbsoluteUrlNeverMatches() {
+        assertFalse(CustomDomainRules.isSiteHost("blog.example.com", null));
+        assertFalse(CustomDomainRules.isSiteHost("blog.example.com", ""));
+        assertFalse(CustomDomainRules.isSiteHost("blog.example.com", "   "));
+    }
+
+    @Test
+    void aNullNormalisedHostNeverMatches() {
+        assertFalse(CustomDomainRules.isSiteHost(null, "https://blog.example.com"));
+    }
+
+    /** A malformed site.absoluteurl has no host to compare against. */
+    @Test
+    void aMalformedSiteAbsoluteUrlNeverMatches() {
+        assertFalse(CustomDomainRules.isSiteHost("blog.example.com", "not a url"));
+    }
 }

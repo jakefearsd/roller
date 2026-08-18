@@ -134,11 +134,22 @@ public class WeblogConfigController extends BaseController {
         if (customDomain != null) {
             if (!CustomDomainRules.isWellFormed(customDomain)) {
                 addError(model, "websiteSettings.customDomain.invalid", request);
+            } else if (CustomDomainRules.isSiteHost(customDomain,
+                    WebloggerRuntimeConfig.getPropertyWithConfigFallback("site.absoluteurl"))) {
+                addError(model, "websiteSettings.customDomain.isSiteHost", request);
             } else {
                 try {
                     Weblog claimant = weblogger.getWeblogManager()
                             .getWeblogByCustomDomain(customDomain);
-                    if (claimant != null && !claimant.getHandle().equals(bean.getHandle())) {
+                    // Compare against the REAL action weblog, never
+                    // bean.getHandle() -- initBeanBinder's "bean." field
+                    // prefix binds bean.handle from POST data even though
+                    // the JSP never renders it, so a submitted bean.handle
+                    // equal to the claimant's own handle must not be able to
+                    // make this check pass for a domain this weblog does not
+                    // actually own (I4).
+                    if (claimant != null
+                            && !claimant.getHandle().equals(getActionWeblog(request).getHandle())) {
                         addError(model, "websiteSettings.customDomain.taken", request);
                     }
                 } catch (WebloggerException e) {

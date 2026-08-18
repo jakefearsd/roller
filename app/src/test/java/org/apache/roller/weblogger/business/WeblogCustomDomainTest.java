@@ -85,6 +85,28 @@ class WeblogCustomDomainTest {
     }
 
     /**
+     * I6: {@code getWeblogs} orders by {@code dateCreated} with no tiebreak,
+     * so {@code GET /api/v1/weblogs} (which paginates over it) can repeat or
+     * skip a row across pages whenever two weblogs share a
+     * {@code dateCreated} -- the same defect fixed for {@code User.getAll}.
+     * Unlike the user queries (named queries in {@code User.orm.xml},
+     * pinnable by reading that file as text), {@code getWeblogs} builds its
+     * JPQL inline in Java, so there is no {@code .orm.xml} to regex here --
+     * this reads {@code JPAWeblogManagerImpl.java} itself, the same
+     * plain-text-source idiom {@code ProductionComposeTest} uses on the
+     * Dockerfile.
+     */
+    @Test
+    void getWeblogsCarriesAHandleTiebreakOnItsOrdering() throws Exception {
+        String source = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/org/apache/roller/weblogger/business/jpa/JPAWeblogManagerImpl.java"));
+        assertTrue(source.contains("ORDER BY w.dateCreated DESC, w.handle"),
+                "getWeblogs has no tiebreak on its ORDER BY -- two LIMIT/OFFSET pages "
+                        + "against it can return the same weblog twice, or skip one, "
+                        + "whenever two weblogs share a dateCreated");
+    }
+
+    /**
      * CHARACTERISATION: saveWeblog already bumps lastModified unconditionally,
      * which is the ONLY thing that expires a page from WeblogPageCache -- it
      * has no CacheHandler, so CacheManager.invalidate never reaches it.

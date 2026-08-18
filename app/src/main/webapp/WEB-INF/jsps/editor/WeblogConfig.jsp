@@ -164,7 +164,7 @@
 
     <%-- ***** Custom domain settings ***** --%>
 
-    <h3 class="section-head" id="settings-customdomain"><spring:message code="websiteSettings.customDomain"/></h3>
+    <h3 class="section-head" id="settings-customdomain"><spring:message code="websiteSettings.customDomainSettings"/></h3>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.customDomain"/></label>
@@ -194,6 +194,7 @@
             <a href="#settings-language"><spring:message code="websiteSettings.languageSettings"/></a>
             <a href="#settings-analytics"><spring:message code="websiteSettings.analyticsSettings"/></a>
             <a href="#settings-newsletter"><spring:message code="websiteSettings.newsletterSettings"/></a>
+            <a href="#settings-customdomain"><spring:message code="websiteSettings.customDomainSettings"/></a>
         </nav>
     </div>
 

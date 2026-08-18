@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.business.jpa;
 
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.roller.testing.RollerDatabaseExtension;
 import org.apache.roller.weblogger.business.WeblogManager;
@@ -120,6 +121,56 @@ class JPAPersistenceStrategyTest {
 
             strategy.remove(reloaded);
             strategy.flush();
+        } finally {
+            strategy.shutdown();
+        }
+    }
+
+    /**
+     * I5's underlying mechanism, tested directly against
+     * {@code JPAPersistenceStrategy} rather than through {@code
+     * VirtualHostRegistry}: a {@code runAfterCommit} callback must not run
+     * until {@code flush()}'s {@code commit()} has actually succeeded, and
+     * must run exactly once even though nothing re-queues it on a later
+     * {@code flush()} call.
+     */
+    @Test
+    void runAfterCommitActionsRunOnlyOnceAndOnlyAfterCommit() throws Exception {
+        RollerDatabaseExtension.ensureSchema();
+        if (!WebloggerStartup.isPrepared()) {
+            WebloggerStartup.prepare();
+        }
+
+        JPAPersistenceStrategy strategy =
+                new JPAPersistenceStrategy(WebloggerStartup.getDatabaseProvider());
+        try {
+            Weblog weblog = new Weblog();
+            weblog.setName("Run After Commit Test Weblog");
+            weblog.setHandle("runaftercommittest");
+            weblog.setEmailAddress("runaftercommittest@dev.null");
+            weblog.setEditorTheme("journal");
+            weblog.setLocale("en_US");
+            weblog.setTimeZone("America/Los_Angeles");
+            weblog.setDateCreated(new Date());
+            weblog.setCreatorUserName("nobody");
+
+            strategy.store(weblog);
+
+            AtomicInteger runs = new AtomicInteger();
+            strategy.runAfterCommit(runs::incrementAndGet);
+
+            assertEquals(0, runs.get(), "must not run before the commit actually happens");
+
+            strategy.flush();
+            assertEquals(1, runs.get(), "must run exactly once, once the commit has succeeded");
+
+            WeblogManager weblogManager = new JPAWeblogManagerImpl(null, strategy);
+            Weblog reloaded = weblogManager.getWeblogByHandle("runaftercommittest");
+            strategy.remove(reloaded);
+            strategy.flush();
+
+            assertEquals(1, runs.get(),
+                    "a later flush() with nothing newly queued must not re-run a stale action");
         } finally {
             strategy.shutdown();
         }

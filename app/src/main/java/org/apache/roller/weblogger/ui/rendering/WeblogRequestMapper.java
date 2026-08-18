@@ -289,8 +289,18 @@ public class WeblogRequestMapper implements RequestMapper {
             //    /<weblog>/<locale>/ was a redirect target, but the url was
             //    built from the handle alone, so /<weblog>/de quietly landed on
             //    the weblog's default-locale home instead of the German one.
-            StringBuilder redirectUrl = new StringBuilder(request.getContextPath());
-            redirectUrl.append('/').append(weblogHandle).append('/');
+            // 3. In vhost mode there is no handle segment at all -- the host
+            //    already supplies it (see the "Host-first resolution" comment
+            //    above) -- so appending weblogHandle here would leak the
+            //    handle back into a user-visible url on exactly the host this
+            //    feature exists to remove it from, and the resulting
+            //    /<contextPath>/<handle>/<locale>/ url is not one this mapper
+            //    (or WeblogRequestMapper in vhost mode) can ever resolve: it
+            //    404s.
+            StringBuilder redirectUrl = new StringBuilder(request.getContextPath()).append('/');
+            if (vhostHandle == null) {
+                redirectUrl.append(weblogHandle).append('/');
+            }
             if(weblogLocale != null) {
                 redirectUrl.append(weblogLocale).append('/');
             }

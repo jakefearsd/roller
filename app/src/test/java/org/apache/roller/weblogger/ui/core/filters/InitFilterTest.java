@@ -18,9 +18,14 @@
 
 package org.apache.roller.weblogger.ui.core.filters;
 
+import java.util.List;
+
 import jakarta.servlet.http.HttpServlet;
 
+import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -28,6 +33,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.filter.ForwardedHeaderFilter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.when;
 
 
 /**
@@ -264,6 +271,92 @@ public class InitFilterTest  {
                     WebloggerRuntimeConfig.getAbsoluteContextURL());
             assertEquals("", WebloggerRuntimeConfig.getRelativeContextURL());
         } finally {
+            WebloggerRuntimeConfig.setAbsoluteContextURL(priorAbsolute);
+            WebloggerRuntimeConfig.setRelativeContextURL(priorRelative);
+        }
+    }
+
+    // -------------------------------------------------- I2 (optional half):
+    // refuse to latch a host VirtualHostRegistry resolves
+    //
+    // Without this, a custom-domain request that happens to be the FIRST
+    // request after boot latches THAT weblog's own hostname as the site's
+    // absolute context url -- and with site.absoluteurl unset (I2's main
+    // fix warns about exactly this), every domain-less weblog then inherits
+    // it in its own canonical url/og:url/feed id/sitemap/robots.txt/
+    // password-reset links.
+
+    /**
+     * A request that arrives on a weblog's own custom domain must not latch
+     * that hostname as the site's absolute context url.
+     */
+    @Test
+    public void aRequestOnACustomDomainIsNotLatchedAsTheAbsoluteContextUrl() throws Exception {
+        String priorAbsolute = WebloggerRuntimeConfig.getAbsoluteContextURL();
+        String priorRelative = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setAbsoluteContextURL(null);
+        WebloggerRuntimeConfig.setRelativeContextURL(null);
+
+        MockWeblogger mocks = MockWeblogger.install();
+        try {
+            Weblog vhostblog = new Weblog();
+            vhostblog.setHandle("vhostblog");
+            vhostblog.setCustomDomain("vhost.example.com");
+            when(mocks.getWeblogManager().getWeblogs(null, null, null, null, 0, -1))
+                    .thenReturn(List.of(vhostblog));
+
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/entry/my-post");
+            request.setServerName("vhost.example.com");
+            request.addHeader("Host", "vhost.example.com");
+            request.setContextPath("");
+
+            new InitFilter().doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+            assertNull(WebloggerRuntimeConfig.getAbsoluteContextURL(),
+                    "a request on a weblog's own custom domain must not latch the site's "
+                            + "absolute context url from it");
+        } finally {
+            MockWeblogger.uninstall();
+            VirtualHostRegistry.invalidate();
+            WebloggerRuntimeConfig.setAbsoluteContextURL(priorAbsolute);
+            WebloggerRuntimeConfig.setRelativeContextURL(priorRelative);
+        }
+    }
+
+    /**
+     * The converse: an UNCLAIMED host (no weblog owns it) must still latch
+     * normally -- this is the ordinary site-host request, and every other
+     * test in this class already exercises it implicitly, but this one
+     * pins it explicitly at the same "VirtualHostRegistry is populated"
+     * setup the test above uses, so the two are read together.
+     */
+    @Test
+    public void aRequestOnAnUnclaimedHostStillLatchesNormally() throws Exception {
+        String priorAbsolute = WebloggerRuntimeConfig.getAbsoluteContextURL();
+        String priorRelative = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setAbsoluteContextURL(null);
+        WebloggerRuntimeConfig.setRelativeContextURL(null);
+
+        MockWeblogger mocks = MockWeblogger.install();
+        try {
+            Weblog vhostblog = new Weblog();
+            vhostblog.setHandle("vhostblog");
+            vhostblog.setCustomDomain("vhost.example.com");
+            when(mocks.getWeblogManager().getWeblogs(null, null, null, null, 0, -1))
+                    .thenReturn(List.of(vhostblog));
+
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");
+            request.setServerName("roller.example.com");
+            request.addHeader("Host", "roller.example.com");
+            request.setContextPath("");
+
+            new InitFilter().doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+            assertEquals("http://roller.example.com", WebloggerRuntimeConfig.getAbsoluteContextURL(),
+                    "an unclaimed host must still latch, unaffected by the custom-domain refusal");
+        } finally {
+            MockWeblogger.uninstall();
+            VirtualHostRegistry.invalidate();
             WebloggerRuntimeConfig.setAbsoluteContextURL(priorAbsolute);
             WebloggerRuntimeConfig.setRelativeContextURL(priorRelative);
         }
