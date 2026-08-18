@@ -19,7 +19,6 @@
 package org.apache.roller.weblogger.ui.rendering.pagers;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -29,8 +28,6 @@ import java.util.TreeMap;
 import java.util.TimeZone;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
@@ -114,44 +111,14 @@ public class WeblogEntriesDayPager extends AbstractWeblogEntriesPager {
         Date endDate = date;
         startDate = DateUtil.getStartOfDay(endDate, cal);
         endDate = DateUtil.getEndOfDay(endDate, cal);
-        
+
         if (entries == null) {
             entries = new TreeMap<>(Collections.reverseOrder());
             try {
                 WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
-                wesc.setWeblog(weblog);
                 wesc.setStartDate(startDate);
                 wesc.setEndDate(endDate);
-                wesc.setCatName(catName);
-                wesc.setTags(tags);
-                wesc.setStatus(WeblogEntry.PubStatus.PUBLISHED);
-                wesc.setLocale(locale);
-                wesc.setOffset(offset);
-                wesc.setMaxResults(length+1);
-                Map<Date, List<WeblogEntry>> mmap =
-                        WebloggerFactory.getWeblogger().getWeblogEntryManager().getWeblogEntryObjectMap(wesc);
-
-                // need to wrap pojos
-                int count = 0;
-                for (Map.Entry<Date, List<WeblogEntry>> entry : mmap.entrySet()) {
-                    // now we need to go through each entry in a day and wrap
-                    List<WeblogEntryWrapper> wrapped = new ArrayList<>();
-                    List<WeblogEntry> unwrapped = entry.getValue();
-                    for (int i=0; i < unwrapped.size(); i++) {
-                        if (count++ < length) {
-                            wrapped.add(i,WeblogEntryWrapper.wrap(unwrapped.get(i), urlStrategy));
-                        } else {
-                            more = true;
-                        }
-                    }
-                    
-                    // done with that day, put it in the map
-                    if (!wrapped.isEmpty()) {
-                        entries.put(entry.getKey(), wrapped);
-                    }
-                }
-                
-                
+                more = queryEntries(wesc, entries);
             } catch (Exception e) {
                 log.error("ERROR: getting entry month map", e);
             }

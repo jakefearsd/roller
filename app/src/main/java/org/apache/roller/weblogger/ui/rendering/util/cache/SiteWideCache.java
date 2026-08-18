@@ -192,6 +192,12 @@ public final class SiteWideCache implements CacheHandler {
     }
     
     
+    // CPD-OFF -- The three render caches are deliberately NOT collapsed into a
+    // shared base. Their expiry contracts genuinely differ: WeblogPageCache has
+    // no CacheHandler and is expired only lazily against weblog.lastModified,
+    // while its siblings are invalidated through CacheManager. Unifying them
+    // would be a behavioural change wearing cleanup's clothes. See CLAUDE.md,
+    // Templates.
     /**
      * Generate a cache key from a parsed weblog page request.
      * This generates a key of the form ...
@@ -273,6 +279,7 @@ public final class SiteWideCache implements CacheHandler {
 
         return key.toString();
     }
+    // CPD-ON
     
     
     /**

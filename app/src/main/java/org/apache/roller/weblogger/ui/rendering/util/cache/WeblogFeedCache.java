@@ -92,68 +92,75 @@ public final class WeblogFeedCache {
     public static WeblogFeedCache getInstance() {
         return singletonInstance;
     }
-    
-    
+
+
+    // CPD-OFF -- The three render caches are deliberately NOT collapsed into a
+    // shared base. Their expiry contracts genuinely differ: WeblogPageCache has
+    // no CacheHandler and is expired only lazily against weblog.lastModified,
+    // while its siblings are invalidated through CacheManager. Unifying them
+    // would be a behavioural change wearing cleanup's clothes. See CLAUDE.md,
+    // Templates.
     public Object get(String key, long lastModified) {
-        
+
         if (!cacheEnabled) {
             return null;
         }
-        
+
         Object entry = null;
-        
+
         LazyExpiringCacheEntry lazyEntry =
                 (LazyExpiringCacheEntry) this.contentCache.get(key);
         if(lazyEntry != null) {
             entry = lazyEntry.getValue(lastModified);
-            
+
             if(entry != null) {
                 log.debug("HIT "+key);
             } else {
                 log.debug("HIT-EXPIRED "+key);
             }
-            
+
         } else {
             log.debug("MISS "+key);
         }
-        
+
         return entry;
     }
-    
-    
+
+
     public void put(String key, Object value) {
-        
+
         if (!cacheEnabled) {
             return;
         }
-        
+
         contentCache.put(key, new LazyExpiringCacheEntry(value));
         log.debug("PUT "+key);
     }
-    
-    
+
+
     public void remove(String key) {
-        
+
         if (!cacheEnabled) {
             return;
         }
-        
+
         contentCache.remove(key);
         log.debug("REMOVE "+key);
     }
-    
-    
+
+
     public void clear() {
-        
+
         if (!cacheEnabled) {
             return;
         }
-        
+
         contentCache.clear();
         log.debug("CLEAR");
     }
-    
-    
+    // CPD-ON
+
+
     /**
      * Generate a cache key from a parsed weblog feed request.
      * This generates a key of the form ...

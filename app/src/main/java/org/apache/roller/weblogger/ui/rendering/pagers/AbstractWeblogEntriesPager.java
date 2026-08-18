@@ -20,16 +20,23 @@ package org.apache.roller.weblogger.ui.rendering.pagers;
 
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
+import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.util.I18nMessages;
 
 /**
@@ -237,6 +244,62 @@ public abstract class AbstractWeblogEntriesPager implements WeblogEntriesPager {
     }
     
     
+    /**
+     * Runs the entry search described by {@code wesc} and wraps the results
+     * into {@code target}, the same way for every subclass. The caller has
+     * already set whatever date range applies -- day, month, or none at all
+     * for the latest pager -- since that part is the one thing that
+     * genuinely differs between them. Returns whether more entries exist
+     * beyond what was requested, which the caller assigns to its own
+     * {@code more} field.
+     *
+     * <p>Moved here from WeblogEntriesDayPager/MonthPager/LatestPager, which
+     * were otherwise identical apart from that date-range setup. The caller
+     * keeps its own try/catch around this call (and its own per-class
+     * logger), so an exception here is reported exactly as it was before the
+     * extraction, and {@code target} -- pre-initialized by the caller and
+     * mutated in place -- keeps whatever entries were added before a
+     * mid-loop failure, also exactly as before.
+     */
+    protected boolean queryEntries(WeblogEntrySearchCriteria wesc,
+            Map<Date, List<WeblogEntryWrapper>> target) throws WebloggerException {
+
+        wesc.setWeblog(weblog);
+        wesc.setCatName(catName);
+        wesc.setTags(tags);
+        wesc.setStatus(WeblogEntry.PubStatus.PUBLISHED);
+        wesc.setLocale(locale);
+        wesc.setOffset(offset);
+        wesc.setMaxResults(length + 1);
+        Map<Date, List<WeblogEntry>> mmap =
+                WebloggerFactory.getWeblogger().getWeblogEntryManager().getWeblogEntryObjectMap(wesc);
+
+        boolean moreEntries = false;
+
+        // need to wrap pojos
+        int count = 0;
+        for (Map.Entry<Date, List<WeblogEntry>> entry : mmap.entrySet()) {
+            // now we need to go through each entry in a day and wrap
+            List<WeblogEntryWrapper> wrapped = new ArrayList<>();
+            List<WeblogEntry> unwrapped = entry.getValue();
+            for (int i = 0; i < unwrapped.size(); i++) {
+                if (count++ < length) {
+                    wrapped.add(i, WeblogEntryWrapper.wrap(unwrapped.get(i), urlStrategy));
+                } else {
+                    moreEntries = true;
+                }
+            }
+
+            // done with that day, put it in the map
+            if (!wrapped.isEmpty()) {
+                target.put(entry.getKey(), wrapped);
+            }
+        }
+
+        return moreEntries;
+    }
+
+
     /**
      * Create URL that encodes pager state using most appropriate forms of URL.
      * @param pageAdd To be added to page number, or 0 for no page number
