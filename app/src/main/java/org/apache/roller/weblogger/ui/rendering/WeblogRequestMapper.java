@@ -19,7 +19,6 @@
 package org.apache.roller.weblogger.ui.rendering;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -31,6 +30,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
 
@@ -95,57 +95,73 @@ public class WeblogRequestMapper implements RequestMapper {
         String weblogRequestData = null;
         
         log.debug("evaluating ["+request.getRequestURI()+"]");
-        
-        // figure out potential weblog handle
+
+        // Host-first resolution. A weblog that owns a hostname supplies its own
+        // handle, so the ENTIRE path is weblog-relative and the first segment is
+        // content (a page slug, a context) rather than a handle. Everything
+        // after this block -- locale detection, context/data splitting, the
+        // trailing-slash rules, the forward url -- is identical either way,
+        // which is the whole reason resolution lives here rather than in a
+        // second mapper that would have to reimplement it.
+        String vhostHandle = VirtualHostRegistry.handleFor(request.getHeader("Host"));
+
         String servlet = request.getRequestURI();
         String pathInfo = null;
-                
-        if(servlet != null && servlet.trim().length() > 1) {
-            
-            if(request.getContextPath() != null) {
-                servlet = servlet.substring(request.getContextPath().length());
-            }
-            
-            // strip off the leading slash
+
+        if (servlet == null) {
+            return false;
+        }
+        if (request.getContextPath() != null) {
+            servlet = servlet.substring(request.getContextPath().length());
+        }
+        if (servlet.startsWith("/")) {
             servlet = servlet.substring(1);
-            
-            // strip off trailing slash if needed
-            if(servlet.endsWith("/")) {
-                servlet = servlet.substring(0, servlet.length() - 1);
+        }
+        if (servlet.endsWith("/")) {
+            servlet = servlet.substring(0, servlet.length() - 1);
+            trailingSlash = true;
+        }
+
+        // The first path segment, whatever it turns out to mean. On a custom
+        // domain it is content; otherwise it is the candidate weblog handle.
+        int firstSlash = servlet.indexOf('/');
+        String firstSegment = firstSlash < 0 ? servlet : servlet.substring(0, firstSlash);
+
+        if (vhostHandle != null) {
+            weblogHandle = vhostHandle;
+            pathInfo = servlet.isEmpty() ? null : servlet;
+            if (servlet.isEmpty()) {
+                // The custom domain's root IS the weblog home and is already the
+                // canonical url. There is no shorter form to redirect to, so
+                // suppress the trailing-slash redirect for this case ONLY --
+                // suppressing it for every vhost request would make the 404
+                // branch below swallow every permalink.
                 trailingSlash = true;
             }
-            
-            if(servlet.indexOf('/') != -1) {
-                weblogHandle = servlet.substring(0, servlet.indexOf('/'));
-                pathInfo = servlet.substring(servlet.indexOf('/')+1);
-            } else {
-                weblogHandle = servlet;
+        } else if (!servlet.isEmpty()) {
+            weblogHandle = firstSegment;
+            if (firstSlash != -1) {
+                pathInfo = servlet.substring(firstSlash + 1);
             }
         }
-        
+
         log.debug("potential weblog handle = "+weblogHandle);
-        
-        // check if it's a valid weblog handle
-        if(restricted.contains(weblogHandle) || !this.isWeblog(weblogHandle)) {
-            log.debug("SKIPPED "+weblogHandle);
+
+        // The protected-url list applies in BOTH modes. On a custom domain the
+        // mapper would otherwise claim every path on that host -- /themes/**,
+        // /webjars/**, /roller-ui/rendering/**, /newsletter/**, /robots.txt and
+        // /sitemap.xml included -- and forward them all to the page servlet.
+        // Only the isWeblog() half is skippable: a host-resolved handle is a
+        // weblog by construction.
+        if (restricted.contains(firstSegment)) {
+            log.debug("SKIPPED " + firstSegment);
+            return false;
+        }
+        if (vhostHandle == null && !this.isWeblog(weblogHandle)) {
+            log.debug("SKIPPED " + weblogHandle);
             return false;
         }
 
-        // is there a special hostname for the specified hostname?
-        String multiHostNameURL =  WebloggerConfig.getProperty("weblog.absoluteurl." + weblogHandle);
-        if ( multiHostNameURL != null ) {
-
-            // there is, so check that configured hostname matches the one in the request
-            URL weblogAbsoluteURL = new URL( multiHostNameURL );
-            String headerHost = request.getHeader("Host");
-            String configHost = weblogAbsoluteURL.getHost();
-
-            if (headerHost != null && configHost != null && !headerHost.equals(configHost)) {
-                log.debug("SKIPPED " + weblogHandle);
-                return false;
-            }
-        }
-        
         log.debug("WEBLOG_URL "+request.getServletPath());
         
         // parse the rest of the url and build forward url

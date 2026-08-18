@@ -1,6 +1,8 @@
 package org.apache.roller.weblogger.ui.rendering;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
+import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
@@ -38,6 +40,9 @@ class WeblogRequestMapperTest {
         TestUtils.teardownWeblog(weblog.getId());
         TestUtils.teardownUser(user.getUserName());
         TestUtils.endSession(true);
+        // VirtualHostRegistry is a JVM-wide static cache -- a custom domain
+        // set by one test must not leak into the next.
+        VirtualHostRegistry.invalidate();
     }
 
     private MockHttpServletRequest publicUrl(String method, String uriAfterContext) {
@@ -403,5 +408,113 @@ class WeblogRequestMapperTest {
         assertFalse(mapper.handleRequest(request, response),
                 "posting into the public url space is not something this mapper routes");
         assertNull(response.getForwardedUrl());
+    }
+
+    // ------------------------------------------------- virtual hosts
+
+    private MockHttpServletRequest vhostUrl(String method, String uri) {
+        MockHttpServletRequest request = publicUrlAt("", method, uri);
+        request.addHeader("Host", "vhost.example.com");
+        request.setServerName("vhost.example.com");
+        return request;
+    }
+
+    /**
+     * On a custom domain the WHOLE path is weblog-relative: there is no handle
+     * segment, because the host supplied it.
+     */
+    @Test
+    void aPermalinkOnACustomDomainForwardsToThePageServlet() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(vhostUrl("GET", "/entry/my-post"), response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/entry/my-post",
+                response.getForwardedUrl());
+    }
+
+    @Test
+    void theWeblogHomeOnACustomDomainForwardsToThePageServlet() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(vhostUrl("GET", "/"), response));
+        assertEquals("/roller-ui/rendering/page/mapperblog", response.getForwardedUrl());
+    }
+
+    /**
+     * The point of the feature: the first path segment is NOT a handle on a
+     * custom domain, so a segment that happens to name another weblog is a page
+     * slug on THIS one, not a route to that other weblog.
+     */
+    @Test
+    void aSegmentNamingAnotherWeblogIsAPageSlugOnACustomDomain() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // No trailing slash, matching the non-vhost sibling test
+        // (anUnknownSingleSegmentForwardsToPageServletAsAPageSlugCandidate,
+        // which uses "/mapperblog/about" rather than "/mapperblog/about/") --
+        // a single content segment PLUS a trailing slash is exactly the shape
+        // aTrailingSlashOnAPermalinkIsNotFound covers, and is a 404 there for
+        // the identical reason it would be here: this mapper enforces the
+        // no-trailing-slash rule identically once there is a content segment,
+        // vhost or not (see the "Host-first resolution" comment above).
+        assertTrue(mapper.handleRequest(vhostUrl("GET", "/someotherblog"), response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/someotherblog",
+                response.getForwardedUrl());
+    }
+
+    /** An unclaimed host falls through to today's path-segment resolution. */
+    @Test
+    void anUnclaimedHostStillResolvesByPathSegment() throws Exception {
+        MockHttpServletRequest request = publicUrlAt("", "GET", "/mapperblog/entry/my-post");
+        request.addHeader("Host", "unclaimed.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/entry/my-post",
+                response.getForwardedUrl());
+    }
+
+    /**
+     * A permalink on a custom domain must render, not 404. The mapper 404s any
+     * request where weblogRequestContext != null and trailingSlash is set, so
+     * forcing trailingSlash for every vhost request would swallow every
+     * permalink on every custom domain.
+     */
+    @Test
+    void aPermalinkOnACustomDomainIsNot404() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(vhostUrl("GET", "/entry/my-post"), response));
+        assertEquals(200, response.getStatus());
+        assertNotNull(response.getForwardedUrl());
+    }
+
+    /**
+     * Protected paths stay protected on a custom domain. Without this the
+     * mapper claims every path on that host and forwards theme assets, the
+     * contact endpoint and robots.txt into the page servlet.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"themes", "webjars", "roller-ui", "newsletter",
+                            "robots.txt", "sitemap.xml"})
+    void protectedPathsAreStillDeclinedOnACustomDomain(String reserved) throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertFalse(mapper.handleRequest(vhostUrl("GET", "/" + reserved + "/x"), response),
+                reserved + " must fall through to its own servlet on a custom domain");
+    }
+
+    private void givenCustomDomain(String host) throws Exception {
+        Weblog stored = WebloggerFactory.getWeblogger().getWeblogManager()
+                .getWeblogByHandle("mapperblog");
+        stored.setCustomDomain(host);
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(stored);
+        TestUtils.endSession(true);
+        VirtualHostRegistry.invalidate();
     }
 }
