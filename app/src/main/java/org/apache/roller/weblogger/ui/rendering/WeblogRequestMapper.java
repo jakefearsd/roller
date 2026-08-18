@@ -509,8 +509,10 @@ public class WeblogRequestMapper implements RequestMapper {
             if(weblog != null) {
                 isWeblog = true;
             }
-        } catch(Exception ex) {
-            // doesn't really matter to us why it's not a valid website
+        } catch(Exception ignored) {
+            // Any exception here (bad handle format, a manager not yet
+            // ready) means this is not a valid weblog handle -- isWeblog
+            // stays false either way, which is all this caller checks.
         }
         
         return isWeblog;

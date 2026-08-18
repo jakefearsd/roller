@@ -26,6 +26,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -58,6 +59,11 @@ public class UserDataServlet extends HttpServlet {
     private static final int MAX_LENGTH = 50;
 
     @Override
+    @SuppressFBWarnings(
+            value = "DE_MIGHT_IGNORE",
+            justification = "A malformed \"offset\"/\"length\" query parameter is routine, not "
+                    + "an error -- parsing simply keeps the declared default and there is "
+                    + "nothing to act on.")
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -98,10 +104,15 @@ public class UserDataServlet extends HttpServlet {
         try {
             offset = Integer.parseInt(request.getParameter("offset"));
         } catch (Exception ignored) {
+            // A malformed or absent "offset" is routine, not an error --
+            // this is a plain GET parameter and the autocomplete lookup
+            // simply starts from the top instead.
         }
         try {
             length = Integer.parseInt(request.getParameter("length"));
         } catch (Exception ignored) {
+            // Same as "offset" above: a bad "length" just keeps the
+            // MAX_LENGTH default.
         }
 
         Weblogger roller = WebloggerFactory.getWeblogger();
@@ -121,7 +132,7 @@ public class UserDataServlet extends HttpServlet {
             }
             response.flushBuffer();
         } catch (WebloggerException e) {
-            throw new ServletException(e.getMessage());
+            throw new ServletException(e.getMessage(), e);
         }
     }
 

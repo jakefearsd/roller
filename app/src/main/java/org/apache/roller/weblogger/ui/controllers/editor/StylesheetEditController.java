@@ -99,7 +99,12 @@ public class StylesheetEditController extends BaseController {
             SharedTheme themeName = themeManager.getTheme(getActionWeblog(request).getEditorTheme());
             stylesheet = themeName.getStylesheet();
         } catch (WebloggerException ex) {
-            // ignored
+            // Letting this fall through with stylesheet == null used to
+            // guarantee an NPE a few lines below (stylesheet.getLink()) --
+            // fail the same way the second try block already does instead.
+            log.error("Error finding stylesheet in shared theme", ex);
+            addError(model, "generic.error.check.logs", request);
+            return revert(request, model);
         }
 
         try {

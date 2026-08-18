@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.ui.controllers.core;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -219,6 +220,33 @@ class InstallControllerTest {
         assertFalse(((List<?>) model.getAttribute("messages")).isEmpty(),
                 "the failure has to come back with something to read");
         assertEquals("installer.database.creation.pageTitle", model.getAttribute("pageTitle"));
+    }
+
+    @Test
+    void aFailureClosingTheProbeConnectionStillReturnsTheProductNameItAlreadyRead() throws Exception {
+        // getDatabaseProductName()'s finally block best-effort-closes the probe
+        // connection; a driver that fails to close it must not stop the name
+        // it already read from reaching the page. Called directly via
+        // reflection -- it is a private helper -- so this is isolated from the
+        // rest of the install flow's own database-state mocking.
+        DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+        when(metaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+
+        Connection connection = mock(Connection.class);
+        when(connection.getMetaData()).thenReturn(metaData);
+        org.mockito.Mockito.doThrow(new java.sql.SQLException("connection already closed"))
+                .when(connection).close();
+
+        DatabaseProvider provider = mock(DatabaseProvider.class);
+        when(provider.getConnection()).thenReturn(connection);
+        setStartupField("dbProvider", provider);
+
+        Method method = InstallController.class.getDeclaredMethod("getDatabaseProductName");
+        method.setAccessible(true);
+        Object name = method.invoke(controller);
+
+        assertEquals("PostgreSQL", name);
+        verify(connection).close();
     }
 
     @Test

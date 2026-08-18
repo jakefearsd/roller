@@ -549,6 +549,34 @@ class AdminApiTest {
     }
 
     @Test
+    void patchConfigRejectsAnUnparseableIntegerWithItsCauseAttached() throws Exception {
+        Weblogger weblogger = mockedConfigWeblogger();
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/admin/config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"site.pages.maxEntries\":\"not-an-integer\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getPropertiesManager(), never()).saveProperties(any());
+    }
+
+    @Test
+    void patchConfigRejectsAnUnparseableFloatWithItsCauseAttached() throws Exception {
+        Weblogger weblogger = mockedConfigWeblogger();
+
+        mockMvc(controllerFor(weblogger))
+                .perform(patch("/v1/admin/config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"uploads.file.maxsize\":\"not-a-float\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        verify(weblogger.getPropertiesManager(), never()).saveProperties(any());
+    }
+
+    @Test
     void patchConfigRejectsAnEmptyBody() throws Exception {
         Weblogger weblogger = mockedConfigWeblogger();
 

@@ -147,6 +147,17 @@ public class WebappResourceLoader extends ResourceLoader {
 			throw new ResourceNotFoundException("Invalid ThemeRL key " + name);
 		}
 
+		if (servletContext == null) {
+			// getResourceAsStream() below would otherwise throw an
+			// unchecked NullPointerException; a null check here reports the
+			// real problem (no ServletContext was set) as the same
+			// ResourceNotFoundException every other failure in this method
+			// produces, instead of catching-and-rethrowing NPE as a
+			// diagnostic technique.
+			throw new ResourceNotFoundException(
+					"WebappResourceLoader: ServletContext not initialized; cannot load '" + name + "'");
+		}
+
 		String savedPath = templatePaths.get(name);
 		if (savedPath != null) {
 			result = servletContext.getResourceAsStream(savedPath + split[0]);
@@ -163,9 +174,6 @@ public class WebappResourceLoader extends ResourceLoader {
 						templatePaths.put(name, pathSegment);
 						break;
 					}
-				} catch (NullPointerException npe) {
-					// no servletContext was set, whine about it!
-					throw npe;
 				} catch (Exception e) {
 					// only save the first one for later throwing
 					if (exception == null) {

@@ -143,10 +143,12 @@ public class WeblogFeedRequest extends WeblogRequest {
         if(request.getParameter("page") != null) {
             try {
                 this.page = Integer.parseInt(request.getParameter("page"));
-            } catch(NumberFormatException e) {
-                // 
+            } catch(NumberFormatException ignored) {
+                // A malformed "page" parameter is routine, not a request
+                // error -- crawlers and hand-edited feed URLs send these
+                // constantly; parsing simply keeps the default page.
             }
-        }     
+        }
         
         if(request.getParameter("q") != null && !request.getParameter("q").isBlank()) {
             this.term = decodeOrReject(request.getParameter("q"), request);

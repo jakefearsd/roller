@@ -320,4 +320,22 @@ class ThemeManagerImplTest {
 
         assertEquals(WeblogTheme.CUSTOM, weblog.getEditorTheme());
     }
+
+    @Test
+    void registerPngMimeTypeSwallowsAFailureFromTheMap() {
+        // The real JDK MimetypesFileTypeMap never throws for this literal,
+        // well-formed string, and the static initializer that normally calls
+        // this runs at most once per JVM -- registerPngMimeType exists as its
+        // own method so a test can drive the failure path with a throwing
+        // subclass instead.
+        jakarta.activation.MimetypesFileTypeMap throwing = new jakarta.activation.MimetypesFileTypeMap() {
+            @Override
+            public synchronized void addMimeTypes(String mimeTypes) {
+                throw new IllegalStateException("registry unavailable");
+            }
+        };
+
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> ThemeManagerImpl.registerPngMimeType(throwing));
+    }
 }

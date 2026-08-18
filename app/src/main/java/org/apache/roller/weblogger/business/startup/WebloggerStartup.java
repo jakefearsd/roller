@@ -135,7 +135,7 @@ public final class WebloggerStartup {
             prepared = true;
             
         } catch (StartupException se) {
-            throw new StartupException(se.getMessage(), se.getRootCause(), installer.getMessages());
+            throw new StartupException(se.getMessage(), se, installer.getMessages());
         }
         
         return installer.getMessages();
@@ -164,7 +164,7 @@ public final class WebloggerStartup {
             prepared = true;
             
         } catch (StartupException se) {
-            throw new StartupException(se.getMessage(), se.getRootCause(), installer.getMessages());
+            throw new StartupException(se.getMessage(), se, installer.getMessages());
         }
         
         return installer.getMessages();

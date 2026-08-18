@@ -30,6 +30,21 @@ public class ApiException extends RuntimeException {
         this.errors = errors;
     }
 
+    /**
+     * As above, but also chains {@code cause} -- the exception this API
+     * exception was translated from -- so the original stack trace survives
+     * in application logs even though the client only ever sees the problem
+     * detail.
+     */
+    public ApiException(int status, String type, String title, String detail,
+                        List<ApiProblem.FieldError> errors, Throwable cause) {
+        super(detail, cause);
+        this.status = status;
+        this.type = type;
+        this.title = title;
+        this.errors = errors;
+    }
+
     public static ApiException notFound(String detail) {
         return new ApiException(404, TYPE_BASE + "not-found", "Not found", detail);
     }
@@ -44,6 +59,11 @@ public class ApiException extends RuntimeException {
 
     public static ApiException badRequest(String detail) {
         return new ApiException(400, TYPE_BASE + "invalid-request", "Invalid request", detail);
+    }
+
+    /** As above, chaining {@code cause} -- see the cause-carrying constructor. */
+    public static ApiException badRequest(String detail, Throwable cause) {
+        return new ApiException(400, TYPE_BASE + "invalid-request", "Invalid request", detail, null, cause);
     }
 
     public static ApiException validation(String detail, List<ApiProblem.FieldError> errors) {
@@ -72,6 +92,11 @@ public class ApiException extends RuntimeException {
      */
     public static ApiException badGateway(String detail) {
         return new ApiException(502, TYPE_BASE + "upstream-failure", "Upstream failure", detail);
+    }
+
+    /** As above, chaining {@code cause} -- see the cause-carrying constructor. */
+    public static ApiException badGateway(String detail, Throwable cause) {
+        return new ApiException(502, TYPE_BASE + "upstream-failure", "Upstream failure", detail, null, cause);
     }
 
     public int getStatus() {

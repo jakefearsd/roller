@@ -127,7 +127,7 @@ public class ThemeMetadataParser {
             try {
                 template.setAction(ComponentType.valueOf(actionString.toUpperCase()));
             } catch (IllegalArgumentException e) {
-                throw new ThemeParsingException("Unknown template action value '" + actionString + "'");
+                throw new ThemeParsingException("Unknown template action value '" + actionString + "'", e);
             }
         }
 
@@ -141,7 +141,7 @@ public class ThemeMetadataParser {
                 try {
                     rendition.setType(RenditionType.valueOf(renditionValue.toUpperCase()));
                 } catch (IllegalArgumentException e) {
-                    throw new ThemeParsingException("Invalid rendition type " + renditionValue + " found.");
+                    throw new ThemeParsingException("Invalid rendition type " + renditionValue + " found.", e);
                 }
             } else {
                 // default to standard if type not provided, as most templates are single-rendition
@@ -154,7 +154,7 @@ public class ThemeMetadataParser {
                 try {
                     rendition.setTemplateLang(TemplateLanguage.valueOf(templateString.toUpperCase()));
                 } catch (IllegalArgumentException e) {
-                    throw new ThemeParsingException("Unknown templateLanguage value '" + templateString + "'");
+                    throw new ThemeParsingException("Unknown templateLanguage value '" + templateString + "'", e);
                 }
             }
 			rendition.setContentsFile(renditionElement.getChildText("contentsFile"));
@@ -203,7 +203,7 @@ public class ThemeMetadataParser {
                 try {
                     rendition.setType(RenditionType.valueOf(renditionValue.toUpperCase()));
                 } catch (IllegalArgumentException e) {
-                    throw new ThemeParsingException("Invalid rendition type " + renditionValue + " found.");
+                    throw new ThemeParsingException("Invalid rendition type " + renditionValue + " found.", e);
                 }
             } else {
                 // default to standard if type not provided, as most templates are single-rendition
@@ -216,7 +216,7 @@ public class ThemeMetadataParser {
                 try {
                     rendition.setTemplateLang(TemplateLanguage.valueOf(templateString.toUpperCase()));
                 } catch (IllegalArgumentException e) {
-                    throw new ThemeParsingException("Unknown templateLanguage value '" + templateString + "'");
+                    throw new ThemeParsingException("Unknown templateLanguage value '" + templateString + "'", e);
                 }
             }
             rendition.setContentsFile(renditionElement.getChildText("contentsFile"));

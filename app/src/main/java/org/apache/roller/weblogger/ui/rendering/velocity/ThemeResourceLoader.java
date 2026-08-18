@@ -125,12 +125,12 @@ public class ThemeResourceLoader extends ResourceLoader {
         } catch (ThemeNotFoundException tnfe) {
             String msg = "ThemeResourceLoader Error: " + tnfe.getMessage();
             logger.error(msg, tnfe);
-            throw new ResourceNotFoundException(msg);
+            throw new ResourceNotFoundException(msg, tnfe);
 
         } catch (WebloggerException re) {
             String msg = "RollerResourceLoader Error: " + re.getMessage();
             logger.error(msg, re);
-            throw new ResourceNotFoundException(msg);
+            throw new ResourceNotFoundException(msg, re);
         }
     }
 

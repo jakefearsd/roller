@@ -209,14 +209,18 @@ public class InstallController extends BaseController {
         try {
             con = WebloggerStartup.getDatabaseProvider().getConnection();
             name = con.getMetaData().getDatabaseProductName();
-        } catch (Exception intentionallyIgnored) {
-            // ignored
+        } catch (Exception ignored) {
+            // This is a best-effort probe for a diagnostics page shown before
+            // the database is confirmed reachable; if the driver won't even
+            // answer getDatabaseProductName(), "unknown" is a fine fallback
+            // for that page and the real failure is reported elsewhere in
+            // the install flow.
         } finally {
             if (con != null) {
                 try {
                     con.close();
                 } catch (Exception ex) {
-                    // ignored
+                    log.debug("Could not close probe connection to database", ex);
                 }
             }
         }

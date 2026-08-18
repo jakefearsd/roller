@@ -73,8 +73,10 @@ public class VelocityRendererFactory implements RendererFactory {
             // standard velocity template
             try {
                renderer = new VelocityRenderer(template);
-            } catch (ResourceNotFoundException ex) {
-                // already logged in VelocityRenderer
+            } catch (ResourceNotFoundException ignored) {
+                // Already logged in VelocityRenderer -- logging again here
+                // would just duplicate that entry. renderer stays null,
+                // which the caller already treats as "no renderer".
             } catch(Exception ex) {
                 // some kind of exception so we don't have a renderer
                 log.error("ERROR creating VelocityRenderer", ex);

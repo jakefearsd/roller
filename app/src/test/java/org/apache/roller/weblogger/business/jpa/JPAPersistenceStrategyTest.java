@@ -175,4 +175,29 @@ class JPAPersistenceStrategyTest {
             strategy.shutdown();
         }
     }
+
+    @Test
+    void refreshOfAnEntityTheEntityManagerHasNeverSeenIsANoOpRatherThanThrowing() throws Exception {
+        // EntityManager.refresh() throws for an entity that is not managed by
+        // this persistence context. refresh() exists to be called
+        // speculatively; the caller re-reads through the EntityManager
+        // either way, so that failure must be swallowed, not propagated.
+        RollerDatabaseExtension.ensureSchema();
+        if (!WebloggerStartup.isPrepared()) {
+            WebloggerStartup.prepare();
+        }
+
+        JPAPersistenceStrategy strategy =
+                new JPAPersistenceStrategy(WebloggerStartup.getDatabaseProvider());
+        try {
+            Weblog neverPersisted = new Weblog();
+            neverPersisted.setName("Never Persisted");
+            neverPersisted.setHandle("neverpersisted");
+
+            assertDoesNotThrow(() -> strategy.refresh(neverPersisted),
+                    "refresh() of an entity the EntityManager has never seen must not throw");
+        } finally {
+            strategy.shutdown();
+        }
+    }
 }

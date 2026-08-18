@@ -367,7 +367,7 @@ public class Utilities {
             in = new FileInputStream(from);
         } catch (IOException ex) {
             throw new IOException("Utilities.copyFile: opening input stream '"
-                    + from.getPath() + "', " + ex.getMessage());
+                    + from.getPath() + "', " + ex.getMessage(), ex);
         }
 
         try {
@@ -375,10 +375,13 @@ public class Utilities {
         } catch (Exception ex) {
             try {
                 in.close();
-            } catch (IOException ex1) {
+            } catch (IOException ignored) {
+                // We are already about to throw the more informative
+                // exception below; a failure to close the still-open input
+                // stream here is secondary and would only mask it.
             }
             throw new IOException("Utilities.copyFile: opening output stream '"
-                    + to.getPath() + "', " + ex.getMessage());
+                    + to.getPath() + "', " + ex.getMessage(), ex);
         }
 
         copyInputToOutput(in, out, from.length());
@@ -423,10 +426,12 @@ public class Utilities {
                 try {
                     in.close();
                     out.close();
-                } catch (IOException ex1) {
+                } catch (IOException ignored) {
+                    // Already failing the read; a close failure on top of
+                    // that has nothing further to tell the caller.
                 }
                 throw new IOException("Reading input stream, "
-                        + ex.getMessage());
+                        + ex.getMessage(), ex);
             }
 
             if (bytes < 0) {
@@ -441,10 +446,12 @@ public class Utilities {
                 try {
                     in.close();
                     out.close();
-                } catch (IOException ex1) {
+                } catch (IOException ignored) {
+                    // Already failing the write; a close failure on top of
+                    // that has nothing further to tell the caller.
                 }
                 throw new IOException("Writing output stream, "
-                        + ex.getMessage());
+                        + ex.getMessage(), ex);
             }
         }
 
@@ -452,7 +459,7 @@ public class Utilities {
             in.close();
             out.close();
         } catch (IOException ex) {
-            throw new IOException("Closing file streams, " + ex.getMessage());
+            throw new IOException("Closing file streams, " + ex.getMessage(), ex);
         }
     }
 
@@ -473,7 +480,7 @@ public class Utilities {
             in.close();
             out.close();
         } catch (IOException ex) {
-            throw new IOException("Closing file streams, " + ex.getMessage());
+            throw new IOException("Closing file streams, " + ex.getMessage(), ex);
         }
     }
 
@@ -906,14 +913,31 @@ public class Utilities {
         FileTypeMap map = FileTypeMap.getDefaultFileTypeMap();
 
         // TODO: figure out why PNG is missing from Java MIME types
-        if (map instanceof MimetypesFileTypeMap) {
-            try {
-                ((MimetypesFileTypeMap) map).addMimeTypes("image/png png PNG");
-            } catch (Exception ignored) {
-            }
+        if (map instanceof MimetypesFileTypeMap mftm) {
+            registerPngMimeType(mftm);
         }
 
         return map.getContentType(fileName);
+    }
+
+    /**
+     * Extracted from {@link #getContentTypeFromFileName} so a test can drive
+     * the failure path directly with a throwing {@code MimetypesFileTypeMap}
+     * subclass -- {@code addMimeTypes} has no declared or documented failure
+     * mode for the literal, well-formed string this is called with, so the
+     * real JDK implementation cannot be made to throw from a black-box test.
+     */
+    static void registerPngMimeType(MimetypesFileTypeMap map) {
+        try {
+            map.addMimeTypes("image/png png PNG");
+        } catch (Exception ex) {
+            // This guards against a future JDK/vendor MimetypesFileTypeMap
+            // that behaves differently. If it ever does throw, PNG simply
+            // falls back to whatever the platform default answers, which is
+            // exactly the "missing from Java MIME types" case above -- worth
+            // a trace if someone is chasing that down.
+            mLogger.debug("Could not register PNG mime type", ex);
+        }
     }
 
     /**

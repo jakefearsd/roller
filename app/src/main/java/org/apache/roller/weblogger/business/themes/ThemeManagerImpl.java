@@ -64,19 +64,33 @@ import org.apache.roller.weblogger.util.RollerMessages;
  */
 public class ThemeManagerImpl implements ThemeManager {
 
+	private static final Log log = LogFactory.getLog(ThemeManagerImpl.class);
+
 	private static final FileTypeMap map;
 	static {
 		// TODO: figure out why PNG is missing from Java MIME types
 		map = FileTypeMap.getDefaultFileTypeMap();
-		if (map instanceof MimetypesFileTypeMap) {
-			try {
-				((MimetypesFileTypeMap) map).addMimeTypes("image/png png PNG");
-			} catch (Exception ignored) {
-			}
+		if (map instanceof MimetypesFileTypeMap mftm) {
+			registerPngMimeType(mftm);
 		}
 	}
 
-	private static final Log log = LogFactory.getLog(ThemeManagerImpl.class);
+	/**
+	 * Extracted from the static initializer above so a test can drive the
+	 * failure path directly with a throwing {@code MimetypesFileTypeMap}
+	 * subclass -- {@code addMimeTypes} has no declared or documented failure
+	 * mode for the literal, well-formed string this is called with, so the
+	 * real JDK implementation cannot be made to throw from a black-box test,
+	 * and the static initializer itself runs at most once per JVM.
+	 */
+	static void registerPngMimeType(MimetypesFileTypeMap map) {
+		try {
+			map.addMimeTypes("image/png png PNG");
+		} catch (Exception ex) {
+			log.debug("Could not register PNG mime type", ex);
+		}
+	}
+
 	private final Weblogger roller;
 	// directory where themes are kept
 	private String themeDir = null;

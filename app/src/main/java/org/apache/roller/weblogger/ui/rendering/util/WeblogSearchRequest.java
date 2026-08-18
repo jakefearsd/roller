@@ -88,8 +88,10 @@ public class WeblogSearchRequest extends WeblogRequest {
             String pageInt = request.getParameter("page");
             try {
                 this.pageNum = Integer.parseInt(pageInt);
-            } catch(NumberFormatException e) {
-                // ignored, bad input
+            } catch(NumberFormatException ignored) {
+                // A malformed "page" parameter is routine, not a request
+                // error -- crawlers and hand-edited search URLs send these
+                // constantly; parsing simply keeps the default page.
             }
         }
         

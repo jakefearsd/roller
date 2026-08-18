@@ -168,6 +168,21 @@ class UserDataServletTest {
         assertEquals(404, response.getStatus());
     }
 
+    @Test
+    void aFailureListingUsersIsWrappedAsAServletExceptionCarryingItsCause() throws Exception {
+        callerIsAdmin(false);
+        WebloggerException cause = new WebloggerException("query failed");
+        when(weblogger.userManager().getUsersStartingWith(any(), any(), anyOffset(), anyLength()))
+                .thenThrow(cause);
+
+        jakarta.servlet.ServletException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                jakarta.servlet.ServletException.class,
+                () -> servlet.doGet(request, response));
+
+        assertEquals(cause, thrown.getCause(),
+                "the WebloggerException must survive as the cause, not just its message");
+    }
+
     // ------------------------------------------------------- query parameters
 
     /**

@@ -185,7 +185,7 @@ public class AdminApi extends BaseApiController implements UISecurityEnforced {
             log.error("Set-password link could not be sent for new user " + userName, e);
             throw ApiException.badGateway(
                     "The account was created (disabled), but the set-password link could not be sent. "
-                            + "Resend it from the UserAdmin screen's \"send set-password link\" action.");
+                            + "Resend it from the UserAdmin screen's \"send set-password link\" action.", e);
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(AdminDtos.toView(user, roles(user)));
@@ -332,14 +332,14 @@ public class AdminApi extends BaseApiController implements UISecurityEnforced {
                 try {
                     Integer.parseInt(value);
                 } catch (NumberFormatException e) {
-                    throw ApiException.badRequest("'" + def.getName() + "' must be an integer.");
+                    throw ApiException.badRequest("'" + def.getName() + "' must be an integer.", e);
                 }
             }
             case "float" -> {
                 try {
                     Float.parseFloat(value);
                 } catch (NumberFormatException e) {
-                    throw ApiException.badRequest("'" + def.getName() + "' must be a number.");
+                    throw ApiException.badRequest("'" + def.getName() + "' must be a number.", e);
                 }
             }
             default -> {

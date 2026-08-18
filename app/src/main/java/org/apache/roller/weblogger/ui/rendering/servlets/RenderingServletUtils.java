@@ -70,7 +70,11 @@ final class RenderingServletUtils {
             return output;
         } catch (Exception e) {
             log.error("Error during rendering for " + logContext, e);
-            try { output.close(); } catch (IOException ignored) {}
+            try {
+                output.close();
+            } catch (IOException closeFailure) {
+                log.debug("Failed to close render buffer after a render error", closeFailure);
+            }
             sendNotFound(response);
             return null;
         }

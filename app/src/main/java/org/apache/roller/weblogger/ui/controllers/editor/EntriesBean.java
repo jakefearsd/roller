@@ -59,7 +59,11 @@ public class EntriesBean {
             try {
                 DateFormat df = new SimpleDateFormat("MM/dd/yy");
                 return df.parse(getStartDateString());
-            } catch(Exception e) { }
+            } catch(Exception ignored) {
+                // A malformed hand-typed search-date is routine, not an
+                // error -- the search simply proceeds without a start-date
+                // bound.
+            }
         }
         return null;
     }
@@ -69,7 +73,10 @@ public class EntriesBean {
             try {
                 DateFormat df = new SimpleDateFormat("MM/dd/yy");
                 return df.parse(getEndDateString());
-            } catch(Exception e) { }
+            } catch(Exception ignored) {
+                // Same as getStartDate() above: a malformed end-date just
+                // leaves the search with no end-date bound.
+            }
         }
         return null;
     }

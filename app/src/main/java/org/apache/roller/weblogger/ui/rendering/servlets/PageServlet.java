@@ -365,7 +365,13 @@ public class PageServlet extends HttpServlet {
             try {
                 template = weblog.getTheme().getTemplateByName("_page");
             } catch (Exception e) {
-                // ignored ... considered page not found
+                // Not simply "no _page override" -- getTemplateByName
+                // returns null for that. An exception here means a real
+                // lookup failure, so fall back to the default page template
+                // (unchanged behavior) but leave a trace for whoever is
+                // debugging why a themed page render looks generic.
+                log.warn("Error looking up '_page' template for weblog "
+                        + weblog.getHandle(), e);
             }
             return template != null ? template
                     : new StaticThemeTemplate("templates/weblog/page.vm",

@@ -78,7 +78,8 @@ public class MailProvider {
                 Context ctx = new InitialContext();
                 session = (Session) ctx.lookup(jndiName);
             } catch (NamingException ex) {
-                throw new StartupException("ERROR looking up mail-session with JNDI name: " + jndiName);
+                throw new StartupException(
+                        "ERROR looking up mail-session with JNDI name: " + jndiName, ex);
             }
         } else {
             Properties props = new Properties();

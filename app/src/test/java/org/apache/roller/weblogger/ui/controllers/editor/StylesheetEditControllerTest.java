@@ -249,6 +249,25 @@ class StylesheetEditControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void copyingWhenTheSharedThemeCannotBeLoadedReportsAnErrorInsteadOfThrowing() throws Exception {
+        // Regression test: the lookup of the shared theme used to be wrapped in
+        // a try/catch that swallowed the WebloggerException and left
+        // `stylesheet` null, so the very next line (stylesheet.getLink()) always
+        // threw an unhandled NullPointerException instead of the error message
+        // this endpoint is supposed to report.
+        when(weblogger.getThemeManager().getTheme("journal"))
+                .thenThrow(new WebloggerException("theme not found"));
+
+        String view = controller.copyStylesheet(request, model);
+
+        assertEquals(".StylesheetEdit", view);
+        assertTrue(messages(model).isEmpty(), "A failed lookup must not report success");
+        assertEquals(1, errors(model).size(),
+                "Expected the failure to be surfaced, got: " + errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveTemplate(any());
+    }
+
+    @Test
     void copyingDoesNothingWhenAnOverrideAlreadyExists() throws Exception {
         // The override is already there; recreating it would discard the user's
         // existing customisations. copyStylesheet always finishes by delegating

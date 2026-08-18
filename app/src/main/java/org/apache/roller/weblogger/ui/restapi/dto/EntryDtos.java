@@ -122,7 +122,7 @@ public final class EntryDtos {
         try {
             return WeblogEntry.PubStatus.valueOf(raw.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw ApiException.badRequest("Unknown status '" + raw + "'.");
+            throw ApiException.badRequest("Unknown status '" + raw + "'.", e);
         }
     }
 
@@ -179,7 +179,7 @@ public final class EntryDtos {
                 // 400 this exists to produce.
                 throw ApiException.badRequest(
                         "pubTime must be a wall-clock time in the weblog's zone, "
-                        + "for example 2026-03-01T09:30.");
+                        + "for example 2026-03-01T09:30.", e);
             }
         }
         if (write.metaTitle() != null) {

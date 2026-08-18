@@ -149,7 +149,7 @@ public class TokensApi {
         try {
             return ApiToken.Role.valueOf(role.toUpperCase(Locale.ROOT));
         } catch (RuntimeException e) {
-            throw ApiException.badRequest("Unknown role: " + role);
+            throw ApiException.badRequest("Unknown role: " + role, e);
         }
     }
 

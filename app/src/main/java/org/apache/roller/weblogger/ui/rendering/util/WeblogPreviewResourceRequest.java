@@ -88,8 +88,11 @@ public class WeblogPreviewResourceRequest extends WeblogResourceRequest {
             try {
                 ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
                 theme = themeMgr.getTheme(themeName);
-            } catch(ThemeNotFoundException tnfe) {
-                // bogus theme specified ... don't worry about it
+            } catch(ThemeNotFoundException ignored) {
+                // A preview URL naming an unknown theme is routine (someone
+                // trying out a theme name), not an error worth logging --
+                // theme simply stays null and the caller treats that as
+                // "no theme".
             } catch(WebloggerException re) {
                 log.error("Error looking up theme "+themeName, re);
             }

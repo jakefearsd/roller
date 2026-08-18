@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -742,6 +743,42 @@ public class UtilitiesTest  {
         }
 
         @Test
+        public void aFailedReadWhoseCleanupCloseAlsoFailsStillReportsTheReadFailure() {
+            // The read failure is what matters to the caller; a second,
+            // unrelated failure while cleaning up must not replace it or go
+            // unswallowed.
+            IOException thrown = assertThrows(IOException.class,
+                    () -> Utilities.copyInputToOutput(
+                            new FailingInputThatWontClose(), new ByteArrayOutputStream(), 10));
+
+            assertTrue(thrown.getMessage().contains("Reading input stream"),
+                    "Message was: " + thrown.getMessage());
+        }
+
+        @Test
+        public void aFailedWriteWhoseCleanupCloseAlsoFailsStillReportsTheWriteFailure() {
+            IOException thrown = assertThrows(IOException.class,
+                    () -> Utilities.copyInputToOutput(
+                            new TrackingInput(new byte[20000]), new FailingOutputThatWontClose(), 20000));
+
+            assertTrue(thrown.getMessage().contains("Writing output stream"),
+                    "Message was: " + thrown.getMessage());
+        }
+
+        @Test
+        public void aFailedFinalCloseOnTheTwoArgOverloadIsReported() {
+            // copyInputToOutput(in, out) -- no byte count -- has its own final
+            // close(), distinct from the byte-counted overload above.
+            IOException thrown = assertThrows(IOException.class,
+                    () -> Utilities.copyInputToOutput(
+                            new FailingCloseInput("data".getBytes(StandardCharsets.UTF_8)),
+                            new ByteArrayOutputStream()));
+
+            assertTrue(thrown.getMessage().contains("Closing file streams"),
+                    "Message was: " + thrown.getMessage());
+        }
+
+        @Test
         public void copyFileReproducesTheFileByteForByte(@TempDir Path tmp) throws IOException {
             Path from = tmp.resolve("from.txt");
             Files.writeString(from, "contents café", StandardCharsets.UTF_8);
@@ -842,6 +879,54 @@ public class UtilitiesTest  {
                 closed = true;
             }
         }
+
+        /** Fails on every read, AND fails to close -- for the read-failure cleanup catch. */
+        private static class FailingInputThatWontClose extends InputStream {
+            @Override
+            public int read() throws IOException {
+                throw new IOException("disk gone");
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                throw new IOException("disk gone");
+            }
+
+            @Override
+            public void close() throws IOException {
+                throw new IOException("stuck open");
+            }
+        }
+
+        /** Fails on every write, AND fails to close -- for the write-failure cleanup catch. */
+        private static class FailingOutputThatWontClose extends OutputStream {
+            @Override
+            public void write(int b) throws IOException {
+                throw new IOException("disk full");
+            }
+
+            @Override
+            public void write(byte[] b, int off, int len) throws IOException {
+                throw new IOException("disk full");
+            }
+
+            @Override
+            public void close() throws IOException {
+                throw new IOException("stuck open");
+            }
+        }
+
+        /** Reads normally but always fails to close -- for the final-close catch. */
+        private static class FailingCloseInput extends ByteArrayInputStream {
+            FailingCloseInput(byte[] data) {
+                super(data);
+            }
+
+            @Override
+            public void close() throws IOException {
+                throw new IOException("stuck open");
+            }
+        }
     }
 
     // ----------------------------------------------------------------- email
@@ -883,5 +968,21 @@ public class UtilitiesTest  {
         assertEquals("image/png", Utilities.getContentTypeFromFileName("photo.png"));
         assertEquals("text/plain", Utilities.getContentTypeFromFileName("notes.txt"));
         assertEquals("application/octet-stream", Utilities.getContentTypeFromFileName("mystery.zzz"));
+    }
+
+    @Test
+    public void registerPngMimeTypeSwallowsAFailureFromTheMap() {
+        // The real JDK MimetypesFileTypeMap never throws for this literal,
+        // well-formed string -- registerPngMimeType exists as its own method
+        // so a test can drive the failure path with a throwing subclass
+        // instead.
+        jakarta.activation.MimetypesFileTypeMap throwing = new jakarta.activation.MimetypesFileTypeMap() {
+            @Override
+            public synchronized void addMimeTypes(String mimeTypes) {
+                throw new IllegalStateException("registry unavailable");
+            }
+        };
+
+        assertDoesNotThrow(() -> Utilities.registerPngMimeType(throwing));
     }
 }

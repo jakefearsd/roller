@@ -80,7 +80,7 @@ public class CharEncodingFilter implements Filter {
             
         } catch (UnsupportedEncodingException e) {
             // This should never happen since UTF-8 is a Java-specified required encoding.
-            throw new ServletException("Can't set incoming encoding to UTF-8");
+            throw new ServletException("Can't set incoming encoding to UTF-8", e);
         }
         
         chain.doFilter(req, res);

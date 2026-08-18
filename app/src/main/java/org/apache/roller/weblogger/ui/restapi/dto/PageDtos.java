@@ -89,7 +89,7 @@ public final class PageDtos {
         try {
             return WeblogPage.PubStatus.valueOf(raw.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw ApiException.badRequest("Unknown status '" + raw + "'.");
+            throw ApiException.badRequest("Unknown status '" + raw + "'.", e);
         }
     }
 

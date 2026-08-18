@@ -32,6 +32,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -474,6 +475,11 @@ public class JPAPersistenceStrategy {
      * 
      * @throws org.apache.roller.weblogger.WebloggerException on any error
      */
+    @SuppressFBWarnings(
+            value = "DE_MIGHT_IGNORE",
+            justification = "A refresh of an entity that is no longer managed is a no-op for "
+                    + "the caller's purposes; the caller re-reads through the EntityManager "
+                    + "either way, so there is nothing to log or act on.")
     public void refresh(Object clazz) throws WebloggerException {
         if (clazz == null) {
             return;
@@ -481,8 +487,11 @@ public class JPAPersistenceStrategy {
         try {
             EntityManager em = getEntityManager(true);
             em.refresh(clazz);
-        } catch (Exception e) {
-            // ignored;
+        } catch (Exception ignored) {
+            // A refresh of an entity that is no longer managed is a no-op for
+            // the caller's purposes; the caller re-reads through the
+            // EntityManager either way. Nothing downstream can observe the
+            // difference.
         }
     }
     /**

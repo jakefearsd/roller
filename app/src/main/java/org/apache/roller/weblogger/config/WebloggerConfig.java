@@ -140,8 +140,8 @@ public final class WebloggerConfig {
             e.printStackTrace();
             // A RuntimeException here is a programming or configuration
             // error, not a missing optional file -- do not boot on it.
-            if (e instanceof RuntimeException re) {
-                throw re;
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
             }
         }
 
