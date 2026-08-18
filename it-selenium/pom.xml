@@ -68,7 +68,22 @@ limitations under the License.
         <it.db.container-alias>roller-it-postgres</it.db.container-alias>
         <it.postgres.image>postgres:16</it.postgres.image>
 
-        <it.context.path>roller</it.context.path>
+        <!-- The bare context segment the app under test is deployed under.
+             EMPTY = the root, which is what application.properties now ships
+             (server.servlet.context-path=/). The suite must track the shipped
+             default, not pin a prefix production does not use.
+
+             it.base.url below therefore ends in a trailing slash at the root;
+             RollerIT.baseUrl() strips one, which is why that is harmless and
+             why this can stay a plain string substitution.
+
+             `mvn verify -Pit -Dit.context.path=roller` runs the entire suite
+             under /roller instead. That is the ONLY end-to-end coverage of the
+             non-root case (the unit tests cover the url-building rules at both
+             contexts, but only a real container proves the servlet mappings,
+             the security chain and the rendering forwards survive a prefix), so
+             run it before shipping anything that touches routing. -->
+        <it.context.path/>
 
         <!-- ONE ID PER RUN, stamped into every process, file, directory and
              container this module creates. It is what makes cleanup
@@ -409,6 +424,15 @@ limitations under the License.
                         <goals><goal>exec</goal></goals>
                         <configuration>
                             <executable>${project.basedir}/src/test/script/start-app.sh</executable>
+                            <!-- Passed as an environment variable rather than a
+                                 positional argument specifically because it is
+                                 empty by default, and an empty argument element
+                                 is not reliably delivered as an empty argv slot;
+                                 it would silently shift every later argument by
+                                 one. The script defaults it the same way. -->
+                            <environmentVariables>
+                                <IT_CONTEXT_PATH>${it.context.path}</IT_CONTEXT_PATH>
+                            </environmentVariables>
                             <arguments>
                                 <argument>${it.app.war}</argument>
                                 <argument>${it.http.port}</argument>

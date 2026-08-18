@@ -20,6 +20,14 @@
 #   IT_READY_TIMEOUT_SECONDS  readiness budget (default: 180)
 #   IT_OWNER_PID              build process that owns this app (default: $PPID,
 #                             which under exec-maven-plugin is the Maven JVM)
+#   IT_CONTEXT_PATH           bare context segment the app is deployed under,
+#                             e.g. "roller". EMPTY (the default) means the
+#                             root, which is what the app itself defaults to --
+#                             the suite tracks the shipped default rather than
+#                             pinning a prefix production does not use.
+#                             `mvn verify -Pit -Dit.context.path=roller` runs
+#                             the whole suite under a prefix instead, which is
+#                             the only end-to-end coverage of that case.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,6 +39,22 @@ WAR="$1"; PORT="$2"; PROPS="$3"; PIDFILE="$4"; LOG="$5"; RUN_ID="$6"
 JAVA="${IT_APP_JAVA:-java}"
 READY_TIMEOUT="${IT_READY_TIMEOUT_SECONDS:-180}"
 OWNER="$(it_owner_stamp "${IT_OWNER_PID:-$PPID}")"
+
+# The bare segment ("roller") becomes the servlet context path ("/roller") and
+# the readiness url prefix. Empty means the root: Spring Boot normalises a lone
+# "/" to the empty string, so passing "/" is the same thing and keeps the
+# command line free of an empty-looking argument. URL_PREFIX must stay empty in
+# that case -- "/" would make every readiness url double-slashed.
+CONTEXT_SEGMENT="${IT_CONTEXT_PATH:-}"
+CONTEXT_SEGMENT="${CONTEXT_SEGMENT#/}"
+CONTEXT_SEGMENT="${CONTEXT_SEGMENT%/}"
+if [ -n "$CONTEXT_SEGMENT" ]; then
+    CONTEXT_PATH="/$CONTEXT_SEGMENT"
+    URL_PREFIX="/$CONTEXT_SEGMENT"
+else
+    CONTEXT_PATH="/"
+    URL_PREFIX=""
+fi
 
 APP_PID=""
 
@@ -77,7 +101,7 @@ mkdir -p "$(dirname "$PIDFILE")" "$(dirname "$LOG")"
 # exist so this process can be found again by anything that has to clean it up.
 "$JAVA" -Djava.awt.headless=true -Droller.custom.config="$PROPS" \
      "-Droller.it.run=$RUN_ID" "-Droller.it.owner=$OWNER" \
-     -jar "$WAR" --server.port="$PORT" --server.servlet.context-path=/roller \
+     -jar "$WAR" --server.port="$PORT" --server.servlet.context-path="$CONTEXT_PATH" \
      --management.server.port=0 \
      > "$LOG" 2>&1 &
 APP_PID=$!
@@ -88,7 +112,7 @@ echo "$APP_PID" > "$PIDFILE"
 # diagnostics of the run that had just leaked).
 ln -sfn "$(basename "$LOG")" "$(dirname "$LOG")/app-latest.log" 2>/dev/null || true
 
-echo "start-app.sh: run $RUN_ID, app pid $APP_PID, owner $OWNER, log $LOG"
+echo "start-app.sh: run $RUN_ID, app pid $APP_PID, owner $OWNER, log $LOG, context '${URL_PREFIX:-/}'"
 
 DEADLINE=$(( SECONDS + READY_TIMEOUT ))
 while [ "$SECONDS" -lt "$DEADLINE" ]; do
@@ -98,7 +122,7 @@ while [ "$SECONDS" -lt "$DEADLINE" ]; do
         APP_PID=""
         exit 1
     fi
-    if curl -sf "http://127.0.0.1:${PORT}/roller/roller-ui/login.rol" > /dev/null; then
+    if curl -sf "http://127.0.0.1:${PORT}${URL_PREFIX}/roller-ui/login.rol" > /dev/null; then
         exit 0
     fi
     sleep 2

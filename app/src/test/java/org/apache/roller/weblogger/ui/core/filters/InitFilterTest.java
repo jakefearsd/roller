@@ -171,11 +171,102 @@ public class InitFilterTest  {
 
     /** A plain-http request as the app sees it behind the reverse proxy. */
     private static MockHttpServletRequest proxiedRequest() {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/roller/");
+        return proxiedRequest("/roller");
+    }
+
+    private static MockHttpServletRequest proxiedRequest(String contextPath) {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", contextPath + "/");
         request.setServerName("photos.example.com");
         request.setServerPort(80);
-        request.setContextPath("/roller");
+        request.setContextPath(contextPath);
         return request;
+    }
+
+    // ------------------------------------------------- the root context
+    //
+    // The shipped default is the root context (application.properties), so
+    // these are the ordinary case rather than an exotic one. Serving from the
+    // root is what lets a weblog own a bare hostname -- https://example.com/
+    // rather than https://example.com/roller/ -- which is both what a reverse
+    // proxy in front of this app is usually for and what keeps a canonical
+    // url free of a deployment artefact nobody can ever remove later without
+    // a redirect map.
+    //
+    // CHARACTERISATION: every test in this section passed the moment it was
+    // written. InitFilter was already correct at the root and already followed
+    // X-Forwarded-Host; nothing here was fixed, and these exist to pin that
+    // before the default context path moved onto them. Do not read them as
+    // tests written after the code they cover -- read them as the reason the
+    // move was safe. (WeblogRequestMapper, which builds a redirect rather than
+    // reading a request, was NOT already correct; see its own test.)
+
+    @Test
+    public void theAbsoluteUrlAtTheRootContextCarriesNoPathAtAll() throws Exception {
+        String absoluteUrl = InitFilter.getAbsoluteUrl(false, SERVER_NAME, "",
+                "/handle/entry/title", "http://roller.example.com/handle/entry/title");
+        assertEquals("http://roller.example.com", absoluteUrl);
+    }
+
+    @Test
+    public void theAbsoluteUrlAtTheRootContextKeepsAnExplicitPort() throws Exception {
+        String absoluteUrl = InitFilter.getAbsoluteUrl(false, SERVER_NAME, "",
+                "/handle/", "http://roller.example.com:8083/handle/");
+        assertEquals("http://roller.example.com:8083", absoluteUrl);
+    }
+
+    /**
+     * The relative context url is the prefix every in-page link is built from,
+     * and at the root it is the EMPTY string -- not "/". A "/" here would make
+     * every url Roller emits carry a doubled slash ("//handle/entry/x"), which
+     * a browser reads as a protocol-relative url pointing at a host called
+     * "handle".
+     */
+    @Test
+    public void theRelativeContextUrlAtTheRootIsEmptyNotASlash() throws Exception {
+        String priorAbsolute = WebloggerRuntimeConfig.getAbsoluteContextURL();
+        String priorRelative = WebloggerRuntimeConfig.getRelativeContextURL();
+        try {
+            new ForwardedHeaderFilter().doFilter(proxiedRequest(""), new MockHttpServletResponse(),
+                    new MockFilterChain(new HttpServlet() { }, new InitFilter()));
+
+            assertEquals("", WebloggerRuntimeConfig.getRelativeContextURL());
+            assertEquals("http://photos.example.com",
+                    WebloggerRuntimeConfig.getAbsoluteContextURL());
+        } finally {
+            WebloggerRuntimeConfig.setAbsoluteContextURL(priorAbsolute);
+            WebloggerRuntimeConfig.setRelativeContextURL(priorRelative);
+        }
+    }
+
+    /**
+     * The proxy owns the public hostname, not just the scheme. Caddy sends
+     * X-Forwarded-Host along with X-Forwarded-Proto; without honouring it the
+     * absolute context url would be built from the container-internal name the
+     * app was actually reached by, and every canonical/og:url/sitemap loc would
+     * name a host that does not resolve on the internet.
+     */
+    @Test
+    public void theForwardedHostDecidesTheAbsoluteUrlAtTheRootContext() throws Exception {
+        String priorAbsolute = WebloggerRuntimeConfig.getAbsoluteContextURL();
+        String priorRelative = WebloggerRuntimeConfig.getRelativeContextURL();
+        try {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");
+            request.setServerName("app");
+            request.setServerPort(8080);
+            request.setContextPath("");
+            request.addHeader("X-Forwarded-Proto", "https");
+            request.addHeader("X-Forwarded-Host", "maiiavorobiova.com");
+
+            new ForwardedHeaderFilter().doFilter(request, new MockHttpServletResponse(),
+                    new MockFilterChain(new HttpServlet() { }, new InitFilter()));
+
+            assertEquals("https://maiiavorobiova.com",
+                    WebloggerRuntimeConfig.getAbsoluteContextURL());
+            assertEquals("", WebloggerRuntimeConfig.getRelativeContextURL());
+        } finally {
+            WebloggerRuntimeConfig.setAbsoluteContextURL(priorAbsolute);
+            WebloggerRuntimeConfig.setRelativeContextURL(priorRelative);
+        }
     }
 
 }

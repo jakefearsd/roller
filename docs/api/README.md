@@ -12,7 +12,7 @@ users — everything the JSP admin UI can do, callable without a browser.
 There is **no web UI for minting a token**. The only route in is the CLI:
 
 ```
-bin/roller-api auth login --url http://localhost:8083/roller
+bin/roller-api auth login --url http://localhost:8083
 ```
 
 Everything below assumes a Roller running at that URL (the default for
@@ -83,7 +83,7 @@ token.
 ```bash
 curl -sS -u alice:hunter2 \
   -H 'Content-Type: application/json' \
-  -X POST http://localhost:8083/roller/api/v1/tokens \
+  -X POST http://localhost:8083/api/v1/tokens \
   -d '{"label": "seo-agent", "role": "POST", "weblog": "myblog"}'
 ```
 
@@ -168,7 +168,7 @@ Every non-mint call is Bearer-authenticated:
 
 ```bash
 curl -sS -H "Authorization: Bearer $ROLLER_API_TOKEN" \
-  http://localhost:8083/roller/api/v1/weblogs/myblog/entries
+  http://localhost:8083/api/v1/weblogs/myblog/entries
 ```
 
 `Content-Type: application/json` on every request carrying a JSON body
@@ -305,7 +305,7 @@ Reads need `READ`; writes need `POST` or `ADMIN`.
 ```bash
 curl -sS -H "Authorization: Bearer $ROLLER_API_TOKEN" \
   -H 'Content-Type: application/json' \
-  -X POST http://localhost:8083/roller/api/v1/weblogs/myblog/entries \
+  -X POST http://localhost:8083/api/v1/weblogs/myblog/entries \
   -d '{
         "title": "Hello, automation",
         "text": "Written by a script.",
@@ -394,7 +394,7 @@ somewhere other than the weblog's default directory:
 
 ```bash
 curl -sS -H "Authorization: Bearer $ROLLER_API_TOKEN" \
-  -X POST http://localhost:8083/roller/api/v1/weblogs/myblog/media \
+  -X POST http://localhost:8083/api/v1/weblogs/myblog/media \
   -F 'file=@photo1.jpg' -F 'file=@photo2.jpg'
 ```
 
@@ -555,7 +555,7 @@ caller never has to special-case one of the three.
 
 ```bash
 curl -sS -H "Authorization: Bearer $ROLLER_API_TOKEN" \
-  http://localhost:8083/roller/api/v1/openapi.json
+  http://localhost:8083/api/v1/openapi.json
 ```
 
 A machine-readable OpenAPI 3 document describing every endpoint above, for

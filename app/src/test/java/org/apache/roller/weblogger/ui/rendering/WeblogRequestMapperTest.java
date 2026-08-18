@@ -41,9 +41,22 @@ class WeblogRequestMapperTest {
     }
 
     private MockHttpServletRequest publicUrl(String method, String uriAfterContext) {
+        return publicUrlAt("/roller", method, uriAfterContext);
+    }
+
+    /**
+     * The same request, deployed under an arbitrary context path. The context
+     * path is a deployment detail -- Roller must be correct both at the root
+     * ({@code ""}, the shipped default) and under a prefix a reverse proxy or
+     * a servlet container chose -- so every url the mapper *emits* has to be
+     * built against the context it was actually reached through, never
+     * assumed.
+     */
+    private MockHttpServletRequest publicUrlAt(String contextPath, String method,
+                                               String uriAfterContext) {
         MockHttpServletRequest request =
-                new MockHttpServletRequest(method, "/roller" + uriAfterContext);
-        request.setContextPath("/roller");
+                new MockHttpServletRequest(method, contextPath + uriAfterContext);
+        request.setContextPath(contextPath);
         return request;
     }
 
@@ -88,6 +101,13 @@ class WeblogRequestMapperTest {
         assertEquals("/roller-ui/rendering/search/mapperblog", response.getForwardedUrl());
     }
 
+    /**
+     * The redirect target is sent to the browser, not dispatched internally,
+     * so it must carry the context path. A leading-slash location is resolved
+     * by the container against the SERVER root, not the application root
+     * (Servlet 6.1, {@code sendRedirect}) -- so dropping the context sends a
+     * reader deployed at /roller to /mapperblog/, which 404s.
+     */
     @Test
     void missingTrailingSlashRedirects() throws Exception {
         MockHttpServletRequest request = publicUrl("GET", "/mapperblog");
@@ -95,8 +115,34 @@ class WeblogRequestMapperTest {
 
         assertTrue(mapper.handleRequest(request, response));
         assertNotNull(response.getRedirectedUrl(), "must redirect to the canonical slash form");
-        assertTrue(response.getRedirectedUrl().endsWith("/mapperblog/"),
-                "redirect target was: " + response.getRedirectedUrl());
+        assertEquals("/roller/mapperblog/", response.getRedirectedUrl());
+    }
+
+    /** The same redirect at the root context, where there is no prefix to add. */
+    @Test
+    void theTrailingSlashRedirectIsBareAtTheRootContext() throws Exception {
+        MockHttpServletRequest request = publicUrlAt("", "GET", "/mapperblog");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/mapperblog/", response.getRedirectedUrl());
+    }
+
+    /**
+     * A weblog url at the root context still reaches the rendering servlet.
+     * Forwards are container-internal and therefore context-RELATIVE, which is
+     * why these targets carry no prefix at either context -- the opposite
+     * convention from the redirect above, and the reason the two cannot share
+     * one url builder.
+     */
+    @Test
+    void permalinkForwardsToPageServletAtTheRootContext() throws Exception {
+        MockHttpServletRequest request = publicUrlAt("", "GET", "/mapperblog/entry/my-post");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("/roller-ui/rendering/page/mapperblog/entry/my-post",
+                response.getForwardedUrl());
     }
 
     @Test
@@ -166,7 +212,7 @@ class WeblogRequestMapperTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         assertTrue(mapper.handleRequest(request, response));
-        assertEquals("/mapperblog/", response.getRedirectedUrl());
+        assertEquals("/roller/mapperblog/en/", response.getRedirectedUrl());
     }
 
     /**
@@ -210,7 +256,7 @@ class WeblogRequestMapperTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         assertTrue(mapper.handleRequest(request, response));
-        assertEquals("/mapperblog/?page=2", response.getRedirectedUrl());
+        assertEquals("/roller/mapperblog/?page=2", response.getRedirectedUrl());
     }
 
     /**

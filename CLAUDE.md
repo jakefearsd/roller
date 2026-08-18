@@ -66,7 +66,10 @@ mvn -DskipTests=true install
 # Run the dev server: starts PostgreSQL, applies migrations, runs the app
 # via `spring-boot:run` (embedded Tomcat) with roller-boot-dev.properties
 ./roller dev
-# Access at http://localhost:8083/roller
+# Access at http://localhost:8083 -- Roller serves from the ROOT
+# (server.servlet.context-path=/, application.properties). The context path is
+# a deployment detail and no code may assume one; set DEV_CONTEXT_PATH=/roller
+# to reproduce a prefixed deployment locally. See "Context path" below.
 
 # Or run the packaged executable WAR directly, no Maven/IDE involved
 # (default port 8080; point -Droller.custom.config at a real database

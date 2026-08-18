@@ -224,10 +224,45 @@ not an outage. Check `docker compose -f docker-compose.prod.yml logs
 analytics-views` if the Grafana dashboard's traffic panel comes up empty; the
 same `up -d analytics-views` re-run mentioned in its own log output is safe.
 
-When it finishes, browse to `https://<your-domain>/roller` (or
-`http://<host>/roller` in `:80` mode) and complete Roller's normal
-first-run flow: register the first user account, which becomes the site
-administrator, then create a weblog.
+When it finishes, browse to `https://<your-domain>/` (or `http://<host>/` in
+`:80` mode) and complete Roller's normal first-run flow: register the first
+user account, which becomes the site administrator, then create a weblog.
+
+### The context path
+
+Roller serves from the **root**: a weblog is at `https://<domain>/<handle>/`,
+not `https://<domain>/roller/<handle>/`. That is the shipped default
+(`server.servlet.context-path=/`), and it is deliberate — the segment would
+otherwise end up in every canonical url, `og:url`, sitemap `<loc>`, feed id and
+inbound link, where removing it later costs a redirect map rather than a config
+edit.
+
+To deploy under a prefix instead — sharing a hostname with another app, or
+matching an existing installation's urls — set it in `.env`:
+
+```bash
+SERVER_SERVLET_CONTEXT_PATH=/roller
+```
+
+`env_file` passes the whole `.env` into the app container and Spring Boot's
+relaxed binding maps that variable onto `server.servlet.context-path`, so no
+image change is involved. Nothing else needs adjusting: Caddy already proxies
+`/*` wholesale, and the app builds every url it emits — links, redirects,
+canonicals — from the context path the request actually arrived on.
+
+**Upgrading a site that was already crawled at `/roller`** (Roller ≤ 0.1.3
+defaulted there): either keep the old urls with the variable above, or move to
+the root and add a permanent redirect ahead of the `reverse_proxy` in the
+Caddyfile, so existing inbound links and the search index survive the move:
+
+```caddyfile
+# Inside the {$SITE_DOMAIN} block, BEFORE `handle { reverse_proxy app:8080 }`.
+# The bare /roller needs its own line: the capture group in the regexp below
+# would be empty for it, and an empty redirect target is not a url.
+redir /roller / permanent
+@rollerlegacy path_regexp rollerlegacy ^/roller(/.+)$
+redir @rollerlegacy {re.rollerlegacy.1} permanent
+```
 
 ## TLS
 
@@ -294,7 +329,7 @@ docker inspect --format '{{json .State.Health}}' \
 
 `docker compose ps` reporting `app` as `healthy` is normally enough for
 day-to-day monitoring; wire up an external uptime check against the public
-`https://<domain>/roller/roller-ui/login.rol` URL (200 OK) for outside-in
+`https://<domain>/roller-ui/login.rol` URL (200 OK) for outside-in
 monitoring, since that's the only thing actually exposed to the internet.
 
 Logs:
@@ -678,7 +713,7 @@ snippet.)
 
 with a local `.env` carrying `SITE_DOMAIN=:80`, `UMAMI_DOMAIN=:8081`,
 `LISTMONK_DOMAIN=:8082`, `LISTMONK_ROOT_URL=http://localhost:8082` and
-throwaway secrets. The blog is at `http://localhost/roller`, the analytics
+throwaway secrets. The blog is at `http://localhost/`, the analytics
 console at `http://localhost:8081`, the newsletter admin at
 `http://localhost:8082`.
 

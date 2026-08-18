@@ -192,15 +192,35 @@ public class WeblogRequestMapper implements RequestMapper {
         // we need this because by http standards the urls /foo and /foo/ are
         // supposed to be considered different, so we must enforce that
         if(weblogRequestContext == null && !trailingSlash) {
-            // this means someone referred to a weblog index page with the 
+            // this means someone referred to a weblog index page with the
             // shortest form of url /<weblog> or /<weblog>/<locale> and we need
             // to do a redirect to /<weblog>/ or /<weblog>/<locale>/
-            String redirectUrl = "/" + weblogHandle + "/";
-            if(request.getQueryString() != null) {
-                redirectUrl += "?"+request.getQueryString();
+            //
+            // Two things here are easy to get wrong, and both were:
+            //
+            // 1. The context path has to be on the front. Unlike the FORWARD
+            //    below -- which is dispatched inside the container and is
+            //    therefore context-relative -- this location goes back to the
+            //    browser, and a leading-slash location is resolved against the
+            //    SERVER root, not the application root (Servlet 6.1,
+            //    sendRedirect). Deployed under /roller, omitting it sent every
+            //    reader of /roller/<weblog> to /<weblog>, which 404s. The bug
+            //    is invisible at the root context, which is now the default --
+            //    hence the test at both contexts.
+            // 2. The locale has to survive. The comment above always claimed
+            //    /<weblog>/<locale>/ was a redirect target, but the url was
+            //    built from the handle alone, so /<weblog>/de quietly landed on
+            //    the weblog's default-locale home instead of the German one.
+            StringBuilder redirectUrl = new StringBuilder(request.getContextPath());
+            redirectUrl.append('/').append(weblogHandle).append('/');
+            if(weblogLocale != null) {
+                redirectUrl.append(weblogLocale).append('/');
             }
-            
-            response.sendRedirect(redirectUrl);
+            if(request.getQueryString() != null) {
+                redirectUrl.append('?').append(request.getQueryString());
+            }
+
+            response.sendRedirect(redirectUrl.toString());
             return true;
             
         } else if(weblogRequestContext != null &&

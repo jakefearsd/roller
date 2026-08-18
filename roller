@@ -22,6 +22,16 @@ DB_NAME="${DB_NAME:-rollerdb}"
 DB_APP_USER="${DB_APP_USER:-roller}"
 DB_PORT="${DB_PORT:-${DEV_DB_PORT:-5433}}"
 
+# The dev server runs at the ROOT, matching application.properties' shipped
+# default -- `./roller dev` must reproduce the deployed url shape, or the one
+# place a bad context assumption would show up is the one place nobody looks.
+# Set DEV_CONTEXT_PATH=/roller (leading slash, no trailing) to reproduce a
+# prefixed deployment locally. DEV_URL is what both `dev` and `token` print and
+# pass around, so the two can never drift.
+DEV_PORT="${DEV_PORT:-8083}"
+DEV_CONTEXT_PATH="${DEV_CONTEXT_PATH:-}"
+DEV_URL="http://localhost:${DEV_PORT}${DEV_CONTEXT_PATH}"
+
 GREEN="\033[0;32m"
 RED="\033[0;31m"
 NC="\033[0m"
@@ -117,13 +127,13 @@ case "${1:-dev}" in
         start_db
         run_migrations
         seed_dev_data
-        print_ok "Starting Roller on http://localhost:8083/roller"
+        print_ok "Starting Roller on ${DEV_URL}"
         # process-test-resources runs first so roller-boot-dev.properties is
         # filtered into target/test-classes before spring-boot:run starts the
         # app; without it, ${basedir}-style filtering never happens and the
         # custom config points at a file that doesn't exist yet.
         mvn -ntp -pl app process-test-resources spring-boot:run \
-            -Dspring-boot.run.arguments="--server.port=8083" \
+            -Dspring-boot.run.arguments="--server.port=${DEV_PORT} --server.servlet.context-path=${DEV_CONTEXT_PATH:-/}" \
             -Dspring-boot.run.jvmArguments="-Droller.custom.config=${SCRIPT_DIR}/app/target/test-classes/roller-boot-dev.properties"
         ;;
     migrate)
@@ -153,7 +163,7 @@ case "${1:-dev}" in
         load_dev_secret
         printf '%s\n' "${ROLLER_DEV_ADMIN_PASSWORD}" | \
             bin/roller-api auth login \
-                --url http://localhost:8083/roller \
+                --url "${DEV_URL}" \
                 --user admin \
                 --password-stdin
         ;;
