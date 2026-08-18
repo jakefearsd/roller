@@ -22,6 +22,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Optional;
 
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.Selenide;
@@ -83,7 +84,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       {@code @BeforeEach} method this class could declare -- by the time a
  *       {@code @Test} or {@code @BeforeEach} body runs, the driver already
  *       exists, so there is no later point at which per-test Chrome
- *       capabilities could still take effect.</li>
+ *       capabilities could still take effect. Setting {@code Configuration}
+ *       fields in {@code @BeforeAll} is not sufficient by itself, though --
+ *       see {@link #enableVhostDns()}'s own javadoc for the once-per-suite
+ *       race that also requires {@link RollerIT#markSelenideConfigured()}.</li>
  * </ul>
  *
  * <p>Every criterion here documents, in its own javadoc, whether it was
@@ -122,10 +126,23 @@ class VirtualHostIT extends RollerIT {
      * <p>Deliberately does not call {@code RollerIT.configureSelenide()} --
      * it is package-private to {@code org.apache.roller.it.support}, and this
      * class lives in {@code org.apache.roller.it}. Setting the same
-     * {@link Configuration} fields directly is equivalent and idempotent:
-     * whichever test class in the suite happens to run first, the values
-     * here end up current by the time this class's first test's browser
-     * starts.
+     * {@link Configuration} fields directly is equivalent, but NOT on its own
+     * idempotent against {@code configureSelenide()}'s own once-per-suite
+     * guard: that method still runs (and overwrites {@code browserCapabilities}
+     * back to the plain, no-host-resolver-rules default) the first time
+     * {@code BrowserHealthExtension.beforeEach()} calls it, UNLESS something
+     * has already marked configuration done. When some other IT class happens
+     * to run before this one, that something is that other class's own first
+     * test; when this class runs standalone (as in
+     * {@code -Dit.test=VirtualHostIT}, exactly the run shape used to develop
+     * this fixture) or happens to run first in the full suite, nothing has,
+     * and {@code aCustomDomainRendersTheHomePageAndPermalink} fails with
+     * {@code net::ERR_NAME_NOT_RESOLVED} despite the flag being set right
+     * here -- it gets clobbered moments later, before this class's own first
+     * test even starts. {@link RollerIT#markSelenideConfigured()} closes that
+     * race by marking configuration done from THIS {@code @BeforeAll}
+     * instead, so the later, ordinary {@code configureSelenide()} call is a
+     * no-op and these capabilities survive regardless of run order.
      */
     @BeforeAll
     void enableVhostDns() {
@@ -137,6 +154,7 @@ class VirtualHostIT extends RollerIT {
         Configuration.browserCapabilities = new ChromeOptions()
                 .addArguments("--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
                         "--host-resolver-rules=MAP " + VHOST + " 127.0.0.1");
+        RollerIT.markSelenideConfigured();
     }
 
     /** Undoes {@link #enableVhostDns()} so later test classes in the suite get a plain Chrome instance. */
@@ -434,6 +452,23 @@ class VirtualHostIT extends RollerIT {
      * resolves to null/blank, specifically to avoid building a redirect
      * target from {@code getAbsoluteContextURL()}'s InitFilter-latched value
      * -- which, reached over the custom domain, would loop forever.
+     *
+     * <p><b>"Served, not redirected" means never redirected CROSS-HOST, not
+     * never redirected at all.</b> {@code menu.rol} requires an
+     * authenticated session, and this test deliberately runs unauthenticated
+     * (nothing here logs in before the request) -- so once
+     * {@code ControlPlaneHostFilter} degrades and calls
+     * {@code chain.doFilter(...)}, the request falls through to ordinary,
+     * pre-vhost Spring Security behaviour, which for an unauthenticated
+     * request IS a redirect: a same-host 302 to
+     * {@code http://vhost.example.com/roller-ui/login.rol}. That is correct
+     * and expected, not a regression -- the behaviour this criterion actually
+     * protects is that the degraded path can never build a CROSS-host
+     * redirect (toward a site host {@code site.absoluteurl} never named),
+     * which is the specific loop {@code ControlPlaneHostFilter}'s degrade
+     * branch exists to avoid. So: no redirect at all is a pass outright: any
+     * redirect is only a pass if its {@code Location} names the SAME host the
+     * request went to.
      */
     @Test
     void withSiteAbsoluteUrlUnsetTheControlPlaneIsServedNotRedirected() throws Exception {
@@ -442,14 +477,16 @@ class VirtualHostIT extends RollerIT {
         logout();
         try {
             HttpResponse<String> response = get("/roller-ui/menu.rol", VHOST);
-            assertNotEquals(301, response.statusCode(),
-                    "with site.absoluteurl unset the control plane must degrade to serving "
-                            + "the request on the custom domain, never redirect -- there is "
-                            + "nowhere host-independent left to redirect to");
-            response.headers().firstValue("Location").ifPresent(location ->
-                    assertFalse(location.startsWith("http"),
-                            "the degraded path must never redirect cross-host, which is "
-                                    + "exactly the loop this behaviour exists to avoid: " + location));
+            Optional<String> location = response.headers().firstValue("Location");
+            if (location.isPresent()) {
+                assertEquals(VHOST, URI.create(location.get()).getHost(),
+                        "the degraded path must never redirect cross-host, which is "
+                                + "exactly the loop this behaviour exists to avoid: " + location.get());
+            }
+            // No Location header at all (e.g. the login form served directly) is
+            // "served, not redirected" in the most literal sense and needs no
+            // further assertion -- see this method's javadoc for why a same-host
+            // redirect to the login page, the actual observed shape, is also fine.
         } finally {
             loginAsAdmin();
             setSiteAbsoluteUrl(duringTest);

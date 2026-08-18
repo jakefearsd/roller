@@ -108,6 +108,30 @@ public abstract class RollerIT {
     }
 
     /**
+     * Lets a subclass's own {@code @BeforeAll} win a race with this method.
+     *
+     * <p>{@code configureSelenide()} above is guarded to run its body exactly once per
+     * suite -- necessary, since {@code Configuration} is Selenide's process-wide static
+     * state and every class shares it. But {@code @BeforeAll} in a subclass runs before
+     * {@code BrowserHealthExtension.beforeEach()} ever fires for that class's first test,
+     * so a subclass that sets {@code Configuration.*} fields directly from its own
+     * {@code @BeforeAll} (rather than through this class, which it cannot reach --
+     * {@code configureSelenide()} is package-private to {@code support} and such a
+     * subclass typically lives outside it, see {@code VirtualHostIT}) is racing the very
+     * next {@code configureSelenide()} call: if THIS is the first one the suite has ever
+     * made, {@code selenideConfigured} is still false, so it runs its full body and
+     * clobbers whatever the subclass just set. That only surfaces when the subclass's
+     * class happens to run first in the suite -- including every single-class run via
+     * {@code -Dit.test=<ThatClass>}, which is exactly the run shape most likely to catch
+     * it late. Calling this at the end of such a {@code @BeforeAll} marks configuration
+     * as already done, so the next {@code configureSelenide()} call is a no-op and the
+     * subclass's own fields survive regardless of run order.
+     */
+    protected static synchronized void markSelenideConfigured() {
+        selenideConfigured = true;
+    }
+
+    /**
      * Opens a path on the Roller under test and waits for the browser to finish, so the
      * health recorder has seen every request the page made before the test asserts anything.
      *
