@@ -106,7 +106,7 @@ class SeoControllerTest {
 
     @Test
     void robotsAllowsEverythingAndAdvertisesTheSitemapIndex() {
-        ResponseEntity<String> response = controller.robots();
+        ResponseEntity<String> response = controller.robots(new MockHttpServletRequest());
 
         assertEquals(200, response.getStatusCode().value());
         String body = response.getBody();
@@ -136,7 +136,7 @@ class SeoControllerTest {
             new ForwardedHeaderFilter().doFilter(first, new MockHttpServletResponse(),
                     new MockFilterChain(new HttpServlet() { }, new InitFilter()));
 
-            ResponseEntity<String> response = controller.sitemapIndex();
+            ResponseEntity<String> response = controller.sitemapIndex(new MockHttpServletRequest());
 
             assertEquals(200, response.getStatusCode().value());
             String body = response.getBody();
@@ -156,7 +156,7 @@ class SeoControllerTest {
 
     @Test
     void sitemapIndexListsTheVisibleWeblogAndParsesAsXml() throws Exception {
-        ResponseEntity<String> response = controller.sitemapIndex();
+        ResponseEntity<String> response = controller.sitemapIndex(new MockHttpServletRequest());
 
         assertEquals(200, response.getStatusCode().value());
         String body = response.getBody();
@@ -179,7 +179,7 @@ class SeoControllerTest {
             WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(hidden);
             TestUtils.endSession(true);
 
-            String body = controller.sitemapIndex().getBody();
+            String body = controller.sitemapIndex(new MockHttpServletRequest()).getBody();
             assertNotNull(body);
             assertFalse(body.contains("/sitemap-" + hidden.getHandle() + ".xml"),
                     "A weblog with visible=false must not appear in the index:\n" + body);
@@ -333,7 +333,7 @@ class SeoControllerTest {
         SeoController failing = new SeoController();
         inject(failing, "weblogger", broken);
 
-        ResponseEntity<String> response = failing.sitemapIndex();
+        ResponseEntity<String> response = failing.sitemapIndex(new MockHttpServletRequest());
 
         assertEquals(500, response.getStatusCode().value(),
                 "A failing weblog query must surface as a server error, not an empty index");

@@ -22,10 +22,13 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -65,6 +68,11 @@ import org.springframework.web.bind.annotation.PathVariable;
  * SEO patterns added in {@code ServletRegistrationConfig} -- see
  * {@code ServletRegistrationConfig#SEO_URL_PATTERNS} for why the per-weblog
  * sitemaps ride on a {@code *.xml} extension mapping.
+ *
+ * <p>{@code /robots.txt} and {@code /sitemap.xml} are host-aware: on a
+ * request whose {@code Host} header names a weblog's custom domain, they
+ * describe THAT weblog rather than the whole site (see {@link #robots} and
+ * {@link #sitemapIndex}).
  */
 @Controller
 public class SeoController extends BaseController {
@@ -91,22 +99,50 @@ public class SeoController extends BaseController {
         return Collections.emptyList();
     }
 
-    /** Allow-all robots policy that advertises the sitemap index. */
+    /**
+     * Allow-all robots policy that advertises the sitemap. On a custom
+     * domain this advertises THAT weblog's own sitemap -- crawlers arriving
+     * at a virtual host must be pointed at a document that host is actually
+     * allowed to serve; the site index lives elsewhere and, per the sitemap
+     * protocol, may only ever reference sitemaps on its own host (see
+     * {@link #sitemapIndex}).
+     */
     @GetMapping("/robots.txt")
-    public ResponseEntity<String> robots() {
+    public ResponseEntity<String> robots(HttpServletRequest request) {
+        String vhostHost = VirtualHostRegistry.normalise(request.getHeader("Host"));
+        String vhostHandle = VirtualHostRegistry.handleFor(request.getHeader("Host"));
+        String sitemapUrl = vhostHandle != null
+                ? "https://" + vhostHost + "/sitemap.xml"
+                : absoluteContextURL() + "/sitemap.xml";
         String body = "User-agent: *\n"
                 + "Disallow:\n"
                 + "\n"
-                + "Sitemap: " + absoluteContextURL() + "/sitemap.xml\n";
+                + "Sitemap: " + sitemapUrl + "\n";
         return ResponseEntity.ok()
                 .contentType(new MediaType(MediaType.TEXT_PLAIN,
                         java.nio.charset.StandardCharsets.UTF_8))
                 .body(body);
     }
 
-    /** Sitemap index listing one sitemap per visible, active weblog. */
+    /**
+     * Sitemap index listing one sitemap per visible, active weblog on the
+     * site host -- OR, on a custom domain, that weblog's own sitemap in
+     * place of the index (see {@link #weblogSitemap}).
+     *
+     * <p>A weblog with its own custom domain is deliberately left out of the
+     * site index: the sitemap protocol permits an index to reference only
+     * sitemaps on its own host, so keeping such a weblog in the index would
+     * produce a document that is invalid for exactly the entries most wanted
+     * in the crawl. That weblog is discovered instead through its own host's
+     * {@code robots.txt}.
+     */
     @GetMapping("/sitemap.xml")
-    public ResponseEntity<String> sitemapIndex() {
+    public ResponseEntity<String> sitemapIndex(HttpServletRequest request) {
+        String vhostHandle = VirtualHostRegistry.handleFor(request.getHeader("Host"));
+        if (vhostHandle != null) {
+            return weblogSitemap(vhostHandle);
+        }
+
         List<Weblog> weblogs;
         try {
             weblogs = weblogger.getWeblogManager()
@@ -120,6 +156,10 @@ public class SeoController extends BaseController {
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.append("<sitemapindex xmlns=\"").append(SITEMAP_NS).append("\">\n");
         for (Weblog weblog : weblogs) {
+            String customDomain = weblog.getCustomDomain();
+            if (customDomain != null && !customDomain.isBlank()) {
+                continue;
+            }
             xml.append("  <sitemap>\n");
             xml.append("    <loc>").append(escapeXml(absoluteContextURL()
                     + "/sitemap-" + weblog.getHandle() + ".xml")).append("</loc>\n");
