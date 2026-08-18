@@ -7,6 +7,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.ui.controllers.CustomDomainRules;
 import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
@@ -122,6 +123,26 @@ public class WeblogsApi extends BaseApiController implements UISecurityEnforced 
         }
         if (body.active() != null) {
             weblog.setActive(body.active());
+        }
+        if (body.customDomain() != null) {
+            // Same rule as WeblogConfigController.myValidate for the JSP
+            // editor -- calling CustomDomainRules here rather than
+            // reimplementing the hostname check is the whole point of that
+            // class existing. An explicit blank clears the domain (normalise
+            // turns "" into null); a JSON-null field (the body.customDomain()
+            // != null guard above) leaves it untouched, same as every other
+            // patchable field on this endpoint.
+            String customDomain = CustomDomainRules.normalise(body.customDomain());
+            if (customDomain != null) {
+                if (!CustomDomainRules.isWellFormed(customDomain)) {
+                    throw ApiException.badRequest("customDomain must be a well-formed hostname.");
+                }
+                Weblog claimant = weblogger.getWeblogManager().getWeblogByCustomDomain(customDomain);
+                if (claimant != null && !claimant.getHandle().equals(weblog.getHandle())) {
+                    throw ApiException.conflict("customDomain is already in use by another weblog.");
+                }
+            }
+            weblog.setCustomDomain(customDomain);
         }
 
         weblogger.getWeblogManager().saveWeblog(weblog);

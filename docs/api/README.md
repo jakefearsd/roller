@@ -536,6 +536,30 @@ operator who wants that reach must mint the token unpinned; pinning it "to
 be safe" and expecting `ADMIN` role to still cross other weblogs is the
 opposite of what happens.
 
+**`customDomain`** carries the weblog's virtual-host hostname (e.g.
+`blog.example.com`), or `null` when the weblog is served the default way,
+under `/<handle>/` on the site host. `PATCH` applies the same rules the JSP
+Weblog Settings form applies — both call the shared
+`CustomDomainRules` class, so the two surfaces cannot drift — validating and
+persisting the hostname synchronously in the same request:
+
+- a malformed hostname is **400**;
+- a hostname another weblog already holds is **409**; re-submitting a
+  weblog's own already-stored hostname unchanged is not a conflict;
+- an explicit blank string (`""`) clears the domain; omitting the field
+  (or sending JSON `null`) leaves it unchanged, the same convention every
+  other field on this PATCH follows.
+
+There is no API equivalent of the JSP form's certificate-zone warning — it
+is advisory UI text (`vhost.cert.zones`), and an API client has nowhere to
+show it.
+
+`analytics_weblog_sites` (see the Grafana/SEO analytics contract) carries
+this same hostname alongside the weblog handle and the Umami website id, so
+that view is the single place mapping a Search Console property (keyed by
+hostname) back to the weblog an agent can edit through this API (keyed by
+handle).
+
 ## Maintenance actions
 
 ```

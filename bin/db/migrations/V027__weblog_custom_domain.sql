@@ -17,3 +17,19 @@ ALTER TABLE weblog
 CREATE UNIQUE INDEX IF NOT EXISTS uq_weblog_custom_domain
     ON weblog (custom_domain)
     WHERE custom_domain IS NOT NULL;
+
+-- The Grafana/SEO join key. analytics_weblog_sites already carries
+-- handle <-> Umami website id; adding the hostname makes it the single place
+-- that maps a Search Console property to a weblog. The WHERE is widened
+-- (OR, not AND) so a weblog with a hostname but no Umami id still appears --
+-- exactly the state a weblog is in immediately after being given a domain,
+-- which is precisely when the SEO tooling needs to find it.
+CREATE OR REPLACE VIEW analytics_weblog_sites AS
+SELECT handle            AS weblog_handle,
+       analytics_site_id AS website_id,
+       custom_domain     AS custom_domain
+FROM weblog
+WHERE analytics_site_id IS NOT NULL
+   OR custom_domain IS NOT NULL;
+
+GRANT SELECT ON analytics_weblog_sites TO grafana_ro;

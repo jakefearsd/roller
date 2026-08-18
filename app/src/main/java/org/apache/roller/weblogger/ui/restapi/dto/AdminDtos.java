@@ -47,15 +47,19 @@ public final class AdminDtos {
     public record WeblogView(String id, String handle, String name, String tagline,
                               String emailAddress, String locale, String timeZone,
                               int entryDisplayCount, boolean active, String editorTheme,
-                              String creatorUserName) {
+                              String creatorUserName, String customDomain) {
     }
 
     /**
      * The body of a weblog PATCH. A null field leaves the corresponding
-     * property unchanged.
+     * property unchanged. {@code customDomain} follows the JSP editor's own
+     * convention (see {@code WeblogConfigController.myValidate}): an
+     * explicit blank string clears the domain (normalises to null), while
+     * an omitted (JSON-null) field leaves whatever is stored untouched.
      */
     public record WeblogPatch(String name, String tagline, String emailAddress, String locale,
-                               String timeZone, Integer entryDisplayCount, Boolean active) {
+                               String timeZone, Integer entryDisplayCount, Boolean active,
+                               String customDomain) {
     }
 
     public static UserView toView(User user, List<String> roles) {
@@ -68,7 +72,7 @@ public final class AdminDtos {
                 weblog.getTagline(), weblog.getEmailAddress(), weblog.getLocale(),
                 weblog.getTimeZone(), weblog.getEntryDisplayCount(),
                 Boolean.TRUE.equals(weblog.getActive()), weblog.getEditorTheme(),
-                weblog.getCreatorUserName());
+                weblog.getCreatorUserName(), weblog.getCustomDomain());
     }
 
     /**
