@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<ruleset name="Roller"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Roller's PMD gate: PMD's own quickstart set plus the security category,
+        minus seven rules. Zero tolerance: see
+        docs/superpowers/specs/2026-08-18-static-analysis-quality-gates-design.md.
+
+        A rule is excluded only when violating it is SYSTEMATICALLY not a defect
+        in this architecture, never merely because there are a lot of them.
+        Adding an exclusion means updating the spec and QualityGatePomTest.
+    </description>
+
+    <rule ref="rulesets/java/quickstart.xml">
+        <!-- DEFERRED, not rejected. 368 hits, all from the commons-logging API,
+             which has no parameterized form so every call concatenates. The fix
+             is the SLF4J migration (176 files, ~550 call sites) recorded as this
+             spec's follow-up; doing it here would bury the gate in a diff nobody
+             could review. Delete this exclusion when that wave lands. -->
+        <exclude name="GuardLogStatement"/>
+        <!-- DEFERRED, same SLF4J migration: 167 hits on declaration shape and
+             naming that the migration rewrites wholesale anyway. -->
+        <exclude name="ProperLogger"/>
+        <!-- Style opinion with no defect class behind it: an empty constructor
+             is not improved by a comment saying it is empty. -->
+        <exclude name="UncommentedEmptyConstructor"/>
+        <!-- while ((line = reader.readLine()) != null) is correct, idiomatic
+             Java and the clearest way to write that loop. -->
+        <exclude name="AssignmentInOperand"/>
+        <!-- Style opinion, same reasoning as UncommentedEmptyConstructor. -->
+        <exclude name="UncommentedEmptyMethodBody"/>
+        <!-- WRONG for this architecture, not merely noisy: JPA entities are
+             REQUIRED to declare a no-arg constructor, and this codebase is
+             built on EclipseLink. -->
+        <exclude name="UnnecessaryConstructor"/>
+        <!-- Directly contradicts SpotBugs AT_STALE_THREAD_WRITE_OF_PRIMITIVE,
+             which fires five times here and wants MORE volatile, not less.
+             Two gates cannot disagree; SpotBugs is right on this one. -->
+        <exclude name="AvoidUsingVolatile"/>
+    </rule>
+
+    <!-- Currently zero violations. Included precisely because holding zero
+         forever is free, and a future one is worth failing a build over. -->
+    <rule ref="category/java/security.xml"/>
+</ruleset>

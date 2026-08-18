@@ -664,6 +664,22 @@ limitations under the License.
             <version>${bouncycastle.version}</version>
         </dependency>
 
+        <!-- Annotations only (@SuppressFBWarnings), read by the SpotBugs gate
+             (see the parent pom's pluginManagement entry and
+             config/spotbugs/exclude.xml) at build time, never at runtime:
+             provided + optional so it neither ships in the WAR nor leaks
+             onto any consumer's compile classpath. Added ahead of the tasks
+             that use the annotation (the static-analysis wave's per-site
+             fix tasks) so the first `@SuppressFBWarnings` written compiles
+             immediately rather than blocking on a later pom change. -->
+        <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
+            <version>4.9.8</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test deps -->
 
         <dependency>
@@ -884,6 +900,51 @@ limitations under the License.
                     </systemProperties>
                     <trimStackTrace>false</trimStackTrace>
                 </configuration>
+            </plugin>
+
+            <!-- PMD + CPD, bound to verify. Configuration (ruleset, CPD token
+                 count, failOnViolation) lives in the parent pom's
+                 pluginManagement; this module only supplies the executions
+                 and, for pmd:check, the temporary ceiling
+                 (${pmd.max.violations}, see the parent pom's properties
+                 comment). cpd-check carries no ceiling: CPD starts at 4
+                 blocks and the very next task clears them, so it goes hard
+                 immediately. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>pmd-check</id>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
+                        <configuration>
+                            <maxAllowedViolations>${pmd.max.violations}</maxAllowedViolations>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>cpd-check</id>
+                        <phase>verify</phase>
+                        <goals><goal>cpd-check</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- SpotBugs, bound to verify, same ceiling scheme as PMD above
+                 (${spotbugs.max.violations}). -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>spotbugs-check</id>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
+                        <configuration>
+                            <maxAllowedViolations>${spotbugs.max.violations}</maxAllowedViolations>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Compile every JSP at build time. JSP syntax and taglib errors
