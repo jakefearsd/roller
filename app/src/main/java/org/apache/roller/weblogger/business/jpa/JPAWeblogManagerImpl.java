@@ -411,8 +411,8 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         int size = 0;
         String queryString;
         StringBuilder whereClause = new StringBuilder();
-        
-        queryString = "SELECT w FROM Weblog w WHERE ";
+
+        queryString = "SELECT w FROM Weblog w";
 
         if (startDate != null) {
             Timestamp start = new Timestamp(startDate.getTime());
@@ -443,11 +443,20 @@ public class JPAWeblogManagerImpl implements WeblogManager {
             }
             params.add(size++, active);
             whereClause.append(" w.active = ?").append(size);
-        }      
-                
-        whereClause.append(" ORDER BY w.dateCreated DESC");
-        
-        TypedQuery<Weblog> query = strategy.getDynamicQuery(queryString + whereClause.toString(), Weblog.class);
+        }
+
+        // The WHERE keyword may only appear when there is an actual predicate
+        // to follow it -- with every filter left null (as VirtualHostRegistry
+        // does, deliberately, to read every weblog regardless of enabled/
+        // active status) whereClause is empty, and "WHERE" with nothing after
+        // it is invalid JPQL that EclipseLink rejects at query-creation time.
+        StringBuilder fullQuery = new StringBuilder(queryString);
+        if (whereClause.length() > 0) {
+            fullQuery.append(" WHERE").append(whereClause);
+        }
+        fullQuery.append(" ORDER BY w.dateCreated DESC");
+
+        TypedQuery<Weblog> query = strategy.getDynamicQuery(fullQuery.toString(), Weblog.class);
         if (offset != 0) {
             query.setFirstResult(offset);
         }
