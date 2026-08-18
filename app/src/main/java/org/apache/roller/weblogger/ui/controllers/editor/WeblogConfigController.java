@@ -147,7 +147,11 @@ public class WeblogConfigController extends BaseController {
             }
         }
 
-        if (CustomDomainRules.isOutsideCertZones(customDomain,
+        // Only warn about the zone when the save is actually going to happen --
+        // otherwise a malformed or taken hostname's rejection re-renders the
+        // page with an error AND a false "Saved, but..." banner, for a
+        // domain that was never persisted at all.
+        if (!hasErrors(model) && CustomDomainRules.isOutsideCertZones(customDomain,
                 WebloggerConfig.getProperty("vhost.cert.zones"))) {
             model.addAttribute("customDomainWarning", customDomain);
         }

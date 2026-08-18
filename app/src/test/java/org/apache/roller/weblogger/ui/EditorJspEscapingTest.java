@@ -62,7 +62,8 @@ class EditorJspEscapingTest {
             "newFile.name",
             "newImage.name",
             "post.title",
-            "entry.title");
+            "entry.title",
+            "bean.customDomain");
 
     @Test
     void authorControlledTextNeverRendersRawInAJsp() throws IOException {

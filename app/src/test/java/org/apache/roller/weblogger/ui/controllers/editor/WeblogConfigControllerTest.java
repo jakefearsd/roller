@@ -272,6 +272,51 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogManager()).saveWeblog(weblog);
     }
 
+    /**
+     * The zone-warning block must not run independently of the rest of
+     * validation: a malformed hostname is rejected (nothing saves), and the
+     * page must not ALSO claim "Saved, but this server has no wildcard
+     * certificate..." for a domain that was never saved at all. Before this
+     * fix myValidate computed isOutsideCertZones() unconditionally, so a
+     * configured zone plus a mistyped hostname produced a validation error
+     * and a false success-shaped warning banner in the same response.
+     */
+    @Test
+    void aMalformedCustomDomainInAConfiguredZoneShowsNoZoneWarning() throws Exception {
+        previousVhostCertZones = overrideConfigProperty("vhost.cert.zones", "thelocalwiki.com");
+        bean.setCustomDomain("bad_host.otherzone.com");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("websiteSettings.customDomain.invalid"),
+                "Expected an invalid-domain error, got: " + errors(model));
+        assertNull(model.getAttribute("customDomainWarning"),
+                "A failed save must not also claim the zone-warning success banner");
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    /**
+     * Same blind spot as above, via the taken-domain rejection path rather
+     * than the malformed-hostname path.
+     */
+    @Test
+    void aTakenCustomDomainInAConfiguredZoneShowsNoZoneWarning() throws Exception {
+        previousVhostCertZones = overrideConfigProperty("vhost.cert.zones", "thelocalwiki.com");
+        Weblog other = new Weblog();
+        other.setHandle("otherblog");
+        when(weblogger.getWeblogManager().getWeblogByCustomDomain("taken.otherzone.com"))
+                .thenReturn(other);
+        bean.setCustomDomain("taken.otherzone.com");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("websiteSettings.customDomain.taken"),
+                "Expected a taken-domain error, got: " + errors(model));
+        assertNull(model.getAttribute("customDomainWarning"),
+                "A failed save must not also claim the zone-warning success banner");
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
     // --- WeblogConfigBean ---
 
     /**
