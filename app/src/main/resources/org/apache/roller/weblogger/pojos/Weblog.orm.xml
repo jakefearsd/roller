@@ -17,6 +17,9 @@
 			     database happens to return. -->
 			<query>SELECT w FROM Weblog w WHERE w.newsletterListUuid = ?1 ORDER BY w.handle</query>
 		</named-query>
+		<named-query name="Weblog.getByCustomDomain">
+			<query>SELECT w FROM Weblog w WHERE w.customDomain = ?1</query>
+		</named-query>
 		<named-query name="Weblog.getByLetterOrderByHandle">
 			<query>SELECT w FROM Weblog w WHERE UPPER(w.handle) like ?1 ORDER BY w.handle</query>
 		</named-query>
@@ -54,6 +57,9 @@
             </basic>
             <basic name="newsletterListUuid">
                 <column name="newsletter_list_uuid" insertable="true" updatable="true" unique="false"/>
+            </basic>
+            <basic name="customDomain">
+                <column name="custom_domain" insertable="true" updatable="true" unique="true"/>
             </basic>
 			<basic name="emailAddress">
 				<column name="emailaddress" insertable="true" updatable="true" unique="false"/>

@@ -74,6 +74,7 @@ public class Weblog implements Serializable {
     private String  analyticsSiteId  = null;
     private String  analyticsShareUrl = null;
     private String  newsletterListUuid = null;
+    private String  customDomain     = null;
 
     private transient Map<String, WeblogEntryPlugin> initializedPlugins = null;
 
@@ -445,6 +446,20 @@ public class Weblog implements Serializable {
 
     public void setNewsletterListUuid(String newsletterListUuid) {
         this.newsletterListUuid = newsletterListUuid;
+    }
+
+    /**
+     * The hostname this weblog is served at, or null to be served under
+     * /<handle>/ on the site host. Stored lowercased; see
+     * WeblogConfigController for the validation, and VirtualHostRegistry for
+     * how it is resolved on a request.
+     */
+    public String getCustomDomain() {
+        return customDomain;
+    }
+
+    public void setCustomDomain(String customDomain) {
+        this.customDomain = customDomain;
     }
 
     /**

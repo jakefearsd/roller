@@ -89,6 +89,15 @@ public interface WeblogManager {
     Weblog getWeblogByNewsletterListUuid(String listUuid) throws WebloggerException;
 
     /**
+     * The weblog served at the given hostname, or null when no weblog claims
+     * it. Unlike getWeblogByNewsletterListUuid, custom_domain carries a unique
+     * index, so at most one row can ever match.
+     *
+     * @param host a hostname, already lowercased and stripped of any port
+     */
+    Weblog getWeblogByCustomDomain(String host) throws WebloggerException;
+
+    /**
      * Get websites optionally restricted by user, enabled and active status.
      * @param enabled   Get all with this enabled state (or null or all)
      * @param active    Get all with this active state (or null or all)

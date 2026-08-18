@@ -373,6 +373,21 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         return results.isEmpty() ? null : results.get(0);
     }
 
+    @Override
+    public Weblog getWeblogByCustomDomain(String host) throws WebloggerException {
+        // A null host must not reach the query: it would match every weblog
+        // whose custom_domain is NULL and resolve an unclaimed hostname to an
+        // arbitrary weblog.
+        if (host == null || host.isBlank()) {
+            return null;
+        }
+        TypedQuery<Weblog> query = strategy.getNamedQuery(
+                "Weblog.getByCustomDomain", Weblog.class);
+        query.setParameter(1, host);
+        List<Weblog> results = query.getResultList();
+        return results.isEmpty() ? null : results.get(0);
+    }
+
     /**
      * Get weblogs of a user
      */
