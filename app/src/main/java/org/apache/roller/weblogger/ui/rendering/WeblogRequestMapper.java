@@ -197,15 +197,19 @@ public class WeblogRequestMapper implements RequestMapper {
 
         // The custom domain is canonical: a weblog that has one is reachable at
         // exactly one address per page, and any other host permanently
-        // redirects there. Absolute by necessity -- this crosses hosts, so
-        // unlike the trailing-slash redirect below there is no context path to
-        // prepend.
+        // redirects there. Absolute by necessity -- this crosses hosts -- and
+        // it STILL needs the context path: this is one Tomcat context reached
+        // under many hostnames, so a deployment under a prefix (e.g. /roller)
+        // has that prefix on the custom domain too. pathInfo was stripped of
+        // it above (line ~139), so it has to be added back here rather than
+        // assumed away the way the container-internal FORWARD below can.
         // Redirect precisely when the weblog has a hostname and THIS request
         // did not arrive on it. vhostHandle != null means the host already
         // resolved the weblog, i.e. we are on the canonical domain already.
         String canonicalHost = VirtualHostRegistry.hostFor(weblogHandle);
         if (vhostHandle == null && canonicalHost != null) {
             StringBuilder target = new StringBuilder("https://").append(canonicalHost);
+            target.append(request.getContextPath());
             if (pathInfo != null) {
                 target.append('/').append(pathInfo);
             }

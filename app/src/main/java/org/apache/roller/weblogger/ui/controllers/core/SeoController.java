@@ -111,8 +111,11 @@ public class SeoController extends BaseController {
     public ResponseEntity<String> robots(HttpServletRequest request) {
         String vhostHost = VirtualHostRegistry.normalise(request.getHeader("Host"));
         String vhostHandle = VirtualHostRegistry.handleFor(request.getHeader("Host"));
+        // Same webapp context reached under many hostnames -- the custom
+        // domain still needs the context path, or a deployment under a
+        // prefix advertises a sitemap url that 404s on that same deployment.
         String sitemapUrl = vhostHandle != null
-                ? "https://" + vhostHost + "/sitemap.xml"
+                ? "https://" + vhostHost + WebloggerRuntimeConfig.getRelativeContextURL() + "/sitemap.xml"
                 : absoluteContextURL() + "/sitemap.xml";
         String body = "User-agent: *\n"
                 + "Disallow:\n"

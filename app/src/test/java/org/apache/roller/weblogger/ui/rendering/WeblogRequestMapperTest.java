@@ -544,6 +544,44 @@ class WeblogRequestMapperTest {
         assertEquals("https://vhost.example.com/entry/my-post", response.getRedirectedUrl());
     }
 
+    /**
+     * The same redirect deployed under a context path. This crosses hosts, so
+     * unlike the mapper's OWN trailing-slash redirect (see
+     * {@link #missingTrailingSlashRedirects}) the target is built from
+     * {@code pathInfo}, which is already context-stripped -- the context path
+     * has to be re-added, or a reader deployed at /roller is sent to
+     * https://vhost.example.com/entry/my-post, which 404s on that same
+     * deployment.
+     */
+    @Test
+    void thePathFormRedirectsToTheCustomDomainUnderAContextPath() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/entry/my-post");
+        request.addHeader("Host", "blog.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals(301, response.getStatus());
+        assertEquals("https://vhost.example.com/roller/entry/my-post",
+                response.getRedirectedUrl());
+    }
+
+    /**
+     * The bare weblog-home form under a context path -- the pathInfo == null,
+     * trailingSlash == true branch pair, at a non-root context this time.
+     */
+    @Test
+    void thePathFormRedirectsTheWeblogHomeWithTrailingSlashUnderAContextPath() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletRequest request = publicUrl("GET", "/mapperblog/");
+        request.addHeader("Host", "blog.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals(301, response.getStatus());
+        assertEquals("https://vhost.example.com/roller/", response.getRedirectedUrl());
+    }
+
     @Test
     void thePathFormRedirectKeepsTheQueryString() throws Exception {
         givenCustomDomain("vhost.example.com");

@@ -88,4 +88,46 @@ class MultiWeblogURLStrategyTest {
         assertEquals("/plainblog/",
                 strategy.getWeblogURL(weblog("plainblog", null), null, false));
     }
+
+    /**
+     * CHARACTERISATION: at the root context ("", the pinned default above),
+     * a custom-domain weblog's urls are exactly what they were before this
+     * class existed -- no context path segment to add. Expected to pass on
+     * arrival.
+     */
+    @Test
+    void atTheRootContextTheCustomDomainUrlIsUnchanged() {
+        assertEquals("https://vhost.example.com/",
+                strategy.getWeblogURL(weblog("vhostblog", "vhost.example.com"), null, true));
+        assertEquals("/",
+                strategy.getWeblogURL(weblog("vhostblog", "vhost.example.com"), null, false));
+    }
+
+    /**
+     * Under a servlet-container prefix, a custom-domain weblog's root on
+     * that hostname is "/roller/", not "/" -- the host supplies the handle,
+     * not the context path. The prefix must appear exactly once.
+     */
+    @Test
+    void underAContextPathTheCustomDomainUrlCarriesThePrefixExactlyOnce() {
+        WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+
+        assertEquals("https://vhost.example.com/roller/",
+                strategy.getWeblogURL(weblog("vhostblog", "vhost.example.com"), null, true));
+        assertEquals("/roller/",
+                strategy.getWeblogURL(weblog("vhostblog", "vhost.example.com"), null, false));
+    }
+
+    /**
+     * A derived url (entry, not just the weblog root) must carry the prefix
+     * too, since it is built on top of getWeblogURL.
+     */
+    @Test
+    void underAContextPathADerivedUrlCarriesThePrefixToo() {
+        WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+
+        assertEquals("https://vhost.example.com/roller/entry/my-post",
+                strategy.getWeblogEntryURL(
+                        weblog("vhostblog", "vhost.example.com"), null, "my-post", true));
+    }
 }

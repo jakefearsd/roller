@@ -93,12 +93,37 @@ class SeoControllerVirtualHostTest {
         return request;
     }
 
-    /** On a custom domain, robots.txt points at THAT weblog's sitemap. */
+    /**
+     * On a custom domain, robots.txt points at THAT weblog's sitemap -- and,
+     * since this is one Tomcat context reached under many hostnames (this
+     * fixture's setUp() pins the context to "/roller"), the sitemap url must
+     * still carry the context path. The real {@code /sitemap.xml} route is
+     * mapped under the same prefix; omitting it here would advertise a url
+     * that 404s.
+     */
     @Test
     void robotsOnACustomDomainAdvertisesTheWeblogSitemap() {
         String body = controller.robots(onHost("vhost.example.com")).getBody();
-        assertTrue(body.contains("Sitemap: https://vhost.example.com/sitemap.xml"),
+        assertTrue(body.contains("Sitemap: https://vhost.example.com/roller/sitemap.xml"),
                 "robots.txt was: " + body);
+    }
+
+    /**
+     * CHARACTERISATION: at the root context, robots.txt on a custom domain is
+     * unchanged -- there is no prefix to add. The class's own setUp() pins a
+     * non-root context by default, so this overrides it locally and restores
+     * it afterward.
+     */
+    @Test
+    void robotsOnACustomDomainAtTheRootContextHasNoPrefix() {
+        WebloggerRuntimeConfig.setRelativeContextURL("");
+        try {
+            String body = controller.robots(onHost("vhost.example.com")).getBody();
+            assertTrue(body.contains("Sitemap: https://vhost.example.com/sitemap.xml"),
+                    "robots.txt was: " + body);
+        } finally {
+            WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+        }
     }
 
     /** On a custom domain, /sitemap.xml IS the weblog's sitemap, not the index. */
