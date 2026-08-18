@@ -539,6 +539,57 @@ class WeblogRequestMapperTest {
                 response.getRedirectedUrl());
     }
 
+    /**
+     * The bare weblog-home form ({@code /mapperblog/}, the canonical non-vhost
+     * shape covered on the plain path by {@link #weblogHomeForwardsToPageServlet})
+     * is the single most common inbound link shape this feature has to handle
+     * -- pathInfo is null and trailingSlash is true, the exact branch pair the
+     * three redirect tests above never exercised (they all use
+     * "/mapperblog/entry/my-post", which is neither).
+     */
+    @Test
+    void thePathFormRedirectsTheWeblogHomeWithTrailingSlash() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletRequest request = publicUrlAt("", "GET", "/mapperblog/");
+        request.addHeader("Host", "blog.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals(301, response.getStatus());
+        assertEquals("https://vhost.example.com/", response.getRedirectedUrl());
+    }
+
+    /**
+     * The no-trailing-slash weblog-home form ({@code /mapperblog}) is, before
+     * this feature, precisely the shape that triggers the OLD context-relative
+     * trailing-slash redirect a few lines below this block. The custom-domain
+     * redirect has to intercept it first, or a reader pays two hops -- add the
+     * slash on the old host, then cross to the domain -- which is a wasted
+     * round trip and a crawl-budget cost the whole feature exists to avoid.
+     * Asserting the exact Location proves it is the single, domain-form hop
+     * and not the old form ("/mapperblog/", which is what this request would
+     * redirect to on this empty-context test setup if the old redirect fired
+     * instead).
+     * <p>
+     * The resulting Location is a bare "https://vhost.example.com" -- no
+     * trailing slash, no path. That is what the implementation actually
+     * produces (pathInfo is null and trailingSlash is false, so neither of
+     * the block's two append branches fires) and is accepted as-is: it is
+     * equivalent to the root and every browser/crawler treats it the same as
+     * "https://vhost.example.com/".
+     */
+    @Test
+    void thePathFormRedirectsTheWeblogHomeWithoutTrailingSlash() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletRequest request = publicUrlAt("", "GET", "/mapperblog");
+        request.addHeader("Host", "blog.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals(301, response.getStatus());
+        assertEquals("https://vhost.example.com", response.getRedirectedUrl());
+    }
+
     /** A request already ON the custom domain must not redirect to itself. */
     @Test
     void aRequestOnTheCustomDomainIsNotRedirected() throws Exception {
