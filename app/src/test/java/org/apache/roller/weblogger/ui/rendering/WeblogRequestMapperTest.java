@@ -509,6 +509,46 @@ class WeblogRequestMapperTest {
                 reserved + " must fall through to its own servlet on a custom domain");
     }
 
+    /**
+     * The custom domain is the single canonical address, so the old path form
+     * permanently redirects to it -- which is what keeps already-indexed urls
+     * and existing inbound links working after a weblog gains a hostname.
+     */
+    @Test
+    void thePathFormRedirectsToTheCustomDomain() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletRequest request = publicUrlAt("", "GET", "/mapperblog/entry/my-post");
+        request.addHeader("Host", "blog.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals(301, response.getStatus());
+        assertEquals("https://vhost.example.com/entry/my-post", response.getRedirectedUrl());
+    }
+
+    @Test
+    void thePathFormRedirectKeepsTheQueryString() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletRequest request = publicUrlAt("", "GET", "/mapperblog/entry/my-post");
+        request.addHeader("Host", "blog.example.com");
+        request.setQueryString("p=2");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(request, response));
+        assertEquals("https://vhost.example.com/entry/my-post?p=2",
+                response.getRedirectedUrl());
+    }
+
+    /** A request already ON the custom domain must not redirect to itself. */
+    @Test
+    void aRequestOnTheCustomDomainIsNotRedirected() throws Exception {
+        givenCustomDomain("vhost.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(mapper.handleRequest(vhostUrl("GET", "/entry/my-post"), response));
+        assertNull(response.getRedirectedUrl());
+    }
+
     private void givenCustomDomain(String host) throws Exception {
         Weblog stored = WebloggerFactory.getWeblogger().getWeblogManager()
                 .getWeblogByHandle("mapperblog");
