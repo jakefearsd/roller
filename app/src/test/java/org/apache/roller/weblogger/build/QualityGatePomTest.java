@@ -37,6 +37,19 @@ class QualityGatePomTest {
     private static final List<String> PERMITTED_SPOTBUGS_EXCLUSIONS = List.of(
             "EI_EXPOSE_REP", "SE_TRANSIENT_FIELD_NOT_RESTORED", "THROWS_METHOD_THROWS");
 
+    /**
+     * The exact bug patterns making up the three permitted SpotBugs exclusion
+     * families in config/spotbugs/exclude.xml, transcribed from that file. This
+     * set is closed: a pattern outside it, or a fourth {@code <Match>} family,
+     * is a spec change -- update the design doc and this list.
+     */
+    private static final List<String> PERMITTED_SPOTBUGS_PATTERNS = List.of(
+            "EI_EXPOSE_REP", "EI_EXPOSE_REP2", "MS_EXPOSE_REP",
+            "SE_TRANSIENT_FIELD_NOT_RESTORED", "SE_COMPARATOR_SHOULD_BE_SERIALIZABLE", "CT_CONSTRUCTOR_THROW",
+            "THROWS_METHOD_THROWS_RUNTIMEEXCEPTION", "THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION",
+            "THROWS_METHOD_THROWS_CLAUSE_THROWABLE", "REC_CATCH_EXCEPTION",
+            "MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR", "MC_OVERRIDABLE_METHOD_CALL_IN_READ_OBJECT");
+
     @Test
     void allThreeChecksAreBoundToVerifyAndFailTheBuild() throws IOException {
         String appPom = read("app/pom.xml");
@@ -75,10 +88,29 @@ class QualityGatePomTest {
         for (String family : PERMITTED_SPOTBUGS_EXCLUSIONS) {
             assertTrue(filter.contains(family), "expected SpotBugs exclusion for " + family);
         }
+
         Matcher m = Pattern.compile("<Match>").matcher(filter);
+        int matchCount = 0;
         while (m.find()) {
+            matchCount++;
             assertTrue(hasPrecedingComment(filter, m.start()),
                     "every <Match> in the SpotBugs filter needs a justification comment above it");
+        }
+        // Closes the set the same way everyPmdExclusionIsPermittedAndCarriesAReason does for PMD:
+        // a fourth <Match> family, even with a justification comment, is a spec change.
+        assertEquals(3, matchCount,
+                "config/spotbugs/exclude.xml must contain exactly the three <Match> families the "
+                + "spec permits. Adding a fourth is a spec change: update the design doc and this test.");
+
+        Matcher bugPattern = Pattern.compile("<Bug\\s+pattern=\"([^\"]+)\"").matcher(filter);
+        while (bugPattern.find()) {
+            for (String pattern : bugPattern.group(1).split(",")) {
+                String trimmed = pattern.trim();
+                assertTrue(PERMITTED_SPOTBUGS_PATTERNS.contains(trimmed),
+                        "SpotBugs bug pattern '" + trimmed + "' is excluded but the spec does not "
+                        + "permit it. Adding an exclusion is a spec change: update the design doc "
+                        + "and this test.");
+            }
         }
     }
 
