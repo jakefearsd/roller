@@ -7,7 +7,7 @@
             access="PROPERTY">
         <table name="roller_user"/>
         <named-query name="User.getAll">
-            <query>SELECT u FROM User u</query>
+            <query>SELECT u FROM User u ORDER BY u.dateCreated DESC, u.id</query>
         </named-query>
         <named-query name="User.getByEnabled">
             <query>SELECT u FROM User u WHERE u.enabled = ?1</query>

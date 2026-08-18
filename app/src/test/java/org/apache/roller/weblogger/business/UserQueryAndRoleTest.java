@@ -256,6 +256,84 @@ class UserQueryAndRoleTest {
     }
 
     /**
+     * {@link #listingIsPageable} above is correct but flaky -- it depends on
+     * the ambient user population and can pass by luck. This walks a whole
+     * page of colliding-timestamp fixture users one row at a time and proves
+     * every offset returns a row no earlier offset already returned.
+     *
+     * <p>This deliberately calls {@code getUsersStartingWith(null, null, ...)},
+     * not {@code getUsers(...)} -- {@code getUsers} always resolves to one of
+     * the {@code EndDateOrderByStartDateDesc} named queries, which already
+     * carry {@code ORDER BY u.dateCreated DESC, u.id}. {@code getUsersStartingWith}
+     * is what falls through to {@code User.getAll} when both {@code startsWith}
+     * and {@code enabled} are null (see {@code JPAUserManagerImpl}), and
+     * {@code User.getAll} is the one named query in {@code User.orm.xml} with
+     * no {@code ORDER BY} at all. This is also a real, reachable path: it is
+     * what {@code UserDataServlet} (the collaborator picker) calls when
+     * loaded with no filter typed in yet.
+     *
+     * <p>With no {@code ORDER BY}, two same-{@code dateCreated} rows have no
+     * defined relative order and a {@code LIMIT 1 OFFSET n} walk can hand
+     * back the same row twice while never handing back another at all.
+     */
+    @Test
+    void listingWalksEveryUserExactlyOnceAcrossPages() throws Exception {
+        List<User> extra = new java.util.ArrayList<>();
+        try {
+            for (int i = 0; i < 20; i++) {
+                extra.add(TestUtils.setupUser("uqPage" + i));
+            }
+            TestUtils.endSession(true);
+
+            int total = 3 + extra.size();
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (int offset = 0; offset < total; offset++) {
+                List<User> page = users().getUsersStartingWith(null, null, offset, 1);
+                assertEquals(1, page.size(), "each page must return exactly one row at offset " + offset);
+                String name = page.get(0).getUserName();
+                assertTrue(seen.add(name),
+                        "offset " + offset + " returned a user already seen at an earlier "
+                                + "offset -- the walk repeated a row instead of moving the "
+                                + "window: " + name);
+            }
+        } finally {
+            for (User u : extra) {
+                TestUtils.teardownUser(u.getUserName());
+            }
+            TestUtils.endSession(true);
+        }
+    }
+
+    /**
+     * A source-level proof for {@code User.getAll}, because the runtime walk
+     * above could not demonstrate this defect: it did not reproduce a repeat
+     * or a skip at the scale one test can afford to create, for the same
+     * reason recorded on {@link #dateCreatedOrderedUserQueriesCarryTheIdTiebreak}
+     * -- a moderate fixture gets a stable page order from Postgres "by luck"
+     * (an unchanged table is scanned in stable physical order within one
+     * short-lived test process), and the sibling defect that test pins only
+     * surfaced under the full suite's accumulated churn of creates and
+     * deletes. Asserting the query text directly is the deterministic pin,
+     * exactly as that test already does for its four siblings; this is the
+     * fifth dateCreated-ordered query, the one that was missing entirely
+     * rather than missing only its id tiebreak.
+     */
+    @Test
+    void getAllCarriesTheSameOrderingAsItsDateCreatedOrderedSiblings() throws Exception {
+        String orm = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/resources/org/apache/roller/weblogger/pojos/User.orm.xml"));
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("name=\"User\\.getAll\">\\s*<query>([^<]*)</query>").matcher(orm);
+        assertTrue(m.find(), "User.getAll named query not found in User.orm.xml");
+        assertTrue(m.group(1).contains("ORDER BY u.dateCreated DESC, u.id"),
+                "User.getAll has no ORDER BY at all, unlike every sibling query in "
+                        + "this file -- two LIMIT 1 OFFSET n calls against it can return "
+                        + "the same row twice, or skip one entirely, because SQL makes no "
+                        + "ordering guarantee without ORDER BY. Query text: "
+                        + m.group(1).trim());
+    }
+
+    /**
      * Pins the id tiebreak on every dateCreated-ordered user query at the
      * SOURCE level. A runtime version of this pin (forced same-timestamp
      * users walked one page at a time) was tried first and passed with the
@@ -265,6 +343,12 @@ class UserQueryAndRoleTest {
      * users: ORDER BY dateCreated alone leaves same-timestamp rows in
      * undefined order, and adjacent one-row pages repeated a row roughly
      * every other run. Asserting the query text is the deterministic pin.
+     *
+     * <p>{@code User.getAll} joined this count once it was given the same
+     * ordering as its siblings (it previously had no {@code ORDER BY} at
+     * all, and so did not match this regex and was not counted here --
+     * {@link #getAllCarriesTheSameOrderingAsItsDateCreatedOrderedSiblings}
+     * is what pinned that gap).
      */
     @Test
     void dateCreatedOrderedUserQueriesCarryTheIdTiebreak() throws Exception {
@@ -282,8 +366,8 @@ class UserQueryAndRoleTest {
                             + "repeat or skip a row. Offender: ORDER BY "
                             + "u.dateCreated DESC" + m.group(1));
         }
-        assertEquals(4, found,
-                "the four dateCreated-ordered queries moved or changed count "
+        assertEquals(5, found,
+                "the five dateCreated-ordered queries moved or changed count "
                         + "-- update this pin alongside them");
     }
 
