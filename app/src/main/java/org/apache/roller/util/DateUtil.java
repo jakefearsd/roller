@@ -283,7 +283,7 @@ public abstract class DateUtil {
      * Returns a java.sql.Timestamp equal to the current time
      **/
     public static java.sql.Timestamp now() {
-        return new java.sql.Timestamp(new java.util.Date().getTime());
+        return new java.sql.Timestamp(new Date().getTime());
     }
     
     
@@ -348,12 +348,12 @@ public abstract class DateUtil {
     
     // convenience method returns minimal date format
     public static SimpleDateFormat defaultDateFormat() {
-        return DateUtil.friendlyDateFormat(true);
+        return friendlyDateFormat(true);
     }
     
     
     // convenience method returns minimal date format
-    public static java.text.SimpleDateFormat minimalDateFormat() {
+    public static SimpleDateFormat minimalDateFormat() {
         return friendlyDateFormat(true);
     }
     
@@ -430,12 +430,12 @@ public abstract class DateUtil {
     
     // convenience method using minimal date format
     public static String minimalDate(Date date) {
-        return format(date, DateUtil.minimalDateFormat());
+        return format(date, minimalDateFormat());
     }
     
     
     public static String fullDate(Date date) {
-        return format(date, DateUtil.fullDateFormat());
+        return format(date, fullDateFormat());
     }
     
     
@@ -529,8 +529,8 @@ public abstract class DateUtil {
     public static Date parseWeblogURLDateString(String dateString, TimeZone tz, Locale locale) {
         
         Date ret = new Date();
-        SimpleDateFormat char8DateFormat = DateUtil.get8charDateFormat();
-        SimpleDateFormat char6DateFormat = DateUtil.get6charDateFormat();
+        SimpleDateFormat char8DateFormat = get8charDateFormat();
+        SimpleDateFormat char6DateFormat = get6charDateFormat();
         
         if (dateString != null
                 && dateString.length()==8

@@ -18,7 +18,6 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 

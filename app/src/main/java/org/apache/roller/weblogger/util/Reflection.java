@@ -48,7 +48,7 @@ public final class Reflection {
             
         for (String klass : classList) {
             @SuppressWarnings("unchecked")
-            T instance = (T) Reflection.newInstance(klass);  // throws CCE if instance dos not match T
+            T instance = (T) newInstance(klass);  // throws CCE if instance dos not match T
             instances.add(instance);
         }
         

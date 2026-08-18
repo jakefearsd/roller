@@ -152,7 +152,7 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
             // feeds are sorted by pubtime, so first might not be last updated
             List<WeblogEntryWrapper> items = getItems();
             if (getItems() != null && !getItems().isEmpty()) {
-                Timestamp newest = (getItems().get(0)).getUpdateTime();
+                Timestamp newest = getItems().get(0).getUpdateTime();
                 for (WeblogEntryWrapper e : items) {
                     if (e.getUpdateTime().after(newest)) {
                         // NOTE: must store the update time we just compared. Storing

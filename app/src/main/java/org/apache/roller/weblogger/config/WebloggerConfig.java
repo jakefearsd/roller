@@ -284,7 +284,7 @@ public final class WebloggerConfig {
      */
     public static boolean getBooleanProperty(String name, boolean defaultValue) {
         // get the value first, then convert
-        String value = WebloggerConfig.getProperty(name);
+        String value = getProperty(name);
 
         if(value == null) {
             return defaultValue;
@@ -305,7 +305,7 @@ public final class WebloggerConfig {
      */
     public static int getIntProperty(String name, int defaultValue) {
         // get the value first, then convert
-        String value = WebloggerConfig.getProperty(name);
+        String value = getProperty(name);
 
         if (value == null) {
             return defaultValue;

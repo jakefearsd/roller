@@ -121,7 +121,7 @@ public class MailUtil {
                     new Object[] { userName, userName, editURL })
                     );
             content = sb.toString();
-            MailUtil.sendTextMessage(
+            sendTextMessage(
                     from, to, cc, bcc, subject, content);
         } catch (MessagingException e) {
             log.error("ERROR: Problem sending pending entry notification email.");

@@ -60,7 +60,6 @@ public class IPBanFilter implements Filter {
         if(IPBanList.getInstance().isBanned(request.getRemoteAddr())) {
             log.debug("BANNED "+request.getRemoteAddr());
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
         } else {
             chain.doFilter(request, response);
         }

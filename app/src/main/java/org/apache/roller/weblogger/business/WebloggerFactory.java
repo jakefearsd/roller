@@ -42,7 +42,7 @@ public final class WebloggerFactory {
      * True if bootstrap process has been completed, False otherwise.
      */
     public static boolean isBootstrapped() {
-        return (webloggerProvider != null);
+        return webloggerProvider != null;
     }
 
 

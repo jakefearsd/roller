@@ -100,7 +100,7 @@ public class ExpiringCacheEntry implements Serializable {
      * Determine if this cache entry has expired as of the given time.
      */
     boolean hasExpired(long now) {
-        return ((this.timeCached + this.timeout) < now);
+        return (this.timeCached + this.timeout) < now;
     }
     
 }

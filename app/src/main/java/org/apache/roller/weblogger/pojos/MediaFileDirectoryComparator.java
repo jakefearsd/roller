@@ -33,7 +33,7 @@ public class MediaFileDirectoryComparator implements Comparator<MediaFileDirecto
 	 * Comparator types that define all possible attributes for comparing media file directories. 
 	 *
 	 */
-	public enum DirectoryComparatorType {NAME};
+	public enum DirectoryComparatorType {NAME}
 	
 	// Comparator type associated with this instance of media directory comparator
 	DirectoryComparatorType type;

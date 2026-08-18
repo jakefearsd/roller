@@ -93,7 +93,7 @@ public final class BlurHash {
         int acCount = factors.length - 1;
 
         StringBuilder hash = new StringBuilder();
-        int sizeFlag = (componentsX - 1) + (componentsY - 1) * 9;
+        int sizeFlag = componentsX - 1 + (componentsY - 1) * 9;
         hash.append(encode83(sizeFlag, 1));
 
         double maximumValue;
@@ -191,7 +191,7 @@ public final class BlurHash {
     private static String encode83(int value, int length) {
         StringBuilder result = new StringBuilder();
         for (int i = 1; i <= length; i++) {
-            int digit = (value / pow83(length - i)) % 83;
+            int digit = value / pow83(length - i) % 83;
             result.append(DIGIT_CHARACTERS.charAt(digit));
         }
         return result.toString();

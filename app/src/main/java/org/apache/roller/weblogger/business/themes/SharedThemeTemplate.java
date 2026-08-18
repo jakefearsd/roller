@@ -26,7 +26,6 @@ import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
 
 
@@ -152,8 +151,8 @@ public class SharedThemeTemplate implements ThemeTemplate, Serializable {
     
     @Override
     public String toString() {
-        return (id + "," + name + "," + description + "," + link + "," + 
-                lastModified + "\n\n" + contents + "\n");
+        return id + "," + name + "," + description + "," + link + "," +
+                lastModified + "\n\n" + contents + "\n";
     }
 
     @Override

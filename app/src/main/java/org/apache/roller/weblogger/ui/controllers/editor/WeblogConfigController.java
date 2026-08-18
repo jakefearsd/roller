@@ -18,8 +18,6 @@
 
 package org.apache.roller.weblogger.ui.controllers.editor;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.regex.Pattern;
 
 import jakarta.servlet.http.HttpServletRequest;

@@ -23,7 +23,6 @@ import java.io.InputStreamReader;
 import java.io.StringWriter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.config.runtime.RuntimeConfigDefs;
 import org.apache.roller.weblogger.config.runtime.RuntimeConfigDefsParser;
 import org.apache.roller.weblogger.business.PropertiesManager;
@@ -92,7 +91,7 @@ public final class WebloggerRuntimeConfig {
      * check both rather than reimplementing this fallback each time.
      */
     public static String getPropertyWithConfigFallback(String name) {
-        String value = WebloggerRuntimeConfig.getProperty(name);
+        String value = getProperty(name);
         if (value == null || value.isBlank()) {
             value = WebloggerConfig.getProperty(name);
         }
@@ -106,7 +105,7 @@ public final class WebloggerRuntimeConfig {
     public static boolean getBooleanProperty(String name) {
 
         // check runtime config first, then fall through to static config
-        String value = WebloggerRuntimeConfig.getProperty(name);
+        String value = getProperty(name);
         if (value == null) {
             value = WebloggerConfig.getProperty(name);
         }
@@ -125,7 +124,7 @@ public final class WebloggerRuntimeConfig {
     public static int getIntProperty(String name) {
         
         // get the value first, then convert
-        String value = WebloggerRuntimeConfig.getProperty(name);
+        String value = getProperty(name);
         
         if (value == null) {
             return -1;
@@ -261,7 +260,7 @@ public final class WebloggerRuntimeConfig {
         
         boolean siteWide = getBooleanProperty("site.frontpage.weblog.aggregated");
         
-        return (isFrontPageWeblog(weblogHandle) && siteWide);
+        return isFrontPageWeblog(weblogHandle) && siteWide;
     }
     
 }

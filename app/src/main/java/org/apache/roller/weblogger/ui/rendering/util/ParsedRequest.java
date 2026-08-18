@@ -104,7 +104,7 @@ public abstract class ParsedRequest {
     
     
     public boolean isLoggedIn() {
-        return (this.authenticUser != null);
+        return this.authenticUser != null;
     }
 
 }

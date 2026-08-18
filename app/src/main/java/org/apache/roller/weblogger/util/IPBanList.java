@@ -104,7 +104,7 @@ public final class IPBanList {
         this.loadBannedIpsIfNeeded();
 
         if(!this.bannedIps.contains(ip) &&
-                (bannedIpsFile != null && bannedIpsFile.canWrite())) {
+                bannedIpsFile != null && bannedIpsFile.canWrite()) {
 
             try {
                 synchronized(this) {
@@ -132,7 +132,7 @@ public final class IPBanList {
     private void loadBannedIpsIfNeeded() {
 
         if(bannedIpsFile != null &&
-                (bannedIpsFile.hasChanged())) {
+                bannedIpsFile.hasChanged()) {
 
             // need to reload
             this.loadBannedIps();

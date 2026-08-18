@@ -126,11 +126,11 @@ public class WeblogEntryTag implements Serializable {
     }
     
     
-    public java.sql.Timestamp getTime() {
+    public Timestamp getTime() {
         return this.time;
     }
     
-    public void setTime(java.sql.Timestamp tagTime) {
+    public void setTime(Timestamp tagTime) {
         this.time = tagTime;
     }
     

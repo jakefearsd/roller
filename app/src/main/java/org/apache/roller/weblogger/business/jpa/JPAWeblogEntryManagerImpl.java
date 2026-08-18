@@ -821,8 +821,8 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     @Override
     public boolean isDuplicateWeblogCategoryName(WeblogCategory cat)
     throws WebloggerException {
-        return (getWeblogCategoryByName(
-                cat.getWeblog(), cat.getName()) != null);
+        return getWeblogCategoryByName(
+                cat.getWeblog(), cat.getName()) != null;
     }
     
     /**
@@ -1128,7 +1128,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         //TODO: DatamapperPort: Since we are only interested in knowing whether
         //results.size() == tags.size(). This query can be optimized to just fetch COUNT
         //instead of objects as done currently
-        return (results != null && results.size() == tags.size());
+        return results != null && results.size() == tags.size();
     }
 
     /**
@@ -1176,7 +1176,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         } catch (NoResultException e) {
             siteTagData = null;
         }
-        Timestamp lastUsed = new Timestamp((new Date()).getTime());
+        Timestamp lastUsed = new Timestamp(new Date().getTime());
 
         upsertTagAggregate(weblogTagData, name, website, amount, lastUsed);
         upsertTagAggregate(siteTagData, name, null, amount, lastUsed);

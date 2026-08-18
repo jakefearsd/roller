@@ -75,7 +75,7 @@ public class LazyExpiringCacheEntry implements Serializable {
      */
     public boolean isInvalid(long lastInvalidated) {
         
-        return (this.timeCached < lastInvalidated);
+        return this.timeCached < lastInvalidated;
     }
 
     

@@ -54,7 +54,7 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
     private int interval = 1;
 
     // lease time given to task lock, default is 30 minutes
-    private int leaseTime = RollerTaskWithLeasing.DEFAULT_LEASE_MINS;
+    private int leaseTime = DEFAULT_LEASE_MINS;
 
 
     @Override
@@ -84,7 +84,7 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
 
 
     public void init() throws WebloggerException {
-        this.init(ScheduledEntriesTask.NAME);
+        this.init(NAME);
     }
 
     @Override

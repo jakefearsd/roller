@@ -117,7 +117,7 @@ public class UtilitiesModel implements Model {
     }
         
     public boolean isUserAuthenticated() {
-        return (parsedRequest.getAuthenticUser() != null);
+        return parsedRequest.getAuthenticUser() != null;
     }
        
     public UserWrapper getAuthenticatedUser() {

@@ -30,13 +30,13 @@ public class MediaFileFilter {
 	 * Enumeration of the ways in which size can be used to filter media files. 
 	 *
 	 */
-	public enum SizeFilterType {GT, GTE, EQ, LT, LTE};
+	public enum SizeFilterType {GT, GTE, EQ, LT, LTE}
 
 	/**
 	 * Enumeration of possible sort orders for media files. 
 	 *
 	 */
-	public enum MediaFileOrder {NAME, DATE_UPLOADED, TYPE};
+	public enum MediaFileOrder {NAME, DATE_UPLOADED, TYPE}
 
 	// Search criteria - name
 	String name;

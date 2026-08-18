@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 public final class PropertyExpander {
     
     // The pattern for a system property.  Matches ${property.name}, with the interior matched reluctantly.
-    private static final Pattern EXPANSION_PATTERN = Pattern.compile("(\\$\\{([^}]+?)\\})", java.util.regex.Pattern.MULTILINE);
+    private static final Pattern EXPANSION_PATTERN = Pattern.compile("(\\$\\{([^}]+?)\\})", Pattern.MULTILINE);
     
     
     // non-instantiable

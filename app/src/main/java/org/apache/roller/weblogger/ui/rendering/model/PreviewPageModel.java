@@ -72,8 +72,8 @@ public class PreviewPageModel extends PageModel {
     
     @Override
     public boolean isPermalink() {
-        return (previewRequest.getPreviewEntry() != null ||
-                previewRequest.getWeblogAnchor() != null);
+        return previewRequest.getPreviewEntry() != null ||
+                previewRequest.getWeblogAnchor() != null;
     }
     
     

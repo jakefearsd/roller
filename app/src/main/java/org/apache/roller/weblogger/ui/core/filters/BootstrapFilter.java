@@ -73,12 +73,12 @@ public class BootstrapFilter implements Filter {
     
     
     private boolean isInstallUrl(String uri) {
-        return (uri != null && (
+        return uri != null && (
                    uri.endsWith("bootstrap.rol")
-                || uri.endsWith("create.rol") 
-                || uri.endsWith("upgrade.rol") 
-                || uri.endsWith(".js") 
-                || uri.endsWith(".css")));
+                || uri.endsWith("create.rol")
+                || uri.endsWith("upgrade.rol")
+                || uri.endsWith(".js")
+                || uri.endsWith(".css"));
     }
     
     

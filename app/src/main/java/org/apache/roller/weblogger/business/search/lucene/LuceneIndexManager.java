@@ -372,7 +372,7 @@ public class LuceneIndexManager implements IndexManager {
 
             IndexWriterConfig config = new IndexWriterConfig(
                     new LimitTokenCountAnalyzer(
-                            LuceneIndexManager.getAnalyzer(), 128));
+                            getAnalyzer(), 128));
 
             writer = new IndexWriter(dir, config);
 

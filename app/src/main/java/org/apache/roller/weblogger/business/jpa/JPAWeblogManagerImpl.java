@@ -87,7 +87,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
     @Override
     public void saveWeblog(Weblog weblog) throws WebloggerException {
 
-        weblog.setLastModified(new java.util.Date());
+        weblog.setLastModified(new Date());
         strategy.store(weblog);
 
         // The host map is derived from this column, so any save may change

@@ -203,7 +203,7 @@ public class Utilities {
         if (s == null) {
             return "";
         } else {
-            return Utilities.escapeHTML(Utilities.removeHTML(s));
+            return escapeHTML(removeHTML(s));
         }
     }
 
@@ -539,7 +539,7 @@ public class Utilities {
      */
     public static String encodeString(String str) throws IOException {
         String encodedStr = new String(Base64.encodeBase64(str.getBytes()));
-        return (encodedStr.trim());
+        return encodedStr.trim();
     }
 
     /**
@@ -552,7 +552,7 @@ public class Utilities {
      */
     public static String decodeString(String str) throws IOException {
         String value = new String(Base64.decodeBase64(str.getBytes()));
-        return (value);
+        return value;
     }
 
     /**
@@ -611,7 +611,7 @@ public class Utilities {
             String appendToEnd) {
         // strip markup from the string
         String str2 = removeHTML(str, false);
-        boolean diff = (str2.length() < str.length());
+        boolean diff = str2.length() < str.length();
 
         // quickly adjust the upper if it is set lower than 'lower'
         if (upper < lower) {
@@ -781,15 +781,15 @@ public class Utilities {
             boolean bByte2 = (i + 1) < iByteLen;
             boolean bByte3 = (i + 2) < iByteLen;
             byte1 = aValue[i] & 0xFF;
-            byte2 = (bByte2) ? (aValue[i + 1] & 0xFF) : 0;
-            byte3 = (bByte3) ? (aValue[i + 2] & 0xFF) : 0;
+            byte2 = bByte2 ? (aValue[i + 1] & 0xFF) : 0;
+            byte3 = bByte3 ? (aValue[i + 2] & 0xFF) : 0;
 
             tt.append(strBase64Chars.charAt(byte1 / 4));
             tt.append(strBase64Chars
                     .charAt((byte2 / 16) + ((byte1 & 0x3) * 16)));
-            tt.append(((bByte2) ? strBase64Chars.charAt((byte3 / 64)
-                    + ((byte2 & 0xF) * 4)) : '='));
-            tt.append(((bByte3) ? strBase64Chars.charAt(byte3 & 0x3F) : '='));
+            tt.append(bByte2 ? strBase64Chars.charAt((byte3 / 64)
+                    + ((byte2 & 0xF) * 4)) : '=');
+            tt.append(bByte3 ? strBase64Chars.charAt(byte3 & 0x3F) : '=');
         }
 
         return tt.toString();
@@ -826,7 +826,7 @@ public class Utilities {
     }
 
     public static String normalizeTag(String tag, Locale locale) {
-        tag = Utilities.stripInvalidTagCharacters(tag);
+        tag = stripInvalidTagCharacters(tag);
         return locale == null ? tag.toLowerCase() : tag.toLowerCase(locale);
     }
 

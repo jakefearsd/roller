@@ -56,7 +56,7 @@ public class MediaFilePager {
      *
      */
     public boolean isJustOnePage() {
-    	return (pageNum == 0 && !moreItems);
+    	return pageNum == 0 && !moreItems;
     }
 
     /**
@@ -64,7 +64,7 @@ public class MediaFilePager {
      *
      */
     public boolean hasPrevious() {
-    	return (pageNum > 0);
+    	return pageNum > 0;
     }
 
     /**

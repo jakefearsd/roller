@@ -211,8 +211,8 @@ public class CreateWeblogController extends BaseController {
     private static final String SITEWIDE_ONLY_THEME_ID = "frontpage";
 
     private void addListsToModel(Model model) {
-        model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
-        model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
+        model.addAttribute("localesList", UIUtils.getLocales());
+        model.addAttribute("timeZonesList", UIUtils.getTimeZones());
 
         ThemeManager themeMgr = weblogger.getThemeManager();
         List<SharedTheme> themes = themeMgr.getEnabledThemesList().stream()

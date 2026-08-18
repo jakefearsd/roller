@@ -102,7 +102,7 @@ public class TaskScheduler implements Runnable {
                 //       during the next minute, and not before.  awakening at
                 //       exactly the .000ms is not of any concern to us
                 Date endOfMinute = DateUtil.getEndOfMinute(now);
-                long sleepTime = (endOfMinute.getTime() + 50) - System.currentTimeMillis();
+                long sleepTime = endOfMinute.getTime() + 50 - System.currentTimeMillis();
                 if(sleepTime > 0) {
                     log.debug("sleeping - "+sleepTime);
                     Thread.sleep(sleepTime);
@@ -110,7 +110,7 @@ public class TaskScheduler implements Runnable {
                     // it's taken us more than 1 minute for the last loop
                     // so recalculate to sleep 'til the end of the current minute
                     endOfMinute = DateUtil.getEndOfMinute(new Date());
-                    sleepTime = (endOfMinute.getTime() + 50) - System.currentTimeMillis();
+                    sleepTime = endOfMinute.getTime() + 50 - System.currentTimeMillis();
                     log.debug("sleeping - "+sleepTime);
                     Thread.sleep(sleepTime);
                 }

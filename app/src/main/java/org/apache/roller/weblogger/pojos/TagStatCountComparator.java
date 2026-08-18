@@ -46,7 +46,7 @@ public class TagStatCountComparator implements Comparator<TagStat>, Serializable
     @Override
     public int compare(TagStat st1, TagStat st2) {
         int compVal = st1.getCount() < st2.getCount() ? -1 :
-                (st1.getCount() == st2.getCount() ? 0 : 1);
+                st1.getCount() == st2.getCount() ? 0 : 1;
         
         if (compVal == 0) {
             compVal = st1.getName().compareTo(st2.getName());

@@ -22,7 +22,6 @@ import java.util.EnumMap;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**

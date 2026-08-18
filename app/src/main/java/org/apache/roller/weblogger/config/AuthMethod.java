@@ -38,7 +38,7 @@ public enum AuthMethod {
     }
 
     public static AuthMethod getAuthMethod(String propertyName) {
-        for (AuthMethod test : AuthMethod.values()) {
+        for (AuthMethod test : values()) {
             if (test.getPropertyName().equals(propertyName)) {
                 return test;
             }

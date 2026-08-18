@@ -18,7 +18,6 @@
 
 package org.apache.roller.weblogger.ui.controllers.editor;
 
-import java.util.Collections;
 import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -106,8 +105,8 @@ public class ThemeEditController extends BaseController {
                     ThemeManager themeMgr = weblogger.getThemeManager();
                     if (!StringUtils.isEmpty(selectedThemeId)) {
                         SharedTheme t = themeMgr.getTheme(selectedThemeId);
-                        boolean skipStylesheet = (sharedThemeCustomStylesheet
-                                && selectedThemeId.equals(weblog.getEditorTheme()));
+                        boolean skipStylesheet = sharedThemeCustomStylesheet
+                                && selectedThemeId.equals(weblog.getEditorTheme());
                         themeMgr.importTheme(getActionWeblog(request), t, skipStylesheet);
                         addMessage(model, "themeEditor.setCustomTheme.success", t.getName(), request);
                     }

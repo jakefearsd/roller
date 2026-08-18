@@ -171,7 +171,7 @@ public class ApiToken implements Serializable {
         if (revokedAt != null) {
             return false;
         }
-        return expiresAt == null || expiresAt.after(new java.sql.Timestamp(System.currentTimeMillis()));
+        return expiresAt == null || expiresAt.after(new Timestamp(System.currentTimeMillis()));
     }
 
     // ------------------------------------------------------- Good citizenship

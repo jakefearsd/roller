@@ -167,7 +167,7 @@ public class WeblogTemplate implements ThemeTemplate, Serializable {
         * eventually, the required flag should probably be stored in the db
         * and possibly applicable to any template.
         */
-        return (requiredTemplates.contains(getName()) || "Weblog".equals(getLink()));
+        return requiredTemplates.contains(getName()) || "Weblog".equals(getLink());
     }
 
     /**

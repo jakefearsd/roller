@@ -50,7 +50,7 @@ public class JPAApiTokenManagerImpl implements ApiTokenManager {
     @Override
     public Issued issueToken(User user, String label, String scopeWeblog,
                              ApiToken.Role role, Timestamp expiresAt) throws WebloggerException {
-        String raw = ApiTokenManager.TOKEN_PREFIX + TokenGenerator.newToken();
+        String raw = TOKEN_PREFIX + TokenGenerator.newToken();
         ApiToken token = new ApiToken();
         token.setUser(user);
         token.setLabel(label);

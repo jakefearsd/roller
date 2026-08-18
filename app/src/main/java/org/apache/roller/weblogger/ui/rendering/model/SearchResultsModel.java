@@ -118,7 +118,7 @@ public class SearchResultsModel extends PageModel {
 
 		// search completed, setup pager based on results
 		pager = new SearchResultsPager(
-			urlStrategy, searchRequest, results, (hits > (offset + limit)));
+			urlStrategy, searchRequest, results, hits > (offset + limit));
 	}
 
 	private void addEntryToResults(

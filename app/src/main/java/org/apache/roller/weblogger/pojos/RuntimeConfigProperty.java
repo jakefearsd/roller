@@ -83,7 +83,7 @@ public class RuntimeConfigProperty implements Serializable {
     
     @Override
     public String toString() {
-        return (getName() + "=" + getValue());
+        return getName() + "=" + getValue();
     }
     
     @Override

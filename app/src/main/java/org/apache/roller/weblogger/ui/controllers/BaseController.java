@@ -20,7 +20,6 @@ package org.apache.roller.weblogger.ui.controllers;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import jakarta.servlet.http.HttpServletRequest;
 

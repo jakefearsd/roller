@@ -146,7 +146,7 @@ public class PageModel implements Model {
      * Is this page considered a permalink?
      */
     public boolean isPermalink() {
-        return (pageRequest.getWeblogAnchor() != null);
+        return pageRequest.getWeblogAnchor() != null;
     }
     
     

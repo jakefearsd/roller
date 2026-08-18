@@ -71,7 +71,7 @@ public final class ModDateHeaderUtil {
 		}
 
 		// truncate to seconds
-		lastModifiedTimeMillis -= (lastModifiedTimeMillis % RollerConstants.SEC_IN_MS);
+		lastModifiedTimeMillis -= lastModifiedTimeMillis % RollerConstants.SEC_IN_MS;
 
 		if (log.isDebugEnabled()) {
 			SimpleDateFormat dateFormat = new SimpleDateFormat(

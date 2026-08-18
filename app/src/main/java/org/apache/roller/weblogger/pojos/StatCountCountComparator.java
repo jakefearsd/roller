@@ -41,7 +41,7 @@ public final class StatCountCountComparator implements Comparator<StatCount>, Se
     @Override
     public int compare(StatCount sc1, StatCount sc2) {
         int compVal = sc1.getCount() < sc2.getCount() ? -1 :
-                (sc1.getCount() == sc2.getCount() ? 0 : 1);
+                sc1.getCount() == sc2.getCount() ? 0 : 1;
         
         if (compVal == 0) {
             compVal = sc1.getSubjectId().compareTo(sc2.getSubjectId());

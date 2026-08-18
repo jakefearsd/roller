@@ -311,7 +311,7 @@ public final class GalleryMarkup {
 
     /** {@code 1.50 -> "1.5"}, {@code 2.00 -> "2"} -- CSS wants neither trailing zero. */
     private static String trimTrailingZeros(double value) {
-        String text = String.format(java.util.Locale.ROOT, "%.2f", value);
+        String text = String.format(Locale.ROOT, "%.2f", value);
         text = text.replaceAll("0+$", "");
         return text.endsWith(".") ? text.substring(0, text.length() - 1) : text;
     }

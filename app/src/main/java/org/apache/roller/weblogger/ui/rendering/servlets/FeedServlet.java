@@ -203,7 +203,7 @@ public class FeedServlet extends HttpServlet {
                 WeblogEntryManager wmgr = WebloggerFactory.getWeblogger()
                         .getWeblogEntryManager();
                 invalid = !wmgr.getTagComboExists(feedRequest.getTags(),
-                        (isSiteWide) ? null : weblog);
+                        isSiteWide ? null : weblog);
             } catch (WebloggerException ex) {
                 invalid = true;
             }

@@ -19,7 +19,6 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.List;

@@ -65,7 +65,7 @@ public class Weblog implements Serializable {
     private String  timeZone         = null;
     private Boolean visible          = Boolean.TRUE;
     private Boolean active           = Boolean.TRUE;
-    private Date    dateCreated      = new java.util.Date();
+    private Date    dateCreated      = new Date();
     private int     entryDisplayCount = 15;
     private Date    lastModified     = new Date();
     private String  iconPath         = null;
@@ -199,7 +199,7 @@ public class Weblog implements Serializable {
     /**
      * Original creator of website.
      */
-    public org.apache.roller.weblogger.pojos.User getCreator() {
+    public User getCreator() {
         try {
             return WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(creator);
         } catch (Exception e) {
