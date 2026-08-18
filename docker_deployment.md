@@ -264,6 +264,75 @@ redir /roller / permanent
 redir @rollerlegacy {re.rollerlegacy.1} permanent
 ```
 
+### Custom domains (virtual hosting)
+
+A weblog can serve from its own domain — `blog.example.org` instead of
+`https://<SITE_DOMAIN>/<handle>/` — with no per-blog deploy step. This works
+by putting a **wildcard** certificate on the proxy for a whole DNS zone, so
+adding another weblog's custom domain later needs only a DNS record and a
+Weblog Settings edit, not a new certificate or a Caddy change.
+
+A wildcard can only be proven with the ACME **DNS-01** challenge (unlike
+`SITE_DOMAIN` above, which uses ordinary HTTP-01) — `*.example.org` has no
+single URL an HTTP challenge could be served from. That's why
+`deploy/caddy/Dockerfile` builds Caddy with `xcaddy` and the
+`github.com/caddy-dns/cloudflare` module baked in, rather than shipping stock
+`caddy:*`: DNS-01 needs a provider-specific module compiled into the binary,
+and `ProductionComposeTest` fails the build if that stops being true.
+
+Four steps, in order:
+
+1. **Tell the app which domains are covered**, so a mistyped custom domain is
+   caught on Weblog Settings instead of surfacing later as a browser TLS
+   error. `vhost.cert.zones` is a startup property (`roller.properties`), not
+   a runtime one — it isn't on Admin Settings and a change needs a restart —
+   so set it via the environment override in `.env`:
+   ```bash
+   ROLLER_VHOST_CERT_ZONES=example.org
+   ```
+   (comma-separated apex names, e.g. `example.org` for a `*.example.org`
+   cert). This is advisory only: nothing refuses to save a domain outside
+   these zones, it only warns.
+2. **Point the proxy at the same zone**, in `.env`:
+   ```bash
+   VHOST_ZONE=example.org
+   VHOST_DNS_API_TOKEN=<a Cloudflare API token scoped to Zone:DNS:Edit on example.org>
+   ```
+   See `deploy/.env.example` for how to scope the token narrowly. Restart
+   Caddy (`docker compose -f docker-compose.prod.yml up -d caddy`) after
+   changing either value — Caddy reads them once, at startup.
+3. **Add a wildcard DNS record** at your registrar/DNS provider:
+   `*.example.org` → the host's public IP (A/AAAA, same as `SITE_DOMAIN`'s
+   own record). Caddy requests the certificate the first time it needs it and
+   retries with backoff if the record isn't live yet, the same as any other
+   domain in this stack.
+4. **Set the domain on the weblog**: Weblog Settings → Custom domain
+   (`blog.example.org`) → Save. The weblog is then reachable at that host
+   immediately — `VirtualHostRegistry` resolves the `Host` header to a weblog
+   on every request, so there is nothing else to deploy.
+
+**Both `VHOST_ZONE` and `VHOST_DNS_API_TOKEN` are optional.** Left unset,
+`docker-compose.prod.yml` substitutes safe placeholders (an unresolvable
+`.invalid` zone and a token-shaped-but-fake string) so the wildcard site
+block still parses and Caddy still starts — `SITE_DOMAIN` and everything else
+keep working exactly as before. Only `SITE_DOMAIN`'s own certificate is real
+in that configuration; the placeholder wildcard simply fails to obtain a
+certificate in the background, forever, the same harmless way `UMAMI_DOMAIN`/
+`LISTMONK_DOMAIN` already do when left at their own defaults (see
+[DNS](#dns)).
+
+**Not verified by this repo's automated tests**: actually obtaining a
+certificate needs a real DNS zone and real provider credentials, neither of
+which exist in CI or in a local checkout. `docker build -f deploy/caddy/Dockerfile .`
+(from the repo root) proves the `xcaddy` stage actually compiles with the DNS
+module linked in — that's what `ProductionComposeTest` pins — but the DNS-01
+handshake against a real Cloudflare zone can only be proven on a real deploy
+host. After step 3 above, confirm it actually worked with:
+```bash
+docker compose -f docker-compose.prod.yml logs caddy | grep -i "vhost\|certificate obtained\|<your-domain>"
+curl -vI https://blog.example.org/ 2>&1 | grep -i "SSL certificate\|subject"
+```
+
 ## TLS
 
 Handled entirely by Caddy (`deploy/caddy/Caddyfile`, baked into the

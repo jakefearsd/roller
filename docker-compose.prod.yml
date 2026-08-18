@@ -126,6 +126,23 @@ services:
       SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN must be set in .env (a real domain, or :80 for LAN/testing)}
       UMAMI_DOMAIN: ${UMAMI_DOMAIN:-analytics.invalid}
       LISTMONK_DOMAIN: ${LISTMONK_DOMAIN:-newsletter.invalid}
+      # Per-weblog custom domains (virtual hosting): unlike UMAMI_DOMAIN/
+      # LISTMONK_DOMAIN above, VHOST_ZONE unset can't just default to a
+      # do-nothing hostname on its own -- the Caddyfile's wildcard block
+      # carries `tls { dns cloudflare {$VHOST_DNS_API_TOKEN} }`, and an
+      # EMPTY token fails to adapt the Caddyfile at all ("missing API
+      # token"), which would take the whole proxy down, SITE_DOMAIN
+      # included, not just this block. VHOST_DNS_API_TOKEN's default is
+      # therefore a token-SHAPED placeholder (the Cloudflare module checks
+      # only that it looks like a token, not that it works), which is what
+      # keeps parsing valid; VHOST_ZONE's default mirrors UMAMI_DOMAIN/
+      # LISTMONK_DOMAIN's ".invalid" pattern so the resulting wildcard cert
+      # request fails the same harmless, already-proven-safe way theirs do
+      # (rejected by Let's Encrypt as not a public suffix, logged, retried
+      # in the background -- never fatal). Both are real values once set in
+      # .env; see docker_deployment.md's "Custom domains" section.
+      VHOST_ZONE: ${VHOST_ZONE:-vhost.invalid}
+      VHOST_DNS_API_TOKEN: ${VHOST_DNS_API_TOKEN:-vhost-dns-api-token-not-configured-0000}
     volumes:
       - caddy-data:/data
       - caddy-config:/config

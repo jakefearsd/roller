@@ -43,6 +43,39 @@
 	}
 }
 
+# Per-weblog custom domains (virtual hosting): a weblog with a custom domain
+# set on Weblog Settings is served here, one wildcard cert covering every
+# subdomain under {$VHOST_ZONE} rather than a per-blog TLS/deploy step.
+#
+# {$VHOST_ZONE} and {$VHOST_DNS_API_TOKEN} come from deploy/.env.example. A
+# wildcard name can only ever be proven via the ACME DNS-01 challenge (HTTP-01
+# cannot issue for a "*" name at all), which is why this Caddyfile needs a
+# Caddy binary built with a DNS provider module baked in -- see
+# deploy/caddy/Dockerfile and docker_deployment.md's "Custom domains" section
+# for the full procedure (vhost.cert.zones on the app, VHOST_ZONE here, a
+# wildcard DNS record, then the domain on Weblog Settings). Left unset in
+# .env, docker-compose.prod.yml substitutes a placeholder zone/token pair so
+# this block still parses and Caddy still starts -- see the `caddy:` service
+# environment there for why an empty token cannot be tolerated here the way
+# an empty UMAMI_DOMAIN/LISTMONK_DOMAIN can be below. The placeholder zone
+# resolves nowhere and its wildcard certificate request simply fails forever
+# in the background, the same harmless way theirs do; a deployment that
+# doesn't use custom domains otherwise pays nothing for this block.
+#
+# The app resolves which weblog to serve purely from the Host header
+# (VirtualHostRegistry), the same way it does for {$SITE_DOMAIN} above -- this
+# block proxies to the identical upstream and carries no weblog-specific
+# routing of its own.
+*.{$VHOST_ZONE} {
+	tls {
+		dns cloudflare {$VHOST_DNS_API_TOKEN}
+	}
+
+	handle {
+		reverse_proxy app:8080
+	}
+}
+
 # The Umami dashboard, on its own hostname.
 #
 # No theme CSP applies to it, so a separate origin costs nothing here, and it

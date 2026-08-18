@@ -262,4 +262,31 @@ class ProductionComposeTest {
             }
         }
     }
+
+    @Test
+    void caddyDockerfileBuildsWithXcaddyAndNamesADnsProviderModule() throws IOException {
+        // Per-weblog custom domains (virtual hosting) need a wildcard TLS
+        // certificate, which means DNS-01 -- something stock `caddy:*` cannot
+        // do at all, since DNS-01 requires a provider-specific module compiled
+        // into the binary. A plain `FROM caddy` builds and runs just fine and
+        // fails only at certificate-request time, in production, on a
+        // wildcard that never arrives. Reading the Dockerfile as plain text
+        // (the same idiom everyEntrypointPathIsActuallyBakedIntoTheImage above
+        // uses on the root Dockerfile) is what makes a future revert to a
+        // stock image fail the BUILD instead of failing silently later.
+        Path dockerfile = Paths.get("../deploy/caddy/Dockerfile");
+        assertTrue(Files.exists(dockerfile), "missing " + dockerfile.toAbsolutePath());
+        String text = Files.readString(dockerfile, StandardCharsets.UTF_8);
+
+        assertTrue(text.contains("xcaddy build"),
+                "the Caddy image must be built with xcaddy -- stock caddy:* has no "
+                        + "DNS-01 provider modules compiled in");
+        assertTrue(text.matches("(?s).*--with\\s+github\\.com/caddy-dns/\\S+.*"),
+                "the xcaddy build must name a github.com/caddy-dns/<provider> module, "
+                        + "or DNS-01 has nothing to authenticate against the zone with");
+        assertTrue(text.contains("AS builder") && text.contains("COPY --from=builder"),
+                "the xcaddy-built binary must be copied into a separate runtime stage -- "
+                        + "shipping the builder stage itself would ship Go toolchain and "
+                        + "source into production");
+    }
 }

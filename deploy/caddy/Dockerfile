@@ -15,6 +15,31 @@
 # The reverse proxy with its config baked in, so a production host needs no
 # checkout to bind-mount a Caddyfile from. Build from the REPO ROOT:
 #   docker build -t ghcr.io/jakefearsd/roller-caddy:<tag> -f deploy/caddy/Dockerfile .
-FROM caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+#
+# Two stages, both pinned to the SAME Caddy version:
+#
+#   1. A `xcaddy` build stage that compiles a custom Caddy binary with the
+#      Cloudflare DNS provider module baked in. Per-weblog custom domains
+#      (virtual hosting) terminate on a WILDCARD certificate for the vhost
+#      zone (*.{$VHOST_ZONE}, see the Caddyfile and docker_deployment.md's
+#      "Custom domains" section), and a wildcard can only ever be proven via
+#      the ACME DNS-01 challenge -- HTTP-01 (what stock Caddy does out of the
+#      box) cannot issue for a name with a "*" in it at all. Stock
+#      `caddy:*` therefore is not merely slower here, it is categorically
+#      unable to obtain this certificate: it would build and run fine and
+#      only fail, silently and repeatedly, when it actually tries to request
+#      the wildcard. Building with xcaddy at IMAGE BUILD time is what turns
+#      "no DNS provider module" into a build failure instead of a production
+#      incident with no certificate ever arriving.
+#   2. The same runtime base as before, with the custom-built binary swapped
+#      in for the stock one -- everything else about the image (config path,
+#      entrypoint, exposed ports) is inherited unchanged from the upstream
+#      `caddy:2.11.4-alpine` image.
+FROM caddy:2.11.4-builder-alpine@sha256:c2433c74c0648b47d8a844ff1792661f93996c553687101bbdf89c63a09dccef AS builder
 
+RUN xcaddy build --with github.com/caddy-dns/cloudflare
+
+FROM caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 COPY deploy/caddy/Caddyfile /etc/caddy/Caddyfile
