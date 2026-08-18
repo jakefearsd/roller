@@ -32,6 +32,7 @@ import org.apache.roller.weblogger.ui.controllers.ajax.UserDataServlet;
 import org.apache.roller.weblogger.ui.core.RollerSession;
 import org.apache.roller.weblogger.ui.core.filters.BootstrapFilter;
 import org.apache.roller.weblogger.ui.core.filters.CharEncodingFilter;
+import org.apache.roller.weblogger.ui.core.filters.ControlPlaneHostFilter;
 import org.apache.roller.weblogger.ui.core.filters.InitFilter;
 import org.apache.roller.weblogger.ui.core.filters.PersistenceSessionFilter;
 import org.apache.roller.weblogger.ui.core.filters.SpringFirewallExceptionFilter;
@@ -261,6 +262,21 @@ class ServletRegistrationConfigTest {
         assertEquals(Set.of("/*"), Set.copyOf(bean.getUrlPatterns()));
         assertEquals(java.util.EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD),
                 bean.determineDispatcherTypes());
+    }
+
+    /**
+     * Order 35 -- between SpringFirewallExceptionFilter (30) and the Spring
+     * Security chain (40, Boot-managed) -- is load-bearing: see the class
+     * javadoc on {@link ControlPlaneHostFilter} for why it must run ahead of
+     * security rather than after it.
+     */
+    @Test
+    void controlPlaneHostFilterRunsBetweenTheFirewallFilterAndSecurityAtOrderThirtyFive() {
+        FilterRegistrationBean<ControlPlaneHostFilter> bean = config.controlPlaneHostFilterRegistration();
+        assertInstanceOf(ControlPlaneHostFilter.class, bean.getFilter());
+        assertEquals(35, bean.getOrder());
+        assertEquals(Set.of("/*"), Set.copyOf(bean.getUrlPatterns()));
+        assertEquals(java.util.EnumSet.of(DispatcherType.REQUEST), bean.determineDispatcherTypes());
     }
 
     @Test

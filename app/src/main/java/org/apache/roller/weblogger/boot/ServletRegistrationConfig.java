@@ -28,6 +28,7 @@ import org.apache.roller.weblogger.ui.controllers.ajax.UserDataServlet;
 import org.apache.roller.weblogger.ui.core.RollerSession;
 import org.apache.roller.weblogger.ui.core.filters.BootstrapFilter;
 import org.apache.roller.weblogger.ui.core.filters.CharEncodingFilter;
+import org.apache.roller.weblogger.ui.core.filters.ControlPlaneHostFilter;
 import org.apache.roller.weblogger.ui.core.filters.InitFilter;
 import org.apache.roller.weblogger.ui.core.filters.PersistenceSessionFilter;
 import org.apache.roller.weblogger.ui.core.filters.SpringFirewallExceptionFilter;
@@ -264,6 +265,24 @@ public class ServletRegistrationConfig {
         registration.setOrder(30);
         registration.setUrlPatterns(List.of("/*"));
         registration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
+        return registration;
+    }
+
+    /**
+     * Order 35: between SpringFirewallExceptionFilter (30) and the Spring
+     * Security chain (spring.security.filter.order=40). Running after security
+     * would let an unauthenticated admin request be 302'd to a login page on
+     * the custom domain before this filter ever sees it. Running this early is
+     * only possible because VirtualHostRegistry reads an in-memory map and
+     * needs no EntityManager -- PersistenceSessionFilter is order 60.
+     */
+    @Bean
+    public FilterRegistrationBean<ControlPlaneHostFilter> controlPlaneHostFilterRegistration() {
+        FilterRegistrationBean<ControlPlaneHostFilter> registration =
+                new FilterRegistrationBean<>(new ControlPlaneHostFilter());
+        registration.setOrder(35);
+        registration.setUrlPatterns(List.of("/*"));
+        registration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST));
         return registration;
     }
 
