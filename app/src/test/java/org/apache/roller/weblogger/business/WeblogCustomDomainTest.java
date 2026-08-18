@@ -83,4 +83,28 @@ class WeblogCustomDomainTest {
         assertTrue(mgr.getWeblogs(null, null, null, null, 0, -1).stream()
                 .anyMatch(w -> "vhostblog".equals(w.getHandle())));
     }
+
+    /**
+     * CHARACTERISATION: saveWeblog already bumps lastModified unconditionally,
+     * which is the ONLY thing that expires a page from WeblogPageCache -- it
+     * has no CacheHandler, so CacheManager.invalidate never reaches it.
+     * Without the bump, every cached page would keep serving handle-form urls
+     * after a domain is set. Expected to pass on arrival; pinned so it is not
+     * turned into a conditional bump later.
+     */
+    @Test
+    void settingACustomDomainBumpsLastModified() throws Exception {
+        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        Weblog stored = mgr.getWeblogByHandle("vhostblog");
+        java.util.Date before = stored.getLastModified();
+
+        Thread.sleep(10);
+        stored.setCustomDomain("bump.example.com");
+        mgr.saveWeblog(stored);
+        TestUtils.endSession(true);
+
+        Weblog reloaded = mgr.getWeblogByHandle("vhostblog");
+        assertTrue(reloaded.getLastModified().after(before),
+                "lastModified must advance, or WeblogPageCache keeps serving handle-form urls");
+    }
 }

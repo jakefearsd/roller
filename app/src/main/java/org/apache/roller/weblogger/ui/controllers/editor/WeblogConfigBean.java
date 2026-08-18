@@ -42,6 +42,7 @@ public class WeblogConfigBean {
     private String analyticsSiteId = null;
     private String analyticsShareUrl = null;
     private String newsletterListUuid = null;
+    private String customDomain = null;
 
 
     public String getHandle() {
@@ -148,6 +149,14 @@ public class WeblogConfigBean {
         this.newsletterListUuid = newsletterListUuid;
     }
 
+    public String getCustomDomain() {
+        return customDomain;
+    }
+
+    public void setCustomDomain(String customDomain) {
+        this.customDomain = customDomain;
+    }
+
     public void copyFrom(Weblog dataHolder) {
         
         this.handle = dataHolder.getHandle();
@@ -161,6 +170,7 @@ public class WeblogConfigBean {
         this.analyticsSiteId = dataHolder.getAnalyticsSiteId();
         this.analyticsShareUrl = dataHolder.getAnalyticsShareUrl();
         this.newsletterListUuid = dataHolder.getNewsletterListUuid();
+        this.customDomain = dataHolder.getCustomDomain();
         setIcon(dataHolder.getIconPath());
         setAbout(dataHolder.getAbout());
     }
@@ -179,6 +189,7 @@ public class WeblogConfigBean {
         dataHolder.setAnalyticsSiteId(StringUtils.trimToNull(this.analyticsSiteId));
         dataHolder.setAnalyticsShareUrl(StringUtils.trimToNull(this.analyticsShareUrl));
         dataHolder.setNewsletterListUuid(StringUtils.trimToNull(this.newsletterListUuid));
+        dataHolder.setCustomDomain(StringUtils.trimToNull(this.customDomain));
     }
     
 

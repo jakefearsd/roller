@@ -27,9 +27,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.apache.roller.weblogger.ui.controllers.CustomDomainRules;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -124,6 +127,29 @@ public class WeblogConfigController extends BaseController {
         String analyticsShareUrl = StringUtils.trimToNull(bean.getAnalyticsShareUrl());
         if (analyticsShareUrl != null && !analyticsShareUrl.matches("(?i)^https?://.*")) {
             addError(model, "websiteSettings.analyticsShareUrl.invalid", request);
+        }
+
+        String customDomain = CustomDomainRules.normalise(bean.getCustomDomain());
+        bean.setCustomDomain(customDomain);
+        if (customDomain != null) {
+            if (!CustomDomainRules.isWellFormed(customDomain)) {
+                addError(model, "websiteSettings.customDomain.invalid", request);
+            } else {
+                try {
+                    Weblog claimant = weblogger.getWeblogManager()
+                            .getWeblogByCustomDomain(customDomain);
+                    if (claimant != null && !claimant.getHandle().equals(bean.getHandle())) {
+                        addError(model, "websiteSettings.customDomain.taken", request);
+                    }
+                } catch (WebloggerException e) {
+                    addError(model, "websiteSettings.customDomain.invalid", request);
+                }
+            }
+        }
+
+        if (CustomDomainRules.isOutsideCertZones(customDomain,
+                WebloggerConfig.getProperty("vhost.cert.zones"))) {
+            model.addAttribute("customDomainWarning", customDomain);
         }
     }
 

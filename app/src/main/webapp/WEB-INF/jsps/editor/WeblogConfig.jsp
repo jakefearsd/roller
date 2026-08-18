@@ -162,6 +162,23 @@
         </div>
     </div>
 
+    <%-- ***** Custom domain settings ***** --%>
+
+    <h3 class="section-head" id="settings-customdomain"><spring:message code="websiteSettings.customDomain"/></h3>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.customDomain"/></label>
+        <div class="col-sm-9">
+            <input type="text" name="bean.customDomain" value="${fn:escapeXml(bean.customDomain)}" size="40" maxlength="255" class="form-control"/>
+            <div class="form-text"><spring:message code="websiteSettings.customDomain.tip"/></div>
+            <c:if test="${not empty customDomainWarning}">
+                <div class="form-text text-warning">
+                    <spring:message code="websiteSettings.customDomain.outsideZone"/>
+                </div>
+            </c:if>
+        </div>
+    </div>
+
 </div>
 
 <%-- ====================================================================== --%>

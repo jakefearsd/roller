@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
@@ -34,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link WeblogConfigController} and {@link WeblogConfigBean}.
@@ -150,6 +152,126 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
                 "Expected the failure to be surfaced, got: " + errors(model));
     }
 
+    // --- custom domain ---
+
+    private String previousVhostCertZones;
+
+    @AfterEach
+    void restoreVhostCertZones() {
+        // myValidate reads this straight off WebloggerConfig, which is
+        // process-global, so any test that overrides it must put it back.
+        if (previousVhostCertZones != null) {
+            overrideConfigProperty("vhost.cert.zones", previousVhostCertZones);
+            previousVhostCertZones = null;
+        }
+    }
+
+    @Test
+    void blankCustomDomainIsAcceptedAndClearsTheWeblog() throws Exception {
+        weblog.setCustomDomain("old.example.com");
+        bean.setCustomDomain("  ");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertNull(weblog.getCustomDomain());
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
+    @Test
+    void aWellFormedCustomDomainIsNormalisedAndSaved() throws Exception {
+        bean.setCustomDomain("  VHost.Example.COM ");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertEquals("vhost.example.com", weblog.getCustomDomain());
+        assertEquals("vhost.example.com", bean.getCustomDomain(),
+                "The bean re-rendered on the response must show the normalised value too");
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
+    @Test
+    void aMalformedCustomDomainIsRejected() throws Exception {
+        bean.setCustomDomain("not a hostname");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("websiteSettings.customDomain.invalid"),
+                "Expected an invalid-domain error, got: " + errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void aCustomDomainAlreadyClaimedByAnotherWeblogIsRejected() throws Exception {
+        Weblog other = new Weblog();
+        other.setHandle("otherblog");
+        when(weblogger.getWeblogManager().getWeblogByCustomDomain("taken.example.com"))
+                .thenReturn(other);
+        bean.setCustomDomain("taken.example.com");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("websiteSettings.customDomain.taken"),
+                "Expected a taken-domain error, got: " + errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    /**
+     * Re-saving a weblog's own unchanged domain must not trip the uniqueness
+     * check against itself.
+     */
+    @Test
+    void reSavingThisWeblogsOwnCustomDomainIsNotAConflict() throws Exception {
+        Weblog self = new Weblog();
+        self.setHandle(WEBLOG_HANDLE);
+        when(weblogger.getWeblogManager().getWeblogByCustomDomain("mine.example.com"))
+                .thenReturn(self);
+        bean.setCustomDomain("mine.example.com");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
+    @Test
+    void aWebloggerExceptionDuringTheUniquenessCheckIsReportedAsInvalid() throws Exception {
+        when(weblogger.getWeblogManager().getWeblogByCustomDomain("vhost.example.com"))
+                .thenThrow(new WebloggerException("database down"));
+        bean.setCustomDomain("vhost.example.com");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("websiteSettings.customDomain.invalid"),
+                "Expected the lookup failure to surface as an invalid-domain error, got: " + errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void aCustomDomainOutsideConfiguredZonesWarnsButStillSaves() throws Exception {
+        previousVhostCertZones = overrideConfigProperty("vhost.cert.zones", "thelocalwiki.com");
+        bean.setCustomDomain("maiiavorobiova.com");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "A zone mismatch must warn, not block: " + errors(model));
+        assertEquals("maiiavorobiova.com", model.getAttribute("customDomainWarning"));
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
+    @Test
+    void aCustomDomainInsideAConfiguredZoneDoesNotWarn() throws Exception {
+        previousVhostCertZones = overrideConfigProperty("vhost.cert.zones", "thelocalwiki.com");
+        bean.setCustomDomain("berlin.thelocalwiki.com");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertNull(model.getAttribute("customDomainWarning"));
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
     // --- WeblogConfigBean ---
 
     /**
@@ -179,6 +301,7 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         source.setAbout("About me");
         source.setIconPath("icon.png");
         source.setActive(Boolean.TRUE);
+        source.setCustomDomain("vhost.example.com");
 
         WeblogConfigBean copy = new WeblogConfigBean();
         copy.copyFrom(source);
@@ -190,12 +313,14 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         assertEquals(7, copy.getEntryDisplayCount());
         assertEquals("About me", copy.getAbout());
         assertEquals("icon.png", copy.getIcon());
+        assertEquals("vhost.example.com", copy.getCustomDomain());
 
         Weblog target = new Weblog();
         copy.copyTo(target);
 
         assertEquals("Source Blog", target.getName());
         assertEquals("Asia/Tokyo", target.getTimeZone());
+        assertEquals("vhost.example.com", target.getCustomDomain());
         assertNull(target.getHandle(), "copyTo must never write the handle");
     }
 
