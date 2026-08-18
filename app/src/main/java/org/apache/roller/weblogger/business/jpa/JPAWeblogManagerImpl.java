@@ -38,6 +38,7 @@ import java.util.TreeMap;
 
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.UserManager;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
@@ -85,18 +86,26 @@ public class JPAWeblogManagerImpl implements WeblogManager {
      */
     @Override
     public void saveWeblog(Weblog weblog) throws WebloggerException {
-        
+
         weblog.setLastModified(new java.util.Date());
         strategy.store(weblog);
+
+        // The host map is derived from this column, so any save may change it.
+        // Cheap: the map is rebuilt lazily on the next read, not here.
+        VirtualHostRegistry.invalidate();
     }
-    
+
     @Override
     public void removeWeblog(Weblog weblog) throws WebloggerException {
-        
+
         // remove contents first, then remove weblog
         this.removeWeblogContents(weblog);
         this.strategy.remove(weblog);
-        
+
+        // The host map is derived from this column, so any save may change it.
+        // Cheap: the map is rebuilt lazily on the next read, not here.
+        VirtualHostRegistry.invalidate();
+
         // remove entry from cache mapping
         this.weblogHandleToIdMap.remove(weblog.getHandle());
     }
