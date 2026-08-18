@@ -306,7 +306,7 @@ public final class WeblogEntryWrapper {
         }
         try {
             MediaFile mediaFile = WebloggerFactory.getWeblogger().getMediaFileManager().getMediaFile(mediaFileId);
-            return MediaFileWrapper.wrap(mediaFile, urlStrategy);
+            return MediaFileWrapper.wrap(mediaFile);
         } catch (Exception e) {
             log.debug("Could not resolve media file " + mediaFileId, e);
             return null;

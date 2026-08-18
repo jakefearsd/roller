@@ -259,7 +259,7 @@ public class PageModel implements Model {
         try {
             MediaFile mediaFile = WebloggerFactory.getWeblogger()
                     .getMediaFileManager().getMediaFile(page.getOgImageId());
-            return MediaFileWrapper.wrap(mediaFile, urlStrategy);
+            return MediaFileWrapper.wrap(mediaFile);
         } catch (Exception ex) {
             log.debug("Could not resolve media file " + page.getOgImageId(), ex);
             return null;

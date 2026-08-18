@@ -67,7 +67,7 @@ public class WeblogConfigController extends BaseController {
     public String execute(HttpServletRequest request, Model model,
                           @ModelAttribute("bean") WeblogConfigBean bean) {
         populateCommonModel(request, model);
-        loadFormData(request, model);
+        loadFormData(model);
 
         bean.copyFrom(getActionWeblog(request));
 
@@ -78,7 +78,7 @@ public class WeblogConfigController extends BaseController {
     public String save(HttpServletRequest request, Model model,
                        @ModelAttribute("bean") WeblogConfigBean bean) {
         populateCommonModel(request, model);
-        loadFormData(request, model);
+        loadFormData(model);
 
         myValidate(bean, request, model);
 
@@ -166,7 +166,7 @@ public class WeblogConfigController extends BaseController {
         }
     }
 
-    private void loadFormData(HttpServletRequest request, Model model) {
+    private void loadFormData(Model model) {
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
         model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
     }

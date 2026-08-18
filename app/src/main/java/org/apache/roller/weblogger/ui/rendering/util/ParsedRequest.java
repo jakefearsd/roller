@@ -41,9 +41,7 @@ import org.apache.roller.weblogger.pojos.User;
 public abstract class ParsedRequest {
     
     private static Log log = LogFactory.getLog(ParsedRequest.class);
-    
-    HttpServletRequest request = null;
-    
+
     // lightweight attributes
     private String authenticUser = null;
 
@@ -61,10 +59,7 @@ public abstract class ParsedRequest {
      * relevant to all requests to Roller.
      */
     public ParsedRequest(HttpServletRequest request) throws InvalidRequestException {
-        
-        // keep a reference to the original request
-        this.request = request;
-        
+
         // login status
         java.security.Principal prince = request.getUserPrincipal();
         if(prince != null) {

@@ -85,9 +85,9 @@ public class GlobalConfigController extends BaseController {
     public String execute(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
 
-        Map<String, RuntimeConfigProperty> properties = loadProperties(model);
+        Map<String, RuntimeConfigProperty> properties = loadProperties();
         ConfigDef globalConfigDef = loadConfigDef();
-        Collection<Weblog> weblogs = loadWeblogs(model);
+        Collection<Weblog> weblogs = loadWeblogs();
 
         model.addAttribute("properties", properties);
         model.addAttribute("globalConfigDef", globalConfigDef);
@@ -103,9 +103,9 @@ public class GlobalConfigController extends BaseController {
     public String save(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
 
-        Map<String, RuntimeConfigProperty> properties = loadProperties(model);
+        Map<String, RuntimeConfigProperty> properties = loadProperties();
         ConfigDef globalConfigDef = loadConfigDef();
-        Collection<Weblog> weblogs = loadWeblogs(model);
+        Collection<Weblog> weblogs = loadWeblogs();
 
         model.addAttribute("properties", properties);
         model.addAttribute("globalConfigDef", globalConfigDef);
@@ -188,7 +188,7 @@ public class GlobalConfigController extends BaseController {
         return ".GlobalConfig";
     }
 
-    private Map<String, RuntimeConfigProperty> loadProperties(Model model) {
+    private Map<String, RuntimeConfigProperty> loadProperties() {
         Map<String, RuntimeConfigProperty> properties = Collections.emptyMap();
         try {
             PropertiesManager mgr = weblogger.getPropertiesManager();
@@ -210,7 +210,7 @@ public class GlobalConfigController extends BaseController {
         return null;
     }
 
-    private Collection<Weblog> loadWeblogs(Model model) {
+    private Collection<Weblog> loadWeblogs() {
         try {
             WeblogManager mgr = weblogger.getWeblogManager();
             return mgr.getWeblogs(true, null, null, null, 0, -1);

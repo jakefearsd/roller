@@ -74,11 +74,6 @@ public class DatabaseInstaller {
         return messages;
     }
 
-    private void errorMessage(String msg) {
-        messages.add(msg);
-        log.error(msg);
-    }
-
     private void errorMessage(String msg, Throwable t) {
         messages.add(msg);
         log.error(msg, t);

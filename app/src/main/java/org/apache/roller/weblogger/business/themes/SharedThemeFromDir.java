@@ -263,7 +263,6 @@ public class SharedThemeFromDir extends SharedTheme {
 
                 for (RenditionType type : availableTypesList) {
                     SharedThemeTemplateRendition rendition = createRendition(
-                            themeTemplate.getId(),
                             stylesheetTmpl.getTemplateRendition(type));
 
                     themeTemplate.addTemplateRendition(rendition);
@@ -349,7 +348,6 @@ public class SharedThemeFromDir extends SharedTheme {
 
             for (RenditionType type : availableTypesList) {
                 SharedThemeTemplateRendition templateCode = createRendition(
-                        themeTemplate.getId(),
                         templateMetadata.getTemplateRendition(type));
 
                 themeTemplate.addTemplateRendition(templateCode);
@@ -418,7 +416,7 @@ public class SharedThemeFromDir extends SharedTheme {
         this.resources.put(normalizedPath, resource);
     }
 
-    private SharedThemeTemplateRendition createRendition(String templateId,
+    private SharedThemeTemplateRendition createRendition(
             ThemeMetadataTemplateRendition templateCodeMetadata) {
         SharedThemeTemplateRendition templateRendition = new SharedThemeTemplateRendition();
 
@@ -434,7 +432,6 @@ public class SharedThemeFromDir extends SharedTheme {
             log.error("Couldn't load stylesheet theme [" + this.getName()
                     + "] template file [" + templateFile + "]");
         }
-        //TODO: remove templateId above
         templateRendition.setTemplate(contents);
         templateRendition.setTemplateLanguage(templateCodeMetadata.getTemplateLang());
         templateRendition.setType(templateCodeMetadata.getType());

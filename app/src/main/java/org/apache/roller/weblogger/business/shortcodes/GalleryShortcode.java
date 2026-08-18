@@ -102,8 +102,7 @@ public class GalleryShortcode implements ShortcodeHandler {
             images = directory.getMediaFiles().stream()
                     .filter(MediaFile::isImageFile)
                     .sorted(GalleryMarkup.GALLERY_ORDER)
-                    .map(mf -> MediaFileWrapper.wrap(mf,
-                            WebloggerFactory.getWeblogger().getUrlStrategy()))
+                    .map(MediaFileWrapper::wrap)
                     .toList();
         } catch (Exception e) {
             log.warn("[gallery] shortcode could not resolve directory \""

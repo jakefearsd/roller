@@ -48,7 +48,6 @@ class MediaFileWrapperTest {
 
     private Weblog weblog;
     private MediaFile pojo;
-    private URLStrategy urls;
     private MediaFileWrapper wrapper;
 
     @BeforeEach
@@ -79,13 +78,12 @@ class MediaFileWrapperTest {
         pojo.setFocalX(0.31);
         pojo.setFocalY(0.62);
 
-        urls = mock(URLStrategy.class);
-        wrapper = MediaFileWrapper.wrap(pojo, urls);
+        wrapper = MediaFileWrapper.wrap(pojo);
     }
 
     @Test
     void wrappingNullGivesNull() {
-        assertNull(MediaFileWrapper.wrap(null, urls),
+        assertNull(MediaFileWrapper.wrap(null),
                 "Templates test media files for presence before dereferencing them");
     }
 

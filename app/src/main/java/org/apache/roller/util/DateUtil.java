@@ -539,15 +539,13 @@ public abstract class DateUtil {
             ret = char8DateFormat.parse(dateString, pos);
             
             // make sure the requested date is not in the future
-            Date today = null;
-            Calendar todayCal = Calendar.getInstance();
-            todayCal = Calendar.getInstance(tz, locale);
+            Calendar todayCal = Calendar.getInstance(tz, locale);
             todayCal.setTime(new Date());
-            today = todayCal.getTime();
+            Date today = todayCal.getTime();
             if(ret.after(today)) {
                 ret = today;
             }
-            
+
         } else if(dateString != null
                 && dateString.length()==6
                 && StringUtils.isNumeric(dateString)) {
@@ -555,8 +553,7 @@ public abstract class DateUtil {
             ret = char6DateFormat.parse(dateString, pos);
             
             // make sure the requested date is not in the future
-            Calendar todayCal = Calendar.getInstance();
-            todayCal = Calendar.getInstance(tz, locale);
+            Calendar todayCal = Calendar.getInstance(tz, locale);
             todayCal.setTime(new Date());
             Date today = todayCal.getTime();
             if(ret.after(today)) {

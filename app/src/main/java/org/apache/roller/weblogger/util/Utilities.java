@@ -551,8 +551,7 @@ public class Utilities {
      * @throws IOException
      */
     public static String decodeString(String str) throws IOException {
-        String value = new String(Base64.decodeBase64(str.getBytes()));
-        return value;
+        return new String(Base64.decodeBase64(str.getBytes()));
     }
 
     /**

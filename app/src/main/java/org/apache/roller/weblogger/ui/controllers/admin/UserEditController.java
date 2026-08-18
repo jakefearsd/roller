@@ -255,7 +255,7 @@ public class UserEditController extends BaseController {
                     hasAdmin = true;
                 }
                 // grant/revoke admin role if needed
-                boolean userEditingSelf = authUser != null && user.equals(authUser);
+                boolean userEditingSelf = user.equals(authUser);
                 if (hasAdmin && !bean.isAdministrator()) {
                     if (!userEditingSelf) {
                         // revoke role

@@ -21,11 +21,9 @@ package org.apache.roller.weblogger.business.themes;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 
 import java.util.*;
-import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Theme;
 import org.apache.roller.weblogger.pojos.ThemeResource;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
@@ -243,25 +241,12 @@ public class WeblogSharedTheme extends WeblogTheme {
             return null;
         }
         
-        ThemeResource resource;
-        
-        // first check in our shared theme
-        resource = this.theme.getResource(path);
-        
-        // if we didn't find it in our theme then look in weblog uploads
-        if(resource == null) {
-            try {
-                MediaFileManager mmgr =
-                    WebloggerFactory.getWeblogger().getMediaFileManager();
-                MediaFile mf = mmgr.getMediaFileByOriginalPath(
-                    this.weblog, path);
-
-            } catch (WebloggerException ex) {
-                // ignored, resource considered not found
-            }
-        }
-        
-        return resource;
+        // Shared themes have never resolved a fallback resource from weblog
+        // uploads -- the lookup here was never wired into the returned
+        // value -- so this has always meant "check the shared theme only";
+        // the dead local variable and its wasted lookup are removed, not
+        // the (already inert) fallback behavior.
+        return this.theme.getResource(path);
     }
     
 }

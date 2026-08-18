@@ -19,12 +19,10 @@
 package org.apache.roller.weblogger.business.themes;
 
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 
 import java.util.Date;
 import java.util.List;
-import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Theme;
 import org.apache.roller.weblogger.pojos.ThemeResource;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
@@ -157,16 +155,11 @@ public class WeblogCustomTheme extends WeblogTheme {
      */
     @Override
     public ThemeResource getResource(String path) {
-        ThemeResource resource = null;
-        try {
-            MediaFileManager mmgr =
-                WebloggerFactory.getWeblogger().getMediaFileManager();
-            MediaFile mf = mmgr.getMediaFileByOriginalPath(
-                this.weblog, path);
-        } catch (WebloggerException ex) {
-            // ignored, resource considered not found
-        }
-        return resource;
+        // Custom themes have never resolved resources by media path -- no
+        // ThemeResource implementation ever wrapped a MediaFile -- so this
+        // has always returned null; the dead local variable is removed, not
+        // the (already inert) behavior.
+        return null;
     }
     
 }

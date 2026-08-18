@@ -23,9 +23,9 @@ package org.apache.roller.weblogger.pojos;
  */
 public interface TemplateRendition {
 
-    public enum RenditionType {STANDARD}
+    enum RenditionType {STANDARD}
 
-    public enum TemplateLanguage {
+    enum TemplateLanguage {
         VELOCITY("Velocity");
 
         private final String readableName;

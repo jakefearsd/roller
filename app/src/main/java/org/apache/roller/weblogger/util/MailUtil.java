@@ -47,12 +47,10 @@ import org.apache.roller.weblogger.pojos.WeblogPermission;
  * A utility class for helping with sending email. 
  */
 public class MailUtil {
-    
+
     private static Log log = LogFactory.getLog(MailUtil.class);
-    
-    private static final String EMAIL_ADDR_REGEXP = "^.*@.*[.].{2,}$";
-    
-    
+
+
     /**
      * Ideally mail senders should call this first to avoid errors that occur 
      * when mail is not properly configured. We'll complain about that at 

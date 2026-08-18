@@ -93,7 +93,6 @@ public class MediaFileViewController extends MediaFileBase {
                                      @RequestParam(value = "sortBy", required = false) String sortBy) {
         populateCommonModel(request, model);
 
-        boolean dirCreated = false;
         if (StringUtils.isEmpty(newDirectoryName)) {
             addError(model, "mediaFile.error.view.dirNameEmpty", request);
         } else if (newDirectoryName.contains("/")) {
@@ -106,7 +105,6 @@ public class MediaFileViewController extends MediaFileBase {
                     weblogger.flush();
                     addMessage(model, "mediaFile.directoryCreate.success", newDirectoryName, request);
                     directoryId = dir.getId();
-                    dirCreated = true;
                 } else {
                     addMessage(model, "mediaFile.directoryCreate.error.exists", newDirectoryName, request);
                 }

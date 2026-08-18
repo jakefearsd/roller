@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.logging.Log;
@@ -215,6 +216,16 @@ public class MediaFile implements Serializable {
         return tagSet;
     }
 
+    // JPA property-access setter: MediaFile.orm.xml declares access="PROPERTY"
+    // and maps the one-to-many "tags" (getTags()/setTags()), so EclipseLink
+    // calls this reflectively when hydrating the entity even though no Java
+    // caller ever does -- deleting it compiles clean and breaks persistence
+    // in production. See CLAUDE.md's URF_UNREAD_FIELD/UnusedPrivateField note.
+    @SuppressWarnings("PMD.UnusedPrivateMethod")
+    @SuppressFBWarnings(
+            value = "UPM_UNCALLED_PRIVATE_METHOD",
+            justification = "JPA property-access setter invoked reflectively by EclipseLink "
+                    + "(MediaFile.orm.xml access=\"PROPERTY\", one-to-many \"tags\")")
     private void setTags(Set<MediaFileTag> tagSet) throws WebloggerException {
         this.tagSet = tagSet;
         this.removedTags = new HashSet<>();

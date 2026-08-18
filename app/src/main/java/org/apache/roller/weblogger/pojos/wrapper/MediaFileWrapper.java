@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 
 import org.apache.roller.weblogger.business.BlurHash;
 import org.apache.roller.weblogger.business.RenditionSupport;
-import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileTag;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
@@ -40,19 +39,15 @@ public final class MediaFileWrapper {
     // keep a reference to the wrapped pojo
     private final MediaFile pojo;
 
-    // url strategy to use for any url building
-    private final URLStrategy urlStrategy;
-
     // this is private so that we can force the use of the .wrap(pojo) method
-    private MediaFileWrapper(MediaFile toWrap, URLStrategy strat) {
+    private MediaFileWrapper(MediaFile toWrap) {
         this.pojo = toWrap;
-        this.urlStrategy = strat;
     }
 
     // wrap the given pojo if it is not null
-    public static MediaFileWrapper wrap(MediaFile toWrap, URLStrategy strat) {
+    public static MediaFileWrapper wrap(MediaFile toWrap) {
         if (toWrap != null) {
-            return new MediaFileWrapper(toWrap, strat);
+            return new MediaFileWrapper(toWrap);
         }
         return null;
     }

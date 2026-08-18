@@ -78,8 +78,7 @@ public class ImageShortcode implements ShortcodeHandler {
                 log.debug("[image] shortcode id " + id + " is not an image media file");
                 return null;
             }
-            media = MediaFileWrapper.wrap(mediaFile,
-                    WebloggerFactory.getWeblogger().getUrlStrategy());
+            media = MediaFileWrapper.wrap(mediaFile);
         } catch (Exception e) {
             log.warn("[image] shortcode could not resolve media file " + id, e);
             return null;

@@ -112,7 +112,7 @@ public final class CustomDomainRules {
             return false;
         }
         String siteHost = hostOf(siteAbsoluteUrl.trim());
-        return siteHost != null && normalisedHost.equals(siteHost);
+        return normalisedHost.equals(siteHost);
     }
 
     private static String hostOf(String absoluteUrl) {
