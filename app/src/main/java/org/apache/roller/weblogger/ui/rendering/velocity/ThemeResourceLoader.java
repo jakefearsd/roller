@@ -27,6 +27,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.util.Locale;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
@@ -76,7 +77,7 @@ public class ThemeResourceLoader extends ResourceLoader {
         if (name.contains("|")) {
             String[] pair = name.split("\\|");
             name = pair[0];
-            renditionType = RenditionType.valueOf(pair[1].toUpperCase());
+            renditionType = RenditionType.valueOf(pair[1].toUpperCase(Locale.ROOT));
         }
 
         try {
@@ -114,7 +115,7 @@ public class ThemeResourceLoader extends ResourceLoader {
             }
 
             // return the input stream
-            return new InputStreamReader(new ByteArrayInputStream(contents.getBytes(encoding)));
+            return new InputStreamReader(new ByteArrayInputStream(contents.getBytes(encoding)), encoding);
 
         } catch (UnsupportedEncodingException uex) {
             // We expect UTF-8 in all JRE installation.

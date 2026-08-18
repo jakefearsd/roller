@@ -19,6 +19,7 @@
 package org.apache.roller.weblogger.business.search.lucene;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -121,7 +122,7 @@ public class SearchOperation extends ReadFromIndexOperation {
             }
 
             if (category != null) {
-                Term catTerm = new Term(FieldConstants.CATEGORY, category.toLowerCase());
+                Term catTerm = new Term(FieldConstants.CATEGORY, category.toLowerCase(Locale.ROOT));
                 query = new BooleanQuery.Builder()
                     .add(query, BooleanClause.Occur.MUST)
                     .add(new TermQuery(catTerm), BooleanClause.Occur.MUST)

@@ -21,6 +21,7 @@
 package org.apache.roller.weblogger.business.search.lucene;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -79,7 +80,7 @@ public abstract class IndexOperation implements Runnable {
         // text, don't index deleted/disabled users of a group blog
         if (data.getCreator() != null) {
             doc.add(new TextField(FieldConstants.USERNAME, data.getCreator()
-                    .getUserName().toLowerCase(), Field.Store.YES));
+                    .getUserName().toLowerCase(Locale.ROOT), Field.Store.YES));
         }
 
         // text
@@ -88,7 +89,7 @@ public abstract class IndexOperation implements Runnable {
 
         // keyword needs to be in lower case as we are used in a term
         doc.add(new StringField(FieldConstants.LOCALE, data.getLocale()
-                .toLowerCase(), Field.Store.YES));
+                .toLowerCase(Locale.ROOT), Field.Store.YES));
 
         // index the entry text, but don't store it
         doc.add(new TextField(FieldConstants.CONTENT, data.getText(),
@@ -108,7 +109,7 @@ public abstract class IndexOperation implements Runnable {
         WeblogCategory categorydata = data.getCategory();
         if (categorydata != null) {
             doc.add(new StringField(FieldConstants.CATEGORY, categorydata
-                    .getName().toLowerCase(), Field.Store.YES));
+                    .getName().toLowerCase(Locale.ROOT), Field.Store.YES));
         }
 
         return doc;

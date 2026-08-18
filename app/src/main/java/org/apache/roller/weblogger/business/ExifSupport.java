@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.business;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -189,7 +190,7 @@ public final class ExifSupport {
         if (model == null) {
             return make;
         }
-        if (model.toLowerCase().startsWith(make.toLowerCase())) {
+        if (model.toLowerCase(Locale.ROOT).startsWith(make.toLowerCase(Locale.ROOT))) {
             return model;
         }
         return make + " " + model;

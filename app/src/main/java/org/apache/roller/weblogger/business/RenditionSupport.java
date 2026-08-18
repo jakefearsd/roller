@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -142,7 +143,7 @@ public final class RenditionSupport {
         if (contentType == null) {
             return null;
         }
-        String type = contentType.toLowerCase();
+        String type = contentType.toLowerCase(Locale.ROOT);
         if (type.equals("image/jpeg") || type.equals("image/jpg")) {
             return "jpg";
         }

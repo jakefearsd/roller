@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -358,8 +359,8 @@ public class FileContentManagerImpl implements FileContentManager {
                 if (allowFiles[y].indexOf('/') != -1) {
                     continue;
                 }
-                if (fileName.toLowerCase()
-                        .endsWith(allowFiles[y].toLowerCase())) {
+                if (fileName.toLowerCase(Locale.ROOT)
+                        .endsWith(allowFiles[y].toLowerCase(Locale.ROOT))) {
                     allowFile = true;
                     break;
                 }
@@ -389,8 +390,8 @@ public class FileContentManagerImpl implements FileContentManager {
                 if (forbidFiles[x].indexOf('/') != -1) {
                     continue;
                 }
-                if (fileName.toLowerCase().endsWith(
-                        forbidFiles[x].toLowerCase())) {
+                if (fileName.toLowerCase(Locale.ROOT).endsWith(
+                        forbidFiles[x].toLowerCase(Locale.ROOT))) {
                     allowFile = false;
                     break;
                 }

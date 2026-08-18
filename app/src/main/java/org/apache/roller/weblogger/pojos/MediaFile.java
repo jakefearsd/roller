@@ -373,8 +373,8 @@ public class MediaFile implements Serializable {
         if (getContentType() == null) {
             return false;
         }
-        return getContentType().toLowerCase().startsWith(MediaFileType.IMAGE
-                .getContentTypePrefix().toLowerCase());
+        return getContentType().toLowerCase(Locale.ROOT).startsWith(MediaFileType.IMAGE
+                .getContentTypePrefix().toLowerCase(Locale.ROOT));
     }
 
     /**

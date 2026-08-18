@@ -330,6 +330,30 @@ public class FileContentManagerTest  {
                     "an extension absent from a non-empty allow list must be refused");
         }
 
+        /**
+         * In a Turkish locale, {@code "I".toLowerCase()} is {@code "ı"}
+         * (dotless i), not {@code "i"} -- so an uppercase {@code .GIF}
+         * upload stops matching a lowercase {@code "gif"} allow-list entry
+         * once the JVM's default locale is Turkish. The comparison must be
+         * locale-independent.
+         */
+        @Test
+        void aTurkishDefaultLocaleDoesNotBreakTheUppercaseExtensionAllowList() throws Exception {
+            configure("true", "1.00", "30000", "gif", "");
+
+            java.util.Locale original = java.util.Locale.getDefault();
+            try {
+                java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr"));
+                assertTrue(canSave("PHOTO.GIF", "image/gif", 10, new RollerMessages()),
+                        "an uppercase .GIF extension must still match a lowercase "
+                                + "'gif' allow-list entry under a Turkish default locale");
+            } finally {
+                // the suite shares one JVM; leaking a Turkish default would
+                // poison unrelated tests that assume Locale.getDefault() is stable
+                java.util.Locale.setDefault(original);
+            }
+        }
+
         @Test
         void anAllowListMayNameAContentTypeRange() throws Exception {
             configure("true", "1.00", "30000", "image/*", "");

@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.ui.core.filters;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
@@ -68,11 +69,11 @@ public class CharEncodingFilter implements Filter {
             mLogger.debug("Processing CharEncodingFilter");
         }
         try {
-        	if (!"UTF-8".equals(req.getCharacterEncoding())) {
+        	if (!StandardCharsets.UTF_8.name().equals(req.getCharacterEncoding())) {
         		// only set encoding if not already UTF-8
-        		// despite the fact that this is the first filter in the chain, on Glassfish it 
+        		// despite the fact that this is the first filter in the chain, on Glassfish it
         		// is already too late to set request encoding without getting a WARN level log message
-        		req.setCharacterEncoding("UTF-8");
+        		req.setCharacterEncoding(StandardCharsets.UTF_8.name());
         	}
             if (mLogger.isDebugEnabled()) {
                 mLogger.debug("Set request character encoding to UTF-8");

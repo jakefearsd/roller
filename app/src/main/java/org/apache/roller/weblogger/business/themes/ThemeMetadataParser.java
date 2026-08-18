@@ -30,6 +30,7 @@ import org.jdom2.input.SAXBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Locale;
 
 
 /**
@@ -125,7 +126,7 @@ public class ThemeMetadataParser {
             throw new ThemeParsingException("Template must contain an 'action' element");
         } else {
             try {
-                template.setAction(ComponentType.valueOf(actionString.toUpperCase()));
+                template.setAction(ComponentType.valueOf(actionString.toUpperCase(Locale.ROOT)));
             } catch (IllegalArgumentException e) {
                 throw new ThemeParsingException("Unknown template action value '" + actionString + "'", e);
             }
@@ -139,7 +140,7 @@ public class ThemeMetadataParser {
             String renditionValue = renditionElement.getAttributeValue("type");
             if (renditionValue != null) {
                 try {
-                    rendition.setType(RenditionType.valueOf(renditionValue.toUpperCase()));
+                    rendition.setType(RenditionType.valueOf(renditionValue.toUpperCase(Locale.ROOT)));
                 } catch (IllegalArgumentException e) {
                     throw new ThemeParsingException("Invalid rendition type " + renditionValue + " found.", e);
                 }
@@ -152,7 +153,7 @@ public class ThemeMetadataParser {
                 throw new ThemeParsingException("rendition must contain a 'templateLanguage' element");
             } else {
                 try {
-                    rendition.setTemplateLang(TemplateLanguage.valueOf(templateString.toUpperCase()));
+                    rendition.setTemplateLang(TemplateLanguage.valueOf(templateString.toUpperCase(Locale.ROOT)));
                 } catch (IllegalArgumentException e) {
                     throw new ThemeParsingException("Unknown templateLanguage value '" + templateString + "'", e);
                 }
@@ -201,7 +202,7 @@ public class ThemeMetadataParser {
             String renditionValue = renditionElement.getAttributeValue("type");
             if (renditionValue != null) {
                 try {
-                    rendition.setType(RenditionType.valueOf(renditionValue.toUpperCase()));
+                    rendition.setType(RenditionType.valueOf(renditionValue.toUpperCase(Locale.ROOT)));
                 } catch (IllegalArgumentException e) {
                     throw new ThemeParsingException("Invalid rendition type " + renditionValue + " found.", e);
                 }
@@ -214,7 +215,7 @@ public class ThemeMetadataParser {
                 throw new ThemeParsingException("rendition must contain a 'templateLanguage' element");
             } else {
                 try {
-                    rendition.setTemplateLang(TemplateLanguage.valueOf(templateString.toUpperCase()));
+                    rendition.setTemplateLang(TemplateLanguage.valueOf(templateString.toUpperCase(Locale.ROOT)));
                 } catch (IllegalArgumentException e) {
                     throw new ThemeParsingException("Unknown templateLanguage value '" + templateString + "'", e);
                 }

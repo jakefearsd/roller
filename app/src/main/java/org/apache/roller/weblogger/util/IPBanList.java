@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -109,7 +110,8 @@ public final class IPBanList {
             try {
                 synchronized(this) {
                     // add to file
-                    try (PrintWriter out = new PrintWriter(new FileWriter(this.bannedIpsFile, true))) {
+                    try (PrintWriter out = new PrintWriter(
+                            new FileWriter(this.bannedIpsFile, StandardCharsets.UTF_8, true))) {
                         out.println(ip);
                     }
                     this.bannedIpsFile.clearChanged();
@@ -149,7 +151,8 @@ public final class IPBanList {
         if(bannedIpsFile != null) {
 
             // TODO: optimize this
-            try (BufferedReader in = new BufferedReader(new FileReader(this.bannedIpsFile))) {
+            try (BufferedReader in = new BufferedReader(
+                    new FileReader(this.bannedIpsFile, StandardCharsets.UTF_8))) {
                 Set<String> newBannedIpList = newThreadSafeSet();
 
                 String ip = null;

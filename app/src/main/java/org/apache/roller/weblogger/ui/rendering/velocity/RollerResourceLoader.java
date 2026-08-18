@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.util.Locale;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -78,7 +79,7 @@ public class RollerResourceLoader extends ResourceLoader {
 		if (name.contains("|")) {
 			String[] pair = name.split("\\|");
 			name = pair[0];
-			renditionType = RenditionType.valueOf(pair[1].toUpperCase());
+			renditionType = RenditionType.valueOf(pair[1].toUpperCase(Locale.ROOT));
 		}
 
 		logger.debug("   Actually, it's " + name);
@@ -96,7 +97,7 @@ public class RollerResourceLoader extends ResourceLoader {
 			if (templateCode != null) {
 				contents = templateCode.getTemplate();
 			}
-			return new InputStreamReader(new ByteArrayInputStream(contents.getBytes(encoding)));
+			return new InputStreamReader(new ByteArrayInputStream(contents.getBytes(encoding)), encoding);
 
 		} catch (UnsupportedEncodingException uex) {
 			// This should never actually happen. We expect UTF-8 in all JRE

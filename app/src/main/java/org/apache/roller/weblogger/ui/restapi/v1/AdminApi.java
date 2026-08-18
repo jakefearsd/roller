@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.CharSetUtils;
@@ -135,7 +136,7 @@ public class AdminApi extends BaseApiController implements UISecurityEnforced {
         // ENABLED users -- a same-named disabled account would otherwise
         // reach addUser and fail as a bare, unguarded WebloggerException.
         if (mgr.getUserByUserName(userName, null) != null
-                || mgr.getUserByUserName(userName.toLowerCase(), null) != null) {
+                || mgr.getUserByUserName(userName.toLowerCase(Locale.ROOT), null) != null) {
             throw ApiException.conflict("A user named '" + userName + "' already exists.");
         }
 

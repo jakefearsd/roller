@@ -21,6 +21,7 @@ package org.apache.roller.weblogger.business.startup;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -51,7 +52,7 @@ public class SQLScriptRunner {
     /** Creates a new instance of SQLScriptRunner */
     public SQLScriptRunner(InputStream is) throws IOException {
 
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(is))) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             String command = "";
             String line;
             // Tag of the currently open dollar-quote (may be the empty string for

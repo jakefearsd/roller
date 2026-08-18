@@ -21,6 +21,7 @@ package org.apache.roller.weblogger.config;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.config.runtime.RuntimeConfigDefs;
@@ -178,7 +179,8 @@ public final class WebloggerRuntimeConfig {
         
         try {
             StringWriter configString = new StringWriter();
-            try (InputStreamReader reader = new InputStreamReader(WebloggerConfig.class.getResourceAsStream(RUNTIME_CONFIG))) {
+            try (InputStreamReader reader = new InputStreamReader(
+                    WebloggerConfig.class.getResourceAsStream(RUNTIME_CONFIG), StandardCharsets.UTF_8)) {
                 reader.transferTo(configString);
             }
             return configString.toString();

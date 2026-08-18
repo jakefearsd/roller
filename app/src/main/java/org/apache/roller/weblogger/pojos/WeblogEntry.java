@@ -954,7 +954,7 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
             char separator = titleSeparator();
             while (toker.hasMoreTokens() && count < 5) {
                 String s = toker.nextToken();
-                s = s.toLowerCase();
+                s = s.toLowerCase(Locale.ROOT);
                 tmp = (tmp == null) ? s : tmp + separator + s;
                 count++;
             }

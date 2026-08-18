@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import jakarta.persistence.NoResultException;
@@ -116,7 +117,7 @@ public class JPAUserManagerImpl implements UserManager {
         }
 
         if (getUserByUserName(newUser.getUserName()) != null ||
-                getUserByUserName(newUser.getUserName().toLowerCase()) != null) {
+                getUserByUserName(newUser.getUserName().toLowerCase(Locale.ROOT)) != null) {
             throw new WebloggerException("error.add.user.userNameInUse");
         }
 
