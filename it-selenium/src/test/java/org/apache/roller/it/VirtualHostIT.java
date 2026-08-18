@@ -242,7 +242,7 @@ class VirtualHostIT extends RollerIT {
     void thePathFormRedirectsToTheCustomDomain() throws Exception {
         HttpResponse<String> response = get("/" + vhostHandle + "/entry/x?p=2", "127.0.0.1");
         assertEquals(301, response.statusCode());
-        assertEquals("https://" + VHOST + "/entry/x?p=2",
+        assertEquals(customDomainUrl("/entry/x?p=2"),
                 response.headers().firstValue("Location").orElseThrow());
     }
 
@@ -342,7 +342,7 @@ class VirtualHostIT extends RollerIT {
         String permalink = publishEntry(vhostHandle, title);
         logout();
         String anchor = anchorOf(permalink);
-        String expectedCanonical = "https://" + VHOST + "/entry/" + anchor;
+        String expectedCanonical = customDomainUrl("/entry/" + anchor);
 
         HttpResponse<String> onVhost = get("/entry/" + anchor, VHOST);
         assertEquals(200, onVhost.statusCode(), onVhost.body());
@@ -371,13 +371,13 @@ class VirtualHostIT extends RollerIT {
     @Test
     void robotsOnTheCustomDomainNamesItsOwnSitemap() throws Exception {
         assertTrue(get("/robots.txt", VHOST).body()
-                .contains("Sitemap: https://" + VHOST + "/sitemap.xml"));
+                .contains("Sitemap: " + customDomainUrl("/sitemap.xml")));
 
         String sitemap = get("/sitemap.xml", VHOST).body();
         assertFalse(sitemap.contains("<sitemapindex"),
                 "a custom domain's /sitemap.xml must be that weblog's OWN sitemap, "
                         + "not the site-wide index:\n" + sitemap);
-        assertTrue(sitemap.contains("<loc>https://" + VHOST + "/</loc>"),
+        assertTrue(sitemap.contains("<loc>" + customDomainUrl("/") + "</loc>"),
                 "the custom domain's own sitemap must list its home page in domain form:\n" + sitemap);
     }
 
@@ -494,6 +494,35 @@ class VirtualHostIT extends RollerIT {
         }
     }
 
+    // --------------------------------------------------------- url building
+
+    /**
+     * The custom-domain form of {@code path} under the configured servlet
+     * context path -- e.g. {@code https://vhost.example.com/entry/x} at the
+     * root context, {@code https://vhost.example.com/roller/entry/x} under a
+     * {@code /roller} prefix. Every assertion in this class that predicts a
+     * domain-form URL (a 301 {@code Location}, a canonical/og:url, a sitemap
+     * {@code <loc>}) must route through this rather than concatenating
+     * {@code "https://" + VHOST} directly, because that literal shape is only
+     * correct at the root context -- see {@link #contextPath()} for where the
+     * context segment actually comes from.
+     */
+    private static String customDomainUrl(String path) {
+        return "https://" + VHOST + contextPath() + path;
+    }
+
+    /**
+     * The servlet context path segment of {@link #baseUrl()} -- {@code ""} at
+     * the root context, {@code "/roller"} under a prefix. Derived from the
+     * same {@value RollerIT#BASE_URL_PROPERTY} system property the harness
+     * was actually started with, rather than a second, independently-read
+     * source (e.g. an {@code it.context.path} property) that could drift
+     * from it.
+     */
+    private static String contextPath() {
+        return URI.create(baseUrl()).getPath();
+    }
+
     // ---------------------------------------------------------------- HTTP
 
     /** Does NOT follow redirects: the 301 itself is the assertion. */
@@ -523,8 +552,7 @@ class VirtualHostIT extends RollerIT {
 
     private String vhostUrl(String path) {
         URI base = URI.create(baseUrl());
-        String contextPath = base.getPath();
-        return "http://" + VHOST + ":" + base.getPort() + contextPath + path;
+        return "http://" + VHOST + ":" + base.getPort() + contextPath() + path;
     }
 
     // --------------------------------------------------------------- weblog
