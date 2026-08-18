@@ -150,8 +150,23 @@ acceptance criterion, not an incidental consequence.
 **Rule: a weblog with a custom domain generates every URL against that domain,
 derived from the weblog, never from the request.**
 
+**A custom domain replaces the HANDLE segment and nothing else.** The servlet
+context path, the locale segment, and every reserved path root are unchanged.
+State it that precisely: an earlier draft of this section said the weblog's root
+"IS the site root", and that one simplification generated three separate
+defects — the protected-path guard swallowing `/page/<theme>.css` on every vhost
+page, the context path dropped from custom-domain URLs at three sites, and a
+locale-shaped first segment redirecting back to handle form.
+
+At the root context:
+
 - absolute → `https://maiiavorobiova.com/entry/x`
-- relative → `/entry/x` (root-relative, no handle segment)
+- relative → `/entry/x`
+
+Under a `/roller` context path:
+
+- absolute → `https://maiiavorobiova.com/roller/entry/x`
+- relative → `/roller/entry/x`
 
 This is forced, not stylistic. `WeblogPageCache.generateKey` keys on the weblog
 handle and not the host, so one weblog reachable at two hostnames shares one
