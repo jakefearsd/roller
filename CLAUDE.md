@@ -1247,6 +1247,79 @@ answering to.
   test reads `PageEdit.jsp` directly to pin the marker's actual name rather
   than hardcoding it.
 
+## Virtual hosts (per-weblog custom domains)
+
+A weblog with `weblog.custom_domain` set is served at that hostname's root:
+`https://berlin.thelocalwiki.com/entry/x`, not
+`https://blog.example.com/berlin/entry/x`. Spec:
+`docs/superpowers/specs/2026-08-18-virtual-host-support-design.md`.
+
+- **Resolution is host-first, inside `WeblogRequestMapper`, and the forward url
+  still carries the handle.** That is the whole trick: `PageServlet`,
+  `WeblogPageRequest`, the pagers, the rendering models and both render caches
+  never learn that virtual hosts exist. `VirtualHostRegistry` holds the
+  hostname→handle map in memory (invalidated in `saveWeblog`/`removeWeblog`),
+  so the lookup costs no query and works before `PersistenceSessionFilter` runs
+  — which is what lets `ControlPlaneHostFilter` sit at filter order **35**,
+  ahead of the Spring Security chain (40). Later would let security 302 an
+  unauthenticated admin request to a login page on the *custom domain*, minting
+  a session and CSRF token on the wrong host.
+- **Generated urls derive from the WEBLOG, never from the request.**
+  `WeblogPageCache` keys on the handle and not the host, and `#showSeoHead`
+  bakes absolute canonical/`og:url` values into those cached bytes — so a
+  request-derived url would let whichever host rendered first stamp its
+  canonical onto the other's response. All eleven weblog-content url methods
+  root through `MultiWeblogURLStrategy.getWeblogURL`, so this is one method.
+  `AbstractURLStrategy`'s six `/roller-ui/` methods are control plane and must
+  **not** become domain-aware.
+- **`appProtectedUrls` is a strict subset of `rollerProtectedUrls`, and the
+  split is load-bearing.** `rollerProtectedUrls` mixes application paths
+  (`roller-ui`, `api`, `themes`, `webjars`, `robots.txt`, `sitemap.xml`,
+  `newsletter`) with weblog request *contexts* (`page`, `search`, `resource`,
+  plus legacy `flavor`/`rss`/`atom`/`language`). On the site host a context is
+  always the SECOND segment (`/<handle>/page/x`) so the collision never shows.
+  On a custom domain the handle comes from the Host header and the context
+  becomes the FIRST segment — reserving it there declines
+  `/page/<theme>.css` and **renders every vhost page unstyled**. Only
+  `appProtectedUrls` applies in vhost mode; only the `isWeblog()` half of the
+  guard is skippable.
+- **A custom-domain url still carries the servlet context path.** The weblog
+  owns the hostname, so it drops the *handle* segment — but under a prefix its
+  root is `https://host/roller/`, not `https://host/`. Three separate sites got
+  this wrong at once (`getWeblogURL`, the mapper's path-form 301, and
+  `SeoController.robots()`); a fourth, `ControlPlaneHostFilter`, is correct
+  because `site.absoluteurl` carries the context path by convention.
+- **`/roller-ui/rendering/**` and `/newsletter/**` are exempt from the
+  control-plane redirect, and that exemption is a silent-breakage guard.**
+  `ContactController` is at `/roller-ui/rendering/contact.rol` and
+  `NewsletterController` at `/newsletter/subscribe`; both are posted by `fetch`
+  from the rendered page under a `connect-src 'self'` CSP. Redirecting either
+  to the site host makes it cross-origin — blocked by CSP, and a 301 on a POST
+  carries no body anyway — so every `[contact]` and `[subscribe]` shortcode on
+  every vhost weblog would stop working, visible only in a browser console.
+- **`site.absoluteurl` becomes required once any weblog has a custom domain.**
+  The control-plane filter reads it **directly**, never
+  `getAbsoluteContextURL()`, whose `InitFilter` fallback can itself be a custom
+  domain — which would redirect the control plane to a custom domain, forever.
+  Unset, the filter serves the request rather than redirecting: a missing
+  configuration degrades to pre-vhost behaviour, never to a loop.
+- The path form 301s to the domain (`sendRedirect` is not used — it defaults to
+  302, and a temporary redirect tells crawlers not to transfer ranking). The
+  site sitemap index **omits** custom-domain weblogs, because a sitemap index
+  may only reference sitemaps on its own host.
+
+### Run the browser suite at BOTH context paths before shipping routing changes
+
+`mvn verify -Pit` covers the root context; `mvn verify -Pit -Dit.context.path=roller`
+is the only thing that exercises a servlet prefix end to end. This is not
+belt-and-braces. The vhost wave's unit tests were written almost entirely at the
+root, so "passes at root" was carrying far more weight than anyone realised, and
+the prefix pass found a defect the root pass structurally could not see. Worse,
+`SeoController.robots()`'s unit test already ran under `/roller` and had baked
+the buggy url in as its expected value — a test encoding the defect it should
+have caught. When a test fixture pins a context path, check that its assertion
+*derives* the expected url rather than hardcoding one shape.
+
 ## Audience
 Contact forms, newsletter subscribe, and account tokens (Stage 2 Wave B). No
 CAPTCHA anywhere; no CSP change anywhere — every endpoint is same-origin.
