@@ -16,7 +16,7 @@ import org.apache.roller.weblogger.util.GenericThrottle;
  * read fresh on every call instead, through {@link WebloggerRuntimeConfig},
  * so it can be flipped from Admin Settings without a restart.
  */
-public class ApiThrottle {
+public final class ApiThrottle {
 
     private final GenericThrottle throttle;
 
@@ -60,10 +60,7 @@ public class ApiThrottle {
         boolean enabled = forcedEnabled != null
                 ? forcedEnabled
                 : WebloggerRuntimeConfig.getBooleanProperty("api.throttle.enabled");
-        if (!enabled) {
-            return false;
-        }
-        return throttle.processHit(key);
+        return enabled && throttle.processHit(key);
     }
 
     private static int intProperty(String name, int fallback) {

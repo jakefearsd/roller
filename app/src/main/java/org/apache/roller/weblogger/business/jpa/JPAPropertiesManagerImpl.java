@@ -106,7 +106,7 @@ public class JPAPropertiesManagerImpl implements PropertiesManager {
     @Override
     public Map<String, RuntimeConfigProperty> getProperties() throws WebloggerException {
 
-        HashMap<String, RuntimeConfigProperty> props = new HashMap<>();
+        Map<String, RuntimeConfigProperty> props = new HashMap<>();
         List<RuntimeConfigProperty> list = strategy.getNamedQuery("RuntimeConfigProperty.getAll",
                 RuntimeConfigProperty.class).getResultList();
         /*

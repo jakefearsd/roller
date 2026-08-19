@@ -454,7 +454,7 @@ public class LuceneIndexManager implements IndexManager {
 
         try {
             Set<String> categories = new TreeSet<>();
-            TreeSet<String> categorySet = new TreeSet<>();
+            Set<String> categorySet = new TreeSet<>();
             Weblogger roller = WebloggerFactory.getWeblogger();
             WeblogEntryManager weblogMgr = roller.getWeblogEntryManager();
 

@@ -97,11 +97,7 @@ public final class IPBanList {
         // update the banned ips list if needed
         this.loadBannedIpsIfNeeded();
 
-        if(ip != null) {
-            return this.bannedIps.contains(ip);
-        } else {
-            return false;
-        }
+        return ip != null && this.bannedIps.contains(ip);
     }
 
 

@@ -270,10 +270,7 @@ public class MediaResourceServlet extends HttpServlet {
             }
             org.apache.roller.weblogger.pojos.User user = WebloggerFactory.getWeblogger()
                     .getUserManager().getUserByUserName(authentication.getName());
-            if (user == null) {
-                return false;
-            }
-            return WebloggerFactory.getWeblogger().getUserManager().checkPermission(
+            return user != null && WebloggerFactory.getWeblogger().getUserManager().checkPermission(
                     new org.apache.roller.weblogger.pojos.WeblogPermission(weblog,
                             java.util.List.of(
                                     org.apache.roller.weblogger.pojos.WeblogPermission.EDIT_DRAFT)),

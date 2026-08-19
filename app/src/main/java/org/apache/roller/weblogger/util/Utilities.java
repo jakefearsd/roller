@@ -36,7 +36,11 @@ import org.apache.roller.util.RollerConstants;
 /**
  * General purpose utilities, not for use in templates.
  */
-public class Utilities {
+public final class Utilities {
+
+    private Utilities() {
+    }
+
     /** The <code>Log</code> instance for this class. */
     private static final Log mLogger = LogFactory.getLog(Utilities.class);
 
@@ -261,9 +265,9 @@ public class Utilities {
     public static String replaceNonAlphanumeric(String str, char subst) {
         StringBuilder ret = new StringBuilder(str.length());
         char[] testChars = str.toCharArray();
-        for (int i = 0; i < testChars.length; i++) {
-            if (Character.isLetterOrDigit(testChars[i])) {
-                ret.append(testChars[i]);
+        for (char testChar : testChars) {
+            if (Character.isLetterOrDigit(testChar)) {
+                ret.append(testChar);
             } else {
                 ret.append(subst);
             }
@@ -278,10 +282,10 @@ public class Utilities {
     public static String removeNonAlphanumeric(String str) {
         StringBuilder ret = new StringBuilder(str.length());
         char[] testChars = str.toCharArray();
-        for (int i = 0; i < testChars.length; i++) {
+        for (char testChar : testChars) {
             // MR: Allow periods in page links
-            if (Character.isLetterOrDigit(testChars[i]) || testChars[i] == '.') {
-                ret.append(testChars[i]);
+            if (Character.isLetterOrDigit(testChar) || testChar == '.') {
+                ret.append(testChar);
             }
         }
         return ret.toString();
@@ -291,11 +295,11 @@ public class Utilities {
     /** Convert string array to string with delimeters. */
     public static String stringArrayToString(String[] stringArray, String delim) {
         StringBuilder bldr = new StringBuilder();
-        for (int i = 0; i < stringArray.length; i++) {
+        for (String s : stringArray) {
             if (bldr.length() > 0) {
-                bldr.append(delim).append(stringArray[i]);
+                bldr.append(delim).append(s);
             } else {
-                bldr.append(stringArray[i]);
+                bldr.append(s);
             }
         }
         return bldr.toString();
@@ -527,12 +531,12 @@ public class Utilities {
 
         StringBuilder buf = new StringBuilder();
 
-        for (int i = 0; i < encodedPassword.length; i++) {
-            if ((encodedPassword[i] & 0xff) < 0x10) {
+        for (byte b : encodedPassword) {
+            if ((b & 0xff) < 0x10) {
                 buf.append("0");
             }
 
-            buf.append(Long.toString(encodedPassword[i] & 0xff, 16));
+            buf.append(Long.toString(b & 0xff, 16));
         }
 
         return buf.toString();
@@ -819,9 +823,7 @@ public class Utilities {
 
         StringBuilder sb = new StringBuilder();
         char[] charArray = tag.toCharArray();
-        for (int i = 0; i < charArray.length; i++) {
-            char c = charArray[i];
-
+        for (char c : charArray) {
             // fast-path exclusions quotes and commas are obvious
             // 34 = double-quote, 44 = comma
             switch (c) {
@@ -832,7 +834,7 @@ public class Utilities {
 
             if ((33 <= c && c <= 126) || Character.isUnicodeIdentifierPart(c)
                     || Character.isUnicodeIdentifierStart(c)) {
-                sb.append(charArray[i]);
+                sb.append(c);
             }
         }
         return sb.toString();

@@ -173,7 +173,6 @@ public class SeoController extends BaseController {
         return xmlResponse(xml);
     }
 
-    /** Sitemap for one weblog: home page plus published, indexable entries. */
     /**
      * The sitemap protocol's own limit: a sitemap may list at most 50,000
      * URLs. A weblog with more needs a sitemap index of its own, which is a
@@ -181,6 +180,7 @@ public class SeoController extends BaseController {
      */
     static final int MAX_SITEMAP_URLS = 50_000;
 
+    /** Sitemap for one weblog: home page plus published, indexable entries. */
     @GetMapping("/sitemap-{handle}.xml")
     public ResponseEntity<String> weblogSitemap(@PathVariable("handle") String handle) {
         Weblog weblog;

@@ -165,13 +165,9 @@ public class WeblogEntryRevision implements Serializable {
 
     @Override
     public boolean equals(Object other) {
-        if (other == this) {
-            return true;
-        }
-        if (!(other instanceof WeblogEntryRevision o)) {
-            return false;
-        }
-        return new EqualsBuilder().append(getId(), o.getId()).isEquals();
+        return other == this
+                || (other instanceof WeblogEntryRevision o
+                        && new EqualsBuilder().append(getId(), o.getId()).isEquals());
     }
 
     @Override

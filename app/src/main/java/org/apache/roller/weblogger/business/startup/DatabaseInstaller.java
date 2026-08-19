@@ -116,10 +116,7 @@ public class DatabaseInstaller {
     /** True when migrations exist on the classpath that this database has not applied. */
     public boolean isUpgradeRequired() {
         try (Connection con = db.getConnection()) {
-            if (!tableExists(con, TRACKING_TABLE)) {
-                return true;
-            }
-            return !pendingMigrations(appliedVersions(con)).isEmpty();
+            return !tableExists(con, TRACKING_TABLE) || !pendingMigrations(appliedVersions(con)).isEmpty();
         } catch (SQLException e) {
             throw new RuntimeException("Error checking for pending migrations", e);
         }

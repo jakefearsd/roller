@@ -98,20 +98,20 @@ public final class WebloggerConfig {
             }
 
             // finally, check for an external config file
-            String env_file = System.getProperty(custom_jvm_param);
-            if(env_file != null && env_file.length() > 0) {
-                File custom_config_file = new File(env_file);
+            String envFile = System.getProperty(custom_jvm_param);
+            if(envFile != null && envFile.length() > 0) {
+                File customConfigFile = new File(envFile);
 
                 // make sure the file exists, then try and load it
-                if(custom_config_file.exists()) {
-                    try(InputStream is = new FileInputStream(custom_config_file)) {
+                if(customConfigFile.exists()) {
+                    try(InputStream is = new FileInputStream(customConfigFile)) {
                         config.load(is);
                     }
                     System.out.println("Roller Weblogger: Successfully loaded custom properties from "+
-                            custom_config_file.getAbsolutePath());
+                            customConfigFile.getAbsolutePath());
                 } else {
                     System.out.println("Roller Weblogger: Failed to load custom properties from "+
-                            custom_config_file.getAbsolutePath());
+                            customConfigFile.getAbsolutePath());
                 }
 
             }
@@ -126,8 +126,8 @@ public final class WebloggerConfig {
             String expandedPropertiesDef = config.getProperty("config.expandedProperties");
             if (expandedPropertiesDef != null) {
                 String[] expandedProperties = expandedPropertiesDef.split(",");
-                for (int i = 0; i < expandedProperties.length; i++) {
-                    String propName = expandedProperties[i].trim();
+                for (String expandedProperty : expandedProperties) {
+                    String propName = expandedProperty.trim();
                     String initialValue = config.getProperty(propName);
                     if (initialValue != null) {
                         String expandedValue = PropertyExpander.expandSystemProperties(initialValue);

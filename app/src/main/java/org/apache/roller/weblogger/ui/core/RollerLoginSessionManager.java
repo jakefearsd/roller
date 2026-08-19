@@ -19,7 +19,7 @@ public class RollerLoginSessionManager {
       return RollerLoginSessionManager.SingletonHolder.INSTANCE;
    }
 
-   private static class SingletonHolder {
+   private static final class SingletonHolder {
       private static final RollerLoginSessionManager INSTANCE = new RollerLoginSessionManager();
    }
 

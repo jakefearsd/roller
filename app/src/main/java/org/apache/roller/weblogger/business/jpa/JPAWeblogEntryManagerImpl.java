@@ -253,9 +253,6 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     }
     
     /**
-     * @inheritDoc
-     */
-    /**
      * Records what this save is about to displace, and prunes to the
      * configured retention.
      *
@@ -879,7 +876,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
      */
     @Override
     public Map<Date, List<WeblogEntry>> getWeblogEntryObjectMap(WeblogEntrySearchCriteria wesc) throws WebloggerException {
-        TreeMap<Date, List<WeblogEntry>> map = new TreeMap<>(Collections.reverseOrder());
+        Map<Date, List<WeblogEntry>> map = new TreeMap<>(Collections.reverseOrder());
 
         List<WeblogEntry> entries = getWeblogEntries(wesc);
 
@@ -901,7 +898,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
      */
     @Override
     public Map<Date, String> getWeblogEntryStringMap(WeblogEntrySearchCriteria wesc) throws WebloggerException {
-        TreeMap<Date, String> map = new TreeMap<>(Collections.reverseOrder());
+        Map<Date, String> map = new TreeMap<>(Collections.reverseOrder());
 
         List<WeblogEntry> entries = getWeblogEntries(wesc);
 

@@ -46,7 +46,10 @@ import org.apache.roller.weblogger.pojos.WeblogPermission;
 /**
  * A utility class for helping with sending email. 
  */
-public class MailUtil {
+public final class MailUtil {
+
+    private MailUtil() {
+    }
 
     private static Log log = LogFactory.getLog(MailUtil.class);
 

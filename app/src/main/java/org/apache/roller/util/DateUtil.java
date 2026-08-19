@@ -332,17 +332,8 @@ public abstract class DateUtil {
         // false if either value is null
         if (startDate == null || endDate == null) { return false; }
         
-        if (equalOK && startDate.equals(endDate)) {
-            // true if they are equal
-            return true;
-        }
-        
-        // true if endDate after startDate
-        if (endDate.after(startDate)) {
-            return true;
-        }
-        
-        return false;
+        // true if they are equal (when equalOK) or endDate is after startDate
+        return (equalOK && startDate.equals(endDate)) || endDate.after(startDate);
     }
     
     

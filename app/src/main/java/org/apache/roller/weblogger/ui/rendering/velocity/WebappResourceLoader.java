@@ -282,15 +282,11 @@ public class WebappResourceLoader extends ResourceLoader {
 			}
 		}
 
-		// If the current is the cached and it is readable
-		if (cachedFile.equals(currentFile) && cachedFile.canRead()) {
-			// then (and only then) do we compare the last modified values
-			return cachedFile.lastModified() != resource.getLastModified();
-		} else {
-			// We found a new file for the resource or the resource is no longer
-			// readable.
-			return true;
-		}
+		// A new file was found for the resource, or the resource is no longer
+		// readable -- unless it's still the cached file and still readable, in
+		// which case (and only then) compare the last modified values.
+		return !(cachedFile.equals(currentFile) && cachedFile.canRead())
+				|| cachedFile.lastModified() != resource.getLastModified();
 	}
 
 	/**

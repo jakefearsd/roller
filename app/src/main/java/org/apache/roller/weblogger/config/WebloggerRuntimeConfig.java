@@ -119,11 +119,7 @@ public final class WebloggerRuntimeConfig {
             value = WebloggerConfig.getProperty(name);
         }
 
-        if (value == null) {
-            return false;
-        }
-
-        return Boolean.valueOf(value);
+        return value != null && Boolean.valueOf(value);
     }
     
     

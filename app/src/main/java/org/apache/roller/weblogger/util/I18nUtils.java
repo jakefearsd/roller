@@ -26,7 +26,10 @@ import org.apache.commons.lang3.StringUtils;
  * A utility class for dealing with i18n.
  */
 public final class I18nUtils {
-    
+
+    private I18nUtils() {
+    }
+
     public static Locale toLocale(String locale) {
         if (locale != null) {
             String[] localeStr = StringUtils.split(locale,"_");

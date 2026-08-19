@@ -29,10 +29,13 @@ import org.apache.roller.weblogger.util.Utilities;
 /**
  * Helps with model loading process.
  */
-public class ModelLoader {
-    
+public final class ModelLoader {
+
+    private ModelLoader() {
+    }
+
     private static final Log log = LogFactory.getLog(ModelLoader.class);
-    
+
     /**
      * Convenience method to load a comma-separated list of page models.
      *

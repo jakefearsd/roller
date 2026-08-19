@@ -476,7 +476,7 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                     request.setAttribute("tile_" + key, value));
             // expose Spring model attributes
             if (model != null) {
-                model.forEach((key, value) -> request.setAttribute(key, value));
+                model.forEach(request::setAttribute);
             }
             // forward to the layout JSP
             request.getRequestDispatcher(definition.layout()).forward(request, response);

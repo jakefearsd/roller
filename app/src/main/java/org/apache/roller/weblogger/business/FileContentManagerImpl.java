@@ -374,13 +374,13 @@ public class FileContentManagerImpl implements FileContentManager {
 
         // check file against allowed file extensions
         if (allowFiles != null && allowFiles.length > 0) {
-            for (int y = 0; y < allowFiles.length; y++) {
+            for (String allowRule : allowFiles) {
                 // oops, this allowed rule is a content-type, skip it
-                if (allowFiles[y].indexOf('/') != -1) {
+                if (allowRule.indexOf('/') != -1) {
                     continue;
                 }
                 if (fileName.toLowerCase(Locale.ROOT)
-                        .endsWith(allowFiles[y].toLowerCase(Locale.ROOT))) {
+                        .endsWith(allowRule.toLowerCase(Locale.ROOT))) {
                     allowFile = true;
                     break;
                 }
@@ -389,12 +389,12 @@ public class FileContentManagerImpl implements FileContentManager {
 
         // check file against allowed contentTypes
         if (allowFiles != null && allowFiles.length > 0) {
-            for (int y = 0; y < allowFiles.length; y++) {
+            for (String allowRule : allowFiles) {
                 // oops, this allowed rule is NOT a content-type, skip it
-                if (allowFiles[y].indexOf('/') == -1) {
+                if (allowRule.indexOf('/') == -1) {
                     continue;
                 }
-                if (matchContentType(allowFiles[y], contentType)) {
+                if (matchContentType(allowRule, contentType)) {
                     allowFile = true;
                     break;
                 }
@@ -405,13 +405,13 @@ public class FileContentManagerImpl implements FileContentManager {
 
         // check file against forbidden file extensions, overrides any allows
         if (forbidFiles != null && forbidFiles.length > 0) {
-            for (int x = 0; x < forbidFiles.length; x++) {
+            for (String forbidRule : forbidFiles) {
                 // oops, this forbid rule is a content-type, skip it
-                if (forbidFiles[x].indexOf('/') != -1) {
+                if (forbidRule.indexOf('/') != -1) {
                     continue;
                 }
                 if (fileName.toLowerCase(Locale.ROOT).endsWith(
-                        forbidFiles[x].toLowerCase(Locale.ROOT))) {
+                        forbidRule.toLowerCase(Locale.ROOT))) {
                     allowFile = false;
                     break;
                 }
@@ -420,12 +420,12 @@ public class FileContentManagerImpl implements FileContentManager {
 
         // check file against forbidden contentTypes, overrides any allows
         if (forbidFiles != null && forbidFiles.length > 0) {
-            for (int x = 0; x < forbidFiles.length; x++) {
+            for (String forbidRule : forbidFiles) {
                 // oops, this forbid rule is NOT a content-type, skip it
-                if (forbidFiles[x].indexOf('/') == -1) {
+                if (forbidRule.indexOf('/') == -1) {
                     continue;
                 }
-                if (matchContentType(forbidFiles[x], contentType)) {
+                if (matchContentType(forbidRule, contentType)) {
                     allowFile = false;
                     break;
                 }
@@ -447,11 +447,7 @@ public class FileContentManagerImpl implements FileContentManager {
         }
         String ruleParts[] = rangeRule.split("/");
         String typeParts[] = contentType.split("/");
-        if (ruleParts[0].equals(typeParts[0]) && "*".equals(ruleParts[1])) {
-            return true;
-        }
-
-        return false;
+        return ruleParts[0].equals(typeParts[0]) && "*".equals(ruleParts[1]);
     }
 
     /**

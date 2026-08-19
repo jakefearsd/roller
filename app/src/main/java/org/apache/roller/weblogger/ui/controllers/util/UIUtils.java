@@ -31,6 +31,9 @@ import java.util.TimeZone;
  */
 public final class UIUtils {
 
+    private UIUtils() {
+    }
+
     /** Default characters allowed in usernames. */
     public static final String DEFAULT_ALLOWED_CHARS = "A-Za-z0-9";
 

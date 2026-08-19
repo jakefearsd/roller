@@ -237,12 +237,6 @@ public final class GalleryMarkup {
     }
 
     /**
-     * The narrowest and widest ratios the grid has a rule for. A panorama or a
-     * very tall portrait clamps to the end of the range rather than falling
-     * back to the default: clamped packing is still roughly right, whereas the
-     * default (1.5) would be wrong in the opposite direction.
-     */
-    /**
      * The justified-grid stylesheet, generated from the very constants that
      * produce the classes it targets.
      *
@@ -316,6 +310,12 @@ public final class GalleryMarkup {
         return text.endsWith(".") ? text.substring(0, text.length() - 1) : text;
     }
 
+    /**
+     * The narrowest and widest ratios the grid has a rule for. A panorama or a
+     * very tall portrait clamps to the end of the range rather than falling
+     * back to the default: clamped packing is still roughly right, whereas the
+     * default (1.5) would be wrong in the opposite direction.
+     */
     static final int MIN_AR_CLASS = 40;
     static final int MAX_AR_CLASS = 260;
 

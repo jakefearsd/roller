@@ -227,7 +227,7 @@ public class FeedServlet extends HttpServlet {
         // has anything to trigger it.
 
         // looks like we need to render content
-        HashMap<String, Object> model = new HashMap<>();
+        Map<String, Object> model = new HashMap<>();
         String pageId;
         try {
             // determine what template to render with

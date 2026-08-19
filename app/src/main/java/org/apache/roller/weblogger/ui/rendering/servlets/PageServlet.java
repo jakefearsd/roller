@@ -250,7 +250,7 @@ public class PageServlet extends HttpServlet {
         // set the content deviceType
         String contentType = resolveContentType(page);
 
-        HashMap<String, Object> model = new HashMap<>();
+        Map<String, Object> model = new HashMap<>();
         try {
             PageContext pageContext = JspFactory.getDefaultFactory()
                     .getPageContext(this, request, response, "", false,

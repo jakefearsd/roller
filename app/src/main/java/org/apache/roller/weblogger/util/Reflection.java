@@ -70,9 +70,11 @@ public final class Reflection {
      * Returns true if the given class directly implements the given interface.
      */
     public static boolean implementsInterface(Class<?> clazz, Class<?> interfaze) {
-        for (Class<?> inter : clazz.getInterfaces())
-            if (inter.equals(interfaze))
+        for (Class<?> inter : clazz.getInterfaces()) {
+            if (inter.equals(interfaze)) {
                 return true;
+            }
+        }
         return false;
     }
     

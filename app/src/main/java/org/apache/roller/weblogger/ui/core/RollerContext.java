@@ -64,7 +64,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  * {@link org.apache.roller.weblogger.pojos.User}'s existing
  * {@link #getPasswordEncoder()} call site keeps working unchanged.
  */
-public class RollerContext {
+public final class RollerContext {
 
     private static final Log log = LogFactory.getLog(RollerContext.class);
 
@@ -142,20 +142,6 @@ public class RollerContext {
     }
 
     /**
-     * Builds the {@link DelegatingPasswordEncoder} Roller's configured
-     * password-encryption settings ({@code passwds.encryption.*}) describe.
-     *
-     * <p>Called exactly once, by {@code SecurityConfig}'s
-     * {@code passwordEncoder()} {@code @Bean} method, which immediately
-     * hands the result to {@link #setPasswordEncoder(PasswordEncoder)}. Public
-     * (was {@code private}, folded into the old {@code initializeSecurityFeatures})
-     * so {@code SecurityConfig} -- which needs the encoder to build its
-     * {@code DaoAuthenticationProvider} during context refresh, before
-     * {@code RollerLifecycle.start()} ever runs -- can call it directly
-     * instead of going through a by-name Spring bean lookup that no longer
-     * exists now that {@code security.xml} is gone.
-     */
-    /**
      * The property that used to make this method register a no-op encoder.
      *
      * <p>Removed outright: encryption is not optional. Named here only so that
@@ -182,6 +168,20 @@ public class RollerContext {
         }
     }
 
+    /**
+     * Builds the {@link DelegatingPasswordEncoder} Roller's configured
+     * password-encryption settings ({@code passwds.encryption.*}) describe.
+     *
+     * <p>Called exactly once, by {@code SecurityConfig}'s
+     * {@code passwordEncoder()} {@code @Bean} method, which immediately
+     * hands the result to {@link #setPasswordEncoder(PasswordEncoder)}. Public
+     * (was {@code private}, folded into the old {@code initializeSecurityFeatures})
+     * so {@code SecurityConfig} -- which needs the encoder to build its
+     * {@code DaoAuthenticationProvider} during context refresh, before
+     * {@code RollerLifecycle.start()} ever runs -- can call it directly
+     * instead of going through a by-name Spring bean lookup that no longer
+     * exists now that {@code security.xml} is gone.
+     */
     public static DelegatingPasswordEncoder createPasswordEncoder() {
 
         rejectRemovedEncryptionFlag(WebloggerConfig.getProperty(REMOVED_ENCRYPTION_FLAG));

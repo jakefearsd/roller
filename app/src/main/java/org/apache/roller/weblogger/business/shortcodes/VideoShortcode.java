@@ -95,18 +95,17 @@ public class VideoShortcode implements ShortcodeHandler {
 
         for (Provider provider : PROVIDERS) {
             Matcher matcher = provider.urlPattern().matcher(url);
-            if (!matcher.find()) {
-                continue;
+            if (matcher.find()) {
+                String id = matcher.group(1);
+                if (!provider.idPattern().matcher(id).matches()) {
+                    // Refused rather than escaped: a value this shape is not an id,
+                    // and it would travel into both an attribute and a thumbnail URL.
+                    log.debug("[video] id is not valid for " + provider.name()
+                            + "; leaving it as written");
+                    return null;
+                }
+                return markup(provider, id, attributes.get("caption"));
             }
-            String id = matcher.group(1);
-            if (!provider.idPattern().matcher(id).matches()) {
-                // Refused rather than escaped: a value this shape is not an id,
-                // and it would travel into both an attribute and a thumbnail URL.
-                log.debug("[video] id is not valid for " + provider.name()
-                        + "; leaving it as written");
-                return null;
-            }
-            return markup(provider, id, attributes.get("caption"));
         }
 
         log.debug("[video] url is not an allowlisted provider; leaving it as written");

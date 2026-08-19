@@ -120,10 +120,6 @@ public class User implements Serializable {
     }
 
     /**
-     * Open ID URL of the user, if provided.
-     */
-
-    /**
      * Screen name of the user.
      */
     public String getScreenName() {

@@ -106,8 +106,16 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
     // other PMD.UnnecessaryFullyQualifiedName sites in this file were
     // shortened to would make this method text-identical to
     // ScheduledEntriesTask's, extending an already-large shared-boilerplate
-    // span past CPD's 200-token minimum (see task-3-report.md). Keeping one
-    // side qualified breaks that match without reintroducing behavior risk.
+    // span past CPD's 200-token minimum. Keeping one side qualified breaks
+    // that match without reintroducing behavior risk.
+    //
+    // This is a scaffold, not the answer, and it has a scheduled end: the
+    // "Follow-up (not this wave)" section of
+    // docs/superpowers/specs/2026-08-18-static-analysis-quality-gates-design.md
+    // (search that file for "ScheduledEntriesTask") records the honest fix as
+    // hoisting the shared getters and init(String) parsing up into
+    // RollerTaskWithLeasing, which removes the duplication these two classes
+    // carry at its source and deletes this suppression along with it.
     @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
     public void init() throws WebloggerException {
         this.init(TrashPurgeTask.NAME);

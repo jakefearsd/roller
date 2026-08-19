@@ -36,8 +36,11 @@ import org.apache.velocity.app.VelocityEngine;
  * We construct our own instance of VelocityEngine, initialize it, and provide
  * access to the instance via the Singleton getInstance() method.
  */
-public class RollerVelocity {
-    
+public final class RollerVelocity {
+
+    private RollerVelocity() {
+    }
+
     public static final String VELOCITY_CONFIG = "/WEB-INF/velocity.properties";
     
     private static final Log log = LogFactory.getLog(RollerVelocity.class);

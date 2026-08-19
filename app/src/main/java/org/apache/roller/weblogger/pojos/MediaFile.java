@@ -275,7 +275,7 @@ public class MediaFile implements Serializable {
             return;
         }
 
-        HashSet<String> newTags = new HashSet<>(updatedTags.size());
+        Set<String> newTags = new HashSet<>(updatedTags.size());
         Locale localeObject = getWeblog() != null ? getWeblog()
                 .getLocaleInstance() : Locale.getDefault();
 
@@ -283,7 +283,7 @@ public class MediaFile implements Serializable {
             newTags.add(Utilities.normalizeTag(inName, localeObject));
         }
 
-        HashSet<String> removeTags = new HashSet<>();
+        Set<String> removeTags = new HashSet<>();
 
         // remove old ones no longer passed.
         for (MediaFileTag tag : getTags()) {
@@ -370,10 +370,7 @@ public class MediaFile implements Serializable {
      * 
      */
     public boolean isImageFile() {
-        if (getContentType() == null) {
-            return false;
-        }
-        return getContentType().toLowerCase(Locale.ROOT).startsWith(MediaFileType.IMAGE
+        return getContentType() != null && getContentType().toLowerCase(Locale.ROOT).startsWith(MediaFileType.IMAGE
                 .getContentTypePrefix().toLowerCase(Locale.ROOT));
     }
 

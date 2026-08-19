@@ -115,7 +115,7 @@ public class VelocityRenderer implements Renderer {
 
             if (velocityDecorator != null) {
 
-                /**
+                /*
                  * We only allow decorating once, so the process isn't fully
                  * recursive. This is just to keep it simple.
                  */

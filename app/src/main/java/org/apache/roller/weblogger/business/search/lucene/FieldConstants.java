@@ -26,6 +26,9 @@ package org.apache.roller.weblogger.business.search.lucene;
  */
 public final class FieldConstants {
 
+    private FieldConstants() {
+    }
+
     public static final String ANCHOR = "anchor";
     public static final String UPDATED = "updated";
     public static final String ID = "id";
