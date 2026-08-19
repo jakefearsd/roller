@@ -20,12 +20,15 @@ package org.apache.roller.weblogger.business.themes;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 
+import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link ThemeMetadataParser}, focused on the five places a
@@ -112,5 +115,47 @@ class ThemeMetadataParserTest {
 
         assertEquals("Unknown templateLanguage value 'bogus'", ex.getMessage());
         assertNotNull(ex.getCause());
+    }
+
+    // RenditionType has exactly one value (STANDARD), so an explicit
+    // type="standard" attribute is the only value that can ever parse
+    // successfully -- the two tests below drive that success path, distinct
+    // from the default-when-absent branch every other fixture above exercises.
+
+    @Test
+    void templateRenditionWithExplicitStandardTypeIsAccepted() throws Exception {
+        String xml = HEADER
+                + "<template action=\"weblog\"><name>t</name><link>t</link>"
+                + "<rendition type=\"standard\"><templateLanguage>velocity</templateLanguage>"
+                + "<contentsFile>t.vm</contentsFile></rendition></template>"
+                + FOOTER;
+
+        ThemeMetadata parsed = parse(xml);
+
+        Iterator<ThemeMetadataTemplate> templates = parsed.getTemplates().iterator();
+        assertTrue(templates.hasNext(), "the template must have parsed");
+        ThemeMetadataTemplateRendition rendition =
+                templates.next().getTemplateRendition(RenditionType.STANDARD);
+        assertNotNull(rendition, "the explicit standard rendition must be reachable by type");
+        assertEquals(RenditionType.STANDARD, rendition.getType());
+    }
+
+    @Test
+    void stylesheetRenditionWithExplicitStandardTypeIsAccepted() throws Exception {
+        String xml = HEADER
+                + "<template action=\"weblog\"><name>t</name><link>t</link>"
+                + "<rendition><templateLanguage>velocity</templateLanguage>"
+                + "<contentsFile>t.vm</contentsFile></rendition></template>"
+                + "<stylesheet><name>s</name><link>s</link>"
+                + "<rendition type=\"standard\"><templateLanguage>velocity</templateLanguage>"
+                + "<contentsFile>s.css</contentsFile></rendition></stylesheet>"
+                + FOOTER;
+
+        ThemeMetadata parsed = parse(xml);
+
+        ThemeMetadataTemplateRendition rendition =
+                parsed.getStylesheet().getTemplateRendition(RenditionType.STANDARD);
+        assertNotNull(rendition, "the explicit standard rendition must be reachable by type");
+        assertEquals(RenditionType.STANDARD, rendition.getType());
     }
 }
