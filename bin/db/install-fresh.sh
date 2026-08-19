@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Roller fresh-install database bootstrap.
 #
 # Creates a brand-new Roller database and application role, then runs

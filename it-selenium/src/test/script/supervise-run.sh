@@ -72,7 +72,7 @@ echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] supervising run $RUN_ID, build pid $OWN
 record_chromedrivers() {
     local pid comm
     for pid in $(it_descendants "$OWNER_PID"); do
-        comm="$(ps -o comm= -p "$pid" 2>/dev/null || true)"
+        comm="$(it_comm "$pid")"
         case "$comm" in
             chromedriver*)
                 if ! grep -qx "$pid" "$CHROMEDRIVERS" 2>/dev/null; then
@@ -103,7 +103,7 @@ if [ -f "$CHROMEDRIVERS" ]; then
         case "$pid" in
             ''|*[!0-9]*) continue ;;
         esac
-        case "$(ps -o comm= -p "$pid" 2>/dev/null || true)" in
+        case "$(it_comm "$pid")" in
             chromedriver*) ;;
             *) continue ;;
         esac

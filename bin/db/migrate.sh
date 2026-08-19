@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Roller database migration runner.
 #
 # Applies any pending V*.sql files from the migrations/ directory to a Roller
@@ -109,24 +109,35 @@ if [[ "${tracker_exists}" != "t" ]]; then
     print_ok "V001__schema_migrations applied"
 fi
 
-# Load applied versions into a bash set.
-mapfile -t applied < <(psql "${psql_args[@]}" -c "SELECT version FROM schema_migrations ORDER BY version;")
-declare -A applied_set=()
-for v in "${applied[@]}"; do
-    [[ -n "${v}" ]] && applied_set["${v}"]=1
-done
+# Load applied versions into a "|"-delimited string used as a set.
+#
+# Deliberately NOT `mapfile` + `declare -A`: both are bash 4+, and this script
+# has to run on the two oldest shells it can be handed. macOS ships bash 3.2 as
+# /bin/bash (it has neither builtin -- `mapfile: command not found` and
+# `declare: -A: invalid option`), and this same file is baked into the app image
+# as /app/migrate.sh and run by deploy/provision.sh on a production deploy. A
+# migration version is `V0NN__description`, which can never contain "|", so the
+# delimiters make membership an exact test rather than a substring one (without
+# them "V001" would match "V0011").
+applied_set="|"
+applied_count=0
+while IFS= read -r v; do
+    [[ -n "${v}" ]] || continue
+    applied_set="${applied_set}${v}|"
+    applied_count=$(( applied_count + 1 ))
+done < <(psql "${psql_args[@]}" -c "SELECT version FROM schema_migrations ORDER BY version;")
 
 pending=()
 for path in "${MIGRATIONS_DIR}"/V*.sql; do
     [[ -e "${path}" ]] || continue
     version="$(basename "${path}" .sql)"
-    if [[ -z "${applied_set[${version}]:-}" ]]; then
+    if [[ "${applied_set}" != *"|${version}|"* ]]; then
         pending+=("${path}")
     fi
 done
 
 if [[ ${#pending[@]} -eq 0 ]]; then
-    print_ok "Database ${DB_NAME} is up to date (${#applied_set[@]} migrations applied)"
+    print_ok "Database ${DB_NAME} is up to date (${applied_count} migrations applied)"
     exit 0
 fi
 

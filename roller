@@ -48,9 +48,40 @@ compose() {
     fi
 }
 
+# Fails loudly on a missing prerequisite instead of letting it surface as a
+# wrong diagnosis. macOS has no PostgreSQL client tools out of the box and
+# Homebrew's libpq is keg-only (installed but NOT on PATH), so pg_isready is
+# absent on a fresh Mac -- and because the readiness probe below sends its
+# output to /dev/null, "command not found" used to be indistinguishable from
+# "database not up yet". The script then blamed a perfectly healthy container.
+# A plain string accumulator, not an array: under `set -u` bash 3.2 -- the very
+# shell this function exists to keep working -- treats an EMPTY array expansion
+# as an unbound variable, so the no-missing-tools path would itself abort.
+require_tools() {
+    local missing="" tool
+    for tool in "$@"; do
+        command -v "${tool}" >/dev/null 2>&1 || missing="${missing}${missing:+ }${tool}"
+    done
+    if [ -n "${missing}" ]; then
+        print_err "Missing required command(s): ${missing}"
+        print_err "  Linux: install docker and the postgresql-client package."
+        print_err "  macOS: brew install --cask docker && brew install libpq"
+        print_err "         libpq is keg-only, so put it on PATH too:"
+        print_err '         echo "export PATH=\"$(brew --prefix)/opt/libpq/bin:\$PATH\"" >> ~/.zshrc'
+        exit 1
+    fi
+}
+
 start_db() {
+    require_tools docker pg_isready
     compose up -d postgres
     echo -n "Waiting for PostgreSQL"
+    # `sleep 1` is load-bearing, not politeness: pg_isready returns instantly on
+    # connection-refused, so without it all 60 "retries" burn in well under a
+    # second and the wait is milliseconds, not a minute. On Linux the named
+    # volume usually means postgres is already accepting connections when
+    # `compose up -d` returns, which hid this; a Mac's first run has to initdb
+    # inside the Docker Desktop VM and reliably lost the race.
     for _ in $(seq 1 60); do
         if PGPASSWORD="${DB_APP_USER}" pg_isready \
                 -h localhost -p "${DB_PORT}" -U "${DB_APP_USER}" -d "${DB_NAME}" -t 1 \
@@ -60,6 +91,7 @@ start_db() {
             return 0
         fi
         echo -n "."
+        sleep 1
     done
     echo
     print_err "PostgreSQL did not become ready. Check: compose logs postgres"
@@ -108,6 +140,7 @@ seed_dev_data() {
 }
 
 run_migrations() {
+    require_tools psql
     DB_NAME="${DB_NAME}" DB_APP_USER="${DB_APP_USER}" \
         PGHOST=localhost PGPORT="${DB_PORT}" PGUSER="${DB_APP_USER}" \
         PGPASSWORD="${DB_APP_USER}" \

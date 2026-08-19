@@ -160,6 +160,24 @@ it_descendants() {
 # it_kill_pids <grace seconds> <pid...> -- TERM, wait, KILL. Returns non-zero
 # if anything survived both, so callers can report a failure to clean up rather
 # than assuming success.
+# The command name of a pid, as a bare basename on every platform.
+#
+# `ps -o comm=` is NOT portable in the way this harness assumed. On Linux it
+# prints the executable's basename ("chromedriver"); on macOS/BSD it prints the
+# FULL PATH (there, the short accounting name is `ucomm`). So a bare
+# `case "$comm" in chromedriver*)` matches nothing on a Mac against a real path
+# like /Users/x/.cache/selenium/chromedriver/mac-arm64/141.0/chromedriver --
+# record_chromedrivers records nothing, the supervisor and the sweep reap
+# nothing, and both still report success. That is the harness's own failure
+# mode (a leak whose silence is the defect) reintroduced by a userland
+# difference. Stripping any leading path makes the match identical on both.
+it_comm() {
+    local pid="${1:-}" comm
+    [ -n "$pid" ] || return 0
+    comm="$(ps -o comm= -p "$pid" 2>/dev/null || true)"
+    printf '%s\n' "${comm##*/}"
+}
+
 it_kill_pids() {
     local grace="${1:-10}"
     shift

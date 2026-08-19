@@ -14,7 +14,13 @@ cd "$(dirname "$0")/.."
 RULE="${1:-}"
 export MAVEN_OPTS="${MAVEN_OPTS:--Xmx4g}"
 
-if pgrep -f "[s]urefirebooter.*source/roller" >/dev/null; then
+# Scoped to THIS checkout, derived rather than hardcoded: the literal
+# "source/roller" only matches the original author's directory layout, so a
+# clone at ~/dev/roller reported CLEAR while a build was running and launched a
+# second mvn into the same app/target/ -- the clobbering this guard exists to
+# prevent. The bracket on [s] keeps the pattern from matching this pgrep itself.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if pgrep -f "[s]urefirebooter.*${REPO_ROOT}" >/dev/null; then
     echo "A build is already running in this tree; wait for it." >&2; exit 2
 fi
 

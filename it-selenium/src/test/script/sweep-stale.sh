@@ -80,7 +80,7 @@ for runid in $STALE_RUNS; do
         case "$pid" in
             ''|*[!0-9]*) continue ;;
         esac
-        case "$(ps -o comm= -p "$pid" 2>/dev/null || true)" in
+        case "$(it_comm "$pid")" in
             chromedriver*) ;;
             *) continue ;;
         esac

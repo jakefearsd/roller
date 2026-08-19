@@ -586,7 +586,11 @@ media_upload() {
     # assignment as an `if` condition is what keeps set -e from firing here,
     # the same way `load_credentials`'s `:` guard does elsewhere.
     local response_file status
-    response_file="$(mktemp "${TMPDIR:-/tmp}/roller-api-upload.XXXXXX.json")"
+    # No ".json" suffix after the X's: GNU mktemp allows a trailing suffix but
+    # BSD/macOS mktemp hands the template straight to mkstemp(3), which requires
+    # the last six characters to be XXXXXX and fails with "Invalid argument".
+    # Nothing reads this file's extension.
+    response_file="$(mktemp "${TMPDIR:-/tmp}/roller-api-upload.XXXXXX")"
     _register_cleanup "$response_file"
     if ! status="$(api_raw POST "/weblogs/${weblog}/media" "${form_args[@]}" \
         -o "$response_file" -w '%{http_code}')"; then
