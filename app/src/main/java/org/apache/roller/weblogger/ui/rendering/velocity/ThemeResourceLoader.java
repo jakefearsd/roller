@@ -50,6 +50,12 @@ import org.apache.velocity.util.ExtProperties;
  */
 public class ThemeResourceLoader extends ResourceLoader {
 
+    /**
+     * Named {@code logger}, not {@code log}, deliberately: Velocity's own
+     * {@link ResourceLoader} base class declares {@code protected Logger log},
+     * and renaming this field to {@code log} would shadow it. Every other class
+     * in this codebase uses {@code log}; this one cannot.
+     */
     private static final Logger logger = LoggerFactory.getLogger(ThemeResourceLoader.class);
 
     @Override
@@ -63,9 +69,7 @@ public class ThemeResourceLoader extends ResourceLoader {
     @Override
     public Reader getResourceReader(String name, String encoding) {
 
-        if (log.isDebugEnabled()) {
-            logger.debug("Looking for: {}", name);
-        }
+        logger.debug("Looking for: {}", name);
 
         if (name == null || name.length() < 1) {
             throw new ResourceNotFoundException(
@@ -109,9 +113,7 @@ public class ThemeResourceLoader extends ResourceLoader {
                         + "] of Template [" + split[1] + "] not found.");
             }
 
-            if (log.isDebugEnabled()) {
-                logger.debug("Resource found!");
-            }
+            logger.debug("Resource found!");
 
             // return the input stream
             return new InputStreamReader(new ByteArrayInputStream(contents.getBytes(encoding)), encoding);
