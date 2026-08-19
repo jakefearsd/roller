@@ -22,8 +22,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.runtime.RuntimeConfigDefs;
 import org.apache.roller.weblogger.config.runtime.RuntimeConfigDefsParser;
 import org.apache.roller.weblogger.business.PropertiesManager;
@@ -41,7 +41,7 @@ import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
  */
 public final class WebloggerRuntimeConfig {
     
-    private static Log log = LogFactory.getLog(WebloggerRuntimeConfig.class);
+    private static final Logger log = LoggerFactory.getLogger(WebloggerRuntimeConfig.class);
     
     private static String RUNTIME_CONFIG = "/org/apache/roller/weblogger/config/runtimeConfigDefs.xml";
 
@@ -78,10 +78,10 @@ public final class WebloggerRuntimeConfig {
                 value = prop.getValue();
             }
         } catch(Exception e) {
-            log.warn("Trouble accessing property: "+name, e);
+            log.warn("Trouble accessing property: {}", name, e);
         }
-        
-        log.debug("fetched property ["+name+"="+value+"]");
+
+        log.debug("fetched property [{}={}]", name, value);
 
         return value;
     }
@@ -139,7 +139,7 @@ public final class WebloggerRuntimeConfig {
         try {
             intval = Integer.parseInt(value);
         } catch(Exception e) {
-            log.warn("Trouble converting to int: "+name, e);
+            log.warn("Trouble converting to int: {}", name, e);
         }
         
         return intval;

@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.pojos;
 
 import java.util.Locale;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The schema.org type a weblog entry's head emits as JSON-LD structured
@@ -44,7 +44,7 @@ public enum JsonLdType {
     EVENT("Event"),
     FAQ_PAGE("FAQPage");
 
-    private static final Log log = LogFactory.getLog(JsonLdType.class);
+    private static final Logger log = LoggerFactory.getLogger(JsonLdType.class);
 
     private final String schemaType;
 
@@ -76,7 +76,7 @@ public enum JsonLdType {
         try {
             return valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            log.warn("Unknown JSON-LD type '" + value + "'; falling back to BLOG_POSTING");
+            log.warn("Unknown JSON-LD type '{}'; falling back to BLOG_POSTING", value);
             return BLOG_POSTING;
         }
     }

@@ -22,8 +22,8 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.JsonLdType;
@@ -39,7 +39,7 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  */
 public final class WeblogEntryWrapper {
 
-    private static final Log log = LogFactory.getLog(WeblogEntryWrapper.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogEntryWrapper.class);
 
     // keep a reference to the wrapped pojo
     private final WeblogEntry pojo;
@@ -308,7 +308,7 @@ public final class WeblogEntryWrapper {
             MediaFile mediaFile = WebloggerFactory.getWeblogger().getMediaFileManager().getMediaFile(mediaFileId);
             return MediaFileWrapper.wrap(mediaFile);
         } catch (Exception e) {
-            log.debug("Could not resolve media file " + mediaFileId, e);
+            log.debug("Could not resolve media file {}", mediaFileId, e);
             return null;
         }
     }

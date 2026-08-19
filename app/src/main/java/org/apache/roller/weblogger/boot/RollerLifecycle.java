@@ -20,8 +20,8 @@ import java.io.File;
 
 import jakarta.servlet.ServletContext;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.BootstrapException;
 import org.apache.roller.weblogger.business.SpringWebloggerProvider;
@@ -73,7 +73,7 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "roller.lifecycle.enabled", havingValue = "true", matchIfMissing = true)
 public class RollerLifecycle implements SmartLifecycle {
 
-    private static final Log log = LogFactory.getLog(RollerLifecycle.class);
+    private static final Logger log = LoggerFactory.getLogger(RollerLifecycle.class);
 
     private final ApplicationContext applicationContext;
     private final ServletContext servletContext;
@@ -101,7 +101,7 @@ public class RollerLifecycle implements SmartLifecycle {
         try {
             WebloggerStartup.prepare();
         } catch (StartupException ex) {
-            log.fatal("Roller Weblogger startup failed during app preparation", ex);
+            log.error("Roller Weblogger startup failed during app preparation", ex);
             running = true;
             return;
         }
@@ -168,9 +168,9 @@ public class RollerLifecycle implements SmartLifecycle {
                 }
 
             } catch (BootstrapException ex) {
-                log.fatal("Roller Weblogger bootstrap failed", ex);
+                log.error("Roller Weblogger bootstrap failed", ex);
             } catch (WebloggerException ex) {
-                log.fatal("Roller Weblogger initialization failed", ex);
+                log.error("Roller Weblogger initialization failed", ex);
             } finally {
                 if (weblogger != null) {
                     weblogger.release();
@@ -214,7 +214,7 @@ public class RollerLifecycle implements SmartLifecycle {
             // the whole deployment down -- rendering would be broken either
             // way, but the admin UI, install wizard, and every non-Velocity
             // code path stay usable for an operator to fix the config.
-            log.fatal("Error initializing Roller Weblogger web tier", ex);
+            log.error("Error initializing Roller Weblogger web tier", ex);
         }
 
         running = true;

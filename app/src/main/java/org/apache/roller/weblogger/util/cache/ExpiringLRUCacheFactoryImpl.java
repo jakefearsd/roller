@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.util.cache;
 
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -28,7 +28,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class ExpiringLRUCacheFactoryImpl implements CacheFactory {
     
-    private static final Log log = LogFactory.getLog(ExpiringLRUCacheFactoryImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(ExpiringLRUCacheFactoryImpl.class);
     
     
     // protected so only the CacheManager can instantiate us
@@ -64,7 +64,7 @@ public class ExpiringLRUCacheFactoryImpl implements CacheFactory {
         
         Cache cache = new ExpiringLRUCacheImpl(id, size, timeout);
         
-        log.debug("new cache constructed. size=" + size + ", timeout=" + timeout);
+        log.debug("new cache constructed. size={}, timeout={}", size, timeout);
         
         return cache;
     }

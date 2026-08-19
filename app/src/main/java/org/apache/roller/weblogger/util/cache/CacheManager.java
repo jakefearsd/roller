@@ -22,8 +22,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -48,7 +48,7 @@ import org.apache.roller.weblogger.util.Reflection;
  */
 public final class CacheManager {
     
-    private static final Log log = LogFactory.getLog(CacheManager.class);
+    private static final Logger log = LoggerFactory.getLogger(CacheManager.class);
     
     private static final String DEFAULT_FACTORY = 
             "org.apache.roller.weblogger.util.cache.ExpiringLRUCacheFactoryImpl";
@@ -75,8 +75,7 @@ public final class CacheManager {
             log.error("It appears that your factory does not implement "+
                     "the CacheFactory interface",cce);
         } catch(ReflectiveOperationException e) {
-            log.error("Unable to instantiate cache factory ["+classname+"]"+
-                    " falling back on default", e);
+            log.error("Unable to instantiate cache factory [{}] falling back on default", classname, e);
         }
         
         if(factory == null) {
@@ -85,14 +84,14 @@ public final class CacheManager {
                 // lets try our default
                 factory = (CacheFactory) Reflection.newInstance(DEFAULT_FACTORY);
             } catch(ReflectiveOperationException e) {
-                log.fatal("Failed to instantiate a cache factory", e);
+                log.error("Failed to instantiate a cache factory", e);
                 throw new RuntimeException(e);
             }
         }
         cacheFactory = factory;
-        
+
         log.info("Cache Manager Initialized.");
-        log.info("Cache Factory = "+cacheFactory.getClass().getName());
+        log.info("Cache Factory = {}", cacheFactory.getClass().getName());
         
         
         // add custom handlers
@@ -130,7 +129,7 @@ public final class CacheManager {
      */
     public static Cache constructCache(CacheHandler handler, Map<String, String> properties) {
         
-        log.debug("Constructing new cache with props "+properties);
+        log.debug("Constructing new cache with props {}", properties);
         
         Cache cache = null;
         
@@ -145,11 +144,9 @@ public final class CacheManager {
                 // now ask for a new cache
                 cache = factory.constructCache(properties);
             } catch(ClassCastException cce) {
-                log.error("It appears that your factory ["+classname+
-                        "] does not implement the CacheFactory interface",cce);
+                log.error("It appears that your factory [{}] does not implement the CacheFactory interface", classname, cce);
             } catch(ReflectiveOperationException e) {
-                log.error("Unable to instantiate cache factory ["+classname+
-                        "] falling back on default", e);
+                log.error("Unable to instantiate cache factory [{}] falling back on default", classname, e);
             }
         }
         
@@ -184,7 +181,7 @@ public final class CacheManager {
      */
     public static void registerHandler(CacheHandler handler) {
 
-        log.debug("Registering handler "+handler);
+        log.debug("Registering handler {}", handler);
 
         if(handler != null) {
             cacheHandlers.add(handler);
@@ -208,7 +205,7 @@ public final class CacheManager {
 
     public static void invalidate(WeblogEntry entry) {
         
-        log.debug("invalidating entry = "+entry.getAnchor());
+        log.debug("invalidating entry = {}", entry.getAnchor());
         for (CacheHandler handler : cacheHandlers) {
             handler.invalidate(entry);
         }
@@ -217,7 +214,7 @@ public final class CacheManager {
     
     public static void invalidate(Weblog website) {
         
-        log.debug("invalidating website = "+website.getHandle());
+        log.debug("invalidating website = {}", website.getHandle());
         for (CacheHandler handler : cacheHandlers) {
             handler.invalidate(website);
         }
@@ -226,7 +223,7 @@ public final class CacheManager {
     
     public static void invalidate(User user) {
         
-        log.debug("invalidating user = "+user.getUserName());
+        log.debug("invalidating user = {}", user.getUserName());
         for (CacheHandler handler : cacheHandlers) {
             handler.invalidate(user);
         }
@@ -235,7 +232,7 @@ public final class CacheManager {
     
     public static void invalidate(WeblogCategory category) {
         
-        log.debug("invalidating category = " + category.getId());
+        log.debug("invalidating category = {}", category.getId());
         for (CacheHandler handler : cacheHandlers) {
             handler.invalidate(category);
         }
@@ -243,7 +240,7 @@ public final class CacheManager {
     
     
     public static void invalidate(WeblogTemplate template) {
-        log.debug("invalidating template = " + template.getId());
+        log.debug("invalidating template = {}", template.getId());
         for (CacheHandler handler : cacheHandlers) {
             handler.invalidate(template);
         }

@@ -28,8 +28,8 @@ import java.util.Set;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
@@ -44,7 +44,7 @@ public class MediaFile implements Serializable {
 
     private static final long serialVersionUID = -6704258422169734004L;
 
-    private static final Log log = LogFactory.getFactory().getInstance(MediaFile.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaFile.class);
 
     private String id = UUIDGenerator.generateUUID();
 
@@ -418,8 +418,7 @@ public class MediaFile implements Serializable {
             return WebloggerFactory.getWeblogger().getUserManager()
                     .getUserByUserName(getCreatorUserName());
         } catch (Exception e) {
-            log.error("ERROR fetching user object for username: "
-                    + getCreatorUserName(), e);
+            log.error("ERROR fetching user object for username: {}", getCreatorUserName(), e);
         }
         return null;
     }

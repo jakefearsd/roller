@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Serializable;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -19,7 +19,7 @@ public class CachedContent implements AutoCloseable, Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private static final Log log = LogFactory.getLog(CachedContent.class);
+    private static final Logger log = LoggerFactory.getLogger(CachedContent.class);
     
     // the byte array we use to maintain the cached content
     private byte[] content = new byte[0];
@@ -100,7 +100,7 @@ public class CachedContent implements AutoCloseable, Serializable {
         this.cachedWriter.flush();
         this.content = this.outstream.toByteArray();
         
-        log.debug("FLUSHED "+this.content.length);
+        log.debug("FLUSHED {}", this.content.length);
     }
     
     

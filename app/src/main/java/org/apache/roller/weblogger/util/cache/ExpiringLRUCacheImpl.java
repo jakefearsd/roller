@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.util.cache;
 
 import java.util.function.LongSupplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 
 
@@ -29,7 +29,7 @@ import org.apache.roller.util.RollerConstants;
  */
 public class ExpiringLRUCacheImpl extends LRUCacheImpl {
 
-    private static Log log = LogFactory.getLog(ExpiringLRUCacheImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(ExpiringLRUCacheImpl.class);
 
     private long timeout = 0;
 
@@ -99,7 +99,7 @@ public class ExpiringLRUCacheImpl extends LRUCacheImpl {
             
             // if the value is null then that means this entry expired
             if (value == null) {
-                log.debug("EXPIRED ["+key+"]");
+                log.debug("EXPIRED [{}]", key);
                 hits--;
                 super.remove(key);
             }

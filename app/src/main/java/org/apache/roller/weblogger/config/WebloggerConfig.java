@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.PropertyExpander;
 
 
@@ -50,7 +50,7 @@ public final class WebloggerConfig {
 
     private final static Properties config;
 
-    private final static Log log;
+    private final static Logger log;
     
 
     /*
@@ -151,7 +151,7 @@ public final class WebloggerConfig {
         org.slf4j.bridge.SLF4JBridgeHandler.install();
         
         // finally we can start logging...
-        log = LogFactory.getLog(WebloggerConfig.class);
+        log = LoggerFactory.getLogger(WebloggerConfig.class);
 
         // some debugging for those that want it
         if(log.isDebugEnabled()) {
@@ -161,7 +161,7 @@ public final class WebloggerConfig {
             Enumeration<Object> keys = config.keys();
             while(keys.hasMoreElements()) {
                 key = (String) keys.nextElement();
-                log.debug(key+"="+maskSecret(key, config.getProperty(key)));
+                log.debug("{}={}", key, maskSecret(key, config.getProperty(key)));
             }
         }
 
@@ -275,7 +275,7 @@ public final class WebloggerConfig {
      */
     public static String getProperty(String key) {
         String value = config.getProperty(key);
-        log.debug("Fetching property ["+key+"="+value+"]");
+        log.debug("Fetching property [{}={}]", key, value);
         return value == null ? null : value.trim();
     }
     
@@ -287,7 +287,7 @@ public final class WebloggerConfig {
      */
     public static String getProperty(String key, String defaultValue) {
         String value = config.getProperty(key);
-        log.debug("Fetching property ["+key+"="+value+",defaultValue="+defaultValue+"]");
+        log.debug("Fetching property [{}={},defaultValue={}]", key, value, defaultValue);
         if (value == null) {
             return defaultValue;
         }
