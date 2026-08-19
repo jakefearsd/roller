@@ -472,19 +472,7 @@ public class FileContentManagerImpl implements FileContentManager {
         Path filePath = weblogRoot;
         if (fileId != null) {
             checkFileName(fileId);
-            filePath = filePath.resolve(fileId).normalize();
-            // The containment check, and the actual boundary enforcement --
-            // checkFileName above only rejects the two shapes we can name.
-            // Path.resolve() RETURNS ITS ARGUMENT when that argument is
-            // absolute, discarding weblogRoot entirely, so an absolute fileId
-            // used to walk straight out of the uploads area without ever
-            // containing ".." for the name check to catch. Comparing the
-            // normalized result against the root is the check that does not
-            // depend on enumerating hostile spellings.
-            if (!filePath.startsWith(weblogRoot)) {
-                throw new FilePathException("Invalid file id [" + fileId + "], "
-                        + "resolves outside the weblog's uploads dir.");
-            }
+            filePath = requireInside(weblogRoot, weblogRoot.resolve(fileId), fileId);
         }
 
         // make sure path exists and is readable
@@ -494,6 +482,36 @@ public class FileContentManagerImpl implements FileContentManager {
         }
 
         return filePath.toFile();
+    }
+
+    /**
+     * The uploads-dir boundary itself: {@code candidate}, normalized, must sit
+     * under {@code root}.
+     *
+     * <p>This is the check that does not depend on enumerating hostile
+     * spellings, and it is the reason an absolute file id can no longer
+     * escape. {@link Path#resolve} RETURNS ITS ARGUMENT when that argument is
+     * absolute, discarding {@code root} entirely -- so such an id used to walk
+     * straight out of the uploads area without ever containing {@code ".."}
+     * for {@link #checkFileName} to catch.
+     *
+     * <p>Package-private for test access to a defensive branch, the same way
+     * {@link #requireParent} is, and labelled here so a later reader does not
+     * mistake it for ordinary API: with {@code checkFileName} refusing both
+     * {@code ".."} and absolute ids ahead of it, no public call can currently
+     * drive this to throw. The invariant making that true -- that the name
+     * check names every shape that could resolve outside -- is not
+     * compiler-enforced and is exactly the sort that breaks quietly later,
+     * which is why the guard is kept and tested rather than dropped as
+     * redundant.
+     */
+    static Path requireInside(Path root, Path candidate, String fileId) throws FilePathException {
+        Path normalized = candidate.normalize();
+        if (!normalized.startsWith(root.normalize())) {
+            throw new FilePathException("Invalid file id [" + fileId + "], "
+                    + "resolves outside the weblog's uploads dir.");
+        }
+        return normalized;
     }
 
     /**

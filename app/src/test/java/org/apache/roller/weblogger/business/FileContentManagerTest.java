@@ -136,6 +136,44 @@ public class FileContentManagerTest  {
         }
 
         @Test
+        void anIdThatIsNotAValidPathIsRefused() {
+            FileContentManager fcm = WebloggerFactory.getWeblogger().getFileContentManager();
+            // Path.of rejects an embedded NUL outright, which reaches
+            // checkFileName's InvalidPathException branch rather than its
+            // isAbsolute() one.
+            assertThrows(FilePathException.class,
+                    () -> fcm.getFileContent(weblog(), "hello\u0000world"),
+                    "an id that is not even a valid path must be refused");
+        }
+
+        /**
+         * Drives {@link FileContentManagerImpl#requireInside} directly. No
+         * public call can reach its throwing branch today, because
+         * checkFileName refuses both ".." and absolute ids first -- and that
+         * redundancy is the point: this pins the boundary itself, so it keeps
+         * holding if the name check ever stops covering a shape.
+         */
+        @Test
+        void requireInsideRejectsAPathOutsideTheRoot() {
+            Path root = Path.of("/srv/uploads/myweblog");
+            assertThrows(FilePathException.class,
+                    () -> FileContentManagerImpl.requireInside(root, Path.of("/etc/passwd"), "x"),
+                    "a path outside the root must be refused");
+            assertThrows(FilePathException.class,
+                    () -> FileContentManagerImpl.requireInside(
+                            root, root.resolve("../../etc/passwd"), "x"),
+                    "a path that normalizes outside the root must be refused");
+        }
+
+        @Test
+        void requireInsideAcceptsAPathUnderTheRoot() throws Exception {
+            Path root = Path.of("/srv/uploads/myweblog");
+            assertEquals(root.resolve("photo.jpg"),
+                    FileContentManagerImpl.requireInside(root, root.resolve("photo.jpg"), "photo.jpg"));
+            assertEquals(root, FileContentManagerImpl.requireInside(root, root, null));
+        }
+
+        @Test
         void aRelativeTraversalIsStillRefused() {
             FileContentManager fcm = WebloggerFactory.getWeblogger().getFileContentManager();
             assertThrows(FilePathException.class,
