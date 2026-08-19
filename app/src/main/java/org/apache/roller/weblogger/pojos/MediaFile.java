@@ -220,7 +220,7 @@ public class MediaFile implements Serializable {
     // and maps the one-to-many "tags" (getTags()/setTags()), so EclipseLink
     // calls this reflectively when hydrating the entity even though no Java
     // caller ever does -- deleting it compiles clean and breaks persistence
-    // in production. See CLAUDE.md's URF_UNREAD_FIELD/UnusedPrivateField note.
+    // in production.
     @SuppressWarnings("PMD.UnusedPrivateMethod")
     @SuppressFBWarnings(
             value = "UPM_UNCALLED_PRIVATE_METHOD",

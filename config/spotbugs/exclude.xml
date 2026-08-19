@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Roller's SpotBugs exclusion filter. Three families, 469 of 601 findings.
-  Zero tolerance on the remaining 132: see
+  Roller's SpotBugs exclusion filter. Three families, 469 of 603 findings.
+  Zero tolerance on the remaining 134: see
   docs/superpowers/specs/2026-08-18-static-analysis-quality-gates-design.md.
 
   Every Match block below needs a justification comment above it; QualityGatePomTest enforces it.

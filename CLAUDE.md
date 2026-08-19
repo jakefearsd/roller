@@ -160,7 +160,7 @@ at all (`OverrideBothEqualsAndHashCodeOnComparable`,
 `AvoidInstanceofChecksInCatchClause`, `AvoidCatchingGenericException`). An
 unpinned plugin drifts the gate's count *silently* whenever the plugin's
 bundled PMD version moves — a violation appears or disappears on a routine
-plugin bump with nobody having touched a rule or a source file. `app/pom.xml`'s
+plugin bump with nobody having touched a rule or a source file. `pom.xml`'s
 explicit `pmd-core`/`pmd-java` `7.26.0` dependency override in the parent
 `pluginManagement` is what fixes the version the gate actually measures
 against.
@@ -186,17 +186,21 @@ three SpotBugs families (or a bug pattern outside
 fourth SpotBugs family would.
 
 Two exclusions are **deferred, not permanent**: `GuardLogStatement` (368) and
-`ProperLogger` (167) both fire on the commons-logging idiom — 176 files on
+`ProperLogger` (167) both fire on the commons-logging idiom — 178 files on
 `org.apache.commons.logging` with 377 string-concatenating calls and zero
 parameterized ones, plus 43 hand-written `isDebugEnabled` guards. Runtime
 behaviour is already SLF4J (`jcl-over-slf4j` bridges it), so migrating is
 mechanical; finishing it deletes both exclusions and re-gates at zero.
 
-CPD runs at **200 tokens**, not lower, deliberately: at 100 it flags the three
-render caches, and collapsing those into a shared base would be a behavioural
-change — `WeblogPageCache` has no CacheHandler and expires only against
-`weblog.lastModified` while its siblings are invalidated through
-`CacheManager`. Those blocks carry `CPD-OFF` markers stating that reason.
+CPD runs at **200 tokens**. Two of the four blocks it flags at that threshold
+already are the render caches (the other two are the entry pagers, genuinely
+extractable) — the `CPD-OFF` markers around them are load-bearing at 200, not
+a precaution against some lower setting. Collapsing the caches into a shared
+base would be a behavioural change — `WeblogPageCache` has no CacheHandler and
+expires only against `weblog.lastModified` while its siblings are invalidated
+through `CacheManager`. The threshold stays at 200 rather than dropping to 100
+for a separate reason: 100 finds twenty blocks, not zero, and the gate starts
+demanding refactors whose risk exceeds the duplication's cost.
 
 One-off suppressions go at the call site (`@SuppressWarnings("PMD.Rule")`,
 `@SuppressFBWarnings`, `// CPD-OFF`) **with a reason**; the two config files

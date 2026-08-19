@@ -157,9 +157,13 @@ limitations under the License.
                         <printFailingErrors>true</printFailingErrors>
                         <failOnViolation>true</failOnViolation>
                         <skip>${quality.check.skip}</skip>
-                        <!-- CPD: 200 tokens. Below that the gate starts demanding refactors
-                             whose risk exceeds the duplication's cost: at 100 it flags the
-                             three render caches, whose expiry contracts genuinely differ. -->
+                        <!-- CPD: 200 tokens. Two of the four blocks flagged AT this
+                             threshold are the render caches, whose expiry contracts
+                             genuinely differ; see their `CPD-OFF` markers, which are
+                             load-bearing at 200, not a precaution against some lower
+                             setting. Dropping to 100 finds twenty blocks, not zero, and
+                             the gate starts demanding refactors whose risk exceeds the
+                             duplication's cost. -->
                         <minimumTokens>200</minimumTokens>
                     </configuration>
                     <dependencies>

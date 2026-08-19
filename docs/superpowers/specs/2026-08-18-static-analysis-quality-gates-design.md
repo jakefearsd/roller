@@ -119,7 +119,7 @@ Settled before design; recorded so a later reader does not relitigate them.
    cost.
 
 7. **`GuardLogStatement` and `ProperLogger` are deferred, not rejected.** They
-   are 535 of PMD's 994 and both point at one real finding — 176 files on the
+   are 535 of PMD's 994 and both point at one real finding — 178 files on the
    commons-logging API with 377 string-concatenating calls and zero
    parameterized ones. That is worth fixing, and it is a ~550-site diff that
    must not ride along inside the commit that introduces the gates, where
@@ -160,6 +160,11 @@ names what failed without a second command. XML and HTML reports land under
 | `UnnecessaryConstructor` | 23 | JPA entities are required to declare a no-arg constructor |
 | `AvoidUsingVolatile` | 9 | contradicts SpotBugs `AT_STALE_THREAD_WRITE_OF_PRIMITIVE`, which wants more `volatile`, not less |
 
+**Design-time figure, PMD 7.17.0. Superseded by the Measured baseline table
+above, which reports 362 gated under the pinned 7.26.0 -- not 307.** Kept
+because it is the record of what was estimated before the fix pass, not what
+the fix pass found.
+
 Leaves 307 violations across 31 rules. The largest remaining are
 `UselessParentheses` 44, `UnnecessaryImport` 34,
 `UnnecessaryFullyQualifiedName` 28, `PreserveStackTrace` 27,
@@ -175,6 +180,10 @@ Leaves 307 violations across 31 rules. The largest remaining are
 | `SE_TRANSIENT_FIELD_NOT_RESTORED`, `SE_COMPARATOR_SHOULD_BE_SERIALIZABLE`, `CT_CONSTRUCTOR_THROW` | 42 | entities are never Java-serialized; constructor-throw is the Spring bean-init idiom |
 | `THROWS_METHOD_THROWS_*`, `REC_CATCH_EXCEPTION`, `MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR` | 94 | style opinions, pervasive and load-bearing in framework-shaped code |
 
+**Design-time figure. Superseded by the Measured baseline table above, which
+reports 134 gated -- not 132.** Kept because it is the record of what was
+estimated before the fix pass, not what the fix pass found.
+
 Leaves 132. That remainder is not filler — it includes
 `SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE` (1),
 `HRS_REQUEST_PARAMETER_TO_HTTP_HEADER` (1, response-splitting in
@@ -185,6 +194,13 @@ resource leaks), `NP_NULL_PARAM_DEREF` (2),
 `DM_CONVERT_CASE` (14).
 
 ### The 443 fixes, by risk
+
+**Design-time figure, PMD 7.17.0 (307 + SpotBugs's 132 + CPD's 4 = 443).
+Superseded by the Measured baseline table above, whose equivalent total is
+500. The breakdown below was estimated before the fix pass started and was
+not re-derived against the final 500; it is kept as the record of what was
+estimated versus what the fix pass actually found, not as a description of
+the finished wave.**
 
 The count that matters is not 443 but its distribution:
 
@@ -406,10 +422,32 @@ untestable, it was unreachable. Either delete the loop or ship a theme that
 uses it; leaving it is a third place where the theme-resource story is written
 but not wired (see the `getResource()` fallback above).
 
-**JCL→SLF4J migration.** 176 files on `org.apache.commons.logging`, 377
+**JCL→SLF4J migration.** 178 files on `org.apache.commons.logging`, 377
 string-concatenating log calls, 0 parameterized, plus 43 hand-written
 `isDebugEnabled` guards that become dead weight once calls are parameterized.
 Runtime behaviour is already SLF4J — `jcl-over-slf4j` bridges it today — so the
 migration is mechanical and low-risk at runtime, and large at review time.
 Finishing it deletes the `GuardLogStatement` and `ProperLogger` exclusions and
 re-gates both at zero.
+
+**A `CPD-OFF` blind spot.** The `CPD-OFF`/`CPD-ON` markers around the render
+caches (Decision 6) remove the bracketed region from CPD's token stream
+entirely, not merely excuse the existing match — so a future fourth render
+cache that copy-pastes the marked key-builder logic would be invisible to the
+gate rather than flagged. Narrow and acceptable given how rarely a new render
+cache is added, but worth recording rather than discovering by surprise.
+
+**A pre-existing resource leak on the 304 path, recorded rather than fixed.**
+`PreviewResourceServlet.java:164`, `ResourceServlet.java:163` and
+`MediaResourceServlet.java:160` each `return` on the "not modified" branch of
+`ModDateHeaderUtil.respondIfNotModified` *before* reaching the `finally {
+resourceStream.close(); }` further down, leaving `resourceStream` open on
+every 304 response. This predates this wave — it is not a regression the
+static-analysis pass introduced — but `6fc0272a0`'s title ("close streams and
+readers on every path") is the specific claim this path contradicts, and a
+304 is the request shape a returning reader's browser produces most often for
+theme CSS and images, i.e. not a rare corner of the traffic. Left unfixed here
+deliberately: this is a behavioural change to a hot serving path at the tail
+end of an already-large wave, and it deserves its own test (asserting the
+stream is closed on the 304 branch, not just the 200 branch) and its own
+review rather than riding along inside a documentation-accuracy pass.
