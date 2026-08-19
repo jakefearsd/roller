@@ -33,6 +33,13 @@ import org.slf4j.LoggerFactory;
  * when the binary is absent, callers fall back to JPEG/PNG-only renditions
  * -- {@code cwebp} is never a hard requirement.
  */
+// PMD.GuardLogStatement: every violation in this class is a parameterized
+// SLF4J {} call whose data argument is a cheap accessor (a getter,
+// getClass(), or similar single-field read), not the expensive
+// computation this rule exists to catch. Guarding it with isXEnabled()
+// would be pure ceremony -- SLF4J already defers message formatting.
+// See CLAUDE.md's Static analysis section.
+@SuppressWarnings("PMD.GuardLogStatement")
 public final class CwebpEncoder {
 
     private static final Logger log = LoggerFactory.getLogger(CwebpEncoder.class);

@@ -61,9 +61,15 @@ public final class RendererManager {
                     + "Rendering probably won't function as you expect.");
         }
 
-        log.info("Renderer Manager Initialized, {} factories configured.", rendererFactories.size());
-        log.info(rendererFactories.stream().map(t -> t.getClass().toString()).collect(Collectors.joining(",", "[", "]")));
-        
+        // The second line here does genuinely non-trivial work (stream +
+        // collect), unlike a plain accessor -- both lines are guarded
+        // together as one startup log entry, per GuardLogStatement's own
+        // textbook case.
+        if (log.isInfoEnabled()) {
+            log.info("Renderer Manager Initialized, {} factories configured.", rendererFactories.size());
+            log.info(rendererFactories.stream().map(t -> t.getClass().toString())
+                    .collect(Collectors.joining(",", "[", "]")));
+        }
     }
 
     // this class is non-instantiable

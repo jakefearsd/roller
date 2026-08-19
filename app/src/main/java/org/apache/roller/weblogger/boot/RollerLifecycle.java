@@ -116,11 +116,9 @@ public class RollerLifecycle implements SmartLifecycle {
         // WebloggerFactory.isBootstrapped() is false, exactly as today.
         if (!WebloggerStartup.isPrepared() && !ittest) {
 
-            StringBuilder buf = new StringBuilder();
-            buf.append("\n--------------------------------------------------------------");
-            buf.append("\nRoller Weblogger startup INCOMPLETE, user interaction required");
-            buf.append("\n--------------------------------------------------------------");
-            log.info(buf.toString());
+            log.info("\n--------------------------------------------------------------"
+                    + "\nRoller Weblogger startup INCOMPLETE, user interaction required"
+                    + "\n--------------------------------------------------------------");
 
         } else {
             if (ittest) {

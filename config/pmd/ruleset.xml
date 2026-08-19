@@ -6,7 +6,7 @@
 
     <description>
         Roller's PMD gate: PMD's own quickstart set plus the security category,
-        minus seven rules. Zero tolerance: see
+        minus five rules. Zero tolerance: see
         docs/superpowers/specs/2026-08-18-static-analysis-quality-gates-design.md.
 
         A rule is excluded only when violating it is SYSTEMATICALLY not a defect
@@ -15,15 +15,6 @@
     </description>
 
     <rule ref="rulesets/java/quickstart.xml">
-        <!-- DEFERRED, not rejected. 368 hits, all from the commons-logging API,
-             which has no parameterized form so every call concatenates. The fix
-             is the SLF4J migration (176 files, ~550 call sites) recorded as this
-             spec's follow-up; doing it here would bury the gate in a diff nobody
-             could review. Delete this exclusion when that wave lands. -->
-        <exclude name="GuardLogStatement"/>
-        <!-- DEFERRED, same SLF4J migration: 167 hits on declaration shape and
-             naming that the migration rewrites wholesale anyway. -->
-        <exclude name="ProperLogger"/>
         <!-- Style opinion with no defect class behind it: an empty constructor
              is not improved by a comment saying it is empty. -->
         <exclude name="UncommentedEmptyConstructor"/>

@@ -18,7 +18,6 @@
 /* Created on Jul 16, 2003 */
 package org.apache.roller.weblogger.business.search.lucene;
 
-import java.text.MessageFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -40,6 +39,13 @@ import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
  * 
  * @author Mindaugas Idzelis (min@idzelis.com)
  */
+// PMD.GuardLogStatement: every violation in this class is a parameterized
+// SLF4J {} call whose data argument is a cheap accessor (a getter,
+// getClass(), or similar single-field read), not the expensive
+// computation this rule exists to catch. Guarding it with isXEnabled()
+// would be pure ceremony -- SLF4J already defers message formatting.
+// See CLAUDE.md's Static analysis section.
+@SuppressWarnings("PMD.GuardLogStatement")
 public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
 
     // ~ Static fields/initializers
@@ -130,9 +136,7 @@ public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
 
                 for (WeblogEntry entry : entries) {
                     writer.addDocument(getDocument(entry));
-                    log.debug(MessageFormat.format(
-                            "Indexed entry {0}: {1}",
-                            entry.getPubTime(), entry.getAnchor()));
+                    log.debug("Indexed entry {}: {}", entry.getPubTime(), entry.getAnchor());
                 }
 
                 // release the database connection

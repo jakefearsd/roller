@@ -44,6 +44,13 @@ import org.apache.roller.weblogger.util.Reflection;
  *
  * @web.filter name="RequestMappingFilter"
  */
+// PMD.GuardLogStatement: every violation in this class is a parameterized
+// SLF4J {} call whose data argument is a cheap accessor (a getter,
+// getClass(), or similar single-field read), not the expensive
+// computation this rule exists to catch. Guarding it with isXEnabled()
+// would be pure ceremony -- SLF4J already defers message formatting.
+// See CLAUDE.md's Static analysis section.
+@SuppressWarnings("PMD.GuardLogStatement")
 public class RequestMappingFilter implements Filter {
     
     private static final Logger log = LoggerFactory.getLogger(RequestMappingFilter.class);
@@ -72,9 +79,15 @@ public class RequestMappingFilter implements Filter {
                     "Weblog urls probably won't function as you expect.");
         }
         
-        log.info("Request mapping filter initialized, {} mappers configured.", requestMappers.size());
-        log.info(requestMappers.stream().map(t -> t.getClass().toString()).collect(Collectors.joining(",", "[", "]")));
-        
+        // The second line here does genuinely non-trivial work (stream +
+        // collect), unlike a plain accessor -- both lines are guarded
+        // together as one startup log entry, per GuardLogStatement's own
+        // textbook case.
+        if (log.isInfoEnabled()) {
+            log.info("Request mapping filter initialized, {} mappers configured.", requestMappers.size());
+            log.info(requestMappers.stream().map(t -> t.getClass().toString())
+                    .collect(Collectors.joining(",", "[", "]")));
+        }
     }
     
     

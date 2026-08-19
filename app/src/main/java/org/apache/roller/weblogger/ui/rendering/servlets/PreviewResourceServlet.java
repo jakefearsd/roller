@@ -46,6 +46,13 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogPreviewResourceReques
  * ResourceServlet because it can accept urls parameters which affect how it
  * behaves which are used for previewing.
  */
+// PMD.GuardLogStatement: every violation in this class is a parameterized
+// SLF4J {} call whose data argument is a cheap accessor (a getter,
+// getClass(), or similar single-field read), not the expensive
+// computation this rule exists to catch. Guarding it with isXEnabled()
+// would be pure ceremony -- SLF4J already defers message formatting.
+// See CLAUDE.md's Static analysis section.
+@SuppressWarnings("PMD.GuardLogStatement")
 public class PreviewResourceServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;

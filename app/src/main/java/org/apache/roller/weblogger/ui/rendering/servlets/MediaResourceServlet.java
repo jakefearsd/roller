@@ -49,6 +49,13 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogMediaResourceRequest;
  * way to serve them up. This servlet assumes that resources are stored on a
  * filesystem in the "uploads.dir" directory.
  */
+// PMD.GuardLogStatement: every violation in this class is a parameterized
+// SLF4J {} call whose data argument is a cheap accessor (a getter,
+// getClass(), or similar single-field read), not the expensive
+// computation this rule exists to catch. Guarding it with isXEnabled()
+// would be pure ceremony -- SLF4J already defers message formatting.
+// See CLAUDE.md's Static analysis section.
+@SuppressWarnings("PMD.GuardLogStatement")
 public class MediaResourceServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;

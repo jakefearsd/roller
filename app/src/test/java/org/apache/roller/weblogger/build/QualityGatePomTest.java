@@ -28,9 +28,9 @@ class QualityGatePomTest {
         return Files.readString(REPO.resolve(relative));
     }
 
-    /** The seven PMD rules the spec permits excluding. A rule outside this set is a spec change. */
+    /** The five PMD rules the spec permits excluding. A rule outside this set is a spec change. */
     private static final List<String> PERMITTED_PMD_EXCLUSIONS = List.of(
-            "GuardLogStatement", "ProperLogger", "UncommentedEmptyConstructor",
+            "UncommentedEmptyConstructor",
             "AssignmentInOperand", "UncommentedEmptyMethodBody",
             "UnnecessaryConstructor", "AvoidUsingVolatile");
 
@@ -126,14 +126,6 @@ class QualityGatePomTest {
                 "maxAllowedViolations was scaffolding; the gate is zero-tolerance now. Every PMD/SpotBugs "
                 + "<configuration> block lives in the parent pom's pluginManagement, not app/pom.xml, so "
                 + "the parent must be checked too or this assertion is a no-op.");
-    }
-
-    @Test
-    void theDeferredLoggingRulesAreMarkedDeferredNotRejected() throws IOException {
-        String ruleset = read("config/pmd/ruleset.xml");
-        assertTrue(ruleset.contains("SLF4J"),
-                "GuardLogStatement/ProperLogger are deferred pending the SLF4J migration; "
-                + "the ruleset must point at that follow-up so it stays discoverable");
     }
 
     /**
