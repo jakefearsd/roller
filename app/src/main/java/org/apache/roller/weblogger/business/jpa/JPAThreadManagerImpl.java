@@ -38,13 +38,6 @@ import org.apache.roller.weblogger.pojos.TaskLock;
  * This implementation extends the base ThreadManagerImpl class and provides
  * locking abilities which are managed through the database.
  */
-// PMD.GuardLogStatement: every violation in this class is a parameterized
-// SLF4J {} call whose data argument is a cheap accessor (a getter,
-// getClass(), or similar single-field read), not the expensive
-// computation this rule exists to catch. Guarding it with isXEnabled()
-// would be pure ceremony -- SLF4J already defers message formatting.
-// See CLAUDE.md's Static analysis section.
-@SuppressWarnings("PMD.GuardLogStatement")
 public class JPAThreadManagerImpl extends ThreadManagerImpl {
 
     private static final Logger log = LoggerFactory.getLogger(JPAThreadManagerImpl.class);

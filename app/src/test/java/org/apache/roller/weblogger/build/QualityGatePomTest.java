@@ -28,9 +28,9 @@ class QualityGatePomTest {
         return Files.readString(REPO.resolve(relative));
     }
 
-    /** The five PMD rules the spec permits excluding. A rule outside this set is a spec change. */
+    /** The six PMD rules the spec permits excluding. A rule outside this set is a spec change. */
     private static final List<String> PERMITTED_PMD_EXCLUSIONS = List.of(
-            "UncommentedEmptyConstructor",
+            "GuardLogStatement", "UncommentedEmptyConstructor",
             "AssignmentInOperand", "UncommentedEmptyMethodBody",
             "UnnecessaryConstructor", "AvoidUsingVolatile");
 

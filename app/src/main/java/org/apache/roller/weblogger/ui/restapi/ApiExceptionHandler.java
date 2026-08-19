@@ -17,13 +17,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
  * it cannot change how the JSP controllers report failures.
  */
 @RestControllerAdvice(basePackages = "org.apache.roller.weblogger.ui.restapi")
-// PMD.GuardLogStatement: every violation in this class is a parameterized
-// SLF4J {} call whose data argument is a cheap accessor (a getter,
-// getClass(), or similar single-field read), not the expensive
-// computation this rule exists to catch. Guarding it with isXEnabled()
-// would be pure ceremony -- SLF4J already defers message formatting.
-// See CLAUDE.md's Static analysis section.
-@SuppressWarnings("PMD.GuardLogStatement")
 public class ApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);

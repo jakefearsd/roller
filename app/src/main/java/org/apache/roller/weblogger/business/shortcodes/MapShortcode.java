@@ -72,13 +72,6 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  * GPS-bearing images; when every manual pin is malformed; and when a bare
  * map has no entry coordinates to center on.
  */
-// PMD.GuardLogStatement: every violation in this class is a parameterized
-// SLF4J {} call whose data argument is a cheap accessor (a getter,
-// getClass(), or similar single-field read), not the expensive
-// computation this rule exists to catch. Guarding it with isXEnabled()
-// would be pure ceremony -- SLF4J already defers message formatting.
-// See CLAUDE.md's Static analysis section.
-@SuppressWarnings("PMD.GuardLogStatement")
 public class MapShortcode implements ShortcodeHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MapShortcode.class);
