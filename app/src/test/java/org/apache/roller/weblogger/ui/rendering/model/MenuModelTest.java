@@ -18,6 +18,13 @@
 
 package org.apache.roller.weblogger.ui.rendering.model;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.config.Property;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.Weblogger;
@@ -31,10 +38,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -160,6 +170,54 @@ class MenuModelTest {
 
         assertNull(modelFor(request).getAdminMenu(),
                 "A permission check that blows up must hide the menu, not show it.");
+    }
+
+    /**
+     * A failed permission check must not just be swallowed at DEBUG: it is
+     * logged at ERROR with the exception attached, matching its siblings in
+     * MenuHelper. Captures the real log4j2 output via a throwaway appender
+     * bound to MenuModel's own logger, rather than trusting that a return
+     * value alone proves the log call changed.
+     */
+    @Test
+    void aFailedPermissionCheckIsLoggedAtErrorWithTheException() throws Exception {
+        User user = new User();
+        user.setUserName("bob");
+        WeblogPageRequest request = pageRequest();
+        request.setAuthenticUser("bob");
+        request.setUser(user);
+        WebloggerException failure = new WebloggerException("database is down");
+        when(userManager.checkPermission(any(), any())).thenThrow(failure);
+
+        List<LogEvent> captured = new ArrayList<>();
+        Appender appender = new AbstractAppender("MenuModelTest-capture", null, null, false,
+                Property.EMPTY_ARRAY) {
+            @Override
+            public void append(LogEvent event) {
+                if (MenuModel.class.getName().equals(event.getLoggerName())) {
+                    captured.add(event.toImmutable());
+                }
+            }
+        };
+        appender.start();
+
+        LoggerContext context = LoggerContext.getContext(false);
+        LoggerConfig loggerConfig = context.getConfiguration().getLoggerConfig(MenuModel.class.getName());
+        loggerConfig.addAppender(appender, null, null);
+        try {
+            modelFor(request).getAdminMenu();
+        } finally {
+            loggerConfig.removeAppender("MenuModelTest-capture");
+            appender.stop();
+        }
+
+        assertFalse(captured.isEmpty(), "Expected the failed permission check to log something.");
+        LogEvent event = captured.get(0);
+        assertEquals(Level.ERROR, event.getLevel(),
+                "A failed permission check must be logged at ERROR, not silently downgraded to DEBUG.");
+        assertNotNull(event.getThrown(),
+                "The caught exception must be attached to the log record, not discarded.");
+        assertEquals("database is down", event.getThrown().getMessage());
     }
 
     @Test

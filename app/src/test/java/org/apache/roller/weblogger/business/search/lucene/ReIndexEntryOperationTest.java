@@ -18,8 +18,15 @@
 package org.apache.roller.weblogger.business.search.lucene;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.config.Property;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.search.IndexManager;
@@ -34,6 +41,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * {@link ReIndexEntryOperation} against a real Lucene index -- the fix that
@@ -166,6 +175,53 @@ class ReIndexEntryOperationTest {
         ReIndexEntryOperation op = new ReIndexEntryOperation(null, null, data);
 
         assertDoesNotThrow(op::doRun);
+    }
+
+    /**
+     * Regression test for a copy-paste bug: this class's logger field used to
+     * be declared {@code LoggerFactory.getLogger(AddEntryOperation.class)} --
+     * a lone mistake among five sibling lucene operation classes that all name
+     * themselves correctly. Every line this class logged therefore appeared
+     * under {@code AddEntryOperation}'s category, and any log configuration
+     * targeting {@code ReIndexEntryOperation} specifically matched nothing.
+     * Captures the real log4j2 event from the same null-Weblogger path as
+     * {@link #doRunWithoutAWebloggerLogsAndReturnsInsteadOfThrowing} and
+     * asserts the event's logger name is this class's own name, not its
+     * sibling's -- {@code getLoggerName()} reflects the {@code Logger}
+     * instance actually used at the call site regardless of which
+     * {@code LoggerConfig} node the capturing appender is attached to, so
+     * this would have failed against the pre-fix field.
+     */
+    @Test
+    void logsUnderItsOwnClassNameNotAddEntryOperations() {
+        WeblogEntry data = new WeblogEntry();
+        data.setId("does-not-matter");
+        ReIndexEntryOperation op = new ReIndexEntryOperation(null, null, data);
+
+        List<LogEvent> captured = new ArrayList<>();
+        Appender appender = new AbstractAppender("ReIndexEntryOperationTest-capture", null, null, false,
+                Property.EMPTY_ARRAY) {
+            @Override
+            public void append(LogEvent event) {
+                captured.add(event.toImmutable());
+            }
+        };
+        appender.start();
+
+        LoggerContext context = LoggerContext.getContext(false);
+        LoggerConfig loggerConfig = context.getConfiguration()
+                .getLoggerConfig(ReIndexEntryOperation.class.getName());
+        loggerConfig.addAppender(appender, null, null);
+        try {
+            op.doRun();
+        } finally {
+            loggerConfig.removeAppender("ReIndexEntryOperationTest-capture");
+            appender.stop();
+        }
+
+        assertFalse(captured.isEmpty(), "Expected doRun() with a null Weblogger to log something.");
+        assertEquals(ReIndexEntryOperation.class.getName(), captured.get(0).getLoggerName(),
+                "The logger must be named after this class, not a copy-pasted sibling (AddEntryOperation).");
     }
 
     // ---------------------------------------------------------------- helpers

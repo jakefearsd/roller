@@ -40,7 +40,7 @@ public class ReIndexEntryOperation extends WriteToIndexOperation {
     // =============================================
 
     private static final Logger log = LoggerFactory.getLogger(
-            AddEntryOperation.class);
+            ReIndexEntryOperation.class);
 
     // ~ Instance fields
     // ========================================================

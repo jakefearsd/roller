@@ -592,7 +592,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         try {
             cmgr.deleteFile(weblog, fileId);
         } catch (Exception e) {
-            log.debug("File to be deleted already unavailable in the file store: {}", fileId);
+            log.debug("File to be deleted already unavailable in the file store: {}", fileId, e);
         }
     }
 

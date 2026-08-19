@@ -143,7 +143,7 @@ public class PluginManagerImpl implements PluginManager {
                         log.warn("{} is not a PagePlugin", clazz);
                     }
                 } catch (ReflectiveOperationException e) {
-                    log.error("unable to create {}", plugin);
+                    log.error("unable to create {}", plugin, e);
                 }
             }
         }

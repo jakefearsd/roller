@@ -85,7 +85,7 @@ public class MenuModel implements Model {
                 return MenuHelper.getMenu("admin", "noAction", pageRequest.getUser(), pageRequest.getWeblog());
             }
         } catch (WebloggerException ex) {
-            log.debug("ERROR: fetching user roles");
+            log.error("ERROR: fetching user roles", ex);
         }
         return null;
     }
