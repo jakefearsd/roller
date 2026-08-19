@@ -2,8 +2,8 @@ package org.apache.roller.weblogger.ui.core.security;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -20,7 +20,7 @@ import org.springframework.dao.DataRetrievalFailureException;
  * Spring Security UserDetailsService implemented using Weblogger API.
  */
 public class RollerUserDetailsService implements UserDetailsService {
-    private static Log log = LogFactory.getLog(RollerUserDetailsService.class);
+    private static final Logger log = LoggerFactory.getLogger(RollerUserDetailsService.class);
     
     /**
      * @throws UsernameNotFoundException, DataAccessException

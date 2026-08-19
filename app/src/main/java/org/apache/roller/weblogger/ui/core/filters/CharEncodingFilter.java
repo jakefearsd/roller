@@ -27,8 +27,8 @@ import jakarta.servlet.FilterConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -41,8 +41,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class CharEncodingFilter implements Filter {
     
-    private static Log mLogger =
-            LogFactory.getFactory().getInstance(CharEncodingFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(CharEncodingFilter.class);
     
     /**
      * init
@@ -65,9 +64,7 @@ public class CharEncodingFilter implements Filter {
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
     throws IOException, ServletException {
-        if (mLogger.isDebugEnabled()) {
-            mLogger.debug("Processing CharEncodingFilter");
-        }
+        log.debug("Processing CharEncodingFilter");
         try {
         	if (!StandardCharsets.UTF_8.name().equals(req.getCharacterEncoding())) {
         		// only set encoding if not already UTF-8
@@ -75,9 +72,7 @@ public class CharEncodingFilter implements Filter {
         		// is already too late to set request encoding without getting a WARN level log message
         		req.setCharacterEncoding(StandardCharsets.UTF_8.name());
         	}
-            if (mLogger.isDebugEnabled()) {
-                mLogger.debug("Set request character encoding to UTF-8");
-            }
+            log.debug("Set request character encoding to UTF-8");
             
         } catch (UnsupportedEncodingException e) {
             // This should never happen since UTF-8 is a Java-specified required encoding.

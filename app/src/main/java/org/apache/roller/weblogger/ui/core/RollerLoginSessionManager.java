@@ -1,7 +1,7 @@
 package org.apache.roller.weblogger.ui.core;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.util.cache.Cache;
 import org.apache.roller.weblogger.util.cache.CacheHandler;
@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RollerLoginSessionManager {
-   private static final Log log = LogFactory.getLog(RollerLoginSessionManager.class);
+   private static final Logger log = LoggerFactory.getLogger(RollerLoginSessionManager.class);
    private static final String CACHE_ID = "roller.session.cache";
    private final Cache sessionCache;
 
@@ -50,7 +50,7 @@ public class RollerLoginSessionManager {
    public void register(String userName, RollerSession session) {
       if (userName != null && session != null) {
          this.sessionCache.put(userName, session);
-         log.debug("Registered session for user: " + userName);
+         log.debug("Registered session for user: {}", userName);
       }
    }
 
@@ -64,7 +64,7 @@ public class RollerLoginSessionManager {
    public void invalidate(String userName) {
       if (userName != null) {
          this.sessionCache.remove(userName);
-         log.debug("Invalidated session for user: " + userName);
+         log.debug("Invalidated session for user: {}", userName);
       }
    }
 }

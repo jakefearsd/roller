@@ -2,8 +2,8 @@ package org.apache.roller.weblogger.ui.restapi;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -19,7 +19,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice(basePackages = "org.apache.roller.weblogger.ui.restapi")
 public class ApiExceptionHandler {
 
-    private static final Log log = LogFactory.getLog(ApiExceptionHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiProblem> handleApiException(ApiException ex, HttpServletRequest request) {
@@ -51,7 +51,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiProblem> handleMalformedBody(HttpMessageNotReadableException ex,
                                                            HttpServletRequest request) {
-        log.info("Malformed request body at " + request.getRequestURI() + ": " + ex.getMessage());
+        log.info("Malformed request body at {}: {}", request.getRequestURI(), ex.getMessage());
         return handleApiException(
                 ApiException.badRequest("The request body could not be parsed as JSON."), request);
     }
@@ -73,7 +73,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiProblem> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
                                                           HttpServletRequest request) {
-        log.info("Type mismatch for parameter '" + ex.getName() + "' at " + request.getRequestURI(),
+        log.info("Type mismatch for parameter '{}' at {}", ex.getName(), request.getRequestURI(),
                 ex);
         return handleApiException(
                 ApiException.badRequest("'" + ex.getName() + "' is not a valid value for this parameter."),
@@ -87,7 +87,7 @@ public class ApiExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiProblem> handleUnexpected(Exception ex, HttpServletRequest request) {
-        log.error("Unhandled API exception at " + request.getRequestURI(), ex);
+        log.error("Unhandled API exception at {}", request.getRequestURI(), ex);
         ApiException opaque = new ApiException(500,
                 "https://roller.invalid/problems/internal-error",
                 "Internal error",

@@ -11,8 +11,8 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -28,7 +28,7 @@ import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
  */
 public class ControlPlaneHostFilter implements Filter {
 
-    private static final Log log = LogFactory.getLog(ControlPlaneHostFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(ControlPlaneHostFilter.class);
 
     /** The public rendering namespace, which must stay on the custom domain. */
     private static final String PUBLIC_RENDERING = "/roller-ui/rendering/";
@@ -81,9 +81,9 @@ public class ControlPlaneHostFilter implements Filter {
                 // producing an infinite redirect. Degrade to pre-vhost
                 // behaviour instead: serve the request.
                 log.warn("A weblog has a custom domain but site.absoluteurl is unset; "
-                        + "serving " + path + " on the custom domain rather than "
+                        + "serving {} on the custom domain rather than "
                         + "redirecting. Set site.absoluteurl to enable the "
-                        + "control-plane boundary.");
+                        + "control-plane boundary.", path);
                 chain.doFilter(req, res);
                 return;
             }

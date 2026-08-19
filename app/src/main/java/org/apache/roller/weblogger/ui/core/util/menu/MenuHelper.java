@@ -27,8 +27,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -53,7 +53,7 @@ import org.jdom2.input.SAXBuilder;
  */
 public final class MenuHelper {
 
-    private static Log log = LogFactory.getLog(MenuHelper.class);
+    private static final Logger log = LoggerFactory.getLogger(MenuHelper.class);
 
     private static Map<String, ParsedMenu> menus = new HashMap<>();
 

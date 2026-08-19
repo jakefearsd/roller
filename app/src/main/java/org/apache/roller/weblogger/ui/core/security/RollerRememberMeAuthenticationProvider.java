@@ -18,14 +18,14 @@
 
 package org.apache.roller.weblogger.ui.core.security;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.springframework.security.authentication.RememberMeAuthenticationProvider;
 
 
 public class RollerRememberMeAuthenticationProvider extends RememberMeAuthenticationProvider {
-    private static final Log log = LogFactory.getLog(RollerRememberMeAuthenticationProvider.class);
+    private static final Logger log = LoggerFactory.getLogger(RollerRememberMeAuthenticationProvider.class);
 
 
     public RollerRememberMeAuthenticationProvider() {
@@ -40,7 +40,7 @@ public class RollerRememberMeAuthenticationProvider extends RememberMeAuthentica
                 "properties file. Make sure it is a secret and make sure it is NOT springRocks");
         }
 
-        log.debug("initialized: RollerRememberMeAuthenticationProvider with key: " + getKey());
+        log.debug("initialized: RollerRememberMeAuthenticationProvider with key: {}", getKey());
     }
 }
 

@@ -29,8 +29,8 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -44,7 +44,7 @@ import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
  */
 public class InitFilter implements Filter {
 
-    private static final Log log = LogFactory.getLog(InitFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(InitFilter.class);
 
     private boolean initialized = false;
 
@@ -90,10 +90,8 @@ public class InitFilter implements Filter {
                 WebloggerRuntimeConfig.setAbsoluteContextURL(absPath);
                 WebloggerRuntimeConfig.setRelativeContextURL(relPath);
 
-                if (log.isDebugEnabled()) {
-                    log.debug("relPath = " + relPath);
-                    log.debug("absPath = " + absPath);
-                }
+                log.debug("relPath = {}", relPath);
+                log.debug("absPath = {}", absPath);
 
                 this.initialized = true;
             }
@@ -135,9 +133,7 @@ public class InitFilter implements Filter {
 
         // if the uri is only "/" then we are basically done
         if ("/".equals(requestURI)) {
-            if (log.isDebugEnabled()) {
-                log.debug("requestURI is only '/'. fullUrl: " + fullUrl);
-            }
+            log.debug("requestURI is only '/'. fullUrl: {}", fullUrl);
             return removeTrailingSlash(fullUrl);
         }
 

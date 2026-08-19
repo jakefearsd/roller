@@ -28,8 +28,8 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.util.IPBanList;
 
 
@@ -40,7 +40,7 @@ import org.apache.roller.weblogger.util.IPBanList;
  */
 public class IPBanFilter implements Filter {
     
-    private static Log log = LogFactory.getLog(IPBanFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(IPBanFilter.class);
     
     
     @Override
@@ -67,7 +67,7 @@ public class IPBanFilter implements Filter {
         
         // check if client is allowed
         if(IPBanList.getInstance().isBanned(request.getRemoteAddr())) {
-            log.debug("BANNED "+request.getRemoteAddr());
+            log.debug("BANNED {}", request.getRemoteAddr());
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
         } else {
             chain.doFilter(request, response);

@@ -28,8 +28,8 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.web.firewall.RequestRejectedException;
 
 /**
@@ -44,7 +44,7 @@ import org.springframework.security.web.firewall.RequestRejectedException;
  */
 public class SpringFirewallExceptionFilter implements Filter {
     
-    private final static Log log = LogFactory.getLog(SpringFirewallExceptionFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(SpringFirewallExceptionFilter.class);
 
     @Override
     @SuppressFBWarnings(
@@ -64,7 +64,7 @@ public class SpringFirewallExceptionFilter implements Filter {
             HttpServletResponse resp = (HttpServletResponse) response;
             
             // url seems to be dangerous -> log & 404
-            log.warn("request rejected: " + req.getRequestURL() + " cause: " + ex.getMessage());
+            log.warn("request rejected: {} cause: {}", req.getRequestURL(), ex.getMessage());
             resp.sendError(HttpServletResponse.SC_NOT_FOUND);
             
         }

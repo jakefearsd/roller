@@ -28,8 +28,8 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -42,7 +42,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class DebugFilter implements Filter {
     
-    private static Log log = LogFactory.getLog(DebugFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(DebugFilter.class);
     
     
     @Override
@@ -60,22 +60,22 @@ public class DebugFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
         
-        log.info("ENTERING "+request.getRequestURL());
+        log.info("ENTERING {}", request.getRequestURL());
         
         // some info about the request and response
         log.info("Response Object:");
-        log.info("   isCommitted = "+response.isCommitted());
-        log.info("   bufferSize  = "+response.getBufferSize());
+        log.info("   isCommitted = {}", response.isCommitted());
+        log.info("   bufferSize  = {}", response.getBufferSize());
         log.info("");
         
         chain.doFilter(request, response);
         
-        log.info("EXITING "+request.getRequestURL());
+        log.info("EXITING {}", request.getRequestURL());
         
         // some info about the request and response
         log.info("Response Object:");
-        log.info("   isCommitted = "+response.isCommitted());
-        log.info("   bufferSize  = "+response.getBufferSize());
+        log.info("   isCommitted = {}", response.isCommitted());
+        log.info("   bufferSize  = {}", response.getBufferSize());
         log.info("");
     }
     

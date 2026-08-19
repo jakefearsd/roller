@@ -10,8 +10,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.CharSetUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -68,7 +68,7 @@ import org.springframework.web.bind.annotation.RestController;
 @AdminScoped
 public class AdminApi extends BaseApiController implements UISecurityEnforced {
 
-    private static final Log log = LogFactory.getLog(AdminApi.class);
+    private static final Logger log = LoggerFactory.getLogger(AdminApi.class);
 
     private static final int MAX_LIMIT = 200;
 
@@ -183,7 +183,7 @@ public class AdminApi extends BaseApiController implements UISecurityEnforced {
             // account that already exists) and a bare 201 would silently
             // hide that the one thing this endpoint exists to do -- get a
             // usable link to the new account -- did not happen.
-            log.error("Set-password link could not be sent for new user " + userName, e);
+            log.error("Set-password link could not be sent for new user {}", userName, e);
             throw ApiException.badGateway(
                     "The account was created (disabled), but the set-password link could not be sent. "
                             + "Resend it from the UserAdmin screen's \"send set-password link\" action.", e);

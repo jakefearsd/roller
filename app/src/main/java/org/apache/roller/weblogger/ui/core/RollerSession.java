@@ -26,8 +26,8 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpSessionActivationListener;
 import jakarta.servlet.http.HttpSessionEvent;
 import jakarta.servlet.http.HttpSessionListener;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -46,13 +46,13 @@ public class RollerSession
     // the id of the user represented by this session
     private String userName = null;
     
-    private static final Log log;
+    private static final Logger log;
     
     public static final String ROLLER_SESSION = "org.apache.roller.weblogger.rollersession";
 
     static{
         WebloggerConfig.init(); // must be called before calls to logging APIs
-        log = LogFactory.getLog(RollerSession.class);
+        log = LoggerFactory.getLogger(RollerSession.class);
     }
    
     /**
@@ -138,7 +138,7 @@ public class RollerSession
                 UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
                 authenticUser = mgr.getUserByUserName(userName);
             } catch (WebloggerException ex) {
-                log.warn("Error looking up authenticated user "+userName, ex);
+                log.warn("Error looking up authenticated user {}", userName, ex);
             }
         }
         
@@ -159,10 +159,8 @@ public class RollerSession
         try {
             session.removeAttribute(ROLLER_SESSION);
         } catch (Exception e) {
-            if (log.isDebugEnabled()) {
-                // ignore purge exceptions
-                log.debug("EXCEPTION PURGING session attributes",e);
-            }
+            // ignore purge exceptions
+            log.debug("EXCEPTION PURGING session attributes", e);
         }
     }
 }

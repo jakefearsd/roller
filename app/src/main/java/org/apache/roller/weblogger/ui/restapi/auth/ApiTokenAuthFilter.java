@@ -7,8 +7,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.ApiTokenManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.ApiToken;
@@ -36,7 +36,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public class ApiTokenAuthFilter extends OncePerRequestFilter {
 
-    private static final Log log = LogFactory.getLog(ApiTokenAuthFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(ApiTokenAuthFilter.class);
     private static final String BEARER = "Bearer ";
 
     private final Supplier<ApiTokenManager> tokenManager;

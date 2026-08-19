@@ -30,8 +30,8 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 
@@ -42,7 +42,7 @@ import org.apache.roller.weblogger.config.WebloggerConfig;
  */
 public class BootstrapFilter implements Filter {
     private ServletContext context = null;
-    private static Log log = LogFactory.getLog(BootstrapFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(BootstrapFilter.class);
 
 
     @Override
@@ -60,7 +60,7 @@ public class BootstrapFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
         
-        log.debug("Entered "+request.getRequestURI());
+        log.debug("Entered {}", request.getRequestURI());
         
         if ("auto".equals(WebloggerConfig.getProperty("installation.type"))
                 && !WebloggerFactory.isBootstrapped() 
@@ -77,7 +77,7 @@ public class BootstrapFilter implements Filter {
             chain.doFilter(request, response);
         }
         
-        log.debug("Exiting "+request.getRequestURI());
+        log.debug("Exiting {}", request.getRequestURI());
     }
     
     

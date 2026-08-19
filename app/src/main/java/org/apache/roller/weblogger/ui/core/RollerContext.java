@@ -26,8 +26,8 @@ import java.util.Properties;
 import jakarta.servlet.ServletContext;
 
 import org.springframework.security.core.userdetails.UserCache;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.velocity.runtime.RuntimeSingleton;
@@ -67,7 +67,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  */
 public final class RollerContext {
 
-    private static final Log log = LogFactory.getLog(RollerContext.class);
+    private static final Logger log = LoggerFactory.getLogger(RollerContext.class);
 
     private static ServletContext servletContext = null;
     private static PasswordEncoder encoder;
@@ -136,9 +136,7 @@ public final class RollerContext {
             try (InputStream instream = servletContext.getResourceAsStream("/WEB-INF/velocity.properties")) {
                 velocityProps.load(instream);
             }
-            if (log.isDebugEnabled()) {
-                log.debug("Velocity props = " + velocityProps);
-            }
+            log.debug("Velocity props = {}", velocityProps);
 
             // init velocity
             RuntimeSingleton.init(velocityProps);
@@ -230,7 +228,7 @@ public final class RollerContext {
             throw new RuntimeException("passwds.encryption.algorithm="+algorithm+" is not supported.");
         }
 
-        log.info("Password Encryption Algorithm set to '" + algorithm + "'");
+        log.info("Password Encryption Algorithm set to '{}'", algorithm);
         
         return new DelegatingPasswordEncoder(algorithm, encoders);
     }
