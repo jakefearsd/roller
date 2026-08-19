@@ -84,7 +84,7 @@ limitations under the License.
              ceiling the spec rejected: the difference is that it has a
              scheduled end. -->
         <pmd.max.violations>63</pmd.max.violations>
-        <spotbugs.max.violations>44</spotbugs.max.violations>
+        <spotbugs.max.violations>42</spotbugs.max.violations>
         <quality.check.skip>false</quality.check.skip>
     </properties>
 

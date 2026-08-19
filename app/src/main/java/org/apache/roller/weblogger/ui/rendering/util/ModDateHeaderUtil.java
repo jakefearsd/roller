@@ -91,10 +91,10 @@ public final class ModDateHeaderUtil {
 
 			response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
 
-			// use the same date we sent when we created the ETag the
-			// first time through
-			response.setHeader("Last-Modified",
-					request.getHeader("If-Modified-Since"));
+			// Last-Modified must describe the resource, not echo whatever
+			// string the client sent as If-Modified-Since -- the caller
+			// already knows the resource's own last-modified time.
+			response.setDateHeader("Last-Modified", lastModifiedTimeMillis);
 
 			return true;
 		} else {

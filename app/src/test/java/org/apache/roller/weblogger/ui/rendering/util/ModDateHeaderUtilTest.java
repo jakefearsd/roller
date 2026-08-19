@@ -118,17 +118,23 @@ class ModDateHeaderUtilTest {
     }
 
     @Test
-    void theEchoedLastModifiedHeaderIsTheClientsOwnStringNotOurs() {
-        // Echoing back the exact string the client sent keeps the value byte-
-        // identical to the one the ETag was derived from. Reformatting our own
-        // date here would break clients that compare strings.
+    void lastModifiedOnA304IsDerivedFromTheResourceNotEchoedFromTheRequest() {
+        // The Last-Modified header on a 304 must describe the resource, not
+        // repeat back whatever string the client happened to send as
+        // If-Modified-Since. Echoing untrusted request-header input straight
+        // into a response header is the response-splitting shape (modern
+        // Tomcat rejects CR/LF in header values, so this was defence in depth
+        // rather than a live exploit) -- and the echoed value was simply
+        // wrong on its own terms besides: the caller already knows the
+        // resource's real last-modified time and must use that.
         String clientHeader = "Wed, 21 Oct 2015 07:28:00 GMT";
         when(request.getDateHeader(IF_MODIFIED_SINCE)).thenReturn(2 * ONE_SECOND_MARK);
         when(request.getHeader(IF_MODIFIED_SINCE)).thenReturn(clientHeader);
 
         ModDateHeaderUtil.respondIfNotModified(request, response, ONE_SECOND_MARK);
 
-        verify(response).setHeader("Last-Modified", clientHeader);
+        verify(response).setDateHeader("Last-Modified", ONE_SECOND_MARK);
+        verify(response, never()).setHeader(anyString(), anyString());
     }
 
     @Test

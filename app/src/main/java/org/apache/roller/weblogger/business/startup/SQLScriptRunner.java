@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.business.startup;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
@@ -161,6 +162,18 @@ public class SQLScriptRunner {
     
     
     /** Run script, logs messages, and optionally throws exception on error */
+    @SuppressFBWarnings(
+            value = "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE",
+            justification = "SQLScriptRunner exists to execute the migration scripts under "
+                    + "bin/db/migrations, which ship inside the artifact and are parsed by "
+                    + "this class's own constructor -- non-constant SQL is the class's entire "
+                    + "purpose, not an oversight. No user input reaches this method: its only "
+                    + "production caller, DatabaseInstaller.applyMigration, builds the command "
+                    + "list from files read off the classpath (MigrationCatalog.versions() / "
+                    + "ClasspathDatabaseScriptProvider), and neither the web install wizard "
+                    + "(InstallController) nor any other caller accepts caller-supplied SQL "
+                    + "text. Parameterising this would break the migration runner, which is "
+                    + "one of the three appliers of the migration chain.")
     public void runScript(
             Connection con, boolean stopOnError) throws SQLException {
         failed = false;
