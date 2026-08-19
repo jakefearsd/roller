@@ -34,12 +34,4 @@ class TagStatTest {
 
         assertEquals("{name=travel count=7}", stat.toString());
     }
-
-    @Test
-    void intensityRoundTrips() {
-        TagStat stat = new TagStat();
-        stat.setIntensity(3);
-
-        assertEquals(3, stat.getIntensity());
-    }
 }

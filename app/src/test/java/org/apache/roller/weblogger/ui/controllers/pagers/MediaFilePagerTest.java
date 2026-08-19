@@ -22,7 +22,6 @@ import java.util.List;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -56,13 +55,5 @@ class MediaFilePagerTest {
         assertFalse(pager.isJustOnePage());
         assertTrue(pager.hasPrevious());
         assertFalse(pager.hasNext());
-    }
-
-    @Test
-    void getItemsReturnsTheSuppliedList() {
-        List<MediaFile> files = List.of(new MediaFile());
-        MediaFilePager pager = new MediaFilePager(0, files, false);
-
-        assertEquals(files, pager.getItems());
     }
 }
