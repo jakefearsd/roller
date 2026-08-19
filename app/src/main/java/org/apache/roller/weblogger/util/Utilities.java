@@ -28,8 +28,8 @@ import jakarta.mail.internet.InternetAddress;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RegexUtil;
 import org.apache.roller.util.RollerConstants;
 
@@ -42,7 +42,7 @@ public final class Utilities {
     }
 
     /** The <code>Log</code> instance for this class. */
-    private static final Log mLogger = LogFactory.getLog(Utilities.class);
+    private static final Logger log = LoggerFactory.getLogger(Utilities.class);
 
     public static final String TAG_SPLIT_CHARS = " ,\n\r\f\t";
 
@@ -516,7 +516,7 @@ public final class Utilities {
             // first create an instance, given the provider
             md = MessageDigest.getInstance(algorithm);
         } catch (Exception e) {
-            mLogger.error("Exception: " + e);
+            log.error("Exception", e);
             return password;
         }
 
@@ -776,7 +776,7 @@ public final class Utilities {
         try {
             return Integer.parseInt(string);
         } catch (NumberFormatException e) {
-            mLogger.debug("Invalid Integer:" + string);
+            log.debug("Invalid Integer:{}", string);
         }
         return 0;
     }
@@ -948,7 +948,7 @@ public final class Utilities {
             // falls back to whatever the platform default answers, which is
             // exactly the "missing from Java MIME types" case above -- worth
             // a trace if someone is chasing that down.
-            mLogger.debug("Could not register PNG mime type", ex);
+            log.debug("Could not register PNG mime type", ex);
         }
     }
 

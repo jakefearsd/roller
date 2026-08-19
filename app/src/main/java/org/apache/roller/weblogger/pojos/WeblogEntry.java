@@ -38,8 +38,8 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.util.UUIDGenerator;
@@ -58,7 +58,7 @@ import org.apache.roller.weblogger.util.Utilities;
  * Represents a Weblog Entry.
  */
 public class WeblogEntry implements Serializable, ShortcodeContext {
-    private static final Log mLogger = LogFactory.getFactory().getInstance(WeblogEntry.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogEntry.class);
     
     public static final long serialVersionUID = 2341505386843044125L;
 
@@ -379,7 +379,7 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
         try {
             return WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(getCreatorUserName());
         } catch (Exception e) {
-            mLogger.error("ERROR fetching user object for username: " + getCreatorUserName(), e);
+            log.error("ERROR fetching user object for username: {}", getCreatorUserName(), e);
         }
         return null;
     }   
@@ -851,7 +851,7 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
             
             return format.format(getPubTime());
         } catch (RuntimeException e) {
-            mLogger.error("Unexpected exception", e);
+            log.error("Unexpected exception", e);
         }
         
         return "ERROR: formatting date";
@@ -872,7 +872,7 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
             
             return format.format(getUpdateTime());
         } catch (RuntimeException e) {
-            mLogger.error("Unexpected exception", e);
+            log.error("Unexpected exception", e);
         }
         
         return "ERROR: formatting date";
@@ -1065,7 +1065,7 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
             
         } catch (WebloggerException ex) {
             // security interceptor should ensure this never happens
-            mLogger.error("ERROR retrieving user's permission", ex);
+            log.error("ERROR retrieving user's permission", ex);
             return false;
         }
 
@@ -1090,14 +1090,14 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
      */
     private String render(String str) {
         String ret = str;
-        mLogger.debug("Applying page plugins to string");
+        log.debug("Applying page plugins to string");
         Map<String, WeblogEntryPlugin> inPlugins = getWebsite().getInitializedPlugins();
         if (str != null && inPlugins != null) {
             for (WeblogEntryPlugin pagePlugin : inPlugins.values()) {
                 try {
                     ret = pagePlugin.render(this, ret);
                 } catch (Exception e) {
-                    mLogger.error("ERROR from plugin: " + pagePlugin.getName(), e);
+                    log.error("ERROR from plugin: {}", pagePlugin.getName(), e);
                 }
             }
         }

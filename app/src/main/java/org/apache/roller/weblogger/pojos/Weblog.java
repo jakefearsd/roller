@@ -27,8 +27,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
@@ -51,7 +51,7 @@ public class Weblog implements Serializable {
     
     public static final long serialVersionUID = 206437645033737127L;
     
-    private static Log log = LogFactory.getLog(Weblog.class);
+    private static final Logger log = LoggerFactory.getLogger(Weblog.class);
 
     private static final int MAX_ENTRIES = 100;
     
@@ -145,7 +145,7 @@ public class Weblog implements Serializable {
             ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
             return themeMgr.getTheme(this);
         } catch (WebloggerException ex) {
-            log.error("Error getting theme for weblog - "+getHandle(), ex);
+            log.error("Error getting theme for weblog - {}", getHandle(), ex);
         }
         
         // TODO: maybe we should return a default theme in this case?
@@ -204,7 +204,7 @@ public class Weblog implements Serializable {
         try {
             return WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(creator);
         } catch (Exception e) {
-            log.error("ERROR fetching user object for username: " + creator, e);
+            log.error("ERROR fetching user object for username: {}", creator, e);
         }
         return null;
     }
@@ -547,7 +547,7 @@ public class Weblog implements Serializable {
                 category = getWeblogCategories().getFirst();
             }
         } catch (WebloggerException e) {
-            log.error("ERROR: fetching category: " + categoryName, e);
+            log.error("ERROR: fetching category: {}", categoryName, e);
         }
         return category;
     }
@@ -637,7 +637,7 @@ public class Weblog implements Serializable {
             WeblogEntryManager wmgr = roller.getWeblogEntryManager();
             return wmgr.getPopularTags(this, startDate, 0, length);
         } catch (Exception e) {
-            log.error("ERROR: fetching popular tags for weblog " + this.getName(), e);
+            log.error("ERROR: fetching popular tags for weblog {}", this.getName(), e);
         }
         return Collections.emptyList();
     }      
@@ -649,7 +649,7 @@ public class Weblog implements Serializable {
             WeblogEntryManager mgr = roller.getWeblogEntryManager();
             count = mgr.getEntryCount(this);            
         } catch (WebloggerException e) {
-            log.error("Error getting entry count for weblog " + this.getName(), e);
+            log.error("Error getting entry count for weblog {}", this.getName(), e);
         }
         return count;
     }

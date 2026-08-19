@@ -28,8 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 
 
@@ -42,7 +42,7 @@ import org.apache.roller.weblogger.config.WebloggerConfig;
  */
 public final class IPBanList {
 
-    private static final Log log = LogFactory.getLog(IPBanList.class);
+    private static final Logger log = LoggerFactory.getLogger(IPBanList.class);
 
     // set of ips that are banned, use a set to ensure uniqueness
     private volatile Set<String> bannedIps = newThreadSafeSet();
@@ -127,7 +127,7 @@ public final class IPBanList {
                     this.bannedIps.add(ip);
                 }
 
-                log.debug("ADDED "+ip);
+                log.debug("ADDED {}", ip);
             } catch(Exception e) {
                 log.error("Error adding banned ip to file", e);
             }
@@ -171,7 +171,7 @@ public final class IPBanList {
                 this.bannedIps = newBannedIpList;
                 this.bannedIpsFile.clearChanged();
 
-                log.info(this.bannedIps.size()+" banned ips loaded");
+                log.info("{} banned ips loaded", this.bannedIps.size());
             } catch(Exception ex) {
                log.error("Error loading banned ips from file", ex);
             }

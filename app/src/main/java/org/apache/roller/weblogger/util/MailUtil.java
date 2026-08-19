@@ -31,8 +31,8 @@ import jakarta.mail.Address;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MailProvider;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -51,7 +51,7 @@ public final class MailUtil {
     private MailUtil() {
     }
 
-    private static Log log = LogFactory.getLog(MailUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(MailUtil.class);
 
 
     /**
@@ -177,9 +177,7 @@ public final class MailUtil {
         if (! StringUtils.isEmpty(from)) {
             InternetAddress sentFrom = new InternetAddress(from);
             message.setFrom(sentFrom);
-            if (log.isDebugEnabled()) {
-                log.debug("e-mail from: " + sentFrom);
-            }
+            log.debug("e-mail from: {}", sentFrom);
         }
 
         // A form submitter's or commenter's address is not the account this
@@ -187,43 +185,35 @@ public final class MailUtil {
         // weblog's own from address (or nowhere, when no from is set).
         if (! StringUtils.isEmpty(replyTo)) {
             message.setReplyTo(new InternetAddress[]{ new InternetAddress(replyTo) });
-            if (log.isDebugEnabled()) {
-                log.debug("e-mail reply-to: " + replyTo);
-            }
+            log.debug("e-mail reply-to: {}", replyTo);
         }
 
         if (to!=null) {
             InternetAddress[] sendTo = new InternetAddress[to.length];
-            
+
             for (int i = 0; i < to.length; i++) {
                 sendTo[i] = new InternetAddress(to[i]);
-                if (log.isDebugEnabled()) {
-                    log.debug("sending e-mail to: " + to[i]);
-                }
+                log.debug("sending e-mail to: {}", to[i]);
             }
             message.setRecipients(Message.RecipientType.TO, sendTo);
         }
-        
+
         if (cc != null) {
             InternetAddress[] copyTo = new InternetAddress[cc.length];
-            
+
             for (int i = 0; i < cc.length; i++) {
                 copyTo[i] = new InternetAddress(cc[i]);
-                if (log.isDebugEnabled()) {
-                    log.debug("copying e-mail to: " + cc[i]);
-                }
+                log.debug("copying e-mail to: {}", cc[i]);
             }
             message.setRecipients(Message.RecipientType.CC, copyTo);
         }
-        
+
         if (bcc != null) {
             InternetAddress[] copyTo = new InternetAddress[bcc.length];
-            
+
             for (int i = 0; i < bcc.length; i++) {
                 copyTo[i] = new InternetAddress(bcc[i]);
-                if (log.isDebugEnabled()) {
-                    log.debug("blind copying e-mail to: " + bcc[i]);
-                }
+                log.debug("blind copying e-mail to: {}", bcc[i]);
             }
             message.setRecipients(Message.RecipientType.BCC, copyTo);
         }

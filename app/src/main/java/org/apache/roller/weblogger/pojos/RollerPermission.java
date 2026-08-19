@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.pojos;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.util.Utilities;
 
 
@@ -32,7 +32,7 @@ public abstract class RollerPermission extends java.security.Permission {
 
     private static final long serialVersionUID = 1L;
 
-    private static Log log = LogFactory.getLog(RollerPermission.class);
+    private static final Logger log = LoggerFactory.getLogger(RollerPermission.class);
     
 
     public RollerPermission(String name) {
@@ -115,7 +115,7 @@ public abstract class RollerPermission extends java.security.Permission {
         for (String actionToRemove : actionsToRemove) {
             updatedActions.remove(actionToRemove);
         }
-        log.debug("updatedActions2: " + updatedActions);
+        log.debug("updatedActions2: {}", updatedActions);
         setActionsAsList(updatedActions);
     }
     

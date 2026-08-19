@@ -19,8 +19,8 @@ package org.apache.roller.weblogger.util;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.util.cache.Cache;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.util.cache.ExpiringCacheEntry;
@@ -35,7 +35,7 @@ import org.apache.roller.weblogger.util.cache.ExpiringCacheEntry;
  */
 public class GenericThrottle {
     
-    private static Log log = LogFactory.getLog(GenericThrottle.class);
+    private static final Logger log = LoggerFactory.getLogger(GenericThrottle.class);
     
     // threshold and interval to determine who is abusive
     private int threshold = 1;
@@ -92,30 +92,30 @@ public class GenericThrottle {
         ClientInfo client = null;
         ExpiringCacheEntry cacheEntry = (ExpiringCacheEntry) this.clientHistoryCache.get(clientId);
         if(cacheEntry != null) {
-            log.debug("HIT "+clientId);
+            log.debug("HIT {}", clientId);
             client = (ClientInfo) cacheEntry.getValue();
-            
+
             // this means entry had expired
             if(client == null) {
-                log.debug("EXPIRED "+clientId);
+                log.debug("EXPIRED {}", clientId);
                 this.clientHistoryCache.remove(clientId);
             }
         }
-        
-        // if we already know this client then update their hit count and 
+
+        // if we already know this client then update their hit count and
         // see if they have surpassed the threshold
         if(client != null) {
             client.hits++;
-            
-            log.debug("STATUS "+clientId+" - "+client.hits+" hits since "+client.start);
-            
+
+            log.debug("STATUS {} - {} hits since {}", clientId, client.hits, client.start);
+
             // abusive client
             if(client.hits > this.threshold) {
                 return true;
             }
-            
+
         } else {
-            log.debug("NEW "+clientId);
+            log.debug("NEW {}", clientId);
             
             // first timer
             ClientInfo newClient = new ClientInfo();
@@ -146,12 +146,12 @@ public class GenericThrottle {
         ClientInfo client = null;
         ExpiringCacheEntry cacheEntry = (ExpiringCacheEntry) this.clientHistoryCache.get(clientId);
         if(cacheEntry != null) {
-            log.debug("HIT "+clientId);
+            log.debug("HIT {}", clientId);
             client = (ClientInfo) cacheEntry.getValue();
-            
+
             // this means entry had expired
             if (client == null) {
-                log.debug("EXPIRED "+clientId);
+                log.debug("EXPIRED {}", clientId);
                 this.clientHistoryCache.remove(clientId);
             }
         }
