@@ -32,8 +32,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -48,7 +48,7 @@ import org.apache.roller.weblogger.util.RollerMessages;
  */
 public class FileContentManagerImpl implements FileContentManager {
 
-    private static final Log log = LogFactory.getLog(FileContentManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(FileContentManagerImpl.class);
 
     private String storageDir = null;
 
@@ -152,7 +152,7 @@ public class FileContentManagerImpl implements FileContentManager {
                 // exotic filesystem: degrade to a plain replace rather than fail
                 Files.move(tempFile, saveFile, StandardCopyOption.REPLACE_EXISTING);
             }
-            log.debug("The file has been written to [" + saveFile + "]");
+            log.debug("The file has been written to [{}]", saveFile);
         } catch (IOException e) {
             // the destination was never touched; only the temp needs cleanup
             if (tempFile != null) {
@@ -172,7 +172,7 @@ public class FileContentManagerImpl implements FileContentManager {
         try {
             Files.deleteIfExists(tempFile);
         } catch (IOException cleanup) {
-            log.debug("Could not delete temp file " + tempFile, cleanup);
+            log.debug("Could not delete temp file {}", tempFile, cleanup);
         }
     }
 
@@ -208,7 +208,7 @@ public class FileContentManagerImpl implements FileContentManager {
         File delFile = this.getRealFile(weblog, fileId);
 
         if (!delFile.delete()) {
-            log.warn("Delete appears to have failed for [" + fileId + "]");
+            log.warn("Delete appears to have failed for [{}]", fileId);
         }
     }
 
@@ -262,8 +262,8 @@ public class FileContentManagerImpl implements FileContentManager {
                 WebloggerRuntimeConfig.getProperty("uploads.file.maxsize"));
         int maxFileBytes = (int) (RollerConstants.ONE_MB_IN_BYTES * maxFileMB
                 .doubleValue());
-        log.debug("max allowed file size = " + maxFileBytes);
-        log.debug("attempted save file size = " + size);
+        log.debug("max allowed file size = {}", maxFileBytes);
+        log.debug("attempted save file size = {}", size);
         if (size > maxFileBytes) {
             String[] args = { fileName, maxFileMB.toString() };
             messages.addError("error.upload.filemax", args);

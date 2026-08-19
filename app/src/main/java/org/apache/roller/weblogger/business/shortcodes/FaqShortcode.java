@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The built-in {@code [faq]} shortcode: a body of
@@ -45,7 +45,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class FaqShortcode implements ShortcodeHandler {
 
-    private static final Log log = LogFactory.getLog(FaqShortcode.class);
+    private static final Logger log = LoggerFactory.getLogger(FaqShortcode.class);
 
     @Override
     public String getName() {

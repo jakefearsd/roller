@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
@@ -61,7 +61,7 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  */
 public class CtaShortcode implements ShortcodeHandler {
 
-    private static final Log log = LogFactory.getLog(CtaShortcode.class);
+    private static final Logger log = LoggerFactory.getLogger(CtaShortcode.class);
 
     /** The same schemes the sanitizer accepts for anchor hrefs. */
     private static final UrlValidator URL_VALIDATOR =
@@ -91,7 +91,7 @@ public class CtaShortcode implements ShortcodeHandler {
             // the sanitizer would silently delete the whole anchor; failing
             // here keeps the author's [cta ...] text visible instead
             log.debug("[cta] shortcode href is not an absolute http(s) URL;"
-                    + " leaving it as written: " + href);
+                    + " leaving it as written: {}", href);
             return null;
         }
 

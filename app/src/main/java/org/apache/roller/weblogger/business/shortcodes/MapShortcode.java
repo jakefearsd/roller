@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -74,7 +74,7 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  */
 public class MapShortcode implements ShortcodeHandler {
 
-    private static final Log log = LogFactory.getLog(MapShortcode.class);
+    private static final Logger log = LoggerFactory.getLogger(MapShortcode.class);
 
     @Override
     public String getName() {
@@ -237,16 +237,16 @@ public class MapShortcode implements ShortcodeHandler {
             MediaFileDirectory directory = WebloggerFactory.getWeblogger()
                     .getMediaFileManager().getMediaFileDirectoryByName(weblog, directoryName);
             if (directory == null) {
-                log.debug("[map] shortcode auto directory \"" + directoryName
-                        + "\" does not exist in weblog " + weblog.getHandle());
+                log.debug("[map] shortcode auto directory \"{}\" does not exist in weblog {}",
+                        directoryName, weblog.getHandle());
                 return null;
             }
             if (directory.isPrivate()) {
                 // A private directory's photo coordinates are location
                 // metadata; a public map pinning them would leak exactly
                 // what the private flag protects (same gate as [gallery]).
-                log.debug("[map] shortcode auto directory \"" + directoryName
-                        + "\" is private; not mapping it");
+                log.debug("[map] shortcode auto directory \"{}\" is private; not mapping it",
+                        directoryName);
                 return null;
             }
             pins = directory.getMediaFiles().stream()
@@ -259,15 +259,15 @@ public class MapShortcode implements ShortcodeHandler {
                                     StringUtils.trimToNull(mf.getName()))))
                     .toList();
         } catch (Exception e) {
-            log.warn("[map] shortcode could not resolve auto directory \""
-                    + directoryName + "\"", e);
+            log.warn("[map] shortcode could not resolve auto directory \"{}\"",
+                    directoryName, e);
             return null;
         }
         if (pins.isEmpty()) {
             // GPS is stripped at upload by default (uploads.exif.stripGps);
             // an empty map would just be confusing, so stay visible instead.
-            log.debug("[map] shortcode auto directory \"" + directoryName
-                    + "\" holds no GPS-bearing images; leaving it as written");
+            log.debug("[map] shortcode auto directory \"{}\" holds no GPS-bearing images;"
+                    + " leaving it as written", directoryName);
             return null;
         }
         return pins;

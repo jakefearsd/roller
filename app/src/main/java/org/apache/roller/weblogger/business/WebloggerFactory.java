@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 
 
@@ -28,7 +28,7 @@ import org.apache.roller.weblogger.business.startup.WebloggerStartup;
  */
 public final class WebloggerFactory {
     
-    private static final Log LOG = LogFactory.getLog(WebloggerFactory.class);
+    private static final Logger log = LoggerFactory.getLogger(WebloggerFactory.class);
     
     // our configured weblogger provider
     private static WebloggerProvider webloggerProvider = null;
@@ -109,9 +109,9 @@ public final class WebloggerFactory {
             throw new NullPointerException("WebloggerProvider is null");
         }
         
-        LOG.info("Bootstrapping Roller Weblogger business tier");
-        
-        LOG.info("Weblogger Provider = " + provider.getClass().getName());
+        log.info("Bootstrapping Roller Weblogger business tier");
+
+        log.info("Weblogger Provider = {}", provider.getClass().getName());
         
         // save reference to provider
         webloggerProvider = provider;
@@ -124,9 +124,9 @@ public final class WebloggerFactory {
             throw new BootstrapException("Bootstrapping failed, Weblogger instance is null");
         }
         
-        LOG.info("Roller Weblogger business tier successfully bootstrapped");
-        LOG.info("   Version: " + webloggerProvider.getWeblogger().getVersion());
-        LOG.info("   Revision: " + webloggerProvider.getWeblogger().getRevision());
+        log.info("Roller Weblogger business tier successfully bootstrapped");
+        log.info("   Version: {}", webloggerProvider.getWeblogger().getVersion());
+        log.info("   Revision: {}", webloggerProvider.getWeblogger().getRevision());
     }
     
 }

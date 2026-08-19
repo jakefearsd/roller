@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.business.themes;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 
@@ -56,7 +56,7 @@ public class WeblogSharedTheme extends WeblogTheme {
 
     private static final long serialVersionUID = 1L;
 
-    private static Log log = LogFactory.getLog(WeblogSharedTheme.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogSharedTheme.class);
     
     private SharedTheme theme = null;
 
@@ -111,7 +111,7 @@ public class WeblogSharedTheme extends WeblogTheme {
             }
         } catch(Exception e) {
             // db error
-            log.error(e);
+            log.error("Error getting templates from database", e);
         }
         
         
@@ -124,7 +124,7 @@ public class WeblogSharedTheme extends WeblogTheme {
             }
         } catch(Exception e) {
             // how??
-            log.error(e);
+            log.error("Error getting templates from theme", e);
         }
         
         return new ArrayList<>(pages.values());

@@ -33,8 +33,8 @@ import java.util.Set;
 import jakarta.activation.FileTypeMap;
 import jakarta.activation.MimetypesFileTypeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.InitializationException;
 import org.apache.roller.weblogger.business.MediaFileManager;
@@ -64,7 +64,7 @@ import org.apache.roller.weblogger.util.RollerMessages;
  */
 public class ThemeManagerImpl implements ThemeManager {
 
-	private static final Log log = LogFactory.getLog(ThemeManagerImpl.class);
+	private static final Logger log = LoggerFactory.getLogger(ThemeManagerImpl.class);
 
 	private static final FileTypeMap map;
 	static {
@@ -132,7 +132,7 @@ public class ThemeManagerImpl implements ThemeManager {
 			// the disk preemptive and cache them
 			this.themes = loadAllThemesFromDisk();
 
-			log.info("Successfully loaded " + this.themes.size() + " themes from disk.");
+			log.info("Successfully loaded {} themes from disk.", this.themes.size());
 		}
 	}
 
@@ -176,7 +176,7 @@ public class ThemeManagerImpl implements ThemeManager {
 			if (staticTheme != null) {
 				weblogTheme = new WeblogSharedTheme(weblog, staticTheme);
 			} else {
-				log.warn("Unable to lookup theme " + weblog.getEditorTheme());
+				log.warn("Unable to lookup theme {}", weblog.getEditorTheme());
 			}
 		}
 
@@ -207,15 +207,14 @@ public class ThemeManagerImpl implements ThemeManager {
 	public void importTheme(Weblog weblog, SharedTheme theme, boolean skipStylesheet)
 			throws WebloggerException {
 
-		log.debug("Importing theme [" + theme.getName() + "] to weblog ["
-				+ weblog.getName() + "]");
+		log.debug("Importing theme [{}] to weblog [{}]", theme.getName(), weblog.getName());
 
 		WeblogManager wmgr = roller.getWeblogManager();
 		MediaFileManager fileMgr = roller.getMediaFileManager();
 
 		MediaFileDirectory root = fileMgr.getDefaultMediaFileDirectory(weblog);
         if (root == null) {
-            log.warn("Weblog " + weblog.getHandle() + " does not have a root MediaFile directory");
+            log.warn("Weblog {} does not have a root MediaFile directory", weblog.getHandle());
         }
 
 		Set<ComponentType> importedActionTemplates = EnumSet.noneOf(ComponentType.class);
@@ -292,7 +291,7 @@ public class ThemeManagerImpl implements ThemeManager {
 			if (!importedActionTemplates.contains(action)) {
 				WeblogTemplate toDelete = wmgr.getTemplateByAction(weblog, action);
 				if (toDelete != null) {
-					log.debug("Removing stale action template " + toDelete.getId());
+					log.debug("Removing stale action template {}", toDelete.getId());
 					wmgr.removeTemplate(toDelete);
 				}
 			}
@@ -305,13 +304,13 @@ public class ThemeManagerImpl implements ThemeManager {
 		// now lets import all the theme resources
         for (ThemeResource resource : theme.getResources()) {
 
-			log.debug("Importing resource " + resource.getPath());
+			log.debug("Importing resource {}", resource.getPath());
 
 			if (resource.isDirectory()) {
 				MediaFileDirectory mdir = fileMgr.getMediaFileDirectoryByName(
 						weblog, resource.getPath());
 				if (mdir == null) {
-					log.debug("    Creating directory: " + resource.getPath());
+					log.debug("    Creating directory: {}", resource.getPath());
 					fileMgr.createMediaFileDirectory(weblog, resource.getPath());
 					roller.flush();
 				} else {
@@ -338,7 +337,7 @@ public class ThemeManagerImpl implements ThemeManager {
 					justName = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
 					mdir = fileMgr.getMediaFileDirectoryByName(weblog, justPath);
 					if (mdir == null) {
-						log.debug("    Creating directory: " + justPath);
+						log.debug("    Creating directory: {}", justPath);
 						mdir = fileMgr.createMediaFileDirectory(weblog, justPath);
 						roller.flush();
 					}
@@ -359,8 +358,8 @@ public class ThemeManagerImpl implements ThemeManager {
 				mf.setContentType(map.getContentType(justName));
 				mf.setLength(resource.getLength());
 
-				log.debug("    Saving file: " + justName);
-				log.debug("    Saving in directory = " + mf.getDirectory());
+				log.debug("    Saving file: {}", justName);
+				log.debug("    Saving in directory = {}", mf.getDirectory());
 				RollerMessages errors = new RollerMessages();
 				try (InputStream is = resource.getInputStream()) {
 					mf.setInputStream(is);
@@ -400,17 +399,17 @@ public class ThemeManagerImpl implements ThemeManager {
 			log.warn("No themes found!  Perhaps wrong directory for themes specified?  "
 					+ "(Check themes.dir setting in roller[-custom].properties file.)");
 		} else {
-            log.info("Loading themes from " + themesdir.getAbsolutePath() + "...");
+            log.info("Loading themes from {}...", themesdir.getAbsolutePath());
 
             // now go through each theme and load it into a Theme object
             for (String themeName : themenames) {
                 try {
                     SharedTheme theme = new SharedThemeFromDir(this.themeDir + File.separator + themeName);
                     themeMap.put(theme.getId(), theme);
-                    log.info("Loaded theme '" + themeName + "'");
+                    log.info("Loaded theme '{}'", themeName);
                 } catch (Exception unexpected) {
                     // shouldn't happen, so let's learn why it did
-                    log.error("Problem processing theme '" + themeName + "':", unexpected);
+                    log.error("Problem processing theme '{}':", themeName, unexpected);
                 }
             }
         }
@@ -443,7 +442,7 @@ public class ThemeManagerImpl implements ThemeManager {
 
 		} catch (Exception unexpected) {
 			// shouldn't happen, so let's learn why it did
-			log.error("Problem reloading theme " + reloadTheme, unexpected);
+			log.error("Problem reloading theme {}", reloadTheme, unexpected);
 		}
 
 		return reloaded;

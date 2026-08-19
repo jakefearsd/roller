@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.business;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Thin wrapper around the {@code cwebp} command-line tool.
@@ -35,7 +35,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public final class CwebpEncoder {
 
-    private static final Log log = LogFactory.getLog(CwebpEncoder.class);
+    private static final Logger log = LoggerFactory.getLogger(CwebpEncoder.class);
 
     /**
      * System property that, when set to {@code true} or {@code false}, forces
@@ -64,9 +64,9 @@ public final class CwebpEncoder {
         synchronized (CwebpEncoder.class) {
             if (available == null) {
                 available = detect();
-                log.info("cwebp " + (available
+                log.info("cwebp {}", available
                         ? "detected; WebP renditions enabled"
-                        : "not found; WebP renditions disabled, JPEG/PNG ladder only"));
+                        : "not found; WebP renditions disabled, JPEG/PNG ladder only");
             }
             return available;
         }
@@ -123,7 +123,7 @@ public final class CwebpEncoder {
             }
             return process.exitValue() == 0 && output.isFile() && output.length() > 0;
         } catch (Exception e) {
-            log.warn("cwebp encode failed for " + input, e);
+            log.warn("cwebp encode failed for {}", input, e);
             return false;
         }
     }

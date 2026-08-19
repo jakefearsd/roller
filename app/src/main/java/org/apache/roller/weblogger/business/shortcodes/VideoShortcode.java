@@ -23,8 +23,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.text.StringEscapeUtils;
 
 /**
@@ -49,7 +49,7 @@ import org.apache.commons.text.StringEscapeUtils;
  */
 public class VideoShortcode implements ShortcodeHandler {
 
-    private static final Log log = LogFactory.getLog(VideoShortcode.class);
+    private static final Logger log = LoggerFactory.getLogger(VideoShortcode.class);
 
     /** YouTube ids are [A-Za-z0-9_-]{11}; Vimeo ids are digits. */
     private record Provider(String name, Pattern urlPattern, Pattern idPattern,
@@ -100,8 +100,8 @@ public class VideoShortcode implements ShortcodeHandler {
                 if (!provider.idPattern().matcher(id).matches()) {
                     // Refused rather than escaped: a value this shape is not an id,
                     // and it would travel into both an attribute and a thumbnail URL.
-                    log.debug("[video] id is not valid for " + provider.name()
-                            + "; leaving it as written");
+                    log.debug("[video] id is not valid for {}; leaving it as written",
+                            provider.name());
                     return null;
                 }
                 return markup(provider, id, attributes.get("caption"));

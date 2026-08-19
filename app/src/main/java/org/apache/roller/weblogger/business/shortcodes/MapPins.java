@@ -24,8 +24,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Parses {@code [pin lat=".." lng=".." label=".."]} tags out of raw entry
@@ -57,7 +57,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public final class MapPins {
 
-    private static final Log log = LogFactory.getLog(MapPins.class);
+    private static final Logger log = LoggerFactory.getLogger(MapPins.class);
 
     /**
      * A {@code [pin ...]} tag: same attribute-section grammar as
@@ -134,7 +134,7 @@ public final class MapPins {
         Double latitude = parseCoordinate(lat, 90);
         Double longitude = parseCoordinate(lng, 180);
         if (latitude == null || longitude == null) {
-            log.debug("Skipping malformed [pin] (lat=" + lat + ", lng=" + lng + ")");
+            log.debug("Skipping malformed [pin] (lat={}, lng={})", lat, lng);
             return null;
         }
         return new Pin(latitude, longitude, StringUtils.trimToNull(label));
