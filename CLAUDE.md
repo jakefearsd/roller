@@ -413,6 +413,30 @@ on rerun. Before assuming flake, confirm the `<script>` is still unconditional:
 if someone widens that `<c:if>` to cover EasyMDE, the identical error becomes a
 real breakage on every screen the condition excludes.
 
+**Known flake, MECHANISM NOT ESTABLISHED: a 403 on `POST
+/roller-ui/admin/createUser!save.rol`** in
+`ErrorCasesIT.aDuplicateUserNameIsRefused`, surfacing through
+`BrowserHealth`'s broken-sub-resource check. Observed once, on the
+class-parallel suite, during the 2026-08-19 security wave. Evidence it is a
+flake and not a regression: the same commit passed a full 125/125 run
+minutes earlier, `ErrorCasesIT` passes 8/8 when run alone
+(`mvn verify -Pit -Dit.test=ErrorCasesIT`), and the only change in between
+touched neither sessions, CSRF, nor authorization.
+
+**What it is NOT is understood.** Spring Security answers 403 both for a
+stale CSRF token and for access-denied, and this repo runs test *classes*
+concurrently while many of them call `loginAs`/`logout` — which invalidates
+the session — so there are at least two plausible stories and no evidence
+selecting between them. Deliberately left unexplained here rather than given
+a confident-sounding rationale: see the `ModDateHeaderUtil` precedent in the
+static-analysis spec for what happens when a coverage-or-cleanup pass invents
+a plausible reason for something nobody actually traced.
+
+If this recurs, it is worth tracing properly rather than rerunning — a 403 on
+an admin POST is exactly the shape a real authorization or CSRF regression
+would take, and "known flake" is the label most likely to hide one. Start by
+capturing which other class was in flight on the other three threads.
+
 ### The IT harness cleans up by identity, not by pidfile
 
 Every process, file, directory and container an IT run creates carries that
