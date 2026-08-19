@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
@@ -39,7 +39,7 @@ import java.util.Properties;
  */
 public abstract class WebloggerImpl implements Weblogger {
     
-    private static final Log log = LogFactory.getLog(WebloggerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(WebloggerImpl.class);
     
     // managers
     private final IndexManager         indexManager;

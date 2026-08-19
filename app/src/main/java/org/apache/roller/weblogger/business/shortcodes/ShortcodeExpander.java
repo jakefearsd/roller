@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -82,7 +82,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 public final class ShortcodeExpander {
 
-    private static final Log log = LogFactory.getLog(ShortcodeExpander.class);
+    private static final Logger log = LoggerFactory.getLogger(ShortcodeExpander.class);
 
     /**
      * How deep body expansion may recurse. Nesting beyond this leaves the
@@ -226,8 +226,8 @@ public final class ShortcodeExpander {
             try {
                 replacement = handler.render(parseAttributes(attributeText), body, content);
             } catch (Exception e) {
-                log.warn("Shortcode [" + name + "] handler failed; leaving the "
-                        + "shortcode text as the author wrote it", e);
+                log.warn("Shortcode [{}] handler failed; leaving the "
+                        + "shortcode text as the author wrote it", name, e);
             }
             if (replacement != null) {
                 out.append(replacement);

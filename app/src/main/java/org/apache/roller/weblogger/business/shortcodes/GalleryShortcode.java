@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
@@ -58,7 +58,7 @@ import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
  */
 public class GalleryShortcode implements ShortcodeHandler {
 
-    private static final Log log = LogFactory.getLog(GalleryShortcode.class);
+    private static final Logger log = LoggerFactory.getLogger(GalleryShortcode.class);
 
     @Override
     public String getName() {
@@ -88,15 +88,15 @@ public class GalleryShortcode implements ShortcodeHandler {
             MediaFileDirectory directory = WebloggerFactory.getWeblogger()
                     .getMediaFileManager().getMediaFileDirectoryByName(weblog, directoryName);
             if (directory == null) {
-                log.debug("[gallery] shortcode dir \"" + directoryName
-                        + "\" does not exist in weblog " + weblog.getHandle());
+                log.debug("[gallery] shortcode dir \"{}\" does not exist in weblog {}",
+                        directoryName, weblog.getHandle());
                 return null;
             }
             if (directory.isPrivate()) {
                 // A private directory is only reachable through its share
                 // link (Wave 2 T5); the normal render path must not leak it.
-                log.debug("[gallery] shortcode dir \"" + directoryName
-                        + "\" is private; not rendering it inline");
+                log.debug("[gallery] shortcode dir \"{}\" is private; not rendering it inline",
+                        directoryName);
                 return null;
             }
             images = directory.getMediaFiles().stream()
@@ -105,8 +105,8 @@ public class GalleryShortcode implements ShortcodeHandler {
                     .map(MediaFileWrapper::wrap)
                     .toList();
         } catch (Exception e) {
-            log.warn("[gallery] shortcode could not resolve directory \""
-                    + directoryName + "\"", e);
+            log.warn("[gallery] shortcode could not resolve directory \"{}\"",
+                    directoryName, e);
             return null;
         }
 
@@ -115,8 +115,8 @@ public class GalleryShortcode implements ShortcodeHandler {
             images = images.subList(0, max);
         }
         if (images.isEmpty()) {
-            log.debug("[gallery] shortcode dir \"" + directoryName
-                    + "\" holds no image files; leaving it as written");
+            log.debug("[gallery] shortcode dir \"{}\" holds no image files; leaving it as written",
+                    directoryName);
             return null;
         }
 

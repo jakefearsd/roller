@@ -25,8 +25,8 @@ import jakarta.mail.Transport;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 
@@ -36,7 +36,7 @@ import org.apache.roller.weblogger.config.WebloggerConfig;
  */
 public class MailProvider {
     
-    private static final Log LOG = LogFactory.getLog(MailProvider.class);
+    private static final Logger log = LoggerFactory.getLogger(MailProvider.class);
     
     private enum ConfigurationType {JNDI_NAME, MAIL_PROPERTIES }
     
@@ -66,7 +66,7 @@ public class MailProvider {
                 mailPort = Integer.parseInt(portString);
             }
         } catch (Exception e) {
-            LOG.warn("mail server port not a valid integer, ignoring");
+            log.warn("mail server port not a valid integer, ignoring");
         }
         
         // init and connect now so we fail early
@@ -94,7 +94,7 @@ public class MailProvider {
         }
         
         try (Transport ignored = getTransport()) {
-            LOG.debug("Successfully connected to mail server");
+            log.debug("Successfully connected to mail server");
         } catch (Exception e) {
             throw new StartupException("ERROR connecting to mail server", e);
         }

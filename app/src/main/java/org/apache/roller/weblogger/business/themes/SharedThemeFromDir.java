@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.business.themes;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,7 +42,7 @@ public class SharedThemeFromDir extends SharedTheme {
 
     private static final long serialVersionUID = 1L;
 
-    private static Log log = LogFactory.getLog(SharedThemeFromDir.class);
+    private static final Logger log = LoggerFactory.getLogger(SharedThemeFromDir.class);
 
     // the filesystem directory where we should read this theme from
     private String themeDir = null;
@@ -178,7 +178,7 @@ public class SharedThemeFromDir extends SharedTheme {
      */
     private void loadThemeFromDisk() throws ThemeInitializationException {
 
-        log.debug("Parsing theme descriptor for " + this.themeDir);
+        log.debug("Parsing theme descriptor for {}", this.themeDir);
 
         ThemeMetadata themeMetadata;
         try (InputStream is = new FileInputStream(this.themeDir + File.separator
@@ -191,7 +191,7 @@ public class SharedThemeFromDir extends SharedTheme {
                     "Unable to parse theme.xml for theme " + this.themeDir, ex);
         }
 
-        log.debug("Loading Theme " + themeMetadata.getName());
+        log.debug("Loading Theme {}", themeMetadata.getName());
 
         // use parsed theme descriptor to load Theme data
         setId(themeMetadata.getId());
@@ -208,9 +208,8 @@ public class SharedThemeFromDir extends SharedTheme {
         // load resource representing preview image
         File previewFile = new File(this.themeDir + File.separator + themeMetadata.getPreviewImage());
         if (!previewFile.exists() || !previewFile.canRead()) {
-            log.warn("Couldn't read theme [" + this.getName()
-                    + "] preview image file ["
-                    + themeMetadata.getPreviewImage() + "]");
+            log.warn("Couldn't read theme [{}] preview image file [{}]",
+                    this.getName(), themeMetadata.getPreviewImage());
         } else {
             this.previewImage = new SharedThemeResourceFromDir(
                     themeMetadata.getPreviewImage(), previewFile);
@@ -245,8 +244,8 @@ public class SharedThemeFromDir extends SharedTheme {
             String contents = loadTemplateFile(templateFile);
             if (contents == null) {
                 // if we don't have any contents then skip this one
-                log.error("Couldn't load stylesheet theme [" + this.getName()
-                        + "] template file [" + templateFile + "]");
+                log.error("Couldn't load stylesheet theme [{}] template file [{}]",
+                        this.getName(), templateFile);
             } else {
 
                 // construct ThemeTemplate representing this file
@@ -292,8 +291,8 @@ public class SharedThemeFromDir extends SharedTheme {
 
             // Continue reading theme even if problem encountered with one file
             if (!resourceFile.exists() || !resourceFile.canRead()) {
-                log.warn("Couldn't read  theme [" + this.getName()
-                        + "] resource file [" + resourcePath + "]");
+                log.warn("Couldn't read  theme [{}] resource file [{}]",
+                        this.getName(), resourcePath);
                 continue;
             }
 
@@ -383,11 +382,10 @@ public class SharedThemeFromDir extends SharedTheme {
             chars = new char[(int) templateFile.length()];
             length = reader.read(chars);
         } catch (Exception noprob) {
-            log.error("Exception reading theme [" + this.getName()
-                    + "] template file [" + templateFile + "]");
-            if (log.isDebugEnabled()) {
-                log.debug(noprob);
-            }
+            log.error("Exception reading theme [{}] template file [{}]",
+                    this.getName(), templateFile);
+            log.debug("Exception reading theme [{}] template file [{}]",
+                    this.getName(), templateFile, noprob);
             return null;
         }
 
@@ -427,8 +425,8 @@ public class SharedThemeFromDir extends SharedTheme {
         if (contents == null) {
             // if we don't have any contents then load no string
             contents = "";
-            log.error("Couldn't load stylesheet theme [" + this.getName()
-                    + "] template file [" + templateFile + "]");
+            log.error("Couldn't load stylesheet theme [{}] template file [{}]",
+                    this.getName(), templateFile);
         }
         templateRendition.setTemplate(contents);
         templateRendition.setTemplateLanguage(templateCodeMetadata.getTemplateLang());

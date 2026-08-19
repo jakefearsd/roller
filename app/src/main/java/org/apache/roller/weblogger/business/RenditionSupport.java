@@ -44,8 +44,8 @@ import javax.imageio.stream.ImageOutputStream;
 
 import net.coobird.thumbnailator.Thumbnails;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
 
@@ -66,7 +66,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
  */
 public final class RenditionSupport {
 
-    private static final Log log = LogFactory.getFactory().getInstance(RenditionSupport.class);
+    private static final Logger log = LoggerFactory.getLogger(RenditionSupport.class);
 
     /** The responsive width ladder, ascending. Widths >= the original image's width are skipped. */
     public static final List<Integer> LADDER_WIDTHS = List.of(480, 960, 1600, 2400);
@@ -353,7 +353,7 @@ public final class RenditionSupport {
                 byte[] encoded = encodeToBytes(resized, formatName, JPEG_QUALITY);
                 cmgr.saveFileContent(weblog, id + "_" + width, new ByteArrayInputStream(encoded));
             } catch (Exception e) {
-                log.warn("Failed to generate " + width + "w rendition for media file " + id, e);
+                log.warn("Failed to generate {}w rendition for media file {}", width, id, e);
                 continue;
             }
 
@@ -437,10 +437,10 @@ public final class RenditionSupport {
                     cmgr.saveFileContent(weblog, id + "_" + width + ".webp", is);
                 }
             } else {
-                log.warn("cwebp declined to encode the " + width + "w webp rendition for media file " + id);
+                log.warn("cwebp declined to encode the {}w webp rendition for media file {}", width, id);
             }
         } catch (Exception e) {
-            log.warn("Failed to generate " + width + "w webp rendition for media file " + id, e);
+            log.warn("Failed to generate {}w webp rendition for media file {}", width, id, e);
         } finally {
             deleteQuietly(tempInput);
             deleteQuietly(tempOutput);
@@ -449,7 +449,7 @@ public final class RenditionSupport {
 
     private static void deleteQuietly(File file) {
         if (file != null && file.exists() && !file.delete()) {
-            log.debug("Could not delete temp rendition file " + file);
+            log.debug("Could not delete temp rendition file {}", file);
         }
     }
 }

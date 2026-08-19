@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.business.shortcodes;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -43,7 +43,7 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  */
 public class ImageShortcode implements ShortcodeHandler {
 
-    private static final Log log = LogFactory.getLog(ImageShortcode.class);
+    private static final Logger log = LoggerFactory.getLogger(ImageShortcode.class);
 
     /** The browser hint for how wide the image renders; themes show entry images full-column. */
     private static final String SIZES = "100vw";
@@ -75,12 +75,12 @@ public class ImageShortcode implements ShortcodeHandler {
             MediaFile mediaFile = WebloggerFactory.getWeblogger()
                     .getMediaFileManager().getMediaFile(id);
             if (mediaFile == null || !mediaFile.isImageFile()) {
-                log.debug("[image] shortcode id " + id + " is not an image media file");
+                log.debug("[image] shortcode id {} is not an image media file", id);
                 return null;
             }
             media = MediaFileWrapper.wrap(mediaFile);
         } catch (Exception e) {
-            log.warn("[image] shortcode could not resolve media file " + id, e);
+            log.warn("[image] shortcode could not resolve media file {}", id, e);
             return null;
         }
 

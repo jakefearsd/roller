@@ -23,8 +23,8 @@ import java.util.Date;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.lang.GeoLocation;
@@ -46,7 +46,7 @@ import com.drew.metadata.exif.GpsDirectory;
  */
 public final class ExifSupport {
 
-    private static final Log log = LogFactory.getFactory().getInstance(ExifSupport.class);
+    private static final Logger log = LoggerFactory.getLogger(ExifSupport.class);
 
     /**
      * Column width of {@code roller_mediafile.exif_camera} (migration V006).
@@ -227,7 +227,7 @@ public final class ExifSupport {
                 if (orientation >= 1 && orientation <= 8) {
                     return orientation;
                 }
-                log.debug("Ignoring out-of-range EXIF orientation " + orientation);
+                log.debug("Ignoring out-of-range EXIF orientation {}", orientation);
             }
         } catch (Exception e) {
             // Same normal case as extract(): plenty of uploads have no EXIF at all.

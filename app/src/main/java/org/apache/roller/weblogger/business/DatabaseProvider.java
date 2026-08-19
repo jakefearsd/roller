@@ -27,8 +27,8 @@ import java.util.Properties;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 
@@ -60,7 +60,7 @@ import org.apache.roller.weblogger.config.WebloggerConfig;
  */
 public class DatabaseProvider  {
     
-    private static final Log log = LogFactory.getLog(DatabaseProvider.class);
+    private static final Logger log = LoggerFactory.getLogger(DatabaseProvider.class);
 
     public enum ConfigurationType {JNDI_NAME, JDBC_PROPERTIES}
     private ConfigurationType type = ConfigurationType.JNDI_NAME;

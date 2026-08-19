@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.Weblog;
 
@@ -25,7 +25,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
  */
 public final class VirtualHostRegistry {
 
-    private static final Log log = LogFactory.getLog(VirtualHostRegistry.class);
+    private static final Logger log = LoggerFactory.getLogger(VirtualHostRegistry.class);
 
     private static volatile Map<String, String> hostToHandle = null;
 
