@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -133,6 +134,63 @@ class QualityGatePomTest {
         assertTrue(ruleset.contains("SLF4J"),
                 "GuardLogStatement/ProperLogger are deferred pending the SLF4J migration; "
                 + "the ruleset must point at that follow-up so it stays discoverable");
+    }
+
+    /**
+     * The exclusion lists above are closed, but nothing stopped the gate's
+     * SCOPE from shrinking instead: dropping the security category, swapping
+     * quickstart for a narrower ruleset, or adding a ruleset-level
+     * {@code <exclude-pattern>} (a real PMD 7 element the exclusion regex above
+     * does not see, and which silences whole files rather than one rule) would
+     * all pass every other test in this class. This pins the scope itself.
+     */
+    @Test
+    void pmdRulesetScopeIsPinned() throws IOException {
+        String ruleset = read("config/pmd/ruleset.xml");
+        Matcher m = Pattern.compile("<rule\\s+ref=\"([^\"]+)\"").matcher(ruleset);
+        List<String> refs = new ArrayList<>();
+        while (m.find()) {
+            refs.add(m.group(1));
+        }
+        assertEquals(List.of("rulesets/java/quickstart.xml", "category/java/security.xml"), refs,
+                "config/pmd/ruleset.xml's <rule ref> set IS the gate's scope, not merely its exclusions. "
+                + "Deleting the security category, or swapping quickstart.xml for a narrower ruleset, "
+                + "silently shrinks the gate with no other test failing. Changing this set is a spec "
+                + "change: update the design doc and this test.");
+
+        assertTrue(!ruleset.contains("<exclude-pattern"),
+                "a ruleset-level <exclude-pattern> silences an entire file with none of the per-rule "
+                + "justification-comment scrutiny everyPmdExclusionIsPermittedAndCarriesAReason enforces "
+                + "-- that regex only matches <exclude name=...>, not <exclude-pattern>. Adding one is a "
+                + "spec change: update the design doc and this test.");
+    }
+
+    /**
+     * The exclusion lists close WHICH rules can be silenced; this closes HOW
+     * SENSITIVE the surviving rules are allowed to be. Each of these can be
+     * turned down with a one-line edit that no other test in this class
+     * notices: CPD's token minimum, SpotBugs's threshold/effort, and PMD's
+     * minimumPriority (present nowhere today, so its absence is the pin).
+     */
+    @Test
+    void theGatesSensitivityIsPinned() throws IOException {
+        String parentPom = read("pom.xml");
+        assertTrue(parentPom.contains("<minimumTokens>200</minimumTokens>"),
+                "CPD's duplication threshold is part of the gate's spec (Decision 6): raising it "
+                + "silently drops duplicate blocks from the gate with no other test failing. Changing "
+                + "it is a spec change: update the design doc and this test.");
+        assertTrue(parentPom.contains("<threshold>Low</threshold>"),
+                "SpotBugs threshold=Low is part of the gate's spec: raising it (e.g. to High) silently "
+                + "drops findings with no other test failing. Changing it is a spec change: update the "
+                + "design doc and this test.");
+        assertTrue(parentPom.contains("<effort>Max</effort>"),
+                "SpotBugs effort=Max is part of the gate's spec: lowering it (e.g. to Min) silently "
+                + "drops findings with no other test failing. Changing it is a spec change: update the "
+                + "design doc and this test.");
+        assertTrue(!parentPom.contains("<minimumPriority>"),
+                "maven-pmd-plugin's minimumPriority would silently narrow which PMD violations fail the "
+                + "build -- on top of, and invisible next to, the exclude list this class already pins. "
+                + "Adding one is a spec change: update the design doc and this test.");
     }
 
     /** True if the text between the previous '>' and this offset contains an XML comment. */
