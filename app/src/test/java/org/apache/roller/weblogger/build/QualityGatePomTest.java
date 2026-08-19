@@ -121,8 +121,10 @@ class QualityGatePomTest {
         assertTrue(!parentPom.contains("pmd.max.violations")
                         && !parentPom.contains("spotbugs.max.violations"),
                 "the wave's temporary ceiling properties must be deleted once the tree is at zero");
-        assertTrue(!appPom.contains("maxAllowedViolations"),
-                "maxAllowedViolations was scaffolding; the gate is zero-tolerance now");
+        assertTrue(!parentPom.contains("maxAllowedViolations") && !appPom.contains("maxAllowedViolations"),
+                "maxAllowedViolations was scaffolding; the gate is zero-tolerance now. Every PMD/SpotBugs "
+                + "<configuration> block lives in the parent pom's pluginManagement, not app/pom.xml, so "
+                + "the parent must be checked too or this assertion is a no-op.");
     }
 
     @Test
