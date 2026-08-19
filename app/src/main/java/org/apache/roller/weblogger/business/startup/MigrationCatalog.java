@@ -137,6 +137,7 @@ public final class MigrationCatalog {
      * case directly (e.g. {@code Path.of("/")}) without needing a directory
      * entry that cannot actually occur.
      */
+    // Package-private for test access to a defensive branch -- not ordinary API.
     static String fileNameOf(Path entry) {
         Path fileName = entry.getFileName();
         return fileName == null ? null : fileName.toString();

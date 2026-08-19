@@ -187,6 +187,7 @@ public class FileContentManagerImpl implements FileContentManager {
      * (e.g. the root path) without needing an absolute path that provably
      * cannot arise through {@code saveFileContent}.
      */
+    // Package-private for test access to a defensive branch -- not ordinary API.
     static Path requireParent(Path path) throws IOException {
         Path parent = path.getParent();
         if (parent == null) {

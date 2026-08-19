@@ -17,6 +17,7 @@
  */
 package org.apache.roller.weblogger.business.startup;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.business.DatabaseProvider;
@@ -236,16 +237,25 @@ public class DatabaseInstaller {
     }
 
     // package-private rather than private so DatabaseInstallerTest can drive
-    // both branches directly against a mocked Connection, without needing a
-    // real database connection just to reach this one regex check.
+    // all three branches directly against a mocked Connection, without needing
+    // a real database connection just to reach this one regex check.
+    @SuppressFBWarnings(
+            value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
+            justification = "SpotBugs's own JDBC nullness annotations mark "
+                    + "DatabaseMetaData.getUserName() non-null, and decompiling the bundled "
+                    + "pgjdbc driver (postgresql-42.7.11.jar) confirms PgDatabaseMetaData"
+                    + ".getUserName() delegates to PgConnection.getUserName(), the username "
+                    + "supplied at connection time -- which PostgreSQL authentication requires "
+                    + "to be present. But that javadoc guarantees nothing about null: it is "
+                    + "decompiled driver behaviour, not a contract, and a driver upgrade or a "
+                    + "DataSource wrapper could reintroduce null. This value is spliced straight "
+                    + "into a GRANT statement, so the guard is kept despite the analysis above -- "
+                    + "it fails safe with a diagnostic message instead of a bare NPE.")
     String connectionUser(Connection con) throws SQLException {
         String user = con.getMetaData().getUserName();
         // Defend the substitution: an unexpected value here would be spliced
-        // straight into a GRANT statement. DatabaseMetaData.getUserName() is
-        // known non-null (SpotBugs's own JDK annotation database flags a
-        // `user == null` check here as dead), so only the shape needs
-        // checking.
-        if (!user.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+        // straight into a GRANT statement.
+        if (user == null || !user.matches("[A-Za-z_][A-Za-z0-9_]*")) {
             throw new SQLException("Refusing to substitute unsafe database user name: " + user);
         }
         return user;

@@ -32,9 +32,11 @@ import static org.mockito.Mockito.when;
  * {@link DatabaseInstaller#connectionUser} defends a value that gets spliced
  * straight into a GRANT statement. {@code DatabaseMetaData.getUserName()} is
  * known non-null to SpotBugs's own JDBC annotation database (a {@code == null}
- * check on it is flagged RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE), so only
- * the username's shape needs checking; these tests pin both branches of that
- * check directly, without a real database connection.
+ * check on it is flagged RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE, suppressed
+ * at the call site) -- but that javadoc guarantees nothing about null, so the
+ * null guard is kept anyway and fails safe with a diagnostic message rather
+ * than a bare NPE. These tests pin all three branches of that check directly,
+ * without a real database connection.
  */
 class DatabaseInstallerTest {
 
@@ -62,6 +64,15 @@ class DatabaseInstallerTest {
         SQLException ex = assertThrows(SQLException.class, () -> installer().connectionUser(con));
         assertEquals(
                 "Refusing to substitute unsafe database user name: bad; DROP TABLE x; --",
+                ex.getMessage());
+    }
+
+    @Test
+    void aNullUsernameIsRefusedWithADiagnosticMessage() throws Exception {
+        Connection con = connectionWithUser(null);
+        SQLException ex = assertThrows(SQLException.class, () -> installer().connectionUser(con));
+        assertEquals(
+                "Refusing to substitute unsafe database user name: null",
                 ex.getMessage());
     }
 }

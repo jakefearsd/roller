@@ -161,6 +161,8 @@ class ReIndexEntryOperationTest {
     void doRunWithoutAWebloggerLogsAndReturnsInsteadOfThrowing() {
         WeblogEntry data = new WeblogEntry();
         data.setId("does-not-matter");
+        // The second null is the LuceneIndexManager, deliberately unmocked: doRun()
+        // returns on the null-roller path before it is ever touched.
         ReIndexEntryOperation op = new ReIndexEntryOperation(null, null, data);
 
         assertDoesNotThrow(op::doRun);
