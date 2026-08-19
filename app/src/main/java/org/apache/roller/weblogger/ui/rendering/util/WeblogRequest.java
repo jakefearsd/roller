@@ -23,8 +23,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -51,7 +51,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
  */
 public class WeblogRequest extends ParsedRequest {
     
-    private static final Log log = LogFactory.getLog(WeblogRequest.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogRequest.class);
     
     // lightweight attributes
     private String weblogHandle = null;
@@ -74,7 +74,7 @@ public class WeblogRequest extends ParsedRequest {
         
         String path = request.getPathInfo();
         
-        log.debug("parsing path "+path);
+        log.debug("parsing path {}", path);
         
         // first, cleanup extra slashes and extract the weblog weblogHandle
         if(path != null && path.trim().length() > 1) {
@@ -120,11 +120,9 @@ public class WeblogRequest extends ParsedRequest {
             }
         }
         
-        if(log.isDebugEnabled()) {
-            log.debug("handle = "+this.weblogHandle);
-            log.debug("locale = "+this.locale);
-            log.debug("pathInfo = "+this.pathInfo);
-        }
+        log.debug("handle = {}", this.weblogHandle);
+        log.debug("locale = {}", this.locale);
+        log.debug("pathInfo = {}", this.pathInfo);
     }
     
 
@@ -238,7 +236,7 @@ public class WeblogRequest extends ParsedRequest {
                 weblog = WebloggerFactory.getWeblogger().getWeblogManager()
                         .getWeblogByHandle(weblogHandle, Boolean.TRUE);
             } catch (WebloggerException ex) {
-                log.error("Error looking up weblog "+weblogHandle, ex);
+                log.error("Error looking up weblog {}", weblogHandle, ex);
             }
         }
         

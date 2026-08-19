@@ -23,8 +23,8 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -46,7 +46,7 @@ import org.apache.roller.weblogger.util.cache.ExpiringCacheEntry;
  */
 public final class SiteWideCache implements CacheHandler {
     
-    private static final Log log = LogFactory.getLog(SiteWideCache.class);
+    private static final Logger log = LoggerFactory.getLogger(SiteWideCache.class);
     
     // a unique identifier for this cache, this is used as the prefix for
     // roller config properties that apply to this cache
@@ -106,7 +106,7 @@ public final class SiteWideCache implements CacheHandler {
             }
         }
         
-        log.info(cacheProps);
+        log.info("{}", cacheProps);
         
         if(cacheEnabled) {
             contentCache = CacheManager.constructCache(this, cacheProps);
@@ -142,9 +142,9 @@ public final class SiteWideCache implements CacheHandler {
         Object entry = contentCache.get(key);
         
         if(entry == null) {
-            log.debug("MISS "+key);
+            log.debug("MISS {}", key);
         } else {
-            log.debug("HIT "+key);
+            log.debug("HIT {}", key);
         }
         
         return entry;
@@ -158,7 +158,7 @@ public final class SiteWideCache implements CacheHandler {
         }
         
         contentCache.put(key, value);
-        log.debug("PUT "+key);
+        log.debug("PUT {}", key);
     }
 
     
@@ -169,7 +169,7 @@ public final class SiteWideCache implements CacheHandler {
         }
         
         contentCache.remove(key);
-        log.debug("REMOVE "+key);
+        log.debug("REMOVE {}", key);
     }
     
     

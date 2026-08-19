@@ -25,8 +25,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
@@ -57,7 +57,7 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
  */
 public class SiteModel implements Model {
     
-    private static final Log log = LogFactory.getLog(SiteModel.class);   
+    private static final Logger log = LoggerFactory.getLogger(SiteModel.class);   
     
     private Weblog weblog = null;
     private WeblogRequest weblogRequest = null;

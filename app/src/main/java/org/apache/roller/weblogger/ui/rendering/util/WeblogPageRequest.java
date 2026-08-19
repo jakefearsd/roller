@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.ui.rendering.util;
 
 import java.util.Collections;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -50,7 +50,7 @@ import java.util.Map;
  */
 public class WeblogPageRequest extends WeblogRequest {
 
-    private static Log log = LogFactory.getLog(WeblogPageRequest.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogPageRequest.class);
 
     private static final String PAGE_SERVLET = "/roller-ui/rendering/page";
 
@@ -99,7 +99,7 @@ public class WeblogPageRequest extends WeblogRequest {
         String pathInfo = this.getPathInfo();
 
         // parse the request object and figure out what we've got
-        log.debug("parsing path " + pathInfo);
+        log.debug("parsing path {}", pathInfo);
 
         // was this request bound for the right servlet?
         if (!isValidDestination(servlet)) {
@@ -275,15 +275,13 @@ public class WeblogPageRequest extends WeblogRequest {
         customParams.remove("page");
         customParams.remove("tags");
 
-        if (log.isDebugEnabled()) {
-            log.debug("context = " + this.context);
-            log.debug("weblogAnchor = " + this.weblogAnchor);
-            log.debug("weblogDate = " + this.weblogDate);
-            log.debug("weblogCategory = " + this.weblogCategoryName);
-            log.debug("tags = " + this.tags);
-            log.debug("weblogPage = " + this.weblogPageName);
-            log.debug("pageNum = " + this.pageNum);
-        }
+        log.debug("context = {}", this.context);
+        log.debug("weblogAnchor = {}", this.weblogAnchor);
+        log.debug("weblogDate = {}", this.weblogDate);
+        log.debug("weblogCategory = {}", this.weblogCategoryName);
+        log.debug("tags = {}", this.tags);
+        log.debug("weblogPage = {}", this.weblogPageName);
+        log.debug("pageNum = {}", this.pageNum);
     }
 
     boolean isValidDestination(String servlet) {
@@ -309,7 +307,7 @@ public class WeblogPageRequest extends WeblogRequest {
             return page != null && page.getStatus() == WeblogPage.PubStatus.PUBLISHED
                     ? page : null;
         } catch (WebloggerException ex) {
-            log.error("Error looking up page " + slug, ex);
+            log.error("Error looking up page {}", slug, ex);
             return null;
         }
     }
@@ -416,7 +414,7 @@ public class WeblogPageRequest extends WeblogRequest {
                 weblogEntry = wmgr.getWeblogEntryByAnchor(getWeblog(),
                         weblogAnchor);
             } catch (WebloggerException ex) {
-                log.error("Error getting weblog entry " + weblogAnchor, ex);
+                log.error("Error getting weblog entry {}", weblogAnchor, ex);
             }
         }
 
@@ -434,7 +432,7 @@ public class WeblogPageRequest extends WeblogRequest {
                 weblogPage = getWeblog().getTheme().getTemplateByLink(
                         weblogPageName);
             } catch (WebloggerException ex) {
-                log.error("Error getting weblog page " + weblogPageName, ex);
+                log.error("Error getting weblog page {}", weblogPageName, ex);
             }
         }
 
@@ -492,9 +490,7 @@ public class WeblogPageRequest extends WeblogRequest {
                 weblogCategory = wmgr.getWeblogCategoryByName(getWeblog(),
                         weblogCategoryName);
             } catch (WebloggerException ex) {
-                log.error(
-                        "Error getting weblog category " + weblogCategoryName,
-                        ex);
+                log.error("Error getting weblog category {}", weblogCategoryName, ex);
             }
         }
 

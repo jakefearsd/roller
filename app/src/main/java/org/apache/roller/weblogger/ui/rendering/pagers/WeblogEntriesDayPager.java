@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TimeZone;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
@@ -40,7 +40,7 @@ import org.apache.roller.weblogger.business.URLStrategy;
  */
 public class WeblogEntriesDayPager extends AbstractWeblogEntriesPager {
     
-    private static final Log log = LogFactory.getLog(WeblogEntriesDayPager.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogEntriesDayPager.class);
     
     private SimpleDateFormat dayFormat = new SimpleDateFormat();
     

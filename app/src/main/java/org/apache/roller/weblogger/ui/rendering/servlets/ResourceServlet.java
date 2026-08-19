@@ -28,8 +28,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -48,7 +48,7 @@ public class ResourceServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1350679411381917714L;
 
-    private static final Log log = LogFactory.getLog(ResourceServlet.class);
+    private static final Logger log = LoggerFactory.getLogger(ResourceServlet.class);
 
     private transient ServletContext context = null;
 
@@ -101,8 +101,7 @@ public class ResourceServlet extends HttpServlet {
             return;
         }
 
-        log.debug("Resource requested [" + resourceRequest.getResourcePath()
-                + "]");
+        log.debug("Resource requested [{}]", resourceRequest.getResourcePath());
 
         long resourceLastMod = 0;
         InputStream resourceStream = null;

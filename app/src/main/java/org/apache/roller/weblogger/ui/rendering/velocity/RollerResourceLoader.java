@@ -23,8 +23,8 @@ import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.util.Locale;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.TemplateRendition;
@@ -47,13 +47,11 @@ import org.apache.velocity.util.ExtProperties;
  */
 public class RollerResourceLoader extends ResourceLoader {
 
-	private static final Log logger = LogFactory.getLog(RollerResourceLoader.class);
+	private static final Logger log = LoggerFactory.getLogger(RollerResourceLoader.class);
 
     @Override
 	public void init(ExtProperties configuration) {
-		if (logger.isDebugEnabled()) {
-			logger.debug(configuration);
-		}
+		log.debug("{}", configuration);
 	}
 
 	/**
@@ -67,7 +65,7 @@ public class RollerResourceLoader extends ResourceLoader {
     @Override
     public Reader getResourceReader(String name, String encoding) {
 
-		logger.debug("Looking for: " + name);
+		log.debug("Looking for: {}", name);
 
 		if (name == null || name.length() == 0) {
 			throw new ResourceNotFoundException(
@@ -82,7 +80,7 @@ public class RollerResourceLoader extends ResourceLoader {
 			renditionType = RenditionType.valueOf(pair[1].toUpperCase(Locale.ROOT));
 		}
 
-		logger.debug("   Actually, it's " + name);
+		log.debug("   Actually, it's {}", name);
 
 		try {
 			WeblogTemplate page = WebloggerFactory.getWeblogger()
@@ -102,13 +100,13 @@ public class RollerResourceLoader extends ResourceLoader {
 		} catch (UnsupportedEncodingException uex) {
 			// This should never actually happen. We expect UTF-8 in all JRE
 			// installation.
-//			logger.error(uex);
+//			log.error(uex);
 			throw new RuntimeException(uex);
 
 		} catch (WebloggerException | ResourceNotFoundException re) {
 			String msg = "RollerResourceLoader Error: "
 					+ "database problem trying to load resource " + name;
-//			logger.error(msg, re);
+//			log.error(msg, re);
 			throw new ResourceNotFoundException(msg, re);
 		}
 	}

@@ -31,8 +31,8 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.ui.rendering.RequestMapper;
 import org.apache.roller.weblogger.util.Reflection;
 
@@ -46,7 +46,7 @@ import org.apache.roller.weblogger.util.Reflection;
  */
 public class RequestMappingFilter implements Filter {
     
-    private static final Log log = LogFactory.getLog(RequestMappingFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(RequestMappingFilter.class);
     
     // list of RequestMappers that want to inspect the request
     private final List<RequestMapper> requestMappers = new ArrayList<>();
@@ -72,7 +72,7 @@ public class RequestMappingFilter implements Filter {
                     "Weblog urls probably won't function as you expect.");
         }
         
-        log.info("Request mapping filter initialized, "+requestMappers.size()+" mappers configured.");
+        log.info("Request mapping filter initialized, {} mappers configured.", requestMappers.size());
         log.info(requestMappers.stream().map(t -> t.getClass().toString()).collect(Collectors.joining(",", "[", "]")));
         
     }
@@ -100,12 +100,12 @@ public class RequestMappingFilter implements Filter {
         
         // give each mapper a chance to handle the request
         for (RequestMapper mapper : requestMappers) {
-            log.debug("trying mapper " + mapper.getClass().getName());
+            log.debug("trying mapper {}", mapper.getClass().getName());
 
             boolean wasHandled = mapper.handleRequest(request, response);
             if(wasHandled) {
                 // if mapper has handled the request then we are done
-                log.debug("request handled by " + mapper.getClass().getName());
+                log.debug("request handled by {}", mapper.getClass().getName());
                 log.debug("exiting");
                 return;
             }

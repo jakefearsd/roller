@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.velocity.Template;
@@ -43,7 +43,7 @@ public final class RollerVelocity {
 
     public static final String VELOCITY_CONFIG = "/WEB-INF/velocity.properties";
     
-    private static final Log log = LogFactory.getLog(RollerVelocity.class);
+    private static final Logger log = LoggerFactory.getLogger(RollerVelocity.class);
     
     private static final VelocityEngine velocityEngine;
     
@@ -72,7 +72,7 @@ public final class RollerVelocity {
                 velocityProps.setProperty("velocimacro.library.autoreload", "true");
             }
            
-            log.debug("Velocity engine props = "+velocityProps);
+            log.debug("Velocity engine props = {}", velocityProps);
             
             // construct the VelocityEngine
             velocityEngine = new VelocityEngine();

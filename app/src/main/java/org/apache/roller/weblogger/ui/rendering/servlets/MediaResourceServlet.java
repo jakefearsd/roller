@@ -28,8 +28,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FileContentManager;
@@ -53,7 +53,7 @@ public class MediaResourceServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
-    private static Log log = LogFactory.getLog(MediaResourceServlet.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaResourceServlet.class);
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -122,8 +122,8 @@ public class MediaResourceServlet extends HttpServlet {
         Weblog owningWeblog = mediaFile.getDirectory() == null
                 ? null : mediaFile.getDirectory().getWeblog();
         if (!weblog.equals(owningWeblog)) {
-            log.debug("media file " + resourceRequest.getResourceId()
-                    + " does not belong to weblog " + weblog.getHandle());
+            log.debug("media file {} does not belong to weblog {}", resourceRequest.getResourceId(),
+                    weblog.getHandle());
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
@@ -136,8 +136,8 @@ public class MediaResourceServlet extends HttpServlet {
         // shared cache can replay an editor's copy to an anonymous reader.
         if (mediaFile.getDirectory().isPrivate()) {
             if (!requesterMayEditWeblog(weblog)) {
-                log.debug("media file " + resourceRequest.getResourceId()
-                        + " is in a private directory; not serving it on the base path");
+                log.debug("media file {} is in a private directory; not serving it on the base path",
+                        resourceRequest.getResourceId());
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
@@ -171,11 +171,9 @@ public class MediaResourceServlet extends HttpServlet {
                 resourceStream = mediaFile.getThumbnailInputStream();
             } catch (Exception e) {
                 if (log.isDebugEnabled()) {
-                    log.debug(
-                            "ERROR loading thumbnail for " + mediaFile.getId(),
-                            e);
+                    log.debug("ERROR loading thumbnail for {}", mediaFile.getId(), e);
                 } else {
-                    log.warn("ERROR loading thumbnail for " + mediaFile.getId());
+                    log.warn("ERROR loading thumbnail for {}", mediaFile.getId());
                 }
             }
         } else if (renditionRequest) {
@@ -193,7 +191,7 @@ public class MediaResourceServlet extends HttpServlet {
                 } catch (Exception e) {
                     // no webp sibling (cwebp unavailable at generation time, or
                     // this width was never generated) -- fall through
-                    log.debug("No webp rendition for " + mediaFile.getId() + " at width " + width);
+                    log.debug("No webp rendition for {} at width {}", mediaFile.getId(), width);
                 }
             }
 
@@ -205,7 +203,7 @@ public class MediaResourceServlet extends HttpServlet {
                 } catch (Exception e) {
                     // rendition was never generated (narrower than the original,
                     // or generation failed) -- 404-safe fallback to the original
-                    log.debug("No " + width + "w rendition for " + mediaFile.getId() + "; serving original");
+                    log.debug("No {}w rendition for {}; serving original", width, mediaFile.getId());
                 }
             }
         }

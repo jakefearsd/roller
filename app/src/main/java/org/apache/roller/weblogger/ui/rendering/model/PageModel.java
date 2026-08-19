@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
@@ -54,7 +54,7 @@ import org.apache.roller.weblogger.util.URLUtilities;
  */
 public class PageModel implements Model {
     
-    private static final Log log = LogFactory.getLog(PageModel.class);
+    private static final Logger log = LoggerFactory.getLogger(PageModel.class);
 
     /**
      * Same allowlist as {@code CtaShortcode}: a stored canonical-URL override
@@ -261,7 +261,7 @@ public class PageModel implements Model {
                     .getMediaFileManager().getMediaFile(page.getOgImageId());
             return MediaFileWrapper.wrap(mediaFile);
         } catch (Exception ex) {
-            log.debug("Could not resolve media file " + page.getOgImageId(), ex);
+            log.debug("Could not resolve media file {}", page.getOgImageId(), ex);
             return null;
         }
     }
@@ -285,7 +285,7 @@ public class PageModel implements Model {
                     .filter(page -> Boolean.TRUE.equals(page.getShowInNav()))
                     .collect(Collectors.toList());
         } catch (WebloggerException ex) {
-            log.error("Error getting nav pages for weblog - " + navWeblog, ex);
+            log.error("Error getting nav pages for weblog - {}", navWeblog, ex);
             return Collections.emptyList();
         }
     }

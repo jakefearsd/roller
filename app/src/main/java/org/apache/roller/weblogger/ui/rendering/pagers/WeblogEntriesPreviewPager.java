@@ -22,8 +22,8 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -42,7 +42,7 @@ import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
  */
 public class WeblogEntriesPreviewPager extends WeblogEntriesPermalinkPager {
     
-    private static final Log log = LogFactory.getLog(WeblogEntriesPreviewPager.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogEntriesPreviewPager.class);
     
     
     public WeblogEntriesPreviewPager(

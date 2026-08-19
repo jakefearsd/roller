@@ -30,8 +30,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.jsp.JspFactory;
 import jakarta.servlet.jsp.PageContext;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -58,7 +58,7 @@ public class SearchServlet extends HttpServlet {
 
     private static final long serialVersionUID = 6246730804167411636L;
 
-    private static final Log log = LogFactory.getLog(SearchServlet.class);
+    private static final Logger log = LoggerFactory.getLogger(SearchServlet.class);
 
     // Development theme reloading
     Boolean themeReload = false;
@@ -126,7 +126,7 @@ public class SearchServlet extends HttpServlet {
                 }
 
             } catch (Exception ex) {
-                log.error("ERROR - reloading theme " + ex);
+                log.error("ERROR - reloading theme", ex);
             }
         }
 
@@ -151,7 +151,7 @@ public class SearchServlet extends HttpServlet {
                 throw new WebloggerException("Could not lookup default page for weblog " + weblog.getHandle());
             }
         } catch (Exception e) {
-            log.error("Error getting default page for weblog " + weblog.getHandle(), e);
+            log.error("Error getting default page for weblog {}", weblog.getHandle(), e);
         }
 
         // set the content type

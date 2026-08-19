@@ -23,8 +23,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -38,7 +38,7 @@ import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
  */
 public class WeblogsPager extends AbstractPager<WeblogWrapper> {
     
-    private static Log log = LogFactory.getLog(WeblogsPager.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogsPager.class);
     
     private String letter = null;
     private int sinceDays = -1;

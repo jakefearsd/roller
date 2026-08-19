@@ -24,8 +24,8 @@ import java.util.Date;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.util.DateUtil;
 
@@ -34,7 +34,7 @@ import org.apache.roller.util.DateUtil;
  */
 public final class ModDateHeaderUtil {
 
-	private static Log log = LogFactory.getLog(ModDateHeaderUtil.class);
+	private static final Logger log = LoggerFactory.getLogger(ModDateHeaderUtil.class);
 
 	/**
 	 * Instantiates a new mod date header util.
@@ -76,18 +76,16 @@ public final class ModDateHeaderUtil {
 		if (log.isDebugEnabled()) {
 			SimpleDateFormat dateFormat = new SimpleDateFormat(
 					"EEE MMM dd 'at' h:mm:ss a");
-			log.debug("since date = "
-					+ DateUtil.format(new Date(sinceDate), dateFormat));
-			log.debug("last mod date (trucated to seconds) = "
-					+ DateUtil.format(new Date(lastModifiedTimeMillis),
+			log.debug("since date = {}",
+					DateUtil.format(new Date(sinceDate), dateFormat));
+			log.debug("last mod date (trucated to seconds) = {}",
+					DateUtil.format(new Date(lastModifiedTimeMillis),
 							dateFormat));
 		}
 
 		if (lastModifiedTimeMillis <= sinceDate) {
 
-			if (log.isDebugEnabled()) {
-				log.debug("NOT MODIFIED " + request.getRequestURL());
-            }
+			log.debug("NOT MODIFIED {}", request.getRequestURL());
 
 			response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
 

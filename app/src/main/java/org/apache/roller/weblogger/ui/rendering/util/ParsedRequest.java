@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.ui.rendering.util;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
@@ -40,7 +40,7 @@ import org.apache.roller.weblogger.pojos.User;
  */
 public abstract class ParsedRequest {
     
-    private static Log log = LogFactory.getLog(ParsedRequest.class);
+    private static final Logger log = LoggerFactory.getLogger(ParsedRequest.class);
 
     // lightweight attributes
     private String authenticUser = null;
@@ -85,7 +85,7 @@ public abstract class ParsedRequest {
                 UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
                 user = umgr.getUserByUserName(authenticUser);
             } catch (WebloggerException ex) {
-                log.error("Error looking up user "+authenticUser, ex);
+                log.error("Error looking up user {}", authenticUser, ex);
             }
         }
         

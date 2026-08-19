@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.ui.rendering.pagers;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
@@ -35,7 +35,7 @@ import org.apache.roller.weblogger.business.URLStrategy;
  */
 public class WeblogEntriesMonthPager extends AbstractWeblogEntriesPager {
     
-    private static final Log log = LogFactory.getLog(WeblogEntriesMonthPager.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogEntriesMonthPager.class);
     
     private SimpleDateFormat monthFormat = new SimpleDateFormat();
     

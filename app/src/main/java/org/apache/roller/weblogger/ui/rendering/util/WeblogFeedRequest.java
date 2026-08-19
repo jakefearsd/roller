@@ -23,8 +23,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -43,7 +43,7 @@ import org.apache.roller.weblogger.util.Utilities;
  */
 public class WeblogFeedRequest extends WeblogRequest {
     
-    private static final Log log = LogFactory.getLog(WeblogFeedRequest.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogFeedRequest.class);
     
     private static final String FEED_SERVLET = "/roller-ui/rendering/feed";
     
@@ -78,7 +78,7 @@ public class WeblogFeedRequest extends WeblogRequest {
         String pathInfo = this.getPathInfo();
         
         // parse the request object and figure out what we've got
-        log.debug("parsing path "+pathInfo);
+        log.debug("parsing path {}", pathInfo);
         
         // was this request bound for the feed servlet?
         if(servlet == null || !FEED_SERVLET.equals(servlet)) {
@@ -158,13 +158,11 @@ public class WeblogFeedRequest extends WeblogRequest {
             throw new InvalidRequestException("please specify either category or tags but not both, " + request.getRequestURL());            
         }
         
-        if(log.isDebugEnabled()) {
-            log.debug("type = "+this.type);
-            log.debug("format = "+this.format);
-            log.debug("weblogCategory = "+this.weblogCategoryName);
-            log.debug("tags = "+this.tags);
-            log.debug("excerpts = "+this.excerpts);
-        }
+        log.debug("type = {}", this.type);
+        log.debug("format = {}", this.format);
+        log.debug("weblogCategory = {}", this.weblogCategoryName);
+        log.debug("tags = {}", this.tags);
+        log.debug("excerpts = {}", this.excerpts);
     }
 
     public String getType() {
@@ -214,7 +212,7 @@ public class WeblogFeedRequest extends WeblogRequest {
                 WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
                 weblogCategory = wmgr.getWeblogCategoryByName(getWeblog(), weblogCategoryName);
             } catch (WebloggerException ex) {
-                log.error("Error getting weblog category "+weblogCategoryName, ex);
+                log.error("Error getting weblog category {}", weblogCategoryName, ex);
             }
         }
         

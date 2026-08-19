@@ -24,8 +24,8 @@ import org.apache.roller.weblogger.pojos.Theme;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.apache.roller.weblogger.pojos.Template;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -60,7 +60,7 @@ public class PreviewServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
-    private static final Log log = LogFactory.getLog(PreviewServlet.class);
+    private static final Logger log = LoggerFactory.getLogger(PreviewServlet.class);
     
     
     /**
@@ -115,7 +115,7 @@ public class PreviewServlet extends HttpServlet {
             // in request, which indicates we're doing a theme preview
 
             // try getting the preview theme
-            log.debug("preview theme = "+previewRequest.getThemeName());
+            log.debug("preview theme = {}", previewRequest.getThemeName());
             Theme previewTheme = previewRequest.getTheme();
 
             // construct a temporary Website object for this request
@@ -241,7 +241,7 @@ public class PreviewServlet extends HttpServlet {
             renderer = RendererManager.getRenderer(page);
         } catch(Exception e) {
             // nobody wants to render my content :(
-            log.error("Couldn't find renderer for page "+page.getId(), e);
+            log.error("Couldn't find renderer for page {}", page.getId(), e);
             RenderingServletUtils.sendNotFound(response);
             return;
         }

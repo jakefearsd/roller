@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.ui.rendering.util.cache;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.util.cache.Cache;
@@ -37,7 +37,7 @@ import org.apache.roller.weblogger.util.cache.ExpiringCacheEntry;
  */
 public final class SaltCache {
     
-    private static final Log log = LogFactory.getLog(SaltCache.class);
+    private static final Logger log = LoggerFactory.getLogger(SaltCache.class);
     
     // a unique identifier for this cache, this is used as the prefix for
     // roller config properties that apply to this cache
@@ -63,7 +63,7 @@ public final class SaltCache {
             }
         }
         
-        log.info(cacheProps);
+        log.info("{}", cacheProps);
         contentCache = CacheManager.constructCache(null, cacheProps);
     }
     
@@ -79,13 +79,13 @@ public final class SaltCache {
         if(lazyEntry != null) {
             entry = lazyEntry.getValue();
             if(entry != null) {
-                log.debug("HIT "+key);
+                log.debug("HIT {}", key);
             } else {
-                log.debug("HIT-EXPIRED "+key);
+                log.debug("HIT-EXPIRED {}", key);
             }
             
         } else {
-            log.debug("MISS "+key);
+            log.debug("MISS {}", key);
         }
         
         return entry != null ? entry.toString() : null;
@@ -95,13 +95,13 @@ public final class SaltCache {
     public void put(String key, String value) {
 		// expire after 60 minutes
         contentCache.put(key, new ExpiringCacheEntry(value, RollerConstants.HOUR_IN_MS));
-        log.debug("PUT "+key);
+        log.debug("PUT {}", key);
     }
     
     
     public void remove(String key) {
         contentCache.remove(key);
-        log.debug("REMOVE "+key);
+        log.debug("REMOVE {}", key);
     }
     
     

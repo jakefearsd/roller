@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.ui.rendering.util;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.themes.ThemeNotFoundException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -33,7 +33,7 @@ import org.apache.roller.weblogger.pojos.Theme;
  */
 public class WeblogPreviewResourceRequest extends WeblogResourceRequest {
     
-    private static Log log = LogFactory.getLog(WeblogPreviewResourceRequest.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogPreviewResourceRequest.class);
         
     // lightweight attributes
     private String themeName = null;
@@ -57,9 +57,7 @@ public class WeblogPreviewResourceRequest extends WeblogResourceRequest {
             this.themeName = request.getParameter("theme");
         }
         
-        if(log.isDebugEnabled()) {
-            log.debug("theme = "+this.themeName);
-        }
+        log.debug("theme = {}", this.themeName);
     }
     
     public String getThemeName() {
@@ -94,7 +92,7 @@ public class WeblogPreviewResourceRequest extends WeblogResourceRequest {
                 // theme simply stays null and the caller treats that as
                 // "no theme".
             } catch(WebloggerException re) {
-                log.error("Error looking up theme "+themeName, re);
+                log.error("Error looking up theme {}", themeName, re);
             }
         }
         

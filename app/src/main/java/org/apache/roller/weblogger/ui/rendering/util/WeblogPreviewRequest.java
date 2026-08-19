@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.ui.rendering.util;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.themes.ThemeNotFoundException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -35,7 +35,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntry;
  */
 public class WeblogPreviewRequest extends WeblogPageRequest {
     
-    private static Log log = LogFactory.getLog(WeblogPreviewRequest.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogPreviewRequest.class);
     
     private static final String PREVIEW_SERVLET = "/roller-ui/authoring/preview";
     
@@ -69,9 +69,7 @@ public class WeblogPreviewRequest extends WeblogPageRequest {
             this.previewEntry = decodeOrReject(request.getParameter("previewEntry"), request);
         }
 
-        if(log.isDebugEnabled()) {
-            log.debug("theme = "+this.themeName);
-        }
+        log.debug("theme = {}", this.themeName);
     }
     
     
@@ -113,7 +111,7 @@ public class WeblogPreviewRequest extends WeblogPageRequest {
                 // theme simply stays null and the caller treats that as
                 // "no theme".
             } catch(WebloggerException re) {
-                log.error("Error looking up theme "+themeName, re);
+                log.error("Error looking up theme {}", themeName, re);
             }
         }
         
@@ -148,7 +146,7 @@ public class WeblogPreviewRequest extends WeblogPageRequest {
                 WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
                 weblogEntry = wmgr.getWeblogEntryByAnchor(getWeblog(), anchor);
             } catch (WebloggerException ex) {
-                log.error("Error getting weblog entry "+anchor, ex);
+                log.error("Error getting weblog entry {}", anchor, ex);
             }
         }
         

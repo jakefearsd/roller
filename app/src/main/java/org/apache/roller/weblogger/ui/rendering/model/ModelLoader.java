@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.ui.rendering.model;
 
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.util.Reflection;
 import org.apache.roller.weblogger.util.Utilities;
@@ -34,7 +34,7 @@ public final class ModelLoader {
     private ModelLoader() {
     }
 
-    private static final Log log = LogFactory.getLog(ModelLoader.class);
+    private static final Logger log = LoggerFactory.getLogger(ModelLoader.class);
 
     /**
      * Convenience method to load a comma-separated list of page models.
@@ -56,19 +56,19 @@ public final class ModelLoader {
                     if(fail) {
                         throw re;
                     } else {
-                        log.warn("Error initializing model: " + model);
+                        log.warn("Error initializing model: {}", model);
                     }
                 } catch (ClassNotFoundException cnfe) {
                     if(fail) {
                         throw new WebloggerException("Error finding model: " + model, cnfe);
                     } else {
-                        log.warn("Error finding model: " + model);
+                        log.warn("Error finding model: {}", model);
                     }
                 } catch (ReflectiveOperationException ex) {
                     if(fail) {
                         throw new WebloggerException("Error instantiating model: " + model, ex);
                     } else {
-                        log.warn("Error instantiating model: " + model);
+                        log.warn("Error instantiating model: {}", model);
                     }
                 }
             }

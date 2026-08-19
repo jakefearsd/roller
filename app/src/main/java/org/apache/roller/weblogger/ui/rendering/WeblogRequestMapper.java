@@ -27,8 +27,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -46,7 +46,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
  */
 public class WeblogRequestMapper implements RequestMapper {
     
-    private static final Log log = LogFactory.getLog(WeblogRequestMapper.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogRequestMapper.class);
     
     private static final String PAGE_SERVLET = "/roller-ui/rendering/page";
     private static final String FEED_SERVLET = "/roller-ui/rendering/feed";
@@ -118,7 +118,7 @@ public class WeblogRequestMapper implements RequestMapper {
         String weblogRequestContext = null;
         String weblogRequestData = null;
         
-        log.debug("evaluating ["+request.getRequestURI()+"]");
+        log.debug("evaluating [{}]", request.getRequestURI());
 
         // Host-first resolution. A weblog that owns a hostname supplies its own
         // handle, so the ENTIRE path is weblog-relative and the first segment is
@@ -169,7 +169,7 @@ public class WeblogRequestMapper implements RequestMapper {
             }
         }
 
-        log.debug("potential weblog handle = "+weblogHandle);
+        log.debug("potential weblog handle = {}", weblogHandle);
 
         // The protected-url list applies in BOTH modes, but which list differs.
         // On the site host a context is always the SECOND segment
@@ -187,11 +187,11 @@ public class WeblogRequestMapper implements RequestMapper {
         // host-resolved handle is a weblog by construction.
         Set<String> reserved = (vhostHandle != null) ? appRestricted : restricted;
         if (reserved.contains(firstSegment)) {
-            log.debug("SKIPPED " + firstSegment);
+            log.debug("SKIPPED {}", firstSegment);
             return false;
         }
         if (vhostHandle == null && !this.isWeblog(weblogHandle)) {
-            log.debug("SKIPPED " + weblogHandle);
+            log.debug("SKIPPED {}", weblogHandle);
             return false;
         }
 
@@ -224,7 +224,7 @@ public class WeblogRequestMapper implements RequestMapper {
             return true;
         }
 
-        log.debug("WEBLOG_URL "+request.getServletPath());
+        log.debug("WEBLOG_URL {}", request.getServletPath());
         
         // parse the rest of the url and build forward url
         if(pathInfo != null) {
@@ -338,7 +338,7 @@ public class WeblogRequestMapper implements RequestMapper {
         }
         
         // dispatch to forward url
-        log.debug("forwarding to "+forwardUrl);
+        log.debug("forwarding to {}", forwardUrl);
         RequestDispatcher dispatch = request.getRequestDispatcher(forwardUrl);
         dispatch.forward(request, response);
         
@@ -357,9 +357,7 @@ public class WeblogRequestMapper implements RequestMapper {
                                        String handle, String locale,
                                        String context, String data) {
         
-        if(log.isDebugEnabled()) {
-            log.debug(handle+","+locale+","+context+","+data);
-        }
+        log.debug("{},{},{},{}", handle, locale, context, data);
         
         StringBuilder forwardUrl = new StringBuilder(64);
 
@@ -484,9 +482,7 @@ public class WeblogRequestMapper implements RequestMapper {
             }
         }
         
-        if(log.isDebugEnabled()) {
-            log.debug("FORWARD_URL "+forwardUrl.toString());
-        }
+        log.debug("FORWARD_URL {}", forwardUrl.toString());
         
         return forwardUrl.toString();
     }
@@ -498,7 +494,7 @@ public class WeblogRequestMapper implements RequestMapper {
      */
     private boolean isWeblog(String potentialHandle) {
         
-        log.debug("checking weblog handle "+potentialHandle);
+        log.debug("checking weblog handle {}", potentialHandle);
         
         boolean isWeblog = false;
         

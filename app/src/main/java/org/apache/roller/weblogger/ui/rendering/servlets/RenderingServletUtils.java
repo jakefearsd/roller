@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 
@@ -29,7 +29,7 @@ import java.util.Map;
 
 final class RenderingServletUtils {
 
-    private static final Log log = LogFactory.getLog(RenderingServletUtils.class);
+    private static final Logger log = LoggerFactory.getLogger(RenderingServletUtils.class);
 
     private RenderingServletUtils() {}
 
@@ -69,7 +69,7 @@ final class RenderingServletUtils {
             output.close();
             return output;
         } catch (Exception e) {
-            log.error("Error during rendering for " + logContext, e);
+            log.error("Error during rendering for {}", logContext, e);
             try {
                 output.close();
             } catch (IOException closeFailure) {

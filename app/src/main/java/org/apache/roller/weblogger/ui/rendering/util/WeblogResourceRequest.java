@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.ui.rendering.util;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -30,7 +30,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class WeblogResourceRequest extends WeblogRequest {
     
-    private static Log log = LogFactory.getLog(WeblogResourceRequest.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogResourceRequest.class);
         
     // lightweight attributes
     private String resourcePath = null;
@@ -53,7 +53,7 @@ public class WeblogResourceRequest extends WeblogRequest {
         String pathInfo = this.getPathInfo();
         
         // parse the request object and figure out what we've got
-        log.debug("parsing path "+pathInfo);
+        log.debug("parsing path {}", pathInfo);
                 
         
         /* 
@@ -82,9 +82,7 @@ public class WeblogResourceRequest extends WeblogRequest {
                     request.getRequestURL());
         }
         
-        if(log.isDebugEnabled()) {
-            log.debug("resourcePath = "+this.resourcePath);
-        }
+        log.debug("resourcePath = {}", this.resourcePath);
     }
     
     public String getResourcePath() {

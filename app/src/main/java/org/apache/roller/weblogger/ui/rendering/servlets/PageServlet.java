@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -65,7 +65,7 @@ public class PageServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
-    private static Log log = LogFactory.getLog(PageServlet.class);
+    private static final Logger log = LoggerFactory.getLogger(PageServlet.class);
     // for caching
     private boolean excludeOwnerPages = false;
     private transient WeblogPageCache weblogPageCache = null;
@@ -186,7 +186,7 @@ public class PageServlet extends HttpServlet {
                 }
 
             } catch (Exception ex) {
-                log.error("ERROR - reloading theme " + ex);
+                log.error("ERROR - reloading theme", ex);
             }
         }
 
@@ -204,7 +204,7 @@ public class PageServlet extends HttpServlet {
             }
 
             if (cachedContent != null) {
-                log.debug("HIT " + cacheKey);
+                log.debug("HIT {}", cacheKey);
 
                 // hit counting used to gate on isWebsitePageHit()/isOtherPageHit()
                 // here; Umami owns traffic counting now (see WeblogPageRequest).
@@ -214,7 +214,7 @@ public class PageServlet extends HttpServlet {
                 response.getOutputStream().write(cachedContent.getContent());
                 return;
             } else {
-                log.debug("MISS " + cacheKey);
+                log.debug("MISS {}", cacheKey);
             }
         }
 
@@ -232,7 +232,7 @@ public class PageServlet extends HttpServlet {
         // validation. make sure that request input makes sense.
         String rejection = rejectionReason(pageRequest, weblog, page, isSiteWide);
         if (rejection != null) {
-            log.debug("page failed validation, bailing out: " + rejection);
+            log.debug("page failed validation, bailing out: {}", rejection);
             RenderingServletUtils.sendNotFound(response);
             return;
         }
@@ -297,7 +297,7 @@ public class PageServlet extends HttpServlet {
             renderer = RendererManager.getRenderer(page);
         } catch (Exception e) {
             // nobody wants to render my content :(
-            log.error("Couldn't find renderer for page " + page.getId(), e);
+            log.error("Couldn't find renderer for page {}", page.getId(), e);
             RenderingServletUtils.sendNotFound(response);
             return;
         }
@@ -320,7 +320,7 @@ public class PageServlet extends HttpServlet {
         // cache rendered content. only cache if user is not logged in?
         if ((!this.excludeOwnerPages || !pageRequest.isLoggedIn())
                 && request.getAttribute("skipCache") == null) {
-            log.debug("PUT " + cacheKey);
+            log.debug("PUT {}", cacheKey);
 
             // put it in the right cache
             if (isSiteWide) {
@@ -329,7 +329,7 @@ public class PageServlet extends HttpServlet {
                 weblogPageCache.put(cacheKey, rendererOutput);
             }
         } else {
-            log.debug("SKIPPED " + cacheKey);
+            log.debug("SKIPPED {}", cacheKey);
         }
 
         log.debug("Exiting");
@@ -377,8 +377,7 @@ public class PageServlet extends HttpServlet {
                 // lookup failure, so fall back to the default page template
                 // (unchanged behavior) but leave a trace for whoever is
                 // debugging why a themed page render looks generic.
-                log.warn("Error looking up '_page' template for weblog "
-                        + weblog.getHandle(), e);
+                log.warn("Error looking up '_page' template for weblog {}", weblog.getHandle(), e);
             }
             return template != null ? template
                     : new StaticThemeTemplate("templates/weblog/page.vm",
@@ -416,8 +415,7 @@ public class PageServlet extends HttpServlet {
             try {
                 page = weblog.getTheme().getDefaultTemplate();
             } catch (Exception e) {
-                log.error("Error getting default page for weblog = "
-                        + weblog.getHandle(), e);
+                log.error("Error getting default page for weblog = {}", weblog.getHandle(), e);
             }
         }
 

@@ -23,8 +23,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
@@ -36,7 +36,7 @@ import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
  */
 public class WeblogEntriesLatestPager extends AbstractWeblogEntriesPager {
     
-    private static final Log log = LogFactory.getLog(WeblogEntriesLatestPager.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogEntriesLatestPager.class);
     
     // collection for the pager
     private Map<Date, List<WeblogEntryWrapper>> entries = null;

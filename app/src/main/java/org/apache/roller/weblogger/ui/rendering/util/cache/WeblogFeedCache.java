@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.ui.rendering.util.cache;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
 import org.apache.roller.weblogger.util.cache.Cache;
@@ -35,7 +35,7 @@ import org.apache.roller.weblogger.util.cache.LazyExpiringCacheEntry;
  */
 public final class WeblogFeedCache {
     
-    private static final Log log = LogFactory.getLog(WeblogFeedCache.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogFeedCache.class);
     
     // a unique identifier for this cache, this is used as the prefix for
     // roller config properties that apply to this cache
@@ -79,7 +79,7 @@ public final class WeblogFeedCache {
             }
         }
         
-        log.info(cacheProps);
+        log.info("{}", cacheProps);
         
         if(cacheEnabled) {
             contentCache = CacheManager.constructCache(null, cacheProps);
@@ -124,13 +124,13 @@ public final class WeblogFeedCache {
             entry = lazyEntry.getValue(lastModified);
 
             if(entry != null) {
-                log.debug("HIT "+key);
+                log.debug("HIT {}", key);
             } else {
-                log.debug("HIT-EXPIRED "+key);
+                log.debug("HIT-EXPIRED {}", key);
             }
 
         } else {
-            log.debug("MISS "+key);
+            log.debug("MISS {}", key);
         }
 
         return entry;
@@ -144,7 +144,7 @@ public final class WeblogFeedCache {
         }
 
         contentCache.put(key, new LazyExpiringCacheEntry(value));
-        log.debug("PUT "+key);
+        log.debug("PUT {}", key);
     }
 
 
@@ -155,7 +155,7 @@ public final class WeblogFeedCache {
         }
 
         contentCache.remove(key);
-        log.debug("REMOVE "+key);
+        log.debug("REMOVE {}", key);
     }
 
 

@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.ui.rendering.model;
 
 import java.util.Collections;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -38,7 +38,7 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
  */
 public class MenuModel implements Model {
     
-    private static final Log logger = LogFactory.getLog(MenuModel.class);
+    private static final Logger log = LoggerFactory.getLogger(MenuModel.class);
     
     private WeblogPageRequest pageRequest = null;
     
@@ -85,7 +85,7 @@ public class MenuModel implements Model {
                 return MenuHelper.getMenu("admin", "noAction", pageRequest.getUser(), pageRequest.getWeblog());
             }
         } catch (WebloggerException ex) {
-            logger.debug("ERROR: fetching user roles");
+            log.debug("ERROR: fetching user roles");
         }
         return null;
     }

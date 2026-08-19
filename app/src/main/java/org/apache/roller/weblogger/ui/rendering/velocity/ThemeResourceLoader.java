@@ -28,8 +28,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.util.Locale;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.resource.Resource;
@@ -50,12 +50,11 @@ import org.apache.velocity.util.ExtProperties;
  */
 public class ThemeResourceLoader extends ResourceLoader {
 
-    private static Log logger = LogFactory.getFactory().getInstance(
-            ThemeResourceLoader.class);
+    private static final Logger logger = LoggerFactory.getLogger(ThemeResourceLoader.class);
 
     @Override
     public void init(ExtProperties configuration) {
-        logger.debug(configuration);
+        logger.debug("{}", configuration);
     }
 
     /**
@@ -65,7 +64,7 @@ public class ThemeResourceLoader extends ResourceLoader {
     public Reader getResourceReader(String name, String encoding) {
 
         if (log.isDebugEnabled()) {
-            logger.debug("Looking for: " + name);
+            logger.debug("Looking for: {}", name);
         }
 
         if (name == null || name.length() < 1) {
@@ -120,7 +119,7 @@ public class ThemeResourceLoader extends ResourceLoader {
         } catch (UnsupportedEncodingException uex) {
             // We expect UTF-8 in all JRE installation.
             // This rethrows as a Runtime exception after logging.
-            logger.error(uex);
+            logger.error("Unsupported encoding", uex);
             throw new RuntimeException(uex);
 
         } catch (ThemeNotFoundException tnfe) {

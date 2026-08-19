@@ -28,8 +28,8 @@ import java.util.Map;
 
 import jakarta.servlet.ServletContext;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.resource.Resource;
@@ -62,7 +62,7 @@ import org.apache.velocity.util.ExtProperties;
  */
 public class WebappResourceLoader extends ResourceLoader {
 
-	private static final Log log = LogFactory.getLog(WebappResourceLoader.class);
+	private static final Logger log = LoggerFactory.getLogger(WebappResourceLoader.class);
 
 	// The root paths for templates (relative to webapp's root).
 	protected String[] paths = null;
@@ -82,9 +82,7 @@ public class WebappResourceLoader extends ResourceLoader {
     @Override
 	public void init(ExtProperties configuration) {
 
-		if (log.isDebugEnabled()) {
-			log.debug("WebappResourceLoader: initialization starting.");
-        }
+		log.debug("WebappResourceLoader: initialization starting.");
 
 		// get configured paths
 		paths = configuration.getStringArray("path");
@@ -97,10 +95,7 @@ public class WebappResourceLoader extends ResourceLoader {
 				if (!paths[i].endsWith("/")) {
 					paths[i] += '/';
 				}
-				if (log.isDebugEnabled()) {
-                    log.debug("WebappResourceLoader: added template path - '"
-                            + paths[i] + "'");
-                }
+				log.debug("WebappResourceLoader: added template path - '{}'", paths[i]);
 			}
 		}
 
@@ -108,16 +103,13 @@ public class WebappResourceLoader extends ResourceLoader {
 		servletContext = RollerContext.getServletContext();
 
 		if (log.isDebugEnabled()) {
-			log.debug("Servlet Context = "
-					+ servletContext.getRealPath("/WEB-INF/velocity/"));
+			log.debug("Servlet Context = {}", servletContext.getRealPath("/WEB-INF/velocity/"));
         }
 
 		// init the template paths map
 		templatePaths = new HashMap<>();
 
-		if (log.isDebugEnabled()) {
-            log.debug("WebappResourceLoader: initialization complete.");
-        }
+		log.debug("WebappResourceLoader: initialization complete.");
 	}
 
 	/**
@@ -184,10 +176,7 @@ public class WebappResourceLoader extends ResourceLoader {
 				} catch (Exception e) {
 					// only save the first one for later throwing
 					if (exception == null) {
-						if (log.isDebugEnabled()) {
-							log.debug("WebappResourceLoader: Could not load "
-									+ path, e);
-						}
+						log.debug("WebappResourceLoader: Could not load {}", path, e);
 						exception = e;
 					}
 				}

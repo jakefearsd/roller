@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.ui.rendering.velocity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.StaticThemeTemplate;
 import org.apache.roller.weblogger.pojos.Template;
@@ -35,7 +35,7 @@ import org.apache.velocity.exception.ResourceNotFoundException;
  * RendererFactory for Velocity, creates VelocityRenderers.
  */
 public class VelocityRendererFactory implements RendererFactory {
-    private static final Log log = LogFactory.getLog(VelocityRendererFactory.class);
+    private static final Logger log = LoggerFactory.getLogger(VelocityRendererFactory.class);
 
     @Override
     public Renderer getRenderer(Template template) {

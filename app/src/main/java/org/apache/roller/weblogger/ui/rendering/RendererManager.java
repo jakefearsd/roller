@@ -18,8 +18,8 @@
 package org.apache.roller.weblogger.ui.rendering;
 
 import java.util.ArrayList;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.pojos.Template;
 
 import java.util.List;
@@ -36,7 +36,7 @@ import org.apache.roller.weblogger.util.Reflection;
  */
 public final class RendererManager {
 
-    private static final Log log = LogFactory.getLog(RendererManager.class);
+    private static final Logger log = LoggerFactory.getLogger(RendererManager.class);
     
     // a set of all renderer factories we are consulting
     private static final List<RendererFactory> rendererFactories = new ArrayList<>();
@@ -61,7 +61,7 @@ public final class RendererManager {
                     + "Rendering probably won't function as you expect.");
         }
 
-        log.info("Renderer Manager Initialized, "+ rendererFactories.size()+" factories configured.");
+        log.info("Renderer Manager Initialized, {} factories configured.", rendererFactories.size());
         log.info(rendererFactories.stream().map(t -> t.getClass().toString()).collect(Collectors.joining(",", "[", "]")));
         
     }

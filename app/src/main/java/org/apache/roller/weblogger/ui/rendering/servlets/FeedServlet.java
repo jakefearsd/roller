@@ -26,8 +26,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -55,7 +55,7 @@ public class FeedServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
-    private static final Log log = LogFactory.getLog(FeedServlet.class);
+    private static final Logger log = LoggerFactory.getLogger(FeedServlet.class);
 
     private transient WeblogFeedCache weblogFeedCache = null;
     private transient SiteWideCache siteWideCache = null;
@@ -171,14 +171,14 @@ public class FeedServlet extends HttpServlet {
         }
 
         if (cachedContent != null) {
-            log.debug("HIT " + cacheKey);
+            log.debug("HIT {}", cacheKey);
 
             response.setContentLength(cachedContent.getContent().length);
             response.getOutputStream().write(cachedContent.getContent());
             return;
 
         } else {
-            log.debug("MISS " + cacheKey);
+            log.debug("MISS {}", cacheKey);
         }
 
         // validation. make sure that request input makes sense.
@@ -311,7 +311,7 @@ public class FeedServlet extends HttpServlet {
         response.getOutputStream().write(rendererOutput.getContent());
 
         // cache rendered content. only cache if user is not logged in?
-        log.debug("PUT " + cacheKey);
+        log.debug("PUT {}", cacheKey);
         if (isSiteWide) {
             siteWideCache.put(cacheKey, rendererOutput);
         } else {

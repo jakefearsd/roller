@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.ui.rendering.util.cache;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.util.cache.Cache;
@@ -35,7 +35,7 @@ import org.apache.roller.weblogger.util.cache.LazyExpiringCacheEntry;
  */
 public final class WeblogPageCache {
     
-    private static final Log log = LogFactory.getLog(WeblogPageCache.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogPageCache.class);
     
     // a unique identifier for this cache, this is used as the prefix for
     // roller config properties that apply to this cache
@@ -78,7 +78,7 @@ public final class WeblogPageCache {
             }
         }
         
-        log.info(cacheProps);
+        log.info("{}", cacheProps);
         
         if (cacheEnabled) {
             contentCache = CacheManager.constructCache(null, cacheProps);
@@ -122,13 +122,13 @@ public final class WeblogPageCache {
             entry = lazyEntry.getValue(lastModified);
 
             if(entry != null) {
-                log.debug("HIT "+key);
+                log.debug("HIT {}", key);
             } else {
-                log.debug("HIT-EXPIRED "+key);
+                log.debug("HIT-EXPIRED {}", key);
             }
 
         } else {
-            log.debug("MISS "+key);
+            log.debug("MISS {}", key);
         }
 
         return entry;
@@ -142,7 +142,7 @@ public final class WeblogPageCache {
         }
 
         contentCache.put(key, new LazyExpiringCacheEntry(value));
-        log.debug("PUT "+key);
+        log.debug("PUT {}", key);
     }
 
 
@@ -153,7 +153,7 @@ public final class WeblogPageCache {
         }
 
         contentCache.remove(key);
-        log.debug("REMOVE "+key);
+        log.debug("REMOVE {}", key);
     }
 
 

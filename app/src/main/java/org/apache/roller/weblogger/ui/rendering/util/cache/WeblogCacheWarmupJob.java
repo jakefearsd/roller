@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.ui.rendering.util.cache;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.business.runnable.Job;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -47,7 +47,7 @@ import org.apache.roller.weblogger.util.cache.CachedContent;
  */
 public class WeblogCacheWarmupJob implements Job {
     
-    private static final Log log = LogFactory.getLog(WeblogCacheWarmupJob.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogCacheWarmupJob.class);
     
     // inputs from the user
     private Map<String, Object> inputs = null;
@@ -101,7 +101,7 @@ public class WeblogCacheWarmupJob implements Job {
         long start = System.currentTimeMillis();
         
         for (String weblogHandle : weblogs) {
-            log.debug("doing weblog "+weblogHandle);
+            log.debug("doing weblog {}", weblogHandle);
             
             try {
                 // we need a feed request to represent the data
@@ -151,7 +151,7 @@ public class WeblogCacheWarmupJob implements Job {
                 
             } catch(Exception e) {
                 // bummer, error during rendering
-                log.error("Error rendering for weblog "+weblogHandle, e);
+                log.error("Error rendering for weblog {}", weblogHandle, e);
             }
         }
         
@@ -161,7 +161,7 @@ public class WeblogCacheWarmupJob implements Job {
         // having taken 2,000,000
         long time = (end-start) / RollerConstants.SEC_IN_MS;
 
-        log.info("Completed warmup for "+type+"/"+format+" in "+time+" secs.");
+        log.info("Completed warmup for {}/{} in {} secs.", type, format, time);
         
     }
     
