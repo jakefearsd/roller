@@ -155,6 +155,74 @@ it_descendants() {
     done
 }
 
+# ------------------------------------------------------------- attribution
+
+# Where the supervisor's chromedriver records live. This MUST NOT be under
+# target/: `mvn clean` deletes target/ wholesale, and a chromedriver can only
+# ever be attributed to a run while the JVM that spawned it is alive (see
+# it_descendants above) -- once the record naming it is gone, the pid is
+# unattributable *forever*, by design, because the sweep correctly refuses to
+# kill anything it cannot attribute. That is exactly how 81 processes (8.1GB)
+# under 11 chromedrivers went permanently unreapable on one developer machine:
+# the record lived at target/it-work/supervisor-<run>.chromedrivers and a
+# routine `mvn clean install` erased it out from under a still-running driver.
+#
+# Deliberately not /tmp either: some systems sweep /tmp on a timer regardless
+# of whether the process that owns a file is still alive, which would
+# reintroduce the same bug in a subtler, host-dependent form. XDG_CACHE_HOME
+# (falling back to ~/.cache, the same convention selenium-manager already
+# uses on this machine) is neither of those things. Override with
+# IT_RECORD_DIR for tests -- never point it at a real target/ or /tmp.
+IT_RECORD_DIR="${IT_RECORD_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/roller-it}"
+
+# it_record_path <run id> -> the path of that run's chromedriver record.
+it_record_path() {
+    printf '%s/%s.chromedrivers\n' "$IT_RECORD_DIR" "$1"
+}
+
+# it_record_init <run id> <owner token> -- create the record (and its
+# directory) with a header line naming the owning build, unless it already
+# exists. The header is what makes a record self-describing: a bare pid list
+# means nothing without a live process to interpret it, which is precisely
+# the state a run reaches once BOTH its app and its supervisor have exited --
+# the sweep must be able to judge staleness from the file alone.
+it_record_init() {
+    local path="$(it_record_path "$1")" owner="$2"
+    mkdir -p "$IT_RECORD_DIR"
+    [ -f "$path" ] || printf 'owner %s\n' "$owner" > "$path"
+}
+
+# it_record_add_pid <run id> <pid> -- append, de-duplicated.
+it_record_add_pid() {
+    local path="$(it_record_path "$1")"
+    grep -qx "$2" "$path" 2>/dev/null || printf '%s\n' "$2" >> "$path"
+}
+
+# it_record_owner <record path> -> the owner token from its header line, or
+# empty if the record has none. Callers must treat empty the way
+# it_owner_alive treats an unresolvable start time: as "cannot disprove
+# liveness", never as licence to reap -- a record this library did not write
+# is not this library's to guess about.
+it_record_owner() {
+    local first="$(head -n 1 "$1" 2>/dev/null || true)"
+    case "$first" in
+        "owner "*) printf '%s\n' "${first#owner }" ;;
+    esac
+}
+
+# it_record_pids <record path> -> the numeric pid lines only; the header line
+# and anything blank are excluded by construction (a bare digits-only test),
+# not by knowing the header's exact shape.
+it_record_pids() {
+    local line
+    while IFS= read -r line; do
+        case "$line" in
+            ''|*[!0-9]*) continue ;;
+        esac
+        printf '%s\n' "$line"
+    done < "$1"
+}
+
 # ------------------------------------------------------------------ reaping
 
 # The command name of a pid, as a bare basename on every platform.
@@ -208,6 +276,27 @@ it_kill_pids() {
         fi
     done
     return 0
+}
+
+# it_reap_chromedriver_pid <pid> [grace seconds] -- kills a recorded
+# chromedriver AND its descendants. A bare SIGKILL to chromedriver does NOT
+# take its Chrome children with it -- that is where a reaped run's memory
+# actually sits, and it is why a leak measured in gigabytes hid under a
+# process count that looked like just "some chromedrivers". Re-checks the pid
+# is STILL a chromedriver first, since pids recycle; a record is written once
+# and can outlive the pid it names by a long time.
+#
+# Returns 0 if everything in the tree died, 1 if something survived SIGKILL
+# (a real failure), 2 if the pid is no longer a chromedriver at all (expected
+# whenever a recycled pid is caught by the recheck -- not a failure).
+it_reap_chromedriver_pid() {
+    local pid="$1" grace="${2:-10}" tree
+    case "$(it_comm "$pid")" in
+        chromedriver*) ;;
+        *) return 2 ;;
+    esac
+    tree="$pid $(it_descendants "$pid")"
+    it_kill_pids "$grace" $tree
 }
 
 # it_describe_pid <pid> -- one line of evidence for the report: what it is and

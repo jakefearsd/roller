@@ -24,6 +24,7 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -33,10 +34,12 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -203,6 +206,7 @@ class ItHarnessLeakTest {
 
         Map<String, String> env = new HashMap<>();
         env.put("IT_OWNER_STAMP", ownerToken);
+        env.put("IT_RECORD_DIR", recordDir().toString());
         Instant before = Instant.now();
         Result result = run(List.of(SUPERVISE.toString(), runId, "roller-it-postgres-" + runId, work.toString()),
                 env, Duration.ofSeconds(30));
@@ -236,6 +240,7 @@ class ItHarnessLeakTest {
         Map<String, String> env = new HashMap<>();
         env.put("IT_OWNER_STAMP", ownerToken);
         env.put("IT_POLL_SECONDS", "1");
+        env.put("IT_RECORD_DIR", recordDir().toString());
         Result start = run(List.of(SUPERVISE.toString(), runId, "roller-it-postgres-" + runId, work.toString()),
                 env, Duration.ofSeconds(30));
         assertEquals(0, start.exit(), start.output());
@@ -246,6 +251,185 @@ class ItHarnessLeakTest {
         String log = awaitFileContaining(work.resolve("supervisor-" + runId + ".log"), "cleaned up");
         assertFalse(log.contains("killing pid"),
                 "the supervisor had nothing to reap but killed something anyway:\n" + log);
+    }
+
+    // ------------------------------------------------------ chromedriver records
+
+    /**
+     * Defect 5, half 1: the chromedriver attribution record used to live
+     * under target/ ({@code it.work.dir}), so a routine {@code mvn clean}
+     * destroyed it out from under a still-running driver -- and once the
+     * record naming a pid is gone, that pid is unattributable FOREVER, by
+     * design (the sweep correctly refuses to kill what it cannot attribute).
+     * This is precisely how 81 processes under 11 chromedrivers (8.1GB) went
+     * permanently unreapable on one developer machine.
+     */
+    @Test
+    void chromedriverRecordSurvivesTargetDirectoryBeingDeleted() throws Exception {
+        Path fakeTarget = Files.createDirectories(work.resolve("fake-target")); // stands in for target/
+        Path cache = Files.createDirectories(work.resolve("fake-cache")); // stands in for ~/.cache/roller-it
+        Process owner = spawnOwnerRunningFakeChromedriver();
+        String runId = runId("clean");
+        String ownerToken = ownerToken(owner.pid());
+        long driverPid = childPidOf(owner.pid());
+
+        Map<String, String> env = new HashMap<>();
+        env.put("IT_OWNER_STAMP", ownerToken);
+        env.put("IT_POLL_SECONDS", "1");
+        env.put("IT_RECORD_DIR", cache.toString());
+        Result start = run(List.of(SUPERVISE.toString(), runId, "roller-it-postgres-" + runId, fakeTarget.toString()),
+                env, Duration.ofSeconds(30));
+        assertEquals(0, start.exit(), start.output());
+
+        Path record = awaitRecordNaming(cache, runId, driverPid);
+
+        deleteRecursively(fakeTarget); // simulate `mvn clean`
+
+        assertTrue(Files.exists(record),
+                "the chromedriver record must not live under target/, or `mvn clean` destroys it");
+        assertTrue(recordPidLines(record).contains(String.valueOf(driverPid)),
+                "the record must still be usable (readable, still naming the driver) once target/ is gone:\n"
+                        + recordLines(record));
+
+        owner.destroyForcibly();
+        killTree(driverPid);
+    }
+
+    /**
+     * Defect 5, half 2: sweep-stale.sh used to key its chromedriver reaping
+     * off STALE_RUNS, which is built entirely from LIVE marked processes. A
+     * run whose app AND supervisor have both already exited contributes
+     * nothing to that list, so its record was never even opened -- precisely
+     * the abandoned-run shape that produced the real leak. This drives the
+     * sweep against a record with no live process behind it at all.
+     */
+    @Test
+    void sweepReapsAChromedriverRecordWhoseOwningBuildIsCompletelyGone() throws Exception {
+        Path records = recordDir();
+        String runId = runId("record-dead");
+        String deadOwner = ownerTokenOfDeadProcess();
+        Process driver = spawnFakeChromedriver();
+        long child = childPidOf(driver.pid());
+
+        writeChromedriverRecord(records, runId, deadOwner, driver.pid());
+
+        Result result = runSweep(runId("current"), records);
+
+        assertEquals(0, result.exit(), result.output());
+        assertNoProcessAlive(driver.pid(),
+                "the sweep left a chromedriver running whose record's owner is fully gone:\n" + result.output());
+        assertNoProcessAlive(child, "the sweep reaped the chromedriver but left its child running:\n" + result.output());
+        assertFalse(Files.exists(records.resolve(runId + ".chromedrivers")),
+                "the sweep must delete a record once it has reaped it");
+    }
+
+    /**
+     * THE concurrent-run safety property, and non-negotiable: a second,
+     * legitimate {@code mvn verify -Pit} must survive this sweep untouched.
+     * Staleness is decided by the record's own owner header, never by
+     * whether some other process happens to exist -- so a record whose owner
+     * is alive must be left completely alone, pid, file, and all.
+     */
+    @Test
+    void sweepLeavesAChromedriverRecordWhoseOwnerIsAliveCompletelyUntouched() throws Exception {
+        Path records = recordDir();
+        Process owner = spawn(List.of("sleep", "300"));
+        String runId = runId("record-live");
+        String ownerToken = ownerToken(owner.pid());
+        Process driver = spawnFakeChromedriver();
+
+        writeChromedriverRecord(records, runId, ownerToken, driver.pid());
+        Path record = records.resolve(runId + ".chromedrivers");
+        List<String> before = recordLines(record);
+
+        Result result = runSweep(runId("current"), records);
+
+        assertEquals(0, result.exit(), result.output());
+        assertTrue(isAlive(driver.pid()),
+                "the sweep killed a chromedriver whose owning build is still alive:\n" + result.output());
+        assertTrue(Files.exists(record), "the sweep deleted a record whose owning build is still alive");
+        assertEquals(before, recordLines(record), "a live owner's record must be left byte-for-byte untouched");
+        assertFalse(result.output().contains(String.valueOf(driver.pid())),
+                "the sweep must not even mention a live run's chromedriver:\n" + result.output());
+
+        owner.destroyForcibly();
+        driver.destroyForcibly();
+    }
+
+    /** Pids recycle; a record written once can outlive the pid it names. */
+    @Test
+    void sweepDoesNotKillARecordedPidThatIsNoLongerAChromedriver() throws Exception {
+        Path records = recordDir();
+        String runId = runId("recycled");
+        String deadOwner = ownerTokenOfDeadProcess();
+        Process notADriver = spawn(List.of("sleep", "300")); // comm "sleep", never recorded as a chromedriver
+
+        writeChromedriverRecord(records, runId, deadOwner, notADriver.pid());
+
+        Result result = runSweep(runId("current"), records);
+
+        assertEquals(0, result.exit(), result.output());
+        assertTrue(isAlive(notADriver.pid()),
+                "the sweep killed a recorded pid that is no longer a chromedriver:\n" + result.output());
+
+        notADriver.destroyForcibly();
+    }
+
+    /**
+     * The other half of defect 4: a bare SIGKILL to chromedriver does not
+     * take its Chrome children with it -- that gap is where the 8.1GB
+     * actually sat, under drivers that were themselves long dead.
+     */
+    @Test
+    void sweepReapsDescendantsOfARecordedChromedriverToo() throws Exception {
+        Path records = recordDir();
+        String runId = runId("descendants");
+        String deadOwner = ownerTokenOfDeadProcess();
+        Process driver = spawnFakeChromedriver();
+        long child = childPidOf(driver.pid());
+
+        writeChromedriverRecord(records, runId, deadOwner, driver.pid());
+
+        Result result = runSweep(runId("current"), records);
+
+        assertEquals(0, result.exit(), result.output());
+        assertNoProcessAlive(driver.pid(), "the sweep left the chromedriver running:\n" + result.output());
+        assertNoProcessAlive(child,
+                "the sweep killed the chromedriver but left its child running -- SIGKILL to chromedriver "
+                        + "does not take Chrome children with it, which is where the 8.1GB actually sat");
+    }
+
+    /**
+     * Must-not-regress: on a successful run the supervisor itself still
+     * reaps its own recorded drivers (and now their descendants) when the
+     * build it watches exits, exactly as before this whole fix.
+     */
+    @Test
+    void supervisorReapsItsRecordedChromedriversAndTheirDescendantsWhenTheBuildDies() throws Exception {
+        Path cache = recordDir();
+        Process owner = spawnOwnerRunningFakeChromedriver();
+        String runId = runId("supervised-driver");
+        String ownerToken = ownerToken(owner.pid());
+        long driverPid = childPidOf(owner.pid());
+        long child = childPidOf(driverPid);
+
+        Map<String, String> env = new HashMap<>();
+        env.put("IT_OWNER_STAMP", ownerToken);
+        env.put("IT_POLL_SECONDS", "1");
+        env.put("IT_RECORD_DIR", cache.toString());
+        Result start = run(List.of(SUPERVISE.toString(), runId, "roller-it-postgres-" + runId, work.toString()),
+                env, Duration.ofSeconds(30));
+        assertEquals(0, start.exit(), start.output());
+
+        awaitRecordNaming(cache, runId, driverPid);
+
+        owner.destroyForcibly();
+        assertTrue(owner.waitFor(30, TimeUnit.SECONDS), "the fake build did not die");
+
+        assertNoProcessAlive(driverPid, "the supervisor did not reap its own recorded chromedriver");
+        assertNoProcessAlive(child, "the supervisor reaped the chromedriver but not its child");
+        assertFalse(Files.exists(cache.resolve(runId + ".chromedrivers")),
+                "the supervisor must delete its own record once it has cleaned up");
     }
 
     // --------------------------------------------------------------- driving
@@ -270,9 +454,21 @@ class ItHarnessLeakTest {
                 runId), env);
     }
 
+    /**
+     * IT_RECORD_DIR is ALWAYS set, even by callers that don't care about
+     * chromedriver records: sweep-stale.sh now scans it unconditionally, and
+     * without an override that means the developer's own
+     * {@code ~/.cache/roller-it} -- exactly the directory this class must
+     * never touch, since it may hold real records from a real leak.
+     */
     private Result runSweep(String currentRunId) throws Exception {
+        return runSweep(currentRunId, recordDir());
+    }
+
+    private Result runSweep(String currentRunId, Path recordDir) throws Exception {
         Map<String, String> env = new HashMap<>();
         env.put("IT_WORK_DIR", work.toString());
+        env.put("IT_RECORD_DIR", recordDir.toString());
         return run(List.of(SWEEP.toString(), currentRunId), env, Duration.ofMinutes(1));
     }
 
@@ -318,6 +514,158 @@ class ItHarnessLeakTest {
         shortLived.destroyForcibly();
         assertTrue(shortLived.waitFor(30, TimeUnit.SECONDS), "fixture process would not die");
         return token;
+    }
+
+    // ------------------------------------------------------ chromedriver fixtures
+
+    /**
+     * A fake chromedriver: a copy of the real bash binary, named
+     * "chromedriver". {@code /proc/[pid]/comm} -- what {@code ps -o comm=}
+     * reads on Linux, and what {@code it_comm} in it-harness-lib.sh checks --
+     * is set from the basename of the FILE PASSED TO execve, never from
+     * argv[0]; an {@code exec -a chromedriver ...} rename trick does not
+     * touch it; the file itself has to be named "chromedriver". It spawns one
+     * persistent child ("sleep 300") standing in for a Chrome process, so
+     * descendant-reaping can be verified: a bare SIGKILL to the parent alone
+     * leaves that child running, which is exactly the 8.1GB this class exists
+     * to catch (confirmed by hand against this JDK/coreutils before writing
+     * these tests: `kill -9` on the fake driver leaves its `sleep 300` child
+     * alive).
+     */
+    private Process spawnFakeChromedriver() throws Exception {
+        return spawn(List.of(fakeChromedriverExecutable().toString(), "-c", "sleep 300 & wait"));
+    }
+
+    /**
+     * Like {@link #spawnFakeChromedriver()}, but run as the CHILD of a
+     * returned "owner" process rather than as a direct child of the test
+     * JVM -- for driving supervise-run.sh itself, whose
+     * {@code record_chromedrivers} only ever looks at descendants of the
+     * build pid it is watching (real chromedrivers are children of the
+     * Selenium/failsafe JVM, never siblings of it). The tree is owner ->
+     * fake chromedriver -> "sleep 300" (standing in for a Chrome child).
+     */
+    private Process spawnOwnerRunningFakeChromedriver() throws Exception {
+        Path exe = fakeChromedriverExecutable();
+        return spawn(List.of("bash", "-c", "\"$0\" -c 'sleep 300 & wait' & wait", exe.toString()));
+    }
+
+    /** Best-effort SIGKILL of a pid and everything below it. */
+    private static void killTree(long pid) {
+        ProcessHandle.of(pid).ifPresent(handle -> {
+            handle.children().forEach(child -> killTree(child.pid()));
+            handle.destroyForcibly();
+        });
+    }
+
+    private Path fakeChromedriverExecutable() throws IOException {
+        Path exe = work.resolve("chromedriver");
+        if (!Files.exists(exe)) {
+            Files.copy(realBashBinary(), exe);
+            Files.setPosixFilePermissions(exe, PosixFilePermissions.fromString("rwxr-xr-x"));
+        }
+        return exe;
+    }
+
+    private static Path realBashBinary() {
+        for (String candidate : List.of("/bin/bash", "/usr/bin/bash")) {
+            Path path = Paths.get(candidate);
+            if (Files.isExecutable(path)) {
+                return path;
+            }
+        }
+        throw new IllegalStateException("no bash binary found to build the fake-chromedriver fixture from");
+    }
+
+    /** The single child a {@link #spawnFakeChromedriver()} process spawns. */
+    private static long childPidOf(long parentPid) throws InterruptedException {
+        Instant deadline = Instant.now().plus(REAP_BUDGET);
+        while (Instant.now().isBefore(deadline)) {
+            List<ProcessHandle> children = ProcessHandle.of(parentPid)
+                    .map(handle -> handle.children().toList())
+                    .orElse(List.of());
+            if (!children.isEmpty()) {
+                return children.get(0).pid();
+            }
+            Thread.sleep(100);
+        }
+        throw new AssertionError("fake chromedriver " + parentPid + " never spawned its child");
+    }
+
+    /**
+     * Writes a chromedriver record via the library's own functions, not by
+     * hand -- so a fixture and the real writer (supervise-run.sh) cannot
+     * silently drift in format.
+     */
+    private void writeChromedriverRecord(Path recordDir, String runId, String ownerToken, long... pids) throws Exception {
+        List<String> command = new ArrayList<>(List.of("bash", "-c",
+                "set -e; . \"$1\"; RECORD_DIR=\"$2\"; RUN_ID=\"$3\"; OWNER=\"$4\"; "
+                        + "export IT_RECORD_DIR=\"$RECORD_DIR\"; it_record_init \"$RUN_ID\" \"$OWNER\"; "
+                        + "shift 4; for pid in \"$@\"; do it_record_add_pid \"$RUN_ID\" \"$pid\"; done",
+                "bash", LIB.toString(), recordDir.toString(), runId, ownerToken));
+        for (long pid : pids) {
+            command.add(String.valueOf(pid));
+        }
+        Result result = run(command, Map.of(), Duration.ofSeconds(30));
+        assertEquals(0, result.exit(), "failed to write the fixture chromedriver record:\n" + result.output());
+    }
+
+    private Path recordDir() throws IOException {
+        return Files.createDirectories(work.resolve("record-dir"));
+    }
+
+    private static List<String> recordLines(Path record) throws IOException {
+        return Files.readAllLines(record, StandardCharsets.UTF_8);
+    }
+
+    private static List<String> recordPidLines(Path record) throws IOException {
+        List<String> pids = new ArrayList<>();
+        for (String line : recordLines(record)) {
+            if (line.matches("\\d+")) {
+                pids.add(line);
+            }
+        }
+        return pids;
+    }
+
+    private static Path awaitRecordNaming(Path dir, String runId, long pid) throws Exception {
+        Path record = dir.resolve(runId + ".chromedrivers");
+        Instant deadline = Instant.now().plus(REAP_BUDGET);
+        while (Instant.now().isBefore(deadline)) {
+            if (Files.exists(record) && recordPidLines(record).contains(String.valueOf(pid))) {
+                return record;
+            }
+            Thread.sleep(200);
+        }
+        throw new AssertionError("the record at " + record + " never named pid " + pid + "; it holds:\n"
+                + (Files.exists(record) ? recordLines(record) : "(no such file)"));
+    }
+
+    private static void assertNoProcessAlive(long pid, String message) throws InterruptedException {
+        Instant deadline = Instant.now().plus(REAP_BUDGET);
+        while (Instant.now().isBefore(deadline)) {
+            if (!isAlive(pid)) {
+                return;
+            }
+            Thread.sleep(200);
+        }
+        fail(message + " (pid " + pid + " still alive)");
+    }
+
+    /** Stands in for `rm -rf`, to simulate `mvn clean` deleting target/. */
+    private static void deleteRecursively(Path root) throws IOException {
+        if (!Files.exists(root)) {
+            return;
+        }
+        try (Stream<Path> walk = Files.walk(root)) {
+            walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.delete(p);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        }
     }
 
     // --------------------------------------------------------------- process

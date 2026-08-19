@@ -19,6 +19,9 @@
 # Usage: sweep-stale.sh <current-run-id> [work-dir]
 # Environment:
 #   IT_WORK_DIR      overrides <work-dir>
+#   IT_RECORD_DIR    overrides where chromedriver records are read from
+#                     (default: ${XDG_CACHE_HOME:-$HOME/.cache}/roller-it) --
+#                     tests only.
 #   IT_SWEEP_STRICT  set to 1 to fail the build when anything was reaped,
 #                    rather than warning loudly (default: warn)
 set -euo pipefail
@@ -28,10 +31,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/it-harness-lib.sh"
 
 CURRENT_RUN="${1:-}"
+# Currently unused: the chromedriver record this sweep reads no longer lives
+# under work-dir (see IT_RECORD_DIR below) and nothing else in this script
+# needs it. Kept as an accepted argument for CLI/pom.xml stability.
 WORK_DIR="${IT_WORK_DIR:-${2:-}}"
 STRICT="${IT_SWEEP_STRICT:-0}"
 
 REAPED=0
+PRUNED=0
 FAILED=0
 REPORT=""
 
@@ -70,30 +77,64 @@ done < <(it_marked_processes | sed 's/^/app /'; it_supervisor_processes | sed 's
 
 # Chromedrivers cannot be identified after the fact -- once the failsafe JVM
 # that spawned them dies they reparent to init and look like anyone else's.
-# The supervisor records them by pid while their JVM is still alive; this reads
-# that record back, and re-checks each pid really is still a chromedriver
-# before killing it, in case the pid has been recycled since.
-for runid in $STALE_RUNS; do
-    record="${WORK_DIR:-.}/supervisor-${runid}.chromedrivers"
-    [ -f "$record" ] || continue
-    while read -r pid; do
-        case "$pid" in
-            ''|*[!0-9]*) continue ;;
-        esac
-        case "$(it_comm "$pid")" in
-            chromedriver*) ;;
-            *) continue ;;
-        esac
-        note "  pid $pid  chromedriver from run $runid"
-        if it_kill_pids 10 "$pid"; then
-            REAPED=$(( REAPED + 1 ))
-        else
-            note "    FAILED to kill chromedriver $pid"
-            FAILED=1
+# The supervisor records them by pid, stamped with its owning build's
+# identity (it_record_init), in IT_RECORD_DIR -- a location `mvn clean`
+# cannot reach (see it-harness-lib.sh), so the record survives even a run
+# whose app AND supervisor have BOTH already exited. That run contributes
+# NOTHING to STALE_RUNS above, which is built entirely from live marked
+# processes: this is deliberately a second, independent pass over every
+# record found on disk, not a lookup keyed off STALE_RUNS.
+#
+# Every record is judged purely by its own header, never by whether some
+# other process happens to still exist:
+#   - owner alive  -> skip the record entirely, untouched. Non-negotiable:
+#                      a second, concurrent `mvn verify -Pit` is legitimate
+#                      (CLAUDE.md), and its drivers must survive this sweep
+#                      no matter what the process-marker pass above decided.
+#                      An owner token this library did not recognise (no
+#                      header, or an unparseable one) is treated the same
+#                      way -- refuse to guess, the same rule it_owner_alive
+#                      itself follows for an unresolvable start time.
+#   - owner dead   -> reap the recorded pids, re-checking each is STILL a
+#                      chromedriver (pids recycle) and killing its
+#                      descendants too -- SIGKILL to chromedriver does not
+#                      take its Chrome children with it, which is where a
+#                      reaped run's memory actually sits -- then delete the
+#                      record either way, so an empty record or one whose
+#                      pids have all already exited cannot linger forever.
+if [ -d "$IT_RECORD_DIR" ]; then
+    for record in "$IT_RECORD_DIR"/*.chromedrivers; do
+        [ -e "$record" ] || continue
+        runid="$(basename "$record" .chromedrivers)"
+        [ "$runid" = "$CURRENT_RUN" ] && continue
+
+        owner="$(it_record_owner "$record")"
+        if [ -z "$owner" ] || it_owner_alive "$owner"; then
+            continue
         fi
-    done < "$record"
-    rm -f "$record"
-done
+
+        note "  chromedriver record for run $runid: owner ${owner%%@*} is gone"
+        while IFS= read -r pid; do
+            rc=0
+            it_reap_chromedriver_pid "$pid" 10 || rc=$?
+            case "$rc" in
+                0)
+                    note "  pid $pid  chromedriver from run $runid (record)"
+                    REAPED=$(( REAPED + 1 ))
+                    ;;
+                2) ;; # pid recycled since the record was written; not ours to kill
+                *)
+                    note "  pid $pid  chromedriver from run $runid (record)"
+                    note "    FAILED to kill chromedriver $pid or a descendant"
+                    FAILED=1
+                    ;;
+            esac
+        done < <(it_record_pids "$record")
+
+        rm -f "$record"
+        PRUNED=$(( PRUNED + 1 ))
+    done
+fi
 
 # ------------------------------------------------------ their containers
 
@@ -119,13 +160,16 @@ fi
 
 # ----------------------------------------------------------------- report
 
-if [ "$REAPED" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
+if [ "$REAPED" -eq 0 ] && [ "$FAILED" -eq 0 ] && [ "$PRUNED" -eq 0 ]; then
     echo "sweep-stale.sh: nothing left over from earlier IT runs."
     exit 0
 fi
 
 echo "=================================================================="
 echo " IT harness: reaped $REAPED leftover(s) from earlier runs"
+if [ "$PRUNED" -gt 0 ]; then
+    echo " (also pruned $PRUNED stale chromedriver record(s) whose owning build is gone)"
+fi
 echo "=================================================================="
 printf '%s' "$REPORT"
 echo "------------------------------------------------------------------"

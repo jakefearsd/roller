@@ -20,10 +20,16 @@
 # setsid plus an ignored SIGINT is portable to anything with a POSIX shell.
 #
 # Usage: supervise-run.sh <run-id> <container-name> <work-dir>
+# <work-dir> is used only for this run's own log file; the chromedriver
+# attribution record lives elsewhere (IT_RECORD_DIR, see it-harness-lib.sh)
+# precisely because <work-dir> is target/, which `mvn clean` deletes.
 # Environment:
 #   IT_OWNER_STAMP  owner token to watch (default: computed from $PPID, which
 #                   under maven-antrun-plugin is the Maven JVM)
 #   IT_POLL_SECONDS how often to check on the build (default: 3)
+#   IT_RECORD_DIR   overrides where the chromedriver record is written
+#                   (default: ${XDG_CACHE_HOME:-$HOME/.cache}/roller-it) --
+#                   tests only; never point this at target/ or /tmp.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,7 +43,10 @@ WORK_DIR="${3:-.}"
 OWNER="${IT_OWNER_STAMP:-$(it_owner_stamp "$PPID")}"
 POLL="${IT_POLL_SECONDS:-3}"
 LOG="$WORK_DIR/supervisor-$RUN_ID.log"
-CHROMEDRIVERS="$WORK_DIR/supervisor-$RUN_ID.chromedrivers"
+# Deliberately NOT under $WORK_DIR (target/): see IT_RECORD_DIR in
+# it-harness-lib.sh for why a chromedriver's attribution record must survive
+# `mvn clean`, which target/ by definition does not.
+RECORD="$(it_record_path "$RUN_ID")"
 
 # First invocation: detach and return immediately, so the build is not blocked
 # by its own supervisor. The child re-enters this script with the marker
@@ -66,6 +75,11 @@ trap '' INT HUP
 OWNER_PID="${OWNER%%@*}"
 echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] supervising run $RUN_ID, build pid $OWNER_PID, container ${CONTAINER:-none}"
 
+# The record is created (with its owner header) as soon as we start watching,
+# not lazily on first sighting of a chromedriver -- a run that dies before
+# spawning any browser still leaves a record for the sweep to prune later.
+it_record_init "$RUN_ID" "$OWNER"
+
 # Chromedrivers are attributable to this run only while the failsafe JVM that
 # spawned them is alive; afterwards they are orphans indistinguishable from any
 # other project's. So record them as they appear.
@@ -74,11 +88,7 @@ record_chromedrivers() {
     for pid in $(it_descendants "$OWNER_PID"); do
         comm="$(it_comm "$pid")"
         case "$comm" in
-            chromedriver*)
-                if ! grep -qx "$pid" "$CHROMEDRIVERS" 2>/dev/null; then
-                    echo "$pid" >> "$CHROMEDRIVERS"
-                fi
-                ;;
+            chromedriver*) it_record_add_pid "$RUN_ID" "$pid" ;;
         esac
     done
 }
@@ -98,19 +108,18 @@ for pid in $(it_pids_for_run "$RUN_ID" "$$"); do
     it_kill_pids 15 "$pid" || echo "  pid $pid survived SIGKILL"
 done
 
-if [ -f "$CHROMEDRIVERS" ]; then
-    while read -r pid; do
-        case "$pid" in
-            ''|*[!0-9]*) continue ;;
+if [ -f "$RECORD" ]; then
+    while IFS= read -r pid; do
+        echo "  killing chromedriver $pid and its descendants"
+        rc=0
+        it_reap_chromedriver_pid "$pid" 10 || rc=$?
+        case "$rc" in
+            0) ;;
+            2) echo "    pid $pid is no longer a chromedriver (pid recycled since it was recorded)" ;;
+            *) echo "  chromedriver $pid (or a descendant) survived SIGKILL" ;;
         esac
-        case "$(it_comm "$pid")" in
-            chromedriver*) ;;
-            *) continue ;;
-        esac
-        echo "  killing chromedriver $pid"
-        it_kill_pids 10 "$pid" || echo "  chromedriver $pid survived SIGKILL"
-    done < "$CHROMEDRIVERS"
-    rm -f "$CHROMEDRIVERS"
+    done < <(it_record_pids "$RECORD")
+    rm -f "$RECORD"
 fi
 
 removed="$(it_remove_container "$CONTAINER")"
