@@ -33,6 +33,54 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   machine, which are irrelevant and may run for an hour. Never poll for a lock
   as a separate background step and stop — inline the wait in the same command
   as the build, or you have traded a stall for a longer stall.
+- **Parallelising implementers means git worktrees — and a worktree's base
+  MUST be pinned and verified before you dispatch into it.** Worktrees are the
+  right tool: each gets its own `app/target/` and its own git index, which
+  dissolves both reasons the build is serialised above. But a worktree created
+  without an explicit base can branch from a stale commit, and **that failure is
+  silent in the worst possible way**: the agent's edits are correct against the
+  code it was given, the merge applies cleanly enough, and the result quietly
+  *reverts* whatever else changed in those files since the branch point. Nothing
+  catches it — the reverted code compiles, the tests pass (they were passing
+  before the reverted fix too), and the static-analysis gates pass (the reverted
+  fix is not a violation, it is an improvement).
+
+  This has already happened here. Two parallel logging-migration agents branched
+  from a commit ~22 commits behind master; one overlapped master in **14 of its
+  20 files** and the other's packages had **44 changed files**, all carrying a
+  prior wave's charset, resource-handling, `volatile` and suppression fixes.
+  Merging would have reverted them invisibly.
+
+  So, before dispatching into a worktree:
+
+  ```bash
+  git -C <worktree> rev-parse --short HEAD        # is this the base you meant?
+
+  # The check that actually matters: does the agent's scope overlap anything
+  # that changed on master since that base? LC_ALL=C on BOTH sides is required
+  # -- with a locale-sensitive sort, comm prints "input is not in sorted order"
+  # and its answer is unreliable, which is worse than no check at all because
+  # it still prints an empty (reassuring) result.
+  git diff --name-only <base>..<branch> | LC_ALL=C sort > /tmp/a
+  git diff --name-only <base>..master   | LC_ALL=C sort > /tmp/b
+  LC_ALL=C comm -12 /tmp/a /tmp/b
+
+  # Cross-check with git itself, which needs no sorting and is authoritative:
+  git merge-tree --write-tree <branch> master >/dev/null && echo clean
+  ```
+
+  A non-empty overlap means a merge can revert real work. **Do not resolve that
+  by cherry-picking or rebasing** when the overlap is large: conflict resolution
+  then *is* the work, performed in the mode most likely to drop a line by
+  accident, and a bad resolution reverts a fix silently. Discard and redo on the
+  correct base — the discarded agent's *report* (write reports to the main
+  checkout, never inside the worktree) survives as a checklist, so only the
+  edits are lost, not the discovery.
+
+  One corollary worth knowing: **a worktree on a stale base may not even contain
+  the quality gates**, so its `mvn verify` is a far weaker check than it looks
+  while reporting BUILD SUCCESS. That is how the case above was caught — an
+  agent noticed the plugins were absent from its `pom.xml` and said so.
 - **All development is test-driven.** Write the failing test first, run it and
   watch it fail for the reason you expect, then write the minimum code that
   makes it pass. A test that has never been seen to fail has not been shown to
