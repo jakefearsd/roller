@@ -43,6 +43,7 @@ import org.apache.roller.weblogger.util.Utilities;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
+import org.apache.roller.weblogger.util.SafeXml;
 import org.jdom2.input.SAXBuilder;
 
 /**
@@ -351,7 +352,7 @@ public final class MenuHelper {
 
         ParsedMenu config = new ParsedMenu();
 
-        SAXBuilder builder = new SAXBuilder();
+        SAXBuilder builder = SafeXml.saxBuilder();
         Document doc = builder.build(instream);
 
         Element root = doc.getRootElement();

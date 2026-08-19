@@ -29,6 +29,7 @@ import java.util.List;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
+import org.apache.roller.weblogger.util.SafeXml;
 import org.jdom2.input.SAXBuilder;
 
 
@@ -57,7 +58,7 @@ public class RuntimeConfigDefsParser {
         
         RuntimeConfigDefs configs = new RuntimeConfigDefs();
         
-        SAXBuilder builder = new SAXBuilder();
+        SAXBuilder builder = SafeXml.saxBuilder();
         Document doc = builder.build(instream);
         
         Element root = doc.getRootElement();
