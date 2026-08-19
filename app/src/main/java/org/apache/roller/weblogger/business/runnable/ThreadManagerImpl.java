@@ -27,8 +27,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.InitializationException;
@@ -44,7 +44,7 @@ import static org.apache.roller.util.RollerConstants.GRACEFUL_SHUTDOWN_WAIT_IN_S
  */
 public abstract class ThreadManagerImpl implements ThreadManager {
     
-    private static final Log LOG = LogFactory.getLog(ThreadManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(ThreadManagerImpl.class);
     
     // our own scheduler thread
     private Thread schedulerThread = null;
@@ -55,7 +55,7 @@ public abstract class ThreadManagerImpl implements ThreadManager {
     
     public ThreadManagerImpl() {
         
-        LOG.info("Instantiating Thread Manager");
+        log.info("Instantiating Thread Manager");
         
         serviceScheduler = Executors.newCachedThreadPool();
     }
@@ -72,7 +72,7 @@ public abstract class ThreadManagerImpl implements ThreadManager {
             
             String taskClassName = WebloggerConfig.getProperty("tasks."+taskName+".class");
             if(taskClassName != null) {
-                LOG.info("Initializing task: " + taskName);
+                log.info("Initializing task: {}", taskName);
                 
                 try {
                     RollerTask task = (RollerTask) Reflection.newInstance(taskClassName);
@@ -81,7 +81,7 @@ public abstract class ThreadManagerImpl implements ThreadManager {
                     // make sure there is a tasklock record in the db
                     TaskLock taskLock = getTaskLockByName(task.getName());
                     if (taskLock == null) {
-                        LOG.debug("Task record does not exist, inserting empty record to start with");
+                        log.debug("Task record does not exist, inserting empty record to start with");
 
                         // insert an empty record
                         taskLock = new TaskLock();
@@ -98,11 +98,11 @@ public abstract class ThreadManagerImpl implements ThreadManager {
                     webloggerTasks.add(task);
                     
                 } catch (ClassCastException ex) {
-                    LOG.warn("Task does not extend RollerTask class", ex);
+                    log.warn("Task does not extend RollerTask class", ex);
                 } catch (WebloggerException ex) {
-                    LOG.error("Error scheduling task", ex);
+                    log.error("Error scheduling task", ex);
                 } catch (ReflectiveOperationException ex) {
-                    LOG.error("Error instantiating task", ex);
+                    log.error("Error instantiating task", ex);
                 }
             }
         }
@@ -112,7 +112,7 @@ public abstract class ThreadManagerImpl implements ThreadManager {
         
         // start scheduler thread, but only if it's not already running
         if (schedulerThread == null) {
-            LOG.debug("Starting scheduler thread");
+            log.debug("Starting scheduler thread");
             schedulerThread = new Thread(scheduler, "Roller Weblogger Task Scheduler");
             // set thread priority between MAX and NORM so we get slightly preferential treatment
             schedulerThread.setPriority((Thread.MAX_PRIORITY + Thread.NORM_PRIORITY)/2);
@@ -153,25 +153,25 @@ public abstract class ThreadManagerImpl implements ThreadManager {
     @Override
     public void shutdown() {
         
-        LOG.debug("starting shutdown sequence");
+        log.debug("starting shutdown sequence");
         
         // trigger an immediate shutdown of any backgrounded tasks
         serviceScheduler.shutdownNow();
         try {
             serviceScheduler.awaitTermination(GRACEFUL_SHUTDOWN_WAIT_IN_SECONDS, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
-            LOG.debug(e.getMessage(), e);
+            log.debug(e.getMessage(), e);
         }
 
         // only stop if we are already running
         if(schedulerThread != null) {
-            LOG.debug("Stopping scheduler");
+            log.debug("Stopping scheduler");
             schedulerThread.interrupt();
             try {
                 schedulerThread.join(GRACEFUL_SHUTDOWN_WAIT_IN_MILLISECONDS);
-                LOG.debug("Scheduler was stopped successfully");
+                log.debug("Scheduler was stopped successfully");
             } catch (InterruptedException e) {
-                LOG.debug(e.getMessage(), e);
+                log.debug(e.getMessage(), e);
             }
         }
     }

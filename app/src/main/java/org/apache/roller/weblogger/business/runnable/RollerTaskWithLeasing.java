@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.business.runnable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 
@@ -29,7 +29,7 @@ import org.apache.roller.weblogger.business.WebloggerFactory;
  * attempt to acquire a lease before doing its work.
  */
 public abstract class RollerTaskWithLeasing extends RollerTask {
-    private static Log log = LogFactory.getLog(RollerTaskWithLeasing.class);
+    private static final Logger log = LoggerFactory.getLogger(RollerTaskWithLeasing.class);
     protected static final int DEFAULT_LEASE_MINS = 30;
     
     /**
@@ -55,32 +55,32 @@ public abstract class RollerTaskWithLeasing extends RollerTask {
         
         boolean lockAcquired = false;
         try {
-            log.debug(getName()+": Attempting to acquire lease");
-            
+            log.debug("{}: Attempting to acquire lease", getName());
+
             lockAcquired = mgr.registerLease(this);
-            
+
             // now if we have a lock then run the task
             if(lockAcquired) {
-                log.debug(getName()+": Lease acquired, running task");
+                log.debug("{}: Lease acquired, running task", getName());
                 this.runTask();
             } else {
-                log.debug(getName()+": Lease NOT acquired, cannot continue");
+                log.debug("{}: Lease NOT acquired, cannot continue", getName());
             }
-            
+
         } catch (Exception ex) {
-            log.error(getName()+": Unexpected exception", ex);
+            log.error("{}: Unexpected exception", getName(), ex);
         } finally {
-            
+
             if(lockAcquired) {
-                
-                log.debug(getName()+": Attempting to release lease");
-                
+
+                log.debug("{}: Attempting to release lease", getName());
+
                 boolean lockReleased = mgr.unregisterLease(this);
-                
+
                 if(lockReleased) {
-                    log.debug(getName()+": Lease released, task finished");
+                    log.debug("{}: Lease released, task finished", getName());
                 } else {
-                    log.debug(getName()+": Lease NOT released, some kind of problem");
+                    log.debug("{}: Lease NOT released, some kind of problem", getName());
                 }
             }
             

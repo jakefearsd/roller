@@ -18,8 +18,8 @@
 package org.apache.roller.weblogger.business.startup;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.DatabaseProvider;
 
 import java.io.ByteArrayInputStream;
@@ -50,7 +50,7 @@ import java.util.Set;
  */
 public class DatabaseInstaller {
 
-    private static final Log log = LogFactory.getLog(DatabaseInstaller.class);
+    private static final Logger log = LoggerFactory.getLogger(DatabaseInstaller.class);
 
     /** Tracking table; created by V001, which is therefore self-bootstrapping. */
     static final String TRACKING_TABLE = "schema_migrations";
@@ -202,7 +202,7 @@ public class DatabaseInstaller {
             try {
                 con.rollback();
             } catch (SQLException rollbackFailure) {
-                log.error("Rollback of " + version + " failed", rollbackFailure);
+                log.error("Rollback of {} failed", version, rollbackFailure);
             }
             if (runner != null) {
                 messages.addAll(runner.getMessages());

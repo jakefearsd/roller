@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.business.jpa;
 
 import org.apache.commons.lang3.BooleanUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 
@@ -62,7 +62,7 @@ import org.apache.roller.weblogger.pojos.WeblogTemplate;
  */
 public class JPAWeblogManagerImpl implements WeblogManager {
     
-    private static final Log log = LogFactory.getLog(JPAWeblogManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(JPAWeblogManagerImpl.class);
 
     private final Weblogger roller;
     private final JPAPersistenceStrategy strategy;
@@ -341,7 +341,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
             if (weblog != null) {
                 // only return weblog if enabled status matches
                 if(visible == null || visible.equals(weblog.getVisible())) {
-                    log.debug("weblogHandleToId CACHE HIT - "+handle);
+                    log.debug("weblogHandleToId CACHE HIT - {}", handle);
                     return weblog;
                 }
             } else {
@@ -361,7 +361,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         
         // add mapping to cache
         if(weblog != null) {
-            log.debug("weblogHandleToId CACHE MISS - "+handle);
+            log.debug("weblogHandleToId CACHE MISS - {}", handle);
             this.weblogHandleToIdMap.put(weblog.getHandle(), weblog.getId());
         }
         
@@ -506,7 +506,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         for (WeblogPermission perm : perms) {
             User user = perm.getUser();
             if (user == null) {
-                log.error("ERROR user is null, userName:" + perm.getUserName());
+                log.error("ERROR user is null, userName:{}", perm.getUserName());
                 continue;
             }
             if (!enabledOnly || user.getEnabled()) {

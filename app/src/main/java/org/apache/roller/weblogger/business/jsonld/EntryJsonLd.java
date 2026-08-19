@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.weblogger.business.shortcodes.FaqBlocks;
@@ -101,7 +101,7 @@ import org.apache.roller.weblogger.util.Utilities;
  */
 public final class EntryJsonLd {
 
-    private static final Log log = LogFactory.getLog(EntryJsonLd.class);
+    private static final Logger log = LoggerFactory.getLogger(EntryJsonLd.class);
 
     /** Tags whose removal must leave a word boundary behind. */
     private static final Pattern LINE_BREAKING_TAG = Pattern.compile(
@@ -158,8 +158,8 @@ public final class EntryJsonLd {
             case FAQ_PAGE -> {
                 List<Object> questions = questionsOf(entry);
                 if (questions.isEmpty()) {
-                    log.debug("Entry " + entry.getId() + " is typed FAQ_PAGE but has no"
-                            + " parseable [faq] pairs; emitting no second block");
+                    log.debug("Entry {} is typed FAQ_PAGE but has no"
+                            + " parseable [faq] pairs; emitting no second block", entry.getId());
                     return null;
                 }
                 node.put("mainEntity", questions);
@@ -252,8 +252,8 @@ public final class EntryJsonLd {
     private static boolean addEvent(Map<String, Object> node, WeblogEntry entry) {
         Timestamp start = entry.getEventStart();
         if (start == null) {
-            log.debug("Entry " + entry.getId() + " is typed EVENT but has no start date;"
-                    + " emitting no second block");
+            log.debug("Entry {} is typed EVENT but has no start date;"
+                    + " emitting no second block", entry.getId());
             return false;
         }
         node.put("startDate", DateUtil.formatIso8601(start));

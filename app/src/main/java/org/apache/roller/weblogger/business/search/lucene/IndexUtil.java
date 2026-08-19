@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.business.search.lucene;
 import java.io.IOException;
 import java.io.StringReader;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -35,7 +35,7 @@ import org.apache.lucene.index.Term;
  */
 public final class IndexUtil {
 
-    private static final Log log = LogFactory.getLog(IndexUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(IndexUtil.class);
 
     private IndexUtil() {}
 
@@ -64,7 +64,7 @@ public final class IndexUtil {
                 term = new Term(field, termt);
             }
         } catch (IOException e) {
-            log.debug("Could not tokenize search term for field '" + field + "'", e);
+            log.debug("Could not tokenize search term for field '{}'", field, e);
         }
         return term;
     }

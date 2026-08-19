@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.business.search.lucene;
 import java.io.IOException;
 import java.util.Date;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.roller.util.RollerConstants;
@@ -40,7 +40,7 @@ public class RemoveWebsiteIndexOperation extends WriteToIndexOperation {
     // ~ Static fields/initializers
     // =============================================
 
-    private static Log logger = LogFactory.getFactory().getInstance(
+    private static final Logger log = LoggerFactory.getLogger(
             RemoveWebsiteIndexOperation.class);
 
     // ~ Instance fields
@@ -84,7 +84,7 @@ public class RemoveWebsiteIndexOperation extends WriteToIndexOperation {
             this.website = roller.getWeblogManager().getWeblog(
                     this.website.getId());
         } catch (WebloggerException ex) {
-            logger.error("Error getting website object", ex);
+            log.error("Error getting website object", ex);
             return;
         }
 
@@ -103,7 +103,7 @@ public class RemoveWebsiteIndexOperation extends WriteToIndexOperation {
                 }
             }
         } catch (IOException e) {
-            logger.info("Problems deleting doc from index", e);
+            log.info("Problems deleting doc from index", e);
         } finally {
             endWriting();
         }
@@ -112,8 +112,8 @@ public class RemoveWebsiteIndexOperation extends WriteToIndexOperation {
         double length = (end.getTime() - start.getTime()) / (double) RollerConstants.SEC_IN_MS;
 
         if (website != null) {
-            logger.info("Completed deleting indices for website '"
-                    + website.getName() + "' in '" + length + "' seconds");
+            log.info("Completed deleting indices for website '{}' in '{}' seconds",
+                    website.getName(), length);
         }
     }
 }

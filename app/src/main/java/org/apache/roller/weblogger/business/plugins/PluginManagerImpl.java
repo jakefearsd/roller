@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.business.plugins;
 import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -39,7 +39,7 @@ import org.apache.roller.weblogger.util.Reflection;
  */
 public class PluginManagerImpl implements PluginManager {
     
-    private static final Log log = LogFactory.getLog(PluginManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(PluginManagerImpl.class);
     
     // Plugin classes keyed by plugin name
     private static final Map<String, Class<? extends WeblogEntryPlugin>> mPagePlugins = new LinkedHashMap<>();
@@ -61,7 +61,7 @@ public class PluginManagerImpl implements PluginManager {
         // put()), so it can never be null -- the null check below was dead
         // on arrival, not merely mis-positioned relative to the size() call
         // above.
-        log.debug("mPluginClasses.size(): " + mPagePlugins.size());
+        log.debug("mPluginClasses.size(): {}", mPagePlugins.size());
         return !mPagePlugins.isEmpty();
     }
     
@@ -126,15 +126,11 @@ public class PluginManagerImpl implements PluginManager {
         log.debug("Initializing page plugins");
         
         String pluginStr = WebloggerConfig.getProperty("plugins.page");
-        if (log.isDebugEnabled()) {
-            log.debug(pluginStr);
-        }
+        log.debug(pluginStr);
         if (pluginStr != null) {
             String[] plugins = StringUtils.stripAll(StringUtils.split(pluginStr, ","));
             for (String plugin : plugins) {
-                if (log.isDebugEnabled()) {
-                    log.debug("try " + plugin);
-                }
+                log.debug("try {}", plugin);
                 try {
                     Class<?> clazz = Class.forName(plugin);
                     
@@ -144,10 +140,10 @@ public class PluginManagerImpl implements PluginManager {
                         WeblogEntryPlugin weblogEntryPlugin = Reflection.newInstance(pluginClass);
                         mPagePlugins.put(weblogEntryPlugin.getName(), pluginClass);
                     } else {
-                        log.warn(clazz + " is not a PagePlugin");
+                        log.warn("{} is not a PagePlugin", clazz);
                     }
                 } catch (ReflectiveOperationException e) {
-                    log.error("unable to create " + plugin);
+                    log.error("unable to create {}", plugin);
                 }
             }
         }

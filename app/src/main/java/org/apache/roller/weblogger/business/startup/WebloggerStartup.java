@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.business.startup;
 
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.DatabaseProvider;
 import org.apache.roller.weblogger.business.MailProvider;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -31,7 +31,7 @@ import org.apache.roller.weblogger.config.WebloggerConfig;
  */
 public final class WebloggerStartup {
     
-    private static final Log LOG = LogFactory.getLog(WebloggerStartup.class);
+    private static final Logger log = LoggerFactory.getLogger(WebloggerStartup.class);
     
     private static boolean prepared = false;
 
@@ -202,9 +202,9 @@ public final class WebloggerStartup {
         try {
             mailProvider = new MailProvider();
         } catch(StartupException ex) {
-            LOG.warn("Failed to setup mail provider, continuing anyways.\n"
-                    + "Reason: " + ex.getMessage());
-            LOG.info("The cause of setting up mail provider error was: ", ex);
+            log.warn("Failed to setup mail provider, continuing anyways.\n"
+                    + "Reason: {}", ex.getMessage());
+            log.info("The cause of setting up mail provider error was: ", ex);
         }
         
         // now we need to deal with database install/upgrade logic

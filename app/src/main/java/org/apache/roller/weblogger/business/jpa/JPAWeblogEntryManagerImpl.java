@@ -26,8 +26,8 @@ import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
@@ -58,7 +58,7 @@ import org.apache.roller.weblogger.business.WeblogEntryManager;
  */
 public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     
-    private static final Log LOG = LogFactory.getLog(JPAWeblogEntryManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(JPAWeblogEntryManagerImpl.class);
     
     private final Weblogger roller;
     private final JPAPersistenceStrategy strategy;
@@ -73,7 +73,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
 
 
     public JPAWeblogEntryManagerImpl(Weblogger roller, JPAPersistenceStrategy strategy) {
-        LOG.debug("Instantiating JPA Weblog Manager");
+        log.debug("Instantiating JPA Weblog Manager");
         this.roller = roller;
         this.strategy = strategy;
     }
@@ -236,8 +236,8 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
                 event.setOccurredAt(new Timestamp(System.currentTimeMillis()));
                 roller.getEventManager().record(event);
             } catch (Exception ex) {
-                LOG.warn("Could not record entry_published event for "
-                        + entry.getAnchor(), ex);
+                log.warn("Could not record entry_published event for {}",
+                        entry.getAnchor(), ex);
             }
         }
 
@@ -295,8 +295,8 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
                 this.strategy.remove(existing.get(i));
             }
         } catch (Exception e) {
-            LOG.warn("Could not record a revision for entry " + entry.getId()
-                    + "; the save itself is unaffected", e);
+            log.warn("Could not record a revision for entry {}; the save itself is unaffected",
+                    entry.getId(), e);
         }
     }
 
@@ -490,7 +490,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             throws WebloggerException {
 
 		if (current == null) {
-			LOG.debug("current WeblogEntry cannot be null");
+			log.debug("current WeblogEntry cannot be null");
 			return Collections.emptyList();
 		}
 
@@ -754,7 +754,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             
             WeblogEntry entry = this.getWeblogEntry(this.entryAnchorToIdMap.get(mappingKey));
             if(entry != null) {
-                LOG.debug("entryAnchorToIdMap CACHE HIT - " + mappingKey);
+                log.debug("entryAnchorToIdMap CACHE HIT - {}", mappingKey);
                 return entry;
             } else {
                 // mapping hit with lookup miss?  mapping must be old, remove it
@@ -776,7 +776,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
         
         // add mapping to cache
         if(entry != null) {
-            LOG.debug("entryAnchorToIdMap CACHE MISS - " + mappingKey);
+            log.debug("entryAnchorToIdMap CACHE MISS - {}", mappingKey);
             this.entryAnchorToIdMap.put(mappingKey, entry.getId());
         }
         return entry;

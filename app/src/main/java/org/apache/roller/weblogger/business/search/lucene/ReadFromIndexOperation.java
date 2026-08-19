@@ -17,8 +17,8 @@
  */
 package org.apache.roller.weblogger.business.search.lucene;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author aim4min
@@ -27,10 +27,10 @@ public abstract class ReadFromIndexOperation extends IndexOperation {
     public ReadFromIndexOperation(LuceneIndexManager mgr) {
         super(mgr);
     }
-    
-    private static Log logger = LogFactory.getFactory().getInstance(
+
+    private static final Logger log = LoggerFactory.getLogger(
             ReadFromIndexOperation.class);
-    
+
     @Override
     public final void run() {
         try {
@@ -38,7 +38,7 @@ public abstract class ReadFromIndexOperation extends IndexOperation {
             doRun();
 
         } catch (Exception e) {
-            logger.error("Error acquiring read lock on index", e);
+            log.error("Error acquiring read lock on index", e);
         } finally {
             manager.getReadWriteLock().readLock().unlock();
         }

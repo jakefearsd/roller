@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.business.search.lucene;
 import java.io.IOException;
 import java.util.Locale;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
@@ -47,7 +47,7 @@ public class SearchOperation extends ReadFromIndexOperation {
     // ~ Static fields/initializers
     // =============================================
 
-    private static Log logger = LogFactory.getFactory().getInstance(
+    private static final Logger log = LoggerFactory.getLogger(
             SearchOperation.class);
 
     private static final String[] SEARCH_FIELDS = new String[] {
@@ -145,7 +145,7 @@ public class SearchOperation extends ReadFromIndexOperation {
             searchresults = searcher.search(query, docLimit, SORTER);
 
         } catch (IOException e) {
-            logger.error("Error searching index", e);
+            log.error("Error searching index", e);
             parseError = e.getMessage();
 
         } catch (ParseException e) {

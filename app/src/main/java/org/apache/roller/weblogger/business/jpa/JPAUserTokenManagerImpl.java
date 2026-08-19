@@ -24,8 +24,8 @@ import jakarta.persistence.NoResultException;
 import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserTokenManager;
 import org.apache.roller.weblogger.pojos.User;
@@ -37,7 +37,7 @@ import org.apache.roller.weblogger.util.TokenGenerator;
  */
 public class JPAUserTokenManagerImpl implements UserTokenManager {
 
-    private static final Log log = LogFactory.getLog(JPAUserTokenManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(JPAUserTokenManagerImpl.class);
 
     private final JPAPersistenceStrategy strategy;
 

@@ -33,8 +33,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import jakarta.persistence.EntityManagerFactory;
@@ -72,8 +72,8 @@ import org.apache.roller.weblogger.business.DatabaseProvider;
 @SuppressWarnings("PMD.CloseResource")
 public class JPAPersistenceStrategy {
 
-    private static final Log logger =
-        LogFactory.getFactory().getInstance(JPAPersistenceStrategy.class);
+    private static final Logger log =
+        LoggerFactory.getLogger(JPAPersistenceStrategy.class);
 
     private static final String PERSISTENCE_UNIT_NAME = "RollerPU";
 
@@ -150,7 +150,7 @@ public class JPAPersistenceStrategy {
                         || key.startsWith("openjpa.")
                         || key.startsWith("eclipselink.")) {
                     String value = WebloggerConfig.getProperty(key);
-                    logger.info(key + ": " + value);
+                    log.info("{}: {}", key, value);
                     emfProps.setProperty(key, value);
                 }
             }
@@ -174,7 +174,7 @@ public class JPAPersistenceStrategy {
                         .createContainerEntityManagerFactory(unitInfo, emfProps);
 
             } catch (Exception pe) {
-                logger.error("ERROR: creating entity manager", pe);
+                log.error("ERROR: creating entity manager", pe);
                 throw new WebloggerException(pe);
             }
         }
@@ -590,13 +590,13 @@ public class JPAPersistenceStrategy {
                 em.getTransaction().rollback();
             }
         } catch (Exception e) {
-            logger.error("error during releasing database session", e);
+            log.error("error during releasing database session", e);
         } finally {
             if (em != null) {
                 try {
                     em.close();
                 } catch (Exception e) {
-                    logger.debug("error during closing EntityManager", e);
+                    log.debug("error during closing EntityManager", e);
                 }
             }
             threadLocalEntityManager.remove();

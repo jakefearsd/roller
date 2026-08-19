@@ -23,8 +23,8 @@ import java.util.List;
 import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.Weblogger;
@@ -37,7 +37,7 @@ import org.apache.roller.weblogger.pojos.WeblogPage;
  */
 public class JPAWeblogPageManagerImpl implements WeblogPageManager {
 
-    private static final Log log = LogFactory.getLog(JPAWeblogPageManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(JPAWeblogPageManagerImpl.class);
 
     private final Weblogger roller;
     private final JPAPersistenceStrategy strategy;

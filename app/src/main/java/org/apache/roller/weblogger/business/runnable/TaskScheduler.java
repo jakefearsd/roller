@@ -25,8 +25,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -49,7 +49,7 @@ import static org.apache.roller.util.RollerConstants.GRACEFUL_SHUTDOWN_WAIT_IN_S
  */
 public class TaskScheduler implements Runnable {
     
-    private static Log log = LogFactory.getLog(TaskScheduler.class);
+    private static final Logger log = LoggerFactory.getLogger(TaskScheduler.class);
     private final ExecutorService pool;
     private final List<RollerTask> tasks;
     
@@ -74,7 +74,7 @@ public class TaskScheduler implements Runnable {
             try {
                 // get current time
                 Date now = new Date();
-                log.debug("Current time = "+now);
+                log.debug("Current time = {}", now);
                 
                 // run tasks, skip run on first pass
                 if(firstRun) {
@@ -85,7 +85,7 @@ public class TaskScheduler implements Runnable {
                     cal.set(Calendar.SECOND, cal.getMinimum(Calendar.SECOND));
                     cal.set(Calendar.MILLISECOND, cal.getMinimum(Calendar.MILLISECOND));
                     now = cal.getTime();
-                    log.debug("Start time = "+now);
+                    log.debug("Start time = {}", now);
                     
                     firstRun = false;
                 } else {
@@ -104,14 +104,14 @@ public class TaskScheduler implements Runnable {
                 Date endOfMinute = DateUtil.getEndOfMinute(now);
                 long sleepTime = endOfMinute.getTime() + 50 - System.currentTimeMillis();
                 if(sleepTime > 0) {
-                    log.debug("sleeping - "+sleepTime);
+                    log.debug("sleeping - {}", sleepTime);
                     Thread.sleep(sleepTime);
                 } else {
                     // it's taken us more than 1 minute for the last loop
                     // so recalculate to sleep 'til the end of the current minute
                     endOfMinute = DateUtil.getEndOfMinute(new Date());
                     sleepTime = endOfMinute.getTime() + 50 - System.currentTimeMillis();
-                    log.debug("sleeping - "+sleepTime);
+                    log.debug("sleeping - {}", sleepTime);
                     Thread.sleep(sleepTime);
                 }
                 
@@ -138,7 +138,7 @@ public class TaskScheduler implements Runnable {
     @SuppressWarnings("PMD.AvoidCatchingGenericException")
     private void runTasks(Date currentTime) {
         
-        log.debug("Started - "+currentTime);
+        log.debug("Started - {}", currentTime);
         
         ThreadManager tmgr = WebloggerFactory.getWeblogger().getThreadManager();
         
@@ -155,7 +155,7 @@ public class TaskScheduler implements Runnable {
                 // first, calculate the next allowed run time for the task
                 // based on when the task was last run
                 Date nextRunTime = tasklock.getNextAllowedRun(task.getInterval());
-                log.debug(task.getName()+": next allowed run time = "+nextRunTime);
+                log.debug("{}: next allowed run time = {}", task.getName(), nextRunTime);
                 
                 // if we missed the last scheduled run time then see when the
                 // most appropriate next run time should be and wait 'til then
@@ -187,7 +187,7 @@ public class TaskScheduler implements Runnable {
                 // otherwise we do nothing
                 long differential = currentTime.getTime() - nextRunTime.getTime();
                 if (differential >= 0 && !needToWait) {
-                    log.debug(task.getName()+": LAUNCHING task");
+                    log.debug("{}: LAUNCHING task", task.getName());
                     // execute(), not submit(): this is fire-and-forget, and
                     // every RollerTask is in practice a RollerTaskWithLeasing,
                     // whose run() already wraps runTask() in a try/catch that
@@ -205,7 +205,7 @@ public class TaskScheduler implements Runnable {
                 // down the scheduling loop for every other task. Logged and
                 // moved on; ThreadDeath above is the one Throwable that must
                 // still propagate.
-                log.warn(task.getName() + ": Unhandled exception caught", t);
+                log.warn("{}: Unhandled exception caught", task.getName(), t);
             }
         }
         

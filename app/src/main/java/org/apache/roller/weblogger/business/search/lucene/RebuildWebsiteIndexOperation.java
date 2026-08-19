@@ -22,8 +22,8 @@ import java.text.MessageFormat;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.roller.util.RollerConstants;
@@ -45,7 +45,7 @@ public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
     // ~ Static fields/initializers
     // =============================================
 
-    private static Log logger = LogFactory.getFactory().getInstance(
+    private static final Logger log = LoggerFactory.getLogger(
             RebuildWebsiteIndexOperation.class);
 
     // ~ Instance fields
@@ -87,16 +87,16 @@ public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
         // the weblog object passed in as a detached object which is proned to
         // lazy initialization problems, so requery for the object now
         if (this.website != null) {
-            logger.debug("Reindexining weblog " + website.getHandle());
+            log.debug("Reindexining weblog {}", website.getHandle());
             try {
                 this.website = roller.getWeblogManager().getWeblog(
                         this.website.getId());
             } catch (WebloggerException ex) {
-                logger.error("Error getting website object", ex);
+                log.error("Error getting website object", ex);
                 return;
             }
         } else {
-            logger.debug("Reindexining entire site");
+            log.debug("Reindexining entire site");
         }
 
         IndexWriter writer = beginWriting();
@@ -126,11 +126,11 @@ public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
                 wesc.setStatus(PubStatus.PUBLISHED);
                 List<WeblogEntry> entries = weblogManager.getWeblogEntries(wesc);
 
-                logger.debug("Entries to index: " + entries.size());
+                log.debug("Entries to index: {}", entries.size());
 
                 for (WeblogEntry entry : entries) {
                     writer.addDocument(getDocument(entry));
-                    logger.debug(MessageFormat.format(
+                    log.debug(MessageFormat.format(
                             "Indexed entry {0}: {1}",
                             entry.getPubTime(), entry.getAnchor()));
                 }
@@ -139,7 +139,7 @@ public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
                 roller.release();
             }
         } catch (Exception e) {
-            logger.error("ERROR adding/deleting doc to index", e);
+            log.error("ERROR adding/deleting doc to index", e);
         } finally {
             endWriting();
             if (roller != null) {
@@ -151,11 +151,10 @@ public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
         double length = (end.getTime() - start.getTime()) / (double) RollerConstants.SEC_IN_MS;
 
         if (website == null) {
-            logger.info("Completed rebuilding index for all users in '"
-                    + length + "' secs");
+            log.info("Completed rebuilding index for all users in '{}' secs", length);
         } else {
-            logger.info("Completed rebuilding index for website handle: '"
-                    + website.getHandle() + "' in '" + length + "' seconds");
+            log.info("Completed rebuilding index for website handle: '{}' in '{}' seconds",
+                    website.getHandle(), length);
         }
     }
 }

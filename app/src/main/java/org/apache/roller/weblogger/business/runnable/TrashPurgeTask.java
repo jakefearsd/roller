@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.business.runnable;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -48,7 +48,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
  * has exactly one way of running a scheduled task.
  */
 public class TrashPurgeTask extends RollerTaskWithLeasing {
-    private static Log log = LogFactory.getLog(TrashPurgeTask.class);
+    private static final Logger log = LoggerFactory.getLogger(TrashPurgeTask.class);
 
     public static final String NAME = "TrashPurgeTask";
 
@@ -146,7 +146,7 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
             try {
                 this.interval = Integer.parseInt(intervalStr);
             } catch (NumberFormatException ex) {
-                log.warn("Invalid interval: " + intervalStr);
+                log.warn("Invalid interval: {}", intervalStr);
             }
         }
 
@@ -156,7 +156,7 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
             try {
                 this.leaseTime = Integer.parseInt(leaseTimeStr);
             } catch (NumberFormatException ex) {
-                log.warn("Invalid leaseTime: " + leaseTimeStr);
+                log.warn("Invalid leaseTime: {}", leaseTimeStr);
             }
         }
     }
@@ -189,21 +189,21 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
             int retentionDays = WebloggerRuntimeConfig.getIntProperty(RETENTION_PROPERTY);
 
             List<Weblog> weblogs = wmgr.getWeblogs(true, null, null, null, 0, -1);
-            log.debug("purging trash for " + weblogs.size() + " weblogs at retention "
-                    + retentionDays + " days");
+            log.debug("purging trash for {} weblogs at retention {} days",
+                    weblogs.size(), retentionDays);
 
             for (Weblog weblog : weblogs) {
                 try {
                     int purged = wemgr.purgeTrash(weblog, retentionDays);
                     if (purged > 0) {
-                        log.info("purged " + purged + " trashed entries from weblog "
-                                + weblog.getHandle());
+                        log.info("purged {} trashed entries from weblog {}",
+                                purged, weblog.getHandle());
                     }
                 } catch (WebloggerException e) {
-                    log.error("Error purging trash for weblog " + weblog.getHandle(), e);
+                    log.error("Error purging trash for weblog {}", weblog.getHandle(), e);
                 } catch (Exception e) {
-                    log.error("Unexpected exception purging trash for weblog "
-                            + weblog.getHandle(), e);
+                    log.error("Unexpected exception purging trash for weblog {}",
+                            weblog.getHandle(), e);
                 }
             }
 

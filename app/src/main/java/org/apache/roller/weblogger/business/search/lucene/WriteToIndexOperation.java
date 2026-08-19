@@ -18,33 +18,33 @@
 /* Created on Aug 12, 2003 */
 package org.apache.roller.weblogger.business.search.lucene;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An operation that writes to index.
  * @author Mindaugas Idzelis (min@idzelis.com)
  */
 public abstract class WriteToIndexOperation extends IndexOperation {
-    
+
     public WriteToIndexOperation(LuceneIndexManager mgr) {
         super(mgr);
     }
-    
-    private static Log logger =
-            LogFactory.getFactory().getInstance(WriteToIndexOperation.class);
-    
+
+    private static final Logger log =
+            LoggerFactory.getLogger(WriteToIndexOperation.class);
+
     @Override
     public void run() {
         try {
             manager.getReadWriteLock().writeLock().lock();
-            logger.debug("Starting search index operation");
+            log.debug("Starting search index operation");
             doRun();
-            logger.debug("Search index operation complete");
+            log.debug("Search index operation complete");
 
         } catch (Exception e) {
-            logger.error("Error acquiring write lock on index", e);
-            
+            log.error("Error acquiring write lock on index", e);
+
         } finally {
             manager.getReadWriteLock().writeLock().unlock();
         }

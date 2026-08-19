@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.business.search.lucene;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
@@ -36,8 +36,8 @@ public class AddEntryOperation extends WriteToIndexOperation {
     
     //~ Static fields/initializers =============================================
     
-    private static Log logger =
-            LogFactory.getFactory().getInstance(AddEntryOperation.class);
+    private static final Logger log =
+            LoggerFactory.getLogger(AddEntryOperation.class);
     
     //~ Instance fields ========================================================
     
@@ -69,7 +69,7 @@ public class AddEntryOperation extends WriteToIndexOperation {
         // either happens, not after -- there is nothing this operation can do
         // without it.
         if (roller == null) {
-            logger.error("Weblogger unavailable; cannot index weblog entry");
+            log.error("Weblogger unavailable; cannot index weblog entry");
             return;
         }
 
@@ -82,7 +82,7 @@ public class AddEntryOperation extends WriteToIndexOperation {
             WeblogEntryManager wMgr = roller.getWeblogEntryManager();
             this.data = wMgr.getWeblogEntry(this.data.getId());
         } catch (WebloggerException ex) {
-            logger.error("Error getting weblogentry object", ex);
+            log.error("Error getting weblogentry object", ex);
             return;
         }
 
@@ -99,7 +99,7 @@ public class AddEntryOperation extends WriteToIndexOperation {
                 writer.addDocument(getDocument(data));
             }
         } catch (IOException e) {
-            logger.error("Problems adding doc to index", e);
+            log.error("Problems adding doc to index", e);
         } finally {
             roller.release();
             endWriting();

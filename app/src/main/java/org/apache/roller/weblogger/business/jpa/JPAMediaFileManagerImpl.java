@@ -37,8 +37,8 @@ import jakarta.persistence.NoResultException;
 import jakarta.persistence.TypedQuery;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.BlurHash;
 import org.apache.roller.weblogger.business.ExifSupport;
@@ -62,7 +62,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
 
     private final Weblogger roller;
     private final JPAPersistenceStrategy strategy;
-    private static final Log log = LogFactory.getFactory().getInstance(JPAMediaFileManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(JPAMediaFileManagerImpl.class);
 
     /**
      * Creates a new instance of MediaFileManagerImpl
@@ -163,7 +163,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             throw new WebloggerException("Directory exists");
         } else {
             newDirectory = new MediaFileDirectory(weblog, requestedName, null);
-            log.debug("Created new Directory " + requestedName);
+            log.debug("Created new Directory {}", requestedName);
         }
 
         // update weblog last modified date. date updated by saveWeblog()
@@ -319,7 +319,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         try {
             exif = ExifSupport.extract(fc.getInputStream());
         } catch (Exception e) {
-            log.debug("Could not extract EXIF metadata for media file " + mediaFile.getId(), e);
+            log.debug("Could not extract EXIF metadata for media file {}", mediaFile.getId(), e);
         }
 
         mediaFile.setExifCamera(exif.camera);
@@ -337,7 +337,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         try {
             mediaFile.setBlurhash(computeBlurhash(cmgr, mediaFile));
         } catch (Exception e) {
-            log.debug("Could not compute blurhash for media file " + mediaFile.getId(), e);
+            log.debug("Could not compute blurhash for media file {}", mediaFile.getId(), e);
         }
 
         strategy.store(mediaFile);
@@ -358,7 +358,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                     return BlurHash.encode(image);
                 }
             } catch (Exception e) {
-                log.debug("No usable rendition '" + candidateId + "' for blurhash encoding", e);
+                log.debug("No usable rendition '{}' for blurhash encoding", candidateId, e);
             }
         }
         return null;
@@ -434,9 +434,9 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
 
             } catch (Exception e) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Cannot load thumbnail for image " + id, e);
+                    log.debug("Cannot load thumbnail for image {}", id, e);
                 } else {
-                    log.warn("Cannot load thumbnail for image " + id);
+                    log.warn("Cannot load thumbnail for image {}", id);
                 }
             }
         }
@@ -452,7 +452,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
 
         name = name.startsWith("/") ? name.substring(1) : name;
 
-        log.debug("Looking up weblog|media file directory: " + weblog.getHandle() + "|" + name);
+        log.debug("Looking up weblog|media file directory: {}|{}", weblog.getHandle(), name);
 
         TypedQuery<MediaFileDirectory> q = this.strategy
                 .getNamedQuery("MediaFileDirectory.getByWeblogAndName", MediaFileDirectory.class);
@@ -592,7 +592,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         try {
             cmgr.deleteFile(weblog, fileId);
         } catch (Exception e) {
-            log.debug("File to be deleted already unavailable in the file store: " + fileId);
+            log.debug("File to be deleted already unavailable in the file store: {}", fileId);
         }
     }
 
@@ -774,8 +774,8 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                     FileContent fc = cmgr.getFileContent(weblog, mf.getId());
                     BufferedImage img = ImageIO.read(fc.getInputStream());
                     if (img == null) {
-                        log.warn("Skipping rendition regeneration for media file "
-                                + mf.getId() + ": not a readable image");
+                        log.warn("Skipping rendition regeneration for media file {}: not a readable image",
+                                mf.getId());
                         continue;
                     }
                     // Same orientation correction as the upload path, which is
@@ -803,7 +803,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                     extractExifAndBlurhash(cmgr, mf, fc);
                     count++;
                 } catch (Exception e) {
-                    log.warn("Failed to regenerate renditions for media file " + mf.getId(), e);
+                    log.warn("Failed to regenerate renditions for media file {}", mf.getId(), e);
                 }
             }
         }
@@ -911,8 +911,8 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             try {
                 writeAdminThumbnail(cmgr, mediaFile, cropped);
             } catch (Exception e) {
-                log.warn("Could not regenerate the admin thumbnail after cropping media file "
-                        + mediaFile.getId(), e);
+                log.warn("Could not regenerate the admin thumbnail after cropping media file {}",
+                        mediaFile.getId(), e);
             }
             RenditionSupport.generate(cmgr, mediaFile, cropped);
 
@@ -923,8 +923,8 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             try {
                 mediaFile.setBlurhash(computeBlurhash(cmgr, mediaFile));
             } catch (Exception e) {
-                log.debug("Could not recompute blurhash after cropping media file "
-                        + mediaFile.getId(), e);
+                log.debug("Could not recompute blurhash after cropping media file {}",
+                        mediaFile.getId(), e);
             }
 
             strategy.store(mediaFile);

@@ -23,8 +23,8 @@ package org.apache.roller.weblogger.business.search.lucene;
 import java.io.IOException;
 import java.util.Locale;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.lucene.analysis.miscellaneous.LimitTokenCountAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -49,7 +49,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntry;
  */
 public abstract class IndexOperation implements Runnable {
 
-    private static Log logger = LogFactory.getFactory().getInstance(
+    private static final Logger log = LoggerFactory.getLogger(
             IndexOperation.class);
 
     // ~ Instance fields
@@ -136,7 +136,7 @@ public abstract class IndexOperation implements Runnable {
             writer = new IndexWriter(manager.getIndexDirectory(), config);
 
         } catch (IOException e) {
-            logger.error("ERROR creating writer", e);
+            log.error("ERROR creating writer", e);
         }
 
         return writer;
@@ -150,7 +150,7 @@ public abstract class IndexOperation implements Runnable {
             try {
                 writer.close();
             } catch (IOException e) {
-                logger.error("ERROR closing writer", e);
+                log.error("ERROR closing writer", e);
             }
         }
         // Close only after the writer is fully closed above -- the writer

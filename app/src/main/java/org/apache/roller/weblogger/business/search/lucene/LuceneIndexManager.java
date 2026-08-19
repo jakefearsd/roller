@@ -32,8 +32,8 @@ import java.util.TreeSet;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.beanutils.ConstructorUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.miscellaneous.LimitTokenCountAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -72,7 +72,7 @@ public class LuceneIndexManager implements IndexManager {
     private IndexReader reader;
     private final Weblogger roller;
 
-    private final static Log logger = LogFactory.getFactory().getInstance(LuceneIndexManager.class);
+    private static final Logger log = LoggerFactory.getLogger(LuceneIndexManager.class);
 
     private boolean searchEnabled = true;
 
@@ -111,8 +111,8 @@ public class LuceneIndexManager implements IndexManager {
         this.indexDir = searchIndexDir.replace('/', File.separatorChar);
 
         // a little debugging
-        logger.info("search enabled: " + this.searchEnabled);
-        logger.info("index dir: " + this.indexDir);
+        log.info("search enabled: {}", this.searchEnabled);
+        log.info("index dir: {}", this.indexDir);
 
         String test = indexDir + File.separator + ".index-inconsistent";
         indexConsistencyMarker = new File(test);
@@ -129,7 +129,7 @@ public class LuceneIndexManager implements IndexManager {
 
             // delete index if inconsistency marker exists
             if (indexConsistencyMarker.exists()) {
-                logger.debug("Index inconsistent: marker exists");
+                log.debug("Index inconsistent: marker exists");
                 inconsistentAtStartup = true;
                 deleteIndex();
             } else {
@@ -137,10 +137,10 @@ public class LuceneIndexManager implements IndexManager {
                     File makeIndexDir = new File(indexDir);
                     if (!makeIndexDir.exists()) {
                         if (!makeIndexDir.mkdirs()) {
-                            logger.error("Unable to create search index directory: " + indexDir);
+                            log.error("Unable to create search index directory: {}", indexDir);
                         }
                         inconsistentAtStartup = true;
-                        logger.debug("Index inconsistent: new");
+                        log.debug("Index inconsistent: new");
                     }
                     if (!indexConsistencyMarker.createNewFile()) {
                         // We only reach this branch when
@@ -149,11 +149,11 @@ public class LuceneIndexManager implements IndexManager {
                         // here means the marker was created by someone else
                         // between that check and this call, not a normal
                         // outcome.
-                        logger.warn("Search index consistency marker already existed unexpectedly: "
-                                + indexConsistencyMarker);
+                        log.warn("Search index consistency marker already existed unexpectedly: {}",
+                                indexConsistencyMarker);
                     }
                 } catch (IOException e) {
-                    logger.error(e);
+                    log.error("Error creating search index consistency marker", e);
                 }
             }
 
@@ -165,26 +165,26 @@ public class LuceneIndexManager implements IndexManager {
                         reader = DirectoryReader.open(getIndexDirectory());
                     }
                 } catch (IOException | IllegalArgumentException ex) {  // IAE for incompatible codecs
-                    logger.warn("Failed to open search index, scheduling rebuild.", ex);
+                    log.warn("Failed to open search index, scheduling rebuild.", ex);
                     inconsistentAtStartup = true;
                     deleteIndex();
                 }
             } else {
-                logger.debug("Creating index");
+                log.debug("Creating index");
                 inconsistentAtStartup = true;
                 deleteIndex();
                 createIndex(getIndexDirectory());
             }
 
             if (inconsistentAtStartup) {
-                logger.info("Index was inconsistent. Rebuilding index in the background...");
+                log.info("Index was inconsistent. Rebuilding index in the background...");
                 try {
                     rebuildWeblogIndex();
                 } catch (WebloggerException ex) {
-                    logger.error("ERROR: scheduling re-index operation", ex);
+                    log.error("ERROR: scheduling re-index operation", ex);
                 }
             } else {
-                logger.info("Index initialized and ready for use.");
+                log.info("Index initialized and ready for use.");
             }
         }
 
@@ -283,10 +283,10 @@ public class LuceneIndexManager implements IndexManager {
             final Class<?> clazz = Class.forName(className);
             return (Analyzer) ConstructorUtils.invokeConstructor(clazz, null);
         } catch (final ClassNotFoundException e) {
-            logger.error("failed to lookup analyzer class: " + className, e);
+            log.error("failed to lookup analyzer class: {}", className, e);
             return instantiateDefaultAnalyzer();
         } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            logger.error("failed to instantiate analyzer: " + className, e);
+            log.error("failed to instantiate analyzer: {}", className, e);
             return instantiateDefaultAnalyzer();
         }
     }
@@ -299,12 +299,11 @@ public class LuceneIndexManager implements IndexManager {
         try {
             // only if search is enabled
             if (this.searchEnabled) {
-                logger.debug("Starting scheduled index operation: "
-                        + op.getClass().getName());
+                log.debug("Starting scheduled index operation: {}", op.getClass().getName());
                 roller.getThreadManager().executeInBackground(op);
             }
         } catch (InterruptedException e) {
-            logger.error("Error executing operation", e);
+            log.error("Error executing operation", e);
         }
     }
 
@@ -315,11 +314,11 @@ public class LuceneIndexManager implements IndexManager {
         try {
             // only if search is enabled
             if (this.searchEnabled) {
-                logger.debug("Executing index operation now: " + op.getClass().getName());
+                log.debug("Executing index operation now: {}", op.getClass().getName());
                 roller.getThreadManager().executeInForeground(op);
             }
         } catch (InterruptedException e) {
-            logger.error("Error executing operation", e);
+            log.error("Error executing operation", e);
         }
     }
 
@@ -332,7 +331,7 @@ public class LuceneIndexManager implements IndexManager {
             try {
                 reader = DirectoryReader.open(getIndexDirectory());
             } catch (IOException ex) {
-                logger.error("Error opening DirectoryReader", ex);
+                log.error("Error opening DirectoryReader", ex);
                 throw new RuntimeException(ex);
             }
         }
@@ -350,7 +349,7 @@ public class LuceneIndexManager implements IndexManager {
         try {
             return FSDirectory.open(Path.of(indexDir));
         } catch (IOException e) {
-            logger.error("Problem accessing index directory", e);
+            log.error("Problem accessing index directory", e);
         }
         return null;
     }
@@ -368,7 +367,7 @@ public class LuceneIndexManager implements IndexManager {
             Directory dir = getIndexDirectory();
             return dir != null && DirectoryReader.indexExists(dir);
         } catch (IOException e) {
-            logger.error("Problem accessing index directory", e);
+            log.error("Problem accessing index directory", e);
         }
         return false;
     }
@@ -383,7 +382,7 @@ public class LuceneIndexManager implements IndexManager {
                 Files.delete(Path.of(indexDir, file));
             }
         } catch (IOException ex) {
-             logger.error("Problem accessing index directory", ex);
+             log.error("Problem accessing index directory", ex);
         }
 
     }
@@ -410,13 +409,13 @@ public class LuceneIndexManager implements IndexManager {
             writer = new IndexWriter(dir, config);
 
         } catch (IOException e) {
-            logger.error("Error creating index", e);
+            log.error("Error creating index", e);
         } finally {
             if (writer != null) {
                 try {
                     writer.close();
                 } catch (IOException ex) {
-                    logger.warn("Unable to close IndexWriter.", ex);
+                    log.warn("Unable to close IndexWriter.", ex);
                 }
             }
         }
@@ -446,14 +445,14 @@ public class LuceneIndexManager implements IndexManager {
         // initialize() never ran) does not log a spurious warning on every
         // shutdown.
         if (!indexConsistencyMarker.delete() && indexConsistencyMarker.exists()) {
-            logger.warn("Unable to delete search index consistency marker: " + indexConsistencyMarker);
+            log.warn("Unable to delete search index consistency marker: {}", indexConsistencyMarker);
         }
 
         if (reader != null) {
             try {
                 reader.close();
             } catch (IOException ex) {
-                logger.error("Unable to close reader.", ex);
+                log.error("Unable to close reader.", ex);
             }
         }
     }

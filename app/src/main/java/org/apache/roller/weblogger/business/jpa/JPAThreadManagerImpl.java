@@ -23,8 +23,8 @@ import java.util.Date;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.runnable.ThreadManagerImpl;
@@ -40,7 +40,7 @@ import org.apache.roller.weblogger.pojos.TaskLock;
  */
 public class JPAThreadManagerImpl extends ThreadManagerImpl {
 
-    private static final Log LOG = LogFactory.getLog(JPAThreadManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(JPAThreadManagerImpl.class);
 
     private final JPAPersistenceStrategy strategy;
 
@@ -48,7 +48,7 @@ public class JPAThreadManagerImpl extends ThreadManagerImpl {
     public JPAThreadManagerImpl(JPAPersistenceStrategy strat) {
         super();
 
-        LOG.debug("Instantiating JPA Thread Manager");
+        log.debug("Instantiating JPA Thread Manager");
 
         this.strategy = strat;
     }
@@ -60,7 +60,7 @@ public class JPAThreadManagerImpl extends ThreadManagerImpl {
     @Override
     public boolean registerLease(RollerTask task) {
         
-        LOG.debug("Attempting to register lease for task - " + task.getName());
+        log.debug("Attempting to register lease for task - {}", task.getName());
         
         // keep a copy of the current time
         Date currentTime = new Date();
@@ -70,10 +70,10 @@ public class JPAThreadManagerImpl extends ThreadManagerImpl {
         try {
             taskLock = getTaskLockByName(task.getName());
             if(taskLock == null) {
-                LOG.warn("Cannot acquire lease when no tasklock record exists for task - " + task.getName());
+                log.warn("Cannot acquire lease when no tasklock record exists for task - {}", task.getName());
             }
         } catch (WebloggerException ex) {
-            LOG.warn("Error getting TaskLock", ex);
+            log.warn("Error getting TaskLock", ex);
             return false;
         }
 
@@ -98,13 +98,11 @@ public class JPAThreadManagerImpl extends ThreadManagerImpl {
                     runTime = DateUtil.getStartOfMinute(currentTime);
                 }
 
-                if(LOG.isDebugEnabled()) {
-                    LOG.debug("last run = "+taskLock.getLastRun());
-                    LOG.debug("new run time = "+runTime);
-                    LOG.debug("last acquired = "+taskLock.getTimeAcquired());
-                    LOG.debug("time leased = "+taskLock.getTimeLeased());
-                    LOG.debug("lease expiration = "+leaseExpiration);
-                }
+                log.debug("last run = {}", taskLock.getLastRun());
+                log.debug("new run time = {}", runTime);
+                log.debug("last acquired = {}", taskLock.getTimeAcquired());
+                log.debug("time leased = {}", taskLock.getTimeLeased());
+                log.debug("lease expiration = {}", leaseExpiration);
 
                 Query q = strategy.getNamedUpdate(
                         "TaskLock.updateClient&Timeacquired&Timeleased&LastRunByName&Timeacquired");
@@ -123,7 +121,7 @@ public class JPAThreadManagerImpl extends ThreadManagerImpl {
                 }
 
             } catch (Exception e) {
-                LOG.warn("Error obtaining lease, assuming race condition.", e);
+                log.warn("Error obtaining lease, assuming race condition.", e);
                 return false;
             }
         }
@@ -148,10 +146,10 @@ public class JPAThreadManagerImpl extends ThreadManagerImpl {
             }
 
         } catch (WebloggerException ex) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Error getting TaskLock", ex);
+            if (log.isDebugEnabled()) {
+                log.debug("Error getting TaskLock", ex);
             } else {
-                LOG.warn("Error getting TaskLock, enable debug for more info");
+                log.warn("Error getting TaskLock, enable debug for more info");
             }
             return false;
         }
@@ -171,10 +169,10 @@ public class JPAThreadManagerImpl extends ThreadManagerImpl {
             }
 
         } catch (Exception e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Error releasing lease", e);
+            if (log.isDebugEnabled()) {
+                log.debug("Error releasing lease", e);
             } else {
-                LOG.warn("Error releasing lease, enable debug for more info");
+                log.warn("Error releasing lease, enable debug for more info");
             }
             return false;
         }

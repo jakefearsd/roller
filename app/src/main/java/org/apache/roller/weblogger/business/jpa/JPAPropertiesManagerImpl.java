@@ -22,8 +22,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.InitializationException;
@@ -46,7 +46,7 @@ import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 public class JPAPropertiesManagerImpl implements PropertiesManager {
     
     /** The logger instance for this class. */
-    private static Log log = LogFactory.getLog(
+    private static final Logger log = LoggerFactory.getLogger(
         JPAPropertiesManagerImpl.class);
 
     private final JPAPersistenceStrategy strategy;
@@ -78,7 +78,7 @@ public class JPAPropertiesManagerImpl implements PropertiesManager {
             this.saveProperties(props);
 
         } catch (Exception e) {
-            log.fatal("Failed to initialize runtime configuration properties."+
+            log.error("Failed to initialize runtime configuration properties."+
                     "Please check that the database has been upgraded!", e);
             throw new RuntimeException(e);
         }
@@ -183,9 +183,8 @@ public class JPAPropertiesManagerImpl implements PropertiesManager {
 
                         props.put(propDef.getName(), newprop);
 
-                        log.info("Property " + propDef.getName() +
-                            " not yet in roller_properties database table, will store with " +
-                            "value of [" + initialValue + "`]");
+                        log.info("Property {} not yet in roller_properties database table, will store with "
+                            + "value of [{}`]", propDef.getName(), initialValue);
                     }
                 }
             }

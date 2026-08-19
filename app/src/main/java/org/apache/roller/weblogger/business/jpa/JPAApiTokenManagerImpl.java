@@ -23,8 +23,8 @@ import java.util.List;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.TypedQuery;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.ApiTokenManager;
 import org.apache.roller.weblogger.pojos.ApiToken;
@@ -36,7 +36,7 @@ import org.apache.roller.weblogger.util.TokenGenerator;
  */
 public class JPAApiTokenManagerImpl implements ApiTokenManager {
 
-    private static final Log log = LogFactory.getLog(JPAApiTokenManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(JPAApiTokenManagerImpl.class);
 
     private static final long LAST_USED_RESOLUTION_MS = 60L * 60L * 1000L;
 

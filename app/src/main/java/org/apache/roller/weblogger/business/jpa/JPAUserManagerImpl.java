@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.business.jpa;
 
 import java.sql.Timestamp;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
@@ -46,7 +46,7 @@ import org.apache.roller.weblogger.pojos.WeblogPermission;
 
 
 public class JPAUserManagerImpl implements UserManager {
-    private static final Log log = LogFactory.getLog(JPAUserManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(JPAUserManagerImpl.class);
 
     private final JPAPersistenceStrategy strategy;
     
@@ -160,7 +160,7 @@ public class JPAUserManagerImpl implements UserManager {
             if (user != null) {
                 // only return the user if the enabled status matches
                 if(enabled == null || enabled.equals(user.getEnabled())) {
-                    log.debug("userNameToIdMap CACHE HIT - "+userName);
+                    log.debug("userNameToIdMap CACHE HIT - {}", userName);
                     return user;
                 }
             } else {
@@ -191,7 +191,7 @@ public class JPAUserManagerImpl implements UserManager {
 
         // add mapping to cache
         if(user != null) {
-            log.debug("userNameToIdMap CACHE MISS - " + userName);
+            log.debug("userNameToIdMap CACHE MISS - {}", userName);
             this.userNameToIdMap.put(user.getUserName(), user.getId());
         }
 
@@ -367,9 +367,7 @@ public class JPAUserManagerImpl implements UserManager {
             return true;
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("PERM CHECK FAILED: user " + user.getUserName() + " does not have " + perm.toString());
-        }
+        log.debug("PERM CHECK FAILED: user {} does not have {}", user.getUserName(), perm.toString());
         return false;
     }
 

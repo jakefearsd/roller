@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.business.search.lucene;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.roller.weblogger.WebloggerException;
@@ -39,7 +39,7 @@ public class RemoveEntryOperation extends WriteToIndexOperation {
     // ~ Static fields/initializers
     // =============================================
 
-    private static Log logger = LogFactory.getFactory().getInstance(
+    private static final Logger log = LoggerFactory.getLogger(
             RemoveEntryOperation.class);
 
     // ~ Instance fields
@@ -76,7 +76,7 @@ public class RemoveEntryOperation extends WriteToIndexOperation {
             WeblogEntryManager wMgr = roller.getWeblogEntryManager();
             this.data = wMgr.getWeblogEntry(this.data.getId());
         } catch (WebloggerException ex) {
-            logger.error("Error getting weblogentry object", ex);
+            log.error("Error getting weblogentry object", ex);
             return;
         }
 
@@ -87,7 +87,7 @@ public class RemoveEntryOperation extends WriteToIndexOperation {
                 writer.deleteDocuments(term);
             }
         } catch (IOException e) {
-            logger.error("Error deleting doc from index", e);
+            log.error("Error deleting doc from index", e);
         } finally {
             endWriting();
         }

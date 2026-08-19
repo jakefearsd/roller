@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.business.runnable;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -38,7 +38,7 @@ import org.apache.roller.weblogger.util.cache.CacheManager;
  * status when their publication time has been reached.
  */
 public class ScheduledEntriesTask extends RollerTaskWithLeasing {
-    private static Log log = LogFactory.getLog(ScheduledEntriesTask.class);
+    private static final Logger log = LoggerFactory.getLogger(ScheduledEntriesTask.class);
 
     public static final String NAME = "ScheduledEntriesTask";
 
@@ -115,7 +115,7 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
             try {
                 this.interval = Integer.parseInt(intervalStr);
             } catch (NumberFormatException ex) {
-                log.warn("Invalid interval: "+intervalStr);
+                log.warn("Invalid interval: {}", intervalStr);
             }
         }
 
@@ -125,7 +125,7 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
             try {
                 this.leaseTime = Integer.parseInt(leaseTimeStr);
             } catch (NumberFormatException ex) {
-                log.warn("Invalid leaseTime: "+leaseTimeStr);
+                log.warn("Invalid leaseTime: {}", leaseTimeStr);
             }
         }
     }
@@ -145,14 +145,14 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
 
             Date now = new Date();
 
-            log.debug("looking up scheduled entries older than " + now);
+            log.debug("looking up scheduled entries older than {}", now);
 
             // get all published entries older than current time
             WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
             wesc.setEndDate(now);
             wesc.setStatus(PubStatus.SCHEDULED);
             List<WeblogEntry> scheduledEntries = wMgr.getWeblogEntries(wesc);
-            log.debug("promoting "+scheduledEntries.size()+" entries to PUBLISHED state");
+            log.debug("promoting {} entries to PUBLISHED state", scheduledEntries.size());
 
             for (WeblogEntry entry : scheduledEntries) {
                 entry.setStatus(PubStatus.PUBLISHED);
