@@ -58,11 +58,30 @@ limitations under the License.
              - so build-time validation exercises the same JSP compiler as
              production. -->
         <jspc-plugin.version>5.0.0</jspc-plugin.version>
-        <!-- NOT bumped to 11.0.24 on purpose: this must equal the Tomcat version
-         the Spring Boot BOM resolves for tomcat-embed-jasper (verified 11.0.22),
-         or build-time JSP validation stops exercising the compiler production
-         uses, which is the entire point of pinning it. -->
-    <jspc-plugin.tomcat.version>11.0.22</jspc-plugin.tomcat.version>
+        <!-- Must equal the Tomcat version that ACTUALLY RESOLVES for
+             tomcat-embed-jasper, or build-time JSP validation stops exercising
+             the compiler production uses, which is the entire point of pinning
+             it. That used to mean "whatever the Spring Boot BOM says"; it now
+             means the security override in <dependencyManagement> below, which
+             raises Tomcat past the BOM's 11.0.22. Verify with:
+               mvn dependency:tree -Dincludes=org.apache.tomcat.embed:tomcat-embed-jasper -->
+        <jspc-plugin.tomcat.version>${tomcat.security.version}</jspc-plugin.tomcat.version>
+
+        <!-- Security floors: versions raised past what Spring Boot 4.1.0's BOM
+             manages, because the BOM's pins carry published advisories. Each is
+             applied by a <dependencyManagement> entry below (NOT by naming the
+             BOM's own property - see that block's comment for why that does
+             nothing here) and enforced by DependencySecurityFloorTest, which
+             asserts the RESOLVED classpath rather than this file's text.
+
+             When a future Spring Boot's BOM catches up, delete the override and
+             let the BOM manage it again; that test fails if the deletion is
+             premature, so the cleanup is safe to attempt. -->
+        <tomcat.security.version>11.0.25</tomcat.security.version>
+        <postgresql.security.version>42.7.13</postgresql.security.version>
+        <jackson2.security.version>2.21.6</jackson2.security.version>
+        <jackson3.security.version>3.1.6</jackson3.security.version>
+        <log4j2.security.version>2.25.5</log4j2.security.version>
     </properties>
 
     <!-- Spring Boot 4's BOM manages JUnit 6 (junit-jupiter 6.0.3,
@@ -74,6 +93,80 @@ limitations under the License.
          matches Boot's managed testcontainers, so there's no conflict). -->
     <dependencyManagement>
         <dependencies>
+            <!-- SECURITY OVERRIDES. These MUST stay above the spring-boot-dependencies
+                 import below, and they must be dependencyManagement entries rather
+                 than <properties>.
+
+                 Both details are load-bearing, and getting either wrong fails
+                 SILENTLY - the POM reads as though the version were raised while the
+                 vulnerable jar keeps resolving. The Boot BOM is *imported*
+                 (<scope>import</scope>) rather than inherited from
+                 spring-boot-starter-parent, and an imported BOM resolves its
+                 properties in its OWN context: setting <tomcat.version>11.0.25</...>
+                 here does nothing at all, because it is spring-boot-dependencies'
+                 copy of that property that decides. Ordering matters for the same
+                 reason - dependencyManagement takes the FIRST declaration of a given
+                 groupId:artifactId, so these lose to the BOM if moved below it.
+
+                 DependencySecurityFloorTest asserts the resolved classpath, which is
+                 the only check that can tell a working override from a decorative
+                 one. Advisory details for each entry live in that test. -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson2.security.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>tools.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson3.security.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-bom</artifactId>
+                <version>${log4j2.security.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Tomcat ships no BOM, so every embed artifact the build resolves is
+                 listed individually. A future starter that drags in a further
+                 tomcat-embed-* artifact would silently take the BOM's older version;
+                 `mvn dependency:list | grep tomcat` is the check. -->
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat.security.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-el</artifactId>
+                <version>${tomcat.security.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-jasper</artifactId>
+                <version>${tomcat.security.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-websocket</artifactId>
+                <version>${tomcat.security.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat</groupId>
+                <artifactId>tomcat-annotations-api</artifactId>
+                <version>${tomcat.security.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.security.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>

@@ -45,6 +45,16 @@ limitations under the License.
         <!-- Versions match the sibling jspwiki/wikantik Selenide suite. -->
         <selenide.version>7.17.0</selenide.version>
         <selenium.version>4.47.0</selenium.version>
+        <!-- Raised past selenide-core's transitive 5.6.2, which leaks a pooled
+             connection whenever a response carries an unsupported
+             Content-Encoding (CVE-2026-64607, pool-exhaustion DoS). This suite
+             only ever talks to our own test server, so this is hygiene rather
+             than exposure - but it costs a pin. Enforced by
+             DependencySecurityFloorTest over in app's fast suite, which reads
+             this file's text: this module has no unit tests of its own and
+             builds only under -Pit, so a floor asserted here would go unchecked
+             on the push path. -->
+        <httpclient5.version>5.6.4</httpclient5.version>
         <!-- This module isn't a Spring Boot artifact and imports no BOM, so
              junit-jupiter needs an explicit pin (app/pom.xml gets its JUnit
              version for free from Spring Boot's dependencyManagement import;
@@ -111,6 +121,19 @@ limitations under the License.
         <it.app.log>${it.work.dir}/app-${it.run.id}.log</it.app.log>
         <it.db.container-name>${it.db.container-alias}-${it.run.id}</it.db.container-name>
     </properties>
+
+    <!-- A property alone would not move httpclient5: it arrives transitively via
+         selenide-core, so its own declared version wins unless something manages
+         it. This entry is what makes the pin above effective. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>${httpclient5.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>

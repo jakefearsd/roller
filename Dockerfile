@@ -37,7 +37,7 @@
 # ROLLER_MAIL_* keys. See deploy/.env.example for the full set.
 
 # ---- Stage 1: build -------------------------------------------------------
-FROM maven:3.9-eclipse-temurin-25@sha256:7e461cec477077c1d9e50b13df8aef9018764410f4c4cd7c34803f10c4c99e4c AS builder
+FROM maven:3.9-eclipse-temurin-25@sha256:e401a38b409619191be709faa61b2d9f00dc77c53bc8c9ff4c2f28b364948a08 AS builder
 
 WORKDIR /build
 
@@ -52,7 +52,7 @@ COPY bin/db/migrations bin/db/migrations
 RUN mvn -ntp -pl app -DskipTests package
 
 # ---- Stage 2: runtime -------------------------------------------------------
-FROM eclipse-temurin:25-jre@sha256:681c543d6f36c50f45e9b5226930a46203dcfa351d3670e9d0bdf0dabae53539 AS runtime
+FROM eclipse-temurin:25-jre@sha256:6e9581a150f9ad80d9154f6c9dc4e5df0d4f5eb545e788340e2271e2fb5d3870 AS runtime
 
 # curl is not in the base JRE image; installed for container healthchecks
 # against the management port (docker exec ... curl 8090/actuator/health --
