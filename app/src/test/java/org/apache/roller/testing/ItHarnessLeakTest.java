@@ -428,7 +428,7 @@ class ItHarnessLeakTest {
 
         assertNoProcessAlive(driverPid, "the supervisor did not reap its own recorded chromedriver");
         assertNoProcessAlive(child, "the supervisor reaped the chromedriver but not its child");
-        assertFalse(Files.exists(cache.resolve(runId + ".chromedrivers")),
+        assertRecordDeleted(cache.resolve(runId + ".chromedrivers"),
                 "the supervisor must delete its own record once it has cleaned up");
     }
 
@@ -639,6 +639,26 @@ class ItHarnessLeakTest {
         }
         throw new AssertionError("the record at " + record + " never named pid " + pid + "; it holds:\n"
                 + (Files.exists(record) ? recordLines(record) : "(no such file)"));
+    }
+
+    /**
+     * Waits for the supervisor to delete a record, rather than checking once.
+     *
+     * <p>The supervisor reaps the recorded processes and deletes the record as two
+     * steps on its own poll tick, so a bare {@code assertFalse(Files.exists(...))}
+     * immediately after the process assertions lands in the window between them
+     * roughly one run in five. Every other assertion in these tests awaits; this
+     * one has to as well.
+     */
+    private static void assertRecordDeleted(Path record, String message) throws InterruptedException {
+        Instant deadline = Instant.now().plus(REAP_BUDGET);
+        while (Instant.now().isBefore(deadline)) {
+            if (!Files.exists(record)) {
+                return;
+            }
+            Thread.sleep(200);
+        }
+        fail(message + " (" + record + " still present)");
     }
 
     private static void assertNoProcessAlive(long pid, String message) throws InterruptedException {
