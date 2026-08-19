@@ -104,7 +104,11 @@ public abstract class WebloggerImpl implements Weblogger {
         this.urlStrategy         = urlStrategy;
 
         Properties props = new Properties();
-        try (InputStream in = getClass().getResourceAsStream("/roller-version.properties")) {
+        // WebloggerImpl.class, not getClass(): this class is abstract and
+        // JPAWebloggerImpl extends it, so getClass() would resolve via the
+        // subclass's Class object (UI_INHERITANCE_UNSAFE_GETRESOURCE). The
+        // resource itself belongs to this class either way.
+        try (InputStream in = WebloggerImpl.class.getResourceAsStream("/roller-version.properties")) {
             props.load(in);
         } catch (IOException e) {
             log.error("roller-version.properties not found", e);

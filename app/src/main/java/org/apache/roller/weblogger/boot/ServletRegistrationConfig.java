@@ -208,7 +208,14 @@ public class ServletRegistrationConfig {
      * {@code rendering.weblogMapper.rollerProtectedUrls} so no weblog handle
      * can shadow it.
      */
-    public static final String[] API_URL_PATTERNS = {"/api/*"};
+    // List.of(...), not a String[]: this is read cross-package by
+    // ApiMountingTest, so it cannot simply drop to package-private the way
+    // MS_PKGPROTECT would otherwise suggest (SEO_URL_PATTERNS/
+    // NEWSLETTER_URL_PATTERNS above have no such reader and stay
+    // package-private) -- an immutable List, unlike an array, has no way for
+    // a caller to mutate the shared constant, so public visibility is safe
+    // either way.
+    public static final List<String> API_URL_PATTERNS = List.of("/api/*");
 
     @Bean
     public DispatcherServletRegistrationBean dispatcherServletRegistration(
@@ -221,7 +228,7 @@ public class ServletRegistrationConfig {
                         super.configure(servletRegistration);
                         servletRegistration.addMapping(SEO_URL_PATTERNS);
                         servletRegistration.addMapping(NEWSLETTER_URL_PATTERNS);
-                        servletRegistration.addMapping(API_URL_PATTERNS);
+                        servletRegistration.addMapping(API_URL_PATTERNS.toArray(new String[0]));
                     }
                 };
         registration.setName("springMvc");

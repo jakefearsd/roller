@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.util;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.owasp.html.HtmlPolicyBuilder;
@@ -65,6 +66,14 @@ public final class HTMLSanitizer {
      * on their own pages -- defensible for a single-owner install, dangerous the
      * moment a blog has members.
      */
+    @SuppressFBWarnings(
+            value = "MS_SHOULD_BE_FINAL",
+            justification = "Deliberately mutable, not an oversight (see the javadoc above): at "
+                    + "least seven test classes (HTMLSanitizerTest, WeblogEntryWrapperTest, "
+                    + "WeblogWrapperTest, MediaFileWrapperTest, UserAccountTest, and others) save "
+                    + "the previous value, assign a new one for the duration of one test, and "
+                    + "restore it in a finally. Making this final would remove the only seam those "
+                    + "tests have for exercising both the sanitized and unsanitized code paths.")
     public static Boolean xssEnabled =
             WebloggerConfig.getBooleanProperty("weblogAdminsUntrusted", Boolean.FALSE);
 

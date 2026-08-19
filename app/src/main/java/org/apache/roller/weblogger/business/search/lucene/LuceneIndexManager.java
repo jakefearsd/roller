@@ -136,11 +136,22 @@ public class LuceneIndexManager implements IndexManager {
                 try {
                     File makeIndexDir = new File(indexDir);
                     if (!makeIndexDir.exists()) {
-                        makeIndexDir.mkdirs();
+                        if (!makeIndexDir.mkdirs()) {
+                            logger.error("Unable to create search index directory: " + indexDir);
+                        }
                         inconsistentAtStartup = true;
                         logger.debug("Index inconsistent: new");
                     }
-                    indexConsistencyMarker.createNewFile();
+                    if (!indexConsistencyMarker.createNewFile()) {
+                        // We only reach this branch when
+                        // indexConsistencyMarker.exists() was already false
+                        // (the enclosing if/else above), so a false return
+                        // here means the marker was created by someone else
+                        // between that check and this call, not a normal
+                        // outcome.
+                        logger.warn("Search index consistency marker already existed unexpectedly: "
+                                + indexConsistencyMarker);
+                    }
                 } catch (IOException e) {
                     logger.error(e);
                 }
@@ -346,7 +357,16 @@ public class LuceneIndexManager implements IndexManager {
 
     private boolean indexExists() {
         try {
-            return DirectoryReader.indexExists(getIndexDirectory());
+            // getIndexDirectory() returns null on its own IOException
+            // (caught and logged there already), and DirectoryReader
+            // .indexExists(null) throws an uncaught NullPointerException
+            // rather than the IOException this method's catch expects --
+            // an inaccessible/invalid search.index.dir would otherwise
+            // abort Weblogger bootstrap with an NPE instead of degrading
+            // gracefully, which is what every other caller in this class
+            // treats "no index yet" as.
+            Directory dir = getIndexDirectory();
+            return dir != null && DirectoryReader.indexExists(dir);
         } catch (IOException e) {
             logger.error("Problem accessing index directory", e);
         }
@@ -369,6 +389,16 @@ public class LuceneIndexManager implements IndexManager {
     }
 
     private void createIndex(Directory dir) {
+        if (dir == null) {
+            // getIndexDirectory() already logged the underlying IOException
+            // that produced this; there is nothing further to do without a
+            // Directory to write an index into. Guards the same gap fixed
+            // in indexExists() above -- new IndexWriter(null, config) throws
+            // an uncaught NullPointerException, not the IOException this
+            // method's catch expects.
+            return;
+        }
+
         IndexWriter writer = null;
 
         try {
@@ -407,7 +437,17 @@ public class LuceneIndexManager implements IndexManager {
     @Override
     public synchronized void shutdown() {
 
-        indexConsistencyMarker.delete();
+        // A failed delete here means the next startup's initialize() sees
+        // the marker still present and concludes (wrongly) that the
+        // previous shutdown was unclean, forcing an unnecessary full index
+        // rebuild -- worth a log line to explain that rebuild after the
+        // fact. exists() is checked only when delete() itself reports
+        // failure, so a marker that was never created (search disabled, or
+        // initialize() never ran) does not log a spurious warning on every
+        // shutdown.
+        if (!indexConsistencyMarker.delete() && indexConsistencyMarker.exists()) {
+            logger.warn("Unable to delete search index consistency marker: " + indexConsistencyMarker);
+        }
 
         if (reader != null) {
             try {

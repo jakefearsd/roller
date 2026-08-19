@@ -2,7 +2,6 @@ package org.apache.roller.weblogger.ui.restapi;
 
 import org.apache.roller.weblogger.boot.ServletRegistrationConfig;
 import org.junit.jupiter.api.Test;
-import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ApiMountingTest {
@@ -16,7 +15,7 @@ class ApiMountingTest {
      */
     @Test
     void apiPrefixIsRegisteredOnTheDispatcher() {
-        assertTrue(Arrays.asList(ServletRegistrationConfig.API_URL_PATTERNS).contains("/api/*"),
+        assertTrue(ServletRegistrationConfig.API_URL_PATTERNS.contains("/api/*"),
                 "the dispatcher must carry the /api/* prefix mapping");
     }
 

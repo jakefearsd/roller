@@ -217,6 +217,16 @@ public final class I18nMessages {
 		}
 	}
 
+	// AvoidAccessibilityAlteration: this is Tomcat-hot-reload plumbing, not a
+	// general reflection utility. clearTomcatCache's caller only reaches here
+	// after confirming the context classloader's exact class name is
+	// org.apache.catalina.loader.WebappClassLoader, so setAccessible is only
+	// ever exercised against that one known, non-public Tomcat field
+	// (resourceEntries) and only to invoke its own public clear() method --
+	// there is no other way to flush Tomcat's classloader-level resource
+	// bundle cache on theme/locale reload (see Theme System hot reload in
+	// CLAUDE.md), because the field is deliberately not exposed by Tomcat.
+	@SuppressWarnings("PMD.AvoidAccessibilityAlteration")
 	private static void clearMap(Class<?> cl, Object obj, String name)
 			throws NoSuchFieldException, IllegalAccessException,
 			NoSuchMethodException, InvocationTargetException {

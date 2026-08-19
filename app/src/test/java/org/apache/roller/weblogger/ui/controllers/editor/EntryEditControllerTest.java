@@ -320,7 +320,25 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         foreign.setWebsite(other);
 
         assertEquals("redirect:/roller-ui/menu.rol",
-                controller.entryEditFirstSave(request, model, bean));
+                controller.entryEditFirstSave(request, model, bean, newRedirectAttributes()));
+    }
+
+    @Test
+    void theFirstSaveLandingPageAlsoRedirectsATrashedEntryToTheTrashScreen() throws Exception {
+        // entryEdit!firstSave.rol is just as bookmarkable/reloadable as
+        // entryEdit.rol, and resolves the same way via lookupEntry (no status
+        // filter) -- so it is exposed to the exact same hazard
+        // openingATrashedEntryRedirectsToTheTrashScreenRatherThanTheEditor
+        // above covers for entryEdit.rol: reload this link after the entry
+        // has since been trashed, and lookupEntry alone would hand back the
+        // trashed entry as if it were live.
+        existingEntry(PubStatus.TRASHED);
+        RedirectAttributes redirect = newRedirectAttributes();
+
+        String view = controller.entryEditFirstSave(request, model, bean, redirect);
+
+        assertEquals("redirect:/roller-ui/authoring/trash.rol?weblog=" + WEBLOG_HANDLE, view);
+        assertEquals(List.of("entryEdit.entryIsTrashed"), flashErrors(redirect));
     }
 
     @Test
@@ -409,10 +427,25 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
     void firstSaveShowsTheStatusMessageForTheEntryThatWasJustCreated() throws Exception {
         existingEntry(PubStatus.DRAFT);
 
-        controller.entryEditFirstSave(request, model, bean);
+        controller.entryEditFirstSave(request, model, bean, newRedirectAttributes());
 
         assertTrue(messages(model).contains("weblogEdit.draftSaved"),
                 "The landing page after a first save must confirm what happened: " + messages(model));
+    }
+
+    @Test
+    void addStatusMessageIsADocumentedNoOpForATrashedEntry() {
+        // Both real callers (entryEditExecute, entryEditFirstSave) already
+        // redirect a trashed entry to the trash screen before this method is
+        // ever reached, so this drives the defensive TRASHED case directly
+        // rather than through either of them.
+        WeblogEntry trashed = new WeblogEntry();
+        trashed.setStatus(PubStatus.TRASHED);
+
+        controller.addStatusMessage(PubStatus.TRASHED, model, trashed, request);
+
+        assertTrue(messages(model).isEmpty(),
+                "no status toast makes sense for a trashed entry: " + messages(model));
     }
 
     @Test

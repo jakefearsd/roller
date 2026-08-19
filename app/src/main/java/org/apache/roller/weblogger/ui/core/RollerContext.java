@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.ui.core;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -82,6 +83,13 @@ public final class RollerContext {
      * {@link ServletContext} that used to be captured in
      * {@code contextInitialized}.
      */
+    @SuppressFBWarnings(
+            value = "EI_EXPOSE_STATIC_REP2",
+            justification = "ServletContext is the servlet container's own live, singleton "
+                    + "representation of the running webapp -- it is an interface with no "
+                    + "meaningful defensive copy, and holding a reference to the container's actual "
+                    + "instance is the entire point of this method (every RollerContext caller needs "
+                    + "the real one, not a snapshot).")
     public static void hold(ServletContext sc) {
         servletContext = sc;
     }

@@ -21,6 +21,7 @@ import org.apache.roller.testing.MigrationFiles;
 import org.apache.roller.testing.RollerPostgresContainer;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -98,6 +99,28 @@ public class SchemaMigrationTest {
                     version + " is listed by MigrationCatalog but not readable from the "
                             + "classpath; check the copy-db-migrations step in app/pom.xml");
         }
+    }
+
+    @Test
+    public void getDatabaseScriptOpensTheSameMigrationsFromTheClasspath() throws Exception {
+        // The applier-facing method (migrate.sh/DatabaseInstaller/the test
+        // harness all read migrations through this), as opposed to
+        // getScriptURL above, which exists only for logging which file
+        // resolved.
+        List<String> versions = MigrationCatalog.versions();
+        assertFalse(versions.isEmpty(), "MigrationCatalog found no migrations");
+
+        ClasspathDatabaseScriptProvider provider = new ClasspathDatabaseScriptProvider();
+        String first = versions.get(0) + ".sql";
+        try (InputStream in = provider.getDatabaseScript(first)) {
+            assertTrue(in != null, first + " must be readable via getDatabaseScript, "
+                    + "not just getScriptURL");
+            byte[] content = in.readAllBytes();
+            assertTrue(content.length > 0, first + " resolved to an empty stream");
+        }
+
+        assertTrue(provider.getDatabaseScript("V999999__does_not_exist.sql") == null,
+                "an unknown migration name must resolve to no stream, not throw");
     }
 
     @Test

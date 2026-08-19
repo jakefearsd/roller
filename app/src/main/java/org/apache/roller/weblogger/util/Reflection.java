@@ -36,6 +36,18 @@ public final class Reflection {
         return newInstance(Class.forName(className));
     }
     
+    // AvoidAccessibilityAlteration: this is the codebase's one extension-point
+    // loader -- every caller (CacheManager's cache factory/handlers,
+    // ThreadManagerImpl's scheduled tasks, RendererManager's renderer
+    // factories, ModelLoader's page models, RequestMappingFilter's request
+    // mappers, PluginManagerImpl's entry plugins) resolves the class name
+    // from a startup-scoped WebloggerConfig property
+    // (roller.properties/roller-custom.properties or a ROLLER_* env var),
+    // never from request input, so this is deployer-configured extension
+    // wiring, not an attacker-reachable path. setAccessible is required
+    // because an extension class's declared no-arg constructor is not
+    // guaranteed to be public.
+    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
     public static <T> T newInstance(Class<T> clazz) throws ReflectiveOperationException {
         Constructor<T> constructor = clazz.getDeclaredConstructor();
         constructor.setAccessible(true);

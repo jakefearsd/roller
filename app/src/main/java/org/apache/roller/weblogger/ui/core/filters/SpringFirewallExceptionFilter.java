@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.ui.core.filters;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -46,6 +47,14 @@ public class SpringFirewallExceptionFilter implements Filter {
     private final static Log log = LogFactory.getLog(SpringFirewallExceptionFilter.class);
 
     @Override
+    @SuppressFBWarnings(
+            value = "BC_UNCONFIRMED_CAST",
+            justification = "This application is deployed exclusively over HTTP -- every filter is "
+                    + "registered via a FilterRegistrationBean against Spring Boot's embedded Tomcat "
+                    + "HTTP connector (ServletRegistrationConfig), and no other protocol connector is "
+                    + "ever configured. The servlet container therefore guarantees doFilter is invoked "
+                    + "only with HttpServletRequest/HttpServletResponse; the cast is unconfirmed only "
+                    + "under the general, protocol-independent Filter contract, not in this deployment.")
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         try {
             chain.doFilter(request, response);

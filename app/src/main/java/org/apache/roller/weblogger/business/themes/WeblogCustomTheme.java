@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.business.themes;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 
@@ -34,6 +35,26 @@ import org.apache.roller.weblogger.pojos.WeblogTheme;
 /**
  * A WeblogTheme custom defined by the weblog owner.
  */
+// compareTo exists only to satisfy the Theme interface's Comparable contract
+// and is dead code in practice: ThemeManagerImpl.getWeblogTheme(weblog)
+// constructs exactly one WeblogCustomTheme per call (confirmed by
+// `grep -rn "WeblogCustomTheme" app/src/main/java`, whose only non-declaration
+// hit is that single `new WeblogCustomTheme(weblog)`), and it is returned and
+// used standalone -- never placed in a List, Set or Map alongside a sibling
+// instance, so compareTo/equals/hashCode are never actually compared against
+// one another. getName() also always returns the constant CUSTOM, so a
+// name-based equals would make every weblog's custom theme "equal" to every
+// other weblog's, which is the wrong identity notion for this class -- worse
+// than the current default (reference) equality, not better.
+@SuppressWarnings("PMD.OverrideBothEqualsAndHashCodeOnComparable")
+@SuppressFBWarnings(
+        value = "EQ_COMPARETO_USE_OBJECT_EQUALS",
+        justification = "compareTo satisfies the Theme interface only; ThemeManagerImpl constructs "
+                + "exactly one WeblogCustomTheme per weblog and never collects instances together, "
+                + "so compareTo/equals/hashCode are never compared against a sibling instance in "
+                + "practice (grepped: the only construction site is getWeblogTheme). getName() is "
+                + "the constant CUSTOM for every instance, so a name-based equals would incorrectly "
+                + "equate every weblog's custom theme with every other's.")
 public class WeblogCustomTheme extends WeblogTheme {
 
     private static final long serialVersionUID = 1L;

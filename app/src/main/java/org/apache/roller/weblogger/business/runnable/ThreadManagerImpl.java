@@ -124,7 +124,15 @@ public abstract class ThreadManagerImpl implements ThreadManager {
     @Override
     public void executeInBackground(Runnable runnable)
             throws InterruptedException {
-        serviceScheduler.submit(runnable);
+        // execute(), not submit(): the interface returns void, so nothing
+        // has ever been able to consume the Future submit() would return --
+        // this is fire-and-forget by design. submit() would silently
+        // swallow any uncaught exception the runnable throws (most
+        // IndexOperation.doRun() implementations only try/catch a narrow
+        // WebloggerException section of their own work, not their whole
+        // body); execute() instead lets it reach the pool thread's default
+        // UncaughtExceptionHandler.
+        serviceScheduler.execute(runnable);
     }
     
     

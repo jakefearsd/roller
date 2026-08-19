@@ -114,8 +114,9 @@ public class GlobalConfigController extends BaseController {
         // only set values for properties that are already defined
         RuntimeConfigProperty updProp;
         String incomingProp;
-        for (String propName : properties.keySet()) {
-            updProp = properties.get(propName);
+        for (Map.Entry<String, RuntimeConfigProperty> propEntry : properties.entrySet()) {
+            String propName = propEntry.getKey();
+            updProp = propEntry.getValue();
             incomingProp = request.getParameter(updProp.getName());
 
             PropertyDef propertyDef = globalConfigDef.getPropertyDef(propName);

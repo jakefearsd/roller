@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.ui.rendering.filters;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,9 +82,17 @@ public class RequestMappingFilter implements Filter {
      * Inspect incoming urls and see if they should be routed.
      */
     @Override
+    @SuppressFBWarnings(
+            value = "BC_UNCONFIRMED_CAST",
+            justification = "This application is deployed exclusively over HTTP -- every filter is "
+                    + "registered via a FilterRegistrationBean against Spring Boot's embedded Tomcat "
+                    + "HTTP connector (ServletRegistrationConfig), and no other protocol connector is "
+                    + "ever configured. The servlet container therefore guarantees doFilter is invoked "
+                    + "only with HttpServletRequest/HttpServletResponse; the cast is unconfirmed only "
+                    + "under the general, protocol-independent Filter contract, not in this deployment.")
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
-        
+
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
         

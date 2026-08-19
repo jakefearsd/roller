@@ -188,7 +188,14 @@ public class TaskScheduler implements Runnable {
                 long differential = currentTime.getTime() - nextRunTime.getTime();
                 if (differential >= 0 && !needToWait) {
                     log.debug(task.getName()+": LAUNCHING task");
-                    pool.submit(task);
+                    // execute(), not submit(): this is fire-and-forget, and
+                    // every RollerTask is in practice a RollerTaskWithLeasing,
+                    // whose run() already wraps runTask() in a try/catch that
+                    // logs everything short of an Error. submit()'s Future
+                    // would only ever silently swallow that already-rare
+                    // Error case instead of letting it reach the pool
+                    // thread's default UncaughtExceptionHandler.
+                    pool.execute(task);
                 }
             } catch (ThreadDeath t) {
                 throw t;

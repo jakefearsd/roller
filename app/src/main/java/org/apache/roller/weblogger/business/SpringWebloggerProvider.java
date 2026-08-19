@@ -17,6 +17,7 @@
  */
 package org.apache.roller.weblogger.business;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.roller.weblogger.business.jpa.WebloggerBeanConfig;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -31,6 +32,17 @@ public class SpringWebloggerProvider implements WebloggerProvider {
 
     private final ApplicationContext existingContext;
 
+    // Deliberately left null by both constructors -- see the no-arg
+    // constructor's javadoc below. bootstrap() must run after
+    // WebloggerStartup.prepare(), and only the caller's ordering guarantees
+    // that; building the context in the constructor would risk running
+    // before prepare() and is the specific mistake this design avoids.
+    @SuppressFBWarnings(
+            value = "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR",
+            justification = "Intentionally left null until bootstrap() runs -- see the no-arg "
+                    + "constructor's javadoc. Initializing it eagerly in the constructor would build "
+                    + "the Spring context before WebloggerStartup.prepare() has necessarily run, "
+                    + "which is the exact ordering bug this class's design avoids.")
     private ApplicationContext context;
 
     /**

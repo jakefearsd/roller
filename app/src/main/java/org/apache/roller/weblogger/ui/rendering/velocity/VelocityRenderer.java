@@ -18,7 +18,6 @@
 
 package org.apache.roller.weblogger.ui.rendering.velocity;
 
-import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Map;
 
@@ -44,9 +43,8 @@ public class VelocityRenderer implements Renderer {
     // the original template we are supposed to render
     private final Template renderTemplate;
 
-    // the velocity templates
+    // the velocity template
     private org.apache.velocity.Template velocityTemplate = null;
-    private org.apache.velocity.Template velocityDecorator = null;
 
     // a possible exception
     private Exception velocityException = null;
@@ -113,30 +111,14 @@ public class VelocityRenderer implements Renderer {
             // convert model to Velocity Context
             Context ctx = new VelocityContext(model);
 
-            if (velocityDecorator != null) {
-
-                /*
-                 * We only allow decorating once, so the process isn't fully
-                 * recursive. This is just to keep it simple.
-                 */
-
-                // render base template to a temporary StringWriter
-                StringWriter sw = new StringWriter();
-                velocityTemplate.merge(ctx, sw);
-
-                // put rendered template into context
-                ctx.put("decorator_body", sw.toString());
-
-                log.debug("Applying decorator " + velocityDecorator.getName());
-
-                // now render decorator to our output writer
-                velocityDecorator.merge(ctx, out);
-
-            } else {
-
-                // no decorator, so just merge template to our output writer
-                velocityTemplate.merge(ctx, out);
-            }
+            // Decorator support (rendering a base template, then re-merging
+            // it into a second "decorator" template) was never wired up:
+            // velocityDecorator had no setter and was assigned nothing but
+            // its initial null anywhere in this class, so the branch that
+            // used to live here (UWF_NULL_FIELD) was permanently dead code
+            // that always fell through to this same call. Simplified to
+            // what it always actually did.
+            velocityTemplate.merge(ctx, out);
 
             long endTime = System.currentTimeMillis();
             long renderTime = (endTime - startTime) / RollerConstants.SEC_IN_MS;

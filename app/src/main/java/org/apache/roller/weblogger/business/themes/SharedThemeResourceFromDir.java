@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.business.themes;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -35,6 +36,21 @@ import org.apache.roller.weblogger.pojos.ThemeResource;
  * not be any external classes which need to construct their own instances
  * of this class.
  */
+// compareTo is used only by SharedThemeFromDir.getResources()'s
+// Collections.sort(List<ThemeResource>) -- List sort calls compareTo
+// exclusively, never equals/hashCode. Confirmed by
+// `grep -rn "TreeSet\|TreeMap\|SortedSet\|\.sort(\|Collections.sort"
+// app/src/main/java | grep -i theme`: no TreeSet/TreeMap/SortedSet/HashSet of
+// ThemeResource exists anywhere in app/src/main/java, so equals/hashCode on
+// this class is never consulted.
+@SuppressWarnings("PMD.OverrideBothEqualsAndHashCodeOnComparable")
+@SuppressFBWarnings(
+        value = "EQ_COMPARETO_USE_OBJECT_EQUALS",
+        justification = "compareTo is consulted only by Collections.sort(List<ThemeResource>) in "
+                + "SharedThemeFromDir.getResources -- List sort uses compareTo exclusively, never "
+                + "equals/hashCode. No TreeSet/TreeMap/HashSet of ThemeResource exists anywhere in "
+                + "app/src/main/java (grepped). Adding equals/hashCode here would add API surface "
+                + "nothing reads.")
 public class SharedThemeResourceFromDir
         implements ThemeResource, Serializable {
 

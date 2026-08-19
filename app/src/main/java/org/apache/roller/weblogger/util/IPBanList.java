@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -181,6 +182,12 @@ public final class IPBanList {
 
     // a simple extension to the File class which tracks if the file has
     // changed since the last time we checked
+    @SuppressFBWarnings(
+            value = "EQ_DOESNT_OVERRIDE_EQUALS",
+            justification = "myLastModified is bookkeeping this private, single-use-site class "
+                    + "layers on top of File, not part of any identity comparison -- this class is "
+                    + "never compared with .equals() and never used as a Set/Map key anywhere "
+                    + "(grepped), so inheriting File's pathname-based equals is harmless.")
     private static class ModifiedFile extends java.io.File {
 
         private static final long serialVersionUID = 1L;

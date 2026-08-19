@@ -642,8 +642,17 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                 whereClause.append("<=");
                 break;
             default:
-                whereClause.append("=");
-                break;
+                // SizeFilterType is a closed, internal five-value enum whose
+                // only producer (MediaFileSearchBean) already normalizes any
+                // unrecognized request input to EQ before this method ever
+                // sees it, so every declared constant is handled above by
+                // name. Reaching here means a value was added to the enum
+                // without updating this switch -- silently falling back to
+                // "=" (as an earlier version of this code did) would run a
+                // syntactically valid but semantically wrong query instead
+                // of surfacing the gap, so this fails loudly instead.
+                throw new IllegalStateException(
+                        "Unsupported MediaFileFilter.SizeFilterType: " + filter.getSizeFilterType());
             }
             whereClause.append(" ?").append(size);
         }

@@ -66,7 +66,14 @@ public class SQLScriptRunner {
                 // dollar-quote, where "--" is just content
                 if (openTag != null || !line.startsWith("--")) {
 
-                    if (openTag == null && line.indexOf("--") > 0) {
+                    // >= 0 (found at all), not > 0: a "--" at position 0 can
+                    // never reach here anyway (the enclosing if's
+                    // !line.startsWith("--") already routed that case away
+                    // when openTag == null, which this branch requires), so
+                    // this is behaviourally identical to the > 0 form it
+                    // replaces -- but it does not depend on that coincidence
+                    // to stay correct.
+                    if (openTag == null && line.indexOf("--") >= 0) {
                         // trim comment off end of line
                         line = line.substring(0, line.indexOf("--")).trim();
                     }

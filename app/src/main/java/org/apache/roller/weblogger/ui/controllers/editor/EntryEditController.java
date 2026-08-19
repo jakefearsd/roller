@@ -369,12 +369,25 @@ public class EntryEditController extends BaseController {
 
     @GetMapping("/entryEdit!firstSave.rol")
     public String entryEditFirstSave(HttpServletRequest request, Model model,
-                                     @ModelAttribute("bean") EntryBean bean) {
+                                     @ModelAttribute("bean") EntryBean bean,
+                                     RedirectAttributes redirectAttributes) {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "entryEdit");
         model.addAttribute("pageTitle", getText("weblogEdit.title.editEntry", request));
 
-        WeblogEntry entry = lookupEntry(bean.getId(), request);
+        // This landing page is just as bookmarkable/reloadable as
+        // entryEdit.rol, and resolves the same way via lookupEntry (no status
+        // filter) -- so it carries the exact same trashed-entry hazard that
+        // guard exists for above: send the author to the trash screen rather
+        // than quietly rendering an editable form for an entry that has
+        // since been trashed.
+        WeblogEntry lookedUp = lookupEntry(bean.getId(), request);
+        if (lookedUp != null && lookedUp.getStatus() == PubStatus.TRASHED) {
+            addFlashError(redirectAttributes, "entryEdit.entryIsTrashed", request);
+            return "redirect:/roller-ui/authoring/trash.rol?weblog="
+                    + getActionWeblog(request).getHandle();
+        }
+        WeblogEntry entry = lookedUp;
         if (entry == null) {
             return "redirect:/roller-ui/menu.rol";
         }
@@ -671,7 +684,11 @@ public class EntryEditController extends BaseController {
         return ".EntryEdit";
     }
 
-    private void addStatusMessage(PubStatus pubStatus, Model model, WeblogEntry entry, HttpServletRequest request) {
+    // Package-private rather than private for EntryEditControllerTest --
+    // both real callers guard TRASHED away before reaching this method (see
+    // the case's own comment below), so the only way to exercise that
+    // defensive branch is to call this directly.
+    void addStatusMessage(PubStatus pubStatus, Model model, WeblogEntry entry, HttpServletRequest request) {
         switch (pubStatus) {
             case DRAFT:
                 addMessage(model, "weblogEdit.draftSaved", request);
@@ -685,6 +702,25 @@ public class EntryEditController extends BaseController {
                 break;
             case PENDING:
                 addMessage(model, "weblogEdit.submittedForReview", request);
+                break;
+            case TRASHED:
+                // Both callers (entryEditExecute and entryEditFirstSave)
+                // already redirect a trashed entry to the trash screen
+                // before reaching this method, so this should be
+                // unreachable in practice; it is handled explicitly rather
+                // than silently, in case a future call site forgets that
+                // guard. No status toast makes sense for it, so this is a
+                // documented no-op rather than a thrown exception -- this
+                // method's only job is a confirmation message, and both
+                // current callers would misreport an otherwise-successful
+                // request as a failure (the save-flow caller sits inside a
+                // try/catch that shows "generic.error.check.logs" on any
+                // exception; the firstSave caller has no surrounding
+                // try/catch at all and would simply 500 a page view) if
+                // this threw instead.
+                break;
+            default:
+                log.warn("addStatusMessage: no status message defined for " + pubStatus);
                 break;
         }
     }

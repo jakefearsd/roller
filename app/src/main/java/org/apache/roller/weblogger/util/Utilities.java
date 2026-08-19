@@ -774,7 +774,7 @@ public final class Utilities {
      */
     public static int stringToInt(String string) {
         try {
-            return Integer.valueOf(string);
+            return Integer.parseInt(string);
         } catch (NumberFormatException e) {
             mLogger.debug("Invalid Integer:" + string);
         }
@@ -830,6 +830,9 @@ public final class Utilities {
             case 34:
             case 44:
                 continue;
+            default:
+                // every other character falls through to the filter below
+                break;
             }
 
             if ((33 <= c && c <= 126) || Character.isUnicodeIdentifierPart(c)

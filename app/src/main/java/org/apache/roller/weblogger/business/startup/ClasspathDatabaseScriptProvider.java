@@ -39,7 +39,11 @@ public class ClasspathDatabaseScriptProvider implements DatabaseScriptProvider {
      */
     @Override
     public InputStream getDatabaseScript(String path) {
-        return this.getClass().getResourceAsStream(resourcePath(path));
+        // ClasspathDatabaseScriptProvider.class, not this.getClass() (an
+        // UI_INHERITANCE_UNSAFE_GETRESOURCE risk if ever subclassed) --
+        // matching getScriptURL just below, which already uses the class
+        // literal for the same lookup.
+        return ClasspathDatabaseScriptProvider.class.getResourceAsStream(resourcePath(path));
     }
 
     /**

@@ -61,7 +61,7 @@ public final class WebloggerConfig {
     static {
         config = new Properties();
 
-        try {
+        runAtClassLoad(() -> {
             // we'll need this to get at our properties files in the classpath
             Class<?> configClass = Class.forName("org.apache.roller.weblogger.config.WebloggerConfig");
 
@@ -136,14 +136,7 @@ public final class WebloggerConfig {
                 }
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            // A RuntimeException here is a programming or configuration
-            // error, not a missing optional file -- do not boot on it.
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            }
-        }
+        });
 
         // tell log4j2 to use the optionally specified config file instead of Roller's,
         // but only if it hasn't already been set with -D at JVM startup.
@@ -172,6 +165,36 @@ public final class WebloggerConfig {
             }
         }
 
+    }
+
+    /**
+     * Runs {@code work}, escalating a {@link RuntimeException} (a
+     * programming or configuration error) but only logging anything else (a
+     * missing optional file, matched by the broad {@code Exception} catch
+     * this class has always used here). Extracted from the static
+     * initializer above purely so {@code WebloggerConfigTest} can drive both
+     * catch clauses directly -- the initializer itself runs exactly once, at
+     * class-load, before any test in the suite can intervene, so this
+     * extraction is the only seam that reaches either branch. Package-
+     * private, not private, for that test.
+     */
+    static void runAtClassLoad(ExceptionalRunnable work) {
+        try {
+            work.run();
+        } catch (RuntimeException e) {
+            // A RuntimeException here is a programming or configuration
+            // error, not a missing optional file -- do not boot on it.
+            e.printStackTrace();
+            throw e;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** A block of work that may throw a checked exception. */
+    @FunctionalInterface
+    interface ExceptionalRunnable {
+        void run() throws Exception;
     }
 
 
@@ -311,7 +334,7 @@ public final class WebloggerConfig {
             return defaultValue;
         }
 
-        return Integer.valueOf(value);
+        return Integer.parseInt(value);
     }
 
     /**

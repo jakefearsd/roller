@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.business.themes;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -35,6 +36,22 @@ import org.apache.roller.weblogger.pojos.WeblogTheme;
 /**
  * A WeblogTheme shared by many weblogs and backed by a SharedTheme.
  */
+// compareTo exists only to satisfy the Theme interface's Comparable contract
+// and is dead code in practice: ThemeManagerImpl.getWeblogTheme(weblog)
+// constructs exactly one WeblogSharedTheme per call (confirmed by
+// `grep -rn "WeblogSharedTheme" app/src/main/java`, whose only non-declaration
+// hit is that single `new WeblogSharedTheme(weblog, staticTheme)`), and it is
+// returned and used standalone -- never placed in a List, Set or Map
+// alongside a sibling instance. compareTo simply delegates to the wrapped
+// SharedTheme's own (separately suppressed, same reasoning) compareTo.
+@SuppressWarnings("PMD.OverrideBothEqualsAndHashCodeOnComparable")
+@SuppressFBWarnings(
+        value = "EQ_COMPARETO_USE_OBJECT_EQUALS",
+        justification = "compareTo satisfies the Theme interface only and delegates to the wrapped "
+                + "SharedTheme; ThemeManagerImpl constructs exactly one WeblogSharedTheme per weblog "
+                + "and never collects instances together, so compareTo/equals/hashCode are never "
+                + "compared against a sibling instance in practice (grepped: the only construction "
+                + "site is getWeblogTheme).")
 public class WeblogSharedTheme extends WeblogTheme {
 
     private static final long serialVersionUID = 1L;

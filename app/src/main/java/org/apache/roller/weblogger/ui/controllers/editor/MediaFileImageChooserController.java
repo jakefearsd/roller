@@ -120,10 +120,10 @@ public class MediaFileImageChooserController extends MediaFileBase {
             String fullPath = "/" + directory.getName();
             if (fullPath.length() > 1) {
                 String[] directoryNames = fullPath.substring(1).split("/");
-                String dirPath = "";
+                StringBuilder dirPath = new StringBuilder();
                 for (String dirName : directoryNames) {
-                    dirPath = dirPath + "/" + dirName;
-                    directoryHierarchy.add(new KeyValueObject(dirPath, dirName));
+                    dirPath.append('/').append(dirName);
+                    directoryHierarchy.add(new KeyValueObject(dirPath.toString(), dirName));
                 }
             }
             model.addAttribute("currentDirectoryHierarchy", directoryHierarchy);

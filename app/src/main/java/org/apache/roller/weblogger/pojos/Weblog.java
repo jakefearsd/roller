@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.pojos;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Serializable;
 import java.util.*;
 
@@ -391,6 +392,24 @@ public class Weblog implements Serializable {
         this.lastModified = lastModified;
     }
 
+    // NM_CONFUSING pairs this with AbstractPager.getUrl() (inherited into
+    // FeedModel$FeedEntriesPager, which is what the finding actually names)
+    // purely on case -- the two classes share no relationship. getURL() is
+    // this pojo's canonical spelling, delegated to by WeblogWrapper.getURL()
+    // (the legacy plugin-facing wrapper API, see the Plugin System section
+    // of CLAUDE.md), and getUrl() on AbstractPager is inherited by every
+    // pager in the rendering model (grepped:
+    // ui/rendering/pagers/AbstractPager.java:106), used across the whole
+    // paginated-template family. Renaming either would break its own
+    // unrelated, unrenameable call chain to fix a purely cosmetic collision
+    // between the two.
+    @SuppressFBWarnings(
+            value = "NM_CONFUSING",
+            justification = "getURL() is delegated to by WeblogWrapper.getURL() (the legacy "
+                    + "plugin-facing wrapper API); the method it collides with on case alone, "
+                    + "AbstractPager.getUrl(), is inherited by every pager in the rendering model. "
+                    + "Neither side can be renamed without breaking its own, entirely unrelated "
+                    + "call chain.")
     public String getURL() {
         return WebloggerFactory.getWeblogger().getUrlStrategy().getWeblogURL(this, null, false);
     }

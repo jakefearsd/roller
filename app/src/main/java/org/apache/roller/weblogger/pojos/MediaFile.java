@@ -377,6 +377,20 @@ public class MediaFile implements Serializable {
     /**
      * Returns permalink URL for this media file resource.
      */
+    // NM_CONFUSING pairs this with the unrelated, @Deprecated
+    // WeblogEntry.getPermaLink() purely on case -- the two classes share no
+    // hierarchy. getPermalink() is the canonical spelling, used throughout
+    // the theme templates and JSPs (grepped: $image.permalink in
+    // WEB-INF/velocity/weblog.vm, ${mediaFile.permalink} in
+    // MediaFileImageChooser.jsp) -- renaming it would silently break every
+    // one of those, per CLAUDE.md's Velocity-leniency warning (a missing
+    // reference prints as literal text, no error, no log line).
+    @SuppressFBWarnings(
+            value = "NM_CONFUSING",
+            justification = "getPermalink() is the canonical spelling and is referenced throughout "
+                    + "the theme templates ($image.permalink) and JSPs (${mediaFile.permalink}); "
+                    + "renaming it to avoid a case collision with the unrelated, already-@Deprecated "
+                    + "WeblogEntry.getPermaLink() would silently break those template references.")
     public String getPermalink() {
         return WebloggerFactory.getWeblogger().getUrlStrategy()
                 .getMediaFileURL(getWeblog(), this.getId(), true);

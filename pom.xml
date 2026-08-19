@@ -71,20 +71,16 @@ limitations under the License.
         <jacoco.check.skip>false</jacoco.check.skip>
 
         <!-- TEMPORARY, deleted in the final task of the static-analysis wave.
-             The tree starts at 362 PMD / 134 SpotBugs violations against
-             this exact ruleset/filter, measured directly from this task's
-             own `mvn -pl app compile pmd:pmd spotbugs:spotbugs` run (the
-             wave's design doc estimated 307 / 132; the live count on this
-             tree is what actually gates the build, and is higher: see the
-             task's own report for the reconciliation). Rather than leave the
-             build red for a dozen commits, the gate goes in at today's
-             count: green now, and any NEW violation fails immediately. Each
-             fix batch lowers these. When both reach 0 the properties go away
-             and the gate is absolute. This is a scaffold, not the ratcheted
-             ceiling the spec rejected: the difference is that it has a
-             scheduled end. -->
-        <pmd.max.violations>9</pmd.max.violations>
-        <spotbugs.max.violations>42</spotbugs.max.violations>
+             The tree started at 362 PMD / 134 SpotBugs violations against
+             this exact ruleset/filter. Each fix batch lowered these; Task 12
+             (split into 12a/12b) cleared the last 9 PMD / 42 SpotBugs
+             findings, so both are now 0, and the gate is already absolute in
+             effect. The properties themselves, and this scaffold comment,
+             are deleted (along with the corresponding maxAllowedViolations
+             wiring in app/pom.xml) by the wave's final task, which also
+             writes up the policy this scaffold was standing in for. -->
+        <pmd.max.violations>0</pmd.max.violations>
+        <spotbugs.max.violations>0</spotbugs.max.violations>
         <quality.check.skip>false</quality.check.skip>
     </properties>
 
