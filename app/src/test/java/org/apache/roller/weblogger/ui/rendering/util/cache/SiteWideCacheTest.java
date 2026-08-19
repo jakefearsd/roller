@@ -126,7 +126,7 @@ public class SiteWideCacheTest {
 
         // built here rather than read from the singleton, so that what is being
         // tested is the constructor reading the configuration
-        SiteWideCache configured = new SiteWideCache(true);
+        SiteWideCache configured = SiteWideCache.newForTest(true);
         for (int i = 0; i < configuredSize; i++) {
             configured.put("key" + i, "page " + i);
         }
@@ -473,7 +473,7 @@ public class SiteWideCacheTest {
 
     @Test
     public void aDisabledCacheCachesNothing() {
-        SiteWideCache disabled = new SiteWideCache(false);
+        SiteWideCache disabled = SiteWideCache.newForTest(false);
         disabled.setSiteWideWeblogCheck(FRONT_PAGE::equals);
 
         disabled.put("key", "rendered page");

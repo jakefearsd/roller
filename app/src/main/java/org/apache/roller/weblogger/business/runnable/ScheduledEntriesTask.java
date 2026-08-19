@@ -50,11 +50,14 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
     // a String description of when to start this task
     private String startTimeDesc = "immediate";
 
-    // interval at which the task is run, default is once per minute
-    private int interval = 1;
+    // interval at which the task is run, default is once per minute.
+    // volatile: written by init() on the bootstrap thread, read via
+    // getInterval() from the scheduler thread TaskScheduler runs on.
+    private volatile int interval = 1;
 
-    // lease time given to task lock, default is 30 minutes
-    private int leaseTime = DEFAULT_LEASE_MINS;
+    // lease time given to task lock, default is 30 minutes.
+    // volatile: same cross-thread shape as interval above.
+    private volatile int leaseTime = DEFAULT_LEASE_MINS;
 
 
     @Override

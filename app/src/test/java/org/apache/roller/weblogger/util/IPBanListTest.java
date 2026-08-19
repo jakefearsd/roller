@@ -46,7 +46,7 @@ class IPBanListTest {
     void setUp() throws IOException {
         ipBanListPath = tmpDir.resolve("ipbanlist.txt");
         Files.createFile(ipBanListPath);
-        ipBanList = new IPBanList(() -> ipBanListPath.toAbsolutePath().toString());
+        ipBanList = IPBanList.newForTest(() -> ipBanListPath.toAbsolutePath().toString());
     }
 
     @Test

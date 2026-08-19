@@ -19,15 +19,15 @@
 package org.apache.roller.weblogger.pojos;
 
 import java.util.Comparator;
-import java.io.Serializable;
 
 /**
  * @author Markus Fuchs
  */
-public final class StatCountCountComparator implements Comparator<StatCount>, Serializable {
+public final class StatCountCountComparator implements Comparator<StatCount> {
 
-    private static final long serialVersionUID = 4811314286365625712L;
-    
+    // Nothing serializes this comparator -- it was never more than an
+    // in-memory Comparator -- so Serializable was not pulling its weight.
+    // See SING_SINGLETON_IMPLEMENTS_SERIALIZABLE.
     private static StatCountCountComparator instance = new StatCountCountComparator();
 
     private StatCountCountComparator() {}

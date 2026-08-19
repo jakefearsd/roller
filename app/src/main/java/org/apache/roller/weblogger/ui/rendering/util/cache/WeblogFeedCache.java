@@ -55,12 +55,12 @@ public final class WeblogFeedCache {
 
 
     /**
-     * Package private so that tests can build an instance with caching turned
-     * off. The singleton reads that flag once, when the class is loaded, and
-     * running with the feed cache disabled is a supported (and, in development,
-     * the usual) configuration.
+     * Private -- construction with an explicit flag is for tests only, via
+     * {@link #newForTest(boolean)}. The singleton itself reads the flag once,
+     * when the class is loaded, and running with the feed cache disabled is a
+     * supported (and, in development, the usual) configuration.
      */
-    WeblogFeedCache(boolean cacheEnabled) {
+    private WeblogFeedCache(boolean cacheEnabled) {
 
         this.cacheEnabled = cacheEnabled;
 
@@ -91,6 +91,16 @@ public final class WeblogFeedCache {
     
     public static WeblogFeedCache getInstance() {
         return singletonInstance;
+    }
+
+
+    /**
+     * Package private for unit tests: builds an instance with caching forced
+     * on or off, bypassing the singleton and the config-file read its
+     * constructor otherwise does.
+     */
+    static WeblogFeedCache newForTest(boolean cacheEnabled) {
+        return new WeblogFeedCache(cacheEnabled);
     }
 
 

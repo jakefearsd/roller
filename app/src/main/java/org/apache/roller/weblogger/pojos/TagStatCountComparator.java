@@ -19,21 +19,20 @@
 package org.apache.roller.weblogger.pojos;
 
 import java.util.Comparator;
-import java.io.Serializable;
 
 /**
  * @author Markus Fuchs
  */
-public class TagStatCountComparator implements Comparator<TagStat>, Serializable {
-
-    private static final long serialVersionUID = 1155112837815739929L;
+public final class TagStatCountComparator implements Comparator<TagStat> {
 
     private static TagStatCountComparator instance = new TagStatCountComparator();
-    
-    /**
-     * 
-     */
-    public TagStatCountComparator() {
+
+    // Nothing outside getInstance() ever needs a second instance, and
+    // nothing serializes this comparator (it was never more than an
+    // in-memory Comparator), so neither a public constructor nor
+    // Serializable was pulling its weight -- see SING_SINGLETON_HAS_
+    // NONPRIVATE_CONSTRUCTOR / SING_SINGLETON_IMPLEMENTS_SERIALIZABLE.
+    private TagStatCountComparator() {
 
     }
 

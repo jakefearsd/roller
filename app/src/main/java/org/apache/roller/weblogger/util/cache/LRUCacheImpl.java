@@ -128,9 +128,17 @@ public class LRUCacheImpl implements Cache {
     }
     
     
+    /**
+     * synchronized to match put/get/remove/clear above: startTime, hits,
+     * misses, puts and removes are the same fields those methods mutate
+     * under this monitor, and the efficiency calculation below reads three
+     * of them together -- an unsynchronized read here (IS2_INCONSISTENT_SYNC)
+     * could both see a stale value AND tear the hits/misses/removes snapshot
+     * across a concurrent clear().
+     */
     @Override
-    public Map<String, Object> getStats() {
-        
+    public synchronized Map<String, Object> getStats() {
+
         Map<String, Object> stats = new HashMap<>();
         stats.put("startTime", this.startTime);
         stats.put("hits", this.hits);

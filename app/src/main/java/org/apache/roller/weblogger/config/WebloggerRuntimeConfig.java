@@ -44,7 +44,15 @@ public final class WebloggerRuntimeConfig {
     private static Log log = LogFactory.getLog(WebloggerRuntimeConfig.class);
     
     private static String RUNTIME_CONFIG = "/org/apache/roller/weblogger/config/runtimeConfigDefs.xml";
-    private static RuntimeConfigDefs configDefs = null;
+
+    // Lazily parsed once per JVM and read from many request threads
+    // thereafter. `configDefs` is volatile so a completed parse is fully
+    // visible to every reader (LI_LAZY_INIT_STATIC), and CONFIG_DEFS_LOCK is
+    // a private lock object -- not this class's own intrinsic lock -- so
+    // nothing outside this file can contend on or block the parse
+    // (NonThreadSafeSingleton).
+    private static volatile RuntimeConfigDefs configDefs = null;
+    private static final Object CONFIG_DEFS_LOCK = new Object();
     
     // special case for our context urls
     private static String relativeContextURL = null;
@@ -143,23 +151,30 @@ public final class WebloggerRuntimeConfig {
     
     
     public static RuntimeConfigDefs getRuntimeConfigDefs() {
-        
-        if(configDefs == null) {
-            
-            // unmarshall the config defs file
-            try (InputStream is =
-                    WebloggerRuntimeConfig.class.getResourceAsStream(RUNTIME_CONFIG)) {
 
-                RuntimeConfigDefsParser parser = new RuntimeConfigDefsParser();
-                configDefs = parser.unmarshall(is);
+        // Double-checked locking, correct per JMM because configDefs is
+        // volatile: the outer check avoids the lock on every call once
+        // parsed, the inner check avoids a duplicate parse from a thread
+        // that lost the race to CONFIG_DEFS_LOCK.
+        if (configDefs == null) {
+            synchronized (CONFIG_DEFS_LOCK) {
+                if (configDefs == null) {
 
-            } catch(Exception e) {
-                // error while parsing :(
-                log.error("Error parsing runtime config defs", e);
+                    // unmarshall the config defs file
+                    try (InputStream is =
+                            WebloggerRuntimeConfig.class.getResourceAsStream(RUNTIME_CONFIG)) {
+
+                        RuntimeConfigDefsParser parser = new RuntimeConfigDefsParser();
+                        configDefs = parser.unmarshall(is);
+
+                    } catch (Exception e) {
+                        // error while parsing :(
+                        log.error("Error parsing runtime config defs", e);
+                    }
+                }
             }
-            
         }
-        
+
         return configDefs;
     }
     

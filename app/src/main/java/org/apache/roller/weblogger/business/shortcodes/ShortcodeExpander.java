@@ -28,6 +28,8 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Expands {@code [name attr="value"]body[/name]} shortcodes in entry text
  * into HTML, using a registry of {@link ShortcodeHandler}s.
@@ -119,6 +121,13 @@ public final class ShortcodeExpander {
 
     private final Map<String, ShortcodeHandler> handlers;
 
+    @SuppressFBWarnings(
+            value = "SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR",
+            justification = "DEFAULT is a canonical default instance, not the only instance "
+                    + "this class permits -- MapShortcode.pinsInEntry builds its own expander "
+                    + "with a single collecting handler (production, same package), and the "
+                    + "test suite builds others with fixture handlers. This class was never a "
+                    + "strict singleton; a private constructor would break the real caller.")
     public ShortcodeExpander(List<ShortcodeHandler> handlerList) {
         Map<String, ShortcodeHandler> byName = new LinkedHashMap<>();
         for (ShortcodeHandler handler : handlerList) {

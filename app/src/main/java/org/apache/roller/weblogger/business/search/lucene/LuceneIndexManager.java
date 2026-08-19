@@ -80,7 +80,10 @@ public class LuceneIndexManager implements IndexManager {
 
     private final File indexConsistencyMarker;
 
-    private boolean inconsistentAtStartup = false;
+    // volatile: written during initialize() (the bootstrap thread) and read
+    // via isInconsistentAtStartup() from whatever thread later asks -- an
+    // admin request thread, unrelated to the one that bootstrapped search.
+    private volatile boolean inconsistentAtStartup = false;
 
     private final ReadWriteLock rwl = new ReentrantReadWriteLock();
 
@@ -394,9 +397,16 @@ public class LuceneIndexManager implements IndexManager {
         // no-op
     }
 
+    // synchronized: matches getSharedIndexReader()/resetSharedReader() below
+    // -- every other access to `reader` holds this monitor, and an
+    // unguarded read here was the one inconsistent access
+    // (IS2_INCONSISTENT_SYNC). A method-level modifier, like its two
+    // siblings, rather than a synchronized(this) block around the existing
+    // body, so the already-untested body's lines are not re-indented into
+    // looking like new (and newly diff-covered) lines.
     @Override
-    public void shutdown() {
-        
+    public synchronized void shutdown() {
+
         indexConsistencyMarker.delete();
 
         if (reader != null) {

@@ -58,8 +58,9 @@ public final class IPBanList {
     }
 
 
-    // package-private for unit tests
-    IPBanList(Supplier<String> banIpsFilePathSupplier) {
+    // private -- construction with an explicit supplier is for the static
+    // initializer above and, via newForTest, for unit tests
+    private IPBanList(Supplier<String> banIpsFilePathSupplier) {
 
         log.debug("INIT");
 
@@ -79,6 +80,15 @@ public final class IPBanList {
     // access to the singleton instance
     public static IPBanList getInstance() {
         return instance;
+    }
+
+
+    /**
+     * Package private for unit tests: builds an instance from a supplier of
+     * their own, bypassing the singleton and its {@code WebloggerConfig} read.
+     */
+    static IPBanList newForTest(Supplier<String> banIpsFilePathSupplier) {
+        return new IPBanList(banIpsFilePathSupplier);
     }
 
 

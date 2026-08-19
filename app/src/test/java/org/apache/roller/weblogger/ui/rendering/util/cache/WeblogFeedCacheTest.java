@@ -173,7 +173,7 @@ public class WeblogFeedCacheTest {
 
         // built here rather than read from the singleton, so that what is being
         // tested is the constructor reading the configuration
-        WeblogFeedCache configured = new WeblogFeedCache(true);
+        WeblogFeedCache configured = WeblogFeedCache.newForTest(true);
         for (int i = 0; i < configuredSize; i++) {
             configured.put("key" + i, "feed " + i);
         }
@@ -310,7 +310,7 @@ public class WeblogFeedCacheTest {
     public void aDisabledCacheCachesNothing() {
         // how Roller runs in development, and how it runs for anyone who turns
         // cache.weblogfeed.enabled off: the calls must all be no-ops
-        WeblogFeedCache disabled = new WeblogFeedCache(false);
+        WeblogFeedCache disabled = WeblogFeedCache.newForTest(false);
 
         disabled.put("key", "rendered feed");
 
