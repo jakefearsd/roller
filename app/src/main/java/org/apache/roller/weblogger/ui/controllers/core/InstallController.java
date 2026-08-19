@@ -25,8 +25,8 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.SpringWebloggerProvider;
 import org.apache.roller.weblogger.business.WebloggerFactory;
@@ -51,7 +51,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 @RequestMapping("/roller-ui/install")
 public class InstallController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(InstallController.class);
+    private static final Logger log = LoggerFactory.getLogger(InstallController.class);
 
     private final ApplicationContext applicationContext;
 

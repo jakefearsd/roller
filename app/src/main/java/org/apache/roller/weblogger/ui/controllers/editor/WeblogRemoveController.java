@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
@@ -38,7 +38,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/roller-ui/authoring")
 public class WeblogRemoveController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(WeblogRemoveController.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogRemoveController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -74,7 +74,7 @@ public class WeblogRemoveController extends BaseController {
 
             return "redirect:/roller-ui/menu.rol";
         } catch (Exception ex) {
-            log.error("Error removing weblog - " + getActionWeblog(request).getHandle(), ex);
+            log.error("Error removing weblog - {}", getActionWeblog(request).getHandle(), ex);
             addError(model, "websiteRemove.error", getActionWeblog(request).getName(), request);
         }
 

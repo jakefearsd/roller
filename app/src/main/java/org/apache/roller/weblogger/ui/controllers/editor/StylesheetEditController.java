@@ -22,8 +22,8 @@ import java.util.Date;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
@@ -47,7 +47,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class StylesheetEditController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(StylesheetEditController.class);
+    private static final Logger log = LoggerFactory.getLogger(StylesheetEditController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -269,7 +269,7 @@ public class StylesheetEditController extends BaseController {
                         .getTemplateByLink(getActionWeblog(request), stylesheet.getLink());
             }
         } catch (WebloggerException ex) {
-            log.error("Error looking up stylesheet on weblog - " + getActionWeblog(request).getHandle(), ex);
+            log.error("Error looking up stylesheet on weblog - {}", getActionWeblog(request).getHandle(), ex);
         }
         return null;
     }

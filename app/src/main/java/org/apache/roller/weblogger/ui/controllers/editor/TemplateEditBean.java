@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.ui.controllers.editor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
@@ -32,7 +32,7 @@ import org.apache.roller.weblogger.pojos.WeblogTemplate;
  * Form bean for TemplateEdit action.
  */
 public class TemplateEditBean {
-    private static Log log = LogFactory.getLog(TemplateEditBean.class);
+    private static final Logger log = LoggerFactory.getLogger(TemplateEditBean.class);
  
     private String id = null;
     private String name = null;
@@ -183,7 +183,7 @@ public class TemplateEditBean {
         } else {
             this.contentsStandard = "";
         }
-		log.debug("Standard: " + this.contentsStandard);
+		log.debug("Standard: {}", this.contentsStandard);
 
         this.navbar = dataHolder.isNavbar();
         this.hidden = dataHolder.isHidden();

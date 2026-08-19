@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.ui.controllers;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -55,7 +55,7 @@ import java.util.Map;
  */
 public class RollerHandlerInterceptor implements HandlerInterceptor {
 
-    private static final Log log = LogFactory.getLog(RollerHandlerInterceptor.class);
+    private static final Logger log = LoggerFactory.getLogger(RollerHandlerInterceptor.class);
 
     private static final String LOGIN_URL = "/roller-ui/login.rol";
     private static final String ACCESS_DENIED_URL = "/roller-ui/access-denied.rol";
@@ -93,7 +93,7 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
                         .getWeblogManager()
                         .getWeblogByHandle(weblogHandle);
             } catch (Exception e) {
-                log.warn("Error looking up weblog with handle: " + weblogHandle, e);
+                log.warn("Error looking up weblog with handle: {}", weblogHandle, e);
             }
         }
         if (actionWeblog != null) {
@@ -122,11 +122,8 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
                     GlobalPermission perm = new GlobalPermission(
                             secured.requiredGlobalPermissionActions());
                     if (!umgr.checkPermission(perm, authenticatedUser)) {
-                        if (log.isDebugEnabled()) {
-                            log.debug(String.format(
-                                    "DENIED: user %s does not have global permission = %s",
-                                    authenticatedUser.getUserName(), perm));
-                        }
+                        log.debug("DENIED: user {} does not have global permission = {}",
+                                authenticatedUser.getUserName(), perm);
                         if (apiHandler) {
                             throw forbidden();
                         }
@@ -138,12 +135,9 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
                 // Check if weblog is required
                 if (secured.isWeblogRequired()) {
                     if (actionWeblog == null) {
-                        if (log.isWarnEnabled()) {
-                            log.warn(String.format(
-                                    "User %s unable to process action because no weblog was defined "
-                                            + "(check that the form provides the weblog value).",
-                                    authenticatedUser.getUserName()));
-                        }
+                        log.warn("User {} unable to process action because no weblog was defined "
+                                        + "(check that the form provides the weblog value).",
+                                authenticatedUser.getUserName());
                         if (apiHandler) {
                             // Not found, not forbidden: no weblog was even
                             // resolved to check a permission against, so
@@ -163,11 +157,8 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
                                 actionWeblog,
                                 secured.requiredWeblogPermissionActions());
                         if (!umgr.checkPermission(required, authenticatedUser)) {
-                            if (log.isDebugEnabled()) {
-                                log.debug(String.format(
-                                        "DENIED: user %s does not have weblog permission = %s",
-                                        authenticatedUser.getUserName(), required));
-                            }
+                            log.debug("DENIED: user {} does not have weblog permission = {}",
+                                    authenticatedUser.getUserName(), required);
                             if (apiHandler) {
                                 throw forbidden();
                             }
@@ -302,7 +293,7 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
                     .getUserManager()
                     .getUserByUserName(username);
         } catch (Exception e) {
-            log.error("Error looking up user: " + username, e);
+            log.error("Error looking up user: {}", username, e);
             return null;
         }
     }

@@ -26,8 +26,8 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.CharSetUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.config.AuthMethod;
@@ -57,7 +57,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/admin")
 public class UserEditController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(UserEditController.class);
+    private static final Logger log = LoggerFactory.getLogger(UserEditController.class);
 
     private final AuthMethod authMethod = WebloggerConfig.getAuthMethod();
 
@@ -349,7 +349,7 @@ public class UserEditController extends BaseController {
                 addMessage(model, successKey, request);
             }
         } catch (Exception ex) {
-            log.error("Error sending set-password link for " + user.getUserName(), ex);
+            log.error("Error sending set-password link for {}", user.getUserName(), ex);
             addError(model, "generic.error.check.logs", request);
         }
     }
@@ -365,7 +365,7 @@ public class UserEditController extends BaseController {
                 return mgr.getUserByUserName(bean.getUserName(), null);
             }
         } catch (Exception e) {
-            log.error("Error looking up user (id/username):" + bean.getId() + "/" + bean.getUserName(), e);
+            log.error("Error looking up user (id/username):{}/{}", bean.getId(), bean.getUserName(), e);
         }
         return null;
     }
@@ -401,7 +401,7 @@ public class UserEditController extends BaseController {
         try {
             return weblogger.getUserManager().getWeblogPermissions(user);
         } catch (WebloggerException ex) {
-            log.error("ERROR getting permissions for user " + user.getUserName(), ex);
+            log.error("ERROR getting permissions for user {}", user.getUserName(), ex);
         }
         return new ArrayList<>();
     }

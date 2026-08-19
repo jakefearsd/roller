@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -46,7 +46,7 @@ import java.util.TimeZone;
  */
 public class EntryBean {
     
-    private static final Log log = LogFactory.getLog(EntryBean.class);
+    private static final Logger log = LoggerFactory.getLogger(EntryBean.class);
     
     private String id = null;
     private String title = null;
@@ -318,7 +318,7 @@ public class EntryBean {
         try {
             return Timestamp.valueOf(LocalDateTime.parse(value.trim()));
         } catch (DateTimeParseException e) {
-            log.debug("Ignoring unparseable event date '" + value + "'");
+            log.debug("Ignoring unparseable event date '{}'", value);
             return null;
         }
     }
@@ -443,7 +443,7 @@ public class EntryBean {
         // what getPubTime(TimeZone) parses it back with, so opening and
         // saving an entry unchanged does not move its publication time.
         if (entry.getPubTime() != null) {
-            log.debug("entry pubtime is " + entry.getPubTime());
+            log.debug("entry pubtime is {}", entry.getPubTime());
             ZonedDateTime zoned = entry.getPubTime().toInstant()
                     .atZone(entry.getWebsite().getTimeZoneInstance().toZoneId());
             setPubTimeLocal(zoned.toLocalDateTime().format(DATETIME_LOCAL));

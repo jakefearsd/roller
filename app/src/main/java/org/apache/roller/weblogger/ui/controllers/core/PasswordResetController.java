@@ -25,8 +25,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
@@ -80,7 +80,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/roller-ui")
 public class PasswordResetController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(PasswordResetController.class);
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetController.class);
 
     /**
      * No existing validation in this codebase sets a password-length floor
@@ -340,7 +340,7 @@ public class PasswordResetController extends BaseController {
         int threshold = intProperty("passwordreset.throttle.threshold", 5);
         int interval = intProperty("passwordreset.throttle.interval", 300);
         int maxEntries = intProperty("passwordreset.throttle.maxentries", 250);
-        log.info("Password-reset throttle sized at " + threshold + " requests per " + interval + "s");
+        log.info("Password-reset throttle sized at {} requests per {}s", threshold, interval);
         return new GenericThrottle(threshold, interval * RollerConstants.SEC_IN_MS, maxEntries);
     }
 
@@ -348,7 +348,7 @@ public class PasswordResetController extends BaseController {
         try {
             return Integer.parseInt(WebloggerConfig.getProperty(name));
         } catch (NumberFormatException e) {
-            log.warn("bad input for config property " + name + "; using " + fallback, e);
+            log.warn("bad input for config property {}; using {}", name, fallback, e);
             return fallback;
         }
     }

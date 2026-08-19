@@ -24,8 +24,8 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
@@ -77,7 +77,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 @Controller
 public class SeoController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(SeoController.class);
+    private static final Logger log = LoggerFactory.getLogger(SeoController.class);
 
     private static final String SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9";
     private static final String IMAGE_NS = "http://www.google.com/schemas/sitemap-image/1.1";
@@ -190,7 +190,7 @@ public class SeoController extends BaseController {
             // getWeblogByHandle throws for syntactically invalid handles
             // (crawlers probe all sorts of /sitemap-*.xml URLs) -- that is a
             // 404, not a server error.
-            log.debug("Rejected sitemap request for handle " + handle, e);
+            log.debug("Rejected sitemap request for handle {}", handle, e);
             return ResponseEntity.notFound().build();
         }
         if (weblog == null || !Boolean.TRUE.equals(weblog.getActive())) {
@@ -213,7 +213,7 @@ public class SeoController extends BaseController {
             entries = weblogger.getWeblogEntryManager().getWeblogEntries(criteria);
             pages = weblogger.getWeblogPageManager().getPublishedPages(weblog);
         } catch (WebloggerException e) {
-            log.error("Error building the sitemap for weblog " + handle, e);
+            log.error("Error building the sitemap for weblog {}", handle, e);
             return ResponseEntity.internalServerError().build();
         }
 
@@ -284,8 +284,8 @@ public class SeoController extends BaseController {
         try {
             image = weblogger.getMediaFileManager().getMediaFile(imageId);
         } catch (WebloggerException e) {
-            log.debug("Featured image " + imageId + " of entry " + entry.getAnchor()
-                    + " could not be loaded; omitting it from the sitemap", e);
+            log.debug("Featured image {} of entry {} could not be loaded; omitting it from the sitemap",
+                    imageId, entry.getAnchor(), e);
         }
         if (image == null) {
             return;

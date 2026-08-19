@@ -23,8 +23,8 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MaintenanceService;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -75,7 +75,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/admin")
 public class MaintenanceController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(MaintenanceController.class);
+    private static final Logger log = LoggerFactory.getLogger(MaintenanceController.class);
 
     @Override
     public boolean isWeblogRequired() {
@@ -134,7 +134,7 @@ public class MaintenanceController extends BaseController {
             new MaintenanceService(weblogger).flushCache(weblog);
             addMessage(model, "maintenance.message.flushed", request);
         } catch (Exception ex) {
-            log.error("Error saving weblog - " + weblog.getHandle(), ex);
+            log.error("Error saving weblog - {}", weblog.getHandle(), ex);
             addError(model, "Error flushing page cache", request);
         }
 
@@ -183,7 +183,7 @@ public class MaintenanceController extends BaseController {
             addMessage(model, "maintenance.message.renditionsRegenerated",
                     String.valueOf(count), request);
         } catch (Exception ex) {
-            log.error("Error regenerating renditions - " + weblog.getHandle(), ex);
+            log.error("Error regenerating renditions - {}", weblog.getHandle(), ex);
             addError(model, "maintenance.message.renditionsRegenerated.failure", request);
         }
 
@@ -218,7 +218,7 @@ public class MaintenanceController extends BaseController {
         try {
             return weblogger.getWeblogManager().getWeblog(weblogId);
         } catch (WebloggerException ex) {
-            log.error("Error looking up weblog by id - " + weblogId, ex);
+            log.error("Error looking up weblog by id - {}", weblogId, ex);
             return null;
         }
     }

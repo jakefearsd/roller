@@ -23,8 +23,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -50,7 +50,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class MediaFileViewController extends MediaFileBase {
 
-    private static final Log log = LogFactory.getLog(MediaFileViewController.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaFileViewController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -169,8 +169,8 @@ public class MediaFileViewController extends MediaFileBase {
             } else if (StringUtils.isNotEmpty(directoryId)) {
                 // A folder delete is recursive; a global by-id lookup here let
                 // an editor on one weblog wipe another weblog's folder.
-                log.warn("Refusing to delete directory " + directoryId + ": not owned by weblog "
-                        + getActionWeblog(request).getHandle());
+                log.warn("Refusing to delete directory {}: not owned by weblog {}",
+                        directoryId, getActionWeblog(request).getHandle());
                 addError(model, "mediaFile.deleteFolder.error", request);
                 directoryId = null;
             }

@@ -21,8 +21,8 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class EntryAddWithMediaFileController extends MediaFileBase {
 
-    private static final Log log = LogFactory.getLog(EntryAddWithMediaFileController.class);
+    private static final Logger log = LoggerFactory.getLogger(EntryAddWithMediaFileController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -74,8 +74,8 @@ public class EntryAddWithMediaFileController extends MediaFileBase {
                     // below embeds the file's name and permalink in the draft.
                     MediaFile mediaFile = ownedMediaFile(image, request);
                     if (mediaFile == null) {
-                        log.warn("Refusing to link media file " + image
-                                + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                        log.warn("Refusing to link media file {}: not owned by weblog {}",
+                                image, getActionWeblog(request).getHandle());
                         continue;
                     }
                     String link;

@@ -22,8 +22,8 @@ import java.util.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogManager;
@@ -49,7 +49,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/roller-ui/admin")
 public class GlobalConfigController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(GlobalConfigController.class);
+    private static final Logger log = LoggerFactory.getLogger(GlobalConfigController.class);
 
     private final ResourceBundle bundle = ResourceBundle.getBundle("ApplicationResources");
 
@@ -133,7 +133,7 @@ public class GlobalConfigController extends BaseController {
                         boolean value = Boolean.parseBoolean(incomingProp);
                         updProp.setValue(Boolean.toString(value));
                     }
-                    log.debug("Set boolean " + propName + " = " + incomingProp);
+                    log.debug("Set boolean {} = {}", propName, incomingProp);
                 } catch (Exception nfe) {
                     String propDesc = bundle.getString(propertyDef.getKey());
                     addError(model, "ConfigForm.invalidBooleanProperty", propDesc, request);
@@ -143,7 +143,7 @@ public class GlobalConfigController extends BaseController {
                 try {
                     Integer.parseInt(incomingProp);
                     updProp.setValue(incomingProp);
-                    log.debug("Set integer " + propName + " = " + incomingProp);
+                    log.debug("Set integer {} = {}", propName, incomingProp);
                 } catch (NumberFormatException nfe) {
                     String propDesc = bundle.getString(propertyDef.getKey());
                     addError(model, "ConfigForm.invalidIntegerProperty", propDesc, request);
@@ -153,7 +153,7 @@ public class GlobalConfigController extends BaseController {
                 try {
                     Float.parseFloat(incomingProp);
                     updProp.setValue(incomingProp);
-                    log.debug("Set float " + propName + " = " + incomingProp);
+                    log.debug("Set float {} = {}", propName, incomingProp);
                 } catch (NumberFormatException nfe) {
                     String propDesc = bundle.getString(propertyDef.getKey());
                     addError(model, "ConfigForm.invalidFloatProperty", propDesc, request);
@@ -161,7 +161,7 @@ public class GlobalConfigController extends BaseController {
 
             } else if (incomingProp != null) {
                 updProp.setValue(incomingProp.trim());
-                log.debug("Set something " + propName + " = " + incomingProp);
+                log.debug("Set something {} = {}", propName, incomingProp);
 
             } else {
                 addError(model, "ConfigForm.invalidProperty", propName, request);

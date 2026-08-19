@@ -23,8 +23,8 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileComparator;
@@ -47,7 +47,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring/overlay")
 public class MediaFileImageChooserController extends MediaFileBase {
 
-    private static final Log log = LogFactory.getLog(MediaFileImageChooserController.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaFileImageChooserController.class);
 
     @Override
     public List<String> requiredWeblogPermissionActions() {
@@ -84,8 +84,8 @@ public class MediaFileImageChooserController extends MediaFileBase {
                 // renders the whole directory listing.
                 directory = ownedDirectory(directoryId, request);
                 if (directory == null) {
-                    log.warn("Refusing to browse directory " + directoryId
-                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    log.warn("Refusing to browse directory {}: not owned by weblog {}",
+                            directoryId, getActionWeblog(request).getHandle());
                     addError(model, "MediaFile.error.view", request);
                     return ".MediaFileImageChooser";
                 }

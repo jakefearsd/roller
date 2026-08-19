@@ -28,8 +28,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.util.DateUtil;
@@ -71,7 +71,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/roller-ui/authoring")
 public class EntryEditController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(EntryEditController.class);
+    private static final Logger log = LoggerFactory.getLogger(EntryEditController.class);
 
     /**
      * Same allowlist as {@code CtaShortcode}'s href check: the SEO card's
@@ -337,7 +337,7 @@ public class EntryEditController extends BaseController {
 
             addFlashMessage(redirectAttributes, "weblogEdit.revisionRestored", request);
         } catch (Exception e) {
-            log.error("Error restoring revision " + revisionId, e);
+            log.error("Error restoring revision {}", revisionId, e);
             addFlashError(redirectAttributes, "generic.error.check.logs", request);
         }
         return redirectToEntryEdit(request, entry);
@@ -362,7 +362,7 @@ public class EntryEditController extends BaseController {
             }
             return revision;
         } catch (WebloggerException e) {
-            log.error("Error looking up revision " + revisionId, e);
+            log.error("Error looking up revision {}", revisionId, e);
             return null;
         }
     }
@@ -503,7 +503,7 @@ public class EntryEditController extends BaseController {
         try {
             client.sendCampaign(listUuid, entry.getTitle(), html);
         } catch (IOException ex) {
-            log.error("Error sending newsletter campaign for entry " + entry.getId(), ex);
+            log.error("Error sending newsletter campaign for entry {}", entry.getId(), ex);
             addError(model, "newsletter.sendFailed", ex.getMessage(), request);
             return;
         }
@@ -516,8 +516,8 @@ public class EntryEditController extends BaseController {
             weblogger.flush();
             addMessage(model, "newsletter.sent", request);
         } catch (WebloggerException ex) {
-            log.error("Newsletter campaign for entry " + entry.getId()
-                    + " was sent, but recording newsletterSentAt failed", ex);
+            log.error("Newsletter campaign for entry {} was sent, but recording newsletterSentAt failed",
+                    entry.getId(), ex);
             addError(model, "newsletter.sentButNotRecorded", ex.getMessage(), request);
         }
     }
@@ -720,7 +720,7 @@ public class EntryEditController extends BaseController {
                 // this threw instead.
                 break;
             default:
-                log.warn("addStatusMessage: no status message defined for " + pubStatus);
+                log.warn("addStatusMessage: no status message defined for {}", pubStatus);
                 break;
         }
     }
@@ -741,7 +741,7 @@ public class EntryEditController extends BaseController {
                 model.addAttribute("entryRevisions",
                         weblogger.getWeblogEntryManager().getRevisions(entry));
             } catch (WebloggerException e) {
-                log.error("Error loading revisions for entry " + entry.getId(), e);
+                log.error("Error loading revisions for entry {}", entry.getId(), e);
             }
         }
 
@@ -778,7 +778,7 @@ public class EntryEditController extends BaseController {
                         .getMediaFileThumbnailURL(mediaFile.getWeblog(), mediaFile.getId(), true));
             }
         } catch (WebloggerException ex) {
-            log.error("Error looking up media file - " + mediaFileId, ex);
+            log.error("Error looking up media file - {}", mediaFileId, ex);
         }
     }
 

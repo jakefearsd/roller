@@ -24,8 +24,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -51,7 +51,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class MembersController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(MembersController.class);
+    private static final Logger log = LoggerFactory.getLogger(MembersController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -138,7 +138,7 @@ public class MembersController extends BaseController {
             }
 
         } catch (Exception ex) {
-            log.error("Error saving permissions on weblog - " + getActionWeblog(request).getHandle(), ex);
+            log.error("Error saving permissions on weblog - {}", getActionWeblog(request).getHandle(), ex);
             addError(model, "memberPermissions.saveError", request);
         }
 
@@ -195,7 +195,7 @@ public class MembersController extends BaseController {
                     addError(model, "inviteMember.error.userNotFound", request);
                 }
             } catch (WebloggerException ex) {
-                log.error("Error looking up user by name - " + userName, ex);
+                log.error("Error looking up user by name - {}", userName, ex);
                 addError(model, "memberPermissions.saveError", request);
             }
         }
@@ -218,7 +218,7 @@ public class MembersController extends BaseController {
                 weblogger.flush();
                 addMessage(model, "memberPermissions.membersChanged", "1", request);
             } catch (Exception ex) {
-                log.error("Error granting permission on weblog - " + getActionWeblog(request).getHandle(), ex);
+                log.error("Error granting permission on weblog - {}", getActionWeblog(request).getHandle(), ex);
                 addError(model, "memberPermissions.saveError", request);
             }
         }

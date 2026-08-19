@@ -27,8 +27,8 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogManager;
@@ -52,7 +52,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class TemplatesController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(TemplatesController.class);
+    private static final Logger log = LoggerFactory.getLogger(TemplatesController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -116,7 +116,7 @@ public class TemplatesController extends BaseController {
                 weblogger.flush();
 
             } catch (WebloggerException ex) {
-                log.error("Error adding new template for weblog - " + getActionWeblog(request).getHandle(), ex);
+                log.error("Error adding new template for weblog - {}", getActionWeblog(request).getHandle(), ex);
                 addError(model, "Error adding new template - check Roller logs", request);
             }
         }
@@ -137,8 +137,8 @@ public class TemplatesController extends BaseController {
         // doing it.
         WeblogTemplate template = lookupTemplate(removeId, request);
         if (template == null) {
-            log.warn("Refusing to delete template " + removeId + ": not owned by weblog "
-                    + getActionWeblog(request).getHandle());
+            log.warn("Refusing to delete template {}: not owned by weblog {}",
+                    removeId, getActionWeblog(request).getHandle());
             addError(model, "Error deleting template - check Roller logs", request);
         }
 
@@ -168,7 +168,7 @@ public class TemplatesController extends BaseController {
                     addError(model, "editPages.remove.requiredTemplate", request);
                 }
             } catch (Exception ex) {
-                log.error("Error removing page - " + removeId, ex);
+                log.error("Error removing page - {}", removeId, ex);
                 addError(model, "editPages.remove.error", request);
             }
         } else {
@@ -218,7 +218,7 @@ public class TemplatesController extends BaseController {
             model.addAttribute("customTheme", WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme()));
 
         } catch (WebloggerException ex) {
-            log.error("Error getting templates for weblog - " + getActionWeblog(request).getHandle(), ex);
+            log.error("Error getting templates for weblog - {}", getActionWeblog(request).getHandle(), ex);
             addError(model, "Error getting template list - check Roller logs", request);
         }
     }

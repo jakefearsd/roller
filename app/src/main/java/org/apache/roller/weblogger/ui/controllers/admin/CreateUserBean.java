@@ -22,8 +22,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -35,7 +35,7 @@ import org.apache.roller.weblogger.pojos.User;
  */
 public class CreateUserBean {
 
-    private static final Log log = LogFactory.getLog(CreateUserBean.class);
+    private static final Logger log = LoggerFactory.getLogger(CreateUserBean.class);
 
     private String id = null;
     private String userName = null;
@@ -168,7 +168,7 @@ public class CreateUserBean {
                     .checkPermission(adminPerm, dataHolder);
 
         } catch (WebloggerException ex) {
-            log.warn("Could not determine administrator status for user " + this.userName, ex);
+            log.warn("Could not determine administrator status for user {}", this.userName, ex);
         }
     }
 

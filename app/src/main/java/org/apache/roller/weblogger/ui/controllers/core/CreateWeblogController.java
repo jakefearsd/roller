@@ -24,8 +24,8 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.CharSetUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
@@ -55,7 +55,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/roller-ui")
 public class CreateWeblogController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(CreateWeblogController.class);
+    private static final Logger log = LoggerFactory.getLogger(CreateWeblogController.class);
 
     @Override
     public boolean isWeblogRequired() {

@@ -24,8 +24,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
@@ -53,7 +53,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class PageEditController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(PageEditController.class);
+    private static final Logger log = LoggerFactory.getLogger(PageEditController.class);
 
     /**
      * Same allowlist as {@code CtaShortcode}'s href check and
@@ -175,7 +175,7 @@ public class PageEditController extends BaseController {
                 } else if (message.contains("slug")) {
                     addError(model, "pageEdit.error.slugInvalid", request);
                 } else {
-                    log.error("Error saving page " + bean.getId(), ex);
+                    log.error("Error saving page {}", bean.getId(), ex);
                     addError(model, "generic.error.check.logs", request);
                 }
                 if (!isNew) {
@@ -184,7 +184,7 @@ public class PageEditController extends BaseController {
             } catch (Exception ex) {
                 // Catch-all, matching EntryEditController#doSave's shape: nothing
                 // in this method may turn a bad POST into a 500.
-                log.error("Error saving page " + bean.getId(), ex);
+                log.error("Error saving page {}", bean.getId(), ex);
                 addError(model, "generic.error.check.logs", request);
                 if (!isNew) {
                     model.addAttribute("page", page);
@@ -232,7 +232,7 @@ public class PageEditController extends BaseController {
                             .getMediaFileThumbnailURL(mediaFile.getWeblog(), mediaFile.getId(), true));
                 }
             } catch (WebloggerException ex) {
-                log.error("Error looking up media file - " + bean.getOgImageId(), ex);
+                log.error("Error looking up media file - {}", bean.getOgImageId(), ex);
             }
         }
     }

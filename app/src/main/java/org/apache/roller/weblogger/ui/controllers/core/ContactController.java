@@ -23,8 +23,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FormSubmissionManager;
@@ -69,7 +69,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/roller-ui/rendering")
 public class ContactController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(ContactController.class);
+    private static final Logger log = LoggerFactory.getLogger(ContactController.class);
 
     /** Not in the servlet API's constant list, which stops at 505. */
     private static final int TOO_MANY_REQUESTS = 429;
@@ -164,7 +164,7 @@ public class ContactController extends BaseController {
         try {
             return weblogger.getWeblogManager().getWeblogByHandle(handle);
         } catch (WebloggerException ex) {
-            log.error("Error looking up weblog by handle - " + handle, ex);
+            log.error("Error looking up weblog by handle - {}", handle, ex);
             return null;
         }
     }
@@ -335,7 +335,7 @@ public class ContactController extends BaseController {
         int threshold = intProperty("contact.throttle.threshold", 10);
         int interval = intProperty("contact.throttle.interval", 60);
         int maxEntries = intProperty("contact.throttle.maxentries", 250);
-        log.info("Contact throttle sized at " + threshold + " submissions per " + interval + "s");
+        log.info("Contact throttle sized at {} submissions per {}s", threshold, interval);
         return new GenericThrottle(threshold, interval * RollerConstants.SEC_IN_MS, maxEntries);
     }
 
@@ -343,7 +343,7 @@ public class ContactController extends BaseController {
         try {
             return Integer.parseInt(WebloggerConfig.getProperty(name));
         } catch (NumberFormatException e) {
-            log.warn("bad input for config property " + name + "; using " + fallback, e);
+            log.warn("bad input for config property {}; using {}", name, fallback, e);
             return fallback;
         }
     }

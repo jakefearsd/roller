@@ -26,8 +26,8 @@ import java.util.TimeZone;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.config.AuthMethod;
@@ -52,7 +52,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/roller-ui")
 public class ProfileController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(ProfileController.class);
+    private static final Logger log = LoggerFactory.getLogger(ProfileController.class);
 
     private final AuthMethod authMethod = WebloggerConfig.getAuthMethod();
 

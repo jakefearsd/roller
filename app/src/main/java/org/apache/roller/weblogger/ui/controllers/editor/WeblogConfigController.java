@@ -23,8 +23,8 @@ import java.util.regex.Pattern;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -46,7 +46,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/roller-ui/authoring")
 public class WeblogConfigController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(WeblogConfigController.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogConfigController.class);
 
     @Override
     public String getDesiredMenu() {

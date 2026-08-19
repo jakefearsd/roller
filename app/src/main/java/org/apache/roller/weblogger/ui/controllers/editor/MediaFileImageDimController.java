@@ -19,8 +19,8 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.springframework.stereotype.Controller;
@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class MediaFileImageDimController extends MediaFileBase {
 
-    private static final Log log = LogFactory.getLog(MediaFileImageDimController.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaFileImageDimController.class);
 
     @Override
     public String getActionName() {
@@ -53,8 +53,8 @@ public class MediaFileImageDimController extends MediaFileBase {
             // file's name and thumbnail URL into the overlay.
             MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
             if (mediaFile == null) {
-                log.warn("Refusing to show dimensions for media file " + mediaFileId
-                        + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                log.warn("Refusing to show dimensions for media file {}: not owned by weblog {}",
+                        mediaFileId, getActionWeblog(request).getHandle());
                 return ".MediaFileImageDimension";
             }
             MediaFileBean bean = new MediaFileBean();

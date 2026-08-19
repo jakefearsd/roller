@@ -23,8 +23,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
@@ -52,7 +52,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class ThemeEditController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(ThemeEditController.class);
+    private static final Logger log = LoggerFactory.getLogger(ThemeEditController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -111,7 +111,7 @@ public class ThemeEditController extends BaseController {
                         addMessage(model, "themeEditor.setCustomTheme.success", t.getName(), request);
                     }
                 } catch (Exception re) {
-                    log.error("Error customizing theme for weblog - " + weblog.getHandle(), re);
+                    log.error("Error customizing theme for weblog - {}", weblog.getHandle(), re);
                     addError(model, "generic.error.check.logs", request);
                     loadThemeData(request, model);
                     return ".ThemeEdit";
@@ -127,7 +127,7 @@ public class ThemeEditController extends BaseController {
                     addMessage(model, "themeEditor.setTheme.success", WeblogTheme.CUSTOM, request);
                     addMessage(model, "themeEditor.setCustomTheme.instructions", request);
                 } catch (WebloggerException re) {
-                    log.error("Error saving weblog - " + weblog.getHandle(), re);
+                    log.error("Error saving weblog - {}", weblog.getHandle(), re);
                     addError(model, "generic.error.check.logs", request);
                 }
             }
@@ -138,7 +138,7 @@ public class ThemeEditController extends BaseController {
                 ThemeManager themeMgr = weblogger.getThemeManager();
                 newTheme = themeMgr.getTheme(selectedThemeId);
             } catch (Exception ex) {
-                log.warn(ex);
+                log.warn("Theme not found", ex);
                 addError(model, "Theme not found", request);
             }
 
@@ -163,7 +163,7 @@ public class ThemeEditController extends BaseController {
                         addMessage(model, "themeEditor.setTheme.success", newTheme.getName(), request);
                     }
                 } catch (WebloggerException re) {
-                    log.error("Error saving weblog - " + weblog.getHandle(), re);
+                    log.error("Error saving weblog - {}", weblog.getHandle(), re);
                     addError(model, "generic.error.check.logs", request);
                 }
             }
@@ -254,7 +254,7 @@ public class ThemeEditController extends BaseController {
                 }
             }
         } catch (WebloggerException ex) {
-            log.error("Error looking up stylesheet on weblog - " + getActionWeblog(request).getHandle(), ex);
+            log.error("Error looking up stylesheet on weblog - {}", getActionWeblog(request).getHandle(), ex);
         }
         return false;
     }

@@ -28,8 +28,8 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -57,7 +57,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/roller-ui/authoring")
 public class EntriesController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(EntriesController.class);
+    private static final Logger log = LoggerFactory.getLogger(EntriesController.class);
     private static final int COUNT = 30;
 
     @Override
@@ -162,7 +162,7 @@ public class EntriesController extends BaseController {
             return "redirect:/roller-ui/authoring/entryEdit.rol?weblog=" + handle
                     + "&bean.id=" + copy.getId();
         } catch (Exception e) {
-            log.error("Error duplicating entry " + duplicateId, e);
+            log.error("Error duplicating entry {}", duplicateId, e);
             addFlashError(redirectAttributes, "generic.error.check.logs", request);
             return backToList;
         }
@@ -286,7 +286,7 @@ public class EntriesController extends BaseController {
                 action.apply(entry);
                 applied++;
             } catch (Exception e) {
-                log.error("Bulk action failed for entry " + id, e);
+                log.error("Bulk action failed for entry {}", id, e);
                 failed.add(id);
             }
         }

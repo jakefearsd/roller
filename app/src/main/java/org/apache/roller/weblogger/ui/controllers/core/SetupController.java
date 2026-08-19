@@ -22,8 +22,8 @@ import java.util.Collection;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogManager;
@@ -46,7 +46,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/roller-ui")
 public class SetupController extends BaseController {
 
-    private static final Log LOG = LogFactory.getLog(SetupController.class);
+    private static final Logger log = LoggerFactory.getLogger(SetupController.class);
 
     @Override
     public boolean isUserRequired() {
@@ -72,7 +72,7 @@ public class SetupController extends BaseController {
             Collection<Weblog> weblogs = mgr.getWeblogs(true, null, null, null, 0, -1);
             model.addAttribute("weblogs", weblogs);
         } catch (WebloggerException ex) {
-            LOG.error("Error getting weblogs", ex);
+            log.error("Error getting weblogs", ex);
             addError(model, "frontpageConfig.weblogs.error", request);
         }
 
@@ -82,7 +82,7 @@ public class SetupController extends BaseController {
             model.addAttribute("userCount", userCount);
             model.addAttribute("blogCount", blogCount);
         } catch (WebloggerException ex) {
-            LOG.error("Error getting user/weblog counts", ex);
+            log.error("Error getting user/weblog counts", ex);
             model.addAttribute("userCount", 0L);
             model.addAttribute("blogCount", 0L);
         }
@@ -113,7 +113,7 @@ public class SetupController extends BaseController {
             addFlashMessage(redirectAttributes, "frontpageConfig.values.saved", request);
 
         } catch (WebloggerException ex) {
-            LOG.error("ERROR saving frontpage configuration", ex);
+            log.error("ERROR saving frontpage configuration", ex);
             addFlashError(redirectAttributes, "frontpageConfig.values.error", request);
         }
 

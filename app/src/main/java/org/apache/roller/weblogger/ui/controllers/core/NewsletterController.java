@@ -24,8 +24,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FormSubmissionManager;
@@ -75,7 +75,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @Controller
 public class NewsletterController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(NewsletterController.class);
+    private static final Logger log = LoggerFactory.getLogger(NewsletterController.class);
 
     /** Not in the servlet API's constant list, which stops at 505. */
     private static final int TOO_MANY_REQUESTS = 429;
@@ -174,8 +174,8 @@ public class NewsletterController extends BaseController {
         try {
             status = client.subscribe(payload.email(), listUuid);
         } catch (IOException ex) {
-            log.error("Could not forward newsletter subscription to Listmonk for weblog "
-                    + weblog.getHandle(), ex);
+            log.error("Could not forward newsletter subscription to Listmonk for weblog {}",
+                    weblog.getHandle(), ex);
             return ResponseEntity.status(BAD_GATEWAY).build();
         }
 
@@ -282,7 +282,7 @@ public class NewsletterController extends BaseController {
         int threshold = intProperty("newsletter.subscribe.throttle.threshold", 10);
         int interval = intProperty("newsletter.subscribe.throttle.interval", 60);
         int maxEntries = intProperty("newsletter.subscribe.throttle.maxentries", 250);
-        log.info("Newsletter subscribe throttle sized at " + threshold + " submissions per " + interval + "s");
+        log.info("Newsletter subscribe throttle sized at {} submissions per {}s", threshold, interval);
         return new GenericThrottle(threshold, interval * RollerConstants.SEC_IN_MS, maxEntries);
     }
 
@@ -290,7 +290,7 @@ public class NewsletterController extends BaseController {
         try {
             return Integer.parseInt(WebloggerConfig.getProperty(name));
         } catch (NumberFormatException e) {
-            log.warn("bad input for config property " + name + "; using " + fallback, e);
+            log.warn("bad input for config property {}; using {}", name, fallback, e);
             return fallback;
         }
     }

@@ -23,8 +23,8 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -44,7 +44,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/roller-ui/authoring")
 public class CategoryRemoveController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(CategoryRemoveController.class);
+    private static final Logger log = LoggerFactory.getLogger(CategoryRemoveController.class);
 
     @Override
     public List<String> requiredWeblogPermissionActions() {
@@ -115,7 +115,7 @@ public class CategoryRemoveController extends BaseController {
                 return "redirect:/roller-ui/authoring/categories.rol?weblog="
                         + getActionWeblog(request).getHandle();
             } catch (Exception ex) {
-                log.error("Error removing category - " + removeId, ex);
+                log.error("Error removing category - {}", removeId, ex);
                 addFlashError(redirectAttributes, "generic.error.check.logs", request);
             }
         } else {

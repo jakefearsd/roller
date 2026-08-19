@@ -24,8 +24,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -51,7 +51,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/roller-ui/authoring")
 public class MediaFileAddController extends MediaFileBase {
 
-    private static final Log log = LogFactory.getLog(MediaFileAddController.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaFileAddController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -209,8 +209,8 @@ public class MediaFileAddController extends MediaFileBase {
                 // getMediaFileDirectory answers for every weblog on the site.
                 directory = ownedDirectory(bean.getDirectoryId(), request);
                 if (directory == null) {
-                    log.warn("Refusing to upload into directory " + bean.getDirectoryId()
-                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    log.warn("Refusing to upload into directory {}: not owned by weblog {}",
+                            bean.getDirectoryId(), getActionWeblog(request).getHandle());
                     addError(model, "MediaFile.error.view", request);
                     return null;
                 }

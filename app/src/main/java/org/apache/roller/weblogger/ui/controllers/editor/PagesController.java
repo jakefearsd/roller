@@ -23,8 +23,8 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -48,7 +48,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class PagesController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(PagesController.class);
+    private static final Logger log = LoggerFactory.getLogger(PagesController.class);
 
     @Override
     public List<String> requiredWeblogPermissionActions() {
@@ -92,8 +92,8 @@ public class PagesController extends BaseController {
 
         WeblogPage page = lookupPage(removeId, request);
         if (page == null) {
-            log.warn("Refusing to delete page " + removeId + ": not owned by weblog "
-                    + getActionWeblog(request).getHandle());
+            log.warn("Refusing to delete page {}: not owned by weblog {}",
+                    removeId, getActionWeblog(request).getHandle());
             addError(model, "pageEdit.notFound", request);
         } else {
             try {
@@ -101,7 +101,7 @@ public class PagesController extends BaseController {
                 weblogger.flush();
                 addMessage(model, "pageEdit.removed", page.getSlug(), request);
             } catch (Exception ex) {
-                log.error("Error removing page " + removeId, ex);
+                log.error("Error removing page {}", removeId, ex);
                 addError(model, "generic.error.check.logs", request);
             }
         }
@@ -114,7 +114,7 @@ public class PagesController extends BaseController {
         try {
             model.addAttribute("pages", weblogger.getWeblogPageManager().getPages(getActionWeblog(request)));
         } catch (WebloggerException ex) {
-            log.error("Error getting pages for weblog - " + getActionWeblog(request).getHandle(), ex);
+            log.error("Error getting pages for weblog - {}", getActionWeblog(request).getHandle(), ex);
             addError(model, "generic.error.check.logs", request);
         }
     }

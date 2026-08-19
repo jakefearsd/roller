@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.ui.controllers;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -53,7 +53,7 @@ import org.apache.roller.weblogger.pojos.WeblogTemplate;
  */
 public final class WeblogOwnership {
 
-    private static final Log log = LogFactory.getLog(WeblogOwnership.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogOwnership.class);
 
     private WeblogOwnership() {
     }
@@ -75,7 +75,7 @@ public final class WeblogOwnership {
             }
             return entry;
         } catch (WebloggerException ex) {
-            log.error("Error looking up entry by id - " + id, ex);
+            log.error("Error looking up entry by id - {}", id, ex);
         }
         return null;
     }
@@ -97,7 +97,7 @@ public final class WeblogOwnership {
             }
             return category;
         } catch (WebloggerException ex) {
-            log.error("Error looking up category by id - " + id, ex);
+            log.error("Error looking up category by id - {}", id, ex);
         }
         return null;
     }
@@ -119,7 +119,7 @@ public final class WeblogOwnership {
             }
             return template;
         } catch (WebloggerException ex) {
-            log.error("Error looking up template by id - " + id, ex);
+            log.error("Error looking up template by id - {}", id, ex);
         }
         return null;
     }
@@ -139,7 +139,7 @@ public final class WeblogOwnership {
             }
             return page;
         } catch (WebloggerException ex) {
-            log.error("Error looking up page by id - " + id, ex);
+            log.error("Error looking up page by id - {}", id, ex);
         }
         return null;
     }

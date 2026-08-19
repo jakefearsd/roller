@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FileIOException;
 import org.apache.roller.weblogger.business.MediaFileManager;
@@ -43,7 +43,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/roller-ui/authoring")
 public class MediaFileEditController extends MediaFileBase {
 
-    private static final Log log = LogFactory.getLog(MediaFileEditController.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaFileEditController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -73,8 +73,8 @@ public class MediaFileEditController extends MediaFileBase {
             // copyright and tags straight into this weblog's edit form.
             MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
             if (mediaFile == null) {
-                log.warn("Refusing to open media file " + mediaFileId + ": not owned by weblog "
-                        + getActionWeblog(request).getHandle());
+                log.warn("Refusing to open media file {}: not owned by weblog {}",
+                        mediaFileId, getActionWeblog(request).getHandle());
                 addError(model, "MediaFile.error.view", request);
                 return ".MediaFileEdit";
             }
@@ -83,7 +83,7 @@ public class MediaFileEditController extends MediaFileBase {
         } catch (FileIOException ex) {
             addError(model, "uploadFiles.error.upload", bean.getName(), request);
         } catch (Exception e) {
-            log.error("Error loading media file " + mediaFileId, e);
+            log.error("Error loading media file {}", mediaFileId, e);
             addError(model, "uploadFiles.error.upload", bean.getName(), request);
         }
 
@@ -106,8 +106,8 @@ public class MediaFileEditController extends MediaFileBase {
             if (!StringUtils.isEmpty(bean.getDirectoryId())) {
                 directory = ownedDirectory(bean.getDirectoryId(), request);
                 if (directory == null) {
-                    log.warn("Refusing to save into directory " + bean.getDirectoryId()
-                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    log.warn("Refusing to save into directory {}: not owned by weblog {}",
+                            bean.getDirectoryId(), getActionWeblog(request).getHandle());
                     addError(model, "MediaFile.error.view", request);
                 }
             }
@@ -128,8 +128,8 @@ public class MediaFileEditController extends MediaFileBase {
             try {
                 MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
                 if (mediaFile == null) {
-                    log.warn("Refusing to save media file " + mediaFileId
-                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    log.warn("Refusing to save media file {}: not owned by weblog {}",
+                            mediaFileId, getActionWeblog(request).getHandle());
                     addError(model, "MediaFile.error.view", request);
                     return ".MediaFileEdit";
                 }
@@ -155,7 +155,7 @@ public class MediaFileEditController extends MediaFileBase {
             } catch (FileIOException ex) {
                 addError(model, "uploadFiles.error.upload", bean.getName(), request);
             } catch (Exception e) {
-                log.error("Error uploading file " + bean.getName(), e);
+                log.error("Error uploading file {}", bean.getName(), e);
                 addError(model, "uploadFiles.error.upload", bean.getName(), request);
             }
         }
@@ -189,8 +189,8 @@ public class MediaFileEditController extends MediaFileBase {
             // manager. (The manager enforces the same boundary again.)
             MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
             if (mediaFile == null) {
-                log.warn("Refusing to crop media file " + mediaFileId
-                        + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                log.warn("Refusing to crop media file {}: not owned by weblog {}",
+                        mediaFileId, getActionWeblog(request).getHandle());
                 addError(model, "mediaFileEdit.crop.error", request);
                 return ".MediaFileEdit";
             }
@@ -206,7 +206,7 @@ public class MediaFileEditController extends MediaFileBase {
             bean.copyFrom(mediaFile);
             addMessage(model, "mediaFileEdit.crop.success", request);
         } catch (Exception e) {
-            log.error("Error cropping media file " + mediaFileId, e);
+            log.error("Error cropping media file {}", mediaFileId, e);
             addError(model, "mediaFileEdit.crop.error", request);
         }
 

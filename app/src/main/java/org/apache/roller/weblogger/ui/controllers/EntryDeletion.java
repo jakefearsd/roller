@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.ui.controllers;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -40,7 +40,7 @@ import org.apache.roller.weblogger.util.cache.CacheManager;
  */
 public final class EntryDeletion {
 
-    private static final Log log = LogFactory.getLog(EntryDeletion.class);
+    private static final Logger log = LoggerFactory.getLogger(EntryDeletion.class);
 
     private EntryDeletion() {
     }
@@ -112,7 +112,7 @@ public final class EntryDeletion {
         try {
             weblogger.getIndexManager().removeEntryIndexOperation(entry);
         } catch (WebloggerException ex) {
-            log.warn("Trouble removing entry from the search index for " + entry.getId(), ex);
+            log.warn("Trouble removing entry from the search index for {}", entry.getId(), ex);
         }
 
         CacheManager.invalidate(entry);

@@ -25,8 +25,8 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
@@ -46,7 +46,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/roller-ui/authoring")
 public class TemplateEditController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(TemplateEditController.class);
+    private static final Logger log = LoggerFactory.getLogger(TemplateEditController.class);
 
     @Override
     public String getDesiredMenu() {
@@ -86,7 +86,7 @@ public class TemplateEditController extends BaseController {
                 bean.setManualContentType(template.getOutputContentType());
             }
         } catch (WebloggerException ex) {
-            log.error("Error updating page - " + bean.getId(), ex);
+            log.error("Error updating page - {}", bean.getId(), ex);
             addError(model, "Error saving template - check Roller logs", request);
         }
 
@@ -127,7 +127,7 @@ public class TemplateEditController extends BaseController {
                 addMessage(model, "pageForm.save.success", template.getName(), request);
 
             } catch (Exception ex) {
-                log.error("Error updating page - " + bean.getId(), ex);
+                log.error("Error updating page - {}", bean.getId(), ex);
                 addError(model, "Error updating template - check Roller logs", request);
             }
         }

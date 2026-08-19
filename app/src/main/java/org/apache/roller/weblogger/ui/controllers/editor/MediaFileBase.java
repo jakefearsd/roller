@@ -24,8 +24,8 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -51,7 +51,7 @@ import org.springframework.ui.Model;
  */
 public abstract class MediaFileBase extends BaseController {
 
-    private static final Log log = LogFactory.getLog(MediaFileBase.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaFileBase.class);
 
     @Override
     public List<String> requiredWeblogPermissionActions() {
@@ -116,7 +116,7 @@ public abstract class MediaFileBase extends BaseController {
      */
     protected void doDeleteMediaFile(String mediaFileId, HttpServletRequest request, Model model) {
         try {
-            log.debug("Processing delete of file id - " + mediaFileId);
+            log.debug("Processing delete of file id - {}", mediaFileId);
             MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
             if (mediaFile == null) {
                 addError(model, "mediaFile.delete.error", mediaFileId, request);
@@ -140,9 +140,9 @@ public abstract class MediaFileBase extends BaseController {
             MediaFileManager manager = weblogger.getMediaFileManager();
 
             if (selectedMediaFiles != null && selectedMediaFiles.length > 0) {
-                log.debug("Processing delete of " + selectedMediaFiles.length + " media files.");
+                log.debug("Processing delete of {} media files.", selectedMediaFiles.length);
                 for (String fileId : selectedMediaFiles) {
-                    log.debug("Deleting media file - " + fileId);
+                    log.debug("Deleting media file - {}", fileId);
                     MediaFile mediaFile = ownedMediaFile(fileId, request);
                     if (mediaFile != null) {
                         manager.removeMediaFile(getActionWeblog(request), mediaFile);
@@ -171,16 +171,16 @@ public abstract class MediaFileBase extends BaseController {
             MediaFileManager manager = weblogger.getMediaFileManager();
 
             if (selectedMediaFiles != null && selectedMediaFiles.length > 0) {
-                log.debug("Processing move of " + selectedMediaFiles.length + " media files.");
+                log.debug("Processing move of {} media files.", selectedMediaFiles.length);
                 MediaFileDirectory targetDirectory = ownedDirectory(selectedDirectory, request);
                 if (targetDirectory == null) {
-                    log.warn("Refusing to move media files into directory " + selectedDirectory
-                            + ": not owned by weblog " + getActionWeblog(request).getHandle());
+                    log.warn("Refusing to move media files into directory {}: not owned by weblog {}",
+                            selectedDirectory, getActionWeblog(request).getHandle());
                     addError(model, "mediaFile.move.errors", request);
                     return;
                 }
                 for (String fileId : selectedMediaFiles) {
-                    log.debug("Moving media file - " + fileId + " to directory - " + selectedDirectory);
+                    log.debug("Moving media file - {} to directory - {}", fileId, selectedDirectory);
                     MediaFile mediaFile = ownedMediaFile(fileId, request);
                     if (mediaFile != null && !mediaFile.getDirectory().getId().equals(targetDirectory.getId())) {
                         manager.moveMediaFile(mediaFile, targetDirectory);

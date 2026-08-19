@@ -23,8 +23,8 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -67,7 +67,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/roller-ui/authoring")
 public class TrashController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(TrashController.class);
+    private static final Logger log = LoggerFactory.getLogger(TrashController.class);
 
     @Override
     public List<String> requiredWeblogPermissionActions() {
@@ -121,7 +121,7 @@ public class TrashController extends BaseController {
             weblogger.flush();
             addFlashMessage(redirectAttributes, "trash.restored", entry.getDisplayTitle(), request);
         } catch (Exception e) {
-            log.error("Error restoring entry " + restoreId, e);
+            log.error("Error restoring entry {}", restoreId, e);
             addFlashError(redirectAttributes, "generic.error.check.logs", request);
         }
         return backToList(request);
@@ -144,7 +144,7 @@ public class TrashController extends BaseController {
             weblogger.flush();
             addFlashMessage(redirectAttributes, "trash.deletedForever", title, request);
         } catch (Exception e) {
-            log.error("Error permanently deleting entry " + deleteId, e);
+            log.error("Error permanently deleting entry {}", deleteId, e);
             addFlashError(redirectAttributes, "generic.error.check.logs", request);
         }
         return backToList(request);

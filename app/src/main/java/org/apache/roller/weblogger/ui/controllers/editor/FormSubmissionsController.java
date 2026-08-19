@@ -23,8 +23,8 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.FormSubmissionManager;
 import org.apache.roller.weblogger.pojos.FormSubmission;
@@ -59,7 +59,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui/authoring")
 public class FormSubmissionsController extends BaseController {
 
-    private static final Log log = LogFactory.getLog(FormSubmissionsController.class);
+    private static final Logger log = LoggerFactory.getLogger(FormSubmissionsController.class);
     private static final int COUNT = 30;
 
     @Override
@@ -111,8 +111,8 @@ public class FormSubmissionsController extends BaseController {
                         mgr.remove(submission);
                         deletedCount++;
                     } else {
-                        log.warn("Refusing to delete submission " + id + ": not owned by weblog "
-                                + actionWeblog.getHandle());
+                        log.warn("Refusing to delete submission {}: not owned by weblog {}",
+                                id, actionWeblog.getHandle());
                     }
                 }
             }
@@ -136,7 +136,7 @@ public class FormSubmissionsController extends BaseController {
             model.addAttribute("submissionCount", mgr.getCount(actionWeblog));
             model.addAttribute("page", page);
         } catch (WebloggerException ex) {
-            log.error("Error getting form submissions for weblog - " + actionWeblog.getHandle(), ex);
+            log.error("Error getting form submissions for weblog - {}", actionWeblog.getHandle(), ex);
             addError(model, "generic.error.check.logs", request);
         }
     }
