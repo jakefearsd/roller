@@ -116,7 +116,7 @@ public class GlobalPermission extends RollerPermission {
             } else if (hasAction(WEBLOG)) {
                 // Best we've got is WEBLOG, so make sure perm doesn't specify ADMIN
                 for (String action : rperm.getActionsAsList()) {
-                    if (action.equals(ADMIN)) {
+                    if (ADMIN.equals(action)) {
                         return false;
                     }
                 }
@@ -124,10 +124,10 @@ public class GlobalPermission extends RollerPermission {
             } else if (hasAction(LOGIN)) {
                 // Best we've got is LOGIN, so make sure perm doesn't specify anything else
                 for (String action : rperm.getActionsAsList()) {
-                    if (action.equals(WEBLOG)) {
+                    if (WEBLOG.equals(action)) {
                         return false;
                     }
-                    if (action.equals(ADMIN)) {
+                    if (ADMIN.equals(action)) {
                         return false;
                     }
                 }

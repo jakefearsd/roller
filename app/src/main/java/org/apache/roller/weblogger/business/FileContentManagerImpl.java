@@ -137,7 +137,7 @@ public class FileContentManagerImpl implements FileContentManager {
             // The temp file must live in the SAME directory as the target:
             // Files.move is only atomic within a filesystem, and a rename
             // within one directory is the strongest portable guarantee.
-            tempFile = Files.createTempFile(saveFile.getParent(), "roller-save-", ".tmp");
+            tempFile = Files.createTempFile(requireParent(saveFile), "roller-save-", ".tmp");
             try (FileChannel channel = FileChannel.open(tempFile,
                     StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
                 is.transferTo(Channels.newOutputStream(channel));
@@ -174,6 +174,25 @@ public class FileContentManagerImpl implements FileContentManager {
         } catch (IOException cleanup) {
             log.debug("Could not delete temp file " + tempFile, cleanup);
         }
+    }
+
+    /**
+     * {@code path} passed in from {@code saveFileContent} is always
+     * {@code dirPath}'s absolute path plus {@code fileId}
+     * ({@link #getRealFile} guarantees {@code dirPath} is absolute), so
+     * {@code getParent()} can never actually return null there -- but fail
+     * loudly rather than let a null slip into {@code Files.createTempFile}
+     * if that invariant is ever broken. Package-private so
+     * {@code FileContentManagerImplTest} can pin the null case directly
+     * (e.g. the root path) without needing an absolute path that provably
+     * cannot arise through {@code saveFileContent}.
+     */
+    static Path requireParent(Path path) throws IOException {
+        Path parent = path.getParent();
+        if (parent == null) {
+            throw new IOException("Cannot determine parent directory for [" + path + "]");
+        }
+        return parent;
     }
 
     /**
@@ -419,7 +438,7 @@ public class FileContentManagerImpl implements FileContentManager {
      * Super simple contentType range rule matching
      */
     private boolean matchContentType(String rangeRule, String contentType) {
-        if (rangeRule.equals("*/*")) {
+        if ("*/*".equals(rangeRule)) {
             return true;
         }
         if (rangeRule.equals(contentType)) {
@@ -427,7 +446,7 @@ public class FileContentManagerImpl implements FileContentManager {
         }
         String ruleParts[] = rangeRule.split("/");
         String typeParts[] = contentType.split("/");
-        if (ruleParts[0].equals(typeParts[0]) && ruleParts[1].equals("*")) {
+        if (ruleParts[0].equals(typeParts[0]) && "*".equals(ruleParts[1])) {
             return true;
         }
 

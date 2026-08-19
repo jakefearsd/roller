@@ -160,7 +160,7 @@ public class PageServlet extends HttpServlet {
 
         // Development only. Reload if theme has been modified
         if (themeReload
-                && !weblog.getEditorTheme().equals(WeblogTheme.CUSTOM)
+                && !WeblogTheme.CUSTOM.equals(weblog.getEditorTheme())
                 && (pageRequest.getPathInfo() == null || pageRequest
                         .getPathInfo() != null
                         && !pageRequest.getPathInfo().endsWith(".css"))) {

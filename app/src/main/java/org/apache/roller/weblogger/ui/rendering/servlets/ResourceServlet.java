@@ -114,13 +114,14 @@ public class ResourceServlet extends HttpServlet {
             }
         } catch (Exception ex) {
             // hmmm, some kind of error getting theme. that's an error.
+            // resourceStream is unconditionally null here: the only
+            // assignment to it in this try block is the last statement, so
+            // any exception thrown by this block is thrown before that
+            // assignment runs and there is never a stream to close.
             if (!response.isCommitted()) {
                 response.reset();
             }
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            if(resourceStream != null) {
-                resourceStream.close();
-            }
             return;
         }
 
@@ -136,14 +137,16 @@ public class ResourceServlet extends HttpServlet {
 
             } catch (Exception ex) {
                 // still not found? then we don't have it, 404.
+                // resourceStream is unconditionally null here for the same
+                // reason as the theme-lookup catch above: the enclosing
+                // `if (resourceStream == null)` guarantees it going in, and
+                // this try block's only assignment to it is its last
+                // statement, so any exception here precedes that assignment.
                 if (!response.isCommitted()) {
                     response.reset();
                 }
                 log.debug("Unable to get resource", ex);
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
-                if(resourceStream != null) {
-                    resourceStream.close();
-                }
                 return;
             }
         }

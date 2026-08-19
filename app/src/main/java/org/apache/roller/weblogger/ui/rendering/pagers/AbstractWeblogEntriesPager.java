@@ -110,6 +110,13 @@ public abstract class AbstractWeblogEntriesPager implements WeblogEntriesPager {
                 viewLocale = new Locale(langCountry[0]);
             } else if(langCountry.length == 2) {
                 viewLocale = new Locale(langCountry[0], langCountry[1]);
+            } else {
+                // 3+ underscore-separated parts (e.g. "en_US_POSIX"): use the
+                // first three as language/country/variant. Falling through
+                // with viewLocale left null used to reach
+                // I18nMessages.getMessages(Locale), which dereferences its
+                // parameter unconditionally (NP_NULL_PARAM_DEREF).
+                viewLocale = new Locale(langCountry[0], langCountry[1], langCountry[2]);
             }
         } else {
             viewLocale = weblog.getLocaleInstance();

@@ -149,10 +149,13 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
     /** Get last updated time from items in pager */
     public Date getLastUpdated() {
         if (lastUpdated == null) {
-            // feeds are sorted by pubtime, so first might not be last updated
+            // feeds are sorted by pubtime, so first might not be last updated.
+            // getItems() can never return null -- it always returns the
+            // cached `entries` list or a freshly built (possibly empty) one
+            // -- so only emptiness needs checking here.
             List<WeblogEntryWrapper> items = getItems();
-            if (getItems() != null && !getItems().isEmpty()) {
-                Timestamp newest = getItems().get(0).getUpdateTime();
+            if (!items.isEmpty()) {
+                Timestamp newest = items.get(0).getUpdateTime();
                 for (WeblogEntryWrapper e : items) {
                     if (e.getUpdateTime().after(newest)) {
                         // NOTE: must store the update time we just compared. Storing

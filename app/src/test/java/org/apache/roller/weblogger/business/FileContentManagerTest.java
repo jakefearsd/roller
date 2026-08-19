@@ -32,7 +32,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -209,6 +211,30 @@ public class FileContentManagerTest  {
         java.nio.file.Path temp = java.nio.file.Files.createTempFile("fcm-test-", ".tmp");
         FileContentManagerImpl.deleteTempQuietly(temp);
         assertFalse(java.nio.file.Files.exists(temp));
+    }
+
+    /**
+     * {@code saveFileContent} itself is covered end to end by the rest of
+     * this class against real weblog uploads dirs, where {@code requireParent}'s
+     * argument is always dirPath's absolute path plus a fileId and so always
+     * has a parent. This pins the one case that can't arise there: a path
+     * with no parent at all (NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE on
+     * {@code Path.getParent()}).
+     */
+    @Nested
+    class RequireParent {
+
+        @Test
+        void returnsTheParentOfAnOrdinaryPath() throws IOException {
+            assertEquals(Path.of("/a/b"), FileContentManagerImpl.requireParent(Path.of("/a/b/c")));
+        }
+
+        @Test
+        void rejectsAPathWithNoParent() {
+            IOException ex = assertThrows(IOException.class,
+                    () -> FileContentManagerImpl.requireParent(Path.of("/")));
+            assertTrue(ex.getMessage().contains("Cannot determine parent directory"));
+        }
     }
 
     /**

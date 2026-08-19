@@ -59,8 +59,17 @@ public class AddEntryOperation extends WriteToIndexOperation {
     
     @Override
     public void doRun() {
+        // roller is dereferenced unconditionally below (getWeblogEntryManager,
+        // then release() in the finally); the guard belongs here, before
+        // either happens, not after -- there is nothing this operation can do
+        // without it.
+        if (roller == null) {
+            logger.error("Weblogger unavailable; cannot index weblog entry");
+            return;
+        }
+
         IndexWriter writer = beginWriting();
-        
+
         // since this operation can be run on a separate thread we must treat
         // the weblog object passed in as a detached object which is proned to
         // lazy initialization problems, so requery for the object now
@@ -71,7 +80,7 @@ public class AddEntryOperation extends WriteToIndexOperation {
             logger.error("Error getting weblogentry object", ex);
             return;
         }
-        
+
         try {
             // Only a published entry belongs in the search index -- the
             // same guard ReIndexEntryOperation applies on its own add path.
@@ -87,10 +96,8 @@ public class AddEntryOperation extends WriteToIndexOperation {
         } catch (IOException e) {
             logger.error("Problems adding doc to index", e);
         } finally {
-            if (roller != null) {
-                roller.release();
-            }
+            roller.release();
             endWriting();
         }
-    }   
+    }
 }

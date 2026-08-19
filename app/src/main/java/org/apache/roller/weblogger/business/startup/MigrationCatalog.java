@@ -97,8 +97,8 @@ public final class MigrationCatalog {
         Path path = Paths.get(dir.toURI());
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) {
             for (Path entry : stream) {
-                String name = entry.getFileName().toString();
-                if (MIGRATION_FILE.matcher(name).matches()) {
+                String name = fileNameOf(entry);
+                if (name != null && MIGRATION_FILE.matcher(name).matches()) {
                     versions.add(stripSuffix(name));
                 }
             }
@@ -128,5 +128,17 @@ public final class MigrationCatalog {
 
     private static String stripSuffix(String fileName) {
         return fileName.substring(0, fileName.length() - ".sql".length());
+    }
+
+    /**
+     * {@code Path.getFileName()} is null only for a zero-element path, which
+     * a directory-stream entry never is in practice -- but package-private
+     * rather than inlined so {@code MigrationCatalogTest} can pin the null
+     * case directly (e.g. {@code Path.of("/")}) without needing a directory
+     * entry that cannot actually occur.
+     */
+    static String fileNameOf(Path entry) {
+        Path fileName = entry.getFileName();
+        return fileName == null ? null : fileName.toString();
     }
 }

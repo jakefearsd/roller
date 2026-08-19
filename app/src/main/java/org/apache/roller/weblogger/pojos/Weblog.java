@@ -517,7 +517,7 @@ public class Weblog implements Serializable {
         try {
             Weblogger roller = WebloggerFactory.getWeblogger();
             WeblogEntryManager wmgr = roller.getWeblogEntryManager();
-            if (categoryName != null && !categoryName.equals("nil")) {
+            if (categoryName != null && !"nil".equals(categoryName)) {
                 category = wmgr.getWeblogCategoryByName(this, categoryName);
             } else if (!getWeblogCategories().isEmpty()) {
                 // Same "first category found" fallback saveWeblogEntry uses, and

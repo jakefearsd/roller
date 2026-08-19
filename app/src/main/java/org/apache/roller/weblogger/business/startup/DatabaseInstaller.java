@@ -235,11 +235,17 @@ public class DatabaseInstaller {
         }
     }
 
-    private String connectionUser(Connection con) throws SQLException {
+    // package-private rather than private so DatabaseInstallerTest can drive
+    // both branches directly against a mocked Connection, without needing a
+    // real database connection just to reach this one regex check.
+    String connectionUser(Connection con) throws SQLException {
         String user = con.getMetaData().getUserName();
         // Defend the substitution: an unexpected value here would be spliced
-        // straight into a GRANT statement.
-        if (user == null || !user.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+        // straight into a GRANT statement. DatabaseMetaData.getUserName() is
+        // known non-null (SpotBugs's own JDK annotation database flags a
+        // `user == null` check here as dead), so only the shape needs
+        // checking.
+        if (!user.matches("[A-Za-z_][A-Za-z0-9_]*")) {
             throw new SQLException("Refusing to substitute unsafe database user name: " + user);
         }
         return user;

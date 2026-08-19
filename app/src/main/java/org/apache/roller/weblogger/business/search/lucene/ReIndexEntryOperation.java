@@ -67,6 +67,15 @@ public class ReIndexEntryOperation extends WriteToIndexOperation {
     @Override
     public void doRun() {
 
+        // roller is dereferenced unconditionally below (getWeblogEntryManager,
+        // then release() in the finally); the guard belongs here, before
+        // either happens, not after -- there is nothing this operation can do
+        // without it.
+        if (roller == null) {
+            logger.error("Weblogger unavailable; cannot re-index weblog entry");
+            return;
+        }
+
         // since this operation can be run on a separate thread we must treat
         // the weblog object passed in as a detached object which is prone to
         // lazy initialization problems, so requery for the object now.
@@ -107,9 +116,7 @@ public class ReIndexEntryOperation extends WriteToIndexOperation {
         } catch (IOException e) {
             logger.error("Problems adding/deleting doc to index", e);
         } finally {
-            if (roller != null) {
-                roller.release();
-            }
+            roller.release();
             endWriting();
         }
     }

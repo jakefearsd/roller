@@ -259,7 +259,7 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
         // startsWith(prefix + ".") rather than a bare startsWith(prefix): a
         // sibling package that merely shares the string prefix (e.g. a
         // hypothetical "ui.restapiv2") must not be misclassified.
-        return pkg.equals(API_PACKAGE_PREFIX) || pkg.startsWith(API_PACKAGE_PREFIX + ".");
+        return API_PACKAGE_PREFIX.equals(pkg) || pkg.startsWith(API_PACKAGE_PREFIX + ".");
     }
 
     /**

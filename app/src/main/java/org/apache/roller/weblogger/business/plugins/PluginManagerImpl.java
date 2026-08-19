@@ -56,8 +56,13 @@ public class PluginManagerImpl implements PluginManager {
     
     @Override
     public boolean hasPagePlugins() {
+        // mPagePlugins is a static final field initialized inline at
+        // declaration and never reassigned (only ever mutated in place via
+        // put()), so it can never be null -- the null check below was dead
+        // on arrival, not merely mis-positioned relative to the size() call
+        // above.
         log.debug("mPluginClasses.size(): " + mPagePlugins.size());
-        return mPagePlugins != null && !mPagePlugins.isEmpty();
+        return !mPagePlugins.isEmpty();
     }
     
     

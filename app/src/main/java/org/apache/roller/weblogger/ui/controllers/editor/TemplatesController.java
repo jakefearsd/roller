@@ -149,7 +149,7 @@ public class TemplatesController extends BaseController {
 
                     WeblogManager mgr = weblogger.getWeblogManager();
 
-                    if (template.getName().equals(WeblogTemplate.DEFAULT_PAGE)) {
+                    if (WeblogTemplate.DEFAULT_PAGE.equals(template.getName())) {
                         ThemeTemplate stylesheet = getActionWeblog(request).getTheme().getStylesheet();
                         if (stylesheet != null && getActionWeblog(request).getTheme().getStylesheet() != null
                                 && stylesheet.getLink().equals(

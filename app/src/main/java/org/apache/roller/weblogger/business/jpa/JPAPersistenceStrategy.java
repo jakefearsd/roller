@@ -250,8 +250,11 @@ public class JPAPersistenceStrategy {
      * for a persistence.xml that parses at all.
      */
     private static String readSchemaVersion(Document doc) {
+        // Element.getAttribute() is specified to return "" rather than null
+        // when the attribute is absent -- it never returns null -- so only
+        // the blank case needs handling here.
         String version = doc.getDocumentElement().getAttribute("version");
-        return (version == null || version.isBlank()) ? "3.0" : version;
+        return version.isBlank() ? "3.0" : version;
     }
 
     /**

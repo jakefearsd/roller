@@ -1032,7 +1032,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             String startsWith, int offset, int limit) throws WebloggerException {
         Query query;
         List<?> queryResults;
-        boolean sortByName = sortBy == null || !sortBy.equals("count");
+        boolean sortByName = sortBy == null || !"count".equals(sortBy);
                 
         List<Object> params = new ArrayList<>();
         int size = 0;
@@ -1051,7 +1051,7 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             queryString.append(" AND w.name LIKE ?").append(size);
         }
                     
-        if (sortBy != null && sortBy.equals("count")) {
+        if (sortBy != null && "count".equals(sortBy)) {
             sortBy = "w.total DESC";
         } else {
             sortBy = "w.name";

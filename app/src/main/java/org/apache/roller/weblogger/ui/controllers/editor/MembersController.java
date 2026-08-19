@@ -97,11 +97,11 @@ public class MembersController extends BaseController {
             for (WeblogPermission perms : permsList) {
                 String sval = request.getParameter("perm-" + perms.getUser().getId());
                 if (sval != null) {
-                    if (sval.equals(WeblogPermission.ADMIN)) {
+                    if (WeblogPermission.ADMIN.equals(sval)) {
                         numAdmins++;
                     }
                     if (perms.getUser().getUserName().equals(user.getUserName())) {
-                        if (!sval.equals(WeblogPermission.ADMIN)) {
+                        if (!WeblogPermission.ADMIN.equals(sval)) {
                             error = true;
                             addError(model, "memberPermissions.noSelfModifications", request);
                         }

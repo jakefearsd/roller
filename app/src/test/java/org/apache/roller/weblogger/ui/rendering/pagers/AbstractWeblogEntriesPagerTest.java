@@ -474,6 +474,24 @@ class AbstractWeblogEntriesPagerTest {
         });
     }
 
+    /**
+     * A locale with a variant component (e.g. "en_US_POSIX") used to leave
+     * viewLocale null all the way through the constructor -- neither the
+     * one- nor two-part branch matched -- which reached
+     * I18nMessages.getMessages(Locale), itself unconditionally dereferencing
+     * its parameter (NP_NULL_PARAM_DEREF).
+     */
+    @Test
+    void labelsResolveForAThreePartLocale() {
+        withSiteMaxEntries(SITE_MAX_ENTRIES, () -> {
+            FixedEntriesPager pager = new FixedEntriesPager(urlStrategy, weblog(10),
+                    "en_US_POSIX", null, null, null, null, null, 1, true);
+
+            assertRenderedLabel(pager.getHomeName(), "weblogEntriesPager.latest.home",
+                    "The home control under a three-part locale");
+        });
+    }
+
     @Test
     void flatEntryPagersHaveNoAdjacentCollections() {
         // Only the month and day pagers have a neighbouring collection; the

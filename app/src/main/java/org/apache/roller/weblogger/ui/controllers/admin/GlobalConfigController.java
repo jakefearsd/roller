@@ -124,7 +124,7 @@ public class GlobalConfigController extends BaseController {
                 continue;
             }
 
-            if (propertyDef.getType().equals("boolean")) {
+            if ("boolean".equals(propertyDef.getType())) {
                 try {
                     if (incomingProp == null) {
                         updProp.setValue("false");
@@ -138,7 +138,7 @@ public class GlobalConfigController extends BaseController {
                     addError(model, "ConfigForm.invalidBooleanProperty", propDesc, request);
                 }
 
-            } else if (incomingProp != null && propertyDef.getType().equals("integer")) {
+            } else if (incomingProp != null && "integer".equals(propertyDef.getType())) {
                 try {
                     Integer.parseInt(incomingProp);
                     updProp.setValue(incomingProp);
@@ -148,7 +148,7 @@ public class GlobalConfigController extends BaseController {
                     addError(model, "ConfigForm.invalidIntegerProperty", propDesc, request);
                 }
 
-            } else if (incomingProp != null && propertyDef.getType().equals("float")) {
+            } else if (incomingProp != null && "float".equals(propertyDef.getType())) {
                 try {
                     Float.parseFloat(incomingProp);
                     updProp.setValue(incomingProp);

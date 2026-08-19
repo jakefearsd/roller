@@ -148,6 +148,24 @@ class ReIndexEntryOperationTest {
                 "an operation queued after the stale re-index must still run");
     }
 
+    /**
+     * {@code roller} is dereferenced unconditionally in {@code doRun()}
+     * (getWeblogEntryManager, then release() in the finally), so the guard
+     * belongs before either happens. Constructed directly rather than
+     * through {@link IndexManager}, since every real caller always supplies
+     * a non-null Weblogger -- this exercises a shape no production caller
+     * can currently produce, the same way the class-level javadoc notes for
+     * {@link AddEntryOperation}.
+     */
+    @Test
+    void doRunWithoutAWebloggerLogsAndReturnsInsteadOfThrowing() {
+        WeblogEntry data = new WeblogEntry();
+        data.setId("does-not-matter");
+        ReIndexEntryOperation op = new ReIndexEntryOperation(null, null, data);
+
+        assertDoesNotThrow(op::doRun);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private WeblogEntry savedEntry(String anchor, String title) throws Exception {

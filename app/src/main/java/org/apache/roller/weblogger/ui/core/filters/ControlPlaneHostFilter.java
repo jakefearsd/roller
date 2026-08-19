@@ -44,8 +44,8 @@ public class ControlPlaneHostFilter implements Filter {
         if (path.startsWith(PUBLIC_RENDERING)) {
             return false;
         }
-        return path.startsWith("/roller-ui/") || path.equals("/roller-ui")
-                || path.startsWith("/api/") || path.equals("/api");
+        return path.startsWith("/roller-ui/") || "/roller-ui".equals(path)
+                || path.startsWith("/api/") || "/api".equals(path);
     }
 
     @Override

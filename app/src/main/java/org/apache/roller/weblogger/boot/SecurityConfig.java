@@ -431,7 +431,7 @@ public class SecurityConfig {
             return false;
         }
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        return path.equals("/roller-ui/rendering/contact.rol")
-                || path.equals("/newsletter/subscribe");
+        return "/roller-ui/rendering/contact.rol".equals(path)
+                || "/newsletter/subscribe".equals(path);
     }
 }

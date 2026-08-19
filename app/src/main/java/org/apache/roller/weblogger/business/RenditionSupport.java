@@ -144,10 +144,10 @@ public final class RenditionSupport {
             return null;
         }
         String type = contentType.toLowerCase(Locale.ROOT);
-        if (type.equals("image/jpeg") || type.equals("image/jpg")) {
+        if ("image/jpeg".equals(type) || "image/jpg".equals(type)) {
             return "jpg";
         }
-        if (type.equals("image/png")) {
+        if ("image/png".equals(type)) {
             return "png";
         }
         return null;

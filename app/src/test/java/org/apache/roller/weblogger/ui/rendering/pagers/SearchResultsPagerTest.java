@@ -200,6 +200,28 @@ class SearchResultsPagerTest {
         assertNull(pager.getPrevCollectionName());
     }
 
+    /**
+     * A locale with a variant component (e.g. "en_US_POSIX") used to leave
+     * viewLocale null all the way through the constructor -- neither the
+     * one- nor two-part branch matched -- which reached
+     * I18nMessages.getMessages(Locale), itself unconditionally dereferencing
+     * its parameter (NP_NULL_PARAM_DEREF).
+     */
+    @Test
+    void labelsResolveForAThreePartLocale() {
+        WeblogSearchRequest searchRequest = new WeblogSearchRequest();
+        searchRequest.setWeblog(weblog);
+        searchRequest.setQuery("roller");
+        searchRequest.setLocale("en_US_POSIX");
+        searchRequest.setPageNum(1);
+
+        SearchResultsPager pager =
+                new SearchResultsPager(urlStrategy, searchRequest, Map.of(), true);
+
+        assertRenderedLabel(pager.getHomeName(), "searchPager.home",
+                "The home control under a three-part locale");
+    }
+
     @Test
     void localeIsTakenFromTheWeblogWhenTheSearchUrlHadNone() {
         // A search URL without a locale segment must still produce localised

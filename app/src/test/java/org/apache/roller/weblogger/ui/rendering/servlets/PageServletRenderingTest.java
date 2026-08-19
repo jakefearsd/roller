@@ -211,6 +211,31 @@ class PageServletRenderingTest {
     }
 
     /**
+     * Development-only path: with theme reload on, a request for a
+     * non-custom-themed weblog (the seeded fixture runs the shared "journal"
+     * theme) must still render normally after re-loading the theme from
+     * disk. {@code themeReload} defaults to false in the test config
+     * ({@code themes.reload.mode} is unset in roller-custom.properties), so
+     * this is the only test that actually reaches that branch.
+     */
+    @Test
+    void themeReloadDoesNotBreakRenderingOfANonCustomTheme() throws Exception {
+        TestUtils.setupWeblogEntry("reload-entry", weblog, user);
+        TestUtils.endSession(true);
+
+        PageServlet servlet = RenderingTestSupport.pageServlet();
+        servlet.themeReload = true;
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagerenderblog");
+        MockHttpServletResponse response = RenderingTestSupport.execute(servlet, request);
+
+        assertEquals(200, response.getStatus());
+        assertTrue(response.getContentAsString().contains("reload-entry"),
+                "the page must still render after the theme-reload check runs");
+    }
+
+    /**
      * The rendered page with HTML entities decoded.
      *
      * <p>The sanitizer entity-encodes characters inside attribute values --

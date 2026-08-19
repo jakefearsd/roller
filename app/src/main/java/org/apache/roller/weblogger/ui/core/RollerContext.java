@@ -196,9 +196,9 @@ public class RollerContext {
 
         if(migrateFrom == null || migrateFrom.isEmpty()) {
             log.debug("lazy pw upgrade disabled");
-        } else if (migrateFrom.equals("MD5")) {
+        } else if ("MD5".equals(migrateFrom)) {
             encoders.put(null, new org.springframework.security.crypto.password.MessageDigestPasswordEncoder("MD5"));
-        } else if (migrateFrom.equals("SHA")) {
+        } else if ("SHA".equals(migrateFrom)) {
             encoders.put(null, new org.springframework.security.crypto.password.MessageDigestPasswordEncoder("SHA-1"));
         } else {
             throw new RuntimeException("passwds.encryption.lazyUpgradeFrom="+migrateFrom+" is no valid encoding to upgrade from.");
