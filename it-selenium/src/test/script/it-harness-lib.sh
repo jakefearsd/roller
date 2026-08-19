@@ -157,9 +157,6 @@ it_descendants() {
 
 # ------------------------------------------------------------------ reaping
 
-# it_kill_pids <grace seconds> <pid...> -- TERM, wait, KILL. Returns non-zero
-# if anything survived both, so callers can report a failure to clean up rather
-# than assuming success.
 # The command name of a pid, as a bare basename on every platform.
 #
 # `ps -o comm=` is NOT portable in the way this harness assumed. On Linux it
@@ -178,6 +175,9 @@ it_comm() {
     printf '%s\n' "${comm##*/}"
 }
 
+# it_kill_pids <grace seconds> <pid...> -- TERM, wait, KILL. Returns non-zero
+# if anything survived both, so callers can report a failure to clean up rather
+# than assuming success.
 it_kill_pids() {
     local grace="${1:-10}"
     shift

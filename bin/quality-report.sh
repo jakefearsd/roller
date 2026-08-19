@@ -19,7 +19,12 @@ export MAVEN_OPTS="${MAVEN_OPTS:--Xmx4g}"
 # clone at ~/dev/roller reported CLEAR while a build was running and launched a
 # second mvn into the same app/target/ -- the clobbering this guard exists to
 # prevent. The bracket on [s] keeps the pattern from matching this pgrep itself.
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# $PWD, not a re-derivation from $0: the `cd` above already put us at the repo
+# root, and re-resolving a relative script path against the ALREADY-CHANGED cwd
+# yields the repo's PARENT when invoked as ./quality-report.sh from inside bin/ --
+# which makes the pattern below match a build in any sibling checkout, the exact
+# unscoped-pattern hazard this guard exists to avoid.
+REPO_ROOT="$PWD"
 if pgrep -f "[s]urefirebooter.*${REPO_ROOT}" >/dev/null; then
     echo "A build is already running in this tree; wait for it." >&2; exit 2
 fi
