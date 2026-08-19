@@ -422,13 +422,45 @@ untestable, it was unreachable. Either delete the loop or ship a theme that
 uses it; leaving it is a third place where the theme-resource story is written
 but not wired (see the `getResource()` fallback above).
 
-**JCL→SLF4J migration.** 178 files on `org.apache.commons.logging`, 377
-string-concatenating log calls, 0 parameterized, plus 43 hand-written
-`isDebugEnabled` guards that become dead weight once calls are parameterized.
-Runtime behaviour is already SLF4J — `jcl-over-slf4j` bridges it today — so the
-migration is mechanical and low-risk at runtime, and large at review time.
-Finishing it deletes the `GuardLogStatement` and `ProperLogger` exclusions and
-re-gates both at zero.
+**JCL→SLF4J migration — DONE.** Landed across seven batches (six for
+`app/src/main`, a seventh for `app/src/test`): 178 main-source files + 17
+test files, ~797 call sites, converted from `org.apache.commons.logging` to
+`org.slf4j` with parameterized `{}` logging throughout. 6 `log.fatal` calls
+were mapped to `log.error` (SLF4J has no fatal level); every hand-written
+`isDebugEnabled`-style guard that existed only to gate string concatenation
+was deleted, since a parameterized call already defers formatting until the
+level is enabled and the guard was pure ceremony around it. `GuardLogStatement`
+and `ProperLogger` are both active now (see CLAUDE.md's Static analysis
+section), and the ruleset's exclusion set dropped from seven rules to five.
+
+Kept here rather than deleted, because the record of what was deferred and
+why it was worth doing is the useful part — including the parts that did not
+go as the design-time estimate above assumed:
+
+- **8 pre-existing stack-trace-loss bugs were found and fixed along the
+  way**, all the same shape: JCL's `String`/`Object`-only overloads
+  (`log.error(ex)`, `log.warn("msg " + ex)`) that stringify an exception
+  with `Object.toString()` instead of attaching it as a `Throwable`, so the
+  stack trace never reached the log at all. None of these compiled against
+  SLF4J's API as written, which is exactly how each one surfaced — the
+  migration didn't go looking for bugs, converting every call site to code
+  that compiles found them for free.
+- **`GuardLogStatement` was not, in fact, "at or near zero" once
+  activated** — it came back with 175 violations against a design-time
+  expectation of near-zero. The reason is a genuine gap in the earlier
+  reasoning above, not a flaw in the migration: the rule doesn't just flag
+  string concatenation, it flags *any* non-trivial argument expression
+  (chiefly method calls) to a trace/debug/info/warn call, which is the
+  ordinary shape of parameterized SLF4J logging with an accessor argument
+  (`log.debug("entry {}", entry.getId())`). Three sites were genuine waste
+  and got fixed outright (an eagerly-built `StringBuilder`/
+  `MessageFormat.format()` result handed to a plain `log.info(String)`, and
+  two `stream().collect()` calls that only needed to run when their level
+  was enabled); the remaining ~172, spread across 74 classes, are
+  suppressed with `@SuppressWarnings("PMD.GuardLogStatement")` at the class
+  declaration rather than the ruleset — see CLAUDE.md for why a class-level
+  suppression was chosen over both a per-call-site sprawl and a ruleset
+  re-exclusion.
 
 **A `CPD-OFF` blind spot.** The `CPD-OFF`/`CPD-ON` markers around the render
 caches (Decision 6) remove the bracketed region from CPD's token stream
