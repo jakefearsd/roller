@@ -26,6 +26,9 @@ import java.time.Duration;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLocks;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
@@ -44,6 +47,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * returned 403, template ids resolved without an ownership check. A feature
  * failing correctly is as much a behaviour as a feature working.
  */
+/*
+ * Only reads the shared media page, so it takes both locks in READ mode: it can
+ * run alongside other readers, but not while a media writer is mid-upload or
+ * while a global-config class is toggling uploads.enabled.
+ */
+@ResourceLocks({
+        @ResourceLock(value = RollerIT.SHARED_MEDIA, mode = ResourceAccessMode.READ),
+        @ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
+})
 class ErrorCasesIT extends RollerIT {
 
     private static final String CREATE_USER = "/roller-ui/admin/createUser.rol";

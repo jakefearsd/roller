@@ -33,6 +33,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.TestInstance;
 import org.openqa.selenium.chrome.ChromeOptions;
 
@@ -96,6 +97,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * for the actual run results.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ResourceLock(RollerIT.GLOBAL_CONFIG)
 class VirtualHostIT extends RollerIT {
 
     private static final String VHOST = "vhost.example.com";

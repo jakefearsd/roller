@@ -20,6 +20,7 @@ package org.apache.roller.it;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.checked;
 import static com.codeborne.selenide.Condition.exist;
@@ -44,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * custom theme would change the rendering of every other browser test in the
  * suite, and there is no clean way back -- the import is one-way.
  */
+@ResourceLock(RollerIT.GLOBAL_CONFIG)
 class ThemeIT extends RollerIT {
 
     /** Site-wide switch for whether a weblog may adopt a custom theme. */

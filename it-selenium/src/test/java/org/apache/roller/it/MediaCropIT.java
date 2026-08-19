@@ -31,6 +31,9 @@ import com.codeborne.selenide.Selenide;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLocks;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.openqa.selenium.WebElement;
 
 import static com.codeborne.selenide.Condition.exist;
@@ -54,6 +57,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * pixel rectangle, and the re-rendered editor and the published page must
  * both tell the same story about the new size.
  */
+/*
+ * Writes the shared weblog's media directory, and depends on `uploads.enabled`
+ * staying true while it runs. The READ lock on GLOBAL_CONFIG is what keeps
+ * GlobalConfigMatrixIT (which sets uploads.enabled=false) and ThemeMatrixIT
+ * from flipping that flag mid-test -- with uploads off, the media page simply
+ * does not render the buttons these tests look for, and the failure reads as
+ * 'element not found' rather than as a race.
+ */
+@ResourceLocks({
+        @ResourceLock(RollerIT.SHARED_MEDIA),
+        @ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
+})
 class MediaCropIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;

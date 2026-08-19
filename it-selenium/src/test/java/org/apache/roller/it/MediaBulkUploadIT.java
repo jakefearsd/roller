@@ -23,6 +23,9 @@ import com.codeborne.selenide.SelenideElement;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLocks;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.io.TempDir;
 import org.openqa.selenium.WebElement;
 
@@ -65,6 +68,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link org.apache.roller.weblogger.business.shortcodes.GalleryMarkup}), so
  * alt text reaching one says nothing about the other -- both are proved here.
  */
+/*
+ * Writes the shared weblog's media directory, and depends on `uploads.enabled`
+ * staying true while it runs. The READ lock on GLOBAL_CONFIG is what keeps
+ * GlobalConfigMatrixIT (which sets uploads.enabled=false) and ThemeMatrixIT
+ * from flipping that flag mid-test -- with uploads off, the media page simply
+ * does not render the buttons these tests look for, and the failure reads as
+ * 'element not found' rather than as a race.
+ */
+@ResourceLocks({
+        @ResourceLock(RollerIT.SHARED_MEDIA),
+        @ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
+})
 class MediaBulkUploadIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;

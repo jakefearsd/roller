@@ -28,6 +28,7 @@ import com.codeborne.selenide.WebDriverRunner;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
@@ -60,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>This test owns its weblog. Switching the seeded one would change the
  * rendering under every other browser test in the suite.
  */
+@ResourceLock(RollerIT.GLOBAL_CONFIG)
 class ThemeMatrixIT extends RollerIT {
 
     /**

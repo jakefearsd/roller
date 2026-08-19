@@ -34,6 +34,7 @@ import javax.imageio.ImageIO;
 
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -63,6 +64,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * would -- that is a defect in the packaging to report, never a reason to
  * weaken the assertion.
  */
+@ResourceLock(RollerIT.GLOBAL_CONFIG)
 class ApiIT extends RollerIT {
 
     private final HttpClient client = HttpClient.newBuilder()

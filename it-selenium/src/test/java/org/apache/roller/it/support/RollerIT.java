@@ -51,6 +51,42 @@ import static com.codeborne.selenide.WebDriverConditions.urlContaining;
 @ExtendWith(BrowserHealthExtension.class)
 public abstract class RollerIT {
 
+    /**
+     * Resource-lock key for the site-wide runtime properties.
+     *
+     * <p>{@link #setGlobalFlag} writes Admin Settings, which is ONE set of
+     * properties behind ONE app instance shared by the whole suite. Two classes
+     * doing that concurrently would each observe the other's flag, and the
+     * failure would look like a flaky assertion rather than a race. Every class
+     * that calls {@code setGlobalFlag} must therefore carry
+     * {@code @ResourceLock(RollerIT.GLOBAL_CONFIG)}, which serialises them
+     * against each other while still allowing the classes that touch no global
+     * state to run alongside them.
+     *
+     * <p>This is not {@code @Isolated} on purpose: isolation would stall all 34
+     * classes for the duration of each of these five, which is most of the
+     * benefit of running in parallel at all.
+     */
+    public static final String GLOBAL_CONFIG = "roller.global-runtime-config";
+
+    /**
+     * Resource-lock key for the shared weblog's media directory.
+     *
+     * <p>The media ITs all drive {@code mediaFileView.rol} against the same
+     * {@code WEBLOG_HANDLE}, so they share one upload directory. Run
+     * concurrently they clear each other's fixtures, and the symptom is not an
+     * obvious race -- it is an assertion that the file list is empty, or that a
+     * button which only renders when files exist is missing. Classes that
+     * upload, crop or delete media must carry
+     * {@code @ResourceLock(RollerIT.SHARED_MEDIA)}.
+     *
+     * <p>The alternative -- giving each media IT its own weblog -- is the better
+     * long-term fix and would let them run concurrently, but it is a larger
+     * change to fixtures than the parallelism work warranted; these three
+     * classes total under a minute serialised.
+     */
+    public static final String SHARED_MEDIA = "roller.shared-media-directory";
+
     /** Root URL of the Roller under test, context path included, e.g. {@code http://localhost:8080/roller}. */
     public static final String BASE_URL_PROPERTY = "it.base.url";
 

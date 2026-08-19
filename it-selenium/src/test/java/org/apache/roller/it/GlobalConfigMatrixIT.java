@@ -25,6 +25,7 @@ import java.util.Map;
 import com.codeborne.selenide.CollectionCondition;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
@@ -51,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * what would let the rest of the suite run in parallel one day: everything in
  * {@code WeblogConfigMatrixIT} and {@code ThemeMatrixIT} is per-weblog and safe.
  */
+@ResourceLock(RollerIT.GLOBAL_CONFIG)
 class GlobalConfigMatrixIT extends RollerIT {
 
     private static final String EDITOR_BODY = ".CodeMirror";

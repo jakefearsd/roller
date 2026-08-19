@@ -1000,11 +1000,11 @@ Four classes carry the configuration matrix. The split is deliberate:
   `postCommentDirectly` helper were deleted in W1 along with the comment
   subsystem they exercised — the class still mutates global state.
   **Not actually the only class that does**, despite an earlier version of
-  this paragraph's claim: `ThemeIT` (`CUSTOM_THEMES_ALLOWED`, three tests)
-  and `ThemeMatrixIT` (`uploads.enabled`, one test) both call
-  `setGlobalFlag` too. Worth knowing for a future parallelisation decision —
-  `GlobalConfigMatrixIT` is not the one class that would need serialising,
-  it is one of at least three.
+  this paragraph's claim: the real count is **five** — `GlobalConfigMatrixIT`,
+  `ThemeIT` (`CUSTOM_THEMES_ALLOWED`), `ThemeMatrixIT` (`uploads.enabled`),
+  `ApiIT` and `VirtualHostIT` all call `setGlobalFlag`. The parallelisation
+  decision this paragraph anticipated has since been made — see "Browser ITs
+  run class-parallel" below.
 - `ScheduledEntryIT` — a future-dated entry is withheld from pages, its Atom
   feed, and the sitemap.
 
@@ -1023,6 +1023,51 @@ Analytics below — so there is nothing left to be uncovered.)
 is only `SCHEDULED` when its pubtime is >1 minute out, and the task cadence is
 configured in whole minutes, so observing it costs 1-3 minutes with real
 variance.
+
+### Browser ITs run class-parallel
+
+`it-selenium/src/test/resources/junit-platform.properties` runs test **classes**
+concurrently (fixed parallelism 4) while keeping **methods** on one thread. The
+suite was 14.1 minutes of test time across 34 classes on a single thread of a
+16-core machine; it is now ~7.8 minutes wall clock end to end, verified over
+four consecutive green runs.
+
+Methods stay serial on purpose: an IT class here is a narrative — create a
+weblog, edit it, publish, assert the rendered page — whose methods share
+fixtures built in `@BeforeAll`. The parallelism worth having is across 34
+classes, not within one.
+
+**Two resource locks carry the whole safety story, and both failure modes look
+like something other than a race.**
+
+- **`RollerIT.GLOBAL_CONFIG`** — held **write** by the five classes that call
+  `setGlobalFlag` (`GlobalConfigMatrixIT`, `ThemeIT`, `ThemeMatrixIT`, `ApiIT`,
+  `VirtualHostIT`). There is one set of runtime properties behind one shared app
+  instance, so two of these overlapping would each observe the other's flag.
+  **If you add a sixth class that calls `setGlobalFlag`, it must take this
+  lock** — nothing enforces that automatically, and the symptom of forgetting is
+  a wrong-looking assertion, not an obvious concurrency error.
+- **`RollerIT.SHARED_MEDIA`** — held **write** by the four classes that upload,
+  crop or delete media on the shared `WEBLOG_HANDLE` (`GalleryIT`,
+  `MediaCropIT`, `MediaBulkUploadIT`, `EditorSeoIT`), and **read** by
+  `ErrorCasesIT`, which only browses the media page.
+
+The **read** modes are what preserve the speed. The media classes also take
+`GLOBAL_CONFIG` in READ mode, because they depend on `uploads.enabled` staying
+true — and that, not the upload directory, was the real collision found while
+building this: `GlobalConfigMatrixIT` sets `uploads.enabled=false` and
+`ThemeMatrixIT` sets it true, and **with uploads off the media page simply does
+not render the buttons those tests look for**, so the failure arrives as
+`Element not found {button[formaction$='entryAddWithMediaFile.rol']}` with
+nothing about it suggesting a shared-state problem. Readers exclude the
+mutators but not each other; blanket-serialising them would have worked and
+thrown away most of the gain.
+
+The critical path is now the `GLOBAL_CONFIG` write chain — ~266s, of which
+`VirtualHostIT` alone is 164s because each of its tests drives the admin UI to
+set a custom domain. Hoisting that to once-per-class, and giving the media
+classes their own weblogs instead of sharing `WEBLOG_HANDLE`, are the next two
+levers; both would remove serialisation rather than add it.
 
 ### BrowserHealth: two checks, not one
 `assertNoBrokenResources` catches any sub-resource that came back 4xx/5xx.
