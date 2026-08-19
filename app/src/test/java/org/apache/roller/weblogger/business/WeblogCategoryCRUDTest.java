@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.User;
@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class WeblogCategoryCRUDTest  {
     
-    public static Log log = LogFactory.getLog(WeblogCategoryCRUDTest.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogCategoryCRUDTest.class);
     
     User testUser = null;
     Weblog testWeblog = null;
@@ -58,7 +58,7 @@ public class WeblogCategoryCRUDTest  {
             testWeblog = TestUtils.setupWeblog("categoryCRUDTestWeblog", testUser);
             TestUtils.endSession(true);
         } catch (Exception ex) {
-            log.error(ex);
+            log.error("ERROR in setup", ex);
         }
         
         log.info("END");
@@ -74,7 +74,7 @@ public class WeblogCategoryCRUDTest  {
             TestUtils.teardownUser(testUser.getUserName());
             TestUtils.endSession(true);
         } catch (Exception ex) {
-            log.error(ex);
+            log.error("ERROR in teardown", ex);
         }
         
         log.info("END");

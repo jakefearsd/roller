@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.User;
@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class UserTest  {
     
-    public static Log log = LogFactory.getLog(UserTest.class);
+    private static final Logger log = LoggerFactory.getLogger(UserTest.class);
 
 
     @BeforeEach

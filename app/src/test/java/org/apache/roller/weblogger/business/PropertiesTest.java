@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.junit.jupiter.api.AfterEach;
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class PropertiesTest  {
     
-    public static Log log = LogFactory.getLog(PropertiesTest.class);
+    private static final Logger log = LoggerFactory.getLogger(PropertiesTest.class);
 
     @BeforeEach
     public void setUp() throws Exception {

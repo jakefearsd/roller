@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.*;
@@ -28,8 +28,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -40,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class WeblogEntryTest  {
     
-    public static Log log = LogFactory.getLog(WeblogEntryTest.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogEntryTest.class);
     
     User testUser = null;
     Weblog testWeblog = null;
@@ -183,9 +181,9 @@ public class WeblogEntryTest  {
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
         testUser = TestUtils.getManagedUser(testUser);
 
-        log.debug("entry1 = "+entry1.getUpdateTime());
-        log.debug("entry2 = "+entry2.getUpdateTime());
-        log.debug("entry3 = "+entry3.getUpdateTime());
+        log.debug("entry1 = {}", entry1.getUpdateTime());
+        log.debug("entry2 = {}", entry2.getUpdateTime());
+        log.debug("entry3 = {}", entry3.getUpdateTime());
         
         entry1 = TestUtils.getManagedWeblogEntry(entry1);
         entry2 = TestUtils.getManagedWeblogEntry(entry2);
@@ -385,10 +383,7 @@ public class WeblogEntryTest  {
             TestUtils.endSession(true);
         
         } catch (Throwable t) {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw); 
-            t.printStackTrace(pw);
-            log.info(sw.toString());
+            log.info("Unexpected error", t);
         }
     }
 
@@ -480,10 +475,7 @@ public class WeblogEntryTest  {
             TestUtils.endSession(true);
             
         } catch (Throwable t) {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw); 
-            t.printStackTrace(pw);
-            log.info(sw.toString());
+            log.info("Unexpected error", t);
         }
     }
 
@@ -568,10 +560,7 @@ public class WeblogEntryTest  {
             TestUtils.endSession(true);
             
         } catch (Throwable t) {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw); 
-            t.printStackTrace(pw);
-            log.info(sw.toString());
+            log.info("Unexpected error", t);
         }
     }
 
@@ -839,11 +828,7 @@ public class WeblogEntryTest  {
             TestUtils.endSession(true);
 
         } catch (Throwable t) {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw); 
-            t.printStackTrace(pw);
-            log.error(sw.toString());
-            System.out.println(sw.toString());
+            log.error("Unexpected error", t);
         }
         
         log.info("END");

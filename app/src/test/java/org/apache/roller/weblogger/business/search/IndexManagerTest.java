@@ -20,8 +20,8 @@ package org.apache.roller.weblogger.business.search;
 import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class IndexManagerTest {
     User testUser = null;
     Weblog testWeblog = null;
-    public static Log log = LogFactory.getLog(IndexManagerTest.class);
+    private static final Logger log = LoggerFactory.getLogger(IndexManagerTest.class);
 
     /**
      * All tests in this suite require a user and a weblog.

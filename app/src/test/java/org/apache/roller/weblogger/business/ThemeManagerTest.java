@@ -19,8 +19,8 @@
 package org.apache.roller.weblogger.business;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.junit.jupiter.api.AfterEach;
@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class ThemeManagerTest  {
-    public static Log log = LogFactory.getLog(ThemeManagerTest.class);
+    private static final Logger log = LoggerFactory.getLogger(ThemeManagerTest.class);
 
     @BeforeEach
     public void setUp() throws Exception {

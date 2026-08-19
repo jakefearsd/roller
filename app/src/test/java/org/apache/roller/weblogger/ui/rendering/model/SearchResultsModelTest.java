@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -53,7 +53,7 @@ import static org.mockito.Mockito.when;
 class SearchResultsModelTest {
     User testUser = null;
     Weblog testWeblog = null;
-    public static Log log = LogFactory.getLog(IndexManagerTest.class);
+    private static final Logger log = LoggerFactory.getLogger(SearchResultsModelTest.class);
 
     @BeforeEach
     public void setUp() throws Exception {

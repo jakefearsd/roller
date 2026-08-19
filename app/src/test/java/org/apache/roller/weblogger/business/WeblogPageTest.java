@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
 import org.apache.roller.weblogger.pojos.User;
@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 public class WeblogPageTest  {
     
-    public static Log log = LogFactory.getLog(WeblogPageTest.class);
+    private static final Logger log = LoggerFactory.getLogger(WeblogPageTest.class);
     
     User testUser = null;
     Weblog testWeblog = null;
@@ -61,7 +61,7 @@ public class WeblogPageTest  {
             testWeblog = TestUtils.setupWeblog("wtTestWeblog", testUser);
             TestUtils.endSession(true);
         } catch (Exception ex) {
-            log.error(ex);
+            log.error("ERROR in test setup", ex);
             throw new Exception("Test setup failed", ex);
         }
         
@@ -82,7 +82,7 @@ public class WeblogPageTest  {
             TestUtils.teardownUser(testUser.getUserName());
             TestUtils.endSession(true);
         } catch (Exception ex) {
-            log.error(ex);
+            log.error("ERROR in test teardown", ex);
             throw new Exception("Test teardown failed", ex);
         }
         

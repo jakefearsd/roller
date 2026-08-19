@@ -17,8 +17,8 @@
  */
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class GalleryMetadataTest {
 
-    public static Log log = LogFactory.getLog(GalleryMetadataTest.class);
+    private static final Logger log = LoggerFactory.getLogger(GalleryMetadataTest.class);
 
     User testUser = null;
     Weblog testWeblog = null;
@@ -54,7 +54,7 @@ public class GalleryMetadataTest {
             testWeblog = TestUtils.setupWeblog("galleryMetaTestWeblog", testUser);
             TestUtils.endSession(true);
         } catch (Exception ex) {
-            log.error(ex);
+            log.error("ERROR in test setup", ex);
             throw new Exception("Test setup failed", ex);
         }
     }
@@ -66,7 +66,7 @@ public class GalleryMetadataTest {
             TestUtils.teardownUser(testUser.getUserName());
             TestUtils.endSession(true);
         } catch (Exception ex) {
-            log.error(ex);
+            log.error("ERROR in test teardown", ex);
             throw new Exception("Test teardown failed", ex);
         }
     }

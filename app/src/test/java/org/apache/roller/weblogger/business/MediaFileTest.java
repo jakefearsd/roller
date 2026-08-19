@@ -17,8 +17,8 @@
  */
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.*;
@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class MediaFileTest  {
 
-    public static Log log = LogFactory.getLog(MediaFileTest.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaFileTest.class);
     // static final String runtimeEnv;
     public final static String TEST_IMAGE = "/hawk.jpg";
 
@@ -81,7 +81,7 @@ public class MediaFileTest  {
                     .setupWeblog("mediaFileTestWeblog8", testUser);
             TestUtils.endSession(true);
         } catch (Exception ex) {
-            log.error(ex);
+            log.error("ERROR in test setup", ex);
             throw new Exception("Test setup failed", ex);
         }
 
@@ -160,7 +160,7 @@ public class MediaFileTest  {
             testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog", testUser);
             TestUtils.endSession(true);
         } catch (Exception ex) {
-            log.error(ex);
+            log.error("ERROR in test setup", ex);
             throw new Exception("Test setup failed", ex);
         }
 

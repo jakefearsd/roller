@@ -18,8 +18,8 @@
 
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
 import org.junit.jupiter.api.AfterEach;
@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class TaskLockTest  {
     
-    public static Log log = LogFactory.getLog(TaskLockTest.class);
+    private static final Logger log = LoggerFactory.getLogger(TaskLockTest.class);
 
     @BeforeEach
     public void setUp() throws Exception {

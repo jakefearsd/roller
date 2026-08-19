@@ -17,8 +17,8 @@
  */
 package org.apache.roller.weblogger.business;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.pojos.FileContent;
@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class FileContentManagerTest  {
 
-    private static final Log log = LogFactory.getLog(FileContentManagerTest.class);
+    private static final Logger log = LoggerFactory.getLogger(FileContentManagerTest.class);
     User testUser = null;
     Weblog testWeblog = null;
 
@@ -81,7 +81,7 @@ public class FileContentManagerTest  {
             testWeblog = TestUtils.setupWeblog("FCMTest_handle1", testUser);
             TestUtils.endSession(true);
         } catch (Exception ex) {
-            log.error(ex);
+            log.error("ERROR in test setup", ex);
         }
 
         // update roller properties to prepare for test
