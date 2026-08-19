@@ -133,6 +133,87 @@ touching the rendering path call `CacheManager.clear()` in `@BeforeEach`
 - Browser ITs run in CI (`mvn verify -Pit`) — see `it-selenium/`, and CI
   below for *when*.
 
+### Static-analysis gates
+
+PMD, CPD and SpotBugs run at `verify` in the `app` module and fail the build
+on **any** violation. Config: `config/pmd/ruleset.xml`,
+`config/spotbugs/exclude.xml`; wiring in the parent `pluginManagement`,
+executions in `app/pom.xml`. `bin/quality-report.sh` prints current counts and
+sites; `bin/quality-report.sh <RuleName>` lists one rule's sites.
+
+The tree started this wave at 362 PMD / 134 SpotBugs / 4 CPD violations (=
+500) against this exact ruleset/filter, whittled down batch by batch across
+Tasks 1–12b to zero, at which point the temporary `pmd.max.violations` /
+`spotbugs.max.violations` ceiling properties and the `maxAllowedViolations`
+wiring that carried the wave were deleted — a gate with `maxAllowedViolations
+=0` behaves identically to one with none, so once the tree held at zero the
+scaffolding had no job left. **The PMD count is measured against PMD 7.26.0,
+and pinning that version is load-bearing, not incidental.** The maven-pmd-
+plugin's own bundled PMD is 7.17; an earlier design-time probe run against
+that bundled version measured **307** PMD violations on the same source and
+ruleset, against **362** under the pinned 7.26.0 — a +55 delta with no rule
+or source file touched in between. The single biggest contributor is
+`CloseResource`, which goes 13 -> 42 as that detector improved between the
+two PMD releases; the rest comes from five rules that did not exist in 7.17
+at all (`OverrideBothEqualsAndHashCodeOnComparable`,
+`LambdaCanBeMethodReference`, `UseStandardCharsets`,
+`AvoidInstanceofChecksInCatchClause`, `AvoidCatchingGenericException`). An
+unpinned plugin drifts the gate's count *silently* whenever the plugin's
+bundled PMD version moves — a violation appears or disappears on a routine
+plugin bump with nobody having touched a rule or a source file. `app/pom.xml`'s
+explicit `pmd-core`/`pmd-java` `7.26.0` dependency override in the parent
+`pluginManagement` is what fixes the version the gate actually measures
+against.
+
+Zero tolerance is only affordable because the rule set is narrow, and it is
+narrow on a stated principle: **a rule is excluded only when violating it is
+systematically not a defect in this architecture**, never because there are a
+lot of them. `UnnecessaryConstructor` is the clearest case — JPA entities are
+required to declare a no-arg constructor, so the rule is wrong here, not noisy.
+PMD's `codestyle` category (7,997 violations of pure format opinion) is not
+used at all.
+
+Seven PMD rules and three SpotBugs families (469 of 603 raw SpotBugs findings,
+zero tolerance on the remaining 134) are excluded, each with a reason comment
+in the config file. **`QualityGatePomTest` fails the build if an exclusion is
+added without a justification comment, or if the excluded set differs from
+the list the test names — for both PMD's seven rules and SpotBugs's three
+families — so silencing a rule is never a quiet act, and widening either
+exclusion set is a spec change rather than an implementation decision.** A
+rule name outside `PERMITTED_PMD_EXCLUSIONS`, or a `<Match>` block beyond the
+three SpotBugs families (or a bug pattern outside
+`PERMITTED_SPOTBUGS_PATTERNS`), fails the same way an eighth PMD rule or a
+fourth SpotBugs family would.
+
+Two exclusions are **deferred, not permanent**: `GuardLogStatement` (368) and
+`ProperLogger` (167) both fire on the commons-logging idiom — 176 files on
+`org.apache.commons.logging` with 377 string-concatenating calls and zero
+parameterized ones, plus 43 hand-written `isDebugEnabled` guards. Runtime
+behaviour is already SLF4J (`jcl-over-slf4j` bridges it), so migrating is
+mechanical; finishing it deletes both exclusions and re-gates at zero.
+
+CPD runs at **200 tokens**, not lower, deliberately: at 100 it flags the three
+render caches, and collapsing those into a shared base would be a behavioural
+change — `WeblogPageCache` has no CacheHandler and expires only against
+`weblog.lastModified` while its siblings are invalidated through
+`CacheManager`. Those blocks carry `CPD-OFF` markers stating that reason.
+
+One-off suppressions go at the call site (`@SuppressWarnings("PMD.Rule")`,
+`@SuppressFBWarnings`, `// CPD-OFF`) **with a reason**; the two config files
+are for whole families only. A suppression whose justification only restates
+the rule name is not a justification.
+
+Proof the gate actually bites, not just that it is wired: seeding one
+violation per tool (an unused import for PMD, an unchecked
+`String.getBytes()` for SpotBugs's `DM_DEFAULT_ENCODING`, a 200+-token method
+copied into a second class for CPD) each turned `mvn -pl app verify` into a
+`BUILD FAILURE` naming the offending file, line and rule — see
+`docs/superpowers/specs/2026-08-18-static-analysis-quality-gates-design.md`
+for the design this proof validates. Measured cost: PMD+CPD+SpotBugs add
+roughly 10 seconds to a warm `verify` (comfortably inside the 30-second
+budget); a cold run recompiling everything runs the full `verify` in under 20
+seconds total.
+
 ### CI: three tiers, and nothing publishes on a push
 
 `.github/workflows/main.yml` is split by cost, not by topic.

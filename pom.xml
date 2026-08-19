@@ -70,17 +70,6 @@ limitations under the License.
         <jacoco.branch.minimum>0.7900</jacoco.branch.minimum>
         <jacoco.check.skip>false</jacoco.check.skip>
 
-        <!-- TEMPORARY, deleted in the final task of the static-analysis wave.
-             The tree started at 362 PMD / 134 SpotBugs violations against
-             this exact ruleset/filter. Each fix batch lowered these; Task 12
-             (split into 12a/12b) cleared the last 9 PMD / 42 SpotBugs
-             findings, so both are now 0, and the gate is already absolute in
-             effect. The properties themselves, and this scaffold comment,
-             are deleted (along with the corresponding maxAllowedViolations
-             wiring in app/pom.xml) by the wave's final task, which also
-             writes up the policy this scaffold was standing in for. -->
-        <pmd.max.violations>0</pmd.max.violations>
-        <spotbugs.max.violations>0</spotbugs.max.violations>
         <quality.check.skip>false</quality.check.skip>
     </properties>
 

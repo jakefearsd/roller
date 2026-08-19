@@ -115,6 +115,17 @@ class QualityGatePomTest {
     }
 
     @Test
+    void theTemporaryViolationCeilingIsGone() throws IOException {
+        String parentPom = read("pom.xml");
+        String appPom = read("app/pom.xml");
+        assertTrue(!parentPom.contains("pmd.max.violations")
+                        && !parentPom.contains("spotbugs.max.violations"),
+                "the wave's temporary ceiling properties must be deleted once the tree is at zero");
+        assertTrue(!appPom.contains("maxAllowedViolations"),
+                "maxAllowedViolations was scaffolding; the gate is zero-tolerance now");
+    }
+
+    @Test
     void theDeferredLoggingRulesAreMarkedDeferredNotRejected() throws IOException {
         String ruleset = read("config/pmd/ruleset.xml");
         assertTrue(ruleset.contains("SLF4J"),

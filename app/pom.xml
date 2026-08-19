@@ -902,14 +902,11 @@ limitations under the License.
                 </configuration>
             </plugin>
 
-            <!-- PMD + CPD, bound to verify. Configuration (ruleset, CPD token
-                 count, failOnViolation) lives in the parent pom's
-                 pluginManagement; this module only supplies the executions
-                 and, for pmd:check, the temporary ceiling
-                 (${pmd.max.violations}, see the parent pom's properties
-                 comment). cpd-check carries no ceiling: CPD starts at 4
-                 blocks and the very next task clears them, so it goes hard
-                 immediately. -->
+            <!-- PMD + CPD, bound to verify, zero tolerance. Configuration
+                 (ruleset, CPD token count, failOnViolation) lives in the
+                 parent pom's pluginManagement; this module only supplies the
+                 executions. See CLAUDE.md's "Static-analysis gates" section
+                 for the exclusion policy. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
@@ -918,9 +915,6 @@ limitations under the License.
                         <id>pmd-check</id>
                         <phase>verify</phase>
                         <goals><goal>check</goal></goals>
-                        <configuration>
-                            <maxAllowedViolations>${pmd.max.violations}</maxAllowedViolations>
-                        </configuration>
                     </execution>
                     <execution>
                         <id>cpd-check</id>
@@ -930,8 +924,8 @@ limitations under the License.
                 </executions>
             </plugin>
 
-            <!-- SpotBugs, bound to verify, same ceiling scheme as PMD above
-                 (${spotbugs.max.violations}). -->
+            <!-- SpotBugs, bound to verify, zero tolerance, same as PMD/CPD
+                 above. -->
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
@@ -940,9 +934,6 @@ limitations under the License.
                         <id>spotbugs-check</id>
                         <phase>verify</phase>
                         <goals><goal>check</goal></goals>
-                        <configuration>
-                            <maxAllowedViolations>${spotbugs.max.violations}</maxAllowedViolations>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
