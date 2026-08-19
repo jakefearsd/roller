@@ -178,6 +178,27 @@ touching the rendering path call `CacheManager.clear()` in `@BeforeEach`
 - Changed lines need ~90% coverage: `bin/check-diff-coverage.sh [base-ref]`
   (default `HEAD~1`; needs `pip install diff_cover` and a fresh
   `mvn -pl app jacoco:report`). CI enforces this on every push/PR.
+  **Measure it against the range you will actually push, not per commit** — CI
+  computes its base from `github.event.before`, so a batch of commits is judged
+  as one diff. A wave whose individual commits each pass can still fail in
+  aggregate.
+- **A large mechanical sweep will fail this gate for a reason that is not
+  real, and that is expected.** The gate asks "are the lines you changed
+  tested?", which is the right question for new logic and the wrong one for a
+  rewrite. Changing `log.debug("x " + y)` to `log.debug("x {}", y)` marks a
+  line as changed and demands coverage, while being the same untested line it
+  always was — usually inside an error path nobody can reach from a test.
+  Coverage has not dropped; a sweep has re-marked long-standing uncovered lines
+  as new. Worked example: the JCL→SLF4J migration (pushed at `586d0458b`,
+  37 commits) measured **83% over 1,199 changed lines**, where the
+  static-analysis wave alone had measured 91–92% on the same gate.
+  **The right response is to accept the one red run and say so, not to fix it.**
+  Writing tests for a couple of hundred error-path log statements produces
+  exactly the assertion-free coverage theatre the static-analysis spec bans
+  (see its "Policy: defensive branches and the diff-coverage gate"), and
+  exempting a category of line from the gate buys a permanent hole to settle a
+  one-off event. The next push measures only its own diff and returns to
+  normal.
 - Browser ITs run in CI (`mvn verify -Pit`) — see `it-selenium/`, and CI
   below for *when*.
 
@@ -297,6 +318,15 @@ expires only against `weblog.lastModified` while its siblings are invalidated
 through `CacheManager`. The threshold stays at 200 rather than dropping to 100
 for a separate reason: 100 finds twenty blocks, not zero, and the gate starts
 demanding refactors whose risk exceeds the duplication's cost.
+
+**Editing `config/pmd/ruleset.xml` has two traps that break the build at parse
+time.** A literal `{}` anywhere in that file — including inside a comment, and
+including an illustrative log call in a comment — breaks PMD's ruleset merge,
+because the file is run through `MessageFormat`. And a bare `--` inside an XML
+comment is illegal XML, so this repo's usual ASCII dash convention (fine in
+`.java` and Markdown) cannot be used there; the same rule already bites
+`runtimeConfigDefs.xml`, where it fails *silently*. Both were hit while writing
+the `GuardLogStatement` exclusion comment.
 
 One-off suppressions go at the call site (`@SuppressWarnings("PMD.Rule")`,
 `@SuppressFBWarnings`, `// CPD-OFF`) **with a reason**; the two config files
