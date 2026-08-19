@@ -5,10 +5,14 @@
 #   rule-name  -- every file:line for that one rule
 #
 # Regenerates the reports first, so the numbers are never stale.
+# Sets its own heap (-Xmx4g) rather than relying on the caller's MAVEN_OPTS:
+# the PMD+SpotBugs report goals were OOM-killed twice under default heap
+# during the SLF4J migration's batch 7.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 RULE="${1:-}"
+export MAVEN_OPTS="${MAVEN_OPTS:--Xmx4g}"
 
 if pgrep -f "[s]urefirebooter.*source/roller" >/dev/null; then
     echo "A build is already running in this tree; wait for it." >&2; exit 2

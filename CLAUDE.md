@@ -221,24 +221,25 @@ required to declare a no-arg constructor, so the rule is wrong here, not noisy.
 PMD's `codestyle` category (7,997 violations of pure format opinion) is not
 used at all.
 
-Five PMD rules and three SpotBugs families (469 of 603 raw SpotBugs findings,
+Six PMD rules and three SpotBugs families (469 of 603 raw SpotBugs findings,
 zero tolerance on the remaining 134) are excluded, each with a reason comment
 in the config file. **`QualityGatePomTest` fails the build if an exclusion is
 added without a justification comment, or if the excluded set differs from
-the list the test names — for both PMD's five rules and SpotBugs's three
+the list the test names — for both PMD's six rules and SpotBugs's three
 families — so silencing a rule is never a quiet act, and widening either
 exclusion set is a spec change rather than an implementation decision.** A
 rule name outside `PERMITTED_PMD_EXCLUSIONS`, or a `<Match>` block beyond the
 three SpotBugs families (or a bug pattern outside
-`PERMITTED_SPOTBUGS_PATTERNS`), fails the same way a sixth PMD rule or a
+`PERMITTED_SPOTBUGS_PATTERNS`), fails the same way a seventh PMD rule or a
 fourth SpotBugs family would.
 
 **The JCL→SLF4J migration that used to sit behind two deferred exclusions is
-done.** `GuardLogStatement` and `ProperLogger` used to be excluded pending it —
-178 main-source files plus 17 test files, ~797 call sites, all now on
-`org.slf4j` with parameterized `{}` logging throughout (6 `log.fatal` calls
-mapped to `log.error`, since SLF4J has no fatal level). Both rules are active
-now; the exclusion set dropped from seven to five. **Parameterized logging is
+done, and it changed the two rules' outcomes differently — one genuinely
+fixed, one re-founded, neither still "deferred."** `GuardLogStatement` and
+`ProperLogger` used to be excluded pending the migration — 178 main-source
+files plus 17 test files, ~797 call sites, all now on `org.slf4j` with
+parameterized `{}` logging throughout (6 `log.fatal` calls mapped to
+`log.error`, since SLF4J has no fatal level). **Parameterized logging is
 *why* the guards became unnecessary, not a coincidence:** SLF4J only builds
 the formatted message when the level is enabled, so `if
 (log.isDebugEnabled()) { log.debug("x " + y); }` around a parameterized
@@ -246,20 +247,34 @@ the formatted message when the level is enabled, so `if
 only job was gating string concatenation was deleted as part of the
 migration, batch by batch.
 
-`GuardLogStatement` came back with 175 violations on first activation despite
-that, and understanding why matters more than the number: PMD flags *any*
-non-trivial argument expression (a method call, a ternary — not just string
+`ProperLogger` came back genuinely clean — 167 → 0 — confirming the
+field/import shape every batch standardized on, and it is active now with no
+exclusion. `GuardLogStatement` did not come back clean: reactivating it
+flagged **175 violations at first activation**, not the ~0 predicted, and
+understanding why matters more than the number. PMD flags *any* non-trivial
+argument expression (a method call, a ternary — not just string
 concatenation) as a call the rule can't statically prove is cheap, and the
 overwhelming majority of the 175 were the ordinary idiomatic shape this
 migration standardized on — a `{}` fed by a cheap accessor
 (`entry.getId()`, `weblog.getHandle()`). Three sites were genuine waste (an
 eagerly-built `StringBuilder`/`MessageFormat.format()` result handed to
 `log.info(String)`, and two `stream().collect()` calls at startup) and were
-fixed properly; the rest are suppressed with
+fixed properly. The other 172 were first suppressed with
 `@SuppressWarnings("PMD.GuardLogStatement")` at the class declaration across
-74 classes, each carrying the same stated reason — guarding a cheap accessor
-would reintroduce the exact ceremony parameterization exists to eliminate.
-See `docs/superpowers/specs/2026-08-18-static-analysis-quality-gates-design.md`'s
+74 classes — a reasonable first cut, but overruled: a class-level suppression
+is *broader* than a ruleset exclusion for those classes (it silences the rule
+for all current **and future** code there too, not just today's cheap
+accessors), 172 sites across 74 classes is one policy applied 74 times rather
+than 74 individual one-off judgements, and this repo's own exclusion policy —
+the config files are for whole families, site-level suppressions are for
+one-offs with a stated reason — says so directly. `GuardLogStatement` is
+excluded in `config/pmd/ruleset.xml` instead, permanently: not because a
+migration is pending (it already happened), but because with parameterized
+SLF4J the rule cannot distinguish a cheap accessor from expensive work and
+fires on idiomatic, correct code — violating it is systematically not a
+defect in this architecture, which is exactly what the exclusion principle
+above requires. See
+`docs/superpowers/specs/2026-08-18-static-analysis-quality-gates-design.md`'s
 Follow-up section for the full accounting.
 
 **The one thing a future contributor must know, now that every logging
@@ -287,10 +302,13 @@ One-off suppressions go at the call site (`@SuppressWarnings("PMD.Rule")`,
 `@SuppressFBWarnings`, `// CPD-OFF`) **with a reason**; the two config files
 are for whole families only. A suppression whose justification only restates
 the rule name is not a justification. **A genuinely repeating pattern within
-one class** — the `GuardLogStatement` sweep above is the example — may carry
-the suppression on the class declaration instead of on every call site; that
-is still "at the site" in the sense that matters (the one class where the
-pattern recurs, not a ruleset-wide blanket), it just isn't one-off.
+one class** may carry the suppression on the class declaration instead of on
+every call site; that is still "at the site" in the sense that matters (the
+one class where the pattern recurs, not a ruleset-wide blanket), it just
+isn't one-off. But a pattern repeating across *many* classes is neither —
+`GuardLogStatement` above is the example of where that line sits: 74 classes
+sharing one reason is a family, and belongs in the config file rather than as
+74 copies of the same class-level annotation.
 
 Proof the gate actually bites, not just that it is wired: seeding one
 violation per tool (an unused import for PMD, an unchecked

@@ -429,9 +429,16 @@ test files, ~797 call sites, converted from `org.apache.commons.logging` to
 were mapped to `log.error` (SLF4J has no fatal level); every hand-written
 `isDebugEnabled`-style guard that existed only to gate string concatenation
 was deleted, since a parameterized call already defers formatting until the
-level is enabled and the guard was pure ceremony around it. `GuardLogStatement`
-and `ProperLogger` are both active now (see CLAUDE.md's Static analysis
-section), and the ruleset's exclusion set dropped from seven rules to five.
+level is enabled and the guard was pure ceremony around it. The migration
+resolved the two deferred rules differently, not identically: `ProperLogger`
+came back genuinely clean (167 → 0) and is active now with no exclusion.
+`GuardLogStatement` did not — reactivating it flagged 175 violations, not the
+near-zero the design-time estimate above assumed — and it is excluded again,
+permanently this time (see CLAUDE.md's Static analysis section for why: with
+parameterized SLF4J the rule cannot distinguish a cheap accessor from
+expensive work, and fires on idiomatic, correct code). The ruleset's
+exclusion set went seven → five (both logging rules dropped) → **six**
+(`GuardLogStatement` re-added on its new, permanent footing).
 
 Kept here rather than deleted, because the record of what was deferred and
 why it was worth doing is the useful part — including the parts that did not
@@ -456,11 +463,24 @@ go as the design-time estimate above assumed:
   and got fixed outright (an eagerly-built `StringBuilder`/
   `MessageFormat.format()` result handed to a plain `log.info(String)`, and
   two `stream().collect()` calls that only needed to run when their level
-  was enabled); the remaining ~172, spread across 74 classes, are
-  suppressed with `@SuppressWarnings("PMD.GuardLogStatement")` at the class
-  declaration rather than the ruleset — see CLAUDE.md for why a class-level
-  suppression was chosen over both a per-call-site sprawl and a ruleset
-  re-exclusion.
+  was enabled).
+- **The remaining ~172 sites, across 74 classes, went through two rounds.**
+  First cut: suppressed with `@SuppressWarnings("PMD.GuardLogStatement")` at
+  the class declaration rather than the ruleset, reported as a genuine
+  false-positive judgement call. That was overruled on review and replaced
+  with a single `<exclude name="GuardLogStatement"/>` in
+  `config/pmd/ruleset.xml` — all 74 class-level annotations removed. The
+  reasoning: a class-level suppression is *broader* than a ruleset exclusion
+  for those classes (it silences the rule for all current **and future**
+  code in them, not just today's cheap accessors, so it is not the more
+  conservative choice it looks like); 172 sites sharing one reason across 74
+  classes is a single family-wide policy applied 74 times, which is exactly
+  what this repo's own exclusion policy (config files for whole families,
+  site-level suppressions for one-offs) reserves the config file for; and
+  one exclusion reviewed once in one file beats 74 annotations nobody will
+  ever audit as a set. See CLAUDE.md's Static analysis section for the full
+  reasoning, and `config/pmd/ruleset.xml`'s own comment on the exclusion for
+  the same four points in place.
 
 **A `CPD-OFF` blind spot.** The `CPD-OFF`/`CPD-ON` markers around the render
 caches (Decision 6) remove the bracketed region from CPD's token stream
