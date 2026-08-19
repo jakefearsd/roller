@@ -18,7 +18,7 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle">
-    <spring:message code="pageForm.subtitle" arguments="${bean.name},${actionWeblog.handle}"/>
+    <spring:message code="pageForm.subtitle" arguments="${fn:escapeXml(bean.name)},${actionWeblog.handle}"/>
 </p>
 
 <c:choose>
@@ -42,10 +42,10 @@
             <c:choose>
                 <c:when test="${template.required}">
                     <%-- Cannot edit name of a required template --%>
-                    <input type="text" name="bean.name" value="${bean.name}" size="50" readonly class="form-control"/>
+                    <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="50" readonly class="form-control"/>
                 </c:when>
                 <c:otherwise>
-                    <input type="text" name="bean.name" value="${bean.name}" size="50" class="form-control"/>
+                    <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="50" class="form-control"/>
                 </c:otherwise>
             </c:choose>
         </div>
@@ -65,7 +65,7 @@
                 <label class="col-sm-3 col-form-label"><spring:message code="pageForm.link"/></label>
                 <div class="col-sm-9">
                     <%-- allow setting the path for a custom template --%>
-                    <input type="text" name="bean.link" value="${bean.link}" size="50" class="form-control" onkeyup="updatePageURLDisplay()"/>
+                    <input type="text" name="bean.link" value="${fn:escapeXml(bean.link)}" size="50" class="form-control" onkeyup="updatePageURLDisplay()"/>
                 </div>
             </div>
 
@@ -79,7 +79,7 @@
                  style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
                 <spring:message code="pageForm.resultingUrlWillBe"/>
                 ${actionWeblog.absoluteURL}page/
-                <span id="linkPreview" style="color:var(--bad)">${bean.link}</span>
+                <span id="linkPreview" style="color:var(--bad)">${fn:escapeXml(bean.link)}</span>
                 <c:if test="${template.link != null}">
                     [<a id="launchLink" onClick="launchPage()"><spring:message code="pageForm.launch"/></a>]
                 </c:if>
@@ -94,10 +94,10 @@
             <c:choose>
                 <c:when test="${template.required}">
                     <%-- Required templates have a description--%>
-                    <textarea name="bean.description" rows="2" cols="50" readonly class="form-control">${bean.description}</textarea>
+                    <textarea name="bean.description" rows="2" cols="50" readonly class="form-control">${fn:escapeXml(bean.description)}</textarea>
                 </c:when>
                 <c:otherwise>
-                    <textarea name="bean.description" rows="2" cols="50" class="form-control">${bean.description}</textarea>
+                    <textarea name="bean.description" rows="2" cols="50" class="form-control">${fn:escapeXml(bean.description)}</textarea>
                 </c:otherwise>
             </c:choose>
         </div>
@@ -107,7 +107,7 @@
 
     <%-- Template content area --%>
     <div class="tab-content">
-        <textarea name="bean.contentsStandard" rows="30" cols="80" style="width:100%">${bean.contentsStandard}</textarea>
+        <textarea name="bean.contentsStandard" rows="30" cols="80" style="width:100%">${fn:escapeXml(bean.contentsStandard)}</textarea>
     </div>
 
     <%-- ================================================================== --%>
@@ -194,7 +194,7 @@
 <script type="text/javascript">
 
     var weblogURL = '${actionWeblog.absoluteURL}';
-    var originalLink = '${bean.link}';
+    var originalLink = '${fn:escapeXml(bean.link)}';
     var type = '${bean.type}';
 
     $(document).ready(function () {

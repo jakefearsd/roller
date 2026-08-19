@@ -61,7 +61,7 @@
     <ul>
         <c:if test="${not empty bean.name}">
             <li>
-                <spring:message code="mediaFileView.filesNamed" arguments="${bean.name}"/>
+                <spring:message code="mediaFileView.filesNamed" arguments="${fn:escapeXml(bean.name)}"/>
             </li>
         </c:if>
         <c:if test="${bean.size > 0}">

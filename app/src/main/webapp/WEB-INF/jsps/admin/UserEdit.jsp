@@ -29,7 +29,7 @@
 </c:choose>
 
 <p class="subtitle">
-    <spring:message code="${subtitleKey}" arguments="${bean.userName}"/>
+    <spring:message code="${subtitleKey}" arguments="${fn:escapeXml(bean.userName)}"/>
 </p>
 
 <p class="pagetip">

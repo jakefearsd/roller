@@ -21,7 +21,7 @@
 
 <script>
 function addImage() {
-    var filePointer = "<img src='${mediaFileURL}' alt='${bean.name}' width='<width>' height='<height>' style='<style>' />";
+    var filePointer = "<img src='${mediaFileURL}' alt='${fn:escapeXml(bean.name)}' width='<width>' height='<height>' style='<style>' />";
     filePointer = filePointer.replace('<width>', document.imageDimForm.imageWidth.value);
     filePointer = filePointer.replace('<height>', document.imageDimForm.imageHeight.value);
     var styleDescription = '';

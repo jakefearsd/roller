@@ -22,7 +22,7 @@
 <%-- ********************************************************************* --%>
 
 <%-- content --%>
-<textarea name="bean.text" id="edit_content" rows="18" tabindex="5" class="col-sm-12">${bean.text}</textarea>
+<textarea name="bean.text" id="edit_content" rows="18" tabindex="5" class="col-sm-12">${fn:escapeXml(bean.text)}</textarea>
 
 <%-- The insert menu is generated from the shortcode registry (model attribute
      shortcodeCards), so adding a sixth shortcode means writing its handler and
@@ -68,7 +68,7 @@
     <div id="collapseSummaryEditor" class="collapse">
         <div class="card-body">
 
-            <textarea name="bean.summary" id="edit_summary" rows="10" tabindex="6" class="col-sm-12">${bean.summary}</textarea>
+            <textarea name="bean.summary" id="edit_summary" rows="10" tabindex="6" class="col-sm-12">${fn:escapeXml(bean.summary)}</textarea>
 
         </div>
     </div>

@@ -122,7 +122,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="mediaFileEdit.tags"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" size="30" maxlength="100" tabindex="3" class="form-control"/>
+            <input type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="30" maxlength="100" tabindex="3" class="form-control"/>
         </div>
     </div>
 
@@ -147,7 +147,7 @@
     <!-- original path from base URL of ctx/resources/ -->
     <c:if test="${rc:getBooleanProp('mediafile.originalPathEdit.enabled')}">
         <div id="originalPathdiv" class="miscControl">
-            <input type="text" name="bean.originalPath" value="${bean.originalPath}" id="originalPath" size="30" maxlength="100" tabindex="3" class="form-control"/>
+            <input type="text" name="bean.originalPath" value="${fn:escapeXml(bean.originalPath)}" id="originalPath" size="30" maxlength="100" tabindex="3" class="form-control"/>
         </div>
     </c:if>
 

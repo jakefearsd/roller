@@ -134,21 +134,21 @@
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.name" value="${bean.name}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                            <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.description" value="${bean.description}" class="form-control"/>
+                            <input type="text" name="bean.description" value="${fn:escapeXml(bean.description)}" class="form-control"/>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label"><spring:message code="categoryForm.image"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.image" value="${bean.image}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                            <input type="text" name="bean.image" value="${fn:escapeXml(bean.image)}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
                         </div>
                     </div>
                 <sec:csrfInput/>

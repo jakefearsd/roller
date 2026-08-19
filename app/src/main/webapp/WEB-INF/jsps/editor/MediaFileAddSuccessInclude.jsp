@@ -24,7 +24,7 @@
 <c:otherwise>
 <script>
     <c:url var="mediaFileURL" value="/roller-ui/rendering/media-resources/${bean.id}"/>
-    var filePointer = "<a href='${mediaFileURL}'>${bean.name}</a>";
+    var filePointer = "<a href='${mediaFileURL}'>${fn:escapeXml(bean.name)}</a>";
     parent.onClose(filePointer);
 </script>
 </c:otherwise>

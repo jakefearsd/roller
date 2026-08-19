@@ -47,35 +47,35 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.websiteTitle"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.name" value="${bean.name}" size="30" maxlength="40" class="form-control"/>
+            <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="30" maxlength="40" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="generic.tagline"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.tagline" value="${bean.tagline}" size="30" maxlength="255" class="form-control"/>
+            <input type="text" name="bean.tagline" value="${fn:escapeXml(bean.tagline)}" size="30" maxlength="255" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.icon"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.icon" value="${bean.icon}" size="30" maxlength="40" class="form-control"/>
+            <input type="text" name="bean.icon" value="${fn:escapeXml(bean.icon)}" size="30" maxlength="40" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.about"/></label>
         <div class="col-sm-9">
-            <textarea name="bean.about" rows="3" cols="40" class="form-control">${bean.about}</textarea>
+            <textarea name="bean.about" rows="3" cols="40" class="form-control">${fn:escapeXml(bean.about)}</textarea>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.emailAddress"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.emailAddress" value="${bean.emailAddress}" size="30" maxlength="40" class="form-control"/>
+            <input type="text" name="bean.emailAddress" value="${fn:escapeXml(bean.emailAddress)}" size="30" maxlength="40" class="form-control"/>
         </div>
     </div>
 

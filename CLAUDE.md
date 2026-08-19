@@ -637,6 +637,26 @@ IndexManager getIndexManager()
   `entry.title` included, goes through `fn:escapeXml` in the editor JSPs,
   since JSP-side fields get no save-time escaping the way the entry title
   does).
+- **The `bean.*` form expressions are the dangerous twins of the display
+  expressions, and for a while only the display half was guarded.** A
+  security pass found 40 raw author-controlled EL expressions across 12
+  editor/admin JSPs — `value="${bean.name}"`, `<textarea>${bean.text}</...>`,
+  and inline-JS `'${bean.link}'` — all stored or reflected XSS. Two things
+  made the gap easy to miss, and both are worth knowing before adding a
+  field. First, **escaping at save does not mean the edit form is safe**:
+  `EntryBean.copyFrom` calls `StringEscapeUtils.unescapeHtml4` on the title,
+  deliberately, so the author edits the text they typed — which means
+  `bean.title` holds *raw* input even though `entry.title` is stored escaped.
+  The read-side expression being safe is exactly why the write-side one looks
+  safe and isn't. Second, **a pojo whose wrapper escapes is not an escaped
+  pojo**: `Weblog.getName()` stores raw input and `WeblogWrapper.getName()`
+  escapes on read, so every public theme was fine while
+  `WeblogConfig.jsp` — which reads the bean, not the wrapper — rendered the
+  raw title straight into an attribute. Guarding a field means adding it to
+  `EditorJspEscapingTest`'s `AUTHOR_CONTROLLED` list in **both** spellings.
+  Note also that `<spring:message arguments="...">` does **not** escape:
+  `defaultHtmlEscape` is unset, so an argument is an injection point like any
+  other.
 - **Custom Themes**: User-customized themes per blog
 - **Template Types**: Main templates (`.vm`), stylesheets, and resources
 - **Hot Reload**: Theme changes reload automatically in development mode

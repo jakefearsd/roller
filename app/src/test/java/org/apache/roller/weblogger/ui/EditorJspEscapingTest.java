@@ -63,7 +63,35 @@ class EditorJspEscapingTest {
             "newImage.name",
             "post.title",
             "entry.title",
-            "bean.customDomain");
+            "bean.customDomain",
+            // The form-bean twins of the display expressions above. Adding
+            // these closed a real stored-XSS hole: the list used to name only
+            // the read-side expressions, so the *edit form* -- which renders
+            // the very same author text back into value="..." attributes,
+            // <textarea> bodies and inline-JS string literals -- was
+            // unguarded. See this class's javadoc for the two traps that made
+            // the gap easy to miss.
+            "bean.name",
+            "bean.description",
+            "bean.title",
+            "bean.tagline",
+            "bean.summary",
+            "bean.text",
+            "bean.about",
+            "bean.metaTitle",
+            "bean.searchDescription",
+            "bean.canonicalUrl",
+            "bean.slug",
+            "bean.link",
+            "bean.tagsAsString",
+            "bean.eventLocation",
+            "bean.emailAddress",
+            "bean.image",
+            "bean.icon",
+            "bean.originalPath",
+            "bean.content",
+            "bean.contentsStandard",
+            "bean.userName");
 
     @Test
     void authorControlledTextNeverRendersRawInAJsp() throws IOException {

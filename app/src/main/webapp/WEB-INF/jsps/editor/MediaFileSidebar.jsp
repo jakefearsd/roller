@@ -64,7 +64,7 @@
                     <input type="hidden" name="mediaFileId" value=""/>
 
                     <label><spring:message code="generic.name"/></label>
-                    <input type="text" name="bean.name" value="${bean.name}" id="beanName" size="20" maxlength="255" class="form-control"/>
+                    <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" id="beanName" size="20" maxlength="255" class="form-control"/>
 
                     <label><spring:message code="mediaFileView.type"/></label>
                     <select name="bean.type" id="beanType" class="form-select">

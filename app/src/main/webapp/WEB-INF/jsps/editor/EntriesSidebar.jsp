@@ -39,13 +39,13 @@
     <%-- filter by tag --%>
 
     <label><spring:message code="weblogEntryQuery.label.tags"/></label>
-    <input type="text" name="bean.tagsAsString" value="${bean.tagsAsString}" size="14" class="form-control"/>
+    <input type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="14" class="form-control"/>
 
     <%-- ========================================================= --%>
     <%-- filter by text --%>
 
     <label><spring:message code="weblogEntryQuery.label.text"/></label>
-    <input type="text" name="bean.text" value="${bean.text}" size="14" class="form-control"/>
+    <input type="text" name="bean.text" value="${fn:escapeXml(bean.text)}" size="14" class="form-control"/>
 
     <%-- ========================================================= --%>
     <%-- filter by date --%>

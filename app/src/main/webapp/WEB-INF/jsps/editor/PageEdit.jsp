@@ -56,7 +56,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="page_bean_title"><spring:message code="weblogEdit.title"/></label>
         <div class="col-sm-9">
-            <input type="text" id="page_bean_title" name="bean.title" value="${bean.title}" maxlength="255" class="form-control"/>
+            <input type="text" id="page_bean_title" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255" class="form-control"/>
         </div>
     </div>
 
@@ -65,7 +65,7 @@
         <div class="col-sm-9">
             <div class="input-group">
                 <span class="input-group-text">/${actionWeblog.handle}/</span>
-                <input type="text" id="page_bean_slug" name="bean.slug" value="${bean.slug}" maxlength="255" class="form-control"/>
+                <input type="text" id="page_bean_slug" name="bean.slug" value="${fn:escapeXml(bean.slug)}" maxlength="255" class="form-control"/>
             </div>
         </div>
     </div>
@@ -136,7 +136,7 @@
              bean.text and carries entry-only pieces (summary, mediacast)
              that have no equivalent on a page. --%>
 
-        <textarea name="bean.content" id="edit_content" rows="18" class="col-sm-12">${bean.content}</textarea>
+        <textarea name="bean.content" id="edit_content" rows="18" class="col-sm-12">${fn:escapeXml(bean.content)}</textarea>
 
         <div class="dropdown d-inline-block" id="shortcodeInsertMenu">
             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
@@ -179,14 +179,14 @@
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label" for="seo_metaTitle"><spring:message code="weblogEdit.metaTitle"/></label>
                         <div class="col-sm-9">
-                            <input type="text" id="seo_metaTitle" name="bean.metaTitle" value="${bean.metaTitle}" maxlength="255" class="form-control"/>
+                            <input type="text" id="seo_metaTitle" name="bean.metaTitle" value="${fn:escapeXml(bean.metaTitle)}" maxlength="255" class="form-control"/>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label" for="seo_metaDescription"><spring:message code="weblogEdit.metaDescription"/></label>
                         <div class="col-sm-9">
-                            <input type="text" id="seo_metaDescription" name="bean.searchDescription" value="${bean.searchDescription}" maxlength="255" class="form-control"/>
+                            <input type="text" id="seo_metaDescription" name="bean.searchDescription" value="${fn:escapeXml(bean.searchDescription)}" maxlength="255" class="form-control"/>
                         </div>
                     </div>
 
@@ -208,7 +208,7 @@
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label" for="seo_canonicalUrl"><spring:message code="weblogEdit.canonicalUrl"/></label>
                         <div class="col-sm-9">
-                            <input type="text" id="seo_canonicalUrl" name="bean.canonicalUrl" value="${bean.canonicalUrl}" maxlength="255" class="form-control"/>
+                            <input type="text" id="seo_canonicalUrl" name="bean.canonicalUrl" value="${fn:escapeXml(bean.canonicalUrl)}" maxlength="255" class="form-control"/>
                         </div>
                     </div>
 
