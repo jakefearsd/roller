@@ -66,6 +66,10 @@ public class MediaResourceServlet extends HttpServlet {
     /**
      * Handles requests for user uploaded media file resources.
      */
+    // response.getOutputStream() is container-owned; the servlet container
+    // manages its lifecycle for the whole request, and this code must not
+    // be relied on to close it on every path.
+    @SuppressWarnings("PMD.CloseResource")
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {

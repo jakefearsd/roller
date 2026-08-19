@@ -65,6 +65,12 @@ public class ResourceServlet extends HttpServlet {
     /**
      * Handles requests for user uploaded resources.
      */
+    // False positive: "'resourceStream' is reassigned, but the original
+    // instance is not closed" -- the reassignment below is reached only
+    // inside `if (resourceStream == null)`, so there is never a live stream
+    // to lose at that point. The stream this variable ends up holding is
+    // closed in the finally block further down.
+    @SuppressWarnings("PMD.CloseResource")
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {

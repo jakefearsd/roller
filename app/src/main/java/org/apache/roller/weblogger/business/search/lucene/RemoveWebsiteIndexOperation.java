@@ -68,6 +68,11 @@ public class RemoveWebsiteIndexOperation extends WriteToIndexOperation {
     // ~ Methods
     // ================================================================
 
+    // The IndexWriter returned by beginWriting() is the base class's own
+    // `writer` field; endWriting() in the finally below closes that same
+    // field. PMD's CloseResource can't see that a close happening inside a
+    // different method (via the field alias) satisfies this local variable.
+    @SuppressWarnings("PMD.CloseResource")
     @Override
     public void doRun() {
         Date start = new Date();

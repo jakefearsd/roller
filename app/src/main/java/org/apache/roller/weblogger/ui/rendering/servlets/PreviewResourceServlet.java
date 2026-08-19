@@ -67,6 +67,12 @@ public class PreviewResourceServlet extends HttpServlet {
     /**
      * Handles requests for user uploaded resources.
      */
+    // False positive: "'resourceStream' is reassigned, but the original
+    // instance is not closed" -- each reassignment below is reached only
+    // inside `if (resourceStream == null)`, so there is never a live stream
+    // to lose at that point. The stream this variable ends up holding is
+    // closed in the finally block further down.
+    @SuppressWarnings("PMD.CloseResource")
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -177,6 +183,9 @@ public class PreviewResourceServlet extends HttpServlet {
                 response.reset();
                 response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
+        } finally {
+            // make sure stream to resource file is closed
+            resourceStream.close();
         }
 
     }

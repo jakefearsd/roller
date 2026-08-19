@@ -82,6 +82,13 @@ public class FeedServlet extends HttpServlet {
     /**
      * Handle GET requests for weblog feeds.
      */
+    // Two CachedContent sites here are false positives for CloseResource:
+    // the cache-hit object (siteWideCache/weblogFeedCache.get(...)) is owned
+    // by the render cache and may still be serving other concurrent
+    // requests -- this method must not close it. The cache-miss object
+    // (RenderingServletUtils.render(...)) is already flushed and closed
+    // internally before it is returned; there is nothing left to close here.
+    @SuppressWarnings("PMD.CloseResource")
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {

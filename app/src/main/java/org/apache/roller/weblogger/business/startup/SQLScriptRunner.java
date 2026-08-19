@@ -168,8 +168,7 @@ public class SQLScriptRunner {
         for (String command : commands) {
             
             // run each command
-            try {
-                Statement stmt = con.createStatement();
+            try (Statement stmt = con.createStatement()) {
                 stmt.executeUpdate(command);
                 if (!con.getAutoCommit()) {
                     con.commit();
@@ -177,7 +176,7 @@ public class SQLScriptRunner {
 
                 // on success, echo command to messages
                 successMessage(command);
-                
+
             } catch (SQLException ex) {
                 if (command.contains("drop foreign key") || command.contains("drop index")) {
                     errorMessage("INFO: SQL command [" + command + "] failed, ignored.");

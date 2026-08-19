@@ -53,10 +53,9 @@ public final class IndexUtil {
         if (input == null || field == null) {
             return null;
         }
-        Analyzer analyzer = LuceneIndexManager.getAnalyzer();
         Term term = null;
-        try {
-            TokenStream tokens = analyzer.tokenStream(field, new StringReader(input));
+        try (Analyzer analyzer = LuceneIndexManager.getAnalyzer();
+             TokenStream tokens = analyzer.tokenStream(field, new StringReader(input))) {
             CharTermAttribute termAtt = tokens.addAttribute(CharTermAttribute.class);
             tokens.reset();
 

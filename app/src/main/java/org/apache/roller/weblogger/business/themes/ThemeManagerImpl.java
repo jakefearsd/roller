@@ -351,23 +351,24 @@ public class ThemeManagerImpl implements ThemeManager {
 				}
 
 				// save file without file-type, quota checks, etc.
-				InputStream is = resource.getInputStream();
 				MediaFile mf = new MediaFile();
 				mf.setDirectory(mdir);
 				mf.setWeblog(weblog);
 				mf.setName(justName);
 				mf.setOriginalPath(justPath + "/" + justName);
 				mf.setContentType(map.getContentType(justName));
-				mf.setInputStream(is);
 				mf.setLength(resource.getLength());
 
 				log.debug("    Saving file: " + justName);
 				log.debug("    Saving in directory = " + mf.getDirectory());
 				RollerMessages errors = new RollerMessages();
-				fileMgr.createThemeMediaFile(weblog, mf, errors);
-				try {
-					is.close();
+				try (InputStream is = resource.getInputStream()) {
+					mf.setInputStream(is);
+					fileMgr.createThemeMediaFile(weblog, mf, errors);
 				} catch (IOException ex) {
+					// only reached when closing the stream itself fails --
+					// createThemeMediaFile() declares WebloggerException, not
+					// IOException, so it propagates past this catch untouched
 					errors.addError("error.closingStream");
 					log.debug("ERROR closing inputstream");
 				}

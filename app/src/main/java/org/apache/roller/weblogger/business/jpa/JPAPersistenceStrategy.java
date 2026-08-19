@@ -61,6 +61,15 @@ import org.apache.roller.weblogger.business.DatabaseProvider;
 /**
  * Responsible for the lowest-level interaction with the JPA API.
  */
+// Every EntityManager handed out by getEntityManager()/getThreadLocalEntityManager()
+// is the one thread-local instance held in the threadLocalEntityManager field --
+// its lifecycle spans the whole unit of work (many calls into this class) and is
+// closed exactly once, in release(), not by whichever method happened to fetch it.
+// PMD's CloseResource has no way to see that field-scoped ownership across the
+// dozen accessor methods below that each call getEntityManager(...) and return
+// without closing it -- closing it in any of them would tear down every other
+// manager call still in flight on this thread within the same request/transaction.
+@SuppressWarnings("PMD.CloseResource")
 public class JPAPersistenceStrategy {
 
     private static final Log logger =

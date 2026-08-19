@@ -78,10 +78,14 @@ public class PreviewServlet extends HttpServlet {
     /**
      * Handle GET requests for weblog pages.
      */
+    // The CachedContent returned by RenderingServletUtils.render() is already
+    // flushed and closed internally before it comes back here -- nothing
+    // left for this method to close.
+    @SuppressWarnings("PMD.CloseResource")
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         log.debug("Entering");
         
         Weblog weblog;

@@ -93,9 +93,8 @@ public class MailProvider {
             session = Session.getDefaultInstance(props, null);
         }
         
-        try {
-            Transport transport = getTransport();
-            transport.close();
+        try (Transport ignored = getTransport()) {
+            LOG.debug("Successfully connected to mail server");
         } catch (Exception e) {
             throw new StartupException("ERROR connecting to mail server", e);
         }

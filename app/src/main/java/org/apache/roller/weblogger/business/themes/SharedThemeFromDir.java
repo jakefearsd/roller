@@ -181,11 +181,10 @@ public class SharedThemeFromDir extends SharedTheme {
         log.debug("Parsing theme descriptor for " + this.themeDir);
 
         ThemeMetadata themeMetadata;
-        try {
+        try (InputStream is = new FileInputStream(this.themeDir + File.separator
+                + "theme.xml")) {
             // lookup theme descriptor and parse it
             ThemeMetadataParser parser = new ThemeMetadataParser();
-            InputStream is = new FileInputStream(this.themeDir + File.separator
-                    + "theme.xml");
             themeMetadata = parser.unmarshall(is);
         } catch (Exception ex) {
             throw new ThemeInitializationException(
@@ -379,10 +378,9 @@ public class SharedThemeFromDir extends SharedTheme {
 
         char[] chars;
         int length;
-        try {
+        try (FileInputStream stream = new FileInputStream(templateFile);
+             InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             chars = new char[(int) templateFile.length()];
-            FileInputStream stream = new FileInputStream(templateFile);
-            InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
             length = reader.read(chars);
         } catch (Exception noprob) {
             log.error("Exception reading theme [" + this.getName()

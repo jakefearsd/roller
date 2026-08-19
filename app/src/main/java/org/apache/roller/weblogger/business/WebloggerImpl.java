@@ -27,6 +27,7 @@ import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 
@@ -103,8 +104,8 @@ public abstract class WebloggerImpl implements Weblogger {
         this.urlStrategy         = urlStrategy;
 
         Properties props = new Properties();
-        try {
-            props.load(getClass().getResourceAsStream("/roller-version.properties"));
+        try (InputStream in = getClass().getResourceAsStream("/roller-version.properties")) {
+            props.load(in);
         } catch (IOException e) {
             log.error("roller-version.properties not found", e);
         }

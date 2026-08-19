@@ -56,6 +56,10 @@ public abstract class IndexOperation implements Runnable {
     // ========================================================
     protected LuceneIndexManager manager;
     private IndexWriter writer;
+    // Must stay open for the IndexWriter's whole lifetime -- IndexWriterConfig
+    // only holds a reference to it, and Lucene re-uses it on every add/commit.
+    // Closed alongside the writer in endWriting(), never earlier.
+    private LimitTokenCountAnalyzer analyzer;
 
     // ~ Constructors
     // ===========================================================
@@ -123,7 +127,7 @@ public abstract class IndexOperation implements Runnable {
     protected IndexWriter beginWriting() {
         try {
 
-            LimitTokenCountAnalyzer analyzer = new LimitTokenCountAnalyzer(
+            analyzer = new LimitTokenCountAnalyzer(
                     LuceneIndexManager.getAnalyzer(),
                     WebloggerConfig.getIntProperty("lucene.analyzer.maxTokenCount"));
 
@@ -148,6 +152,12 @@ public abstract class IndexOperation implements Runnable {
             } catch (IOException e) {
                 logger.error("ERROR closing writer", e);
             }
+        }
+        // Close only after the writer is fully closed above -- the writer
+        // uses the analyzer during its own close()/commit.
+        if (analyzer != null) {
+            analyzer.close();
+            analyzer = null;
         }
     }
 

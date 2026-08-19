@@ -129,6 +129,12 @@ public class WebappResourceLoader extends ResourceLoader {
 	 * @throws ResourceNotFoundException if template not found in classpath.
 	 *
 	 */
+    // The InputStream found below is wrapped and RETURNED to the caller as
+    // an InputStreamReader (see the return statement at the end of this
+    // method) -- Velocity's own resource-manager machinery reads and closes
+    // it once the template load completes. Closing it here would hand back
+    // an already-closed reader.
+    @SuppressWarnings("PMD.CloseResource")
     @Override
 	public Reader getResourceReader(String name, String encoding) {
 

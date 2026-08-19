@@ -94,6 +94,11 @@ public class SearchOperation extends ReadFromIndexOperation {
      * 
      * @see java.lang.Runnable#run()
      */
+    // manager.getSharedIndexReader() is the LuceneIndexManager's own
+    // long-lived, shared IndexReader -- closing it here would break every
+    // other search or read in flight on it. See the "don't need to close
+    // the reader" comment at the end of this method.
+    @SuppressWarnings("PMD.CloseResource")
     @Override
     public void doRun() {
         final int docLimit = 500;

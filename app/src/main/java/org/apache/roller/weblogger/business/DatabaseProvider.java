@@ -140,9 +140,8 @@ public class DatabaseProvider  {
         }
         
         // So far so good. Now, can we get a connection?
-        try { 
-            Connection testcon = getConnection();
-            testcon.close();
+        try (Connection ignored = getConnection()) {
+            successMessage("SUCCESS: obtained a database connection");
         } catch (Exception e) {
             String errorMsg = 
                 "ERROR: unable to obtain database connection. "

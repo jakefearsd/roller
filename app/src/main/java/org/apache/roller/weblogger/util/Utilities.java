@@ -360,6 +360,11 @@ public class Utilities {
     }
 
     // ------------------------------------------------------------------------
+    // `in`/`out` are closed inside copyInputToOutput(InputStream, OutputStream,
+    // long) below, on every path -- the success path and both IOException
+    // branches all close both streams before returning or rethrowing. PMD's
+    // CloseResource can't see a close happening inside a different method.
+    @SuppressWarnings("PMD.CloseResource")
     public static void copyFile(File from, File to) throws IOException {
         InputStream in;
         OutputStream out;
