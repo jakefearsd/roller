@@ -24,6 +24,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
@@ -49,7 +50,7 @@ public class WeblogCacheWarmupJobTest {
         // input() may simply never be called
         job.execute();
 
-        assertNull(job.output(), "This job reports nothing back to its scheduler");
+        assertEquals(Map.of(), job.output(), "This job reports nothing back to its scheduler");
     }
 
     @Test
@@ -61,7 +62,7 @@ public class WeblogCacheWarmupJobTest {
         // no "weblogs" key at all: nothing to warm up, and nothing to throw over
         job.execute();
 
-        assertNull(job.output(), "This job reports nothing back to its scheduler");
+        assertEquals(Map.of(), job.output(), "This job reports nothing back to its scheduler");
     }
 
     @Test
@@ -89,6 +90,6 @@ public class WeblogCacheWarmupJobTest {
         // atom requested, no weblogs to do it for
         job.execute();
 
-        assertNull(job.output(), "This job reports nothing back to its scheduler");
+        assertEquals(Map.of(), job.output(), "This job reports nothing back to its scheduler");
     }
 }

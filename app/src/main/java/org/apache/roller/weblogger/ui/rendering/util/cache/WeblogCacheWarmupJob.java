@@ -80,7 +80,7 @@ public class WeblogCacheWarmupJob implements Job {
     
     @Override
     public Map<String, Object> output() {
-       return null; 
+       return Map.of();
     }
     
     

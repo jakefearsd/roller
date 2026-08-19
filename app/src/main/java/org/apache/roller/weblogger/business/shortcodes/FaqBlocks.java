@@ -44,12 +44,12 @@ import java.util.regex.Pattern;
  * <p>The pair grammar is strict: a body is one or more
  * {@code [q]question[/q][a]answer[/a]} pairs, in that order, with only
  * whitespace between and around them, and no blank questions or answers.
- * Anything else is malformed and {@link #parsePairs} returns null -- the
- * shortcode then leaves the author's text visible (the expander's failure
- * signal) instead of rendering half an FAQ, and the JSON-LD side emits
- * nothing for that block. Question and answer text is returned raw
- * (trimmed): it is entry HTML, and each emitter escapes or sanitizes for
- * its own context.
+ * Anything else is malformed and {@link #parsePairs} returns an empty list
+ * (never null) -- the shortcode then leaves the author's text visible (the
+ * expander's failure signal) instead of rendering half an FAQ, and the
+ * JSON-LD side emits nothing for that block. Question and answer text is
+ * returned raw (trimmed): it is entry HTML, and each emitter escapes or
+ * sanitizes for its own context.
  */
 public final class FaqBlocks {
 
@@ -90,22 +90,24 @@ public final class FaqBlocks {
                 // [[faq]]: an escaped mention of the syntax, not a block
                 continue;
             }
-            List<Qa> blockPairs = parsePairs(matcher.group(1));
-            if (blockPairs != null) {
-                pairs.addAll(blockPairs);
-            }
+            // parsePairs() never returns null (an empty list means
+            // "malformed, or nothing to parse"), so nothing to guard here.
+            pairs.addAll(parsePairs(matcher.group(1)));
         }
         return pairs;
     }
 
     /**
-     * The ordered pairs of one {@code [faq]} body, or null when the body
-     * does not match the strict pair grammar (including a body with no
-     * pairs at all). This is the {@link FaqShortcode} entry point.
+     * The ordered pairs of one {@code [faq]} body, or an empty list (never
+     * null) when the body does not match the strict pair grammar (including
+     * a body with no pairs at all). This is the {@link FaqShortcode} entry
+     * point; a well-formed body always yields at least one pair, so
+     * "malformed" and "well-formed but empty" are indistinguishable here on
+     * purpose -- both mean "nothing to render" to every caller.
      */
     public static List<Qa> parsePairs(String faqBody) {
         if (faqBody == null) {
-            return null;
+            return List.of();
         }
         List<Qa> pairs = new ArrayList<>();
         int pos = 0;
@@ -117,20 +119,20 @@ public final class FaqBlocks {
             }
             String question = section(faqBody, pos, "[q]", "[/q]");
             if (question == null) {
-                return null;
+                return List.of();
             }
             pos = skipWhitespace(faqBody, afterSection(faqBody, pos, "[/q]"));
             String answer = section(faqBody, pos, "[a]", "[/a]");
             if (answer == null) {
-                return null;
+                return List.of();
             }
             pos = afterSection(faqBody, pos, "[/a]");
             if (question.isBlank() || answer.isBlank()) {
-                return null;
+                return List.of();
             }
             pairs.add(new Qa(question.trim(), answer.trim()));
         }
-        return pairs.isEmpty() ? null : pairs;
+        return pairs;
     }
 
     /**

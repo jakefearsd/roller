@@ -144,7 +144,18 @@ public class MapShortcode implements ShortcodeHandler {
      * TouristTrip itinerary is always exactly the map readers see -- including
      * the private-directory gate, which must not be bypassed just because the
      * consumer is a {@code <script>} tag rather than a {@code <div>}.
+     *
+     * <p>Deliberately null, not an empty list, on the malformed-pins path:
+     * {@code render()}'s {@code if (pins == null) return null;} is a
+     * three-state contract with the caller -- null means "hard failure, leave
+     * the shortcode visible", empty means "valid, but nothing to draw (a bare
+     * map that may still centre on entry coordinates)". Collapsing the two by
+     * returning {@code List.of()} here would silently render a pinless map
+     * for a directory the author clearly meant to fill with pins, which is
+     * exactly the "hides the mistake" outcome the inline comment below
+     * refuses.
      */
+    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     public static List<MapPins.Pin> resolvePins(Map<String, String> attributes,
             String body, ShortcodeContext content) {
         String auto = StringUtils.trimToNull(attributes.get("auto"));
@@ -208,7 +219,14 @@ public class MapShortcode implements ShortcodeHandler {
      * null when the directory cannot be shown -- the same gates as
      * {@link GalleryShortcode}: missing or private directory, resolution
      * failure, or nothing to render.
+     *
+     * <p>Deliberately null throughout, not an empty list: this method's
+     * result becomes {@link #resolvePins}'s return value verbatim on the
+     * {@code auto} path, and that method's own javadoc explains why an empty
+     * list would mean something different (and worse) than null here -- see
+     * {@link #resolvePins}.
      */
+    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     private static List<MapPins.Pin> autoPins(String directoryName, ShortcodeContext content) {
         Weblog weblog = content == null ? null : content.getWeblog();
         if (weblog == null) {

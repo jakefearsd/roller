@@ -86,10 +86,15 @@ class QueryBeansTest {
         }
 
         @Test
-        void noTagFilterIsNullRatherThanAnEmptyList() {
-            // An empty list would be read as "match entries with no tags";
-            // null means "do not filter on tags at all".
-            assertNull(new EntriesBean().getTags());
+        void noTagFilterIsAnEmptyListRatherThanNull() {
+            // getTags() used to return null here, forcing its one caller
+            // (EntriesController, which feeds it straight into
+            // WeblogEntrySearchCriteria.setTags) to carry a null check on a
+            // collection. JPAWeblogEntryManagerImpl.getWeblogEntries already
+            // treats "tags == null" and "tags.isEmpty()" identically -- both
+            // skip the tag join entirely -- so an empty list means exactly
+            // what null used to mean: no tag filter at all.
+            assertEquals(List.of(), new EntriesBean().getTags());
         }
 
         @Test

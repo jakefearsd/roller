@@ -50,7 +50,7 @@ public class EntriesBean {
         if(getTagsAsString() != null) {
             return Utilities.splitStringAsTags(getTagsAsString());
         } else {
-            return null;
+            return List.of();
         }
     }
     

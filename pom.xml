@@ -83,8 +83,8 @@ limitations under the License.
              and the gate is absolute. This is a scaffold, not the ratcheted
              ceiling the spec rejected: the difference is that it has a
              scheduled end. -->
-        <pmd.max.violations>79</pmd.max.violations>
-        <spotbugs.max.violations>65</spotbugs.max.violations>
+        <pmd.max.violations>64</pmd.max.violations>
+        <spotbugs.max.violations>64</spotbugs.max.violations>
         <quality.check.skip>false</quality.check.skip>
     </properties>
 

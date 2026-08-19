@@ -63,7 +63,7 @@ public class SharedThemeResourceFromDir
     
     
     public ThemeResource[] getChildren() {
-        return null;
+        return new ThemeResource[0];
     }
     
     

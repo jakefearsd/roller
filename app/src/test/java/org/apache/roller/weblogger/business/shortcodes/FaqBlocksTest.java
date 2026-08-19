@@ -22,15 +22,17 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The shared {@code [q]..[/q][a]..[/a]} parser: the single source of truth
  * for both the [faq] shortcode's definition list and the FAQPage JSON-LD
  * emission (Wave 3 T4). The pair grammar is strict -- a malformed body
- * parses to null so the shortcode leaves the author's text visible instead
- * of rendering half an FAQ.
+ * parses to an empty list (never null) so the shortcode leaves the author's
+ * text visible instead of rendering half an FAQ. {@code FaqShortcode} tells
+ * "malformed" apart from "well-formed but empty" the same way either way:
+ * both parse to zero pairs, and this parser never produces a well-formed
+ * body with zero pairs (see {@link #aBodyWithNoPairsAtAllIsMalformed}).
  */
 class FaqBlocksTest {
 
@@ -64,45 +66,45 @@ class FaqBlocksTest {
         assertEquals(1, pairs.size());
     }
 
-    // ------------------------------------------------- malformed body -> null
+    // ---------------------------------------- malformed body -> empty list
 
     @Test
     void aQuestionWithoutAnAnswerIsMalformed() {
-        assertNull(FaqBlocks.parsePairs("[q]alone[/q]"));
-        assertNull(FaqBlocks.parsePairs("[q]one[/q][a]a[/a][q]dangling[/q]"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[q]alone[/q]"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[q]one[/q][a]a[/a][q]dangling[/q]"));
     }
 
     @Test
     void anAnswerBeforeOrWithoutAQuestionIsMalformed() {
-        assertNull(FaqBlocks.parsePairs("[a]answer first[/a][q]q[/q]"));
-        assertNull(FaqBlocks.parsePairs("[a]only an answer[/a]"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[a]answer first[/a][q]q[/q]"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[a]only an answer[/a]"));
     }
 
     @Test
     void unclosedTagsAreMalformed() {
-        assertNull(FaqBlocks.parsePairs("[q]never closed"));
-        assertNull(FaqBlocks.parsePairs("[q]q[/q][a]never closed"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[q]never closed"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[q]q[/q][a]never closed"));
     }
 
     @Test
     void strayTextBetweenPairsIsMalformed() {
-        assertNull(FaqBlocks.parsePairs("[q]q[/q] stray prose [a]a[/a]"));
-        assertNull(FaqBlocks.parsePairs("intro [q]q[/q][a]a[/a]"));
-        assertNull(FaqBlocks.parsePairs("[q]q[/q][a]a[/a] outro"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[q]q[/q] stray prose [a]a[/a]"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("intro [q]q[/q][a]a[/a]"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[q]q[/q][a]a[/a] outro"));
     }
 
     @Test
     void blankQuestionsOrAnswersAreMalformed() {
-        assertNull(FaqBlocks.parsePairs("[q]  [/q][a]a[/a]"));
-        assertNull(FaqBlocks.parsePairs("[q]q[/q][a][/a]"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[q]  [/q][a]a[/a]"));
+        assertEquals(List.of(), FaqBlocks.parsePairs("[q]q[/q][a][/a]"));
     }
 
     @Test
     void aBodyWithNoPairsAtAllIsMalformed() {
-        assertNull(FaqBlocks.parsePairs(null));
-        assertNull(FaqBlocks.parsePairs(""));
-        assertNull(FaqBlocks.parsePairs("   \n  "));
-        assertNull(FaqBlocks.parsePairs("just prose"));
+        assertEquals(List.of(), FaqBlocks.parsePairs(null));
+        assertEquals(List.of(), FaqBlocks.parsePairs(""));
+        assertEquals(List.of(), FaqBlocks.parsePairs("   \n  "));
+        assertEquals(List.of(), FaqBlocks.parsePairs("just prose"));
     }
 
     // ------------------------------------------- parse (raw entry text, T4)

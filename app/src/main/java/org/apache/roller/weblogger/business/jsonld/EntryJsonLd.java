@@ -175,7 +175,16 @@ public final class EntryJsonLd {
      * {@code GeoCoordinates} from the entry's geo columns, or null unless both
      * are set, finite and in range -- the same validity rule
      * {@code MapShortcode} applies before using them as a map centre.
+     *
+     * <p>Deliberately null, not an empty map: the only caller is
+     * {@code put(node, "geo", geoOf(entry))}, which treats null as "omit this
+     * optional property" (see {@link #put}). An empty map would instead be
+     * inserted as {@code "geo":{}}, which is not valid {@code GeoCoordinates}
+     * -- see the class javadoc's "TouristAttraction with no coordinates ...
+     * still valid" note and {@code EntryJsonLdTest}'s
+     * {@code assertFalse(...has("geo"))} assertions, which pin the omission.
      */
+    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     private static Map<String, Object> geoOf(WeblogEntry entry) {
         Double lat = entry.getGeoLatitude();
         Double lng = entry.getGeoLongitude();
@@ -201,7 +210,15 @@ public final class EntryJsonLd {
      * itinerary is still valid). A pin the author gave no label keeps its
      * position and coordinates but has no {@code name}: inventing one from the
      * numbers would be fabrication.
+     *
+     * <p>Deliberately null, not an empty map: same reasoning as {@link #geoOf}
+     * -- the caller's {@link #put} treats null as "omit this optional
+     * property", and an empty {@code "itinerary":{}} would be emitted instead
+     * if this returned {@code Map.of()}. {@code EntryJsonLdTest}'s
+     * {@code aTouristTripWithNoPinsStillEmitsWithoutAnItinerary} pins the
+     * omission.
      */
+    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     private static Map<String, Object> itineraryOf(WeblogEntry entry) {
         List<MapPins.Pin> pins = MapShortcode.pinsInEntry(entry);
         if (pins.isEmpty()) {

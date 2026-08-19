@@ -70,7 +70,7 @@ public class FaqShortcode implements ShortcodeHandler {
             return null;
         }
         List<FaqBlocks.Qa> pairs = FaqBlocks.parsePairs(body);
-        if (pairs == null) {
+        if (pairs.isEmpty()) {
             log.debug("[faq] shortcode body is not well-formed [q]..[/q][a]..[/a]"
                     + " pairs; leaving it as written");
             return null;
