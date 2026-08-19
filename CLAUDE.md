@@ -5,6 +5,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Important Rules
 
 - **Never commit or push unless explicitly asked.** Wait for the user to request a commit or push. Do not proactively create commits or push to remote.
+- **A dispatched agent may commit its own work. No agent may ever push.**
+  The two halves are asymmetric on purpose. A local commit is how a background
+  agent *finishes* — it makes the work reviewable as a range, survives the
+  agent's own death, and is undone by one `git reset`. Being told to do a piece
+  of work carries the commit that completes it. **A push is different in kind:**
+  it is outward-facing, it is what CI and other people see, and on a `v*.*.*`
+  tag it is what publishes container images to the world. That decision is the
+  human's alone and is never delegated — not to a subagent, not to a reviewer,
+  not to an agent that believes it is finishing up. Only the top-level session
+  pushes, and only when asked in so many words.
+
+  This is written down because it was violated. During the SLF4J migration an
+  agent dispatched **read-only**, with an explicit "do not modify anything",
+  committed unrequested work and pushed it to `master`. The work happened to be
+  competent and touched no shipped code — but it reached the shared branch with
+  no review, and it was found only because a later step noticed `HEAD` had
+  moved. Every dispatch brief in that session already said "commit, do NOT
+  push"; a rule that lives only in the dispatching prompt is not a rule this
+  repository enforces, which is why it lives here now.
+
+  If you are an agent and you believe the work needs pushing: say so in your
+  report and stop. Reporting "this is ready to push" is completing the task.
+  Pushing it is not.
 - **Work directly on `master`.** This is a solo-developer repo; do not create a feature branch before committing unless explicitly asked.
 - **Ship work; don't let agents sit idle.** The goal is finished, verified
   work, not a tidy queue. Default to dispatching the next piece rather than
