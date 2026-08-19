@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,6 +69,79 @@ public class FileContentManagerTest  {
         config.get("uploads.enabled").setValue("true");
         pmgr.saveProperties(config);
         TestUtils.endSession(true);
+    }
+
+    /**
+     * The uploads dir is a boundary, and {@code checkFileName} is the only
+     * thing enforcing it. It rejected {@code ".."} and nothing else, which
+     * left an absolute {@code fileId} to walk straight out: {@code
+     * getRealFile} resolves the id against the weblog dir with {@link
+     * java.nio.file.Path#resolve}, and resolve() returns its ARGUMENT
+     * unchanged when that argument is absolute -- the base is discarded, no
+     * {@code ".."} ever appears, and the guard sees nothing to object to.
+     *
+     * <p>The write path never had this hole, which is why it is easy to
+     * assume the read path doesn't either: {@code saveFileContent} builds its
+     * target with {@code Path.of(dir, fileId)}, and that JOINS its arguments
+     * rather than resolving them, so an absolute id lands harmlessly inside
+     * the weblog dir. Only {@code getFileContent} and {@code deleteFile} go
+     * through {@code getRealFile}.
+     *
+     * <p>Every id in production today is a generated UUID, so this was not
+     * reachable; it is fixed because a boundary check that misses a whole
+     * class of input is one careless caller away from being load-bearing.
+     */
+    @Nested
+    class TraversalGuard {
+
+        /**
+         * Deliberately a transient pojo rather than a persisted fixture:
+         * {@code getRealFile} reads nothing but {@code weblog.getHandle()},
+         * so a database round-trip would only add a shared-username
+         * collision with the other tests in this class.
+         */
+        private Weblog weblog() {
+            Weblog w = new Weblog();
+            w.setHandle("fcm-traversal-handle");
+            return w;
+        }
+
+        @Test
+        void anAbsoluteFileIdCannotBeReadFromOutsideTheUploadsDir() throws Exception {
+            Path outside = Files.createTempFile("fcm-outside-", ".txt");
+            Files.writeString(outside, "secret from outside the uploads dir");
+            try {
+                FileContentManager fcm = WebloggerFactory.getWeblogger().getFileContentManager();
+                assertThrows(FilePathException.class,
+                        () -> fcm.getFileContent(weblog(), outside.toAbsolutePath().toString()),
+                        "an absolute fileId must be refused, not resolved outside the uploads dir");
+            } finally {
+                Files.deleteIfExists(outside);
+            }
+        }
+
+        @Test
+        void anAbsoluteFileIdCannotBeDeletedFromOutsideTheUploadsDir() throws Exception {
+            Path outside = Files.createTempFile("fcm-outside-del-", ".txt");
+            Files.writeString(outside, "must survive");
+            try {
+                FileContentManager fcm = WebloggerFactory.getWeblogger().getFileContentManager();
+                assertThrows(FilePathException.class,
+                        () -> fcm.deleteFile(weblog(), outside.toAbsolutePath().toString()),
+                        "an absolute fileId must be refused, not deleted outside the uploads dir");
+                assertTrue(Files.exists(outside), "the file outside the uploads dir was deleted");
+            } finally {
+                Files.deleteIfExists(outside);
+            }
+        }
+
+        @Test
+        void aRelativeTraversalIsStillRefused() {
+            FileContentManager fcm = WebloggerFactory.getWeblogger().getFileContentManager();
+            assertThrows(FilePathException.class,
+                    () -> fcm.getFileContent(weblog(), "../../etc/hostname"),
+                    "the pre-existing \"..\" guard must keep working");
+        }
     }
 
     /**

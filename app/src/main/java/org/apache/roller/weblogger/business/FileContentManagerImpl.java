@@ -26,6 +26,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
@@ -467,10 +468,23 @@ public class FileContentManagerImpl implements FileContentManager {
         }
 
         // now form the absolute path
-        Path filePath = weblogDir.toAbsolutePath();
+        Path weblogRoot = weblogDir.toAbsolutePath().normalize();
+        Path filePath = weblogRoot;
         if (fileId != null) {
             checkFileName(fileId);
-            filePath = filePath.resolve(fileId);
+            filePath = filePath.resolve(fileId).normalize();
+            // The containment check, and the actual boundary enforcement --
+            // checkFileName above only rejects the two shapes we can name.
+            // Path.resolve() RETURNS ITS ARGUMENT when that argument is
+            // absolute, discarding weblogRoot entirely, so an absolute fileId
+            // used to walk straight out of the uploads area without ever
+            // containing ".." for the name check to catch. Comparing the
+            // normalized result against the root is the check that does not
+            // depend on enumerating hostile spellings.
+            if (!filePath.startsWith(weblogRoot)) {
+                throw new FilePathException("Invalid file id [" + fileId + "], "
+                        + "resolves outside the weblog's uploads dir.");
+            }
         }
 
         // make sure path exists and is readable
@@ -484,11 +498,29 @@ public class FileContentManagerImpl implements FileContentManager {
 
     /**
      * Make sure someone isn't trying to sneak outside the uploads dir.
+     *
+     * <p>This is the cheap, name-shaped half of the boundary; {@link
+     * #getRealFile} does the authoritative containment check on the resolved
+     * path. Kept as its own guard because {@code saveFileContent} calls it
+     * directly, and because refusing an obviously hostile id with a message
+     * naming it beats a generic containment failure.
      */
     private static void checkFileName(String fileId) throws FilePathException {
         if(fileId.contains("..")) {
             throw new FilePathException("Invalid file name [" + fileId + "], "
                     + "trying to get outside uploads dir.");
+        }
+        // An absolute id is refused outright rather than resolved: see
+        // getRealFile for why resolve() makes this a real escape and not a
+        // theoretical one. Path.of rejects some strings outright (an embedded
+        // NUL, for instance), which is itself a good enough reason to refuse.
+        try {
+            if (Path.of(fileId).isAbsolute()) {
+                throw new FilePathException("Invalid file name [" + fileId + "], "
+                        + "absolute paths are not valid file ids.");
+            }
+        } catch (InvalidPathException e) {
+            throw new FilePathException("Invalid file name [" + fileId + "].", e);
         }
     }
 
