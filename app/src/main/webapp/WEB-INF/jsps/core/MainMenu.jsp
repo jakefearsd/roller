@@ -82,7 +82,7 @@
                 <c:url value="/roller-ui/authoring/entryAdd.rol" var="newEntry">
                     <c:param name="weblog" value="${perms.weblog.handle}"/>
                 </c:url>
-                <a href="${newEntry}" class="btn btn-secondary">
+                <a href="${newEntry}" class="btn btn-primary">
                     <span class="bi bi-pencil" aria-hidden="true"></span>
                     <spring:message code="yourWebsites.newEntry"/>
                 </a>

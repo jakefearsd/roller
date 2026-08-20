@@ -20,7 +20,7 @@
 <c:choose>
 <c:when test="${error}">
 
-    <h2><spring:message code="installer.errorCreatingTables" /></h2>
+    <h2 class="roller-page-title"><spring:message code="installer.errorCreatingTables" /></h2>
     <p><spring:message code="installer.errorCreatingTablesExplanation" /></p>
 <pre>
 <c:forEach items="${messages}" var="msg">${fn:escapeXml(msg)}<br /></c:forEach>
@@ -29,7 +29,7 @@
 </c:when>
 <c:when test="${success}">
 
-    <h2><spring:message code="installer.tablesCreated" /></h2>
+    <h2 class="roller-page-title"><spring:message code="installer.tablesCreated" /></h2>
 
     <p><spring:message code="installer.tablesCreatedExplanation" /></p>
     <c:url value="/roller-ui/install/install!bootstrap.rol" var="bootstrapUrl"/>
@@ -44,7 +44,7 @@
 </c:when>
 <c:otherwise>
 
-    <h2><spring:message code="installer.noDatabaseTablesFound" /></h2>
+    <h2 class="roller-page-title"><spring:message code="installer.noDatabaseTablesFound" /></h2>
 
     <p>
         <spring:message code="installer.noDatabaseTablesExplanation" arguments="${databaseProductName}" />
@@ -54,11 +54,10 @@
     <form action="${pageContext.request.contextPath}/roller-ui/install/install!create.rol" method="post">
         <sec:csrfInput/>
         <spring:message code="installer.yesCreateTables" var="createTablesLabel"/>
-        <button type="submit" class="btn btn-secondary">${createTablesLabel}</button>
+        <button type="submit" class="btn btn-primary">${createTablesLabel}</button>
     </form>
 
 </c:otherwise>
 </c:choose>
 
-<br />
-<br />
+<div class="mb-4"></div>

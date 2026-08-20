@@ -54,10 +54,6 @@
                     <spring:message code='loginPage.login'/>
                 </button>
 
-                <button class="btn btn-secondary" type="reset" name="reset" id="reset"
-                        onclick="document.getElementById('j_username').focus()">
-                    <spring:message code='loginPage.reset'/>
-                </button>
             </div>
 
         </form>

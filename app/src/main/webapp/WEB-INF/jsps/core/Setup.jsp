@@ -17,7 +17,7 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p style="margin-bottom:2em"><spring:message code="index.prompt"/> </p>
+<p class="pagetip"><spring:message code="index.prompt"/></p>
 
 <%--
       Index page on Roller startup; tell the user how to complete their Roller install,
@@ -63,7 +63,7 @@
 
     <div class="card-body">
 
-        <spring:message code="index.createWeblogHelp"/><br/><br/>
+        <p><spring:message code="index.createWeblogHelp"/></p>
         <c:if test="${userCount > 0 && blogCount == 0}">
             <spring:message code="index.createWeblogBy"/>
             <a id="a_createBlog" href='<c:url value="/roller-ui/createWeblog.rol"/>'>
@@ -124,7 +124,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-secondary"><spring:message code="generic.save"/></button>
+                <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
 
             </form>
 

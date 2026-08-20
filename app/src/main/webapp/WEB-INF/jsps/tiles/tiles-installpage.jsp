@@ -33,20 +33,24 @@
 
 <jsp:include page="${tile_banner}"/>
 
-<div id="wrapper" class="container-fluid" style="margin-top:5em">
+<div class="container-fluid install-page">
 
     <div class="row">
         <div class="col-md-1"></div>
-        <div class="col-md-10">
+        <main class="col-md-10">
             <jsp:include page="${tile_messages}"/>
             <jsp:include page="${tile_content}"/>
-        </div>
+        </main>
         <div class="col-md-1"></div>
     </div>
 
-    <div id="footer">
+</div>
+
+<footer class="footer">
+    <div class="container-fluid">
         <jsp:include page="${tile_footer}"/>
     </div>
+</footer>
 
 </body>
 </html>

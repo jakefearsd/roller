@@ -19,7 +19,7 @@
 
 <p class="subtitle"><spring:message code="maintenance.subtitle"/></p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/admin/maintenance.rol" method="post" class="form-vertical">
+<form action="${pageContext.request.contextPath}/roller-ui/admin/maintenance.rol" method="post" class="form-stacked">
 <sec:csrfInput/>
 
     <div class="mb-3">
@@ -58,15 +58,37 @@
         </select>
     </div>
 
-    <p><spring:message code="maintenance.prompt.flush"/></p>
-    <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!flushCache.rol"><spring:message code="maintenance.button.flush"/></button>
+    <%-- Each prompt and its button are one bordered row, so the three
+         operations read as three separate choices rather than one wall of
+         sentences with buttons somewhere in it. The two long-running ones
+         confirm and NAME the selected weblog first: the <select> above is the
+         only thing that says which weblog an unlabelled "Rebuild" acts on,
+         and it is easy to have scrolled past. --%>
+    <c:set var="selectedWeblogLabel"
+           value="${selectedWeblog == null ? '' : selectedWeblog.handle}"/>
+
+    <div class="maintenance-op">
+        <p><spring:message code="maintenance.prompt.flush"/></p>
+        <button type="submit" class="btn"
+                formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!flushCache.rol"><spring:message code="maintenance.button.flush"/></button>
+    </div>
 
     <c:if test="${rc:getBooleanProp('search.enabled')}">
-        <p><spring:message code="maintenance.prompt.index"/></p>
-        <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!index.rol"><spring:message code="maintenance.button.index"/></button>
+        <spring:message code="maintenance.confirm.index" arguments="${fn:escapeXml(selectedWeblogLabel)}" var="confirmIndex"/>
+        <div class="maintenance-op">
+            <p><spring:message code="maintenance.prompt.index"/></p>
+            <button type="submit" class="btn"
+                    onclick="return confirm('${fn:escapeXml(confirmIndex)}');"
+                    formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!index.rol"><spring:message code="maintenance.button.index"/></button>
+        </div>
     </c:if>
 
-    <p><spring:message code="maintenance.prompt.regenerateRenditions"/></p>
-    <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!regenerateRenditions.rol"><spring:message code="maintenance.button.regenerateRenditions"/></button>
+    <spring:message code="maintenance.confirm.regenerateRenditions" arguments="${fn:escapeXml(selectedWeblogLabel)}" var="confirmRenditions"/>
+    <div class="maintenance-op">
+        <p><spring:message code="maintenance.prompt.regenerateRenditions"/></p>
+        <button type="submit" class="btn"
+                onclick="return confirm('${fn:escapeXml(confirmRenditions)}');"
+                formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!regenerateRenditions.rol"><spring:message code="maintenance.button.regenerateRenditions"/></button>
+    </div>
 
 </form>

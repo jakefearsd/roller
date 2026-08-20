@@ -242,4 +242,114 @@ class AdminJspHygieneTest {
                 "admin/UserEdit.jsp: " + (headers - scoped) + " of " + headers
                         + " <th> cells lack scope=\"col\"");
     }
+
+    // ---------------------------------------------------------------- Task 16
+
+    /**
+     * .subtitle is the one-line orientation sentence under a page title, used
+     * on ~15 admin screens -- and styled nowhere, so every one of them
+     * rendered it as full-ink body prose competing with the title above.
+     */
+    @Test
+    void theSubtitleRoleIsActuallyStyled() {
+        assertTrue(read(STYLES).contains("p.subtitle"),
+                "roller.css has no p.subtitle rule, so the class is inert on ~15 screens");
+    }
+
+    /**
+     * One screen, one primary action -- the design system's button hierarchy.
+     * These six forms each had their save sitting at .btn-secondary, level
+     * with Cancel, so nothing on the page said which control finished the job.
+     */
+    @Test
+    void eachFormScreenHasExactlyOnePrimaryAction() {
+        List<String> wrong = new ArrayList<>();
+        for (String screen : List.of("admin/GlobalConfig.jsp", "admin/UserEdit.jsp",
+                "core/Profile.jsp", "core/CreateWeblog.jsp", "core/Setup.jsp",
+                "core/CreateDatabase.jsp")) {
+            int primaries = jsp(screen).split("btn-primary", -1).length - 1;
+            if (primaries != 1) {
+                wrong.add(screen + " has " + primaries);
+            }
+        }
+        assertTrue(wrong.isEmpty(), "expected exactly one btn-primary per screen: " + wrong);
+    }
+
+    /**
+     * Rebuild-index and regenerate-renditions run for minutes against the
+     * weblog named in a &lt;select&gt; the operator may well have scrolled
+     * past. Both confirm, and the confirmation names the weblog.
+     */
+    @Test
+    void theLongMaintenanceOperationsConfirmAndNameTheirWeblog() {
+        String src = jsp("admin/Maintenance.jsp");
+        List<String> missing = new ArrayList<>();
+        for (String key : List.of("maintenance.confirm.index",
+                "maintenance.confirm.regenerateRenditions")) {
+            if (!src.contains(key)) {
+                missing.add(key);
+            }
+        }
+        assertTrue(missing.isEmpty(), "admin/Maintenance.jsp: unconfirmed long operations: " + missing);
+    }
+
+    /**
+     * Both layouts declared a footer tile and neither rendered it, so the
+     * login and simple pages were the only admin screens with no footer.
+     */
+    @Test
+    void theLoginAndSimpleLayoutsRenderTheirFooter() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : List.of("tiles/tiles-loginpage.jsp", "tiles/tiles-simplepage.jsp")) {
+            if (!jsp(layout).contains("${tile_footer}")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts declaring but never including tile_footer: " + missing);
+    }
+
+    /**
+     * Six ids from a pre-Bootstrap centring scheme, none with a CSS rule for
+     * years, still wrapping the content of three layouts.
+     */
+    @Test
+    void noLayoutStillCarriesTheDeadCentringScaffolding() {
+        List<String> found = new ArrayList<>();
+        for (String layout : TILES_LAYOUTS) {
+            String src = jsp(layout);
+            if (src.contains("leftcontent") || src.contains("centercontent")
+                    || src.contains("rightcontent") || src.contains("id=\"footer\"")) {
+                found.add(layout);
+            }
+        }
+        assertTrue(found.isEmpty(), "dead #leftcontent-era scaffolding still in: " + found);
+    }
+
+    /** Inline style attributes on admin screens belong in roller.css. */
+    @Test
+    void theSweptScreensCarryNoInlineStyleAttributes() {
+        List<String> found = new ArrayList<>();
+        for (String screen : List.of("tiles/tiles-installpage.jsp", "core/Setup.jsp",
+                "core/CreateWeblog.jsp")) {
+            if (jsp(screen).contains("style=\"")) {
+                found.add(screen);
+            }
+        }
+        assertTrue(found.isEmpty(), "inline style= attributes remain in: " + found);
+    }
+
+    /**
+     * form-vertical is a Bootstrap 3 class that does nothing in Bootstrap 5.
+     * .form-stacked is this repo's real labels-above conversion.
+     */
+    @Test
+    void noAdminFormRidesTheDeadBootstrap3FormClass() {
+        List<String> found = new ArrayList<>();
+        for (String screen : List.of("admin/Maintenance.jsp", "admin/UserAdmin.jsp")) {
+            if (jsp(screen).contains("form-vertical")) {
+                found.add(screen);
+            }
+        }
+        assertTrue(found.isEmpty(), "dead form-vertical still in: " + found);
+    }
 }

@@ -26,7 +26,7 @@
 <spring:message code="userAdmin.prompt.searchUser" />
 </p>
 
-<form method="post" action="<c:url value='/roller-ui/admin/userAdmin!edit.rol'/>" class="form-vertical">
+<form method="post" action="<c:url value='/roller-ui/admin/userAdmin!edit.rol'/>" class="form-stacked">
     <sec:csrfInput/>
 
     <div class="mb-3">

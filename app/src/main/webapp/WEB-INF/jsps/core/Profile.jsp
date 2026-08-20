@@ -95,7 +95,7 @@
         </div>
     </div>
 
-    <button type="submit" id="saveButton" class="btn btn-secondary"><spring:message code="generic.save"/></button>
+    <button type="submit" id="saveButton" class="btn btn-primary"><spring:message code="generic.save"/></button>
 
     <input class="btn" type="button" value="<spring:message code='generic.cancel'/>"
            onclick="window.location='<c:url value='/roller-ui/menu.rol'/>'"/>

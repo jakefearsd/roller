@@ -48,5 +48,11 @@
     </div>
 </div>
 
+<footer class="footer">
+    <div class="container-fluid">
+        <jsp:include page="${tile_footer}"/>
+    </div>
+</footer>
+
 </body>
 </html>

@@ -38,30 +38,25 @@
             <jsp:include page="${tile_banner}" />
         </div>
 
-        <div id="wrapper" class="container-fluid">
+        <%-- The six left/center/right wrapper ids this used to carry were a
+             pre-Bootstrap centring scheme; not one of them has had a CSS rule
+             for years. Bootstrap's grid does the centring. --%>
+        <div class="container-fluid">
             <div class="row">
-                <div id="leftcontent_wrap" class="col-md-1">
-                    <div id="leftcontent">
-                    </div>
-                </div>
-
-                <div id="centercontent_wrap" class="col-md-10">
-                    <div id="centercontent">
-                        <jsp:include page="${tile_messages}" />
-                        <jsp:include page="${tile_content}" />
-                    </div>
-                </div>
-
-                <div id="rightcontent_wrap" class="col-md-1">
-                    <div id="rightcontent">
-                    </div>
-                </div>
+                <div class="col-md-1"></div>
+                <main class="col-md-10">
+                    <jsp:include page="${tile_messages}" />
+                    <jsp:include page="${tile_content}" />
+                </main>
+                <div class="col-md-1"></div>
             </div>
         </div>
 
-        <div id="footer">
-            <jsp:include page="${tile_footer}" />
-        </div>
+        <footer class="footer">
+            <div class="container-fluid">
+                <jsp:include page="${tile_footer}" />
+            </div>
+        </footer>
 
     </body>
 </html>

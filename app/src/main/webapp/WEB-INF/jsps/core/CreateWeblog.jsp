@@ -19,8 +19,6 @@
 
 <p class="subtitle"><spring:message code="createWebsite.prompt"/></p>
 
-<br/>
-
 <form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/createWeblog!save.rol"
            method="post" cssClass="validate-form form-stacked">
 
@@ -52,7 +50,7 @@
             <spring:message code="createWebsite.weblogUrl" />:&nbsp;
             <%-- A live preview of the URL the handle will produce, not an
                  error: --accent, not the red it used to be hardcoded to. --%>
-            ${absoluteSiteURL}/<span id="handlePreview" style="color:var(--accent)"><c:choose><c:when test="${bean.handle != null}">${fn:escapeXml(bean.handle)}</c:when><c:otherwise>handle</c:otherwise></c:choose></span>
+            ${absoluteSiteURL}/<span id="handlePreview" class="handle-preview"><c:choose><c:when test="${bean.handle != null}">${fn:escapeXml(bean.handle)}</c:when><c:otherwise>handle</c:otherwise></c:choose></span>
             <br>
         </div>
     </div>
@@ -92,12 +90,12 @@
             <form:select path="theme" items="${themes}" itemValue="id" itemLabel="name" cssClass="form-select"
                          onchange="previewImage(this[selectedIndex].value)"/>
             <p id="themedescription"></p>
-            <p><img id="themeThumbnail" src="" class="img-fluid img-thumbnail" style="max-width: 30em" /></p>
+            <p><img id="themeThumbnail" src="" alt="" class="img-fluid img-thumbnail theme-thumb"/></p>
 
         </div>
     </div>
 
-    <button type="submit" class="btn btn-secondary"><spring:message code="createWebsite.button.save"/></button>
+    <button type="submit" class="btn btn-primary"><spring:message code="createWebsite.button.save"/></button>
 
     <input class="btn" type="button" value="<spring:message code='generic.cancel'/>"
            onclick="window.location='<c:url value='/roller-ui/menu.rol'/>'"/>

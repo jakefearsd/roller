@@ -154,6 +154,7 @@
             <input type="checkbox" class="form-check-input" name="bean.enabled" value="true"
                 <c:if test="${bean.enabled}">checked="checked"</c:if>
                    title="<spring:message code='userAdmin.tip.enabled'/>"/>
+            <div class="form-text"><spring:message code="userAdmin.enabled.signsOutNote"/></div>
         </div>
     </div>
 
@@ -194,7 +195,7 @@
                             <c:url var="newEntry" value="/roller-ui/authoring/entryAdd.rol">
                                 <c:param name="weblog" value="${perms.weblog.handle}" />
                             </c:url>
-                            <img src='<c:url value="/images/page_white_edit.png"/>' />
+                            <span class="bi bi-pencil" aria-hidden="true"></span>
                             <a href='${newEntry}'>
                             <spring:message code="userAdmin.newEntry" /></a>
                         </td>
@@ -202,7 +203,7 @@
                             <c:url var="editEntries" value="/roller-ui/authoring/entries.rol">
                                 <c:param name="weblog" value="${perms.weblog.handle}" />
                             </c:url>
-                            <img src='<c:url value="/images/page_white_edit.png"/>' />
+                            <span class="bi bi-pencil" aria-hidden="true"></span>
                             <a href='${editEntries}'>
                             <spring:message code="userAdmin.editEntries" /></a>
                         </td>
@@ -210,7 +211,7 @@
                             <c:url var="manageWeblog" value="/roller-ui/authoring/weblogConfig.rol">
                                 <c:param name="weblog" value="${perms.weblog.handle}" />
                             </c:url>
-                            <img src='<c:url value="/images/page_white_edit.png"/>' />
+                            <span class="bi bi-pencil" aria-hidden="true"></span>
                             <a href='${manageWeblog}'>
                             <spring:message code="userAdmin.manage" /></a>
                         </td>
@@ -229,11 +230,8 @@
         </c:if>
     </c:if>
 
-    <br />
-    <br />
-
-    <div class="control">
-        <button type="submit" class="btn btn-secondary" id="save_button">
+    <div class="control mt-4">
+        <button type="submit" class="btn btn-primary" id="save_button">
             <spring:message code="generic.save"/>
         </button>
         <a href="<c:url value='${cancelAction}'/>" class="btn">
@@ -246,11 +244,16 @@
 <c:if test="${actionName == 'modifyUser' && not empty bean.id}">
     <%-- A second, sibling form -- HTML does not allow nesting one inside the
          save form above, and this button posts to a different action. --%>
+    <spring:message code="userAdmin.sendPasswordLink.confirm"
+                    arguments="${fn:escapeXml(bean.userName)},${fn:escapeXml(bean.emailAddress)}"
+                    var="sendLinkConfirm"/>
     <form method="post" action="<c:url value='/roller-ui/admin/userEdit!sendPasswordLink.rol'/>"
-          class="mt-3">
+          class="mt-3" onsubmit="return confirm('${fn:escapeXml(sendLinkConfirm)}');">
         <sec:csrfInput/>
         <input type="hidden" name="bean.userName" value="${fn:escapeXml(bean.userName)}"/>
-        <button type="submit" class="btn btn-secondary">
+        <%-- Quiet, not a second save: this mails a real person. .delete-link is
+             deliberately NOT used -- its red hover means destructive. --%>
+        <button type="submit" class="btn btn-link p-0">
             <spring:message code="userAdmin.sendPasswordLink"/>
         </button>
     </form>

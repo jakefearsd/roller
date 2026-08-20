@@ -76,7 +76,7 @@
                     <div class="col-sm-9">
                         <input type="checkbox" name="${fn:escapeXml(pd.name)}" value="true"
                             <c:if test="${properties[pd.name].value == 'true'}">checked="checked"</c:if>
-                               onchange="formChanged()" class="boolean"/>
+                               onchange="formChanged()" class="form-check-input boolean"/>
                     </div>
                 </div>
             </c:if>
@@ -136,7 +136,7 @@
 
     </c:forEach>
 
-    <input id="saveButton" class="btn btn-secondary mt-3" type="submit" value="<spring:message code="generic.save"/>"/>
+    <button id="saveButton" class="btn btn-primary mt-3" type="submit"><spring:message code="generic.save"/></button>
 
 </form>
 
@@ -144,7 +144,7 @@
 <script type="text/javascript">
 
     function formChanged() {
-        var saveBookmarkButton = $('#saveButton:first');
+        var saveButton = $('#saveButton:first');
         var error = false;
 
         $("input").each(function () {
@@ -183,7 +183,7 @@
 
         });
 
-        saveBookmarkButton.prop("disabled", error);
+        saveButton.prop("disabled", error);
     }
 
 </script>
