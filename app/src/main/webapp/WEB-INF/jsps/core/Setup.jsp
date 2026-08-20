@@ -96,7 +96,7 @@
                     <spring:message code="frontpageConfig.frontpageBlogName" var="frontpageBlogLabel"/>
                     <label class="col-sm-3 col-form-label" for="frontpageBlog">${frontpageBlogLabel}</label>
                     <div class="col-sm-9">
-                        <select id="frontpageBlog" name="frontpageBlog" class="form-select">
+                        <select name="frontpageBlog" id="frontpageBlog" class="form-select">
                             <%-- Mirrors Maintenance.jsp's placeholder pattern: a
                                  disabled option carries "selected" only while
                                  nothing is configured yet, so a re-save can never
