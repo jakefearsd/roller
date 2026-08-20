@@ -308,6 +308,15 @@ body.pf a:hover {
     font-size: .90625rem;
 }
 
+.pf-search-empty,
+.pf-search-error {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 0 1.25rem 2rem;
+    color: var(--pf-muted);
+    font-size: .90625rem;
+}
+
 #searchAgain select,
 #searchAgain input.button {
     background: var(--pf-surface);

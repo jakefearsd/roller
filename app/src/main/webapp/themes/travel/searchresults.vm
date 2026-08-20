@@ -40,6 +40,18 @@
         </nav>
         #end
     </div>
+    ## SearchResultsModel.getErrorMessage() carries a WebloggerException's
+    ## message (Lucene down, a malformed query) and was rendered by nothing,
+    ## so a broken index looked exactly like a search that found nothing.
+    ## Reported here with a FIXED sentence -- the exception text is internal
+    ## detail on a public page, for the same reason the Velocity error
+    ## templates may not print it. Checked before the zero-hit branch,
+    ## because a failed search also reports zero hits.
+    #if($utils.isNotEmpty($model.errorMessage))
+    <p class="tg-search-error">Search is temporarily unavailable. Please try again shortly.</p>
+    #elseif($model.hits == 0)
+    <p class="tg-search-empty">No entries matched that search. Try a different word, or a shorter phrase.</p>
+    #end
     <div class="tg-cards">
         #showWeblogEntriesPager($pager)
     </div>

@@ -95,6 +95,75 @@ class PageRoutingTest {
         assertEquals(200, get("").getStatus());
     }
 
+    // ------------------------------------------- the fallback page template
+
+    /**
+     * Switches the weblog to the one bundled theme with no {@code _page}
+     * template (frontpage; journal/portfolio/travel all ship one), which is
+     * what makes {@code WEB-INF/velocity/templates/weblog/page.vm} -- the
+     * {@code StaticThemeTemplate} fallback every unthemed page falls through
+     * to -- the thing that actually renders. Nothing else in the suite
+     * renders it, which is how it kept a head the other reader templates had
+     * all outgrown.
+     */
+    private void useAThemeWithNoPageTemplate() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setEditorTheme("frontpage");
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.endSession(true);
+        RenderingTestSupport.clearRenderCaches();
+    }
+
+    @Test
+    void theFallbackPageTemplateAdvertisesTheFeedAndShipsItsAssetsInTheHead()
+            throws Exception {
+        useAThemeWithNoPageTemplate();
+
+        String body = get("/about").getContentAsString();
+
+        assertTrue(body.contains("<h1>About Us</h1>"),
+                "this must be the naked fallback template, not a theme _page:\n" + body);
+        int head = body.indexOf("</head>");
+        assertTrue(head > 0, "the fallback page must have a head:\n" + body);
+        String headBlock = body.substring(0, head);
+
+        assertTrue(headBlock.contains("rel=\"alternate\" type=\"application/atom+xml\""),
+                "the fallback page was the only reader template with no feed "
+                        + "discovery link:\n" + body);
+        assertTrue(headBlock.contains("/webjars/photoswipe/"),
+                "#showGalleryAssets belongs in the head, beside the grid styles:\n" + body);
+        assertTrue(headBlock.contains("/webjars/leaflet/"),
+                "#showMapAssets belongs in the head:\n" + body);
+        assertTrue(headBlock.contains(".video-embed"),
+                "#showEmbedAssets belongs in the head:\n" + body);
+        assertTrue(headBlock.contains("audience-hp"),
+                "#showAudienceAssets belongs in the head:\n" + body);
+    }
+
+    /**
+     * {@code WeblogWrapper#getName} is pre-escaped
+     * ({@code StringEscapeUtils.escapeHtml4}, WeblogWrapper.java:96); the
+     * fallback template wrapped it in {@code $utils.escapeHTML} again in
+     * both the {@code <title>} and the header link, so an '&' in a weblog
+     * name rendered as {@code &amp;amp;}. Every theme template already
+     * emits it bare.
+     */
+    @Test
+    void theFallbackPageTemplateEscapesTheWeblogNameExactlyOnce() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setName("Rock & Roll Weblog");
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.endSession(true);
+        useAThemeWithNoPageTemplate();
+
+        String body = get("/about").getContentAsString();
+
+        assertTrue(body.contains("Rock &amp; Roll Weblog"),
+                "the weblog name must render escaped exactly once:\n" + body);
+        assertFalse(body.contains("&amp;amp;"),
+                "a pre-escaped wrapper value must not be escaped again:\n" + body);
+    }
+
     @Test
     void aReservedContextStillRoutesToItsOwnView() throws Exception {
         assertFalse(get("/tags").getStatus() == 404,

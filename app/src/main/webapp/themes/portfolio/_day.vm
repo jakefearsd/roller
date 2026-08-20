@@ -13,7 +13,15 @@
     <article class="pf-entry">
         #if($entry.featuredImage)
         <figure class="pf-hero">
-            #showResponsiveImage($entry.featuredImage $entry.title "100vw" "pf-hero-img")
+        ## Alt text: #showResponsiveImage escapes its $alt argument, and
+        ## $entry.title is ALREADY stored escaped -- passing it straight in
+        ## made a screen reader announce "&amp;amp;". The image's own
+        ## MediaFile.altText (raw, W4) is the right description when it has
+        ## one; the title is only a fallback, unescaped first so the macro's
+        ## single escape lands on the plain text.
+            #set($heroAlt = $utils.unescapeHTML($entry.title))
+            #if($utils.isNotEmpty($entry.featuredImage.altText))#set($heroAlt = $entry.featuredImage.altText)#end
+            #showResponsiveImage($entry.featuredImage $heroAlt "100vw" "pf-hero-img")
         </figure>
         #end
         <div class="pf-entry-body">
@@ -40,7 +48,9 @@
             #end
     <figure class="pf-card"#if($cardAspect) style="--ar:$cardAspect"#end>
         <a class="pf-card-link" href="$url.entry($entry.anchor)">
-            #showResponsiveImage($entry.featuredImage $entry.title "(max-width: 640px) 100vw, 40vw" "pf-card-img")
+            #set($cardAlt = $utils.unescapeHTML($entry.title))
+            #if($utils.isNotEmpty($entry.featuredImage.altText))#set($cardAlt = $entry.featuredImage.altText)#end
+            #showResponsiveImage($entry.featuredImage $cardAlt "(max-width: 640px) 100vw, 40vw" "pf-card-img")
             <span class="pf-card-title">$entry.title</span>
         </a>
     </figure>

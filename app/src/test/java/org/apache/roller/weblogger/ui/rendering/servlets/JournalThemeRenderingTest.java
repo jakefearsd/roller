@@ -360,6 +360,32 @@ class JournalThemeRenderingTest {
                         + "stored/wrapped escaped:\n" + body);
     }
 
+    /**
+     * The opposite direction to the test above, and the reason these two are
+     * neighbours: {@code WeblogCategoryWrapper#getName} returns the pojo's
+     * value untouched ({@code return this.pojo.getName();},
+     * WeblogCategoryWrapper.java:63), so a category name reaches a template
+     * <em>raw</em>. {@code weblog.vm}'s {@code #showWeblogCategoryLinksList}
+     * -- which journal's weblog.vm, page.vm and permalink.vm all call --
+     * emitted it bare, so a category named with an '&' rendered invalid
+     * markup and one named with a '<' rendered live markup. {@code
+     * _day.vm}'s category link already escaped; the nav list did not.
+     */
+    @Test
+    void theCategoryNavListEscapesARawCategoryName() throws Exception {
+        TestUtils.setupWeblogCategory(TestUtils.getManagedWebsite(weblog), "Tools & Toys");
+        TestUtils.endSession(true);
+
+        String body = render("/" + HANDLE + "/");
+
+        assertTrue(body.contains("Tools &amp; Toys"),
+                "the category nav list must escape the raw wrapper value:\n" + body);
+        assertFalse(body.contains(">Tools & Toys<"),
+                "an unescaped category name is invalid markup at best:\n" + body);
+        assertFalse(body.contains("&amp;amp;"),
+                "escaping a raw value once must not become twice:\n" + body);
+    }
+
     @Test
     void aDraftPageStill404sUnderTheJournalTheme() throws Exception {
         savePage("still-drafting", "Not Yet", "Nothing to see.", WeblogPage.PubStatus.DRAFT);

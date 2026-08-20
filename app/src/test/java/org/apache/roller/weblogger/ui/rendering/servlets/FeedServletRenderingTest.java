@@ -1,6 +1,7 @@
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -77,6 +78,36 @@ class FeedServletRenderingTest {
         assertTrue(body.contains("<?xml-stylesheet type=\"text/xsl\" "
                         + "href=\"http://localhost:8080/roller/roller-ui/styles/atom.xsl\" media=\"screen\"?>"),
                 "a styled feed must carry the atom.xsl stylesheet PI:\n" + body);
+    }
+
+    /**
+     * {@code UserWrapper#getScreenName} sanitizes tags but does not
+     * entity-escape ({@code HTMLSanitizer.conditionallySanitizeText}), so a
+     * screen name reaches {@code feeds.vm} carrying live {@code &} and
+     * {@code <} characters. {@code <author><name>} is an Atom text
+     * construct, not {@code type="html"} like the title beside it: a bare
+     * {@code &} there is not "unescaped display text", it is a malformed
+     * XML document that a strict feed reader refuses outright. Every other
+     * value in the macro already went through {@code $utils.escapeXML};
+     * the author name was the one that did not.
+     */
+    @Test
+    void theAtomAuthorNameIsXmlEscaped() throws Exception {
+        User managed = WebloggerFactory.getWeblogger().getUserManager()
+                .getUserByUserName(user.getUserName());
+        managed.setScreenName("Ampersand & Sons");
+        WebloggerFactory.getWeblogger().getUserManager().saveUser(managed);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.setupWeblogEntry("author-entry", weblog, user);
+        TestUtils.endSession(true);
+
+        MockHttpServletResponse response = feed("entries/atom");
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+        assertTrue(body.contains("<name>Ampersand &amp; Sons</name>"),
+                "the author name must be XML-escaped inside the Atom text "
+                        + "construct:\n" + body);
     }
 
     /**

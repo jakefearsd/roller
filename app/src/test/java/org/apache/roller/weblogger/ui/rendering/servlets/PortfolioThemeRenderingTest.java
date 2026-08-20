@@ -19,6 +19,7 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
@@ -302,6 +303,68 @@ class PortfolioThemeRenderingTest {
                 "the permalink h1 must render escaped exactly once:\n" + permalinkBody);
         assertFalse(permalinkBody.contains("&amp;amp;"),
                 "the stored-escaped title must not be double-encoded:\n" + permalinkBody);
+    }
+
+    /**
+     * The alt attribute is the third escaping direction on this page and the
+     * one that was wrong in both halves. {@code #showResponsiveImage} escapes
+     * its {@code $alt} argument on the way out
+     * ({@code alt="$utils.escapeHTML($alt)"}), and {@code _day.vm} handed it
+     * {@code $entry.title} -- already stored escaped -- so a screen reader
+     * announced the literal text "Salt &amp;amp; Light". Worse, the entry
+     * title was being used as the image's description at all: the image now
+     * speaks for itself through {@code MediaFile.altText} when it has one
+     * (W4's whole point), and only falls back to the unescaped title.
+     */
+    @Test
+    void theHeroAltTextPrefersTheImagesOwnDescription() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "alt-image");
+        String imageId = image.getId();
+        setAltText(imageId, "A hawk over the marsh & mudflats");
+        TestUtils.endSession(true);
+        WeblogEntry entry = entryWithFeaturedImage("alt-entry", imageId);
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
+        managed.setTitle(StringEscapeUtils.escapeHtml4("Salt & Light"));
+        mgr.saveWeblogEntry(managed);
+        TestUtils.endSession(true);
+
+        String body = render("/" + HANDLE + "/entry/alt-entry");
+
+        assertTrue(body.contains("alt=\"A hawk over the marsh &amp; mudflats\""),
+                "the image's own alt text must win over the entry title:\n" + body);
+        assertFalse(body.contains("&amp;amp;"),
+                "nothing on this page may double-encode:\n" + body);
+    }
+
+    @Test
+    void theHeroAltTextFallsBackToAnUnescapedTitle() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "noalt-image");
+        String imageId = image.getId();
+        TestUtils.endSession(true);
+        WeblogEntry entry = entryWithFeaturedImage("noalt-entry", imageId);
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
+        managed.setTitle(StringEscapeUtils.escapeHtml4("Salt & Light"));
+        mgr.saveWeblogEntry(managed);
+        TestUtils.endSession(true);
+
+        String body = render("/" + HANDLE + "/entry/noalt-entry");
+
+        assertTrue(body.contains("alt=\"Salt &amp; Light\""),
+                "an image with no alt text falls back to the title, escaped "
+                        + "exactly once:\n" + body);
+        assertFalse(body.contains("&amp;amp;"),
+                "the stored-escaped title must be unescaped before the macro "
+                        + "escapes it again:\n" + body);
+    }
+
+    private void setAltText(String mediaFileId, String altText) throws Exception {
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFile managed = mfMgr.getMediaFile(mediaFileId);
+        managed.setAltText(altText);
+        mfMgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), managed);
+        WebloggerFactory.getWeblogger().flush();
     }
 
     /**

@@ -1,16 +1,25 @@
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
+import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
+import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
+import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
+import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+
+import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -198,6 +207,93 @@ class PageServletRenderingTest {
         assertEquals(200, response.getStatus());
         assertTrue(response.getContentAsString().contains("category-entry"),
                 "category page must list the entry");
+    }
+
+    /**
+     * {@code #showAutodiscoveryLinks} built its tag-feed title from
+     * {@code $model.tags.toString()} -- the model holds a {@code List}, so
+     * the title in the head literally read "Entries tagged [travel] (Atom)",
+     * brackets and all, and a multi-tag URL added the list's ", " separator
+     * inside them. The category branch beside it had the other half of the
+     * problem: {@code $model.weblogCategory.name} comes off a wrapper that
+     * returns the raw pojo value, unescaped, into an attribute.
+     */
+    @Test
+    void theTagFeedDiscoveryTitleIsAPlainJoinedList() throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry("tagged-entry", weblog, user);
+        entry.addTag("travel");
+        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.endSession(true);
+        // No bundled theme ships a TAGSINDEX template, so /<handle>/tags/<tag>
+        // 404s everywhere; the reachable route to a non-null $model.tags is
+        // the ?tags= parameter on a custom page (WeblogPageRequest:159).
+        saveCustomTemplate("tagfeed", "<head>#showAutodiscoveryLinks($model.weblog)</head>");
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/pagerenderblog/page/tagfeed");
+        request.setParameter("tags", "travel");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+        assertTrue(body.contains("title=\"Entries tagged travel (Atom)\""),
+                "the tag feed's discovery title must read as prose, not as a "
+                        + "Java List.toString():\n" + body);
+        assertFalse(body.contains("tagged [travel]"),
+                "the List's brackets must not reach the head:\n" + body);
+    }
+
+    /**
+     * The category branch of the same macro. A category name reaches the
+     * template raw ({@code WeblogCategoryWrapper#getName} returns
+     * {@code this.pojo.getName()}), and it lands inside a double-quoted
+     * {@code title} attribute -- so a name carrying a quote or an '&' broke
+     * the tag outright.
+     */
+    @Test
+    void theCategoryFeedDiscoveryTitleEscapesTheRawCategoryName() throws Exception {
+        WeblogCategory category = TestUtils.setupWeblogCategory(
+                TestUtils.getManagedWebsite(weblog), "Tools & Toys");
+        TestUtils.setupWeblogEntry("cat-entry", category,
+                TestUtils.getManagedWebsite(weblog), user);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page",
+                        "/pagerenderblog/category/Tools & Toys");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+        assertTrue(body.contains("title=\"Entries for category Tools &amp; Toys (Atom)\""),
+                "the category feed's discovery title must escape the raw "
+                        + "wrapper value:\n" + body);
+    }
+
+    /** A CUSTOM template gets {@code link = name} and is served at
+     * {@code /<handle>/page/<link>}, on a shared-theme weblog too. */
+    private void saveCustomTemplate(String name, String contents) throws Exception {
+        WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogTemplate template = new WeblogTemplate();
+        template.setWeblog(TestUtils.getManagedWebsite(weblog));
+        template.setAction(ComponentType.CUSTOM);
+        template.setName(name);
+        template.setLink(name);
+        template.setDescription(name);
+        template.setHidden(false);
+        template.setNavbar(false);
+        template.setLastModified(new Date());
+        wmgr.saveTemplate(template);
+        CustomTemplateRendition rendition =
+                new CustomTemplateRendition(template, RenditionType.STANDARD);
+        rendition.setTemplate(contents);
+        rendition.setTemplateLanguage(TemplateLanguage.VELOCITY);
+        wmgr.saveTemplateRendition(rendition);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+        RenderingTestSupport.clearRenderCaches();
     }
 
     @Test

@@ -19,6 +19,7 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
@@ -320,6 +321,53 @@ class TravelThemeRenderingTest {
         assertFalse(permalinkBody.contains("&amp;amp;"),
                 "no reference may double-encode a value that is already "
                         + "wrapper-escaped:\n" + permalinkBody);
+    }
+
+    /**
+     * The travel half of the alt-text fix {@code PortfolioThemeRenderingTest}
+     * documents: {@code #showResponsiveImage} escapes its {@code $alt}
+     * argument, so handing it the stored-escaped {@code $entry.title} made a
+     * screen reader read "&amp;amp;" aloud. The image's own
+     * {@code MediaFile.altText} now wins, and the title fallback is
+     * unescaped first.
+     */
+    @Test
+    void theCardAltTextPrefersTheImagesOwnDescription() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "alt-image");
+        String imageId = image.getId();
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFile managedImage = mfMgr.getMediaFile(imageId);
+        managedImage.setAltText("The ring road at dusk, rain & low cloud");
+        mfMgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), managedImage);
+        WebloggerFactory.getWeblogger().flush();
+        TestUtils.endSession(true);
+        entryWithFeaturedImage("ring-road", imageId);
+
+        String body = render("/" + HANDLE + "/");
+
+        assertTrue(body.contains("alt=\"The ring road at dusk, rain &amp; low cloud\""),
+                "the image's own alt text must win over the entry title:\n" + body);
+        assertFalse(body.contains("&amp;amp;"), body);
+    }
+
+    @Test
+    void theCardAltTextFallsBackToAnUnescapedTitle() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "noalt-image");
+        String imageId = image.getId();
+        TestUtils.endSession(true);
+        WeblogEntry entry = entryWithFeaturedImage("noalt-entry", imageId);
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
+        managed.setTitle(StringEscapeUtils.escapeHtml4("Rock & Road"));
+        mgr.saveWeblogEntry(managed);
+        TestUtils.endSession(true);
+
+        String body = render("/" + HANDLE + "/");
+
+        assertTrue(body.contains("alt=\"Rock &amp; Road\""),
+                "an image with no alt text falls back to the title, escaped "
+                        + "exactly once:\n" + body);
+        assertFalse(body.contains("&amp;amp;"), body);
     }
 
     // -------------------------------------------------------------- _page

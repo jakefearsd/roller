@@ -114,6 +114,8 @@ body.tg img { max-width: 100%; height: auto; }
 .tg-pager { margin-top: 2rem; }
 .tg-pager a { font-weight: 600; text-decoration: none; }
 .tg-search-head { margin-bottom: 1.5rem; }
+.tg-search-empty,
+.tg-search-error { margin: 0 0 1.5rem; color: var(--tg-muted); }
 
 /* ---- permalink ---- */
 

@@ -12,7 +12,15 @@
     <article class="tg-entry">
         #if($entry.featuredImage)
         <figure class="tg-hero">
-            #showResponsiveImage($entry.featuredImage $entry.title "100vw" "tg-hero-img")
+        ## Alt text: #showResponsiveImage escapes its $alt argument, and
+        ## $entry.title is ALREADY stored escaped -- passing it straight in
+        ## made a screen reader announce "&amp;amp;". The image's own
+        ## MediaFile.altText (raw, W4) is the right description when it has
+        ## one; the title is only a fallback, unescaped first so the macro's
+        ## single escape lands on the plain text.
+            #set($heroAlt = $utils.unescapeHTML($entry.title))
+            #if($utils.isNotEmpty($entry.featuredImage.altText))#set($heroAlt = $entry.featuredImage.altText)#end
+            #showResponsiveImage($entry.featuredImage $heroAlt "100vw" "tg-hero-img")
         </figure>
         #end
         <h1 class="tg-entry-title">$entry.title</h1>
@@ -31,7 +39,9 @@
     <article class="tg-card">
         #if($entry.featuredImage)
         <a class="tg-card-media" href="$url.entry($entry.anchor)">
-            #showResponsiveImage($entry.featuredImage $entry.title "(max-width: 700px) 100vw, 33vw" "tg-card-img")
+            #set($cardAlt = $utils.unescapeHTML($entry.title))
+            #if($utils.isNotEmpty($entry.featuredImage.altText))#set($cardAlt = $entry.featuredImage.altText)#end
+            #showResponsiveImage($entry.featuredImage $cardAlt "(max-width: 700px) 100vw, 33vw" "tg-card-img")
         </a>
         #end
         <div class="tg-card-body">

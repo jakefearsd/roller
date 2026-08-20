@@ -372,6 +372,8 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 /* ---- search results ---- */
 
 .qj-search-head { margin-bottom: 1.5rem; }
+.qj-search-empty,
+.qj-search-error { margin: 0 0 1.5rem; color: var(--qj-ink-soft); }
 
 /* ---- contact form & newsletter subscribe ----
  * #showAudienceAssets/#showSubscribeForm inject these forms unscoped

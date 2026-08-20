@@ -9,15 +9,30 @@ markup so a page does not look foreign inside any of them.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
-    <title>#showPageTitle($model.page) : $utils.escapeHTML($model.weblog.name)</title>
+    ## $model.weblog.name is pre-escaped by WeblogWrapper#getName
+    ## (StringEscapeUtils.escapeHtml4) -- emit it bare, or it double-encodes
+    ## ("&amp;" -> "&amp;amp;"), same as every bundled theme does. The page
+    ## title is the opposite: PageBean.copyTo stores it raw, so #showPageTitle
+    ## escapes it.
+    <title>#showPageTitle($model.page) : $model.weblog.name</title>
+    #showAutodiscoveryLinks($model.weblog)
     #showSeoHead()
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href="$model.weblog.stylesheet">
     #showGalleryGridStyles()
+    ## These four belong in the head, beside the grid styles, exactly as every
+    ## bundled theme calls them: #showEmbedAssets and #showAudienceAssets bind
+    ## on DOMContentLoaded, and #showGalleryAssets/#showMapAssets ship
+    ## stylesheets whose late arrival at the end of <body> is a flash of
+    ## unstyled gallery/map.
+    #showGalleryAssets()
+    #showMapAssets()
+    #showEmbedAssets()
+    #showAudienceAssets()
 </head>
 <body>
 <header>
-    <p><a href="$url.home">$utils.escapeHTML($model.weblog.name)</a></p>
+    <p><a href="$url.home">$model.weblog.name</a></p>
     <nav>#showPageLinks($model.weblog)</nav>
 </header>
 <main>
@@ -26,9 +41,5 @@ markup so a page does not look foreign inside any of them.
         $model.page.renderedContent
     </article>
 </main>
-#showGalleryAssets()
-#showMapAssets()
-#showEmbedAssets()
-#showAudienceAssets()
 </body>
 </html>
