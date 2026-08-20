@@ -437,6 +437,15 @@ class TravelThemeRenderingTest {
                 "the site name must be the page's h1:\n" + body);
         assertEquals(1, countOf(body, "<h1"),
                 "a page must have exactly one h1 -- the site name:\n" + body);
+        // This fixture has no entries, so the same render also exercises the
+        // zero-entry branch -- and Velocity is lenient, so an #if whose
+        // reference failed to resolve would print as literal text here rather
+        // than failing (JournalThemeRenderingTest pins the wording; this pins
+        // that the branch evaluates at all in this theme).
+        assertTrue(body.contains("class=\"tg-list-empty\""),
+                "an empty entry list must say something:\n" + body);
+        assertFalse(body.contains("$pagerDays"),
+                "a reference Velocity could not resolve prints as literal text:\n" + body);
     }
 
     /** Occurrences of {@code needle} in {@code haystack}. */
