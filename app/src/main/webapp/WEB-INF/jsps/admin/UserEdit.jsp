@@ -73,7 +73,7 @@
                 <label class="col-sm-3 col-form-label" for="bean_userName"><spring:message code="userSettings.username"/></label>
                 <div class="col-sm-9">
                     <input type="text" id="bean_userName" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
-                           size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
+                           size="30" maxlength="30" onkeyup="formChanged()" class="form-control" autofocus
                            title="<spring:message code='userAdmin.tip.userName'/>"/>
                 </div>
             </div>
@@ -83,7 +83,8 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="bean_screenName"><spring:message code="userSettings.screenname"/></label>
         <div class="col-sm-9">
-            <input type="text" id="bean_screenName" name="bean.screenName" value="${fn:escapeXml(bean.screenName)}"
+            <input type="text" id="bean_screenName" name="bean.screenName"
+                   <c:if test="${actionName == 'modifyUser'}">autofocus</c:if> value="${fn:escapeXml(bean.screenName)}"
                    size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
                    title="<spring:message code='userAdmin.tip.screenName'/>"/>
         </div>
@@ -102,6 +103,7 @@
             <label class="col-sm-3 col-form-label" for="bean_password"><spring:message code="userSettings.password"/></label>
             <div class="col-sm-9">
                 <input type="password" id="bean_password" name="bean.password" size="30" maxlength="30"
+                       autocomplete="new-password"
                        onkeyup="formChanged()" class="form-control"
                        title="<spring:message code='userAdmin.tip.password'/>"/>
                 <c:if test="${actionName == 'createUser' && mailConfigured}">
@@ -262,7 +264,10 @@
 
 <script>
 
-    document.forms[0].elements[0].focus();
+    <%-- A script here used to focus the form's first element on load. The
+         first element of this form is the hidden CSRF input, so it focused
+         the hidden input -- i.e. nothing. The autofocus attribute on the
+         first real field does what it was trying to do. --%>
     let saveButton;
 
     $( document ).ready(function() {

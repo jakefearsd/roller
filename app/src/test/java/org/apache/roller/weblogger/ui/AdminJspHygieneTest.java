@@ -441,4 +441,52 @@ class AdminJspHygieneTest {
         }
         assertTrue(violations.isEmpty(), "unbound labels:\n  " + String.join("\n  ", violations));
     }
+
+    // ---------------------------------------------------------------- Task 17
+
+    /**
+     * Without autocomplete hints a password manager guesses, and its usual
+     * guess on a change-password form is "this is a login" -- so it offers
+     * the OLD password and then quietly stores the new one under the wrong
+     * entry. Every password field on these four screens says which it is.
+     */
+    @Test
+    void credentialFieldsDeclareTheirAutocompleteRole() {
+        List<String> missing = new ArrayList<>();
+        record Field(String file, String id, String role) { }
+        for (Field f : List.of(
+                new Field("core/Login.jsp", "j_username", "username"),
+                new Field("core/Login.jsp", "j_password", "current-password"),
+                new Field("core/ResetPassword.jsp", "passwordText", "new-password"),
+                new Field("core/ResetPassword.jsp", "passwordConfirm", "new-password"),
+                new Field("core/Profile.jsp", "passwordText", "new-password"),
+                new Field("core/Profile.jsp", "passwordConfirm", "new-password"),
+                new Field("admin/UserEdit.jsp", "bean_password", "new-password"))) {
+            if (!jsp(f.file()).contains("autocomplete=\"" + f.role() + "\"")) {
+                missing.add(f.file() + " #" + f.id() + " -> " + f.role());
+            }
+        }
+        assertTrue(missing.isEmpty(), "credential fields with no autocomplete role: " + missing);
+    }
+
+    /**
+     * Two screens ran {@code document.forms[0].elements[0].focus()}. In a form
+     * whose first element is the hidden CSRF input -- both of these -- that
+     * focuses the hidden input, i.e. nothing at all. The attribute does what
+     * the script was trying to do, and does it without a script.
+     */
+    @Test
+    void noScreenFocusesTheHiddenCsrfInput() {
+        List<String> found = new ArrayList<>();
+        for (String screen : List.of("admin/UserEdit.jsp", "core/CreateWeblog.jsp")) {
+            String src = jsp(screen);
+            if (src.contains("elements[0].focus()")) {
+                found.add(screen + " still focuses elements[0]");
+            }
+            if (!src.contains("autofocus")) {
+                found.add(screen + " has no autofocus replacement");
+            }
+        }
+        assertTrue(found.isEmpty(), String.join("; ", found));
+    }
 }

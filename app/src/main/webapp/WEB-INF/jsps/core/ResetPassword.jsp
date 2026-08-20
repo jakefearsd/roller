@@ -33,12 +33,14 @@
 
             <div class="mb-3">
                 <label for="passwordText" class="form-label"><spring:message code="resetPassword.newPassword"/></label>
-                <input type="password" class="form-control" name="passwordText" id="passwordText"/>
+                <input type="password" class="form-control" name="passwordText" id="passwordText"
+                       autocomplete="new-password" autofocus/>
             </div>
 
             <div class="mb-3">
                 <label for="passwordConfirm" class="form-label"><spring:message code="resetPassword.confirmPassword"/></label>
-                <input type="password" class="form-control" name="passwordConfirm" id="passwordConfirm"/>
+                <input type="password" class="form-control" name="passwordConfirm" id="passwordConfirm"
+                       autocomplete="new-password"/>
             </div>
 
             <sec:csrfInput/>

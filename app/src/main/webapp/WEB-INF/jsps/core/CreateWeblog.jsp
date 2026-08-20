@@ -29,7 +29,7 @@
         <spring:message code="generic.name" var="nameLabel"/>
         <label class="col-sm-3 col-form-label" for="name">${nameLabel}</label>
         <div class="col-sm-9">
-            <form:input path="name" id="name" cssClass="form-control" size="30" maxlength="30"
+            <form:input path="name" id="name" autofocus="autofocus" cssClass="form-control" size="30" maxlength="30"
                         data-msg-required="${nameRequired}" required="required"/>
         </div>
     </div>
@@ -106,8 +106,8 @@
 
 <script>
 
-    document.forms[0].elements[0].focus();
-
+    <%-- A script here used to focus the form's first element, which is the
+         hidden CSRF input -- not the name field. autofocus on the field. --%>
     var saveButton;
 
     $( document ).ready(function() {
