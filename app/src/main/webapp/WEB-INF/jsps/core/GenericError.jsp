@@ -21,3 +21,15 @@ To use: addError() messages and they will appear here.
 See CreateWeblogController.java for an example of this JSP.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
+
+<%-- The flash region above carries the specific reason (see
+     CreateWeblogController). This body exists so the page is never blank:
+     before it, a "weblog creation is disabled" answer rendered one alert on
+     an otherwise empty document -- and the alert auto-dismissed. --%>
+<div class="empty-state">
+    <p class="empty-state-title"><spring:message code="genericError.title"/></p>
+    <p class="empty-state-body"><spring:message code="genericError.body"/></p>
+    <a class="btn btn-primary" href="<c:url value='/roller-ui/menu.rol'/>">
+        <spring:message code="genericError.back"/>
+    </a>
+</div>

@@ -91,9 +91,8 @@
             <div class="card">
                 <div class="card-body roller-content-body">
 
-                    <jsp:include page="${tile_messages}"/>
-
                     <h2 class="roller-page-title"><spring:message code="${pageTitle}" text="${pageTitle}"/></h2>
+                    <jsp:include page="${tile_messages}"/>
                     <jsp:include page="${tile_content}"/>
 
                 </div>

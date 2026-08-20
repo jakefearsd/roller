@@ -19,35 +19,36 @@
 
 <script>
     $(document).ready(function () {
-        // Remove the alert box after 10 seconds
-        $(".alert").delay(10000).slideUp(200, function() {
+        // Auto-dismiss SUCCESS messages only, after 10 seconds. Errors stay:
+        // a banner that vanishes while it is being read is worse than none,
+        // and GenericError's whole body is this region.
+        // The success region IS the .alert element (#messages.alert); the
+        // descendant half of the selector keeps working if it ever wraps.
+        $("#messages.alert, #messages .alert").delay(10000).slideUp(200, function() {
             $(this).remove();
         });
     });
 </script>
-<style>
-    <%-- Alert message should not be bulleted  --%>
-    .alert ul {
-        list-style-type: none;
-        margin: 0;
-        padding: 0;
-    }
-
-</style>
-
 
 <%-- Success Messages --%>
 <c:if test="${not empty messages}">
-    <div id="messages" class="alert alert-success alert-dismissible fade show">
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        <c:forEach items="${messages}" var="msg"><div class="alert alert-info">${msg}</div></c:forEach>
+    <div id="messages" class="alert alert-success alert-dismissible fade show"
+         role="status" aria-live="polite">
+        <button type="button" class="btn-close" data-bs-dismiss="alert"
+                aria-label="<spring:message code='generic.close'/>"></button>
+        <ul>
+            <c:forEach items="${messages}" var="msg">
+                <li>${msg}</li>
+            </c:forEach>
+        </ul>
     </div>
 </c:if>
 
 <%-- Error Messages --%>
 <c:if test="${not empty errors}">
-    <div id="errors" class="alert alert-danger alert-dismissible fade show">
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div id="errors" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <button type="button" class="btn-close" data-bs-dismiss="alert"
+                aria-label="<spring:message code='generic.close'/>"></button>
         <ul>
             <c:forEach items="${errors}" var="error">
                 <li><c:out value="${error}" escapeXml="false"/></li>

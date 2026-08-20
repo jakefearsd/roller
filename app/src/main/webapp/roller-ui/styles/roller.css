@@ -1648,5 +1648,16 @@ div.image-controls input {
     --bs-alert-color: var(--ink);
 }
 
+/* Flash messages render as a list even when there is only one of them, so
+   the markup is the same shape whether one thing or five things happened.
+   Bullets would read as a checklist rather than a confirmation. Moved here
+   from an inline <style> block in tiles/messages.jsp -- that block was
+   re-emitted on every admin page render. */
+.alert ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
 
 
