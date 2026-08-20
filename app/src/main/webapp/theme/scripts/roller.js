@@ -238,9 +238,21 @@ if (typeof jQuery !== "undefined") {
  * correct escape for that position, the browser hands dataset.confirm the
  * exact literal text, and quotes and apostrophes are simply characters.
  *
- * Both events are handled. A click covers the submit buttons that route by
- * formaction (Maintenance); a submit covers a form whose confirmation belongs
- * to the whole form and can be reached by pressing Enter in a field.
+ * Both events are handled, and THE DIVISION BETWEEN THEM IS LOAD-BEARING: a
+ * click prompt and a submit prompt for the same action means two dialogs for
+ * one click, and the second one reads like a bug to the operator.
+ *
+ *   - click  owns data-confirm on a CONTROL: the button that routes by
+ *            formaction (Maintenance), a link, anything inside a form.
+ *   - submit owns data-confirm on the FORM itself, which is the only way to
+ *            catch a submit with no click behind it (Enter in a text field).
+ *
+ * The boundary is enforced in one place: the click handler's walk up the
+ * ancestors STOPS at the form. Without that stop it finds a form-level
+ * attribute, prompts, allows the native submit, and the submit handler --
+ * seeing the same attribute -- prompts again. That is not hypothetical; it
+ * shipped for one round on UserEdit's send-password-link form.
+ *
  * Capture phase, so this runs before any other handler commits to the action.
  */
 (function () {
@@ -251,8 +263,10 @@ if (typeof jQuery !== "undefined") {
         return !message || window.confirm(message);
     }
 
-    function nearestConfirmable(node) {
-        while (node && node.nodeType === 1) {
+    // Deliberately stops BEFORE the form: a form's own data-confirm belongs to
+    // the submit handler, and answering it here too would prompt twice.
+    function nearestConfirmableControl(node) {
+        while (node && node.nodeType === 1 && node.tagName !== "FORM") {
             if (node.hasAttribute && node.hasAttribute("data-confirm")) {
                 return node;
             }
@@ -262,7 +276,7 @@ if (typeof jQuery !== "undefined") {
     }
 
     document.addEventListener("click", function (event) {
-        var target = nearestConfirmable(event.target);
+        var target = nearestConfirmableControl(event.target);
         if (target && !confirmed(target)) {
             event.preventDefault();
             event.stopPropagation();
@@ -270,8 +284,9 @@ if (typeof jQuery !== "undefined") {
     }, true);
 
     document.addEventListener("submit", function (event) {
-        // A button's own data-confirm was already answered on the click that
-        // produced this submit; only the form's own attribute applies here.
+        // Only the form's OWN attribute, never a descendant's: a control's
+        // prompt was already answered by the click handler above, which is
+        // why that handler stops at the form and this one does not climb.
         var form = event.target;
         if (form.hasAttribute && form.hasAttribute("data-confirm") && !confirmed(form)) {
             event.preventDefault();

@@ -249,19 +249,26 @@
     <spring:message code="userAdmin.sendPasswordLink.confirm"
                     arguments="${fn:escapeXml(bean.userName)},${fn:escapeXml(bean.emailAddress)}"
                     var="sendLinkConfirm"/>
-    <%-- data-confirm on the FORM, not onsubmit="return confirm('...')". The
-         inline form fails OPEN: fn:escapeXml is an HTML escape in a JS-string
-         position, so an address like o'brien@example.com terminated the
-         string, the handler failed to compile, and the link was mailed with
-         no confirmation at all. See roller.js; and see Maintenance.jsp for
-         why this is single-escaped. --%>
     <form method="post" action="<c:url value='/roller-ui/admin/userEdit!sendPasswordLink.rol'/>"
-          class="mt-3" data-confirm="${sendLinkConfirm}">
+          class="mt-3">
         <sec:csrfInput/>
         <input type="hidden" name="bean.userName" value="${fn:escapeXml(bean.userName)}"/>
         <%-- Quiet, not a second save: this mails a real person. .delete-link is
-             deliberately NOT used -- its red hover means destructive. --%>
-        <button type="submit" class="btn btn-link p-0">
+             deliberately NOT used -- its red hover means destructive.
+
+             data-confirm on the BUTTON, not on the <form> and not an inline
+             onsubmit="return confirm('...')".
+             * Not inline, because fn:escapeXml is an HTML escape in a
+               JS-string position: an address like o'brien@example.com
+               terminated the string, the handler failed to compile, and the
+               link was mailed with NO confirmation at all.
+             * Not on the form, because roller.js answers a click by walking
+               UP from the clicked element -- so a form-level attribute
+               prompts once for the click and again for the submit that click
+               produces. Two dialogs for one action. The button is the shape
+               Maintenance.jsp already uses; keep new prompts on the control.
+             See Maintenance.jsp for why this is single-escaped. --%>
+        <button type="submit" class="btn btn-link p-0" data-confirm="${sendLinkConfirm}">
             <spring:message code="userAdmin.sendPasswordLink"/>
         </button>
     </form>

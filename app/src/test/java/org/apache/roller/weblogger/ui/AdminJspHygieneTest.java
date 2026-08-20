@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -77,7 +78,27 @@ class AdminJspHygieneTest {
      * {@code indexOf('>')} would mistake for the end of the element.
      */
     private static String elementCarrying(String src, String id) {
-        int marker = src.indexOf("id=\"" + id + "\"");
+        return elementAround(src, src.indexOf("id=\"" + id + "\""));
+    }
+
+    /**
+     * The tag name of the element that owns each occurrence of an attribute --
+     * "button", "form", and so on. Lets a test say WHERE an attribute sits, not
+     * merely that the file contains it somewhere.
+     */
+    private static List<String> ownersOf(String src, String attribute) {
+        List<String> owners = new ArrayList<>();
+        Matcher m = Pattern.compile(Pattern.quote(attribute) + "\\s*=").matcher(src);
+        while (m.find()) {
+            String element = elementAround(src, m.start());
+            Matcher name = Pattern.compile("^<\\s*([A-Za-z][A-Za-z0-9:_-]*)").matcher(element);
+            owners.add(name.find() ? name.group(1).toLowerCase(Locale.ROOT) : "?");
+        }
+        return owners;
+    }
+
+    /** The element bracketing {@code marker}, or "" if there is none. */
+    private static String elementAround(String src, int marker) {
         if (marker < 0) {
             return "";
         }
@@ -640,21 +661,47 @@ class AdminJspHygieneTest {
                         + String.join("\n  ", found));
     }
 
-    /** The three repaired prompts, and the handler that reads them back. */
+    /**
+     * The three repaired prompts, the handler that reads them back, and -- the
+     * part that matters -- WHERE each attribute sits.
+     *
+     * <p>All three belong on their CONTROL, not on the enclosing form. A
+     * form-level {@code data-confirm} is answered twice: roller.js's click
+     * handler walks up from the clicked button and finds it, the operator
+     * confirms, the native submit proceeds, and the submit handler finds the
+     * same attribute and asks again. Two dialogs for one click. That shipped
+     * for one round on UserEdit's send-password-link form, so this test names
+     * the owning element rather than trusting the file to contain the string.
+     */
     @Test
-    void theRepairedPromptsUseTheDataConfirmSeam() {
-        List<String> missing = new ArrayList<>();
-        if (jsp("admin/Maintenance.jsp").split("data-confirm=", -1).length - 1 != 2) {
-            missing.add("admin/Maintenance.jsp needs two data-confirm buttons");
-        }
-        if (!jsp("admin/UserEdit.jsp").contains("data-confirm=")) {
-            missing.add("admin/UserEdit.jsp send-password-link form needs data-confirm");
+    void theRepairedPromptsSitOnTheirControlNotTheirForm() {
+        List<String> wrong = new ArrayList<>();
+        record Screen(String file, int expected) { }
+        for (Screen screen : List.of(new Screen("admin/Maintenance.jsp", 2),
+                new Screen("admin/UserEdit.jsp", 1))) {
+            List<String> owners = ownersOf(withoutJspComments(jsp(screen.file())), "data-confirm");
+            if (owners.size() != screen.expected()) {
+                wrong.add(screen.file() + " has " + owners.size()
+                        + " data-confirm attributes, expected " + screen.expected());
+            }
+            for (String owner : owners) {
+                if (!"button".equals(owner)) {
+                    wrong.add(screen.file() + " puts data-confirm on <" + owner
+                            + ">; it belongs on the button (a form-level one prompts twice)");
+                }
+            }
         }
         String js = read(Path.of("src/main/webapp/theme/scripts/roller.js"));
         if (!js.contains("data-confirm")) {
-            missing.add("theme/scripts/roller.js has no data-confirm handler");
+            wrong.add("theme/scripts/roller.js has no data-confirm handler");
         }
-        assertTrue(missing.isEmpty(), String.join("; ", missing));
+        // The general defence behind the convention: the click handler's walk
+        // must stop at the form, or a form-level attribute double-prompts
+        // again the moment someone adds one.
+        if (!js.contains("node.tagName !== \"FORM\"")) {
+            wrong.add("roller.js: the click handler's ancestor walk must stop at the form");
+        }
+        assertTrue(wrong.isEmpty(), String.join("; ", wrong));
     }
 
     /**
