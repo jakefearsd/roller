@@ -312,6 +312,12 @@ class FrontpageRenderingTest {
                 "the contributing weblog must be listed in the full directory:\n" + body);
         assertTrue(body.contains("class=\"fd-letters\""),
                 "the A-Z letter index must be present:\n" + body);
+        // directory.vm #sets $fdPageTitle before including _header, which is
+        // the only thing that distinguishes this tab's <title> from the front
+        // door's -- they were identical, and #includeTemplate is a #parse, so
+        // if context sharing ever stops working this is where it shows.
+        assertTrue(body.contains("<title>Weblog Directory : "),
+                "the directory page must name itself in the title:\n" + body);
     }
 
     /**
@@ -445,5 +451,41 @@ class FrontpageRenderingTest {
 
         assertFalse(body.contains("/analytics/"),
                 "no site id means no Umami script must be injected:\n" + body);
+    }
+
+    // -------------------------------------------------- document shell (a11y)
+
+    /**
+     * The front door's shell, same contract as the three per-weblog themes'
+     * (see {@code JournalThemeRenderingTest#theDocumentShellDeclaresItsLanguageAndOffersASkipLink}):
+     * a BCP-47 {@code lang}, a skip link ahead of the top bar, its
+     * {@code #main} target, and one {@code <h1>} -- the site name. The
+     * "Latest across the site" / "Weblogs" strap lines were {@code <p>} until
+     * the 2026-08-20 sweep, so the page's sections had no headings at all.
+     */
+    @Test
+    void theDocumentShellDeclaresItsLanguageAndOffersASkipLink() throws Exception {
+        contributorEntry("shell-check");
+
+        String body = render("/" + SITE_HANDLE + "/");
+
+        assertTrue(body.contains("<html lang=\"en-US\">"),
+                "the stored en_US locale must reach the page as the BCP-47 tag "
+                        + "en-US:\n" + body);
+        assertFalse(body.contains("lang=\"en_US\""),
+                "the Java locale form is not a language tag:\n" + body);
+        assertTrue(body.contains("href=\"#main\">Skip to content</a>"),
+                "the skip link must render:\n" + body);
+        assertTrue(body.contains("id=\"main\""),
+                "the skip link's target id must exist on <main>:\n" + body);
+        assertTrue(body.indexOf("href=\"#main\"") < body.indexOf("<header"),
+                "the skip link must come before the header it exists to skip:\n" + body);
+        assertTrue(body.contains("<h1 class=\"fd-site\">"),
+                "the site name must be the page's h1:\n" + body);
+        assertTrue(body.contains("<h2 class=\"fd-label\">Latest across the site</h2>"),
+                "each section strap line must be a heading, not a paragraph:\n" + body);
+        assertTrue(body.contains("<span class=\"live\" aria-hidden=\"true\">"),
+                "the always-green live dot is decorative and must be hidden from "
+                        + "assistive technology:\n" + body);
     }
 }

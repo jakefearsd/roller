@@ -25,10 +25,10 @@
         </figure>
         #end
         <div class="pf-entry-body">
-            <h1 class="pf-entry-title">$entry.title</h1>
+            <h2 class="pf-entry-title">$entry.title</h2>
             <div class="pf-entry-content">$entry.displayContent</div>
             <p class="pf-entry-meta">
-                $utils.formatDate($entry.pubTime, "MMMM d, yyyy")
+                <time datetime="$utils.formatIso8601Day($entry.pubTime)">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</time>
                 &middot; <a href="$url.category($entry.category.name)">$utils.escapeHTML($entry.category.name)</a>
                 #if($utils.isUserAuthorizedToAuthor($entry.website))
                 &middot; <a href="$url.editEntry($entry.anchor)">Edit</a>
@@ -51,14 +51,14 @@
             #set($cardAlt = $utils.unescapeHTML($entry.title))
             #if($utils.isNotEmpty($entry.featuredImage.altText))#set($cardAlt = $entry.featuredImage.altText)#end
             #showResponsiveImage($entry.featuredImage $cardAlt "(max-width: 640px) 100vw, 40vw" "pf-card-img")
-            <span class="pf-card-title">$entry.title</span>
+            <h3 class="pf-card-title">$entry.title</h3>
         </a>
     </figure>
         #else
     <figure class="pf-card pf-card-text">
         <a class="pf-card-link" href="$url.entry($entry.anchor)">
-            <span class="pf-card-title">$entry.title</span>
-            <span class="pf-card-date">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</span>
+            <h3 class="pf-card-title">$entry.title</h3>
+            <time class="pf-card-date" datetime="$utils.formatIso8601Day($entry.pubTime)">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</time>
         </a>
     </figure>
         #end

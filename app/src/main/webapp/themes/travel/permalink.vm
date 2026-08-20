@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="$model.weblog.getLanguageTag()">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,6 +8,7 @@
     ## (StringEscapeUtils.escapeHtml4) -- emit it bare, or it double-encodes
     ## ("&amp;" -> "&amp;amp;"), same as frontpage/weblog.vm's $blog.name.
     <title>#showEntryTitle($model.weblogEntry) : $model.weblog.name</title>
+    <link href="$url.absoluteSite/favicon.svg" rel="icon" type="image/svg+xml" />
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href="$model.weblog.stylesheet">
@@ -20,9 +21,10 @@
 </head>
 <!-- permalink -->
 <body class="tg">
+<a class="tg-skip" href="#main">Skip to content</a>
 
 <header class="tg-header">
-    <p class="tg-name"><a href="$url.home">$model.weblog.name</a></p>
+    <h1 class="tg-name"><a href="$url.home">$model.weblog.name</a></h1>
     <nav class="tg-nav">
         #showWeblogCategoryLinksList()
         <ul>
@@ -31,17 +33,17 @@
     </nav>
 </header>
 
-<main class="tg-main tg-main-entry">
+<main class="tg-main tg-main-entry" id="main">
     #set($pager = $model.getWeblogEntriesPager())
     #showWeblogEntriesPager($pager)
 
-    <nav class="tg-pager">
+    <nav class="tg-pager" aria-label="More entries">
         #showNextPrevEntriesControl($pager)
     </nav>
 </main>
 
 <footer class="tg-footer">
-    <form class="tg-search" method="get" action="$url.search">
+    <form class="tg-search" role="search" method="get" action="$url.search">
         <input type="search" name="q" placeholder="Search guides" aria-label="Search">
     </form>
     #showSubscribeForm($model.weblog "Get new guides by email")

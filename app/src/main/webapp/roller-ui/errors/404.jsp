@@ -66,6 +66,26 @@
             a {
                 color: #06c;
             }
+            /* The :root above already declares color-scheme: light dark, which
+               tells the browser the page supports both -- but every rule here
+               was a light-only literal, so on a dark-preferring machine the
+               declaration produced a dark UA canvas behind a #f5f5f5 card and
+               nothing else. These are the same four values inverted. */
+            @media (prefers-color-scheme: dark) {
+                body {
+                    background: #16181a;
+                    color: #e6e6e6;
+                }
+                .code {
+                    color: #8a8a8a;
+                }
+                p {
+                    color: #b4b4b4;
+                }
+                a {
+                    color: #6ab0ff;
+                }
+            }
         </style>
     </head>
     <body>

@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="$model.weblog.getLanguageTag()">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,7 +7,15 @@
     ## $model.weblog.name is pre-escaped by WeblogWrapper#getName
     ## (StringEscapeUtils.escapeHtml4) -- emit it bare, or it double-encodes
     ## ("&amp;" -> "&amp;amp;"), same as frontpage/weblog.vm's $blog.name.
+    ## $model.term is already escaped by SearchResultsModel#getTerm
+    ## (escapeXml10), so it is emitted bare here exactly like
+    ## $model.weblog.name above; escaping it again would double-encode.
+    #if($utils.isNotEmpty($model.term))
+    <title>Search: $model.term : $model.weblog.name</title>
+    #else
     <title>Search results : $model.weblog.name</title>
+    #end
+    <link href="$url.absoluteSite/favicon.svg" rel="icon" type="image/svg+xml" />
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href="$model.weblog.stylesheet">
@@ -20,9 +28,10 @@
 </head>
 <!-- searchresults -->
 <body class="tg">
+<a class="tg-skip" href="#main">Skip to content</a>
 
 <header class="tg-header">
-    <p class="tg-name"><a href="$url.home">$model.weblog.name</a></p>
+    <h1 class="tg-name"><a href="$url.home">$model.weblog.name</a></h1>
     <nav class="tg-nav">
         <ul>
         #showPageLinks($model.weblog)
@@ -30,12 +39,12 @@
     </nav>
 </header>
 
-<main class="tg-main">
+<main class="tg-main" id="main">
     #set($pager = $model.getWeblogEntriesPager())
     <div class="tg-search-head">
         #showWeblogSearchAgainForm($model.weblog)
         #if($model.hits > 0)
-        <nav class="tg-pager">
+        <nav class="tg-pager" aria-label="More search results">
             #showNextPrevSearchControl($pager)
         </nav>
         #end

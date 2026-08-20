@@ -4,7 +4,12 @@ not supply a template named _page. Kept close to the themes' own permalink
 markup so a page does not look foreign inside any of them.
 *#
 <!DOCTYPE html>
-<html lang="$utils.escapeHTML($model.weblog.locale)">
+## lang must be a BCP-47 tag; $model.weblog.locale is Java's stored form
+## ("en_US"), which no user agent recognises -- so this used to declare a
+## language and effectively have none. WeblogWrapper#getLanguageTag does the
+## conversion, and needs no escaping: Locale#toLanguageTag emits "und" for
+## anything ill-formed rather than passing it through.
+<html lang="$model.weblog.getLanguageTag()">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

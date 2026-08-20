@@ -16,11 +16,15 @@
         ## page -- one line above, in qj-head, and itself a link home -- so
         ## repeating it here next to the category nav stated the same thing
         ## three times inside 100px.
-        <p class="qj-crumb">$utils.escapeHTML($entry.category.name)</p>
-        <h1 class="qj-h1">$entry.title</h1>
+        ## Linked, not plain text: the crumb is the only route from a
+        ## reading view back to the rest of that category, and the
+        ## .qj-crumb a rule in journal-custom.css was written for a link
+        ## that had never been emitted.
+        <p class="qj-crumb"><a href="$url.category($entry.category.name)">$utils.escapeHTML($entry.category.name)</a></p>
+        <h2 class="qj-h1">$entry.title</h2>
         <p class="qj-byline">
             <span>By $utils.escapeHTML($entry.creator.screenName)</span>
-            <span class="d">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</span>
+            <time class="d" datetime="$utils.formatIso8601Day($entry.pubTime)">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</time>
         </p>
         <div class="qj-prose">$entry.displayContent</div>
     </article>
@@ -28,7 +32,10 @@
 #else
 #foreach($entry in $entries)
 <article class="qj-entry">
-    <p class="qj-date">$utils.formatDate($entry.pubTime, "MMM dd")<br><span class="y">$utils.formatDate($entry.pubTime, "yyyy")</span></p>
+    ## "MMM d", not "MMM dd": the zero-padded form ("Mar 04") is a machine's
+    ## way of writing a date. The ISO value a machine actually wants is on the
+    ## <time> element, where it belongs.
+    <p class="qj-date"><time datetime="$utils.formatIso8601Day($entry.pubTime)">$utils.formatDate($entry.pubTime, "MMM d")<br><span class="y">$utils.formatDate($entry.pubTime, "yyyy")</span></time></p>
     <div>
         <h3 class="qj-title"><a href="$url.entry($entry.anchor)">$entry.title</a></h3>
         ## Every row gets a line of prose. The search description is the author's

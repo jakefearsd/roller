@@ -6,7 +6,9 @@
 ## contributing weblog's URL), and a "from <weblog>" credit.
 ## Per docs/design/journal/frontpage-front-door.html's .fd-post.
 <div class="fd-post">
-    <span class="d">$utils.formatDate($entry.pubTime, "MMM dd")</span>
+    ## "MMM d" rather than the zero-padded "MMM dd"; the machine-readable
+    ## form lives in the <time> element's datetime attribute.
+    <time class="d" datetime="$utils.formatIso8601Day($entry.pubTime)">$utils.formatDate($entry.pubTime, "MMM d")</time>
     <div>
         <p class="t"><a href="$utils.escapeHTML($entry.permalink)">$utils.truncateNicely($utils.removeHTML($entry.title), 50, 50, "...")</a></p>
         ## $entry.website.name is a WeblogWrapper property, already escaped

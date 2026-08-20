@@ -207,13 +207,13 @@ class TravelThemeRenderingTest {
         String body = render("/" + HANDLE + "/entry/faroe-islands");
 
         assertTravelHead(body);
-        assertTrue(body.contains("<main class=\"tg-main tg-main-entry\">"),
+        assertTrue(body.contains("<main class=\"tg-main tg-main-entry\" id=\"main\">"),
                 "the permalink must use the narrower reading column:\n" + body);
         assertTrue(body.contains("<figure class=\"tg-hero\">"),
                 "and lead with the hero figure:\n" + body);
         assertTrue(body.contains("class=\"tg-hero-img\""),
                 "whose image is the featured image:\n" + body);
-        assertTrue(body.contains("<h1 class=\"tg-entry-title\">"),
+        assertTrue(body.contains("<h2 class=\"tg-entry-title\">"),
                 "the entry title must be the page's h1:\n" + body);
         assertTrue(body.contains("<div class=\"tg-entry-content\">"),
                 "and the content must open the measured column:\n" + body);
@@ -231,7 +231,7 @@ class TravelThemeRenderingTest {
         String body = render("/" + HANDLE + "/entry/packing-list");
 
         assertTravelHead(body);
-        assertTrue(body.contains("<h1 class=\"tg-entry-title\">"), body);
+        assertTrue(body.contains("<h2 class=\"tg-entry-title\">"), body);
         assertFalse(body.contains("<figure class=\"tg-hero\">"),
                 "no featured image means no empty hero figure:\n" + body);
     }
@@ -393,7 +393,7 @@ class TravelThemeRenderingTest {
         assertTravelHead(body);
         assertTrue(body.contains("class=\"tg-header\""),
                 "the page must wear the travel header chrome:\n" + body);
-        assertTrue(body.contains("<h1 class=\"tg-entry-title\">About This Guide</h1>"),
+        assertTrue(body.contains("<h2 class=\"tg-entry-title\">About This Guide</h2>"),
                 "the page title must render as the entry title:\n" + body);
         assertTrue(body.contains("<div class=\"tg-entry-content\">"),
                 "the page content must open the measured column:\n" + body);
@@ -405,5 +405,55 @@ class TravelThemeRenderingTest {
                         + "rendered body -- this is what actually proves the form renders:\n" + body);
         assertFalse(body.contains("<h1>About This Guide</h1>"),
                 "the naked fallback template's unstyled h1 must not be what renders:\n" + body);
+    }
+
+    // -------------------------------------------------- document shell (a11y)
+
+    /**
+     * The document shell every travel page shares: a BCP-47 {@code lang} (the
+     * stored locale is {@code en_US}, which is not a tag any user agent
+     * parses -- see {@code WeblogWrapper#getLanguageTag}), a skip link as the
+     * first focusable node, the {@code #main} target it points at, and exactly
+     * one {@code <h1>} -- the site name. Before the 2026-08-20 sweep the shell
+     * had none of the four.
+     */
+    @Test
+    void theDocumentShellDeclaresItsLanguageAndOffersASkipLink() throws Exception {
+
+        String body = render("/" + HANDLE + "/");
+
+        assertTrue(body.contains("<html lang=\"en-US\">"),
+                "the stored en_US locale must reach the page as the BCP-47 tag "
+                        + "en-US:\n" + body);
+        assertFalse(body.contains("lang=\"en_US\""),
+                "the Java locale form is not a language tag:\n" + body);
+        assertTrue(body.contains("href=\"#main\">Skip to content</a>"),
+                "the skip link must render:\n" + body);
+        assertTrue(body.contains("id=\"main\""),
+                "the skip link's target id must exist on <main>:\n" + body);
+        assertTrue(body.indexOf("href=\"#main\"") < body.indexOf("<header"),
+                "the skip link must come before the header it exists to skip:\n" + body);
+        assertTrue(body.contains("<h1 class=\"tg-name\">"),
+                "the site name must be the page's h1:\n" + body);
+        assertEquals(1, countOf(body, "<h1"),
+                "a page must have exactly one h1 -- the site name:\n" + body);
+        // This fixture has no entries, so the same render also exercises the
+        // zero-entry branch -- and Velocity is lenient, so an #if whose
+        // reference failed to resolve would print as literal text here rather
+        // than failing (JournalThemeRenderingTest pins the wording; this pins
+        // that the branch evaluates at all in this theme).
+        assertTrue(body.contains("class=\"tg-list-empty\""),
+                "an empty entry list must say something:\n" + body);
+        assertFalse(body.contains("$pagerDays"),
+                "a reference Velocity could not resolve prints as literal text:\n" + body);
+    }
+
+    /** Occurrences of {@code needle} in {@code haystack}. */
+    private static int countOf(String haystack, String needle) {
+        int n = 0;
+        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + 1)) {
+            n++;
+        }
+        return n;
     }
 }

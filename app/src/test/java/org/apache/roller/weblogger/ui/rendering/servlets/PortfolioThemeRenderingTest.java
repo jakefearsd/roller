@@ -200,7 +200,7 @@ class PortfolioThemeRenderingTest {
         assertTrue(body.contains("<picture>"), body);
         assertTrue(body.contains(BASE + "/mediaresource/" + imageId),
                 "the card image must come off the rendition ladder:\n" + body);
-        assertTrue(body.contains("<span class=\"pf-card-title\">grid-entry</span>"),
+        assertTrue(body.contains("<h3 class=\"pf-card-title\">grid-entry</h3>"),
                 "the card carries the title overlay:\n" + body);
         assertTrue(body.contains("<a class=\"pf-card-link\" href=\"" + BASE
                         + "/entry/grid-entry\">"),
@@ -217,18 +217,20 @@ class PortfolioThemeRenderingTest {
         assertPortfolioHead(body);
         assertTrue(body.contains("<figure class=\"pf-card pf-card-text\">"),
                 "imageless entries must still get a card:\n" + body);
-        assertTrue(body.contains("<span class=\"pf-card-title\">bare-entry</span>"), body);
+        assertTrue(body.contains("<h3 class=\"pf-card-title\">bare-entry</h3>"), body);
         assertFalse(body.contains("<picture>"),
                 "no responsive image may be emitted without a featured image:\n" + body);
         // The no-image card trades its former bare title for title + mono
         // date, the same $utils.formatDate idiom the permalink's
-        // .pf-entry-meta already uses ("MMMM d, yyyy").
+        // .pf-entry-meta already uses ("MMMM d, yyyy") -- now inside a
+        // <time datetime> so the day survives as a machine value too.
         assertTrue(DATE_SPAN.matcher(body).find(),
-                "the no-image card must carry a formatted pf-card-date span:\n" + body);
+                "the no-image card must carry a machine-readable pf-card-date:\n" + body);
     }
 
-    private static final Pattern DATE_SPAN =
-            Pattern.compile("<span class=\"pf-card-date\">[A-Za-z]+ \\d{1,2}, \\d{4}</span>");
+    private static final Pattern DATE_SPAN = Pattern.compile(
+            "<time class=\"pf-card-date\" datetime=\"\\d{4}-\\d{2}-\\d{2}\">"
+                    + "[A-Za-z]+ \\d{1,2}, \\d{4}</time>");
 
     // ------------------------------------------------------------- permalink
 
@@ -247,7 +249,7 @@ class PortfolioThemeRenderingTest {
         assertTrue(body.contains("class=\"pf-hero-img\""), body);
         assertTrue(body.contains("sizes=\"100vw\""),
                 "the hero is full-bleed, so it declares 100vw:\n" + body);
-        assertTrue(body.contains("<h1 class=\"pf-entry-title\">hero-entry</h1>"), body);
+        assertTrue(body.contains("<h2 class=\"pf-entry-title\">hero-entry</h2>"), body);
         assertTrue(body.contains("blah blah entry"),
                 "the entry content must render below the hero:\n" + body);
         assertFalse(body.contains("pf-comments"),
@@ -267,7 +269,7 @@ class PortfolioThemeRenderingTest {
         assertFalse(body.contains("pf-hero"),
                 "no hero markup may appear without a featured image:\n" + body);
         assertFalse(body.contains("<picture>"), body);
-        assertTrue(body.contains("<h1 class=\"pf-entry-title\">plain-entry</h1>"), body);
+        assertTrue(body.contains("<h2 class=\"pf-entry-title\">plain-entry</h2>"), body);
         assertTrue(body.contains("blah blah entry"), body);
     }
 
@@ -411,7 +413,7 @@ class PortfolioThemeRenderingTest {
         assertPortfolioHead(body);
         assertTrue(body.contains("class=\"pf-header\""),
                 "the page must wear the portfolio header chrome:\n" + body);
-        assertTrue(body.contains("<h1 class=\"pf-entry-title\">About This Work</h1>"),
+        assertTrue(body.contains("<h2 class=\"pf-entry-title\">About This Work</h2>"),
                 "the page title must render as the entry title, the same class "
                         + "the permalink uses:\n" + body);
         assertTrue(body.contains("class=\"pf-entry-content\">"),
@@ -447,7 +449,7 @@ class PortfolioThemeRenderingTest {
      * {@code anEntryWithoutAFeaturedImageBecomesAQuietTextCard} above) trades
      * its former flat empty box for a teal wash off the theme's new accent
      * token -- CSS only, the pinned {@code figure.pf-card.pf-card-text} /
-     * {@code span.pf-card-title} markup does not change.
+     * {@code h3.pf-card-title} markup does not change.
      */
     @Test
     void theNoImageCardGetsATealWashFromTheNewAccentToken() throws Exception {
@@ -484,5 +486,55 @@ class PortfolioThemeRenderingTest {
                 "search results reuse the justified grid:\n" + body);
         assertTrue(body.contains("id=\"searchAgain\""),
                 "the search-again form must be present:\n" + body);
+    }
+
+    // -------------------------------------------------- document shell (a11y)
+
+    /**
+     * The document shell every portfolio page shares: a BCP-47 {@code lang} (the
+     * stored locale is {@code en_US}, which is not a tag any user agent
+     * parses -- see {@code WeblogWrapper#getLanguageTag}), a skip link as the
+     * first focusable node, the {@code #main} target it points at, and exactly
+     * one {@code <h1>} -- the site name. Before the 2026-08-20 sweep the shell
+     * had none of the four.
+     */
+    @Test
+    void theDocumentShellDeclaresItsLanguageAndOffersASkipLink() throws Exception {
+
+        String body = render("/" + HANDLE);
+
+        assertTrue(body.contains("<html lang=\"en-US\">"),
+                "the stored en_US locale must reach the page as the BCP-47 tag "
+                        + "en-US:\n" + body);
+        assertFalse(body.contains("lang=\"en_US\""),
+                "the Java locale form is not a language tag:\n" + body);
+        assertTrue(body.contains("href=\"#main\">Skip to content</a>"),
+                "the skip link must render:\n" + body);
+        assertTrue(body.contains("id=\"main\""),
+                "the skip link's target id must exist on <main>:\n" + body);
+        assertTrue(body.indexOf("href=\"#main\"") < body.indexOf("<header"),
+                "the skip link must come before the header it exists to skip:\n" + body);
+        assertTrue(body.contains("<h1 class=\"pf-name\">"),
+                "the site name must be the page's h1:\n" + body);
+        assertEquals(1, countOf(body, "<h1"),
+                "a page must have exactly one h1 -- the site name:\n" + body);
+        // This fixture has no entries, so the same render also exercises the
+        // zero-entry branch -- and Velocity is lenient, so an #if whose
+        // reference failed to resolve would print as literal text here rather
+        // than failing (JournalThemeRenderingTest pins the wording; this pins
+        // that the branch evaluates at all in this theme).
+        assertTrue(body.contains("class=\"pf-list-empty\""),
+                "an empty entry list must say something:\n" + body);
+        assertFalse(body.contains("$pagerDays"),
+                "a reference Velocity could not resolve prints as literal text:\n" + body);
+    }
+
+    /** Occurrences of {@code needle} in {@code haystack}. */
+    private static int countOf(String haystack, String needle) {
+        int n = 0;
+        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + 1)) {
+            n++;
+        }
+        return n;
     }
 }

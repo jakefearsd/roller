@@ -11,7 +11,7 @@
     ## set($pager = $planet.getAggregationPager($since, $maxResults))
     ## The below pager code should work against either:
 
-    <p class="fd-label">Latest across the site</p>
+    <h2 class="fd-label">Latest across the site</h2>
     <div class="fd-posts">
     ## Pinned entries belong at the top of the front page -- that's the
     ## FIRST page of the pager (prevLink null), not the LAST (nextLink null).
@@ -28,7 +28,7 @@
     #end
     </div>
 
-    <nav class="fd-pager">
+    <nav class="fd-pager" aria-label="More entries">
     #if($pager.prevLink)
        <a href="$pager.prevLink">&lt; $pager.prevName</a>
     #end
@@ -66,7 +66,7 @@
 
 #set($newblogs = $site.getNewWeblogs($since, $maxResults))
 #if(!$newblogs.isEmpty())
-<p class="fd-label">Weblogs</p>
+<h2 class="fd-label">Weblogs</h2>
 <div class="fd-dir">
 ## $blog.name is a WeblogWrapper property -- WeblogWrapper#getName already
 ## runs it through StringEscapeUtils.escapeHtml4, so escaping it again here
@@ -76,7 +76,7 @@
 #foreach($blog in $newblogs)
     <a class="fd-blog" href="$utils.escapeHTML($blog.absoluteURL)">
         <p class="n">$blog.name</p>
-        <p class="h"><span class="live"></span>$utils.escapeHTML($blog.handle)</p>
+        <p class="h"><span class="live" aria-hidden="true"></span>$utils.escapeHTML($blog.handle)</p>
         #if($utils.isNotEmpty($blog.tagline))
         <p class="desc">$utils.escapeHTML($blog.tagline)</p>
         #end
@@ -90,7 +90,7 @@
 </div>
 
 <div class="fd-search">
-    <p class="fd-label">Search for blogs</p>
+    <h2 class="fd-label">Search for blogs</h2>
     #showWeblogSearchForm($model.weblog false)
 </div>
 

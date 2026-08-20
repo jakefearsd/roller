@@ -55,6 +55,10 @@
 }
 
 :root {
+    /* Light and dark palettes both exist below, so tell the browser -- see
+       journal-custom.css's :root for the full reasoning. */
+    color-scheme: light dark;
+
     /* Quiet Instrument -- light palette (default). Values are exactly
        docs/design/design-system.md's Light row / the .fd-light panel in
        docs/design/journal/frontpage-front-door.html -- no other colors. */
@@ -99,6 +103,22 @@ body.fd {
 body.fd a { color: inherit; }
 body.fd img { max-width: 100%; height: auto; }
 body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px; }
+
+/* Skip link -- see journal-custom.css's .qj-skip for why. */
+.fd-skip {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 10;
+    padding: .5rem .75rem;
+    background: var(--fd-surface);
+    color: var(--fd-ink);
+    border: 1px solid var(--fd-line);
+    border-radius: var(--fd-radius);
+    font-size: .90625rem;
+    text-decoration: none;
+}
+.fd-skip:focus { left: .75rem; top: .75rem; }
 
 /* ---- top bar ---- */
 
@@ -271,3 +291,6 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
     color: var(--fd-ink-soft);
 }
 .fd-footer a { color: var(--fd-ink-soft); }
+
+/* #showNextPrevSearchControl's hit count (was an <h3>, now a status line). */
+body.fd .search-summary { margin: 0 0 .75rem; font-size: .75rem; color: var(--fd-ink-soft); }

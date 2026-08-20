@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="$model.weblog.getLanguageTag()">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,7 +7,22 @@
     ## $model.weblog.name is pre-escaped by WeblogWrapper#getName
     ## (StringEscapeUtils.escapeHtml4) -- emit it bare, or it double-encodes
     ## ("&amp;" -> "&amp;amp;"), same as frontpage/weblog.vm's $blog.name.
+    ## The category and the tag views render through this same template and
+    ## used to share its title, so a reader with several tabs open -- or a
+    ## bookmark -- could not tell them apart. $model.weblogCategory.name comes
+    ## back RAW from WeblogCategoryWrapper#getName and is escaped here; the tag
+    ## list is joined by hand because List#toString would put its brackets into
+    ## the title (the same bug #showAutodiscoveryLinks fixed for its own).
+    #if($model.weblogCategory)
+    <title>$utils.escapeHTML($model.weblogCategory.name) : $model.weblog.name</title>
+    #elseif($model.tags && !$model.tags.isEmpty())
+    #set($tagTitle = "")
+    #foreach($titleTag in $model.tags)#if($tagTitle != "")#set($tagTitle = "${tagTitle}, ")#end#set($tagTitle = "${tagTitle}${titleTag}")#end
+    <title>Tagged $utils.escapeHTML($tagTitle) : $model.weblog.name</title>
+    #else
     <title>$model.weblog.name</title>
+    #end
+    <link href="$url.absoluteSite/favicon.svg" rel="icon" type="image/svg+xml" />
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href="$model.weblog.stylesheet">
@@ -20,9 +35,10 @@
 </head>
 <!-- weblog -->
 <body class="pf">
+<a class="pf-skip" href="#main">Skip to content</a>
 
 <header class="pf-header">
-    <p class="pf-name"><a href="$url.home">$model.weblog.name</a></p>
+    <h1 class="pf-name"><a href="$url.home">$model.weblog.name</a></h1>
     #if($utils.isNotEmpty($model.weblog.tagline))
     <p class="pf-tagline">$utils.escapeHTML($model.weblog.tagline)</p>
     #end
@@ -34,18 +50,33 @@
     </nav>
 </header>
 
-<main class="pf-main">
+<main class="pf-main" id="main">
     #set($pager = $model.getWeblogEntriesPager())
+    ## An entry list with nothing in it rendered as blank space, on the home
+    ## page, on a category nobody has filed under, and on a tag page reached
+    ## from a stale link. The wording differs per view because "nothing here
+    ## yet" means three different things to the reader in those three places.
+    #set($pagerDays = $pager.getEntries())
     <div class="pf-grid">
+        #if($pagerDays.isEmpty())
+        #if($model.weblogCategory)
+        <p class="pf-list-empty">Nothing has been filed under this category yet.</p>
+        #elseif($model.tags && !$model.tags.isEmpty())
+        <p class="pf-list-empty">Nothing carries that tag yet.</p>
+        #else
+        <p class="pf-list-empty">No work has been published here yet. The first piece will appear on this page.</p>
+        #end
+        #else
         #showWeblogEntriesPager($pager)
+        #end
     </div>
-    <nav class="pf-pager">
+    <nav class="pf-pager" aria-label="More entries">
         #showNextPrevEntriesControl($pager)
     </nav>
 </main>
 
 <footer class="pf-footer">
-    <form class="pf-search" method="get" action="$url.search">
+    <form class="pf-search" role="search" method="get" action="$url.search">
         <input type="search" name="q" placeholder="Search" aria-label="Search">
     </form>
     #showSubscribeForm($model.weblog "New work, by email")

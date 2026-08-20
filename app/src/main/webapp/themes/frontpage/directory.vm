@@ -1,3 +1,4 @@
+#set($fdPageTitle = "Weblog Directory")
 #includeTemplate($model.weblog "_header")
 
 #set($maxResults = 25)
