@@ -17,17 +17,6 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<style>
-
-</style>
-
-<script>
-    function onSelectDirectory(id) {
-        window.location = "?directoryId=" + id + "&weblog=" + '${actionWeblog.handle}';
-    }
-</script>
-
-
 <%-- ********************************************************************* --%>
 
 <%-- Subtitle and folder path --%>

@@ -261,11 +261,6 @@
                                               title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></span>
                                     </c:if>
 
-                                    <span class="button" id="addbutton-${mediaFile.id}">
-                                    <img id="addbutton-img${mediaFile.id}"
-                                         src="<c:url value="/images/add.png"/>"/>
-                                </span>
-
                                 </div>
 
                             </li>
@@ -436,11 +431,6 @@
     function onEditCancelled() {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).hide();
         $("#mediaFileEditor").attr('src', 'about:blank');
-    }
-
-    function onSelectDirectory(id) {
-        window.location = "<c:url value="/roller-ui/authoring/mediaFileView.rol"/>?directoryId="
-            + id + "&weblog=" + '${actionWeblog.handle}';
     }
 
     function onToggle() {

@@ -124,7 +124,7 @@
 
         <div id="accordion" style="margin-top:2em">
 
-        <div class="card" id="panel-plugins">
+        <div class="card" id="panel-advanced">
 
             <div class="card-header">
 

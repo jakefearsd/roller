@@ -99,7 +99,7 @@ function confirmMemberRemoval() {
     <c:if test="${not empty weblogPermissions}">
 
     <table class="rollertable table table-striped">
-        <tr class="rHeaderTr">
+        <tr>
            <th class="rollertable" width="20%">
                <spring:message code="memberPermissions.userName"/>
            </th>
@@ -116,15 +116,9 @@ function confirmMemberRemoval() {
                <spring:message code="memberPermissions.remove"/>
            </th>
         </tr>
-        <c:forEach items="${weblogPermissions}" var="perm" varStatus="rowstatus">
-            <c:choose>
-<c:when test="${rowstatus.index % 2 != 0}">
-                <tr class="rollertable_odd">
-            </c:when>
-            <c:otherwise>
-                <tr class="rollertable_even">
-            </c:otherwise>
-</c:choose><td class="rollertable">
+        <c:forEach items="${weblogPermissions}" var="perm">
+                <tr>
+                <td class="rollertable">
                     <span class="bi bi-person"></span>
 	                ${perm.user.userName}
                 </td>               

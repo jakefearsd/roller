@@ -21,11 +21,6 @@
 <hr size="1" noshade="noshade"/>
 
 <p>
-    <c:set var="categoryId" value="${bean.id}"/>
-    <c:set var="categoryName" value="${post.name}"/>
-    <c:set var="categoryDesc" value="${post.description}"/>
-    <c:set var="categoryImage" value="${post.image}"/>
-
     <%-- <button>, not <a>: a control that triggers a JS action rather than
          navigating should be a button (a11y sweep). id="addCategoryButton"
          is what CategoryIT keys on now that Categories.jsp's own empty-state
