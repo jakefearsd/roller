@@ -22,7 +22,7 @@
 <%-- ********************************************************************* --%>
 
 <%-- content --%>
-<textarea name="bean.text" id="edit_content" rows="18" tabindex="5" class="col-sm-12">${fn:escapeXml(bean.text)}</textarea>
+<textarea name="bean.text" id="edit_content" rows="18" class="col-sm-12">${fn:escapeXml(bean.text)}</textarea>
 
 <%-- The insert menu is generated from the shortcode registry (model attribute
      shortcodeCards), so adding a sixth shortcode means writing its handler and
@@ -37,10 +37,10 @@
     <ul class="dropdown-menu" aria-labelledby="shortcodeInsertButton">
         <c:forEach items="${shortcodeCards}" var="card">
             <li>
-                <a class="dropdown-item shortcode-card" href="#"
-                   data-shortcode="<c:out value='${card.name}'/>"
-                   data-snippet="<c:out value='${card.snippet}'/>"
-                   data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></a>
+                <button type="button" class="dropdown-item shortcode-card"
+                        data-shortcode="<c:out value='${card.name}'/>"
+                        data-snippet="<c:out value='${card.snippet}'/>"
+                        data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></button>
             </li>
         </c:forEach>
     </ul>
@@ -49,7 +49,8 @@
 <%-- mb-4 rather than a spacer.png with an inline min-height: the gap before
      the Summary card is margin, and margin is what should express it. --%>
 <div class="mb-4">
-    <a href="#" onClick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a>
+    <button type="button" class="btn btn-link p-0 align-baseline border-0"
+            onclick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></button>
 </div>
 
 <%-- summary --%>
@@ -68,7 +69,7 @@
     <div id="collapseSummaryEditor" class="collapse">
         <div class="card-body">
 
-            <textarea name="bean.summary" id="edit_summary" rows="10" tabindex="6" class="col-sm-12">${fn:escapeXml(bean.summary)}</textarea>
+            <textarea name="bean.summary" id="edit_summary" rows="10" class="col-sm-12">${fn:escapeXml(bean.summary)}</textarea>
 
         </div>
     </div>

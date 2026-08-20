@@ -95,13 +95,13 @@
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
-                                        <img border="0" src='${mediaFileThumbnailURL}'
+                                        <img src='${mediaFileThumbnailURL}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
                                              alt='${fn:escapeXml(mediaFile.name)}'/>
                                     </c:when>
 <c:otherwise>
-                                        <span class="bi bi-file-earmark"></span>
+                                        <span class="bi bi-file-earmark" aria-hidden="true"></span>
                                     </c:otherwise>
                                     </c:choose>
                                 </div>

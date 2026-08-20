@@ -69,7 +69,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfedit_bean_name"><spring:message code="generic.name"/></label>
         <div class="col-sm-9">
-            <input id="mfedit_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="35" maxlength="100" tabindex="1" class="form-control"/>
+            <input id="mfedit_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="35" maxlength="100" class="form-control"/>
         </div>
     </div>
 
@@ -106,7 +106,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfedit_bean_description"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
-            <textarea id="mfedit_bean_description" name="bean.description" rows="2" cols="50" tabindex="2" class="form-control">${fn:escapeXml(bean.description)}</textarea>
+            <textarea id="mfedit_bean_description" name="bean.description" rows="2" cols="50" class="form-control">${fn:escapeXml(bean.description)}</textarea>
         </div>
     </div>
 
@@ -122,21 +122,21 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfedit_bean_tagsAsString"><spring:message code="mediaFileEdit.tags"/></label>
         <div class="col-sm-9">
-            <input id="mfedit_bean_tagsAsString" type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="30" maxlength="100" tabindex="3" class="form-control"/>
+            <input id="mfedit_bean_tagsAsString" type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="30" maxlength="100" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfedit_bean_copyrightText"><spring:message code="mediaFileEdit.copyright"/></label>
         <div class="col-sm-9">
-            <input id="mfedit_bean_copyrightText" type="text" name="bean.copyrightText" value="${fn:escapeXml(bean.copyrightText)}" size="30" maxlength="100" tabindex="4" class="form-control"/>
+            <input id="mfedit_bean_copyrightText" type="text" name="bean.copyrightText" value="${fn:escapeXml(bean.copyrightText)}" size="30" maxlength="100" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfedit_bean_directoryId"><spring:message code="mediaFileEdit.directory"/></label>
         <div class="col-sm-9">
-            <select id="mfedit_bean_directoryId" name="bean.directoryId" class="form-select" tabindex="5">
+            <select id="mfedit_bean_directoryId" name="bean.directoryId" class="form-select">
                 <c:forEach items="${allDirectories}" var="opt">
                     <option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${fn:escapeXml(opt.name)}</option>
                 </c:forEach>
@@ -147,14 +147,14 @@
     <!-- original path from base URL of ctx/resources/ -->
     <c:if test="${rc:getBooleanProp('mediafile.originalPathEdit.enabled')}">
         <div id="originalPathdiv" class="miscControl">
-            <input type="text" name="bean.originalPath" value="${fn:escapeXml(bean.originalPath)}" id="originalPath" size="30" maxlength="100" tabindex="3" class="form-control"/>
+            <input type="text" name="bean.originalPath" value="${fn:escapeXml(bean.originalPath)}" id="originalPath" size="30" maxlength="100" class="form-control"/>
         </div>
     </c:if>
 
 
-    <input type="submit" tabindex="7" class="btn btn-success"
+    <input type="submit" class="btn btn-success"
            value="<spring:message code="generic.save"/>" name="saveButton"/>
-    <input type="button" tabindex="8" class="btn"
+    <input type="button" class="btn"
            value="<spring:message code="generic.cancel"/>" onClick="window.parent.onEditCancelled();"/>
 
 <sec:csrfInput/>
@@ -175,7 +175,7 @@
         <cropper-shade hidden></cropper-shade>
         <cropper-handle action="select" plain></cropper-handle>
         <cropper-selection id="cropSelection" initial-coverage="0.9" movable resizable>
-            <cropper-grid role="grid" covered></cropper-grid>
+            <cropper-grid role="presentation" covered></cropper-grid>
             <cropper-crosshair centered></cropper-crosshair>
             <cropper-handle action="move" theme-color="rgba(255, 255, 255, 0.35)"></cropper-handle>
             <cropper-handle action="n-resize"></cropper-handle>

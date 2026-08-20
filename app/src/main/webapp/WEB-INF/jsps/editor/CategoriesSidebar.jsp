@@ -18,7 +18,7 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <h3><spring:message code="mainPage.actions"/></h3>
-<hr size="1" noshade="noshade"/>
+<hr/>
 
 <p>
     <%-- <button>, not <a>: a control that triggers a JS action rather than

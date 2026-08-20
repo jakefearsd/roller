@@ -128,8 +128,8 @@
             <c:param name="weblog" value="${actionWeblog.handle}"/>
             <c:param name="bean.id" value="${post.id}"/>
         </c:url>
-        <a href="${editUrl}">
-            <span class="bi bi-pencil-square"
+        <a href="${editUrl}" aria-label="<spring:message code='generic.edit'/>: ${fn:escapeXml(post.title)}">
+            <span class="bi bi-pencil-square" aria-hidden="true"
                   title="<spring:message code="generic.edit"/>">
             </span>
         </a>
@@ -172,8 +172,9 @@
              without a hidden field per row. --%>
         <button type="submit" name="duplicateId" value="${post.id}"
                 class="btn btn-link p-0 align-baseline border-0"
+                aria-label="<spring:message code='generic.duplicate'/>: ${fn:escapeXml(post.title)}"
                 formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!duplicate.rol">
-            <span class="bi bi-files"
+            <span class="bi bi-files" aria-hidden="true"
                   title="<spring:message code="generic.duplicate"/>">
             </span>
         </button>

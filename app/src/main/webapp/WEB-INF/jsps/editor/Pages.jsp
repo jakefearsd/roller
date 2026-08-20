@@ -39,9 +39,10 @@
     <input type="hidden" name="removeId" id="removeId" value=""/>
     <sec:csrfInput/>
 
+    <c:choose>
+    <c:when test="${not empty pages}">
+
     <table class="rollertable table table-striped" width="100%">
-        <c:choose>
-        <c:when test="${not empty pages}">
 
             <tr>
                 <th class="rollertable"><spring:message code="weblogPagesForm.slug"/></th>
@@ -76,8 +77,8 @@
                     <td>${p.showInNav ? '&#10003;' : ''}</td>
                     <td class="data">${p.navOrder}</td>
                     <td>
-                        <a href="${editUrl}">
-                            <span class="bi bi-pencil-square" title="<spring:message code="generic.edit"/>"></span>
+                        <a href="${editUrl}" aria-label="<spring:message code='generic.edit'/>: ${fn:escapeXml(p.title)}">
+                            <span class="bi bi-pencil-square" aria-hidden="true" title="<spring:message code="generic.edit"/>"></span>
                         </a>
                     </td>
                     <td>
@@ -98,22 +99,21 @@
                 </tr>
             </c:forEach>
 
-        </c:when>
-        <c:otherwise>
-            <tr>
-                <td colspan="7">
-                    <div class="empty-state">
-                        <p class="empty-state-title"><spring:message code="weblogPagesForm.noneFound"/></p>
-                        <p class="empty-state-body"><spring:message code="empty.pages.body"/></p>
-                        <a href="${addUrl}" class="btn btn-primary">
-                            <spring:message code="weblogPagesForm.add"/>
-                        </a>
-                    </div>
-                </td>
-            </tr>
-        </c:otherwise>
-        </c:choose>
     </table>
+
+    </c:when>
+    <c:otherwise>
+
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="weblogPagesForm.noneFound"/></p>
+        <p class="empty-state-body"><spring:message code="empty.pages.body"/></p>
+        <a href="${addUrl}" class="btn btn-primary">
+            <spring:message code="weblogPagesForm.add"/>
+        </a>
+    </div>
+
+    </c:otherwise>
+    </c:choose>
 
 </form>
 

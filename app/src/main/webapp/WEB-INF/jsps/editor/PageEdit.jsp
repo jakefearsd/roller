@@ -146,10 +146,10 @@
             <ul class="dropdown-menu" aria-labelledby="shortcodeInsertButton">
                 <c:forEach items="${shortcodeCards}" var="card">
                     <li>
-                        <a class="dropdown-item shortcode-card" href="#"
-                           data-shortcode="<c:out value='${card.name}'/>"
-                           data-snippet="<c:out value='${card.snippet}'/>"
-                           data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></a>
+                        <button type="button" class="dropdown-item shortcode-card"
+                                data-shortcode="<c:out value='${card.name}'/>"
+                                data-snippet="<c:out value='${card.snippet}'/>"
+                                data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></button>
                     </li>
                 </c:forEach>
             </ul>
@@ -159,7 +159,8 @@
              before the SEO card is margin, and margin is what should express
              it. Same change as EntryEditor.jsp, whose shape this mirrors. --%>
         <div class="mb-4">
-            <a href="#" onclick="onClickPageMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a>
+            <button type="button" class="btn btn-link p-0 align-baseline border-0"
+                    onclick="onClickPageMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></button>
         </div>
 
         <%-- ============================================================ --%>

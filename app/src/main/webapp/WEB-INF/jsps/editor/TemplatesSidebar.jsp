@@ -18,7 +18,7 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <h3><spring:message code="pagesForm.addNewPage"/></h3>
-<hr size="1" noshade="noshade"/>
+<hr/>
 
 <form id="templateAdd" action="${pageContext.request.contextPath}/roller-ui/authoring/templates!add.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>

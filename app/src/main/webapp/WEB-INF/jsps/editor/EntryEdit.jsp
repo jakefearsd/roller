@@ -89,7 +89,7 @@
 
         <%-- title: the page's one piece of layout hierarchy. Large serif,
              borderless -- emphasis elsewhere is weight, never size. --%>
-        <input type="text" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255" tabindex="1"
+        <input type="text" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255"
                class="editor-title"
                placeholder="<spring:message code="weblogEdit.title"/>"
                aria-label="<spring:message code="weblogEdit.title"/>"/>

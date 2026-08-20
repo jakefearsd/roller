@@ -57,7 +57,7 @@
 
                     <td>${fn:escapeXml(category.description)}</td>
 
-                    <td align="center">
+                    <td class="text-center">
 
                         <c:set var="categoryId" value="${category.id}"/>
                         <c:set var="categoryName" value="${fn:escapeXml(category.name)}"/>
@@ -81,7 +81,7 @@
 
                     </td>
 
-                    <td class="rollertable" align="center">
+                    <td class="rollertable text-center">
                         <c:if test="${fn:length(allCategories) > 1}">
 
                             <c:set var="categoryId" value="${category.id}"/>

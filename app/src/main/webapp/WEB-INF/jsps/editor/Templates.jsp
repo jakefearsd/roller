@@ -54,10 +54,10 @@
                     <td style="vertical-align:middle">
                         <c:choose>
 <c:when test="${! p.hidden}">
-                            <img src='<c:url value="/images/page_white.png"/>' border="0" alt="icon"/>
+                            <img src='<c:url value="/images/page_white.png"/>' alt=""/>
                         </c:when>
 <c:otherwise>
-                            <img src='<c:url value="/images/page_white_gear.png"/>' border="0" alt="icon"/>
+                            <img src='<c:url value="/images/page_white_gear.png"/>' alt=""/>
                         </c:otherwise>
 </c:choose><c:url var="edit" value="/roller-ui/authoring/templateEdit.rol">
                             <c:param name="weblog" value="${actionWeblog.handle}"/>
@@ -90,7 +90,8 @@
 
                         </c:when>
 <c:otherwise>
-                            <span class="bi bi-lock"></span>
+                            <span class="bi bi-lock" role="img"
+                                  aria-label="<spring:message code='pagesForm.cannotDelete'/>"></span>
                         </c:otherwise>
 </c:choose></td>
 

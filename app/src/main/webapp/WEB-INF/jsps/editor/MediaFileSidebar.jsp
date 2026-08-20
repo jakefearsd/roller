@@ -21,7 +21,7 @@
 <h3><spring:message code="mediaFileSidebar.actions"/></h3>
 
 <div style="clear:right">
-    <span class="bi bi-image"></span>
+    <span class="bi bi-image" aria-hidden="true"></span>
     <c:url var="mediaFileAddURL" value="/roller-ui/authoring/mediaFileAdd.rol">
         <c:param name="weblog" value="${actionWeblog.handle}"/>
         <c:param name="directoryName" value="${directoryName}"/>
@@ -44,7 +44,7 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <div style="clear:right; margin-top: 1em">
 
-        <span class="bi bi-folder2-open"></span>
+        <span class="bi bi-folder2-open" aria-hidden="true"></span>
         <spring:message code="mediaFileView.addDirectory"/> <br />
 
         <label for="newDirectoryName">
@@ -60,7 +60,7 @@
     </form>
 </c:if>
 
-<hr size="1" noshade="noshade"/>
+<hr/>
 
 <h3><spring:message code="mediaFileView.search"/></h3>
 

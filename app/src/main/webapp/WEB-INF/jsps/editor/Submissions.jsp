@@ -58,9 +58,10 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <sec:csrfInput/>
 
+    <c:choose>
+    <c:when test="${not empty submissions}">
+
     <table class="rollertable table table-striped" width="100%">
-        <c:choose>
-        <c:when test="${not empty submissions}">
 
             <tr>
                 <th class="rollertable" width="3%">
@@ -120,19 +121,18 @@
                 </tr>
             </c:forEach>
 
-        </c:when>
-        <c:otherwise>
-            <tr>
-                <td colspan="6">
-                    <div class="empty-state">
-                        <p class="empty-state-title"><spring:message code="submissions.none"/></p>
-                        <p class="empty-state-body"><spring:message code="empty.inquiries.body"/></p>
-                    </div>
-                </td>
-            </tr>
-        </c:otherwise>
-        </c:choose>
     </table>
+
+    </c:when>
+    <c:otherwise>
+
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="submissions.none"/></p>
+        <p class="empty-state-body"><spring:message code="empty.inquiries.body"/></p>
+    </div>
+
+    </c:otherwise>
+    </c:choose>
 
     <c:if test="${not empty submissions}">
         <button type="submit" class="btn btn-danger" id="submissionsDeleteSelected">

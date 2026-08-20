@@ -48,8 +48,8 @@
                         </div>
 
                         <div class="col-md-2">
-                            <img align="center" class="mediaFileImage"
-                                 src='${newImage.thumbnailURL}' alt="thumbnail"/>
+                            <img class="mediaFileImage"
+                                 src='${newImage.thumbnailURL}' alt=""/>
                         </div>
 
                         <div class="col-md-9">

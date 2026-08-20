@@ -119,7 +119,7 @@ function confirmMemberRemoval() {
         <c:forEach items="${weblogPermissions}" var="perm">
                 <tr>
                 <td class="rollertable">
-                    <span class="bi bi-person"></span>
+                    <span class="bi bi-person" aria-hidden="true"></span>
 	                ${perm.user.userName}
                 </td>               
                 <td class="rollertable">

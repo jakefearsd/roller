@@ -176,7 +176,7 @@
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
-                                        <img border="0" src='${mediaFile.thumbnailURL}'
+                                        <img src='${mediaFile.thumbnailURL}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
                                              title='${fn:escapeXml(mediaFile.name)}'
@@ -184,7 +184,7 @@
                                     </c:when>
 <c:otherwise>
                                         <c:url var="mediaFileURL" value="/images/page.png"/>
-                                        <img border="0" src='${mediaFileURL}'
+                                        <img src='${mediaFileURL}'
                                              style="padding:40px 50px;"
                                              alt='${fn:escapeXml(mediaFile.name)}' />
                                     </c:otherwise>
@@ -197,8 +197,6 @@
                                            name="selectedMediaFiles"
                                            value="${mediaFile.id}"
                                            aria-label="${fn:escapeXml(mediaFile.name)}"/>
-                                    <input type="hidden" id="mediafileidentity"
-                                           value="${mediaFile.id}"/>
 
                                     <str:truncateNicely lower="47" upper="47">
                                         ${fn:escapeXml(mediaFile.name)}
@@ -232,7 +230,7 @@
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
-                                        <img border="0" src='${mediaFile.thumbnailURL}'
+                                        <img src='${mediaFile.thumbnailURL}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
                                              title='${fn:escapeXml(mediaFile.name)}'
@@ -240,7 +238,7 @@
                                     </c:when>
 <c:otherwise>
                                         <c:url var="mediaFileURL" value="/images/page.png"/>
-                                        <img border="0" src='${mediaFileURL}'
+                                        <img src='${mediaFileURL}'
                                              style="padding:40px 50px;" alt='${fn:escapeXml(mediaFile.name)}'/>
                                     </c:otherwise>
 </c:choose></div>
@@ -251,8 +249,6 @@
                                            name="selectedMediaFiles"
                                            value="${mediaFile.id}"
                                            aria-label="${fn:escapeXml(mediaFile.name)}"/>
-                                    <input type="hidden" id="mediafileidentity"
-                                           value="${mediaFile.id}">
 
                                     <str:truncateNicely lower="40" upper="50">
                                         ${fn:escapeXml(mediaFile.name)}
