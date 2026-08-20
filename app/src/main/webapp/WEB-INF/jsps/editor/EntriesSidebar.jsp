@@ -22,14 +22,15 @@
 
 <p><spring:message code="weblogEntryQuery.sidebarDescription"/></p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/entries.rol" method="post" class="form-vertical">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/entries.rol" method="get" class="form-vertical">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- ========================================================= --%>
     <%-- filter by category --%>
 
-    <label><spring:message code="weblogEntryQuery.label.category"/></label>
-    <select name="bean.categoryName" class="form-select" size="1">
+    <label for="entries_bean_categoryName"><spring:message code="weblogEntryQuery.label.category"/></label>
+    <select id="entries_bean_categoryName" name="bean.categoryName" class="form-select" size="1">
+<option value="" ${empty bean.categoryName ? 'selected' : ''}><spring:message code="weblogEntryQuery.label.anyCategory"/></option>
 <c:forEach items="${categories}" var="opt">
 <option value="${opt.name}" ${opt.name == bean.categoryName ? 'selected' : ''}>${opt.name}</option>
 </c:forEach>
@@ -38,26 +39,26 @@
     <%-- ========================================================= --%>
     <%-- filter by tag --%>
 
-    <label><spring:message code="weblogEntryQuery.label.tags"/></label>
-    <input type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="14" class="form-control"/>
+    <label for="entries_bean_tagsAsString"><spring:message code="weblogEntryQuery.label.tags"/></label>
+    <input type="text" id="entries_bean_tagsAsString" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="14" class="form-control"/>
 
     <%-- ========================================================= --%>
     <%-- filter by text --%>
 
-    <label><spring:message code="weblogEntryQuery.label.text"/></label>
-    <input type="text" name="bean.text" value="${fn:escapeXml(bean.text)}" size="14" class="form-control"/>
+    <label for="entries_bean_text"><spring:message code="weblogEntryQuery.label.text"/></label>
+    <input type="text" id="entries_bean_text" name="bean.text" value="${fn:escapeXml(bean.text)}" size="14" class="form-control"/>
 
     <%-- ========================================================= --%>
     <%-- filter by date --%>
 
     <div class="mb-3">
-        <label for="bean.startDateString" class="form-label">
+        <label for="entries_bean_startDateString" class="form-label">
             <spring:message code="weblogEntryQuery.label.startDate"/>
         </label>
         <div class="input-group">
 
-            <input type="text" name="bean.startDateString" value="${bean.startDateString}" readonly class="date-picker form-control"/>
-            <label for="bean.startDateString" class="input-group-text">
+            <input type="text" id="entries_bean_startDateString" name="bean.startDateString" value="${bean.startDateString}" placeholder="MM/DD/YY" class="date-picker form-control"/>
+            <label for="entries_bean_startDateString" class="input-group-text">
                 <span class="bi bi-calendar"></span>
             </label>
 
@@ -65,13 +66,13 @@
     </div>
 
     <div class="mb-3">
-        <label for="bean.endDateString" class="form-label">
+        <label for="entries_bean_endDateString" class="form-label">
             <spring:message code="weblogEntryQuery.label.endDate"/>
         </label>
         <div class="input-group">
 
-            <input type="text" name="bean.endDateString" value="${bean.endDateString}" readonly class="date-picker form-control"/>
-            <label for="bean.endDateString" class="input-group-text">
+            <input type="text" id="entries_bean_endDateString" name="bean.endDateString" value="${bean.endDateString}" placeholder="MM/DD/YY" class="date-picker form-control"/>
+            <label for="entries_bean_endDateString" class="input-group-text">
                 <span class="bi bi-calendar"></span>
             </label>
 
@@ -100,14 +101,15 @@
 
     <button type="submit" class="btn"><spring:message code="weblogEntryQuery.button.query"/></button>
 
-<sec:csrfInput/>
 </form>
 
 <script>
 
     $(document).ready(function () {
-        $("#entries_bean_startDateString").datepicker();
-        $("#entries_bean_endDateString").datepicker();
+        // 'mm/dd/y' matches EntriesBean's strict MM/dd/yy parse -- jQuery UI's
+        // two-digit year token is lowercase 'y', not 'yy' (four-digit).
+        $("#entries_bean_startDateString").datepicker({dateFormat: 'mm/dd/y'});
+        $("#entries_bean_endDateString").datepicker({dateFormat: 'mm/dd/y'});
     });
 
 </script>

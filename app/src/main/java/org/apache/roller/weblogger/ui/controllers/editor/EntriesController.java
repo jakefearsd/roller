@@ -314,10 +314,13 @@ public class EntriesController extends BaseController {
                 + getActionWeblog(request).getHandle();
     }
 
-    private String buildBaseUrl(HttpServletRequest request, EntriesBean bean) {
+    // Package-private rather than public: widened only so the test can call it
+    // directly, per this repo's existing precedent for testing a pager's base
+    // url without going through the full servlet stack.
+    String buildBaseUrl(HttpServletRequest request, EntriesBean bean) {
         Map<String, String> params = new HashMap<>();
         if (!StringUtils.isEmpty(bean.getCategoryName())) {
-            params.put("bean.categoryPath", bean.getCategoryName());
+            params.put("bean.categoryName", bean.getCategoryName());
         }
         if (!StringUtils.isEmpty(bean.getTagsAsString())) {
             params.put("bean.tagsAsString", bean.getTagsAsString());
@@ -341,11 +344,11 @@ public class EntriesController extends BaseController {
                 getActionWeblog(request).getHandle(), params, false);
     }
 
+    // No synthetic "Any" entry here -- that choice is an <option value="">
+    // the JSP emits directly (EntriesSidebar.jsp), since a blank categoryName
+    // already means "no filter" in WeblogEntrySearchCriteria.
     private List<WeblogCategory> getCategories(HttpServletRequest request) {
         List<WeblogCategory> cats = new ArrayList<>();
-        WeblogCategory tmpCat = new WeblogCategory();
-        tmpCat.setName("Any");
-        cats.add(tmpCat);
         try {
             WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             cats.addAll(wmgr.getWeblogCategories(getActionWeblog(request)));

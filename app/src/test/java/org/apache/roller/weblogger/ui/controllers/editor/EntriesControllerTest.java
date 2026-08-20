@@ -17,8 +17,15 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -52,9 +59,10 @@ import static org.mockito.Mockito.when;
  * arithmetic wrong and the list either drops a real entry or shows a
  * "next page" link that leads nowhere. The status filter's "ALL" case is a
  * sentinel that must map to a null {@code PubStatus} rather than an
- * enum value, and the category list always leads with a synthetic "Any"
- * option that has to survive even a failed category lookup, since without it
- * the search form would have no way to clear a category filter.
+ * enum value. The category list is the weblog's own categories with no
+ * synthetic "Any" entry -- that choice is an {@code <option value="">} the
+ * JSP emits directly, since a blank {@code categoryName} already means "no
+ * filter" in the search criteria.
  */
 class EntriesControllerTest extends EditorControllerTestSupport {
 
@@ -134,7 +142,10 @@ class EntriesControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void categoriesAlwaysStartWithASyntheticAnyOptionOnSuccess() throws Exception {
+    void categoriesAreTheWeblogsOwnWithNoSyntheticAnyEntry() throws Exception {
+        // The "Any" choice is now an <option value=""> the JSP emits directly,
+        // not a synthetic WeblogCategory the controller invents -- blank
+        // categoryName already means "no filter" in the search criteria.
         WeblogCategory travel = new WeblogCategory();
         travel.setName("Travel");
         when(weblogger.getWeblogEntryManager().getWeblogCategories(weblog)).thenReturn(List.of(travel));
@@ -143,13 +154,12 @@ class EntriesControllerTest extends EditorControllerTestSupport {
 
         @SuppressWarnings("unchecked")
         List<WeblogCategory> categories = (List<WeblogCategory>) model.getAttribute("categories");
-        assertEquals(2, categories.size());
-        assertEquals("Any", categories.get(0).getName());
-        assertEquals("Travel", categories.get(1).getName());
+        assertEquals(1, categories.size());
+        assertEquals("Travel", categories.get(0).getName());
     }
 
     @Test
-    void categoriesStillStartsWithAnyWhenTheCategoryLookupFails() throws Exception {
+    void categoriesIsEmptyRatherThanNullWhenTheCategoryLookupFails() throws Exception {
         when(weblogger.getWeblogEntryManager().getWeblogCategories(weblog))
                 .thenThrow(new WebloggerException("database down"));
 
@@ -157,10 +167,8 @@ class EntriesControllerTest extends EditorControllerTestSupport {
 
         @SuppressWarnings("unchecked")
         List<WeblogCategory> categories = (List<WeblogCategory>) model.getAttribute("categories");
-        assertEquals(1, categories.size(),
-                "A failed category lookup must still leave the synthetic \"Any\" entry so the form has "
-                        + "something to bind to");
-        assertEquals("Any", categories.get(0).getName());
+        assertTrue(categories.isEmpty(),
+                "A failed category lookup must still leave the form something to bind to");
     }
 
     @Test
@@ -195,6 +203,63 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         EntriesPagerLike pager = pager(model);
         assertNull(pager.items, "A failed lookup leaves the pager's entry list null rather than empty");
         assertFalse(pager.moreItems);
+    }
+
+    // ------------------------------------------------------------ sidebar filter
+
+    /**
+     * Source-scan: the sidebar form must be method="get" with no CSRF input --
+     * a POST here answers 405 because {@code execute()} is {@code @GetMapping}
+     * only.
+     */
+    @Test
+    void theFilterFormSubmitsByGet() throws Exception {
+        String jsp = Files.readString(Path.of(
+                "src/main/webapp/WEB-INF/jsps/editor/EntriesSidebar.jsp"));
+        Matcher form = Pattern.compile("<form[^>]*action=\"[^\"]*entries\\.rol[^>]*>")
+                .matcher(jsp);
+        assertTrue(form.find(), "filter form not found");
+        assertTrue(form.group().contains("method=\"get\""), form.group());
+        assertFalse(jsp.contains("csrfInput"), "GET form must not carry a CSRF token");
+    }
+
+    /**
+     * {@code bean.categoryPath} does not exist on {@link EntriesBean}; emitting
+     * it in the pager's base url means paging silently drops the category
+     * filter.
+     */
+    @Test
+    void thePagerBaseUrlUsesTheBeanCategoryNameProperty() {
+        bean.setCategoryName("Travel");
+        when(weblogger.getUrlStrategy().getActionURL(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    Map<String, String> params = (Map<String, String>) invocation.getArgument(3);
+                    return "/roller-ui/authoring/entries.rol?" + new LinkedHashMap<>(params).entrySet().stream()
+                            .map(e -> e.getKey() + "=" + e.getValue())
+                            .collect(Collectors.joining("&"));
+                });
+
+        String url = controller.buildBaseUrl(request, bean);
+
+        assertTrue(url.contains("bean.categoryName=Travel"), url);
+        assertFalse(url.contains("bean.categoryPath="), url);
+    }
+
+    /**
+     * Every {@code $("#id")} selector in the sidebar's script block must
+     * reference an {@code id=} present in the file, or the datepicker never
+     * binds and the readonly-by-history date fields stay unfillable.
+     */
+    @Test
+    void theDatePickerBindingMatchesRealIds() throws Exception {
+        String jsp = Files.readString(Path.of(
+                "src/main/webapp/WEB-INF/jsps/editor/EntriesSidebar.jsp"));
+        Matcher sel = Pattern.compile("\\$\\(\"#([A-Za-z0-9_]+)\"\\)").matcher(jsp);
+        while (sel.find()) {
+            assertTrue(jsp.contains("id=\"" + sel.group(1) + "\""),
+                    "script binds #" + sel.group(1) + " but no element has that id");
+        }
     }
 
     // --- helpers ---
