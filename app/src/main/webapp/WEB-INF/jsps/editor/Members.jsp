@@ -125,21 +125,25 @@ function confirmMemberRemoval() {
                 <td class="rollertable">
                     <input type="radio" 
                         <c:if test='${perm.hasAction("admin")}'>checked</c:if>
-                        name='perm-${perm.user.id}' value="admin" />
+                        name='perm-${perm.user.id}' value="admin"
+                        aria-label="<spring:message code='memberPermissions.administrator'/>: ${fn:escapeXml(perm.user.userName)}" />
                 </td>
                 <td class="rollertable">
 	                <input type="radio" 
                         <c:if test='${perm.hasAction("post")}'>checked</c:if>
-                        name='perm-${perm.user.id}' value="post" />
+                        name='perm-${perm.user.id}' value="post"
+                        aria-label="<spring:message code='memberPermissions.author'/>: ${fn:escapeXml(perm.user.userName)}" />
                 </td>                
                 <td class="rollertable">
                     <input type="radio" 
                         <c:if test='${perm.hasAction("edit_draft")}'>checked</c:if>
-                        name='perm-${perm.user.id}' value="edit_draft" />
+                        name='perm-${perm.user.id}' value="edit_draft"
+                        aria-label="<spring:message code='memberPermissions.limited'/>: ${fn:escapeXml(perm.user.userName)}" />
                 </td>                
                 <td class="rollertable">
                     <input type="radio" 
-                        name='perm-${perm.user.id}' value="-1" />
+                        name='perm-${perm.user.id}' value="-1"
+                        aria-label="<spring:message code='memberPermissions.remove'/>: ${fn:escapeXml(perm.user.userName)}" />
                 </td>
            </tr>
        </c:forEach>

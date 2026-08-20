@@ -23,12 +23,12 @@
 <form id="templateAdd" action="${pageContext.request.contextPath}/roller-ui/authoring/templates!add.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
-    <spring:message code="generic.name"/>
-    <input type="text" name="newTmplName" value="${newTmplName}" class="form-control"/>
+    <label for="newTmplName"><spring:message code="generic.name"/></label>
+    <input id="newTmplName" type="text" name="newTmplName" value="${newTmplName}" class="form-control"/>
 
     <c:if test="${not empty availableActions}">
-        <spring:message code="pagesForm.action"/>
-        <select name="newTmplAction" class="form-select">
+        <label for="newTmplAction"><spring:message code="pagesForm.action"/></label>
+        <select id="newTmplAction" name="newTmplAction" class="form-select">
 <c:forEach items="${availableActions}" var="opt">
 <option value="${opt.key}" ${opt.key == newTmplAction ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>

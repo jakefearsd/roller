@@ -141,23 +141,23 @@
                     <input type="hidden" name="bean.id" value="${bean.id}"/>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
+                        <label class="col-sm-3 col-form-label" for="category_bean_name"><spring:message code="generic.name"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                            <input id="category_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
+                        <label class="col-sm-3 col-form-label" for="category_bean_description"><spring:message code="generic.description"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.description" value="${fn:escapeXml(bean.description)}" class="form-control"/>
+                            <input id="category_bean_description" type="text" name="bean.description" value="${fn:escapeXml(bean.description)}" class="form-control"/>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="categoryForm.image"/></label>
+                        <label class="col-sm-3 col-form-label" for="category_bean_image"><spring:message code="categoryForm.image"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.image" value="${fn:escapeXml(bean.image)}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                            <input id="category_bean_image" type="text" name="bean.image" value="${fn:escapeXml(bean.image)}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
                         </div>
                     </div>
                 <sec:csrfInput/>
@@ -328,8 +328,8 @@
                             <spring:message code="categoryDeleteOK.warningCatInUse"/>
                             <spring:message code="categoryDeleteOK.youMustMoveEntries"/>
                         </p>
-                        <spring:message code="categoryDeleteOK.moveToWhere"/>
-                        <select name="targetCategoryId" class="form-select">
+                        <label for="targetCategoryId"><spring:message code="categoryDeleteOK.moveToWhere"/></label>
+                        <select id="targetCategoryId" name="targetCategoryId" class="form-select">
 <c:forEach items="${allCategories}" var="opt">
 <option value="${opt.id}" ${opt.id == targetCategoryId ? 'selected' : ''}>${fn:escapeXml(opt.name)}</option>
 </c:forEach>

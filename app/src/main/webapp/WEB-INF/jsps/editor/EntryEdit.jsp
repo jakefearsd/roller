@@ -246,7 +246,7 @@
                          The rules themselves live in roller.css beside the
                          other .editor-* rules. --%>
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.snippetPreview"/></label>
+                        <span class="col-sm-3 col-form-label"><spring:message code="weblogEdit.snippetPreview"/></span>
                         <div class="col-sm-9">
                             <div id="seo_snippet_preview" class="border rounded p-2 bg-body">
                                 <div id="seo_snippet_title" class="seo-snippet-title"></div>
@@ -257,8 +257,8 @@
                     </div>
 
                     <%-- featured image --%>
-                    <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.featuredImage"/></label>
+                    <div class="row mb-3" role="group" aria-labelledby="seo_featuredImage_label">
+                        <span class="col-sm-3 col-form-label" id="seo_featuredImage_label"><spring:message code="weblogEdit.featuredImage"/></span>
                         <div class="col-sm-9">
                             <input type="hidden" id="seo_featuredImageId" name="bean.featuredImageId" value="${bean.featuredImageId}"/>
                             <div class="mb-2">
@@ -273,8 +273,8 @@
                     </div>
 
                     <%-- social share (Open Graph) image; when unset the featured image is used --%>
-                    <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.ogImage"/></label>
+                    <div class="row mb-3" role="group" aria-labelledby="seo_ogImage_label">
+                        <span class="col-sm-3 col-form-label" id="seo_ogImage_label"><spring:message code="weblogEdit.ogImage"/></span>
                         <div class="col-sm-9">
                             <input type="hidden" id="seo_ogImageId" name="bean.ogImageId" value="${bean.ogImageId}"/>
                             <div class="mb-2">
@@ -595,18 +595,18 @@
                 <div class="modal-body">
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label">
+                        <span class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryTitle"/>
-                        </label>
+                        </span>
                         <div class="col-sm-9">
                             <p class="form-control-plaintext" id="postTitleLabel"></p>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label">
+                        <span class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryId"/>
-                        </label>
+                        </span>
                         <div class="col-sm-9">
                             <p class="form-control-plaintext" id="postIdLabel"></p>
                         </div>

@@ -43,7 +43,8 @@
                     <div class="row">
 
                         <div class="col-md-1">
-                            <input type="checkbox" name="selectedImages" value="${newImage.id}"/>
+                            <input type="checkbox" name="selectedImages" value="${newImage.id}"
+                                   aria-label="${fn:escapeXml(newImage.name)}"/>
                         </div>
 
                         <div class="col-md-2">
@@ -99,6 +100,7 @@
 
                         <div class="col-md-1">
                             <input type="radio" name="enclosure"
+                                   aria-label="${fn:escapeXml(newFile.name)}"
                                    onchange="setEnclosure('${newFile.permalink}')"/>
                         </div>
 
@@ -135,7 +137,8 @@
                 <div class="row">
 
                     <div class="col-md-1">
-                        <input type="radio" name="enclosure" onchange="setEnclosure('')" />
+                        <input type="radio" name="enclosure" onchange="setEnclosure('')"
+                               aria-label="<spring:message code='mediaFileSuccess.noEnclosure'/>" />
                     </div>
 
                     <div class="col-md-10">

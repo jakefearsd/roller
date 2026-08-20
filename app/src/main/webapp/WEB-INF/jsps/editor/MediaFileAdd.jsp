@@ -26,30 +26,30 @@
     <input type="hidden" name="directoryName" value="${directoryName}"/>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
+        <label class="col-sm-3 col-form-label" for="mfadd_bean_description"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
-            <textarea name="bean.description" rows="3" class="form-control">${fn:escapeXml(bean.description)}</textarea>
+            <textarea id="mfadd_bean_description" name="bean.description" rows="3" class="form-control">${fn:escapeXml(bean.description)}</textarea>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileAdd.copyright"/></label>
+        <label class="col-sm-3 col-form-label" for="mfadd_bean_copyrightText"><spring:message code="mediaFileAdd.copyright"/></label>
         <div class="col-sm-9">
-            <textarea name="bean.copyrightText" rows="3" class="form-control">${fn:escapeXml(bean.copyrightText)}</textarea>
+            <textarea id="mfadd_bean_copyrightText" name="bean.copyrightText" rows="3" class="form-control">${fn:escapeXml(bean.copyrightText)}</textarea>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileAdd.tags"/></label>
+        <label class="col-sm-3 col-form-label" for="mfadd_bean_tagsAsString"><spring:message code="mediaFileAdd.tags"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" maxlength="255" class="form-control"/>
+            <input id="mfadd_bean_tagsAsString" type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" maxlength="255" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileAdd.directory"/></label>
+        <label class="col-sm-3 col-form-label" for="mfadd_bean_directoryId"><spring:message code="mediaFileAdd.directory"/></label>
         <div class="col-sm-9">
-            <select name="bean.directoryId" class="form-select">
+            <select id="mfadd_bean_directoryId" name="bean.directoryId" class="form-select">
                 <c:forEach items="${allDirectories}" var="opt">
                     <option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${opt.name}</option>
                 </c:forEach>

@@ -28,7 +28,7 @@
 
     <c:if test="${bean.isImage}">
         <div class="row mb-3">
-            <label class="col-form-label col-sm-3">Thumbnail</label>
+            <span class="col-form-label col-sm-3">Thumbnail</span>
             <div class="col-sm-9">
                 <a href='${bean.permalink}' target="_blank">
                     <img alt="thumbnail" src='${bean.thumbnailURL}'
@@ -41,7 +41,7 @@
         <%-- Focal point: click-to-set marker, saved with the main form     --%>
 
         <div class="row mb-3">
-            <label class="col-form-label col-sm-3"><spring:message code="mediaFileEdit.focalPoint"/></label>
+            <span class="col-form-label col-sm-3"><spring:message code="mediaFileEdit.focalPoint"/></span>
             <div class="col-sm-9">
                 <div id="focalPicker" style="position:relative; display:inline-block; cursor:crosshair; line-height:0">
                     <img id="focalImage" src='${bean.permalink}' alt="focal point target"
@@ -67,14 +67,14 @@
     <%-- Title, category, dates and other metadata --%>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
+        <label class="col-sm-3 col-form-label" for="mfedit_bean_name"><spring:message code="generic.name"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="35" maxlength="100" tabindex="1" class="form-control"/>
+            <input id="mfedit_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="35" maxlength="100" tabindex="1" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-form-label col-sm-3"><spring:message code="mediaFileEdit.fileInfo"/></label>
+        <span class="col-form-label col-sm-3"><spring:message code="mediaFileEdit.fileInfo"/></span>
 
         <div class="col-sm-9">
 
@@ -88,7 +88,7 @@
     </div>
 
     <div class="row mb-3">
-        <label class="col-form-label col-sm-3">URL</label>
+        <label class="col-form-label col-sm-3" for="clip_text">URL</label>
 
         <div class="col-sm-9">
 
@@ -104,39 +104,39 @@
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
+        <label class="col-sm-3 col-form-label" for="mfedit_bean_description"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
-            <textarea name="bean.description" rows="2" cols="50" tabindex="2" class="form-control">${fn:escapeXml(bean.description)}</textarea>
+            <textarea id="mfedit_bean_description" name="bean.description" rows="2" cols="50" tabindex="2" class="form-control">${fn:escapeXml(bean.description)}</textarea>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileEdit.altText"/></label>
+        <label class="col-sm-3 col-form-label" for="mfedit_bean_altText"><spring:message code="mediaFileEdit.altText"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.altText" value="${fn:escapeXml(bean.altText)}"
+            <input id="mfedit_bean_altText" type="text" name="bean.altText" value="${fn:escapeXml(bean.altText)}"
                    maxlength="255" class="form-control"/>
             <div class="form-text"><spring:message code="mediaFileEdit.altText.tip"/></div>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileEdit.tags"/></label>
+        <label class="col-sm-3 col-form-label" for="mfedit_bean_tagsAsString"><spring:message code="mediaFileEdit.tags"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="30" maxlength="100" tabindex="3" class="form-control"/>
+            <input id="mfedit_bean_tagsAsString" type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="30" maxlength="100" tabindex="3" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileEdit.copyright"/></label>
+        <label class="col-sm-3 col-form-label" for="mfedit_bean_copyrightText"><spring:message code="mediaFileEdit.copyright"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.copyrightText" value="${fn:escapeXml(bean.copyrightText)}" size="30" maxlength="100" tabindex="4" class="form-control"/>
+            <input id="mfedit_bean_copyrightText" type="text" name="bean.copyrightText" value="${fn:escapeXml(bean.copyrightText)}" size="30" maxlength="100" tabindex="4" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="mediaFileEdit.directory"/></label>
+        <label class="col-sm-3 col-form-label" for="mfedit_bean_directoryId"><spring:message code="mediaFileEdit.directory"/></label>
         <div class="col-sm-9">
-            <select name="bean.directoryId" class="form-select" tabindex="5">
+            <select id="mfedit_bean_directoryId" name="bean.directoryId" class="form-select" tabindex="5">
                 <c:forEach items="${allDirectories}" var="opt">
                     <option value="${opt.id}" ${opt.id == bean.directoryId ? 'selected' : ''}>${fn:escapeXml(opt.name)}</option>
                 </c:forEach>

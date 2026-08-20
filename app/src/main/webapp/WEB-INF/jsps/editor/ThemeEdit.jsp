@@ -37,7 +37,7 @@
                     <h3 class="section-head">
                         <input id="sharedRadio" type="radio" name="themeType" value="shared"
                             <c:if test="${!customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
-                        <spring:message code="themeEditor.sharedTheme"/>
+                        <label for="sharedRadio"><spring:message code="themeEditor.sharedTheme"/></label>
                     </h3>
                     <spring:message code="themeEditor.sharedThemeDescription"/>
                 </div>
@@ -56,7 +56,7 @@
                     <h3 class="section-head">
                         <input id="customRadio" type="radio" name="themeType" value="custom"
                             <c:if test="${customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
-                        <spring:message code="themeEditor.customTheme"/>
+                        <label for="customRadio"><spring:message code="themeEditor.customTheme"/></label>
                     </h3>
                     <spring:message code="themeEditor.customThemeDescription"/>
                 </div>
@@ -89,7 +89,7 @@
     <div id="themeChooser" style="display:none;">
 
         <%-- theme selector with preview image --%>
-        <p class="lead"><spring:message code="themeEditor.selectTheme"/></p>
+        <p class="lead"><label for="themeSelector"><spring:message code="themeEditor.selectTheme"/></label></p>
         <p>
             <select name="selectedThemeId" id="themeSelector" class="form-control" style="width:20em" size="1" onchange="proposeSharedThemeChange(this[selectedIndex].value)">
 <c:forEach items="${themes}" var="opt">

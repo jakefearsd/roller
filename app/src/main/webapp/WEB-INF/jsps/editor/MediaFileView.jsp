@@ -195,7 +195,8 @@
 
                                     <input type="checkbox"
                                            name="selectedMediaFiles"
-                                           value="${mediaFile.id}"/>
+                                           value="${mediaFile.id}"
+                                           aria-label="${fn:escapeXml(mediaFile.name)}"/>
                                     <input type="hidden" id="mediafileidentity"
                                            value="${mediaFile.id}"/>
 
@@ -248,7 +249,8 @@
 
                                     <input type="checkbox"
                                            name="selectedMediaFiles"
-                                           value="${mediaFile.id}"/>
+                                           value="${mediaFile.id}"
+                                           aria-label="${fn:escapeXml(mediaFile.name)}"/>
                                     <input type="hidden" id="mediafileidentity"
                                            value="${mediaFile.id}">
 

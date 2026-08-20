@@ -78,7 +78,8 @@
                 <tr>
                     <td>
                         <input type="checkbox" class="form-check-input submission-select"
-                               name="deleteIds" value="${fn:escapeXml(s.id)}"/>
+                               name="deleteIds" value="${fn:escapeXml(s.id)}"
+                               aria-label="${fn:escapeXml(s.subject)}"/>
                     </td>
                     <td class="data">
                         <c:if test="${s.created != null}">

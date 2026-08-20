@@ -119,7 +119,8 @@
     </c:choose>
     <td>
         <input type="checkbox" class="form-check-input entry-select"
-               name="selectedEntries" value="${post.id}"/>
+               name="selectedEntries" value="${post.id}"
+               aria-label="${fn:escapeXml(post.title)}"/>
     </td>
 
     <td>
@@ -290,18 +291,18 @@
                 <div class="modal-body">
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label">
+                        <span class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryTitle"/>
-                        </label>
+                        </span>
                         <div class="col-sm-9">
                             <p class="form-control-plaintext" id="postTitleLabel"></p>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label">
+                        <span class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryId"/>
-                        </label>
+                        </span>
                         <div class="col-sm-9">
                             <p class="form-control-plaintext" id="postIdLabel"></p>
                         </div>

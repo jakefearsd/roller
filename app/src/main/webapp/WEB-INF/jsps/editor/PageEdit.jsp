@@ -190,8 +190,8 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.ogImage"/></label>
+                    <div class="row mb-3" role="group" aria-labelledby="seo_ogImage_label">
+                        <span class="col-sm-3 col-form-label" id="seo_ogImage_label"><spring:message code="weblogEdit.ogImage"/></span>
                         <div class="col-sm-9">
                             <input type="hidden" id="seo_ogImageId" name="bean.ogImageId" value="${bean.ogImageId}"/>
                             <div class="mb-2">

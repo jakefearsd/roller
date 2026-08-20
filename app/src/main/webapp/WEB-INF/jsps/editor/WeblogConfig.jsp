@@ -45,44 +45,44 @@
     <h3 class="section-head" id="settings-general"><spring:message code="websiteSettings.generalSettings"/></h3>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.websiteTitle"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_name"><spring:message code="websiteSettings.websiteTitle"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="30" maxlength="40" class="form-control"/>
+            <input id="weblog_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="30" maxlength="40" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="generic.tagline"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_tagline"><spring:message code="generic.tagline"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.tagline" value="${fn:escapeXml(bean.tagline)}" size="30" maxlength="255" class="form-control"/>
+            <input id="weblog_bean_tagline" type="text" name="bean.tagline" value="${fn:escapeXml(bean.tagline)}" size="30" maxlength="255" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.icon"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_icon"><spring:message code="websiteSettings.icon"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.icon" value="${fn:escapeXml(bean.icon)}" size="30" maxlength="40" class="form-control"/>
+            <input id="weblog_bean_icon" type="text" name="bean.icon" value="${fn:escapeXml(bean.icon)}" size="30" maxlength="40" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.about"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_about"><spring:message code="websiteSettings.about"/></label>
         <div class="col-sm-9">
-            <textarea name="bean.about" rows="3" cols="40" class="form-control">${fn:escapeXml(bean.about)}</textarea>
+            <textarea id="weblog_bean_about" name="bean.about" rows="3" cols="40" class="form-control">${fn:escapeXml(bean.about)}</textarea>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.emailAddress"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_emailAddress"><spring:message code="websiteSettings.emailAddress"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.emailAddress" value="${fn:escapeXml(bean.emailAddress)}" size="30" maxlength="40" class="form-control"/>
+            <input id="weblog_bean_emailAddress" type="text" name="bean.emailAddress" value="${fn:escapeXml(bean.emailAddress)}" size="30" maxlength="40" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.entryDisplayCount"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_entryDisplayCount"><spring:message code="websiteSettings.entryDisplayCount"/></label>
         <div class="col-sm-9">
-            <input type="number" name="bean.entryDisplayCount" value="${bean.entryDisplayCount}" size="4" class="form-control"/>
+            <input id="weblog_bean_entryDisplayCount" type="number" name="bean.entryDisplayCount" value="${bean.entryDisplayCount}" size="4" class="form-control"/>
         </div>
     </div>
 
@@ -99,9 +99,9 @@
     <h3 class="section-head" id="settings-language"><spring:message code="websiteSettings.languageSettings"/></h3>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="createWebsite.locale"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_locale"><spring:message code="createWebsite.locale"/></label>
         <div class="col-sm-9">
-            <select name="bean.locale" class="form-select">
+            <select id="weblog_bean_locale" name="bean.locale" class="form-select">
                 <c:forEach items="${localesList}" var="opt">
                     <option value="${opt}" ${opt == bean.locale ? 'selected' : ''}>${opt}</option>
                 </c:forEach>
@@ -110,9 +110,9 @@
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="createWebsite.timezone"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_timeZone"><spring:message code="createWebsite.timezone"/></label>
         <div class="col-sm-9">
-            <select name="bean.timeZone" class="form-select">
+            <select id="weblog_bean_timeZone" name="bean.timeZone" class="form-select">
                 <c:forEach items="${timeZonesList}" var="opt">
                     <option value="${opt}" ${opt == bean.timeZone ? 'selected' : ''}>${opt}</option>
                 </c:forEach>
@@ -125,17 +125,17 @@
     <h3 class="section-head" id="settings-analytics"><spring:message code="websiteSettings.analyticsSettings"/></h3>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsSiteId"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_analyticsSiteId"><spring:message code="websiteSettings.analyticsSiteId"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.analyticsSiteId" value="${fn:escapeXml(bean.analyticsSiteId)}" size="40" maxlength="64" class="form-control"/>
+            <input id="weblog_bean_analyticsSiteId" type="text" name="bean.analyticsSiteId" value="${fn:escapeXml(bean.analyticsSiteId)}" size="40" maxlength="64" class="form-control"/>
             <div class="form-text"><spring:message code="websiteSettings.analyticsSiteId.tip"/></div>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.analyticsShareUrl"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_analyticsShareUrl"><spring:message code="websiteSettings.analyticsShareUrl"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.analyticsShareUrl" value="${fn:escapeXml(bean.analyticsShareUrl)}" size="40" maxlength="255" class="form-control"/>
+            <input id="weblog_bean_analyticsShareUrl" type="text" name="bean.analyticsShareUrl" value="${fn:escapeXml(bean.analyticsShareUrl)}" size="40" maxlength="255" class="form-control"/>
             <div class="form-text"><spring:message code="websiteSettings.analyticsShareUrl.tip"/></div>
             <%-- A rejected save re-renders this page with the raw submitted bean, so
                  "not empty" alone would echo an unvalidated value (e.g. javascript:...)
@@ -155,9 +155,9 @@
     <h3 class="section-head" id="settings-newsletter"><spring:message code="websiteSettings.newsletterSettings"/></h3>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.newsletterListUuid"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_newsletterListUuid"><spring:message code="websiteSettings.newsletterListUuid"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.newsletterListUuid" value="${fn:escapeXml(bean.newsletterListUuid)}" size="40" maxlength="64" class="form-control"/>
+            <input id="weblog_bean_newsletterListUuid" type="text" name="bean.newsletterListUuid" value="${fn:escapeXml(bean.newsletterListUuid)}" size="40" maxlength="64" class="form-control"/>
             <div class="form-text"><spring:message code="websiteSettings.newsletterListUuid.tip"/></div>
         </div>
     </div>
@@ -167,9 +167,9 @@
     <h3 class="section-head" id="settings-customdomain"><spring:message code="websiteSettings.customDomainSettings"/></h3>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="websiteSettings.customDomain"/></label>
+        <label class="col-sm-3 col-form-label" for="weblog_bean_customDomain"><spring:message code="websiteSettings.customDomain"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.customDomain" value="${fn:escapeXml(bean.customDomain)}" size="40" maxlength="255" class="form-control"/>
+            <input id="weblog_bean_customDomain" type="text" name="bean.customDomain" value="${fn:escapeXml(bean.customDomain)}" size="40" maxlength="255" class="form-control"/>
             <div class="form-text"><spring:message code="websiteSettings.customDomain.tip"/></div>
             <c:if test="${not empty customDomainWarning}">
                 <div class="form-text text-warning">
