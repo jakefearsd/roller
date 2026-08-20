@@ -640,24 +640,52 @@ class AdminJspHygieneTest {
      * fn:escapeXml IS the correct escape because there is no second parser,
      * and one delegated handler in roller.js reads it back through
      * {@code dataset.confirm}.
+     *
+     * <p>The editor tree has a second shape of the same failure: a bare
+     * {@code <spring:message>} dropped straight into a single-quoted
+     * {@code confirm('...')} JS string, with no HTML parser in between to
+     * blame -- the message text (or a value concatenated alongside it, as on
+     * Templates.jsp/Pages.jsp) lands in the page as raw JS source, so a
+     * translator's apostrophe ("can't be undone") or an author's own typed
+     * value terminates the string early. {@code javaScriptEscape="true"} is
+     * the correct fix here (there being no HTML layer for fn:escapeXml to
+     * fight with), and the named-function + {@code javaScriptEscape} idiom
+     * (e.g. {@code confirmTemplateDelete(...)} reading its arguments off
+     * {@code data-*} attributes, with the message tag itself escaped) is
+     * ALLOWED -- only a message tag missing the escape, sitting inside a
+     * single-quoted confirm string, is banned. Double-quoted confirm strings
+     * (the {@code confirm("<spring:message .../>")} idiom used elsewhere in
+     * the editor tree) are out of scope: an apostrophe is harmless inside a
+     * double-quoted JS string, so that shape does not share this failure
+     * mode.
      */
     @Test
     void noAdminScreenBuildsAConfirmPromptInsideAnInlineHandler() throws IOException {
-        Pattern inlineConfirm = Pattern.compile(
+        Pattern inlineConfirmEl = Pattern.compile(
                 "on(?:click|submit)\\s*=\\s*\"[^\"]*confirm\\s*\\([^\"]*\\$\\{");
+        Pattern unescapedMessageInSingleQuotedConfirm = Pattern.compile(
+                "confirm\\(\\s*'[^']*<spring:message\\b((?:(?!/>).)*?)/>");
         List<String> found = new ArrayList<>();
-        for (String dir : List.of("admin", "core", "tiles")) {
+        for (String dir : List.of("admin", "core", "tiles", "editor")) {
             try (Stream<Path> files = Files.walk(JSPS.resolve(dir))) {
                 files.filter(f -> f.toString().endsWith(".jsp")).forEach(f -> {
-                    Matcher m = inlineConfirm.matcher(read(f));
-                    while (m.find()) {
-                        found.add(f.getFileName() + ": " + m.group());
+                    String src = read(f);
+                    Matcher elMatch = inlineConfirmEl.matcher(src);
+                    while (elMatch.find()) {
+                        found.add(f.getFileName() + ": " + elMatch.group());
+                    }
+                    Matcher msgMatch = unescapedMessageInSingleQuotedConfirm.matcher(src);
+                    while (msgMatch.find()) {
+                        if (!msgMatch.group(1).contains("javaScriptEscape=\"true\"")) {
+                            found.add(f.getFileName() + ": " + msgMatch.group());
+                        }
                     }
                 });
             }
         }
         assertTrue(found.isEmpty(),
-                "inline confirm() built from EL -- fails open on an apostrophe:\n  "
+                "confirm() built from unescaped EL or an un-escaped <spring:message> in a "
+                        + "single-quoted JS string -- fails open on an apostrophe:\n  "
                         + String.join("\n  ", found));
     }
 

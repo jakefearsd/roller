@@ -139,7 +139,7 @@
         // A native confirm is acceptable here: unlike the bulk-delete flow on
         // Entries.jsp, there is exactly one thing being removed and no count
         // to report.
-        if (window.confirm('<spring:message code="weblogPagesForm.removeConfirm"/>: \'' + pageTitle + '\'?')) {
+        if (window.confirm('<spring:message code="weblogPagesForm.removeConfirm" javaScriptEscape="true"/>: \'' + pageTitle + '\'?')) {
             document.getElementById('removeId').value = pageId;
             document.getElementById('pageRemoveForm').submit();
         }

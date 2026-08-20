@@ -76,7 +76,7 @@
 <script type="text/javascript">
 
     function revertStylesheet() {
-        if (window.confirm('<spring:message code="stylesheetEdit.confirmRevert"/>')) {
+        if (window.confirm('<spring:message code="stylesheetEdit.confirmRevert" javaScriptEscape="true"/>')) {
             var form = document.getElementById('stylesheetEditForm');
             form.action = "<c:url value='/roller-ui/authoring/stylesheetEdit!revert.rol'/>";
             form.submit();
@@ -84,7 +84,7 @@
     };
     <c:if test="${sharedThemeStylesheet}">
         function deleteStylesheet() {
-            if (window.confirm('<spring:message code="stylesheetEdit.confirmDelete"/>')) {
+            if (window.confirm('<spring:message code="stylesheetEdit.confirmDelete" javaScriptEscape="true"/>')) {
                 var form = document.getElementById('stylesheetEditForm');
                 form.action = "<c:url value='/roller-ui/authoring/stylesheetEdit!delete.rol'/>";
                 form.submit();

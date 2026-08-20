@@ -351,13 +351,18 @@ public class EntriesController extends BaseController {
         params.put("weblog", getActionWeblog(request).getHandle());
         if (bean != null) {
             params.putAll(filterParams(bean));
-            // Two of the bean's fields have non-null DEFAULTS, and the bulk
-            // form deliberately does not post either (see Entries.jsp), so on
-            // this path they are never an author's choice -- only the default
-            // wearing one. Echoing bean.sortBy would pin UPDATE_TIME on
-            // someone who had been sorting by publication time; "ALL" is what
-            // this controller already treats as "no status filter" at the
-            // query itself, so repeating it in the url says nothing.
+            // Two of the bean's fields have non-null DEFAULTS. bean.sortBy is
+            // still never posted by the bulk form (see Entries.jsp), so on
+            // this path it is never an author's choice -- only the default
+            // wearing one -- and echoing it would pin UPDATE_TIME on someone
+            // who had been sorting by publication time. bean.status IS
+            // posted by the bulk form now (unlike sortBy), so it cannot be
+            // unconditionally dropped the same way; the value-conditional
+            // remove below is what keeps only its default, "ALL", out of the
+            // url -- an author's real filter choice still survives the
+            // round trip. "ALL" is what this controller already treats as
+            // "no status filter" at the query itself, so repeating it in the
+            // url would say nothing anyway.
             params.remove("bean.sortBy");
             params.remove("bean.status", "ALL");
         }

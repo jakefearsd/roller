@@ -24,6 +24,7 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -223,7 +224,7 @@ public class MembersController extends BaseController {
                 userMgr.grantWeblogPermission(getActionWeblog(request), user,
                         Utilities.stringToStringList(permissionString, ","));
                 weblogger.flush();
-                addMessage(model, "memberPermissions.memberChanged", user.getUserName(), request);
+                addMessage(model, "memberPermissions.memberChanged", StringEscapeUtils.escapeHtml4(user.getUserName()), request);
             } catch (Exception ex) {
                 log.error("Error granting permission on weblog - {}", getActionWeblog(request).getHandle(), ex);
                 addError(model, "memberPermissions.saveError", request);

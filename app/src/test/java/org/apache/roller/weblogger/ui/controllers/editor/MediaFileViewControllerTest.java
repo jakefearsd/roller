@@ -244,6 +244,23 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void aDirectoryCollisionEscapesTheSubmittedNameInTheErrorMessage() throws Exception {
+        // The submitted directory name is user-typed and lands in
+        // messages.jsp's deliberately-raw sink -- an unescaped name is
+        // stored HTML in the error banner.
+        registerMessage("mediaFile.directoryCreate.error.exists", "exists:{0}");
+        // No literal "/" -- createNewDirectory refuses that shape as an
+        // invalid name (dirNameInvalid) before it ever reaches the collision
+        // check this test is pinning.
+        weblog.getMediaFileDirectories().add(directory("dir-3", "<script>photos"));
+
+        controller.createNewDirectory(request, model, null, "<script>photos", null);
+
+        assertTrue(errors(model).contains("exists:&lt;script&gt;photos"),
+                "Expected the directory name HTML-escaped, got: " + errors(model));
+    }
+
+    @Test
     void creatingADirectorySwitchesTheViewToTheNewFolder() throws Exception {
         MediaFileDirectory created = directory("dir-3", "trips");
         when(weblogger.getMediaFileManager().createMediaFileDirectory(weblog, "trips"))

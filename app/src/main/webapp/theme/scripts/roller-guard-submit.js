@@ -58,6 +58,15 @@
     }
 
     document.addEventListener("submit", function (event) {
+        // roller.js's own submit listener answers a form-level data-confirm
+        // FIRST (both are capturing listeners on document, so registration
+        // order decides) and calls preventDefault() on Cancel. Without this
+        // check the button still gets disabled on that same event, and
+        // nothing ever re-enables it -- one Cancel permanently disables the
+        // control, no submit ever having happened.
+        if (event.defaultPrevented) {
+            return;
+        }
         var form = event.target;
         if (!form.classList || !form.classList.contains("guard-submit")) {
             return;

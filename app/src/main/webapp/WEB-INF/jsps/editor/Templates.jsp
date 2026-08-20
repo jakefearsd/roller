@@ -131,7 +131,7 @@
         // 'submit')" after the confirm dialog, and no template could be deleted
         // through the UI at all.
         $('#removeId').val(templateId);
-        if (window.confirm('<spring:message code="pageRemove.confirm"/>: \'' + templateName + '\'?')) {
+        if (window.confirm('<spring:message code="pageRemove.confirm" javaScriptEscape="true"/>: \'' + templateName + '\'?')) {
             document.getElementById("templateRemoveForm").submit();
         }
     }

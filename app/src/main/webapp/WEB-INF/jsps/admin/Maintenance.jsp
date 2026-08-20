@@ -16,10 +16,15 @@
   directory of this distribution.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
+<script src="<c:url value='/theme/scripts/roller-guard-submit.js'/>"></script>
 
 <p class="subtitle"><spring:message code="maintenance.subtitle"/></p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/admin/maintenance.rol" method="post" class="form-stacked">
+<%-- guard-submit: rebuild-index and regenerate-renditions are the slow,
+     re-run-the-whole-thing-again operations this guard exists for. One form
+     with three formaction-routed buttons, same shape as Entries.jsp's bulk
+     actions, so the opt-in is form-level. --%>
+<form action="${pageContext.request.contextPath}/roller-ui/admin/maintenance.rol" method="post" class="form-stacked guard-submit">
 <sec:csrfInput/>
 
     <div class="mb-3">
@@ -89,6 +94,7 @@
             <p><spring:message code="maintenance.prompt.index"/></p>
             <button type="submit" class="btn"
                     data-confirm="${confirmIndex}"
+                    data-busy-label="<spring:message code='maintenance.index.building'/>"
                     formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!index.rol"><spring:message code="maintenance.button.index"/></button>
         </div>
     </c:if>
@@ -98,6 +104,7 @@
         <p><spring:message code="maintenance.prompt.regenerateRenditions"/></p>
         <button type="submit" class="btn"
                 data-confirm="${confirmRenditions}"
+                data-busy-label="<spring:message code='maintenance.regenerateRenditions.building'/>"
                 formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!regenerateRenditions.rol"><spring:message code="maintenance.button.regenerateRenditions"/></button>
     </div>
 

@@ -270,6 +270,20 @@ class TemplatesControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void addEscapesTheTemplateNameInTheSuccessMessage() throws Exception {
+        // The template name is user-typed and lands in messages.jsp's
+        // deliberately-raw sink -- an unescaped name is stored HTML in the
+        // success banner.
+        registerMessage("pagesForm.added", "added:{0}");
+        when(weblogger.getWeblogManager().getTemplates(weblog)).thenReturn(List.of());
+
+        controller.add(request, model, "<b>MyTemplate</b>", ComponentType.CUSTOM);
+
+        assertTrue(messages(model).contains("added:&lt;b&gt;MyTemplate&lt;/b&gt;"),
+                "Expected the template name HTML-escaped, got: " + messages(model));
+    }
+
+    @Test
     void addReportsTheForcedNameWhenAWeblogTemplateIsRenamedToTheDefaultPage() throws Exception {
         // A WEBLOG-action template is stored under DEFAULT_PAGE whatever the
         // user typed, so the notice has to name the row that actually appeared.
@@ -346,6 +360,19 @@ class TemplatesControllerTest extends EditorControllerTestSupport {
         assertTrue(messages(model).contains("removed:MyTemplate"),
                 "A deletion is the most consequential action on this screen and reported "
                         + "nothing at all before: " + messages(model));
+    }
+
+    @Test
+    void removeEscapesTheTemplateNameInTheSuccessMessage() throws Exception {
+        registerMessage("pagesForm.removed", "removed:{0}");
+        WeblogTemplate custom = templateNamed("<b>MyTemplate</b>", ComponentType.CUSTOM);
+        when(weblogger.getWeblogManager().getTemplate("t-1")).thenReturn(custom);
+        when(weblogger.getWeblogManager().getTemplates(weblog)).thenReturn(List.of());
+
+        controller.remove(request, model, "t-1");
+
+        assertTrue(messages(model).contains("removed:&lt;b&gt;MyTemplate&lt;/b&gt;"),
+                "Expected the template name HTML-escaped, got: " + messages(model));
     }
 
     @Test

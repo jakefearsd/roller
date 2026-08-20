@@ -346,6 +346,27 @@ class MembersControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void grantingEscapesTheUsernameInTheConfirmation() throws Exception {
+        // The username reaches this message as stored data, not literal
+        // form input, but the sink (messages.jsp) is deliberately raw --
+        // escape here rather than trust every source of a User's userName.
+        registerMessage("memberPermissions.memberChanged", "updated {0}");
+        // Stored userNames are ordinarily sanitized on the way in
+        // (User.setUserName), so this bypasses that with the all-args
+        // constructor -- the point of the test is that the MESSAGE sink
+        // escapes independently of whatever a User's userName happens to
+        // hold, not that a hostile username can be created through the UI.
+        User bob = new User("user-bob", "<b>bob</b>", "pw", "Bob", "bob@example.com",
+                "en_US", "America/New_York", new Date(), Boolean.TRUE);
+        registerUser(bob);
+
+        controller.grant(request, model, "<b>bob</b>", WeblogPermission.POST);
+
+        assertTrue(messages(model).contains("updated &lt;b&gt;bob&lt;/b&gt;"),
+                "Expected the username HTML-escaped, got: " + messages(model));
+    }
+
+    @Test
     void grantingAnUnknownUsernameIsAFieldErrorNotAnException() throws Exception {
         // getUserByUserName legitimately returns null for both an unknown and a
         // disabled username -- MembersController never has to tell them apart.

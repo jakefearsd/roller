@@ -23,6 +23,7 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -106,7 +107,7 @@ public class MediaFileViewController extends MediaFileBase {
                     addMessage(model, "mediaFile.directoryCreate.success", newDirectoryName, request);
                     directoryId = dir.getId();
                 } else {
-                    addError(model, "mediaFile.directoryCreate.error.exists", newDirectoryName, request);
+                    addError(model, "mediaFile.directoryCreate.error.exists", StringEscapeUtils.escapeHtml4(newDirectoryName), request);
                 }
             } catch (WebloggerException e) {
                 log.error("Error creating new directory", e);

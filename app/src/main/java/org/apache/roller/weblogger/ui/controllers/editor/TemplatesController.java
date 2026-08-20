@@ -27,6 +27,7 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
@@ -114,7 +115,7 @@ public class TemplatesController extends BaseController {
                 }
 
                 weblogger.flush();
-                addMessage(model, "pagesForm.added", newTemplate.getName(), request);
+                addMessage(model, "pagesForm.added", StringEscapeUtils.escapeHtml4(newTemplate.getName()), request);
 
             } catch (WebloggerException ex) {
                 log.error("Error adding new template for weblog - {}", getActionWeblog(request).getHandle(), ex);
@@ -172,7 +173,7 @@ public class TemplatesController extends BaseController {
                 CacheManager.invalidate(template);
                 mgr.removeTemplate(template);
                 weblogger.flush();
-                addMessage(model, "pagesForm.removed", removedName, request);
+                addMessage(model, "pagesForm.removed", StringEscapeUtils.escapeHtml4(removedName), request);
             } else {
                 addError(model, "editPages.remove.requiredTemplate", request);
             }

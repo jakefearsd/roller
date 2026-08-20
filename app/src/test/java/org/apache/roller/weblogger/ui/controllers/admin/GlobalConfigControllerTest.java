@@ -187,6 +187,22 @@ class GlobalConfigControllerTest {
     }
 
     @Test
+    void anInvalidIntegerValueIsEscapedInTheErrorMessage() throws Exception {
+        // The submitted value is echoed straight back into messages.jsp's
+        // deliberately-raw sink; propDesc (the first arg) is server-built and
+        // safe, but the submitted value (the second arg) is not.
+        Map<String, RuntimeConfigProperty> stored = properties("site.pages.maxEntries", "30");
+        when(weblogger.propertiesManager().getProperties()).thenReturn(stored);
+        HttpServletRequest request = request();
+        when(request.getParameter("site.pages.maxEntries")).thenReturn("<b>many</b>");
+
+        controller.save(request, model);
+
+        assertTrue(ControllerTestFixture.errors(model).get(0).contains("&lt;b&gt;many&lt;/b&gt;"),
+                "Expected the submitted value HTML-escaped, got: " + ControllerTestFixture.errors(model));
+    }
+
+    @Test
     void anIntegerFieldWithANumberInItIsAccepted() throws Exception {
         Map<String, RuntimeConfigProperty> stored = properties("site.pages.maxEntries", "30");
         when(weblogger.propertiesManager().getProperties()).thenReturn(stored);
