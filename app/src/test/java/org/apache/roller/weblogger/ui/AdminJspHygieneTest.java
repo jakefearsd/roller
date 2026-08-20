@@ -489,4 +489,43 @@ class AdminJspHygieneTest {
         }
         assertTrue(found.isEmpty(), String.join("; ", found));
     }
+
+    // ---------------------------------------------------------------- Task 19
+
+    /**
+     * Chrome asks for /favicon.ico on every navigation whether or not the page
+     * declares one, and the three bundled themes declare none -- so Roller
+     * shipping no .ico meant a 404 on every rendered weblog page, which
+     * BrowserHealth had to excuse blanket-wide to let the suite run at all.
+     * Shipping the file is what retires that exemption.
+     */
+    @Test
+    void aRealFaviconIcoIsShipped() throws IOException {
+        Path ico = Path.of("src/main/webapp/favicon.ico");
+        assertTrue(Files.isRegularFile(ico), "no /favicon.ico at " + ico.toAbsolutePath());
+        byte[] head = Files.readAllBytes(ico);
+        // ICONDIR: reserved 0x0000, type 0x0001 (icon), then the image count.
+        assertTrue(head.length > 6 && head[0] == 0 && head[1] == 0 && head[2] == 1 && head[3] == 0,
+                "favicon.ico is not an ICO file");
+        assertTrue(head[4] > 0, "favicon.ico declares no images");
+    }
+
+    /**
+     * An admin with four weblogs open had four tabs reading "Roller: Entries".
+     * Only the layouts whose model actually carries actionWeblog append it --
+     * these same layouts serve un-scoped screens (Global Config, User Admin).
+     */
+    @Test
+    void weblogScopedLayoutsNameTheirWeblogInTheTitle() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : List.of("tiles/tiles-tabbedpage.jsp", "tiles/tiles-mainmenupage.jsp")) {
+            String src = jsp(layout);
+            int title = src.indexOf("<title>");
+            int end = src.indexOf("</title>", title);
+            if (title < 0 || !src.substring(title, end).contains("actionWeblog.handle")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts whose <title> omits the weblog handle: " + missing);
+    }
 }

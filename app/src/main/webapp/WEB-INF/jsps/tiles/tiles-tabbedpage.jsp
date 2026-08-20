@@ -24,7 +24,11 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
-    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <spring:message code="${pageTitle}" text="${pageTitle}"/></title>
+    <%-- The weblog handle belongs in the tab: an admin with four weblogs open
+         had four tabs reading "Roller: Entries". Only where the model has it
+         -- these layouts serve un-scoped screens (Global Config, User Admin)
+         as well. --%>
+    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <spring:message code="${pageTitle}" text="${pageTitle}"/><c:if test="${not empty actionWeblog}"> &#8212; ${fn:escapeXml(actionWeblog.handle)}</c:if></title>
     <jsp:include page="${tile_head}"/>
     <style>
         <jsp:include page="${tile_styles}" />
