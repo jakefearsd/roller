@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="$model.weblog.getLanguageTag()">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,9 +20,10 @@
 </head>
 <!-- weblog -->
 <body class="pf">
+<a class="pf-skip" href="#main">Skip to content</a>
 
 <header class="pf-header">
-    <p class="pf-name"><a href="$url.home">$model.weblog.name</a></p>
+    <h1 class="pf-name"><a href="$url.home">$model.weblog.name</a></h1>
     #if($utils.isNotEmpty($model.weblog.tagline))
     <p class="pf-tagline">$utils.escapeHTML($model.weblog.tagline)</p>
     #end
@@ -34,18 +35,18 @@
     </nav>
 </header>
 
-<main class="pf-main">
+<main class="pf-main" id="main">
     #set($pager = $model.getWeblogEntriesPager())
     <div class="pf-grid">
         #showWeblogEntriesPager($pager)
     </div>
-    <nav class="pf-pager">
+    <nav class="pf-pager" aria-label="More entries">
         #showNextPrevEntriesControl($pager)
     </nav>
 </main>
 
 <footer class="pf-footer">
-    <form class="pf-search" method="get" action="$url.search">
+    <form class="pf-search" role="search" method="get" action="$url.search">
         <input type="search" name="q" placeholder="Search" aria-label="Search">
     </form>
     #showSubscribeForm($model.weblog "New work, by email")

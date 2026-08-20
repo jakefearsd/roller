@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="$model.weblog.getLanguageTag()">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,6 +16,7 @@
     #showAudienceAssets()
 </head>
 <body class="fd">
+<a class="fd-skip" href="#main">Skip to content</a>
 
 <header class="fd-topbar">
     <a class="fd-topbar-brand" href="$url.absoluteSite">$utils.escapeHTML($config.siteName)</a>
@@ -29,9 +30,9 @@
     </nav>
 </header>
 
-<main class="fd-main">
+<main class="fd-main" id="main">
   <div class="fd-hero">
-      <p class="fd-site"><a href="$url.home">$utils.escapeHTML($config.siteName)</a></p>
+      <h1 class="fd-site"><a href="$url.home">$utils.escapeHTML($config.siteName)</a></h1>
       #if($utils.isNotEmpty($config.siteDescription))
       <p class="fd-tag">$utils.escapeHTML($config.siteDescription)</p>
       #end

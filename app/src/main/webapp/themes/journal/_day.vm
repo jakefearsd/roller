@@ -17,7 +17,7 @@
         ## repeating it here next to the category nav stated the same thing
         ## three times inside 100px.
         <p class="qj-crumb">$utils.escapeHTML($entry.category.name)</p>
-        <h1 class="qj-h1">$entry.title</h1>
+        <h2 class="qj-h1">$entry.title</h2>
         <p class="qj-byline">
             <span>By $utils.escapeHTML($entry.creator.screenName)</span>
             <span class="d">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</span>

@@ -156,6 +156,22 @@ public final class WeblogWrapper {
     public Locale getLocaleInstance() {
         return this.pojo.getLocaleInstance();
     }
+
+
+    /**
+     * The weblog's locale as a BCP-47 language tag, for {@code <html lang>}.
+     *
+     * <p>{@link #getLocale()} returns Java's underscore form as stored
+     * ({@code en_US}), which is not a valid {@code lang} attribute value -- a
+     * user agent that cannot parse it treats the document as having no
+     * declared language, which is what every bundled theme's markup used to
+     * do. {@link Locale#toLanguageTag()} is the conversion
+     * ({@code en_US -> en-US}); an unset locale falls back to the JVM default
+     * through {@code Weblog#getLocaleInstance}, so this never returns null.
+     */
+    public String getLanguageTag() {
+        return this.pojo.getLocaleInstance().toLanguageTag();
+    }
     
     
     public TimeZone getTimeZoneInstance() {

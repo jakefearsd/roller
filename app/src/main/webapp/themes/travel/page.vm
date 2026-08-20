@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="$model.weblog.getLanguageTag()">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,9 +20,10 @@
 </head>
 <!-- page -->
 <body class="tg">
+<a class="tg-skip" href="#main">Skip to content</a>
 
 <header class="tg-header">
-    <p class="tg-name"><a href="$url.home">$model.weblog.name</a></p>
+    <h1 class="tg-name"><a href="$url.home">$model.weblog.name</a></h1>
     #if($utils.isNotEmpty($model.weblog.tagline))
     <p class="tg-tagline">$utils.escapeHTML($model.weblog.tagline)</p>
     #end
@@ -34,15 +35,15 @@
     </nav>
 </header>
 
-<main class="tg-main">
+<main class="tg-main" id="main">
     <article class="tg-entry">
-        <h1 class="tg-entry-title">$utils.escapeHTML($model.page.title)</h1>
+        <h2 class="tg-entry-title">$utils.escapeHTML($model.page.title)</h2>
         <div class="tg-entry-content">$model.page.renderedContent</div>
     </article>
 </main>
 
 <footer class="tg-footer">
-    <form class="tg-search" method="get" action="$url.search">
+    <form class="tg-search" role="search" method="get" action="$url.search">
         <input type="search" name="q" placeholder="Search guides" aria-label="Search">
     </form>
     #showSubscribeForm($model.weblog "Get new guides by email")

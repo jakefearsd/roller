@@ -23,9 +23,9 @@
 </p>
 
 #if($chosenLetter)
-   <p class="fd-label">Weblogs starting with $utils.escapeHTML($chosenLetter)</p>
+   <h2 class="fd-label">Weblogs starting with $utils.escapeHTML($chosenLetter)</h2>
 #else
-   <p class="fd-label">All weblogs</p>
+   <h2 class="fd-label">All weblogs</h2>
 #end
 
 #set($weblogsPager = $site.getWeblogsByLetterPager($chosenLetter, -1, $pageLength))
@@ -33,12 +33,12 @@
 #foreach($loopblog in $weblogsPager.items)
     <a class="fd-blog" href="$utils.escapeHTML($loopblog.absoluteURL)">
         <p class="n">$loopblog.name</p>
-        <p class="h"><span class="live"></span>$utils.escapeHTML($loopblog.handle)</p>
+        <p class="h"><span class="live" aria-hidden="true"></span>$utils.escapeHTML($loopblog.handle)</p>
     </a>
 #end
 </div>
 
-<nav class="fd-pager">
+<nav class="fd-pager" aria-label="More weblogs">
 #if($weblogsPager.prevLink)
    <a href="$weblogsPager.prevLink">&lt; $weblogsPager.prevName</a>
 #end

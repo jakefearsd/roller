@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="$model.weblog.getLanguageTag()">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,9 +20,10 @@
 </head>
 <!-- page -->
 <body class="pf">
+<a class="pf-skip" href="#main">Skip to content</a>
 
 <header class="pf-header">
-    <p class="pf-name"><a href="$url.home">$model.weblog.name</a></p>
+    <h1 class="pf-name"><a href="$url.home">$model.weblog.name</a></h1>
     #if($utils.isNotEmpty($model.weblog.tagline))
     <p class="pf-tagline">$utils.escapeHTML($model.weblog.tagline)</p>
     #end
@@ -34,17 +35,17 @@
     </nav>
 </header>
 
-<main class="pf-main pf-main-entry">
+<main class="pf-main pf-main-entry" id="main">
     <article class="pf-entry">
         <div class="pf-entry-body">
-            <h1 class="pf-entry-title">$utils.escapeHTML($model.page.title)</h1>
+            <h2 class="pf-entry-title">$utils.escapeHTML($model.page.title)</h2>
             <div class="pf-entry-content">$model.page.renderedContent</div>
         </div>
     </article>
 </main>
 
 <footer class="pf-footer">
-    <form class="pf-search" method="get" action="$url.search">
+    <form class="pf-search" role="search" method="get" action="$url.search">
         <input type="search" name="q" placeholder="Search" aria-label="Search">
     </form>
     #showSubscribeForm($model.weblog "New work, by email")

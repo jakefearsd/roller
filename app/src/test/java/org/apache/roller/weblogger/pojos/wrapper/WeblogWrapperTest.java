@@ -92,6 +92,33 @@ class WeblogWrapperTest {
         assertEquals(TimeZone.getTimeZone("America/New_York"), wrapper.getTimeZoneInstance());
     }
 
+    /**
+     * {@code getLanguageTag} exists because {@code <html lang="...">} needs
+     * BCP-47 and the stored locale is Java's underscore form: emitting
+     * {@code lang="en_US"} straight from {@code getLocale()} is a value no
+     * user agent recognises, so the document silently has no declared
+     * language at all. The three cases below are the three shapes a stored
+     * locale actually takes -- language+country, bare language, and unset
+     * (Weblog#getLocaleInstance falls back to the JVM default, which is
+     * forced here so the assertion does not depend on the build machine).
+     */
+    @Test
+    void theLanguageTagIsTheBcp47FormOfTheStoredLocale() {
+        assertEquals("en-US", wrapper.getLanguageTag());
+
+        weblog.setLocale("fr");
+        assertEquals("fr", wrapper.getLanguageTag());
+
+        Locale previousDefault = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.GERMANY);
+            weblog.setLocale(null);
+            assertEquals("de-DE", wrapper.getLanguageTag());
+        } finally {
+            Locale.setDefault(previousDefault);
+        }
+    }
+
     @Test
     void everyBooleanFlagTracksItsOwnFieldInBothStates() {
         // A boolean accessor has only two possible answers, so reading it once

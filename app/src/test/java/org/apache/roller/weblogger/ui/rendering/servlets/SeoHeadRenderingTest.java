@@ -370,7 +370,7 @@ class SeoHeadRenderingTest {
         assertTrue(body.contains("<title>SEO Title Override : Test Weblog</title>"),
                 "the meta title must replace the page title in <title>:\n" + body);
         assertTrue(body.contains("<meta property=\"og:title\" content=\"SEO Title Override\">"));
-        assertTrue(body.contains(">Real Page Title</h1>"),
+        assertTrue(body.contains(">Real Page Title</h2>"),
                 "the meta title must not leak into the page's own heading:\n" + body);
     }
 

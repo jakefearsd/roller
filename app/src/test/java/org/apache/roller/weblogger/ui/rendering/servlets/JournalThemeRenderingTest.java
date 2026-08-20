@@ -274,12 +274,12 @@ class JournalThemeRenderingTest {
         // <main> carries just "qj-main"), so if theme.xml's permalink action
         // ever regresses back to weblog.vm this assertion catches it even
         // though the _day.vm markup below would still render identically.
-        assertTrue(body.contains("<main class=\"qj-main qj-main-entry\">"),
+        assertTrue(body.contains("<main class=\"qj-main qj-main-entry\" id=\"main\">"),
                 "the permalink must render through permalink.vm's own main "
                         + "shell, not weblog.vm's:\n" + body);
         assertTrue(body.contains("class=\"qj-crumb\""),
                 "the weblog/category crumb must be present:\n" + body);
-        assertTrue(body.contains("<h1 class=\"qj-h1\">"),
+        assertTrue(body.contains("<h2 class=\"qj-h1\">"),
                 "the entry title must render as the serif qj-h1:\n" + body);
         assertTrue(body.contains("class=\"qj-byline\""),
                 "the byline (author + mono date) must be present:\n" + body);
@@ -358,7 +358,7 @@ class JournalThemeRenderingTest {
         assertJournalHead(body);
         assertTrue(body.contains("class=\"qj-head\""),
                 "the page must wear the journal header chrome:\n" + body);
-        assertTrue(body.contains("<h1 class=\"qj-h1\">About This Journal</h1>"),
+        assertTrue(body.contains("<h2 class=\"qj-h1\">About This Journal</h2>"),
                 "the page title must render as the serif qj-h1:\n" + body);
         assertTrue(body.contains("class=\"qj-prose\""),
                 "the page content must render inside the qj-prose reading column:\n" + body);
@@ -452,5 +452,47 @@ class JournalThemeRenderingTest {
                 "a draft page must not be reachable through the journal theme's _page "
                         + "template either -- draft status is checked before any template "
                         + "renders:\n" + response.getContentAsString());
+    }
+
+    // -------------------------------------------------- document shell (a11y)
+
+    /**
+     * The document shell every journal page shares: a BCP-47 {@code lang} (the
+     * stored locale is {@code en_US}, which is not a tag any user agent
+     * parses -- see {@code WeblogWrapper#getLanguageTag}), a skip link as the
+     * first focusable node, the {@code #main} target it points at, and exactly
+     * one {@code <h1>} -- the site name. Before the 2026-08-20 sweep the shell
+     * had none of the four.
+     */
+    @Test
+    void theDocumentShellDeclaresItsLanguageAndOffersASkipLink() throws Exception {
+        entryWithSummary("shell-check", "A summary.");
+
+        String body = render("/" + HANDLE + "/");
+
+        assertTrue(body.contains("<html lang=\"en-US\">"),
+                "the stored en_US locale must reach the page as the BCP-47 tag "
+                        + "en-US:\n" + body);
+        assertFalse(body.contains("lang=\"en_US\""),
+                "the Java locale form is not a language tag:\n" + body);
+        assertTrue(body.contains("href=\"#main\">Skip to content</a>"),
+                "the skip link must render:\n" + body);
+        assertTrue(body.contains("id=\"main\""),
+                "the skip link's target id must exist on <main>:\n" + body);
+        assertTrue(body.indexOf("href=\"#main\"") < body.indexOf("<header"),
+                "the skip link must come before the header it exists to skip:\n" + body);
+        assertTrue(body.contains("<h1 class=\"qj-site\">"),
+                "the site name must be the page's h1:\n" + body);
+        assertEquals(1, countOf(body, "<h1"),
+                "a page must have exactly one h1 -- the site name:\n" + body);
+    }
+
+    /** Occurrences of {@code needle} in {@code haystack}. */
+    private static int countOf(String haystack, String needle) {
+        int n = 0;
+        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + 1)) {
+            n++;
+        }
+        return n;
     }
 }

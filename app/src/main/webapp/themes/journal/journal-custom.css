@@ -66,6 +66,12 @@
 }
 
 :root {
+    /* Both palettes below are real, so the browser is told so: color-scheme
+       makes it paint form controls, scrollbars and the canvas from the
+       theme's own light/dark pair instead of guessing from the user's
+       preference alone. */
+    color-scheme: light dark;
+
     /* Quiet Instrument -- light palette (default). Values are exactly
        docs/design/design-system.md's Light row / the .qj-light panel in
        docs/design/journal/journal-home.html -- no other colors. */
@@ -110,6 +116,26 @@ body.qj {
 body.qj a { color: inherit; }
 body.qj img { max-width: 100%; height: auto; }
 body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px; }
+
+/* Skip link: the first focusable thing in the document, off-screen until it
+ * takes focus. Without it a keyboard reader tabs the site name, the whole
+ * category list and every nav page before reaching the first entry, on every
+ * page. left/top rather than clip() so it lands where a sighted keyboard user
+ * is already looking. */
+.qj-skip {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 10;
+    padding: .5rem .75rem;
+    background: var(--qj-surface);
+    color: var(--qj-ink);
+    border: 1px solid var(--qj-line);
+    border-radius: var(--qj-radius);
+    font-size: .90625rem;
+    text-decoration: none;
+}
+.qj-skip:focus { left: .75rem; top: .75rem; }
 
 /* ---- chrome ---- */
 
@@ -430,7 +456,8 @@ body.qj .newsletter-subscribe input[type=email] {
 body.qj .contact-form input:focus,
 body.qj .contact-form textarea:focus,
 body.qj .newsletter-subscribe input[type=email]:focus {
-    outline: none;
+    outline: 2px solid var(--qj-focus);
+    outline-offset: 1px;
     border-color: var(--qj-focus);
 }
 body.qj .contact-form textarea { min-height: 5.25rem; resize: vertical; }
@@ -454,3 +481,15 @@ body.qj .newsletter-subscribe button:hover {
     opacity: .9;
 }
 body.qj .audience-message { margin-top: .75rem; font-size: .90625rem; color: var(--qj-accent); }
+
+/* The button's label is hardcoded white because --qj-accent is dark enough in
+ * the light palette to carry it. In the dark palette --qj-accent lightens to
+ * #4FB3AA and white on it falls to roughly 2.2:1 -- below any readable floor.
+ * --qj-paper is the dark canvas, so the label inverts with the scheme instead
+ * of staying a literal (portfolio does the same with --pf-bg). */
+@media (prefers-color-scheme: dark) {
+    body.qj .contact-form button,
+    body.qj .newsletter-subscribe button {
+        color: var(--qj-paper);
+    }
+}
