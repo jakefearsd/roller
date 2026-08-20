@@ -214,7 +214,8 @@ class TravelThemeRenderingTest {
         assertTrue(body.contains("class=\"tg-hero-img\""),
                 "whose image is the featured image:\n" + body);
         assertTrue(body.contains("<h2 class=\"tg-entry-title\">"),
-                "the entry title must be the page's h1:\n" + body);
+                "the entry title must be the permalink's entry heading -- an h2, since "
+                        + "the shell's only h1 is the site name:\n" + body);
         assertTrue(body.contains("<div class=\"tg-entry-content\">"),
                 "and the content must open the measured column:\n" + body);
         assertFalse(body.contains("tg-comments"),

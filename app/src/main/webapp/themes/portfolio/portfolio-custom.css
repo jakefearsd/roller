@@ -175,8 +175,10 @@ body.pf a:hover {
 }
 
 .pf-card-title {
-    /* An <h3> since the grid otherwise ships no headings at all; the reset
-       below is what keeps it pixel-identical to the <span> it replaced. */
+    /* An <h3> since the grid otherwise ships no headings at all. The margin
+       reset keeps the <span> it replaced in place; the weight is NOT a reset --
+       the span inherited 400, and 600 deliberately lifts the caption to the
+       theme's heading weight now that it is a heading. */
     margin: 0;
     font-weight: 600;
     position: absolute;
@@ -564,6 +566,13 @@ body.pf .jgrid {
 
 body.pf .video-figure {
     margin: 1.75rem 0;
+}
+
+/* Frames the consent-gated embed the way journal/travel do. Portfolio ships no
+   radius custom property, so this is the theme's own literal 2px. */
+body.pf .video-embed {
+    border-radius: 2px;
+    overflow: hidden;
 }
 
 /* #showNextPrevSearchControl's hit count (was an <h3>, now a status line). */

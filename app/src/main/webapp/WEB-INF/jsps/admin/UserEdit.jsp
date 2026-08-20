@@ -102,7 +102,7 @@
         <div class="row mb-3">
             <label class="col-sm-3 col-form-label" for="bean_password"><spring:message code="userSettings.password"/></label>
             <div class="col-sm-9">
-                <input type="password" id="bean_password" name="bean.password" size="30" maxlength="30"
+                <input type="password" id="bean_password" name="bean.password" size="30"
                        autocomplete="new-password"
                        onkeyup="formChanged()" class="form-control"
                        title="<spring:message code='userAdmin.tip.password'/>"/>

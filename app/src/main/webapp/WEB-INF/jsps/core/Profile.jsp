@@ -56,7 +56,7 @@
         <spring:message code="userSettings.email" var="emailLabel"/>
         <label class="col-sm-3 col-form-label" for="emailAddress">${emailLabel}</label>
         <div class="col-sm-9">
-            <form:input path="emailAddress" id="emailAddress" cssClass="form-control" size="40" maxlength="40"
+            <form:input path="emailAddress" id="emailAddress" cssClass="form-control" size="40" maxlength="255"
                         onchange="formChanged()" onkeyup="formChanged()"/>
         </div>
     </div>
@@ -66,7 +66,7 @@
             <label class="col-sm-3 col-form-label" for="passwordText">${passwordLabel}</label>
             <div class="col-sm-9">
                 <form:password path="passwordText" id="passwordText" autocomplete="new-password"
-                               cssClass="form-control" size="20" maxlength="20"
+                               cssClass="form-control" size="20"
                                onchange="formChanged()" onkeyup="formChanged()"/>
             </div>
         </div>
@@ -76,7 +76,7 @@
             <label class="col-sm-3 col-form-label" for="passwordConfirm">${passwordConfirmLabel}</label>
             <div class="col-sm-9">
                 <form:password path="passwordConfirm" id="passwordConfirm" autocomplete="new-password"
-                               cssClass="form-control" size="20" maxlength="20"
+                               cssClass="form-control" size="20"
                                onchange="formChanged()" onkeyup="formChanged()"/>
             </div>
         </div>
