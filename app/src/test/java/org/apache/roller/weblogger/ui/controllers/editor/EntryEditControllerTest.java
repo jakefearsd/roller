@@ -641,6 +641,25 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void publishingConfirmsWithTheEntrysOwnPermalink() throws Exception {
+        // The publish banner is where an author goes to check the post, so it
+        // carries a link. The href must be built here, server-side, from the
+        // entry: messages.jsp renders a message unescaped, so a reader-supplied
+        // argument would be markup injection.
+        registerMessage("weblogEdit.publishedEntry", "published <a href=\"{0}\">View it</a>");
+        existingEntry(PubStatus.DRAFT);
+        userMayPost = true;
+
+        controller.entryEditPublish(request, model, bean);
+
+        WeblogEntry saved = captureSavedEntry();
+        assertTrue(messages(model).contains(
+                        "published <a href=\"" + saved.getPermalink() + "\">View it</a>"),
+                "Expected the publish message to carry the entry's permalink, got: "
+                        + messages(model));
+    }
+
+    @Test
     void schedulingAnEntryConfirmsWithTheDateItWillGoLive() throws Exception {
         // The scheduled message is the only one that carries an argument; the
         // author needs to be told *when*, not just that it was scheduled.

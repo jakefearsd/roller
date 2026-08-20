@@ -694,7 +694,9 @@ public class EntryEditController extends BaseController {
                 addMessage(model, "weblogEdit.draftSaved", request);
                 break;
             case PUBLISHED:
-                addMessage(model, "weblogEdit.publishedEntry", request);
+                // The href is built here, from the entry, and never from anything a
+                // reader supplied: messages.jsp renders a message unescaped.
+                addMessage(model, "weblogEdit.publishedEntry", entry.getPermalink(), request);
                 break;
             case SCHEDULED:
                 addMessage(model, "weblogEdit.scheduledEntry",

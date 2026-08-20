@@ -69,7 +69,7 @@ class CategoriesControllerTest extends EditorControllerTestSupport {
         String view = controller.execute(request, model);
 
         assertEquals(".Categories", view);
-        assertTrue(errors(model).contains("Error building categories list"),
+        assertTrue(errors(model).contains("generic.error.check.logs"),
                 "Expected a categories-list error, got: " + errors(model));
     }
 

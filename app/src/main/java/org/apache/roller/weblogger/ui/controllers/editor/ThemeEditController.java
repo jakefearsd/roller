@@ -124,7 +124,12 @@ public class ThemeEditController extends BaseController {
                     weblogger.getWeblogManager().saveWeblog(weblog);
                     weblogger.flush();
                     CacheManager.invalidate(weblog);
-                    addMessage(model, "themeEditor.setTheme.success", WeblogTheme.CUSTOM, request);
+                    // NOT themeEditor.setTheme.success, whose {0} is a theme NAME: this
+                    // branch used to feed it the WeblogTheme.CUSTOM storage constant, so
+                    // the banner read "Theme set to custom". Nor setCustomTheme.success,
+                    // which names the shared theme an import came from and has no meaning
+                    // on the path where nothing was imported.
+                    addMessage(model, "themeEditor.setCustomTheme.enabled", request);
                     addMessage(model, "themeEditor.setCustomTheme.instructions", request);
                 } catch (WebloggerException re) {
                     log.error("Error saving weblog - {}", weblog.getHandle(), re);
@@ -139,7 +144,7 @@ public class ThemeEditController extends BaseController {
                 newTheme = themeMgr.getTheme(selectedThemeId);
             } catch (Exception ex) {
                 log.warn("Theme not found", ex);
-                addError(model, "Theme not found", request);
+                addError(model, "themeEditor.error.notFound", request);
             }
 
             if (!hasErrors(model)) {

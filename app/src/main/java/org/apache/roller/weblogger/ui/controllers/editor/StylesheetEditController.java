@@ -174,11 +174,11 @@ public class StylesheetEditController extends BaseController {
                 weblogManager.saveTemplate(template);
                 weblogger.flush();
                 CacheManager.invalidate(template);
-                addMessage(model, "stylesheetEdit.save.success", template.getName(), request);
+                addMessage(model, "stylesheetEdit.save.success", request);
 
             } catch (WebloggerException ex) {
                 log.error("Error updating stylesheet template", ex);
-                addError(model, "Error saving template - check Roller logs", request);
+                addError(model, "generic.error.check.logs", request);
             }
         }
 
@@ -216,7 +216,7 @@ public class StylesheetEditController extends BaseController {
                 weblogManager.saveTemplate(template);
                 weblogger.flush();
                 CacheManager.invalidate(template);
-                addMessage(model, "stylesheetEdit.revert.success", template.getName(), request);
+                addMessage(model, "stylesheetEdit.revert.success", request);
 
             } catch (WebloggerException ex) {
                 log.error("Error updating stylesheet template", ex);
@@ -239,7 +239,7 @@ public class StylesheetEditController extends BaseController {
                 weblogManager.saveWeblog(getActionWeblog(request));
                 CacheManager.invalidate(template);
                 weblogger.flush();
-                addMessage(model, "stylesheetEdit.default.success", template.getName(), request);
+                addMessage(model, "stylesheetEdit.default.success", request);
                 template = null;
             } catch (Exception e) {
                 log.error("Error deleting stylesheet template", e);

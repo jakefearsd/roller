@@ -71,7 +71,7 @@ public class TemplateEditController extends BaseController {
 
         WeblogTemplate template = lookupTemplate(bean.getId(), request);
         if (template == null) {
-            addError(model, "Unable to locate specified template", request);
+            addError(model, "pageForm.error.notFound", request);
             return ".Templates";
         }
 
@@ -87,7 +87,7 @@ public class TemplateEditController extends BaseController {
             }
         } catch (WebloggerException ex) {
             log.error("Error updating page - {}", bean.getId(), ex);
-            addError(model, "Error saving template - check Roller logs", request);
+            addError(model, "generic.error.check.logs", request);
         }
 
         return ".TemplateEdit";
@@ -101,7 +101,7 @@ public class TemplateEditController extends BaseController {
 
         WeblogTemplate template = lookupTemplate(bean.getId(), request);
         if (template == null) {
-            addError(model, "Unable to locate specified template", request);
+            addError(model, "pageForm.error.notFound", request);
             return ".Templates";
         }
 
@@ -128,7 +128,7 @@ public class TemplateEditController extends BaseController {
 
             } catch (Exception ex) {
                 log.error("Error updating page - {}", bean.getId(), ex);
-                addError(model, "Error updating template - check Roller logs", request);
+                addError(model, "generic.error.check.logs", request);
             }
         }
 

@@ -166,41 +166,16 @@ public class MessageKeyTest {
     }
 
     /**
-     * Today's known missing keys, verbatim -- emptied by Task 8.
+     * Empty, and it stays empty.
      *
-     * <p>Three are genuine keys that were never added to the bundle (two of them
-     * page titles, one an error path in the theme importer); the rest are English
-     * sentences handed to {@code addError} where a key belongs. The assertion is
-     * equality rather than containment on purpose: a newly-introduced missing key
-     * fails the build, and so does one that gets fixed without this set shrinking
-     * to match.
+     * <p>Task 7 filled this with nineteen offenders -- three genuine keys that
+     * had never been added to the bundle, and sixteen English sentences handed
+     * to {@code addError} where a key belongs -- and Task 8 repaired every one.
+     * The assertion is equality rather than containment, so an empty set is a
+     * live gate: the next raw sentence passed to {@code addError} fails the
+     * build instead of quietly shipping untranslatable English.
      */
-    private static final Set<String> EXPECTED_MISSING_JAVA_KEYS = Set.of(
-            // Real keys, never added to the bundle. The first two are page
-            // titles, so the raw key is what a reader sees as the heading; note
-            // "Imaeg" -- fixing the typo alone would orphan the key instead.
-            "mediaFileImaegChooser.title",
-            "mediaFile.edit.title",
-            "error.closingStream",
-            // English sentences passed where a key belongs: untranslatable, and
-            // indistinguishable at runtime from a working message because
-            // getText() answers with its own argument.
-            "Error adding new template - check Roller logs",
-            "Error applying search criteria - check Roller logs",
-            "Error building categories list",
-            "Error creating new directory",
-            "Error deleting template - check Roller logs",
-            "Error flushing page cache",
-            "Error getting template list - check Roller logs",
-            "Error looking up entries",
-            "Error looking up trashed entries",
-            "Error saving template - check Roller logs",
-            "Error updating configuration",
-            "Error updating template - check Roller logs",
-            "Theme not found",
-            "Unable to locate specified template",
-            "Unexpected error doing profile save",
-            "Unexpected error validating weblog -- check Roller logs");
+    private static final Set<String> EXPECTED_MISSING_JAVA_KEYS = Set.of();
 
     /**
      * Bundle keys nothing refers to are dead weight in eight translated files --

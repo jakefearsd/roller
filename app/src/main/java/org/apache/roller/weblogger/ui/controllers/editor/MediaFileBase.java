@@ -119,7 +119,7 @@ public abstract class MediaFileBase extends BaseController {
             log.debug("Processing delete of file id - {}", mediaFileId);
             MediaFile mediaFile = ownedMediaFile(mediaFileId, request);
             if (mediaFile == null) {
-                addError(model, "mediaFile.delete.error", mediaFileId, request);
+                addError(model, "mediaFile.delete.error", request);
                 return;
             }
             weblogger.getMediaFileManager().removeMediaFile(getActionWeblog(request), mediaFile);
@@ -128,7 +128,7 @@ public abstract class MediaFileBase extends BaseController {
             addMessage(model, "mediaFile.delete.success", request);
         } catch (WebloggerException e) {
             log.error("Error deleting media file", e);
-            addError(model, "mediaFile.delete.error", mediaFileId, request);
+            addError(model, "mediaFile.delete.error", request);
         }
     }
 

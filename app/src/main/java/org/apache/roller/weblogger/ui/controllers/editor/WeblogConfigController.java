@@ -96,7 +96,7 @@ public class WeblogConfigController extends BaseController {
 
             } catch (Exception ex) {
                 log.error("Error updating weblog config", ex);
-                addError(model, "Error updating configuration", request);
+                addError(model, "generic.error.check.logs", request);
             }
         }
 

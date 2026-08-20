@@ -105,7 +105,7 @@ class TrashControllerTest extends EditorControllerTestSupport {
         String view = controller.execute(request, model);
 
         assertEquals(".Trash", view, "The trash page must still render after a failed query");
-        assertTrue(errors(model).contains("Error looking up trashed entries"),
+        assertTrue(errors(model).contains("generic.error.check.logs"),
                 "Expected the lookup failure to be reported, got: " + errors(model));
         assertEquals(List.of(), model.getAttribute("trashedEntries"));
     }

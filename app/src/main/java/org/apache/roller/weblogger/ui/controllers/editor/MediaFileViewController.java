@@ -106,11 +106,11 @@ public class MediaFileViewController extends MediaFileBase {
                     addMessage(model, "mediaFile.directoryCreate.success", newDirectoryName, request);
                     directoryId = dir.getId();
                 } else {
-                    addMessage(model, "mediaFile.directoryCreate.error.exists", newDirectoryName, request);
+                    addError(model, "mediaFile.directoryCreate.error.exists", newDirectoryName, request);
                 }
             } catch (WebloggerException e) {
                 log.error("Error creating new directory", e);
-                addError(model, "Error creating new directory", request);
+                addError(model, "generic.error.check.logs", request);
             }
         }
 
@@ -260,7 +260,7 @@ public class MediaFileViewController extends MediaFileBase {
             model.addAttribute("pager", new MediaFilePager(bean.getPageNum(), results, hasMore));
         } catch (Exception e) {
             log.error("Error applying search criteria", e);
-            addError(model, "Error applying search criteria - check Roller logs", request);
+            addError(model, "generic.error.check.logs", request);
         }
 
         return ".MediaFileView";

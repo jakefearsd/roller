@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -219,8 +220,23 @@ class MembersControllerTest extends EditorControllerTestSupport {
 
         verify(weblogger.getUserManager(), never()).revokeWeblogPermission(any(), any(), any());
         verify(weblogger.getUserManager(), never()).grantWeblogPermission(any(), any(), any());
-        assertTrue(messages(model).isEmpty(),
-                "Nothing changed, so nothing should be reported: " + messages(model));
+        assertEquals(java.util.List.of("memberPermissions.noneChanged"), messages(model),
+                "A save that changed nothing must say so rather than answering with a blank "
+                        + "page that is indistinguishable from a save that failed: " + messages(model));
+    }
+
+    @Test
+    void aSaveThatChangedNothingBecauseItWasRefusedSaysNothingAboutNoChanges() throws Exception {
+        // "No changes to save" alongside "the last admin cannot be removed"
+        // would read as though the refusal were routine. The neutral notice is
+        // for a submission that asked for nothing, not for one that was denied.
+        givenMember(user, WeblogPermission.ADMIN);
+        submit(user, WeblogPermission.POST);
+
+        controller.save(request, model);
+
+        assertFalse(messages(model).contains("memberPermissions.noneChanged"),
+                "A refused save must not also claim there was nothing to do: " + messages(model));
     }
 
     @Test
@@ -311,8 +327,22 @@ class MembersControllerTest extends EditorControllerTestSupport {
         assertEquals(".Members", view);
         verify(weblogger.getUserManager())
                 .grantWeblogPermission(weblog, bob, List.of(WeblogPermission.POST));
-        assertTrue(messages(model).contains("memberPermissions.membersChanged"),
+        assertTrue(messages(model).contains("memberPermissions.memberChanged"),
                 "Granting access must be confirmed: " + messages(model));
+    }
+
+    @Test
+    void grantingConfirmsWithTheUsernameRatherThanACountOfOne() throws Exception {
+        // This used to report through the plural memberPermissions.membersChanged
+        // with a hardcoded "1", so a one-person action read "Changed permission
+        // for 1 user(s)" -- a count where the reader wanted a name.
+        registerMessage("memberPermissions.memberChanged", "updated {0}");
+        otherUser("bob");
+
+        controller.grant(request, model, "bob", WeblogPermission.POST);
+
+        assertTrue(messages(model).contains("updated bob"),
+                "Expected the granted username in the confirmation, got: " + messages(model));
     }
 
     @Test

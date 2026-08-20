@@ -72,7 +72,7 @@ public class CategoriesController extends BaseController {
             model.addAttribute("allCategories", wmgr.getWeblogCategories(getActionWeblog(request)));
         } catch (WebloggerException ex) {
             log.error("Error building categories list", ex);
-            addError(model, "Error building categories list", request);
+            addError(model, "generic.error.check.logs", request);
         }
 
         return ".Categories";

@@ -3,11 +3,13 @@ package org.apache.roller.weblogger.ui.restapi.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
+import org.apache.roller.weblogger.util.I18nMessages;
 import org.apache.roller.weblogger.util.RollerMessages;
 
 /**
@@ -101,7 +103,12 @@ public final class MediaDtos {
             last = it.next();
         }
         if (last == null) {
-            return new UploadResult(fileName, "error", "Upload failed.", null);
+            // No message at all: the only detail here that is not derived from a
+            // key, so it comes from the bundle rather than being spelled out in
+            // Java. The default locale is the right one -- an API response has no
+            // request locale to honour, unlike the JSP surface.
+            return new UploadResult(fileName, "error",
+                    I18nMessages.getMessages(Locale.getDefault()).getString("error.upload.failed"), null);
         }
         String status = switch (last.getKey()) {
             case "error.upload.dirmax", "error.upload.filemax" -> "quota_exceeded";

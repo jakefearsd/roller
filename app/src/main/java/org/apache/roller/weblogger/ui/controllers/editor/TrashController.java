@@ -98,7 +98,7 @@ public class TrashController extends BaseController {
             trashedEntries = weblogger.getWeblogEntryManager().getTrashedEntries(getActionWeblog(request));
         } catch (WebloggerException ex) {
             log.error("Error looking up trashed entries", ex);
-            addError(model, "Error looking up trashed entries", request);
+            addError(model, "generic.error.check.logs", request);
         }
         model.addAttribute("trashedEntries", trashedEntries);
 

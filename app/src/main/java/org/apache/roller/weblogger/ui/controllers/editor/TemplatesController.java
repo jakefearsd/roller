@@ -114,10 +114,11 @@ public class TemplatesController extends BaseController {
                 }
 
                 weblogger.flush();
+                addMessage(model, "pagesForm.added", newTemplate.getName(), request);
 
             } catch (WebloggerException ex) {
                 log.error("Error adding new template for weblog - {}", getActionWeblog(request).getHandle(), ex);
-                addError(model, "Error adding new template - check Roller logs", request);
+                addError(model, "generic.error.check.logs", request);
             }
         }
 
@@ -139,39 +140,44 @@ public class TemplatesController extends BaseController {
         if (template == null) {
             log.warn("Refusing to delete template {}: not owned by weblog {}",
                     removeId, getActionWeblog(request).getHandle());
-            addError(model, "Error deleting template - check Roller logs", request);
+            // One cause, one banner. This used to report here AND fall through
+            // to the generic arm at the bottom, stacking two errors on a screen
+            // where the reader has no way to tell they describe the same thing.
+            addError(model, "editPages.remove.error", request);
+            loadTemplatesList(request, model);
+            return ".Templates";
         }
 
-        if (template != null) {
-            try {
-                if (!template.isRequired()
-                        || !WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme())) {
+        // The name has to be read before the row goes, or the success
+        // message names an emptied object.
+        String removedName = template.getName();
+        try {
+            if (!template.isRequired()
+                    || !WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme())) {
 
-                    WeblogManager mgr = weblogger.getWeblogManager();
+                WeblogManager mgr = weblogger.getWeblogManager();
 
-                    if (WeblogTemplate.DEFAULT_PAGE.equals(template.getName())) {
-                        ThemeTemplate stylesheet = getActionWeblog(request).getTheme().getStylesheet();
-                        if (stylesheet != null && getActionWeblog(request).getTheme().getStylesheet() != null
-                                && stylesheet.getLink().equals(
-                                getActionWeblog(request).getTheme().getStylesheet().getLink())) {
-                            WeblogTemplate css = mgr.getTemplateByLink(getActionWeblog(request), stylesheet.getLink());
-                            if (css != null) {
-                                mgr.removeTemplate(css);
-                            }
+                if (WeblogTemplate.DEFAULT_PAGE.equals(template.getName())) {
+                    ThemeTemplate stylesheet = getActionWeblog(request).getTheme().getStylesheet();
+                    if (stylesheet != null && getActionWeblog(request).getTheme().getStylesheet() != null
+                            && stylesheet.getLink().equals(
+                            getActionWeblog(request).getTheme().getStylesheet().getLink())) {
+                        WeblogTemplate css = mgr.getTemplateByLink(getActionWeblog(request), stylesheet.getLink());
+                        if (css != null) {
+                            mgr.removeTemplate(css);
                         }
                     }
-
-                    CacheManager.invalidate(template);
-                    mgr.removeTemplate(template);
-                    weblogger.flush();
-                } else {
-                    addError(model, "editPages.remove.requiredTemplate", request);
                 }
-            } catch (Exception ex) {
-                log.error("Error removing page - {}", removeId, ex);
-                addError(model, "editPages.remove.error", request);
+
+                CacheManager.invalidate(template);
+                mgr.removeTemplate(template);
+                weblogger.flush();
+                addMessage(model, "pagesForm.removed", removedName, request);
+            } else {
+                addError(model, "editPages.remove.requiredTemplate", request);
             }
-        } else {
+        } catch (Exception ex) {
+            log.error("Error removing page - {}", removeId, ex);
             addError(model, "editPages.remove.error", request);
         }
 
@@ -219,7 +225,7 @@ public class TemplatesController extends BaseController {
 
         } catch (WebloggerException ex) {
             log.error("Error getting templates for weblog - {}", getActionWeblog(request).getHandle(), ex);
-            addError(model, "Error getting template list - check Roller logs", request);
+            addError(model, "generic.error.check.logs", request);
         }
     }
 

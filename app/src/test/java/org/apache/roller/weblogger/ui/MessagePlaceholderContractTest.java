@@ -19,6 +19,11 @@ package org.apache.roller.weblogger.ui;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +33,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -86,39 +92,44 @@ public class MessagePlaceholderContractTest {
             "weblogEdit.draftRecovery.message");
 
     /**
-     * Today's known placeholder-contract violations, verbatim -- emptied by Task 8.
+     * Empty, and it stays empty.
      *
-     * <p>The assertion below is equality, not containment, so this set fails the
-     * build in both directions: a newly-introduced mismatch is not absorbed, and
-     * a silently-repaired one has to be removed from here in the same commit
-     * that repairs it.
+     * <p>Task 7 populated this with eleven legacy mismatches and Task 8 repaired
+     * every one of them. It is kept as a set rather than deleted because the
+     * assertion below is equality, not containment: a newly-introduced mismatch
+     * is not absorbed by an empty expectation, and if a future wave ever has to
+     * carry one deliberately, this is where it goes -- with a reason.
      *
-     * <p>Deliberately absent: {@code memberPermissions.membersChanged}, which
-     * <em>is</em> a defect ({@code MembersController} passes a hardcoded {@code
-     * "1"} into "Changed permission for &#123;0&#125; user(s)") but not one this
-     * ratchet can see. One placeholder, one argument -- the contract holds; what
-     * is wrong is the value of the argument, which no static check reaches. Fix
-     * it, but do not expect this test to have flagged it.
+     * <p>One defect this ratchet structurally cannot see, recorded so nobody
+     * goes looking for a failure that was never going to fire: an argument whose
+     * <em>value</em> is wrong. {@code MembersController} used to pass a
+     * hardcoded {@code "1"} into "Changed permission for &#123;0&#125; user(s)"
+     * -- one placeholder, one argument, contract satisfied, message wrong. It
+     * was fixed by hand in Task 8 (a singular key carrying the username), not by
+     * this test.
      */
-    private static final Set<String> EXPECTED_LEGACY_OFFENDERS = Set.of(
-            // Too few: the value's second placeholder is never filled, so the
-            // admin sees a literal {1} where the rejected value should be.
-            "ConfigForm.invalidBooleanProperty",
-            "ConfigForm.invalidIntegerProperty",
-            "ConfigForm.invalidFloatProperty",
-            // Too few: MediaFileBase passes nothing, so the filename never
-            // appears and a literal {0} does.
-            "mediaFile.delete.error",
-            // Too many: the value computed at the call site is silently dropped.
-            // categoryForm.created still carries the double space the removed
-            // {0} left behind.
-            "categoryForm.created",
-            "categoryForm.error.duplicateName",
-            "createUser.add.success",
-            "pageForm.save.success",
-            "stylesheetEdit.save.success",
-            "stylesheetEdit.revert.success",
-            "stylesheetEdit.default.success");
+    private static final Set<String> EXPECTED_LEGACY_OFFENDERS = Set.of();
+
+    /**
+     * Not message renders at all: two marker literals inside {@code
+     * Categories.jsp}'s AJAX handler, which {@code indexOf}es the message text
+     * against the HTML the save POST answered with in order to guess whether the
+     * category was rejected as a duplicate ("kludge: scrape response status from
+     * HTML returned by Struts" is the file's own comment). The tag renders the
+     * pattern verbatim there on purpose -- it is a needle, not a sentence shown
+     * to anybody -- so it can no more pass an argument than a regex can.
+     *
+     * <p>The scrape is already dead in this tree, which is why exempting it is
+     * safe rather than a hole worth worrying about: {@code
+     * CategoryEditController.categoryEditSave} answers every validation failure
+     * with a 302 and a flash {@code generic.error.check.logs}, so the duplicate
+     * message never appears in the body jQuery receives. Deleting the scrape
+     * belongs to the admin-JSP lane; {@link
+     * #theResponseScrapeMarkersStillExist()} fails once it is gone, so this
+     * exemption cannot outlive it.
+     */
+    private static final Set<String> RESPONSE_SCRAPE_MARKERS = Set.of(
+            "WEB-INF/jsps/editor/Categories.jsp -> categoryForm.error.duplicateName");
 
     /**
      * Call sites whose argument count cannot be read off the source: both pass a
@@ -135,6 +146,7 @@ public class MessagePlaceholderContractTest {
     public void everyCallSitePassesTheArgumentsItsMessageDeclares() throws IOException {
         Properties bundle = loadDefaultBundle();
         assertFalse(bundle.isEmpty(), "Default bundle is empty");
+        Map<String, Integer> declaredEverywhere = highestPlaceholderPerKeyAcrossAllBundles();
 
         Map<String, List<String>> violations = new TreeMap<>();
         int checked = 0;
@@ -142,15 +154,16 @@ public class MessagePlaceholderContractTest {
         for (MessageUsageScanner.Usage usage : MessageUsageScanner.scanAll()) {
             String value = bundle.getProperty(usage.key());
             if (value == null || usage.argCount() == MessageUsageScanner.UNRESOLVED
-                    || CLIENT_SIDE_SUBSTITUTION.contains(usage.key())) {
+                    || CLIENT_SIDE_SUBSTITUTION.contains(usage.key())
+                    || RESPONSE_SCRAPE_MARKERS.contains(fileAndKey(usage))) {
                 continue;
             }
             checked++;
-            int declared = highestPlaceholderIndex(value) + 1;
+            int declared = declaredEverywhere.getOrDefault(usage.key(), -1) + 1;
             if (usage.argCount() != declared) {
                 violations.computeIfAbsent(usage.key(), k -> new ArrayList<>())
                         .add(usage.where() + " passes " + usage.argCount()
-                                + ", value declares " + declared + ": \"" + value + "\"");
+                                + ", the bundles declare " + declared + " (base value: \"" + value + "\")");
             }
         }
 
@@ -192,6 +205,69 @@ public class MessagePlaceholderContractTest {
                     key + " is allowlisted for client-side {0} substitution but no longer "
                             + "declares a placeholder -- drop it from the allowlist.");
         }
+    }
+
+
+    /**
+     * The highest {@code &#123;n&#125;} index each key declares in ANY shipped
+     * bundle, not just the base one.
+     *
+     * <p>The contract a call site has to satisfy is "every translation of this
+     * message", not "the English one". A translator who writes {@code
+     * "Utilisateur [&#123;0&#125;] modifié"} against a base value carrying no
+     * placeholder has made the call site wrong on a French install and nowhere
+     * else -- and reading only the base bundle is precisely how that stays
+     * invisible. Taking the maximum makes the base bundle the floor rather than
+     * the whole answer: fixing such a mismatch means either passing the argument
+     * everywhere or removing the placeholder from the translation, and both show
+     * up here.
+     */
+    private static Map<String, Integer> highestPlaceholderPerKeyAcrossAllBundles() throws IOException {
+        Map<String, Integer> highest = new TreeMap<>();
+        try (Stream<Path> paths = Files.list(RESOURCE_ROOT)) {
+            for (Path bundle : paths.filter(MessagePlaceholderContractTest::isMessageBundle).toList()) {
+                Properties props = new Properties();
+                try (Reader reader = Files.newBufferedReader(bundle, StandardCharsets.UTF_8)) {
+                    props.load(reader);
+                }
+                for (String key : props.stringPropertyNames()) {
+                    highest.merge(key, highestPlaceholderIndex(props.getProperty(key)), Math::max);
+                }
+            }
+        }
+        assertFalse(highest.isEmpty(), "No message bundles found under " + RESOURCE_ROOT.toAbsolutePath());
+        return highest;
+    }
+
+    private static boolean isMessageBundle(Path path) {
+        String name = path.getFileName().toString();
+        return name.startsWith("ApplicationResources") && name.endsWith(".properties");
+    }
+
+    private static final Path RESOURCE_ROOT = Paths.get("src/main/resources");
+
+    /**
+     * Guards {@link #RESPONSE_SCRAPE_MARKERS}: the moment the admin-JSP lane
+     * deletes the response scrape, this fails and the exemption above has to go
+     * with it rather than quietly excusing nothing.
+     */
+    @Test
+    public void theResponseScrapeMarkersStillExist() throws IOException {
+        Set<String> present = new TreeSet<>();
+        for (MessageUsageScanner.Usage usage : MessageUsageScanner.scanAll()) {
+            if (RESPONSE_SCRAPE_MARKERS.contains(fileAndKey(usage))) {
+                present.add(fileAndKey(usage));
+            }
+        }
+        assertEquals(RESPONSE_SCRAPE_MARKERS, present,
+                "A response-scrape marker this test exempts is no longer in the tree. "
+                        + "Drop it from RESPONSE_SCRAPE_MARKERS instead of leaving an "
+                        + "exemption behind that excuses nothing.");
+    }
+
+    private static String fileAndKey(MessageUsageScanner.Usage usage) {
+        String path = usage.where().substring(0, usage.where().lastIndexOf(':'));
+        return path.replace('\\', '/') + " -> " + usage.key();
     }
 
     private static String shortSite(MessageUsageScanner.Usage usage) {

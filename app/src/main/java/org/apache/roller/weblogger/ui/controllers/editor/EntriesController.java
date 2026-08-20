@@ -113,7 +113,7 @@ public class EntriesController extends BaseController {
             }
         } catch (WebloggerException ex) {
             log.error("Error looking up entries", ex);
-            addError(model, "Error looking up entries", request);
+            addError(model, "generic.error.check.logs", request);
         }
 
         String baseUrl = buildBaseUrl(request, bean);

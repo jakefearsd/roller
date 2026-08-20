@@ -136,7 +136,7 @@ public class GlobalConfigController extends BaseController {
                     log.debug("Set boolean {} = {}", propName, incomingProp);
                 } catch (Exception nfe) {
                     String propDesc = bundle.getString(propertyDef.getKey());
-                    addError(model, "ConfigForm.invalidBooleanProperty", propDesc, request);
+                    addError(model, "ConfigForm.invalidBooleanProperty", new Object[]{propDesc, incomingProp}, request);
                 }
 
             } else if (incomingProp != null && "integer".equals(propertyDef.getType())) {
@@ -146,7 +146,7 @@ public class GlobalConfigController extends BaseController {
                     log.debug("Set integer {} = {}", propName, incomingProp);
                 } catch (NumberFormatException nfe) {
                     String propDesc = bundle.getString(propertyDef.getKey());
-                    addError(model, "ConfigForm.invalidIntegerProperty", propDesc, request);
+                    addError(model, "ConfigForm.invalidIntegerProperty", new Object[]{propDesc, incomingProp}, request);
                 }
 
             } else if (incomingProp != null && "float".equals(propertyDef.getType())) {
@@ -156,7 +156,7 @@ public class GlobalConfigController extends BaseController {
                     log.debug("Set float {} = {}", propName, incomingProp);
                 } catch (NumberFormatException nfe) {
                     String propDesc = bundle.getString(propertyDef.getKey());
-                    addError(model, "ConfigForm.invalidFloatProperty", propDesc, request);
+                    addError(model, "ConfigForm.invalidFloatProperty", new Object[]{propDesc, incomingProp}, request);
                 }
 
             } else if (incomingProp != null) {

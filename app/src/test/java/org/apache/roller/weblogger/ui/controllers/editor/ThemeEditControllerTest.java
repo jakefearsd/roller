@@ -306,8 +306,24 @@ class ThemeEditControllerTest extends EditorControllerTestSupport {
         assertEquals(WeblogTheme.CUSTOM, weblog.getEditorTheme());
         verify(weblogger.getWeblogManager()).saveWeblog(weblog);
         assertTrue(weblogger.flushCount() > 0);
-        assertEquals(List.of("themeEditor.setTheme.success", "themeEditor.setCustomTheme.instructions"),
-                messages(model));
+        assertEquals(List.of("themeEditor.setCustomTheme.enabled",
+                        "themeEditor.setCustomTheme.instructions"),
+                messages(model),
+                "Switching to a custom theme used to be reported through setTheme.success "
+                        + "with the literal constant \"custom\" as the theme name, so the banner "
+                        + "read \"Theme set to custom\" -- an internal enum value shown to an author.");
+    }
+
+    @Test
+    void switchingToACustomThemeNeverShowsTheInternalCustomConstantAsAThemeName() throws Exception {
+        registerMessage("themeEditor.setTheme.success", "now:{0}");
+        weblog.setEditorTheme("shared-1");
+
+        controller.save(request, model, WeblogTheme.CUSTOM, null, false);
+
+        assertFalse(messages(model).contains("now:" + WeblogTheme.CUSTOM),
+                "The WeblogTheme.CUSTOM constant is a storage value, not a theme name: "
+                        + messages(model));
     }
 
     @Test
@@ -440,7 +456,7 @@ class ThemeEditControllerTest extends EditorControllerTestSupport {
 
         controller.save(request, model, "shared", "missing", false);
 
-        assertTrue(errors(model).contains("Theme not found"), "Got: " + errors(model));
+        assertTrue(errors(model).contains("themeEditor.error.notFound"), "Got: " + errors(model));
         assertEquals("shared-1", weblog.getEditorTheme(),
                 "A theme lookup failure must leave the weblog's theme untouched");
         verify(weblogger.getWeblogManager(), never()).saveWeblog(any());

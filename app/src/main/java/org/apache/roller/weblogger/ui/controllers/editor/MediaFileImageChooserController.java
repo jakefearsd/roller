@@ -66,7 +66,7 @@ public class MediaFileImageChooserController extends MediaFileBase {
 
     @Override
     public String getPageTitle() {
-        return "mediaFileImaegChooser.title";
+        return "mediaFileImageChooser.title";
     }
 
     @GetMapping("/mediaFileImageChooser.rol")

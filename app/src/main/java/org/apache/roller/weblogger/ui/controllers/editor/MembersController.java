@@ -148,6 +148,13 @@ public class MembersController extends BaseController {
         if (changed > 0) {
             addMessage(model, "memberPermissions.membersChanged", Integer.toString(changed), request);
         }
+        if (removed == 0 && changed == 0 && !hasErrors(model)) {
+            // A submission that asked for nothing used to answer with a blank
+            // page, which is exactly what a save that silently failed looks
+            // like. Only for a save that was not refused -- pairing this with
+            // an error would read as though the refusal were routine.
+            addMessage(model, "memberPermissions.noneChanged", request);
+        }
 
         model.addAttribute("weblogPermissions", getWeblogPermissions(request));
         return ".Members";
@@ -216,7 +223,7 @@ public class MembersController extends BaseController {
                 userMgr.grantWeblogPermission(getActionWeblog(request), user,
                         Utilities.stringToStringList(permissionString, ","));
                 weblogger.flush();
-                addMessage(model, "memberPermissions.membersChanged", "1", request);
+                addMessage(model, "memberPermissions.memberChanged", user.getUserName(), request);
             } catch (Exception ex) {
                 log.error("Error granting permission on weblog - {}", getActionWeblog(request).getHandle(), ex);
                 addError(model, "memberPermissions.saveError", request);

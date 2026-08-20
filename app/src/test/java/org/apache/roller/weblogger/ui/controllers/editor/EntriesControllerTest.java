@@ -193,7 +193,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         String view = controller.execute(request, model, bean);
 
         assertEquals(".Entries", view, "The list page must still render after a failed query");
-        assertTrue(errors(model).contains("Error looking up entries"),
+        assertTrue(errors(model).contains("generic.error.check.logs"),
                 "Expected the lookup failure to be reported, got: " + errors(model));
 
         // The try block throws before `entries` or `hasMore` are ever assigned,

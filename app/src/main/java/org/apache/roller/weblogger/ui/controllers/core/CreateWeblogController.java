@@ -196,7 +196,7 @@ public class CreateWeblogController extends BaseController {
             }
         } catch (WebloggerException ex) {
             log.error("error checking for weblog", ex);
-            addError(model, "Unexpected error validating weblog -- check Roller logs", request);
+            addError(model, "generic.error.check.logs", request);
         }
     }
 

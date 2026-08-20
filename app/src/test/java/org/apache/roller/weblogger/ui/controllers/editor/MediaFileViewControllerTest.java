@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -235,8 +236,11 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
         controller.createNewDirectory(request, model, null, "photos", null);
 
         verify(weblogger.getMediaFileManager(), never()).createMediaFileDirectory(any(), any());
-        assertTrue(messages(model).contains("mediaFile.directoryCreate.error.exists"),
-                "Expected a duplicate notice, got: " + messages(model));
+        assertTrue(errors(model).contains("mediaFile.directoryCreate.error.exists"),
+                "A name collision is a refusal -- the folder was NOT created -- so it has to "
+                        + "render in the error banner, not the green one: " + errors(model));
+        assertFalse(messages(model).contains("mediaFile.directoryCreate.error.exists"),
+                "The collision notice must not also appear among the successes");
     }
 
     @Test

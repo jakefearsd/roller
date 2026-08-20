@@ -135,7 +135,7 @@ public class MaintenanceController extends BaseController {
             addMessage(model, "maintenance.message.flushed", request);
         } catch (Exception ex) {
             log.error("Error saving weblog - {}", weblog.getHandle(), ex);
-            addError(model, "Error flushing page cache", request);
+            addError(model, "generic.error.check.logs", request);
         }
 
         return ".Maintenance";

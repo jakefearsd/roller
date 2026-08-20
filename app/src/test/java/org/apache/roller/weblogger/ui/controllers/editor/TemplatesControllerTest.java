@@ -144,7 +144,7 @@ class TemplatesControllerTest extends EditorControllerTestSupport {
         String view = controller.execute(request, model);
 
         assertEquals(".Templates", view);
-        assertTrue(errors(model).contains("Error getting template list - check Roller logs"),
+        assertTrue(errors(model).contains("generic.error.check.logs"),
                 "Expected a template-list error, got: " + errors(model));
     }
 
@@ -251,8 +251,47 @@ class TemplatesControllerTest extends EditorControllerTestSupport {
         String view = controller.add(request, model, "MyTemplate", ComponentType.CUSTOM);
 
         assertEquals(".Templates", view);
-        assertTrue(errors(model).contains("Error adding new template - check Roller logs"),
+        assertTrue(errors(model).contains("generic.error.check.logs"),
                 "Expected a save error, got: " + errors(model));
+    }
+
+    @Test
+    void addReportsSuccessNamingTheTemplateItCreated() throws Exception {
+        // Before this, a successful add answered with the list page and no
+        // banner at all -- indistinguishable from a POST that silently did
+        // nothing, on a screen where the new row is easy to miss.
+        registerMessage("pagesForm.added", "added:{0}");
+        when(weblogger.getWeblogManager().getTemplates(weblog)).thenReturn(List.of());
+
+        controller.add(request, model, "MyTemplate", ComponentType.CUSTOM);
+
+        assertTrue(messages(model).contains("added:MyTemplate"),
+                "Expected a success notice naming the template, got: " + messages(model));
+    }
+
+    @Test
+    void addReportsTheForcedNameWhenAWeblogTemplateIsRenamedToTheDefaultPage() throws Exception {
+        // A WEBLOG-action template is stored under DEFAULT_PAGE whatever the
+        // user typed, so the notice has to name the row that actually appeared.
+        registerMessage("pagesForm.added", "added:{0}");
+        when(weblogger.getWeblogManager().getTemplates(weblog)).thenReturn(List.of());
+
+        controller.add(request, model, "AnythingAtAll", ComponentType.WEBLOG);
+
+        assertTrue(messages(model).contains("added:" + WeblogTemplate.DEFAULT_PAGE),
+                "Expected the stored name, not the submitted one, got: " + messages(model));
+    }
+
+    @Test
+    void addReportsNoSuccessWhenTheSaveFailed() throws Exception {
+        registerMessage("pagesForm.added", "added:{0}");
+        when(weblogger.getWeblogManager().getTemplates(weblog)).thenReturn(List.of());
+        doThrow(new WebloggerException("boom")).when(weblogger.getWeblogManager()).saveTemplate(any());
+
+        controller.add(request, model, "MyTemplate", ComponentType.CUSTOM);
+
+        assertTrue(messages(model).isEmpty(),
+                "A failed add must not also claim success: " + messages(model));
     }
 
     @Test
@@ -280,6 +319,47 @@ class TemplatesControllerTest extends EditorControllerTestSupport {
         assertTrue(errors(model).contains("editPages.remove.error"),
                 "Expected a remove error, got: " + errors(model));
         verify(weblogger.getWeblogManager(), never()).removeTemplate(any());
+    }
+
+    @Test
+    void removeReportsExactlyOneErrorWhenTheTemplateIdDoesNotResolve() throws Exception {
+        // The not-found path used to fall through into the generic
+        // "else" arm as well, stacking two banners for one cause.
+        when(weblogger.getWeblogManager().getTemplate("gone")).thenReturn(null);
+        when(weblogger.getWeblogManager().getTemplates(weblog)).thenReturn(List.of());
+
+        controller.remove(request, model, "gone");
+
+        assertEquals(List.of("editPages.remove.error"), errors(model),
+                "One cause, one message: " + errors(model));
+    }
+
+    @Test
+    void removeReportsSuccessNamingTheTemplateItDeleted() throws Exception {
+        registerMessage("pagesForm.removed", "removed:{0}");
+        WeblogTemplate custom = templateNamed("MyTemplate", ComponentType.CUSTOM);
+        when(weblogger.getWeblogManager().getTemplate("t-1")).thenReturn(custom);
+        when(weblogger.getWeblogManager().getTemplates(weblog)).thenReturn(List.of());
+
+        controller.remove(request, model, "t-1");
+
+        assertTrue(messages(model).contains("removed:MyTemplate"),
+                "A deletion is the most consequential action on this screen and reported "
+                        + "nothing at all before: " + messages(model));
+    }
+
+    @Test
+    void aRefusedRemoveReportsNoSuccess() throws Exception {
+        WeblogTemplate required = templateNamed("Weblog", ComponentType.WEBLOG);
+        required.setLink("Weblog");
+        when(weblogger.getWeblogManager().getTemplate("t-1")).thenReturn(required);
+        when(weblogger.getWeblogManager().getTemplates(weblog)).thenReturn(List.of());
+
+        controller.remove(request, model, "t-1");
+
+        assertTrue(messages(model).isEmpty(),
+                "A protected template that was not deleted must not report a deletion: "
+                        + messages(model));
     }
 
     @Test

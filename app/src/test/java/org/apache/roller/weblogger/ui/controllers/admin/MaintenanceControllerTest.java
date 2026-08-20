@@ -183,7 +183,7 @@ class MaintenanceControllerTest {
         String view = controller.flushCache(request(), model, "weblog-1");
 
         assertEquals(".Maintenance", view);
-        assertTrue(ControllerTestFixture.errors(model).contains("Error flushing page cache"),
+        assertTrue(ControllerTestFixture.errors(model).contains("generic.error.check.logs"),
                 "Expected a flush error, got: " + ControllerTestFixture.errors(model));
         assertTrue(ControllerTestFixture.messages(model).isEmpty(),
                 "A failed flush must not also report success");

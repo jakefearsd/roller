@@ -221,26 +221,18 @@ public class MessageFormatRegressionTest {
     }
 
     /**
-     * Today's known lone-apostrophe values, verbatim -- emptied by Task 8.
-     * Equality rather than containment, so a new one fails the build and a fixed
-     * one has to leave this set in the same commit.
+     * Empty, and it stays empty. Task 7 recorded six lone apostrophes in values
+     * that declare a placeholder (all French); Task 8 doubled every one. A new
+     * one fails the build rather than being absorbed.
      */
-    private static final Set<String> EXPECTED_LONE_APOSTROPHES = Set.of(
-            "ApplicationResources_fr.properties#categoryForm.error.duplicateName",
-            "ApplicationResources_fr.properties#error.upload.dirmax",
-            "ApplicationResources_fr.properties#error.upload.forbiddenFile",
-            "ApplicationResources_fr.properties#memberPermissions.membersChanged",
-            "ApplicationResources_fr.properties#userAdmin.title.editUser",
-            "ApplicationResources_fr.properties#weblogEntry.pendingEntryContent");
+    private static final Set<String> EXPECTED_LONE_APOSTROPHES = Set.of();
 
     /**
-     * Today's known doubled-apostrophe values, verbatim -- emptied by Task 8.
+     * Empty, and it stays empty. Task 7 recorded four doubled apostrophes in
+     * values with no placeholder -- three French, one Simplified Chinese -- and
+     * Task 8 singled every one.
      */
-    private static final Set<String> EXPECTED_DOUBLED_APOSTROPHES = Set.of(
-            "ApplicationResources_fr.properties#index.createUserHelp",
-            "ApplicationResources_fr.properties#maintenance.button.index",
-            "ApplicationResources_fr.properties#memberPermissions.title",
-            "ApplicationResources_zh_CN.properties#userSettings.tip.username");
+    private static final Set<String> EXPECTED_DOUBLED_APOSTROPHES = Set.of();
 
     private static final Path RESOURCE_ROOT = Paths.get("src/main/resources");
 
