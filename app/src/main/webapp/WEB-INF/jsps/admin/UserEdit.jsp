@@ -282,10 +282,12 @@
     });
 
     function formChanged() {
-        // These are the screen name, full name and email. The first was read
-        // through id="bean_userName" -- an id sitting on the SCREEN NAME input,
-        // which made this look like it validated the username. It never has;
-        // the username is checked server-side.
+        // Screen name, full name and email -- the three fields the save button
+        // waits on. The username is deliberately NOT among them; it is checked
+        // server-side. (An earlier version read the first of these through
+        // id="bean_userName", which at the time sat on the SCREEN NAME input.
+        // That id belongs to the username field now, so the old note about it
+        // would read as a live warning about code that no longer exists.)
         let screenName = $("#bean_screenName:first").val();
         let fullName = $("#bean_fullName:first").val();
         let email = $("#bean_email:first").val();

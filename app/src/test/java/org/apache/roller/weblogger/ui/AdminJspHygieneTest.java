@@ -56,6 +56,60 @@ class AdminJspHygieneTest {
         }
     }
 
+    /**
+     * JSP comments are not part of the rendered page, so a scan asserting that
+     * some attribute or literal is PRESENT must not be satisfied by prose
+     * about it. (This is not hypothetical: the CSRF-focus scan below was
+     * satisfied by the very comment explaining the fix.)
+     */
+    private static String withoutJspComments(String src) {
+        return src.replaceAll("(?s)<%--.*?--%>", "");
+    }
+
+    /**
+     * The single element carrying {@code id="<id>"}, from its opening angle
+     * bracket to the matching close -- so an attribute assertion is about THAT
+     * control and not merely about the file it lives in.
+     *
+     * <p>Angle brackets are counted rather than searched for, because an
+     * attribute value here routinely contains a whole nested tag
+     * ({@code title="<spring:message .../>"}), which a naive
+     * {@code indexOf('>')} would mistake for the end of the element.
+     */
+    private static String elementCarrying(String src, String id) {
+        int marker = src.indexOf("id=\"" + id + "\"");
+        if (marker < 0) {
+            return "";
+        }
+        int start = -1;
+        for (int i = marker - 1; i >= 0; i--) {
+            if (src.charAt(i) == '<') {
+                String between = src.substring(i + 1, marker);
+                if (between.chars().filter(c -> c == '<').count()
+                        == between.chars().filter(c -> c == '>').count()) {
+                    start = i;
+                    break;
+                }
+            }
+        }
+        if (start < 0) {
+            return "";
+        }
+        int depth = 0;
+        for (int i = marker; i < src.length(); i++) {
+            char c = src.charAt(i);
+            if (c == '<') {
+                depth++;
+            } else if (c == '>') {
+                if (depth == 0) {
+                    return src.substring(start, i + 1);
+                }
+                depth--;
+            }
+        }
+        return "";
+    }
+
     private static String jsp(String relative) {
         Path p = JSPS.resolve(relative);
         assertTrue(Files.isRegularFile(p), "JSP moved or deleted? " + p.toAbsolutePath());
@@ -106,6 +160,12 @@ class AdminJspHygieneTest {
         String src = jsp("tiles/messages.jsp");
         assertTrue(src.contains("#messages .alert"),
                 "tiles/messages.jsp: auto-dismiss must select #messages .alert, not every .alert");
+        // The original bug, stated positively: a bare $(".alert") also matched
+        // #errors, so an error banner evaporated after ten seconds while it
+        // was being read -- and on GenericError, whose whole body is this
+        // region, it emptied the page.
+        assertTrue(!withoutJspComments(src).contains("$(\".alert\")"),
+                "tiles/messages.jsp still selects every .alert somewhere");
     }
 
     /** The inline {@code <style>} block belongs with the other alert rules. */
@@ -398,9 +458,13 @@ class AdminJspHygieneTest {
      * <p>Scoped to the admin/core/tiles tree this package owns; the editor
      * tree has its own scan (EditorJspLabelBindingTest).
      *
-     * <p>Targets containing EL are skipped -- {@code globalConfig_$&#123;pd.x&#125;}
-     * resolves per property at render time and cannot be checked as a literal;
-     * the check is that a matching id EXPRESSION exists in the same file.
+     * <p>Targets containing EL are NOT skipped -- they are compared as literal
+     * source text, and that is deliberate rather than a limitation. A target
+     * like {@code globalConfig_$&#123;pd.nameWithUnderbars&#125;} resolves per
+     * property at render time, so no literal id could ever be checked; what
+     * CAN be checked is that the same expression appears in an {@code id=}
+     * attribute in the same file, which is exactly what makes the pair line up
+     * for every property the loop renders.
      */
     @Test
     void everyLabelForTargetsAnIdInTheSameFile() throws IOException {
@@ -463,7 +527,14 @@ class AdminJspHygieneTest {
                 new Field("core/Profile.jsp", "passwordText", "new-password"),
                 new Field("core/Profile.jsp", "passwordConfirm", "new-password"),
                 new Field("admin/UserEdit.jsp", "bean_password", "new-password"))) {
-            if (!jsp(f.file()).contains("autocomplete=\"" + f.role() + "\"")) {
+            // Anchored on the element carrying the id: a file-wide contains()
+            // let ONE autocomplete="new-password" anywhere in Profile.jsp
+            // satisfy both of its password fields, so the confirm field could
+            // have had none and the scan would still have passed.
+            String element = elementCarrying(jsp(f.file()), f.id());
+            if (element.isEmpty()) {
+                missing.add(f.file() + " has no element with id=\"" + f.id() + "\"");
+            } else if (!element.contains("autocomplete=\"" + f.role() + "\"")) {
                 missing.add(f.file() + " #" + f.id() + " -> " + f.role());
             }
         }
@@ -484,7 +555,10 @@ class AdminJspHygieneTest {
             if (src.contains("elements[0].focus()")) {
                 found.add(screen + " still focuses elements[0]");
             }
-            if (!src.contains("autofocus")) {
+            // Comments stripped: the first version of this arm was satisfied
+            // by the comment that explains the fix, which would have passed on
+            // a screen where the attribute had been dropped again.
+            if (!withoutJspComments(src).contains("autofocus")) {
                 found.add(screen + " has no autofocus replacement");
             }
         }
