@@ -57,7 +57,7 @@
         </label>
         <div class="input-group">
 
-            <input type="text" id="entries_bean_startDateString" name="bean.startDateString" value="${bean.startDateString}" placeholder="MM/DD/YY" class="date-picker form-control"/>
+            <input type="text" id="entries_bean_startDateString" name="bean.startDateString" value="${bean.startDateString}" placeholder="MM/DD/YY" readonly class="date-picker form-control"/>
             <label for="entries_bean_startDateString" class="input-group-text">
                 <span class="bi bi-calendar"></span>
             </label>
@@ -71,7 +71,7 @@
         </label>
         <div class="input-group">
 
-            <input type="text" id="entries_bean_endDateString" name="bean.endDateString" value="${bean.endDateString}" placeholder="MM/DD/YY" class="date-picker form-control"/>
+            <input type="text" id="entries_bean_endDateString" name="bean.endDateString" value="${bean.endDateString}" placeholder="MM/DD/YY" readonly class="date-picker form-control"/>
             <label for="entries_bean_endDateString" class="input-group-text">
                 <span class="bi bi-calendar"></span>
             </label>
