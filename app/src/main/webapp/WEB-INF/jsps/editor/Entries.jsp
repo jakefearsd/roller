@@ -32,10 +32,10 @@
     <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
             <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
-                <span aria-hidden="true">&larr;</span>Newer</a>
+                <span aria-hidden="true">&larr;</span><spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto">Older
+            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>
@@ -246,10 +246,10 @@
     <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
             <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
-                <span aria-hidden="true">&larr;</span> Older</a>
+                <span aria-hidden="true">&larr;</span> <spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto">Newer
+            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>

@@ -32,14 +32,14 @@
                 <c:param name="page" value="${page - 1}"/>
             </c:url>
             <a href="${prevUrl}" class="btn btn-outline-secondary previous">
-                <span aria-hidden="true">&larr;</span> Newer</a>
+                <span aria-hidden="true">&larr;</span> <spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${(page + 1) * 30 < submissionCount}">
             <c:url var="nextUrl" value="/roller-ui/authoring/submissions.rol">
                 <c:param name="weblog" value="${actionWeblog.handle}"/>
                 <c:param name="page" value="${page + 1}"/>
             </c:url>
-            <a href="${nextUrl}" class="btn btn-outline-secondary next ms-auto">Older
+            <a href="${nextUrl}" class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>
@@ -98,7 +98,7 @@
                         <c:when test="${fn:length(s.message) > 140}">
                             <c:out value="${fn:substring(s.message, 0, 140)}"/>&hellip;
                             <details>
-                                <summary>Show full message</summary>
+                                <summary><spring:message code="submissions.showFullMessage"/></summary>
                                 <p><c:out value="${s.message}"/></p>
                             </details>
                         </c:when>

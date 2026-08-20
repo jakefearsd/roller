@@ -64,7 +64,9 @@
             </h4>
         </div>
         <div class="card-body">
-            <div id="mediaDropZone" class="media-dropzone">
+            <div id="mediaDropZone" class="media-dropzone"
+                 data-summary-one="<spring:message code='mediaFileAdd.chosenSummary.one'/>"
+                 data-summary-many="<spring:message code='mediaFileAdd.chosenSummary.many'/>">
                 <input type="file" name="uploadedFiles" id="uploadedFiles" multiple/>
                 <p class="media-dropzone-hint"><spring:message code="mediaFileAdd.dropHint"/></p>
                 <ul id="mediaChosenFiles" class="media-chosen"></ul>
@@ -115,9 +117,12 @@
             if (files.length > 0) {
                 var summary = document.createElement("li");
                 summary.className = "media-chosen-total";
-                summary.textContent = files.length
-                        + (files.length === 1 ? " file, " : " files, ")
-                        + formatSize(total) + " total";
+                var template = files.length === 1
+                        ? dropZone.dataset.summaryOne
+                        : dropZone.dataset.summaryMany;
+                summary.textContent = template
+                        .replace("#COUNT#", files.length)
+                        .replace("#SIZE#", formatSize(total));
                 chosenList.appendChild(summary);
             }
 

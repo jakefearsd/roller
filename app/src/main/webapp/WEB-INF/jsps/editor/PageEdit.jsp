@@ -287,14 +287,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
             </div>
             <div class="modal-body">
                 <iframe id="pageMediaFileEditor" style="visibility:inherit" height="600" width="100%"
                         frameborder="no" scrolling="auto"></iframe>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><spring:message code="generic.close"/></button>
             </div>
         </div>
     </div>
@@ -334,9 +334,9 @@
                 return undefined;
             }
             if (event.originalEvent) {
-                event.originalEvent.returnValue = "Are you sure you want to leave?";
+                event.originalEvent.returnValue = "<spring:message code='weblogEdit.leaveWarning' javaScriptEscape='true'/>";
             }
-            return "Are you sure you want to leave?";
+            return "<spring:message code='weblogEdit.leaveWarning' javaScriptEscape='true'/>";
         });
         $("#pageEditForm").on('submit', function () {
             rollerPageDirty = false;

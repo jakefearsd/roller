@@ -28,10 +28,10 @@
 
     <c:if test="${bean.isImage}">
         <div class="row mb-3">
-            <span class="col-form-label col-sm-3">Thumbnail</span>
+            <span class="col-form-label col-sm-3"><spring:message code="mediaFileEdit.thumbnail"/></span>
             <div class="col-sm-9">
                 <a href='${bean.permalink}' target="_blank">
-                    <img alt="thumbnail" src='${bean.thumbnailURL}'
+                    <img alt="" src='${bean.thumbnailURL}'
                          title='<spring:message code="mediaFileEdit.clickToView"/>'/>
                 </a>
             </div>
@@ -44,7 +44,7 @@
             <span class="col-form-label col-sm-3"><spring:message code="mediaFileEdit.focalPoint"/></span>
             <div class="col-sm-9">
                 <div id="focalPicker" style="position:relative; display:inline-block; cursor:crosshair; line-height:0">
-                    <img id="focalImage" src='${bean.permalink}' alt="focal point target"
+                    <img id="focalImage" src='${bean.permalink}' alt=""
                          style="max-width:240px; max-height:240px; display:block"/>
                     <span id="focalMarker"
                           style="position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px;
@@ -88,7 +88,7 @@
     </div>
 
     <div class="row mb-3">
-        <label class="col-form-label col-sm-3" for="clip_text">URL</label>
+        <label class="col-form-label col-sm-3" for="clip_text"><spring:message code="mediaFileEdit.url"/></label>
 
         <div class="col-sm-9">
 
@@ -96,8 +96,9 @@
                    value='${bean.permalink}' readonly />
 
             <c:url var="linkIconURL" value="/roller-ui/images/clippy.svg"/>
-            <button class="clipbutton" data-clipboard-target="#clip_text" type="button">
-                <img src='${linkIconURL}' alt="Copy to clipboard" style="width:0.9em; height:0.9em">
+            <button class="clipbutton" data-clipboard-target="#clip_text" type="button"
+                    aria-label="<spring:message code='generic.copyToClipboard'/>">
+                <img src='${linkIconURL}' alt="" style="width:0.9em; height:0.9em">
             </button>
 
         </div>
@@ -171,7 +172,7 @@
     <p class="pagetip"><spring:message code="mediaFileEdit.crop.tip"/></p>
 
     <cropper-canvas id="cropCanvas" background style="width:100%; height:360px">
-        <cropper-image id="cropImage" src='${bean.permalink}' alt="crop target"></cropper-image>
+        <cropper-image id="cropImage" src='${bean.permalink}' alt=""></cropper-image>
         <cropper-shade hidden></cropper-shade>
         <cropper-handle action="select" plain></cropper-handle>
         <cropper-selection id="cropSelection" initial-coverage="0.9" movable resizable>

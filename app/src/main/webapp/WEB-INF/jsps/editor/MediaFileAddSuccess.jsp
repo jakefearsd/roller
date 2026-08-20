@@ -115,9 +115,12 @@
                                 ${newFile.contentType},&nbsp;
 
                                 <b><spring:message code="mediaFileSuccess.size"/></b>
-                                ${newFile.length} <spring:message code="mediaFileSuccess.bytes"/>,
-                                ${newFile.width} x
-                                ${newFile.height} <spring:message code="mediaFileSuccess.pixels"/>
+                                <%-- No dimensions here: this loop is the
+                                     enclosure (non-image) list, where width
+                                     and height are 0 and "0 x 0 pixels" is a
+                                     confusing claim about a PDF. The image
+                                     loop above keeps them. --%>
+                                ${newFile.length} <spring:message code="mediaFileSuccess.bytes"/>
                             </p>
 
                             <p>

@@ -221,7 +221,7 @@
     // Don't launch page if user has changed link, it'll be a 404
     function launchPage() {
         if (originalLink != document.getElementById('template_bean_link').value) {
-            window.alert("Link changed, not launching page");
+            window.alert("<spring:message code='pageForm.launch.linkChanged' javaScriptEscape='true'/>");
         } else {
             window.open(weblogURL + 'page/' + originalLink + '?type=' + type, '_blank');
         }

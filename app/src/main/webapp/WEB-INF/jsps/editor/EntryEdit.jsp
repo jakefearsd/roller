@@ -486,7 +486,7 @@
 
                     <div class="modal-header">
                         <h4 class="modal-title"><spring:message code="newsletter.confirmTitle"/></h4>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
                     </div>
 
                     <div class="modal-body">
@@ -526,7 +526,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h4 class="modal-title"><spring:message code="weblogEdit.revisionCompare"/></h4>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
                 </div>
                 <div class="modal-body" id="revisionDiffBody"></div>
             </div>

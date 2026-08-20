@@ -117,4 +117,43 @@ class EditorJspMarkupHygieneTest {
         }
         assertTrue(violations.isEmpty(), String.join("\n", violations));
     }
+
+    /**
+     * Hardcoded English the sweep of 2026-08-20 routed through the bundle.
+     * Scoped deliberately narrowly -- these are the exact literals that were
+     * fixed, not a general "no English in a JSP" rule, which would drown in
+     * class names and false positives. A tripwire, not a policy.
+     *
+     * <p>MessageKeyTest owns the general JSP arm (every {@code code=} resolves);
+     * it cannot see a string that never became a key in the first place, which
+     * is exactly the gap this covers.
+     */
+    @Test
+    void noHardcodedEnglishAtTheSitesTheSweepFixed() throws Exception {
+        List<String> banned = List.of(
+                "aria-label=\"Close\"",
+                ">Close</button>",
+                "Newer",
+                "Older",
+                "Are you sure you want to leave?",
+                "Show full message",
+                "Link changed, not launching page",
+                "\" file, \"",
+                "\" files, \"",
+                "\" total\"",
+                ">Thumbnail<",
+                ">URL<",
+                "alt=\"Copy to clipboard\"",
+                "alt=\"thumbnail\"");
+        List<String> violations = new ArrayList<>();
+        for (Path jsp : editorJsps()) {
+            String src = Files.readString(jsp);
+            for (String literal : banned) {
+                if (src.contains(literal)) {
+                    violations.add(jsp.getFileName() + ": hardcoded English " + literal);
+                }
+            }
+        }
+        assertTrue(violations.isEmpty(), String.join("\n", violations));
+    }
 }
