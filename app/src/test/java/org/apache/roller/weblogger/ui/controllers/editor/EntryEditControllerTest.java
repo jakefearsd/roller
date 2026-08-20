@@ -260,6 +260,13 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
      * every one of them read "Edit entry", so finding the right tab meant
      * clicking through them. The entry's own title has to reach the model for
      * the layout's &lt;title&gt; to carry it.
+     *
+     * <p>It reaches it as {@code tabTitle}, NOT by overwriting {@code
+     * pageTitle}: the layouts render {@code pageTitle} a second time as the
+     * visible {@code <h2 class="roller-page-title">}, so appending there put
+     * the whole "Stored title -- Edit entry" string into the page's own
+     * heading. The two are separate attributes precisely so the tab and the
+     * heading can differ.
      */
     @Test
     void theEditorNamesTheEntryItIsEditing() throws Exception {
@@ -267,18 +274,36 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
 
         controller.entryEditExecute(request, model, bean, newRedirectAttributes());
 
-        assertTrue(String.valueOf(model.getAttribute("pageTitle")).startsWith("Stored title"),
-                "pageTitle must lead with the entry's own title, was: "
-                        + model.getAttribute("pageTitle"));
+        assertTrue(String.valueOf(model.getAttribute("tabTitle")).startsWith("Stored title"),
+                "tabTitle must lead with the entry's own title, was: "
+                        + model.getAttribute("tabTitle"));
+    }
+
+    /**
+     * The other half of the split above: naming the tab must leave the visible
+     * heading alone. A regression here is not subtle -- it prints the entry
+     * title and the em dash straight into the page's own h2.
+     */
+    @Test
+    void namingTheTabLeavesTheVisibleHeadingAlone() throws Exception {
+        existingEntry(PubStatus.DRAFT);
+
+        controller.entryEditExecute(request, model, bean, newRedirectAttributes());
+
+        assertEquals("weblogEdit.title.editEntry", model.getAttribute("pageTitle"),
+                "the h2 renders pageTitle, so it must stay the plain message key");
     }
 
     /** A brand-new entry has no title yet, so there is nothing to prepend and
-     *  the generic heading must survive untouched. */
+     *  the generic heading must survive untouched -- with no tabTitle set, the
+     *  layout falls back to pageTitle. */
     @Test
     void theAddScreenKeepsItsGenericTitle() {
         controller.entryAddExecute(request, model, bean);
 
         assertEquals("weblogEdit.title.newEntry", model.getAttribute("pageTitle"));
+        assertNull(model.getAttribute("tabTitle"),
+                "an unsaved entry has no title to name its tab after");
     }
 
     @Test

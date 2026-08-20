@@ -732,14 +732,23 @@ public class EntryEditController extends BaseController {
         // Name the browser tab after the entry. With a dozen editor tabs open
         // -- the normal way this screen gets used -- every one of them read
         // "Edit entry" and the only way to find the right one was to click
-        // through them. Overwrites the generic title set by the caller, and
-        // only once the entry has one: an unsaved entry has no title to show.
+        // through them.
+        //
+        // This is a SEPARATE attribute rather than an overwrite of pageTitle,
+        // and the separation is the whole point: the layout renders pageTitle
+        // twice -- once in <title>, once as the visible
+        // <h2 class="roller-page-title"> -- so appending here used to print
+        // "Stored title <em dash> Edit entry" into the page's own heading.
+        // tiles-tabbedpage.jsp prefers tabTitle in <title> and falls back to
+        // pageTitle; the h2 only ever reads pageTitle.
+        //
+        // Set only once the entry has a title: an unsaved entry has none.
         // getDisplayTitle() strips HTML and falls back to the entry's opening
         // text, so it is blank only on the add screen's scratch entry -- which
         // an id check alone does NOT exclude (a unit test caught the add
         // screen rendering a leading em dash with nothing before it).
         if (StringUtils.isNotBlank(entry.getDisplayTitle())) {
-            model.addAttribute("pageTitle", entry.getDisplayTitle()
+            model.addAttribute("tabTitle", entry.getDisplayTitle()
                     + " \u2014 " + model.getAttribute("pageTitle"));
         }
 

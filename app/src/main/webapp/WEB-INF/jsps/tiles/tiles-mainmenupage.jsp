@@ -28,7 +28,14 @@
          had four tabs reading "Roller: Entries". Only where the model has it
          -- these layouts serve un-scoped screens (Global Config, User Admin)
          as well. --%>
-    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <spring:message code="${pageTitle}" text="${pageTitle}"/><c:if test="${not empty actionWeblog}"> &#8212; ${fn:escapeXml(actionWeblog.handle)}</c:if></title>
+    <%-- tabTitle, when a controller sets one, names the browser TAB more
+         specifically than the visible heading does (the entry editor sets it to
+         "<entry title> - Edit entry", so a dozen open tabs are told apart).
+         pageTitle is what the <h2 class="roller-page-title"> below renders, so
+         it must NOT carry that append -- the two attributes exist to let the
+         tab and the heading differ. Rendered through spring:message exactly as
+         pageTitle is, so escaping is unchanged either way. --%>
+    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <c:choose><c:when test="${not empty tabTitle}"><spring:message code="${tabTitle}" text="${tabTitle}"/></c:when><c:otherwise><spring:message code="${pageTitle}" text="${pageTitle}"/></c:otherwise></c:choose><c:if test="${not empty actionWeblog}"> &#8212; ${fn:escapeXml(actionWeblog.handle)}</c:if></title>
 
     <jsp:include page="${tile_head}"/>
     <style>
