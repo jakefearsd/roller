@@ -112,10 +112,18 @@ class ContactFormIT extends RollerIT {
         $("table.rollertable").shouldHave(text(message));
 
         $(".submission-select").should(exist).click();
+        // Deleting an inquiry is permanent -- there is no trash for these --
+        // so the button opens a confirmation modal rather than deleting on the
+        // first click. The real submit lives inside it.
         $("#submissionsDeleteSelected").click();
+        $("#submissions-delete-modal").shouldBe(visible);
+        $("#submissionsDeleteConfirm").click();
         $("#messages").should(exist);
         $$(".submission-select").shouldHave(CollectionCondition.size(0));
-        $("table.rollertable").shouldHave(text("No inquiries yet."));
+        // The empty state is a SIBLING of the table, not a row inside it: with
+        // no inquiries the <table> is not rendered at all, so asserting on
+        // table.rollertable here would wait for an element that never appears.
+        $(".empty-state").shouldHave(text("No inquiries yet."));
         BrowserHealth.current().assertNoBrokenResources();
         BrowserHealth.current().assertNoFailedRequests();
 
@@ -135,7 +143,7 @@ class ContactFormIT extends RollerIT {
 
         openPath("/roller-ui/authoring/submissions.rol?weblog=" + handle);
         $$(".submission-select").shouldHave(CollectionCondition.size(0));
-        $("table.rollertable").shouldHave(text("No inquiries yet."));
+        $(".empty-state").shouldHave(text("No inquiries yet."));
         BrowserHealth.current().assertNoBrokenResources();
         BrowserHealth.current().assertNoFailedRequests();
     }

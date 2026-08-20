@@ -124,6 +124,8 @@
             </button>
 
             <div class="form-text"><spring:message code="mediaFileEdit.shortcode.tip"/></div>
+
+        </div>
     </div>
 
     <div class="row mb-3">

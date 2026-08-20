@@ -27,6 +27,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.ui.Model;
 import org.apache.roller.weblogger.business.runnable.TrashPurgeTask;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -38,7 +39,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 /**
  * Tests for {@link TrashController}.
@@ -112,10 +116,30 @@ class TrashControllerTest extends EditorControllerTestSupport {
         when(weblogger.getWeblogEntryManager().getTrashedEntries(weblog))
                 .thenReturn(List.of());
 
-        controller.execute(request, model);
+        // The property is CHANGED between two renders, and each render must
+        // reflect the value in force at the time. Asserting against a live
+        // getIntProperty() call instead would be tautological -- it computes
+        // the expectation the same way the code under test does, so it passes
+        // just as happily against a value latched once in init(), which is the
+        // exact defect this test exists to catch (CLAUDE.md's third
+        // configuration-scope trap).
+        try (MockedStatic<WebloggerRuntimeConfig> config = mockStatic(
+                WebloggerRuntimeConfig.class, withSettings().defaultAnswer(CALLS_REAL_METHODS))) {
 
-        assertEquals(WebloggerRuntimeConfig.getIntProperty(TrashPurgeTask.RETENTION_PROPERTY),
-                model.getAttribute("trashRetentionDays"));
+            config.when(() -> WebloggerRuntimeConfig.getIntProperty(TrashPurgeTask.RETENTION_PROPERTY))
+                    .thenReturn(30);
+            controller.execute(request, model);
+            assertEquals(30, model.getAttribute("trashRetentionDays"));
+
+            config.when(() -> WebloggerRuntimeConfig.getIntProperty(TrashPurgeTask.RETENTION_PROPERTY))
+                    .thenReturn(-1);
+            controller.execute(request, model);
+            assertEquals(-1, model.getAttribute("trashRetentionDays"),
+                    "the retention must be re-read per request: it is a RUNTIME property an "
+                            + "admin can change, and TrashPurgeTask re-reads it per sweep, so a "
+                            + "value cached here would advertise a retention the purge no "
+                            + "longer honours");
+        }
     }
 
     @Test

@@ -257,20 +257,101 @@ class EntriesControllerTest extends EditorControllerTestSupport {
     void aBulkActionReturnsToTheFilteredListItWasRunFrom() throws Exception {
         bean.setStatus("DRAFT");
         bean.setCategoryName("Travel");
-        when(weblogger.getUrlStrategy().getActionURL(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean()))
-                .thenAnswer(invocation -> {
-                    @SuppressWarnings("unchecked")
-                    Map<String, String> params = (Map<String, String>) invocation.getArgument(3);
-                    return "/roller-ui/authoring/entries.rol?" + new LinkedHashMap<>(params).entrySet().stream()
-                            .map(e -> e.getKey() + "=" + e.getValue())
-                            .collect(Collectors.joining("&"));
-                });
+        stubActionUrlWithContextPath("/roller");
 
         String view = controller.bulkDelete(request, null, bean, newRedirectAttributes());
 
         assertTrue(view.startsWith("redirect:"), view);
         assertTrue(view.contains("bean.status=DRAFT"), view);
         assertTrue(view.contains("bean.categoryName=Travel"), view);
+        assertTrue(view.contains("weblog=" + WEBLOG_HANDLE), view);
+    }
+
+    /**
+     * The redirect must be CONTEXT-RELATIVE, and this test is written so that
+     * it fails under a prefixed deployment rather than passing at the root
+     * where every prefix is empty.
+     *
+     * <p>{@code buildBaseUrl} goes through {@code getActionURL(...,
+     * absolute=false)}, which prepends {@code getRelativeContextURL()}. That
+     * is right for an href but wrong for a {@code redirect:} view name:
+     * Spring's {@code InternalResourceViewResolver} runs with {@code
+     * redirectContextRelative=true} and prepends the context path again, so
+     * reusing the pager's base url produced {@code
+     * /roller/roller/roller-ui/...} and a 404 under a servlet prefix.
+     *
+     * <p>The expectation is DERIVED from the stubbed context path rather than
+     * hardcoded -- the {@code SeoController.robots()} lesson, where a fixture
+     * that pinned one url shape had baked the defect in as its expected value.
+     */
+    @Test
+    void theBulkRedirectDoesNotInheritTheContextPathTwice() throws Exception {
+        String contextPath = "/roller";
+        stubActionUrlWithContextPath(contextPath);
+        bean.setStatus("DRAFT");
+
+        String view = controller.bulkDelete(request, null, bean, newRedirectAttributes());
+        String target = view.substring("redirect:".length());
+
+        // The pager's base url, which legitimately carries the prefix, is what
+        // the redirect must NOT be -- derived, so a different prefix still fails.
+        String pagerUrl = controller.buildBaseUrl(request, bean);
+        assertTrue(pagerUrl.startsWith(contextPath + "/roller-ui/authoring/entries.rol"),
+                "precondition: the pager url carries the context path, was " + pagerUrl);
+
+        assertTrue(target.startsWith("/roller-ui/authoring/entries.rol"),
+                "the redirect must be context-relative; Spring prepends the context path "
+                        + "itself, so a prefixed target becomes " + contextPath + contextPath
+                        + "/... and 404s. Was: " + target);
+        assertFalse(target.startsWith(contextPath + "/"),
+                "the redirect target carries the context path, which Spring will prepend "
+                        + "again: " + target);
+    }
+
+    /**
+     * The server half of the filter-preserving redirect is worthless on its own:
+     * {@code #entriesBulkForm} is a DIFFERENT form from the sidebar's GET filter
+     * form, so unless it carries the filter as hidden inputs the POST binds an
+     * empty bean and the redirect lands on the unfiltered list -- green unit
+     * test, no behaviour in a browser. This scans the JSP for the inputs.
+     *
+     * <p>bean.sortBy and bean.page are deliberately NOT required: sortBy has a
+     * non-null default that would pin whatever happened to be showing, and
+     * returning to page 4 of a list that just got shorter is worse than
+     * returning to page 1.
+     */
+    @Test
+    void theBulkFormCarriesTheFilterItMustPostBack() throws Exception {
+        String jsp = Files.readString(
+                Path.of("src/main/webapp/WEB-INF/jsps/editor/Entries.jsp"));
+        String form = jsp.substring(jsp.indexOf("<form id=\"entriesBulkForm\""));
+
+        List<String> missing = new ArrayList<>();
+        for (String field : List.of("bean.status", "bean.categoryName", "bean.tagsAsString",
+                                    "bean.text", "bean.startDateString", "bean.endDateString")) {
+            if (!form.contains("<input type=\"hidden\" name=\"" + field + "\"")) {
+                missing.add(field);
+            }
+        }
+        assertTrue(missing.isEmpty(),
+                "#entriesBulkForm must post the current filter back, or backToList has "
+                        + "nothing to rebuild it from. Missing: " + missing);
+    }
+
+    /** Answers the way {@code AbstractURLStrategy} does under a servlet prefix:
+     *  a context-relative url that already begins with the context path. */
+    private void stubActionUrlWithContextPath(String contextPath) {
+        when(weblogger.getUrlStrategy().getActionURL(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    Map<String, String> params = new LinkedHashMap<>(
+                            (Map<String, String>) invocation.getArgument(3));
+                    params.put("weblog", invocation.getArgument(2));
+                    return contextPath + "/roller-ui/authoring/entries.rol?"
+                            + params.entrySet().stream()
+                                    .map(e -> e.getKey() + "=" + e.getValue())
+                                    .collect(Collectors.joining("&"));
+                });
     }
 
     /**

@@ -77,6 +77,33 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 <sec:csrfInput/>
 
+<%-- The filter, carried through the POST. The controller returns to the
+     filtered list after a bulk action, but it can only do that from what the
+     POST body binds -- and this form is separate from the GET filter form in
+     the sidebar, so without these the bean arrives empty and the redirect
+     lands on the unfiltered list of everything. bean.sortBy and bean.page are
+     deliberately absent: sortBy has a non-null default that would pin
+     whatever was showing, and returning to page 4 of a list that just got
+     shorter is worse than returning to page 1. --%>
+<c:if test="${not empty bean.status}">
+    <input type="hidden" name="bean.status" value="${fn:escapeXml(bean.status)}"/>
+</c:if>
+<c:if test="${not empty bean.categoryName}">
+    <input type="hidden" name="bean.categoryName" value="${fn:escapeXml(bean.categoryName)}"/>
+</c:if>
+<c:if test="${not empty bean.tagsAsString}">
+    <input type="hidden" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}"/>
+</c:if>
+<c:if test="${not empty bean.text}">
+    <input type="hidden" name="bean.text" value="${fn:escapeXml(bean.text)}"/>
+</c:if>
+<c:if test="${not empty bean.startDateString}">
+    <input type="hidden" name="bean.startDateString" value="${fn:escapeXml(bean.startDateString)}"/>
+</c:if>
+<c:if test="${not empty bean.endDateString}">
+    <input type="hidden" name="bean.endDateString" value="${fn:escapeXml(bean.endDateString)}"/>
+</c:if>
+
 <%-- Status filter as link-chips: a GET per option, reusing the same
      statusOptions the sidebar select is built from so the two can never
      offer different sets. Possible only because Task 1 made the filter form

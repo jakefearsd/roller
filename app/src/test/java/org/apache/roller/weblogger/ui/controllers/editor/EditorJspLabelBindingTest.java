@@ -21,7 +21,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -105,6 +109,60 @@ class EditorJspLabelBindingTest {
                 violations.add(jsp.getFileName() + ": label \""
                         + body.replaceAll("\\s+", " ").trim()
                         + "\" binds to no control (no for=, no nested control)");
+            }
+        }
+        assertTrue(violations.isEmpty(), String.join("\n", violations));
+    }
+
+    /**
+     * A {@code for=} target that exists in only ONE branch of a
+     * {@code <c:choose>} is a dangling label for every render that takes the
+     * other branch -- and the file-wide scan above cannot see it, because the
+     * id IS present in the source.
+     *
+     * <p>Found live: TemplateEdit.jsp's name and description labels sat
+     * outside a {@code required}/{@code otherwise} choose whose readonly
+     * branch carried the id and whose editable branch did not, so the label
+     * bound to nothing on exactly the templates an author can actually edit.
+     *
+     * <p>The rule checked is narrow on purpose: within one {@code c:choose},
+     * if two branches both declare a control with the same {@code name=}, they
+     * must agree on its {@code id=}. That is precisely the shape above, and it
+     * says nothing about branches that legitimately render different controls.
+     */
+    @Test
+    void aControlDeclaredInSeveralBranchesKeepsTheSameIdInEachOfThem() throws Exception {
+        Pattern choose = Pattern.compile("<c:choose>(.*?)</c:choose>", Pattern.DOTALL);
+        Pattern branch = Pattern.compile(
+                "<c:(?:when[^>]*|otherwise)>(.*?)</c:(?:when|otherwise)>", Pattern.DOTALL);
+        Pattern control = Pattern.compile("<(?:input|select|textarea)\\b([^>]*)>");
+
+        List<String> violations = new ArrayList<>();
+        for (Path jsp : editorJsps()) {
+            Matcher chooses = choose.matcher(Files.readString(jsp));
+            while (chooses.find()) {
+                Map<String, Set<String>> idsByName = new LinkedHashMap<>();
+                Matcher branches = branch.matcher(chooses.group(1));
+                while (branches.find()) {
+                    Matcher controls = control.matcher(branches.group(1));
+                    while (controls.find()) {
+                        String attrs = controls.group(1);
+                        Matcher name = Pattern.compile("\\bname=\"([^\"]+)\"").matcher(attrs);
+                        if (!name.find()) {
+                            continue;
+                        }
+                        Matcher id = Pattern.compile("\\bid=\"([^\"]+)\"").matcher(attrs);
+                        idsByName.computeIfAbsent(name.group(1), k -> new LinkedHashSet<>())
+                                .add(id.find() ? id.group(1) : "(no id)");
+                    }
+                }
+                idsByName.forEach((name, ids) -> {
+                    if (ids.size() > 1) {
+                        violations.add(jsp.getFileName() + ": the branches of one c:choose give "
+                                + "name=\"" + name + "\" different ids " + ids
+                                + " -- a label bound to one of them dangles in the other branch");
+                    }
+                });
             }
         }
         assertTrue(violations.isEmpty(), String.join("\n", violations));

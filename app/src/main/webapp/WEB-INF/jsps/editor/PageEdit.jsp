@@ -359,6 +359,15 @@
         });
 
         document.addEventListener('keydown', function (event) {
+            <%-- CodeMirror's extraKeys calls preventDefault on a key it
+                 handled but does NOT stopPropagation, so the event still
+                 reaches document and this handler fired a SECOND click --
+                 two saves, or a save and a publish, per Ctrl-S. Bailing on
+                 an already-handled event is what keeps the two bindings
+                 from overlapping. --%>
+            if (event.defaultPrevented) {
+                return;
+            }
             if (!(event.ctrlKey || event.metaKey)) {
                 return;
             }

@@ -45,7 +45,7 @@
                     <input id="template_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="50" readonly class="form-control"/>
                 </c:when>
                 <c:otherwise>
-                    <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="50" class="form-control"/>
+                    <input id="template_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="50" class="form-control"/>
                 </c:otherwise>
             </c:choose>
         </div>
@@ -97,7 +97,7 @@
                     <textarea id="template_bean_description" name="bean.description" rows="2" cols="50" readonly class="form-control">${fn:escapeXml(bean.description)}</textarea>
                 </c:when>
                 <c:otherwise>
-                    <textarea name="bean.description" rows="2" cols="50" class="form-control">${fn:escapeXml(bean.description)}</textarea>
+                    <textarea id="template_bean_description" name="bean.description" rows="2" cols="50" class="form-control">${fn:escapeXml(bean.description)}</textarea>
                 </c:otherwise>
             </c:choose>
         </div>

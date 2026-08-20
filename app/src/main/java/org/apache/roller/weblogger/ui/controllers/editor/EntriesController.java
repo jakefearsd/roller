@@ -38,6 +38,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.apache.roller.weblogger.util.URLUtilities;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.apache.roller.weblogger.ui.controllers.pagers.EntriesPager;
 import org.apache.roller.weblogger.ui.controllers.util.KeyValueObject;
@@ -59,6 +60,14 @@ public class EntriesController extends BaseController {
 
     private static final Logger log = LoggerFactory.getLogger(EntriesController.class);
     private static final int COUNT = 30;
+
+    /**
+     * Context-RELATIVE, with no {@code getRelativeContextURL()} prefix: this
+     * feeds a {@code redirect:} view name, which Spring resolves with
+     * {@code redirectContextRelative=true} and so prefixes the context path
+     * itself. See {@link #backToList}.
+     */
+    private static final String ENTRIES_PATH = "/roller-ui/authoring/entries.rol";
 
     @Override
     public List<String> requiredWeblogPermissionActions() {
@@ -314,33 +323,63 @@ public class EntriesController extends BaseController {
     }
 
     /**
-     * Where a bulk action returns to. It reuses {@link #buildBaseUrl} with the
-     * submitted bean rather than building a bare weblog URL, so a filtered
-     * list stays filtered: without it, deleting three drafts out of a
-     * status=DRAFT view dropped the author back into the unfiltered list of
-     * everything, with no indication their filter had been discarded.
+     * Where a bulk action returns to: the same filtered list it was run from.
+     * Without the filter, deleting three drafts out of a status=DRAFT view
+     * dropped the author into the unfiltered list of everything, with nothing
+     * on screen saying the filter had been discarded -- so the next bulk
+     * selection is made against a different set of rows than the one just
+     * acted on.
      *
-     * <p>A null bean is tolerated -- a POST that carried no filter fields at
-     * all binds an empty bean, and every field is optional in buildBaseUrl
-     * anyway.
+     * <p><strong>It builds the path itself instead of reusing
+     * {@link #buildBaseUrl}, and that is the point.</strong> {@code
+     * buildBaseUrl} goes through {@code getActionURL(..., absolute=false)},
+     * which prefixes {@code WebloggerRuntimeConfig.getRelativeContextURL()} --
+     * correct for an href a browser resolves, wrong for a {@code redirect:}
+     * view name, because Spring's {@code InternalResourceViewResolver} has
+     * {@code redirectContextRelative=true} and prepends the context path
+     * AGAIN. Under a servlet prefix that produced {@code
+     * /roller/roller/roller-ui/authoring/entries.rol} and a 404 -- invisible
+     * at the root context, where both prefixes are empty. The query string
+     * still comes from the shared {@link #filterParams}, so the redirect and
+     * the pager's base url cannot drift apart on which filters they carry.
+     *
+     * <p>A null bean is tolerated: a POST carrying no filter fields at all
+     * binds an empty bean, and every field is optional anyway.
      */
     private String backToList(HttpServletRequest request, EntriesBean bean) {
-        String plain = "redirect:/roller-ui/authoring/entries.rol?weblog="
-                + getActionWeblog(request).getHandle();
-        if (bean == null) {
-            return plain;
+        Map<String, String> params = new HashMap<>();
+        params.put("weblog", getActionWeblog(request).getHandle());
+        if (bean != null) {
+            params.putAll(filterParams(bean));
+            // Two of the bean's fields have non-null DEFAULTS, and the bulk
+            // form deliberately does not post either (see Entries.jsp), so on
+            // this path they are never an author's choice -- only the default
+            // wearing one. Echoing bean.sortBy would pin UPDATE_TIME on
+            // someone who had been sorting by publication time; "ALL" is what
+            // this controller already treats as "no status filter" at the
+            // query itself, so repeating it in the url says nothing.
+            params.remove("bean.sortBy");
+            params.remove("bean.status", "ALL");
         }
-        String filtered = buildBaseUrl(request, bean);
-        // A redirect is the one place a blank url is worse than a wrong one:
-        // it would send the browser to the current URL (the POST target),
-        // which is not a page. Fall back to the unfiltered list.
-        return StringUtils.isBlank(filtered) ? plain : "redirect:" + filtered;
+        return "redirect:" + ENTRIES_PATH + URLUtilities.getQueryString(params);
     }
 
     // Package-private rather than public: widened only so the test can call it
     // directly, per this repo's existing precedent for testing a pager's base
     // url without going through the full servlet stack.
     String buildBaseUrl(HttpServletRequest request, EntriesBean bean) {
+        return weblogger.getUrlStrategy().getActionURL("entries", "/roller-ui/authoring",
+                getActionWeblog(request).getHandle(), filterParams(bean), false);
+    }
+
+    /**
+     * The filter the author is looking at, as request parameters. One source
+     * for the pager's base url, the bulk actions' return redirect, and (via
+     * Entries.jsp's hidden inputs) the bulk form's own POST body -- a filter
+     * that survives paging but not deleting, or the reverse, is the shape this
+     * shares one method to avoid.
+     */
+    private Map<String, String> filterParams(EntriesBean bean) {
         Map<String, String> params = new HashMap<>();
         if (!StringUtils.isEmpty(bean.getCategoryName())) {
             params.put("bean.categoryName", bean.getCategoryName());
@@ -363,8 +402,7 @@ public class EntriesController extends BaseController {
         if (bean.getSortBy() != null) {
             params.put("bean.sortBy", bean.getSortBy().toString());
         }
-        return weblogger.getUrlStrategy().getActionURL("entries", "/roller-ui/authoring",
-                getActionWeblog(request).getHandle(), params, false);
+        return params;
     }
 
     // No synthetic "Any" entry here -- that choice is an <option value="">
