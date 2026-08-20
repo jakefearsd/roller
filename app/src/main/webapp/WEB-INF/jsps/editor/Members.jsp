@@ -61,7 +61,7 @@ function confirmMemberRemoval() {
         </label>
         <div class="col-sm-9">
             <input type="text" class="form-control" name="userName" id="grantUserName"
-                   size="30" maxlength="30"/>
+                   size="30" maxlength="255"/>
         </div>
     </div>
     <div class="row mb-3">
@@ -99,7 +99,7 @@ function confirmMemberRemoval() {
     <c:if test="${not empty weblogPermissions}">
 
     <table class="rollertable table table-striped">
-        <tr class="rHeaderTr">
+        <tr>
            <th class="rollertable" width="20%">
                <spring:message code="memberPermissions.userName"/>
            </th>
@@ -116,36 +116,34 @@ function confirmMemberRemoval() {
                <spring:message code="memberPermissions.remove"/>
            </th>
         </tr>
-        <c:forEach items="${weblogPermissions}" var="perm" varStatus="rowstatus">
-            <c:choose>
-<c:when test="${rowstatus.index % 2 != 0}">
-                <tr class="rollertable_odd">
-            </c:when>
-            <c:otherwise>
-                <tr class="rollertable_even">
-            </c:otherwise>
-</c:choose><td class="rollertable">
-                    <span class="bi bi-person"></span>
+        <c:forEach items="${weblogPermissions}" var="perm">
+                <tr>
+                <td class="rollertable">
+                    <span class="bi bi-person" aria-hidden="true"></span>
 	                ${perm.user.userName}
                 </td>               
                 <td class="rollertable">
                     <input type="radio" 
                         <c:if test='${perm.hasAction("admin")}'>checked</c:if>
-                        name='perm-${perm.user.id}' value="admin" />
+                        name='perm-${perm.user.id}' value="admin"
+                        aria-label="<spring:message code='memberPermissions.administrator'/>: ${fn:escapeXml(perm.user.userName)}" />
                 </td>
                 <td class="rollertable">
 	                <input type="radio" 
                         <c:if test='${perm.hasAction("post")}'>checked</c:if>
-                        name='perm-${perm.user.id}' value="post" />
+                        name='perm-${perm.user.id}' value="post"
+                        aria-label="<spring:message code='memberPermissions.author'/>: ${fn:escapeXml(perm.user.userName)}" />
                 </td>                
                 <td class="rollertable">
                     <input type="radio" 
                         <c:if test='${perm.hasAction("edit_draft")}'>checked</c:if>
-                        name='perm-${perm.user.id}' value="edit_draft" />
+                        name='perm-${perm.user.id}' value="edit_draft"
+                        aria-label="<spring:message code='memberPermissions.limited'/>: ${fn:escapeXml(perm.user.userName)}" />
                 </td>                
                 <td class="rollertable">
                     <input type="radio" 
-                        name='perm-${perm.user.id}' value="-1" />
+                        name='perm-${perm.user.id}' value="-1"
+                        aria-label="<spring:message code='memberPermissions.remove'/>: ${fn:escapeXml(perm.user.userName)}" />
                 </td>
            </tr>
        </c:forEach>

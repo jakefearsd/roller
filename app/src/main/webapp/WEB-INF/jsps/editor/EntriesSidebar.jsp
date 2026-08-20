@@ -18,7 +18,7 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <h3><spring:message code="weblogEntryQuery.sidebarTitle"/></h3>
-<hr size="1" noshade="noshade"/>
+<hr/>
 
 <p><spring:message code="weblogEntryQuery.sidebarDescription"/></p>
 
@@ -59,7 +59,7 @@
 
             <input type="text" id="entries_bean_startDateString" name="bean.startDateString" value="${bean.startDateString}" placeholder="MM/DD/YY" readonly class="date-picker form-control"/>
             <label for="entries_bean_startDateString" class="input-group-text">
-                <span class="bi bi-calendar"></span>
+                <span class="bi bi-calendar" aria-hidden="true"></span>
             </label>
 
         </div>
@@ -73,7 +73,7 @@
 
             <input type="text" id="entries_bean_endDateString" name="bean.endDateString" value="${bean.endDateString}" placeholder="MM/DD/YY" readonly class="date-picker form-control"/>
             <label for="entries_bean_endDateString" class="input-group-text">
-                <span class="bi bi-calendar"></span>
+                <span class="bi bi-calendar" aria-hidden="true"></span>
             </label>
 
         </div>

@@ -22,7 +22,7 @@
 <%-- ********************************************************************* --%>
 
 <%-- content --%>
-<textarea name="bean.text" id="edit_content" rows="18" tabindex="5" class="col-sm-12">${fn:escapeXml(bean.text)}</textarea>
+<textarea name="bean.text" id="edit_content" rows="18" class="col-sm-12">${fn:escapeXml(bean.text)}</textarea>
 
 <%-- The insert menu is generated from the shortcode registry (model attribute
      shortcodeCards), so adding a sixth shortcode means writing its handler and
@@ -37,10 +37,10 @@
     <ul class="dropdown-menu" aria-labelledby="shortcodeInsertButton">
         <c:forEach items="${shortcodeCards}" var="card">
             <li>
-                <a class="dropdown-item shortcode-card" href="#"
-                   data-shortcode="<c:out value='${card.name}'/>"
-                   data-snippet="<c:out value='${card.snippet}'/>"
-                   data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></a>
+                <button type="button" class="dropdown-item shortcode-card"
+                        data-shortcode="<c:out value='${card.name}'/>"
+                        data-snippet="<c:out value='${card.snippet}'/>"
+                        data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></button>
             </li>
         </c:forEach>
     </ul>
@@ -49,7 +49,8 @@
 <%-- mb-4 rather than a spacer.png with an inline min-height: the gap before
      the Summary card is margin, and margin is what should express it. --%>
 <div class="mb-4">
-    <a href="#" onClick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a>
+    <button type="button" class="btn btn-link p-0 align-baseline border-0"
+            onclick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></button>
 </div>
 
 <%-- summary --%>
@@ -68,7 +69,7 @@
     <div id="collapseSummaryEditor" class="collapse">
         <div class="card-body">
 
-            <textarea name="bean.summary" id="edit_summary" rows="10" tabindex="6" class="col-sm-12">${fn:escapeXml(bean.summary)}</textarea>
+            <textarea name="bean.summary" id="edit_summary" rows="10" class="col-sm-12">${fn:escapeXml(bean.summary)}</textarea>
 
         </div>
     </div>
@@ -87,7 +88,7 @@
 
             <div class="modal-header">
                 <h4 class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
             </div>
 
             <div class="modal-body">
@@ -101,7 +102,7 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><spring:message code="generic.close"/></button>
             </div>
 
         </div>
@@ -117,7 +118,40 @@
          day, but it would edit Markdown rather than produce HTML. --%>
     var rollerEditor = null;
 
+    <%-- Click the real buttons rather than submitting the form: the buttons
+         carry the formaction that decides draft-vs-publish, and a bare
+         form.submit() would post to the form's own action and silently pick
+         the wrong one. --%>
+    function rollerSaveDraft() {
+        var button = document.querySelector("#entry button[formaction$='saveDraft.rol']");
+        if (button) {
+            button.click();
+        }
+    }
+
+    function rollerPublish() {
+        var button = document.querySelector("#entry button[formaction$='publish.rol']");
+        if (button) {
+            button.click();
+        }
+    }
+
     $(document).ready(function () {
+        <%-- CodeMirror's extraKeys only fire with focus inside the editor.
+             This covers the title field, the rail and the SEO drawer. --%>
+        document.addEventListener('keydown', function (event) {
+            if (!(event.ctrlKey || event.metaKey)) {
+                return;
+            }
+            if (event.key === 's' || event.key === 'S') {
+                event.preventDefault();
+                rollerSaveDraft();
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                rollerPublish();
+            }
+        });
+
         rollerEditor = new EasyMDE({
             element: document.getElementById('edit_content'),
             autoDownloadFontAwesome: false,
@@ -127,7 +161,18 @@
             toolbar: ['bold', 'italic', 'heading', '|',
                       'quote', 'unordered-list', 'ordered-list', '|',
                       'link', 'table', '|', 'preview', 'side-by-side', 'guide'],
-            previewRender: rollerRenderPreview
+            previewRender: rollerRenderPreview,
+            <%-- Ctrl/Cmd-S saves the draft, Ctrl-Enter publishes. Both
+                 preventDefault: without it Ctrl-S opens the browser's Save
+                 dialog over the editor, which is what happens today. These
+                 only fire while focus is INSIDE CodeMirror; the document-level
+                 pair below covers the title field and the rail. --%>
+            extraKeys: {
+                'Cmd-S': rollerSaveDraft,
+                'Ctrl-S': rollerSaveDraft,
+                'Ctrl-Enter': rollerPublish,
+                'Cmd-Enter': rollerPublish
+            }
         });
 
         <%-- Warn before leaving with unsaved edits, and stand down on submit.
@@ -154,9 +199,9 @@
                 return undefined;
             }
             if (event.originalEvent) {
-                event.originalEvent.returnValue = "Are you sure you want to leave?";
+                event.originalEvent.returnValue = "<spring:message code='weblogEdit.leaveWarning' javaScriptEscape='true'/>";
             }
-            return "Are you sure you want to leave?";
+            return "<spring:message code='weblogEdit.leaveWarning' javaScriptEscape='true'/>";
         });
         $("#entry").on('submit', function () {
             rollerEntryDirty = false;

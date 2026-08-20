@@ -51,6 +51,78 @@
 <%-- Local draft recovery. Static script, not a JSP include: every string it
      needs rides on the bar's data- attributes below. --%>
 <script src="<c:url value='/theme/scripts/roller-draft.js'/>"></script>
+<script src="<c:url value='/theme/scripts/roller-guard-submit.js'/>"></script>
+<script>
+    <%-- Last-used category. Keyed per install and per weblog, beside the
+         draft keys and for the same reason: two Roller installs on one origin
+         must not share storage, and a category id from weblog A means nothing
+         on weblog B. Purely a default for a NEW entry -- an entry being edited
+         already has its own category, and preselecting over that would silently
+         refile it. If the stored id is no longer in the list (the category was
+         renamed away or deleted) nothing happens; the select keeps its own
+         default. No schema, no server round trip. --%>
+    (function () {
+        var key = "roller.lastCategory.v1:${pageContext.request.contextPath}:${actionWeblog.handle}";
+        document.addEventListener('DOMContentLoaded', function () {
+            var select = document.getElementById('entry_bean_categoryId');
+            if (!select) {
+                return;
+            }
+            if ("${actionName}" === "entryAdd") {
+                var last = null;
+                try {
+                    last = window.localStorage.getItem(key);
+                } catch (e) {
+                    // Private-browsing modes throw on access rather than
+                    // returning null. A missing convenience, not an error.
+                    last = null;
+                }
+                if (last && select.querySelector("option[value='" + last + "']")) {
+                    select.value = last;
+                }
+            }
+            var form = document.getElementById('entry');
+            if (form) {
+                form.addEventListener('submit', function () {
+                    try {
+                        window.localStorage.setItem(key, select.value);
+                    } catch (e) {
+                        // Same as above: storage unavailable, nothing to do.
+                    }
+                });
+            }
+        });
+    })();
+
+    <%-- Session-expiry banner: see the markup comment above it. --%>
+    <%-- On ready: this script block sits above the markup it looks for. --%>
+    document.addEventListener('DOMContentLoaded', function () {
+        var bar = document.getElementById('sessionExpiryBar');
+        if (!bar) {
+            return;
+        }
+        var timeout = parseInt(bar.dataset.timeout, 10);
+        if (!(timeout > 180)) {
+            // A session shorter than the warning lead time would show the
+            // banner permanently, which teaches people to ignore it.
+            return;
+        }
+        var warnAfterMs = (timeout - 120) * 1000;
+        var timer = null;
+        var arm = function () {
+            bar.hidden = true;
+            window.clearTimeout(timer);
+            timer = window.setTimeout(function () {
+                bar.hidden = false;
+            }, warnAfterMs);
+        };
+        ['keydown', 'click', 'input'].forEach(function (type) {
+            document.addEventListener(type, arm, true);
+        });
+        arm();
+    });
+</script>
+
 
 <%-- Request scope, not page scope: EntryEditor.jsp arrives via jsp:include
      and cannot see page-scoped variables set here. --%>
@@ -75,6 +147,17 @@
 
     <div class="editor-main">
 
+        <%-- Session-expiry warning. Purely local arithmetic against the
+             container's own maxInactiveInterval -- no endpoint, no polling,
+             nothing that would itself keep the session alive. The timer
+             restarts on any input, so it measures inactivity the same way the
+             container does; clock drift can only make it warn EARLY, which is
+             the safe direction. --%>
+        <div id="sessionExpiryBar" class="draft-bar" hidden role="status" aria-live="polite"
+             data-timeout="${pageContext.session.maxInactiveInterval}">
+            <span class="draft-bar-text"><spring:message code="session.expiringSoon"/></span>
+        </div>
+
         <%-- Draft recovery. Hidden until roller-draft.js finds a local
              snapshot the server does not have. type="button" is load-bearing:
              this sits inside #entry, where a bare <button> submits the form. --%>
@@ -89,26 +172,34 @@
 
         <%-- title: the page's one piece of layout hierarchy. Large serif,
              borderless -- emphasis elsewhere is weight, never size. --%>
-        <input type="text" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255" tabindex="1"
+        <input type="text" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255"
+               autofocus
                class="editor-title"
                placeholder="<spring:message code="weblogEdit.title"/>"
                aria-label="<spring:message code="weblogEdit.title"/>"/>
 
         <%-- permalink: small mono line with a copy control --%>
         <c:if test="${actionName == 'entryEdit'}">
-            <p class="editor-permalink" title="<spring:message code="weblogEdit.permaLink"/>">
+            <p class="editor-permalink" title="<spring:message code="weblogEdit.permaLink"/>"
+               role="status" aria-live="polite">
                 <c:choose>
 <c:when test="${bean.published}">
-                    <a id="entry_bean_permalink" href='${entry.permalink}'>${entry.permalink}</a>
+                    <a id="entry_bean_permalink" href='${entry.permalink}'><span id="entry_bean_permalink_text">${entry.permalink}</span></a>
                 </c:when>
 <c:otherwise>
-                    ${entry.permalink}
+                    <span id="entry_bean_permalink_text">${entry.permalink}</span>
                 </c:otherwise>
 </c:choose>
+                <%-- Only offered on a published entry: a draft's permalink
+                     404s, so copying it hands someone a broken link. --%>
+                <c:if test="${bean.published}">
                 &#183;
                 <button type="button" class="editor-permalink-copy"
                         data-permalink="${entry.permalink}"
+                        data-label="<spring:message code='weblogEdit.copyPermalink'/>"
+                        data-copied="<spring:message code='weblogEdit.copiedPermalink'/>"
                         onclick="copyPermalink(this)"><spring:message code="weblogEdit.copyPermalink"/></button>
+                </c:if>
             </p>
         </c:if>
 
@@ -246,19 +337,19 @@
                          The rules themselves live in roller.css beside the
                          other .editor-* rules. --%>
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.snippetPreview"/></label>
+                        <span class="col-sm-3 col-form-label"><spring:message code="weblogEdit.snippetPreview"/></span>
                         <div class="col-sm-9">
                             <div id="seo_snippet_preview" class="border rounded p-2 bg-body">
                                 <div id="seo_snippet_title" class="seo-snippet-title"></div>
-                                <div id="seo_snippet_url" class="seo-snippet-url"><c:if test="${actionName == 'entryEdit'}">${entry.permalink}</c:if></div>
+                                <div id="seo_snippet_url" class="seo-snippet-url"><c:choose><c:when test="${actionName == 'entryEdit'}">${entry.permalink}</c:when><c:otherwise>${actionWeblog.absoluteURL}<spring:message code="weblogEdit.snippetPreview.placeholderSlug"/></c:otherwise></c:choose></div>
                                 <div id="seo_snippet_description" class="seo-snippet-description"></div>
                             </div>
                         </div>
                     </div>
 
                     <%-- featured image --%>
-                    <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.featuredImage"/></label>
+                    <div class="row mb-3" role="group" aria-labelledby="seo_featuredImage_label">
+                        <span class="col-sm-3 col-form-label" id="seo_featuredImage_label"><spring:message code="weblogEdit.featuredImage"/></span>
                         <div class="col-sm-9">
                             <input type="hidden" id="seo_featuredImageId" name="bean.featuredImageId" value="${bean.featuredImageId}"/>
                             <div class="mb-2">
@@ -273,8 +364,8 @@
                     </div>
 
                     <%-- social share (Open Graph) image; when unset the featured image is used --%>
-                    <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.ogImage"/></label>
+                    <div class="row mb-3" role="group" aria-labelledby="seo_ogImage_label">
+                        <span class="col-sm-3 col-form-label" id="seo_ogImage_label"><spring:message code="weblogEdit.ogImage"/></span>
                         <div class="col-sm-9">
                             <input type="hidden" id="seo_ogImageId" name="bean.ogImageId" value="${bean.ogImageId}"/>
                             <div class="mb-2">
@@ -480,13 +571,13 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <form action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!sendNewsletter.rol"
-                      method="post">
+                      method="post" class="guard-submit">
                     <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                     <input type="hidden" name="bean.id" value="${entry.id}"/>
 
                     <div class="modal-header">
                         <h4 class="modal-title"><spring:message code="newsletter.confirmTitle"/></h4>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
                     </div>
 
                     <div class="modal-body">
@@ -494,7 +585,8 @@
                     </div>
 
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary" id="confirmSendNewsletterButton">
+                        <button type="submit" class="btn btn-primary" id="confirmSendNewsletterButton"
+                                data-busy-label="<spring:message code='newsletter.sending'/>">
                             <spring:message code="newsletter.send"/>
                         </button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -526,7 +618,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h4 class="modal-title"><spring:message code="weblogEdit.revisionCompare"/></h4>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
                 </div>
                 <div class="modal-body" id="revisionDiffBody"></div>
             </div>
@@ -595,18 +687,18 @@
                 <div class="modal-body">
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label">
+                        <span class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryTitle"/>
-                        </label>
+                        </span>
                         <div class="col-sm-9">
                             <p class="form-control-plaintext" id="postTitleLabel"></p>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label">
+                        <span class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryId"/>
-                        </label>
+                        </span>
                         <div class="col-sm-9">
                             <p class="form-control-plaintext" id="postIdLabel"></p>
                         </div>
@@ -661,10 +753,37 @@
     <%-- permalink copy control --%>
 
     function copyPermalink(el) {
-        navigator.clipboard.writeText(el.dataset.permalink).then(function () {
+        var done = function () {
             el.classList.add('copied');
-            setTimeout(function () { el.classList.remove('copied'); }, 1500);
-        });
+            el.textContent = el.dataset.copied;
+            setTimeout(function () {
+                el.classList.remove('copied');
+                el.textContent = el.dataset.label;
+            }, 1500);
+        };
+        // navigator.clipboard is undefined on a non-HTTPS origin, which is
+        // every plain-http deployment and every dev server -- the control was
+        // silently dead there (a TypeError in the console, nothing on screen).
+        // The fallback selects the text so Ctrl-C still works, and the
+        // feedback is TEXT inside the existing role="status" region rather
+        // than colour alone.
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(el.dataset.permalink).then(done, selectPermalink);
+        } else {
+            selectPermalink();
+        }
+    }
+
+    function selectPermalink() {
+        var link = document.getElementById('entry_bean_permalink_text');
+        if (!link) {
+            return;
+        }
+        var range = document.createRange();
+        range.selectNodeContents(link);
+        var selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
     }
 
     <%-- SEO panel: search-snippet preview fed from the title/description fields --%>

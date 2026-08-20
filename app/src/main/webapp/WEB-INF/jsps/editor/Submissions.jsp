@@ -32,14 +32,14 @@
                 <c:param name="page" value="${page - 1}"/>
             </c:url>
             <a href="${prevUrl}" class="btn btn-outline-secondary previous">
-                <span aria-hidden="true">&larr;</span> Newer</a>
+                <span aria-hidden="true">&larr;</span> <spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${(page + 1) * 30 < submissionCount}">
             <c:url var="nextUrl" value="/roller-ui/authoring/submissions.rol">
                 <c:param name="weblog" value="${actionWeblog.handle}"/>
                 <c:param name="page" value="${page + 1}"/>
             </c:url>
-            <a href="${nextUrl}" class="btn btn-outline-secondary next ms-auto">Older
+            <a href="${nextUrl}" class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>
@@ -58,9 +58,10 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <sec:csrfInput/>
 
+    <c:choose>
+    <c:when test="${not empty submissions}">
+
     <table class="rollertable table table-striped" width="100%">
-        <c:choose>
-        <c:when test="${not empty submissions}">
 
             <tr>
                 <th class="rollertable" width="3%">
@@ -78,7 +79,8 @@
                 <tr>
                     <td>
                         <input type="checkbox" class="form-check-input submission-select"
-                               name="deleteIds" value="${fn:escapeXml(s.id)}"/>
+                               name="deleteIds" value="${fn:escapeXml(s.id)}"
+                               aria-label="${fn:escapeXml(s.subject)}"/>
                     </td>
                     <td class="data">
                         <c:if test="${s.created != null}">
@@ -96,7 +98,7 @@
                         <c:when test="${fn:length(s.message) > 140}">
                             <c:out value="${fn:substring(s.message, 0, 140)}"/>&hellip;
                             <details>
-                                <summary>Show full message</summary>
+                                <summary><spring:message code="submissions.showFullMessage"/></summary>
                                 <p><c:out value="${s.message}"/></p>
                             </details>
                         </c:when>
@@ -119,27 +121,59 @@
                 </tr>
             </c:forEach>
 
-        </c:when>
-        <c:otherwise>
-            <tr>
-                <td colspan="6">
-                    <div class="empty-state">
-                        <p class="empty-state-title"><spring:message code="submissions.none"/></p>
-                        <p class="empty-state-body"><spring:message code="empty.inquiries.body"/></p>
-                    </div>
-                </td>
-            </tr>
-        </c:otherwise>
-        </c:choose>
     </table>
 
+    </c:when>
+    <c:otherwise>
+
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="submissions.none"/></p>
+        <p class="empty-state-body"><spring:message code="empty.inquiries.body"/></p>
+    </div>
+
+    </c:otherwise>
+    </c:choose>
+
     <c:if test="${not empty submissions}">
-        <button type="submit" class="btn btn-danger" id="submissionsDeleteSelected">
+        <%-- type="button": the real submit lives in the modal below, so the
+             count can be shown BEFORE anything is deleted. Inquiries are
+             deleted permanently -- there is no trash for them. --%>
+        <button type="button" class="btn btn-danger" id="submissionsDeleteSelected">
             <spring:message code="generic.delete.selected"/>
         </button>
     </c:if>
 
 </form>
+
+<%-- Confirmation for the bulk delete, ported from Entries.jsp: a modal
+     rather than window.confirm, because the native dialog cannot say how
+     many inquiries are about to go. --%>
+<div id="submissions-delete-modal" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <h3><spring:message code="submissions.bulkDeleteConfirm"/></h3>
+                    <p><spring:message code="submissions.bulkDeleteWarning"/></p>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p id="submissionsDeleteCount" class="form-control-plaintext"></p>
+            </div>
+            <div class="modal-footer">
+                <%-- Outside the form, so form= names the one carrying the
+                     selection (same shape as Entries.jsp's confirm). --%>
+                <button type="submit" class="btn btn-danger" id="submissionsDeleteConfirm"
+                        form="submissionsDeleteForm">
+                    <spring:message code="generic.yes"/>
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <spring:message code="generic.no"/>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     (function () {
@@ -147,11 +181,35 @@
         if (!selectAll) {
             return;
         }
+        var rows = function () {
+            return document.querySelectorAll('.submission-select');
+        };
         selectAll.addEventListener('change', function () {
             var checked = this.checked;
-            document.querySelectorAll('.submission-select').forEach(function (cb) {
+            rows().forEach(function (cb) {
                 cb.checked = checked;
             });
         });
+
+        // A row unchecked by hand must not leave the header claiming all are
+        // selected -- that is the state that gets someone to delete more than
+        // they meant to. Same sync Entries.jsp carries.
+        rows().forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                selectAll.checked = document.querySelectorAll('.submission-select:checked')
+                        .length === rows().length;
+            });
+        });
+
+        var trigger = document.getElementById('submissionsDeleteSelected');
+        if (trigger) {
+            trigger.addEventListener('click', function () {
+                document.getElementById('submissionsDeleteCount').textContent =
+                        document.querySelectorAll('.submission-select:checked').length
+                        + " " + "<spring:message code='submissions.selectedCount' javaScriptEscape='true'/>";
+                bootstrap.Modal.getOrCreateInstance(
+                        document.getElementById('submissions-delete-modal')).show();
+            });
+        }
     })();
 </script>

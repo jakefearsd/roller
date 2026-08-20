@@ -450,7 +450,16 @@ class MediaFileAddControllerTest extends EditorControllerTestSupport {
     @Test
     void cancellingReturnsToTheMediaFileList() {
         assertEquals("redirect:/roller-ui/authoring/mediaFileView.rol?weblog=" + WEBLOG_HANDLE,
-                controller.cancel(request));
+                controller.cancel(request, null));
+    }
+
+    @Test
+    void cancellingReturnsToTheDirectoryTheUploadWasHeadedFor() {
+        // Without the directory id, cancelling an upload into a nested folder
+        // dropped the author back at the media root, to navigate down again.
+        assertEquals("redirect:/roller-ui/authoring/mediaFileView.rol?weblog=" + WEBLOG_HANDLE
+                        + "&directoryId=dir-42",
+                controller.cancel(request, "dir-42"));
     }
 
     @Test
@@ -460,7 +469,7 @@ class MediaFileAddControllerTest extends EditorControllerTestSupport {
         when(request.getAttribute("actionWeblog")).thenReturn(null);
 
         assertEquals("redirect:/roller-ui/authoring/mediaFileView.rol?weblog=",
-                controller.cancel(request));
+                controller.cancel(request, null));
     }
 
     @Test

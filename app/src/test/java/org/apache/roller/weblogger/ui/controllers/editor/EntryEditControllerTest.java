@@ -255,6 +255,32 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
                 "A missing entry must not render the editor against a null entry");
     }
 
+    /**
+     * With a dozen editor tabs open -- the normal way this screen gets used --
+     * every one of them read "Edit entry", so finding the right tab meant
+     * clicking through them. The entry's own title has to reach the model for
+     * the layout's &lt;title&gt; to carry it.
+     */
+    @Test
+    void theEditorNamesTheEntryItIsEditing() throws Exception {
+        existingEntry(PubStatus.DRAFT);
+
+        controller.entryEditExecute(request, model, bean, newRedirectAttributes());
+
+        assertTrue(String.valueOf(model.getAttribute("pageTitle")).startsWith("Stored title"),
+                "pageTitle must lead with the entry's own title, was: "
+                        + model.getAttribute("pageTitle"));
+    }
+
+    /** A brand-new entry has no title yet, so there is nothing to prepend and
+     *  the generic heading must survive untouched. */
+    @Test
+    void theAddScreenKeepsItsGenericTitle() {
+        controller.entryAddExecute(request, model, bean);
+
+        assertEquals("weblogEdit.title.newEntry", model.getAttribute("pageTitle"));
+    }
+
     @Test
     void openingAnEntryWithNoIdBouncesToTheMenu() {
         bean.setId(null);

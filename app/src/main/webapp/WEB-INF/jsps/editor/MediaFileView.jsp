@@ -113,12 +113,17 @@
 </select>
             </c:if>
 
-            <span><spring:message code="mediaFileView.sortBy"/>:</span>
+            <%-- Not offered over a search result: submitting this form
+                 re-runs the plain directory view and drops the search
+                 silently, so the control appeared to do nothing but reset. --%>
+            <c:if test="${empty pager}">
+            <label for="sortByMenu"><spring:message code="mediaFileView.sortBy"/>:</label>
             <select name="sortBy" id="sortByMenu" class="form-select" onchange="document.mediaFileViewForm.submit();">
 <c:forEach items="${sortOptions}" var="opt">
 <option value="${opt.key}" ${opt.key == sortBy ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
 </select>
+            </c:if>
 
         </div>
 
@@ -176,7 +181,7 @@
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
-                                        <img border="0" src='${mediaFile.thumbnailURL}'
+                                        <img src='${mediaFile.thumbnailURL}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
                                              title='${fn:escapeXml(mediaFile.name)}'
@@ -184,7 +189,7 @@
                                     </c:when>
 <c:otherwise>
                                         <c:url var="mediaFileURL" value="/images/page.png"/>
-                                        <img border="0" src='${mediaFileURL}'
+                                        <img src='${mediaFileURL}'
                                              style="padding:40px 50px;"
                                              alt='${fn:escapeXml(mediaFile.name)}' />
                                     </c:otherwise>
@@ -195,17 +200,18 @@
 
                                     <input type="checkbox"
                                            name="selectedMediaFiles"
-                                           value="${mediaFile.id}"/>
-                                    <input type="hidden" id="mediafileidentity"
-                                           value="${mediaFile.id}"/>
+                                           value="${mediaFile.id}"
+                                           aria-label="${fn:escapeXml(mediaFile.name)}"/>
 
                                     <str:truncateNicely lower="47" upper="47">
                                         ${fn:escapeXml(mediaFile.name)}
                                     </str:truncateNicely>
 
                                     <c:if test="${mediaFile.imageFile and empty fn:trim(mediaFile.altText)}">
-                                        <span class="media-alt-missing"
-                                              title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></span>
+                                        <button type="button" class="media-alt-missing" data-alt-fix
+                                                data-media-file-id="${mediaFile.id}"
+                                                data-media-file-name="${fn:escapeXml(mediaFile.name)}"
+                                                title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></button>
                                     </c:if>
 
                                 </div>
@@ -231,7 +237,7 @@
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
-                                        <img border="0" src='${mediaFile.thumbnailURL}'
+                                        <img src='${mediaFile.thumbnailURL}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
                                              title='${fn:escapeXml(mediaFile.name)}'
@@ -239,7 +245,7 @@
                                     </c:when>
 <c:otherwise>
                                         <c:url var="mediaFileURL" value="/images/page.png"/>
-                                        <img border="0" src='${mediaFileURL}'
+                                        <img src='${mediaFileURL}'
                                              style="padding:40px 50px;" alt='${fn:escapeXml(mediaFile.name)}'/>
                                     </c:otherwise>
 </c:choose></div>
@@ -248,23 +254,19 @@
 
                                     <input type="checkbox"
                                            name="selectedMediaFiles"
-                                           value="${mediaFile.id}"/>
-                                    <input type="hidden" id="mediafileidentity"
-                                           value="${mediaFile.id}">
+                                           value="${mediaFile.id}"
+                                           aria-label="${fn:escapeXml(mediaFile.name)}"/>
 
                                     <str:truncateNicely lower="40" upper="50">
                                         ${fn:escapeXml(mediaFile.name)}
                                     </str:truncateNicely>
 
                                     <c:if test="${mediaFile.imageFile and empty fn:trim(mediaFile.altText)}">
-                                        <span class="media-alt-missing"
-                                              title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></span>
+                                        <button type="button" class="media-alt-missing" data-alt-fix
+                                                data-media-file-id="${mediaFile.id}"
+                                                data-media-file-name="${fn:escapeXml(mediaFile.name)}"
+                                                title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></button>
                                     </c:if>
-
-                                    <span class="button" id="addbutton-${mediaFile.id}">
-                                    <img id="addbutton-img${mediaFile.id}"
-                                         src="<c:url value="/images/add.png"/>"/>
-                                </span>
 
                                 </div>
 
@@ -293,6 +295,14 @@
 
                     <input id="moveButton" type="button" class="btn btn-primary" style="display: inline"
                            value='<spring:message code="mediaFileView.moveSelected"/>' onclick="onMoveSelected()"/>
+
+                    <%-- The one route from "these photos" to "a post about
+                         these photos". #createPostForm has sat below,
+                         reachable by nothing, since the control that used to
+                         drive it was removed. --%>
+                    <input id="newEntryButton" type="button" class="btn" style="display: inline"
+                           value='<spring:message code="mediaFileView.newEntryWithSelected"/>'
+                           onclick="onNewEntryWithSelected()"/>
                 </c:if>
 
                 <select name="selectedDirectory" id="moveTargetMenu" class="form-select" style="display: inline; width: 15em">
@@ -438,23 +448,20 @@
         $("#mediaFileEditor").attr('src', 'about:blank');
     }
 
-    function onSelectDirectory(id) {
-        window.location = "<c:url value="/roller-ui/authoring/mediaFileView.rol"/>?directoryId="
-            + id + "&weblog=" + '${actionWeblog.handle}';
-    }
-
     function onToggle() {
         if (toggleState === 'Off') {
             toggleState = 'On';
             toggleFunction(true, 'selectedMediaFiles');
             $("#deleteButton").attr('disabled', false);
             $("#moveButton").attr('disabled', false);
+            $("#newEntryButton").attr('disabled', false);
             $("#moveTargetMenu").attr('disabled', false);
         } else {
             toggleState = 'Off';
             toggleFunction(false, 'selectedMediaFiles');
             $("#deleteButton").attr('disabled', true);
             $("#moveButton").attr('disabled', true);
+            $("#newEntryButton").attr('disabled', true);
             $("#moveTargetMenu").attr('disabled', true);
         }
     }
@@ -474,6 +481,14 @@
     }
 
     function onMoveSelected() {
+        <%-- The fit-and-finish sweep wanted this confirm dropped: a move is
+             reversible and loses nothing, and confirming it trains people to
+             click through the two dialogs that matter (delete file, delete
+             folder). It stays for now because removing the only use of
+             mediaFile.move.confirm orphans that key, and the orphan ratchet
+             (MessageKeyTest) plus the eight bundles it would have to be
+             deleted from are owned by a different package in this wave.
+             Drop this confirm and the key together. --%>
         if (confirm("<spring:message code="mediaFile.move.confirm"/>")) {
             document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!moveSelected.rol"/>';
             document.mediaFileViewForm.submit();
@@ -494,11 +509,47 @@
         onClickEdit(this.dataset.mediaFileId, this.dataset.mediaFileName);
     });
 
+    <%-- The alt-text marker opens the same editor. stopPropagation keeps the
+         enclosing .mediaObject handler from firing a second time for the same
+         click. --%>
+    $(document).on('click', '[data-alt-fix]', function (event) {
+        event.stopPropagation();
+        onClickEdit(this.dataset.mediaFileId, this.dataset.mediaFileName);
+    });
+
+    <%-- Hands the checked ids to entryAddWithMediaFile.rol, which seeds a
+         draft with an [image id=".."] shortcode per file. The parameter name
+         is selectedImages (plural, repeated) -- the pre-existing
+         #createPostForm carries only the singular selectedImage, which that
+         controller also accepts but only for one file, so the ids are added
+         as fresh inputs rather than stuffed into it. Rebuilt on every click
+         so a changed selection cannot leave stale ids behind. --%>
+    function onNewEntryWithSelected() {
+        var form = document.getElementById('createPostForm');
+        form.querySelectorAll("input[name='selectedImages']").forEach(function (el) {
+            el.remove();
+        });
+        var selected = document.querySelectorAll("input[name='selectedMediaFiles']:checked");
+        if (selected.length === 0) {
+            return;
+        }
+        selected.forEach(function (checkbox) {
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'selectedImages';
+            hidden.value = checkbox.value;
+            form.appendChild(hidden);
+        });
+        form.action = '<c:url value="/roller-ui/authoring/entryAddWithMediaFile.rol"/>';
+        form.submit();
+    }
+
     <%-- code to toggle buttons on/off as media file/directory selections change --%>
 
     $(document).ready(function () {
         $("#deleteButton").attr('disabled', true);
         $("#moveButton").attr('disabled', true);
+        $("#newEntryButton").attr('disabled', true);
         $("#moveTargetMenu").attr('disabled', true);
 
         $("input[type=checkbox]").change(function () {
@@ -509,10 +560,12 @@
             if (count === 0) {
                 $("#deleteButton").attr('disabled', true);
                 $("#moveButton").attr('disabled', true);
+                $("#newEntryButton").attr('disabled', true);
                 $("#moveTargetMenu").attr('disabled', true);
             } else {
                 $("#deleteButton").attr('disabled', false);
                 $("#moveButton").attr('disabled', false);
+                $("#newEntryButton").attr('disabled', false);
                 $("#moveTargetMenu").attr('disabled', false);
             }
         });

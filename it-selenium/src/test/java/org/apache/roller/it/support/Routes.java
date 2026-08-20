@@ -340,8 +340,6 @@ public final class Routes {
                     "Needs selectedImage(s) holding MediaFile ids; no media files are seeded."),
             new SkippedRoute("/roller-ui/authoring/mediaFileEdit.rol", Role.EDITOR,
                     "Needs mediaFileId; no media files are seeded."),
-            new SkippedRoute("/roller-ui/authoring/mediaFileImageDim.rol", Role.EDITOR,
-                    "Needs mediaFileId; no media files are seeded."),
             new SkippedRoute("/roller-ui/authoring/overlay/mediaFileImageChooser.rol", Role.EDITOR,
                     "Takes no required parameter, but the whole of "
                             + "MediaFileImageChooser.jsp sits inside "
@@ -413,18 +411,8 @@ public final class Routes {
     private static final List<BrokenRoute> BROKEN = List.of(
             // Empty, and that is the point of keeping it.
             //
-            // It previously held six routes. Five were GET confirmation pages
-            // (entryRemove, entryRemoveViaList, categoryAdd, categoryEdit,
-            // categoryRemove) whose JSPs were deleted years ago when the dialogs
-            // moved into #delete-entry-modal on Entries.jsp and
-            // #category-edit-modal on Categories.jsp; the handlers outlived their
-            // views and returned unresolvable or empty pages. They have been
-            // removed, so there is no route left to test. The sixth,
-            // mediaFileView!fetchDirectoryContentLight, had a double-prefixed view
-            // path; rather than fix the prefixing, the handler and its
-            // MediaFileViewLight.jsp fragment were deleted outright as dead code
-            // (no caller ever requested that route), so it too is gone rather
-            // than swept.
+            // It previously held six routes, all since deleted outright (dead
+            // handlers whose views had gone years earlier) rather than swept.
             //
             // Add an entry here when a route is found broken and cannot be fixed
             // immediately: RouteSweepIT asserts these are STILL broken, so the

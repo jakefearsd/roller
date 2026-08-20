@@ -169,6 +169,11 @@ public class WeblogConfigController extends BaseController {
     private void loadFormData(Model model) {
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
         model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
+        // The same ceiling myValidate() rejects against, so the field's max=
+        // and the server's refusal cannot drift apart. Read per request: it is
+        // a runtime property (Admin Settings), not a startup one.
+        model.addAttribute("maxEntriesPerPage",
+                WebloggerRuntimeConfig.getIntProperty("site.pages.maxEntries"));
     }
 
     @ModelAttribute("bean")

@@ -289,22 +289,10 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "messages", "/WEB-INF/jsps/tiles/messages.jsp"
                 ));
 
-        addExtendedDefinition(".MediaFileImageDimension", ".tiles-popuppage-only-content",
-                Map.of(
-                        "head",    "/WEB-INF/jsps/tiles/head.jsp",
-                        "content", "/WEB-INF/jsps/editor/MediaFileImageDimension.jsp"
-                ));
-
         addExtendedDefinition(".MediaFileAddInclude", ".tiles-popuppage",
                 Map.of(
                         "head",    "/WEB-INF/jsps/tiles/head.jsp",
                         "content", "/WEB-INF/jsps/editor/MediaFileAdd.jsp"
-                ));
-
-        addExtendedDefinition(".MediaFileAddSuccessInclude", ".tiles-popuppage",
-                Map.of(
-                        "head",    "/WEB-INF/jsps/tiles/head.jsp",
-                        "content", "/WEB-INF/jsps/editor/MediaFileAddSuccessInclude.jsp"
                 ));
 
         // Bare layout, not popuppage: this document exists only to call

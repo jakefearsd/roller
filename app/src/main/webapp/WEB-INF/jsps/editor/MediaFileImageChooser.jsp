@@ -17,17 +17,6 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<style>
-
-</style>
-
-<script>
-    function onSelectDirectory(id) {
-        window.location = "?directoryId=" + id + "&weblog=" + '${actionWeblog.handle}';
-    }
-</script>
-
-
 <%-- ********************************************************************* --%>
 
 <%-- Subtitle and folder path --%>
@@ -46,8 +35,9 @@
         <%-- Maybe show media directory selector --%>
 
         <c:if test="${not empty allDirectories}">
-            <select name="directoryId" class="form-select" onchange="onView()">
-<option value=""></option>
+            <label for="chooserDirectoryId"><spring:message code="mediaFileAdd.directory"/></label>
+            <select id="chooserDirectoryId" name="directoryId" class="form-select" onchange="onView()">
+<option value=""><spring:message code="mediaFileImageChooser.allDirectories"/></option>
 <c:forEach items="${allDirectories}" var="opt">
 <option value="${opt.id}" ${opt.id == directoryId ? 'selected' : ''}>${fn:escapeXml(opt.name)}</option>
 </c:forEach>
@@ -106,13 +96,13 @@
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
-                                        <img border="0" src='${mediaFileThumbnailURL}'
+                                        <img src='${mediaFileThumbnailURL}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
                                              alt='${fn:escapeXml(mediaFile.name)}'/>
                                     </c:when>
 <c:otherwise>
-                                        <span class="bi bi-file-earmark"></span>
+                                        <span class="bi bi-file-earmark" aria-hidden="true"></span>
                                     </c:otherwise>
                                     </c:choose>
                                 </div>

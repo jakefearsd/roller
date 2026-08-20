@@ -28,6 +28,8 @@ import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.Model;
+import org.apache.roller.weblogger.business.runnable.TrashPurgeTask;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -95,6 +97,25 @@ class TrashControllerTest extends EditorControllerTestSupport {
 
         assertEquals(".Trash", view);
         assertEquals(trashed, model.getAttribute("trashedEntries"));
+    }
+
+    /**
+     * The page tells an author their entry is recoverable but, until this,
+     * never for how long. The value must come from the RUNTIME property
+     * {@code entry.trash.retention.days} on every request rather than a
+     * cached copy -- it is editable on Admin Settings, and TrashPurgeTask
+     * re-reads it per sweep for the same reason, so a latched value here
+     * would advertise a retention the purge no longer honours.
+     */
+    @Test
+    void theListCarriesTheRetentionThePurgeActuallyUses() throws Exception {
+        when(weblogger.getWeblogEntryManager().getTrashedEntries(weblog))
+                .thenReturn(List.of());
+
+        controller.execute(request, model);
+
+        assertEquals(WebloggerRuntimeConfig.getIntProperty(TrashPurgeTask.RETENTION_PROPERTY),
+                model.getAttribute("trashRetentionDays"));
     }
 
     @Test

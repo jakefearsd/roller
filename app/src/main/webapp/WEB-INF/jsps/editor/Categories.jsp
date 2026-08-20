@@ -57,7 +57,7 @@
 
                     <td>${fn:escapeXml(category.description)}</td>
 
-                    <td align="center">
+                    <td class="text-center">
 
                         <c:set var="categoryId" value="${category.id}"/>
                         <c:set var="categoryName" value="${fn:escapeXml(category.name)}"/>
@@ -81,7 +81,7 @@
 
                     </td>
 
-                    <td class="rollertable" align="center">
+                    <td class="rollertable text-center">
                         <c:if test="${fn:length(allCategories) > 1}">
 
                             <c:set var="categoryId" value="${category.id}"/>
@@ -141,23 +141,23 @@
                     <input type="hidden" name="bean.id" value="${bean.id}"/>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
+                        <label class="col-sm-3 col-form-label" for="category_bean_name"><spring:message code="generic.name"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                            <input id="category_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" maxlength="255" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
+                        <label class="col-sm-3 col-form-label" for="category_bean_description"><spring:message code="generic.description"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.description" value="${fn:escapeXml(bean.description)}" class="form-control"/>
+                            <input id="category_bean_description" type="text" name="bean.description" value="${fn:escapeXml(bean.description)}" class="form-control"/>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="categoryForm.image"/></label>
+                        <label class="col-sm-3 col-form-label" for="category_bean_image"><spring:message code="categoryForm.image"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.image" value="${fn:escapeXml(bean.image)}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
+                            <input id="category_bean_image" type="text" name="bean.image" value="${fn:escapeXml(bean.image)}" class="form-control" onchange="validateCategory()" onkeyup="validateCategory()"/>
                         </div>
                     </div>
                 <sec:csrfInput/>
@@ -244,6 +244,17 @@
         saveCategoryButton.prop("disabled", false);
     }
 
+    <%-- The modal's form carries no submit button, so the browser's implicit
+         submission never fires and Enter did nothing whatever. Bound on the
+         three text inputs only -- not on the form -- so a future textarea in
+         there keeps its newlines. --%>
+    $(document).on('keydown', "#category-edit-modal input[type='text']", function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            submitEditedCategory();
+        }
+    });
+
     function submitEditedCategory() {
 
         // if name is empty reject and show error message
@@ -270,29 +281,26 @@
             data: $("#categoryEditForm").serialize(),
             context: document.body
 
-        }).done(function (data) {
+        }).done(function () {
 
-            // kludge: scrape response status from HTML returned by Struts
-            var alertEnd = data.indexOf("ALERT_END");
-            var notUnique = data.indexOf('<spring:message code="categoryForm.error.duplicateName"/>');
-            var notValid = data.indexOf('<spring:message code="categoryForm.error.invalidName"/>');
-            if (notUnique > 0 && notUnique < alertEnd) {
-                feedbackAreaEdit.css("color", "var(--bad)");
-                feedbackAreaEdit.html('<spring:message code="categoryForm.error.duplicateName"/>');
-            } else if (notValid > 0 && notValid < alertEnd) {
-                feedbackAreaEdit.css("color", "var(--bad)");
-                feedbackAreaEdit.html('<spring:message code="categoryForm.error.invalidName"/>');
-            } else {
-                feedbackAreaEdit.css("color", "var(--good)");
-                feedbackAreaEdit.html('<spring:message code="generic.success"/>');
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).hide();
-                location.reload(true);
-            }
+            // The response is never inspected. It used to be scraped for the
+            // duplicate-name and invalid-name strings inside an "ALERT_END"
+            // marker -- a Struts-era kludge that has not been able to match
+            // anything since CategoryEditController started answering with a
+            // 302 and a flash message: jQuery follows the redirect, so `data`
+            // is the redirected page, and the flash renders on the reload
+            // below anyway. Scraping localized text is also the shape that
+            // breaks the moment a message gains a placeholder, which is
+            // exactly what happened.
+            feedbackAreaEdit.css("color", "var(--good)");
+            feedbackAreaEdit.html('<spring:message code="generic.success"/>');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).hide();
+            location.reload(true);
 
         // .fail, not .error: jQuery removed .error() in 3.0, so this threw
         // "TypeError: $.ajax(...).done(...).error is not a function" on every
         // single save.
-        }).fail(function (data) {
+        }).fail(function () {
             feedbackAreaEdit.html('<spring:message code="generic.error.check.logs"/>');
             feedbackAreaEdit.css("color", "var(--bad)");
         });
@@ -328,8 +336,8 @@
                             <spring:message code="categoryDeleteOK.warningCatInUse"/>
                             <spring:message code="categoryDeleteOK.youMustMoveEntries"/>
                         </p>
-                        <spring:message code="categoryDeleteOK.moveToWhere"/>
-                        <select name="targetCategoryId" class="form-select">
+                        <label for="targetCategoryId"><spring:message code="categoryDeleteOK.moveToWhere"/></label>
+                        <select id="targetCategoryId" name="targetCategoryId" class="form-select">
 <c:forEach items="${allCategories}" var="opt">
 <option value="${opt.id}" ${opt.id == targetCategoryId ? 'selected' : ''}>${fn:escapeXml(opt.name)}</option>
 </c:forEach>

@@ -32,10 +32,10 @@
     <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
             <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
-                <span aria-hidden="true">&larr;</span>Newer</a>
+                <span aria-hidden="true">&larr;</span><spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto">Older
+            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>
@@ -77,6 +77,29 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 <sec:csrfInput/>
 
+<%-- Status filter as link-chips: a GET per option, reusing the same
+     statusOptions the sidebar select is built from so the two can never
+     offer different sets. Possible only because Task 1 made the filter form
+     a GET -- before that the filter lived in a POST body and had no URL. --%>
+<nav class="entries-status-chips d-flex flex-wrap gap-2 mb-3" aria-label="<spring:message code='weblogEdit.status'/>">
+    <c:forEach items="${statusOptions}" var="opt">
+        <c:url var="chipUrl" value="/roller-ui/authoring/entries.rol">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+            <c:param name="bean.status" value="${opt.key}"/>
+            <c:if test="${not empty bean.categoryName}">
+                <c:param name="bean.categoryName" value="${bean.categoryName}"/>
+            </c:if>
+        </c:url>
+        <%-- A blank bean.status means the same thing as ALL, so both mark
+             the ALL chip -- otherwise the unfiltered default list shows no
+             chip active at all. --%>
+        <c:set var="chipActive" value="${opt.key == bean.status
+                or (opt.key == 'ALL' and empty bean.status)}"/>
+        <a class="btn btn-sm ${chipActive ? 'btn-secondary' : 'btn-outline-secondary'}"
+           href="${chipUrl}" ${chipActive ? 'aria-current="page"' : ''}>${opt.value}</a>
+    </c:forEach>
+</nav>
+
 <c:if test="${not empty pager.items}">
 <table class="rollertable table table-striped" width="100%">
 
@@ -94,6 +117,9 @@
     </th>
     <th class="rollertable">
         <spring:message code="weblogEntryQuery.title"/>
+    </th>
+    <th class="rollertable" width="10%">
+        <spring:message code="weblogEdit.status"/>
     </th>
     <th class="rollertable" width="15%">
         <spring:message code="weblogEntryQuery.category"/>
@@ -119,7 +145,8 @@
     </c:choose>
     <td>
         <input type="checkbox" class="form-check-input entry-select"
-               name="selectedEntries" value="${post.id}"/>
+               name="selectedEntries" value="${post.id}"
+               aria-label="${fn:escapeXml(post.title)}"/>
     </td>
 
     <td>
@@ -127,8 +154,8 @@
             <c:param name="weblog" value="${actionWeblog.handle}"/>
             <c:param name="bean.id" value="${post.id}"/>
         </c:url>
-        <a href="${editUrl}">
-            <span class="bi bi-pencil-square"
+        <a href="${editUrl}" aria-label="<spring:message code='generic.edit'/>: ${fn:escapeXml(post.title)}">
+            <span class="bi bi-pencil-square" aria-hidden="true"
                   title="<spring:message code="generic.edit"/>">
             </span>
         </a>
@@ -158,7 +185,27 @@
         </c:otherwise>
         </c:choose>
     </td>
-    
+
+    <%-- A badge, not just the row tint: the tint is the only thing carrying
+         status today, and colour alone is not information a screen reader or
+         a colour-blind reader receives. Same badge pattern as Pages.jsp. --%>
+    <td>
+        <c:choose>
+        <c:when test="${post.status.name() == 'PUBLISHED'}">
+            <span class="badge bg-success"><spring:message code="weblogEdit.published"/></span>
+        </c:when>
+        <c:when test="${post.status.name() == 'PENDING'}">
+            <span class="badge bg-warning"><spring:message code="weblogEdit.pending"/></span>
+        </c:when>
+        <c:when test="${post.status.name() == 'SCHEDULED'}">
+            <span class="badge bg-primary"><spring:message code="weblogEdit.scheduled"/></span>
+        </c:when>
+        <c:otherwise>
+            <span class="badge bg-info"><spring:message code="weblogEdit.draft"/></span>
+        </c:otherwise>
+        </c:choose>
+    </td>
+
     <td>
         ${fn:escapeXml(post.category.name)}
     </td>
@@ -171,8 +218,9 @@
              without a hidden field per row. --%>
         <button type="submit" name="duplicateId" value="${post.id}"
                 class="btn btn-link p-0 align-baseline border-0"
+                aria-label="<spring:message code='generic.duplicate'/>: ${fn:escapeXml(post.title)}"
                 formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!duplicate.rol">
-            <span class="bi bi-files"
+            <span class="bi bi-files" aria-hidden="true"
                   title="<spring:message code="generic.duplicate"/>">
             </span>
         </button>
@@ -244,10 +292,10 @@
     <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
             <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
-                <span aria-hidden="true">&larr;</span> Older</a>
+                <span aria-hidden="true">&larr;</span> <spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto">Newer
+            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>
@@ -290,18 +338,18 @@
                 <div class="modal-body">
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label">
+                        <span class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryTitle"/>
-                        </label>
+                        </span>
                         <div class="col-sm-9">
                             <p class="form-control-plaintext" id="postTitleLabel"></p>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label">
+                        <span class="col-sm-3 col-form-label">
                             <spring:message code="weblogEntryRemove.entryId"/>
-                        </label>
+                        </span>
                         <div class="col-sm-9">
                             <p class="form-control-plaintext" id="postIdLabel"></p>
                         </div>

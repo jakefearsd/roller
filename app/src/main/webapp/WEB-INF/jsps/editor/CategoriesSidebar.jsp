@@ -18,14 +18,9 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <h3><spring:message code="mainPage.actions"/></h3>
-<hr size="1" noshade="noshade"/>
+<hr/>
 
 <p>
-    <c:set var="categoryId" value="${bean.id}"/>
-    <c:set var="categoryName" value="${post.name}"/>
-    <c:set var="categoryDesc" value="${post.description}"/>
-    <c:set var="categoryImage" value="${post.image}"/>
-
     <%-- <button>, not <a>: a control that triggers a JS action rather than
          navigating should be a button (a11y sweep). id="addCategoryButton"
          is what CategoryIT keys on now that Categories.jsp's own empty-state
@@ -59,6 +54,15 @@
 
         bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).show();
     }
+
+    <%-- Focus has to wait for shown.bs.modal: Bootstrap animates the dialog
+         in, and an element inside a display:none subtree cannot take focus.
+         Bound once on the element, not per open. --%>
+    $(document).ready(function () {
+        $('#category-edit-modal').on('shown.bs.modal', function () {
+            categoryField('bean.name').trigger('focus');
+        });
+    });
 
 </script>
 

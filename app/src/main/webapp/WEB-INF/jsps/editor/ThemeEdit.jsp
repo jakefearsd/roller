@@ -21,7 +21,9 @@
     <spring:message code="themeEditor.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/themeEdit!save.rol" method="post" class="form-vertical">
+<script src="<c:url value='/theme/scripts/roller-guard-submit.js'/>"></script>
+
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/themeEdit!save.rol" method="post" class="form-vertical guard-submit">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- Two choices side-by-side: choose Shared or Custom Theme --%>
@@ -37,7 +39,7 @@
                     <h3 class="section-head">
                         <input id="sharedRadio" type="radio" name="themeType" value="shared"
                             <c:if test="${!customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
-                        <spring:message code="themeEditor.sharedTheme"/>
+                        <label for="sharedRadio"><spring:message code="themeEditor.sharedTheme"/></label>
                     </h3>
                     <spring:message code="themeEditor.sharedThemeDescription"/>
                 </div>
@@ -56,7 +58,7 @@
                     <h3 class="section-head">
                         <input id="customRadio" type="radio" name="themeType" value="custom"
                             <c:if test="${customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
-                        <spring:message code="themeEditor.customTheme"/>
+                        <label for="customRadio"><spring:message code="themeEditor.customTheme"/></label>
                     </h3>
                     <spring:message code="themeEditor.customThemeDescription"/>
                 </div>
@@ -82,6 +84,9 @@
             </c:otherwise>
 </c:choose></p>
 
+        <p><a href="${actionWeblog.absoluteURL}" target="_blank" rel="noopener">
+            <spring:message code="themeEditor.viewYourBlog"/></a></p>
+
     </div>
 
     <%-- ================================================= --%>
@@ -89,7 +94,7 @@
     <div id="themeChooser" style="display:none;">
 
         <%-- theme selector with preview image --%>
-        <p class="lead"><spring:message code="themeEditor.selectTheme"/></p>
+        <p class="lead"><label for="themeSelector"><spring:message code="themeEditor.selectTheme"/></label></p>
         <p>
             <select name="selectedThemeId" id="themeSelector" class="form-control" style="width:20em" size="1" onchange="proposeSharedThemeChange(this[selectedIndex].value)">
 <c:forEach items="${themes}" var="opt">
@@ -131,7 +136,8 @@
             value="<spring:message code="themeEditor.preview"/>"
             onclick="fullPreview($('#themeSelector').get(0))"/>
 
-        <button type="submit" class="btn btn-secondary"><spring:message code="themeEditor.save"/></button>
+        <button type="submit" class="btn btn-secondary"
+                data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
 
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
@@ -155,7 +161,8 @@
             <label><input type="checkbox" name="importTheme" value="true" ${importTheme ? 'checked' : ''}/> <spring:message code="themeEditor.importAndOverwriteTemplates"/></label>
         </c:otherwise>
 </c:choose><%-- Update button --%>
-        <button type="submit" class="btn btn-secondary"><spring:message code="themeEditor.save"/></button>
+        <button type="submit" class="btn btn-secondary"
+                data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
 
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
@@ -163,6 +170,9 @@
 
     <div id="customNoChange" style="display:none;">
         <p class="lead"><spring:message code="themeEditor.youAreUsingACustomTheme"/></p>
+
+        <p><a href="${actionWeblog.absoluteURL}" target="_blank" rel="noopener">
+            <spring:message code="themeEditor.viewYourBlog"/></a></p>
     </div>
 
     <div id="customChangeToShared" style="display:none;">
@@ -177,7 +187,8 @@
             value="<spring:message code="themeEditor.preview"/>"
             onclick="fullPreview($('#themeSelector').get(0))"/>
 
-        <button type="submit" class="btn btn-secondary"><spring:message code="themeEditor.save"/></button>
+        <button type="submit" class="btn btn-secondary"
+                data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
 
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 

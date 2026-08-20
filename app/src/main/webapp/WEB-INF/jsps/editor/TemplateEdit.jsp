@@ -37,12 +37,12 @@
     <%-- Name, link and description: disabled when page is a required page --%>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="generic.name"/></label>
+        <label class="col-sm-3 col-form-label" for="template_bean_name"><spring:message code="generic.name"/></label>
         <div class="col-sm-9">
             <c:choose>
                 <c:when test="${template.required}">
                     <%-- Cannot edit name of a required template --%>
-                    <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="50" readonly class="form-control"/>
+                    <input id="template_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="50" readonly class="form-control"/>
                 </c:when>
                 <c:otherwise>
                     <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="50" class="form-control"/>
@@ -52,9 +52,9 @@
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="pageForm.action"/></label>
+        <label class="col-sm-3 col-form-label" for="template_bean_action"><spring:message code="pageForm.action"/></label>
         <div class="col-sm-9">
-            <input type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control"/>
+            <input id="template_bean_action" type="text" name="bean.action" value="${bean.action}" size="50" readonly class="form-control"/>
         </div>
     </div>
 
@@ -62,7 +62,7 @@
         <c:when test="${!template.required && template.custom}">
 
             <div class="row mb-3">
-                <label class="col-sm-3 col-form-label"><spring:message code="pageForm.link"/></label>
+                <label class="col-sm-3 col-form-label" for="template_bean_link"><spring:message code="pageForm.link"/></label>
                 <div class="col-sm-9">
                     <%-- allow setting the path for a custom template --%>
                     <input type="text" id="template_bean_link" name="bean.link" value="${fn:escapeXml(bean.link)}" size="50" class="form-control" onkeyup="updatePageURLDisplay()"/>
@@ -89,12 +89,12 @@
     </c:choose>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="generic.description"/></label>
+        <label class="col-sm-3 col-form-label" for="template_bean_description"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
             <c:choose>
                 <c:when test="${template.required}">
                     <%-- Required templates have a description--%>
-                    <textarea name="bean.description" rows="2" cols="50" readonly class="form-control">${fn:escapeXml(bean.description)}</textarea>
+                    <textarea id="template_bean_description" name="bean.description" rows="2" cols="50" readonly class="form-control">${fn:escapeXml(bean.description)}</textarea>
                 </c:when>
                 <c:otherwise>
                     <textarea name="bean.description" rows="2" cols="50" class="form-control">${fn:escapeXml(bean.description)}</textarea>
@@ -124,7 +124,7 @@
 
         <div id="accordion" style="margin-top:2em">
 
-        <div class="card" id="panel-plugins">
+        <div class="card" id="panel-advanced">
 
             <div class="card-header">
 
@@ -140,9 +140,9 @@
                 <div class="card-body">
 
                     <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="pageForm.templateLanguage"/></label>
+                        <label class="col-sm-3 col-form-label" for="template_bean_templateLanguage"><spring:message code="pageForm.templateLanguage"/></label>
                         <div class="col-sm-9">
-                            <select name="bean.templateLanguage" class="form-select" size="1">
+                            <select id="template_bean_templateLanguage" name="bean.templateLanguage" class="form-select" size="1">
                                 <c:forEach items="${templateLanguages}" var="opt">
                                     <option value="${opt.key}" ${opt.key == bean.templateLanguage ? 'selected' : ''}>${opt.value}</option>
                                 </c:forEach>
@@ -175,9 +175,9 @@
                     </div>
 
                     <div class="row mb-3" id="manual-content-type-control-group" style="display:none">
-                        <label class="col-sm-3 col-form-label"><spring:message code="pageForm.useManualContentType"/></label>
+                        <label class="col-sm-3 col-form-label" for="template_bean_manualContentType"><spring:message code="pageForm.useManualContentType"/></label>
                         <div class="col-sm-9">
-                            <input type="text" name="bean.manualContentType" value="${bean.manualContentType}" class="form-control"/>
+                            <input id="template_bean_manualContentType" type="text" name="bean.manualContentType" value="${bean.manualContentType}" class="form-control"/>
                         </div>
                     </div>
 
@@ -221,7 +221,7 @@
     // Don't launch page if user has changed link, it'll be a 404
     function launchPage() {
         if (originalLink != document.getElementById('template_bean_link').value) {
-            window.alert("Link changed, not launching page");
+            window.alert("<spring:message code='pageForm.launch.linkChanged' javaScriptEscape='true'/>");
         } else {
             window.open(weblogURL + 'page/' + originalLink + '?type=' + type, '_blank');
         }

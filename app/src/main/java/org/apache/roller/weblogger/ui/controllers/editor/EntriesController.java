@@ -181,12 +181,13 @@ public class EntriesController extends BaseController {
     public String bulkPublish(HttpServletRequest request,
                               @RequestParam(value = "selectedEntries", required = false)
                               List<String> selectedEntries,
+                              @ModelAttribute("bean") EntriesBean bean,
                               RedirectAttributes redirectAttributes) {
         boolean mayPublish = getActionWeblog(request)
                 .hasUserPermission(getAuthenticatedUser(request), WeblogPermission.POST);
         PubStatus target = mayPublish ? PubStatus.PUBLISHED : PubStatus.PENDING;
 
-        return applyToSelection(request, selectedEntries, redirectAttributes,
+        return applyToSelection(request, selectedEntries, bean, redirectAttributes,
                 mayPublish ? "weblogEntryQuery.bulkPublished" : "weblogEntryQuery.bulkSubmitted",
                 entry -> {
                     if (target == PubStatus.PUBLISHED && !entry.isPublished()) {
@@ -214,14 +215,15 @@ public class EntriesController extends BaseController {
                           @RequestParam(value = "selectedEntries", required = false)
                           List<String> selectedEntries,
                           @RequestParam(value = "bulkTag", required = false) String bulkTag,
+                          @ModelAttribute("bean") EntriesBean bean,
                           RedirectAttributes redirectAttributes) {
         String tag = StringUtils.trimToNull(bulkTag);
         if (tag == null) {
             addFlashError(redirectAttributes, "weblogEntryQuery.bulkTagMissing", request);
-            return backToList(request);
+            return backToList(request, bean);
         }
 
-        return applyToSelection(request, selectedEntries, redirectAttributes,
+        return applyToSelection(request, selectedEntries, bean, redirectAttributes,
                 "weblogEntryQuery.bulkTagged",
                 entry -> {
                     entry.addTag(tag);
@@ -239,8 +241,9 @@ public class EntriesController extends BaseController {
     public String bulkDelete(HttpServletRequest request,
                              @RequestParam(value = "selectedEntries", required = false)
                              List<String> selectedEntries,
+                             @ModelAttribute("bean") EntriesBean bean,
                              RedirectAttributes redirectAttributes) {
-        return applyToSelection(request, selectedEntries, redirectAttributes,
+        return applyToSelection(request, selectedEntries, bean, redirectAttributes,
                 "weblogEntryQuery.bulkDeleted", this::trashEntryWithIndex);
     }
 
@@ -263,11 +266,12 @@ public class EntriesController extends BaseController {
      * worse answer than doing the other nineteen and saying so.
      */
     private String applyToSelection(HttpServletRequest request, List<String> selectedEntries,
+                                    EntriesBean bean,
                                     RedirectAttributes redirectAttributes, String successKey,
                                     EntryAction action) {
         if (selectedEntries == null || selectedEntries.isEmpty()) {
             addFlashError(redirectAttributes, "weblogEntryQuery.bulkNothingSelected", request);
-            return backToList(request);
+            return backToList(request, bean);
         }
 
         int applied = 0;
@@ -296,7 +300,7 @@ public class EntriesController extends BaseController {
         } catch (WebloggerException e) {
             log.error("Error flushing bulk action", e);
             addFlashError(redirectAttributes, "generic.error.check.logs", request);
-            return backToList(request);
+            return backToList(request, bean);
         }
 
         if (applied > 0) {
@@ -306,12 +310,31 @@ public class EntriesController extends BaseController {
             addFlashError(redirectAttributes, "weblogEntryQuery.bulkFailed",
                     String.valueOf(failed.size()), request);
         }
-        return backToList(request);
+        return backToList(request, bean);
     }
 
-    private String backToList(HttpServletRequest request) {
-        return "redirect:/roller-ui/authoring/entries.rol?weblog="
+    /**
+     * Where a bulk action returns to. It reuses {@link #buildBaseUrl} with the
+     * submitted bean rather than building a bare weblog URL, so a filtered
+     * list stays filtered: without it, deleting three drafts out of a
+     * status=DRAFT view dropped the author back into the unfiltered list of
+     * everything, with no indication their filter had been discarded.
+     *
+     * <p>A null bean is tolerated -- a POST that carried no filter fields at
+     * all binds an empty bean, and every field is optional in buildBaseUrl
+     * anyway.
+     */
+    private String backToList(HttpServletRequest request, EntriesBean bean) {
+        String plain = "redirect:/roller-ui/authoring/entries.rol?weblog="
                 + getActionWeblog(request).getHandle();
+        if (bean == null) {
+            return plain;
+        }
+        String filtered = buildBaseUrl(request, bean);
+        // A redirect is the one place a blank url is worse than a wrong one:
+        // it would send the browser to the current URL (the POST target),
+        // which is not a page. Fall back to the unfiltered list.
+        return StringUtils.isBlank(filtered) ? plain : "redirect:" + filtered;
     }
 
     // Package-private rather than public: widened only so the test can call it

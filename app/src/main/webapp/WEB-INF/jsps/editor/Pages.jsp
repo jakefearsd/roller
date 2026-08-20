@@ -39,9 +39,10 @@
     <input type="hidden" name="removeId" id="removeId" value=""/>
     <sec:csrfInput/>
 
+    <c:choose>
+    <c:when test="${not empty pages}">
+
     <table class="rollertable table table-striped" width="100%">
-        <c:choose>
-        <c:when test="${not empty pages}">
 
             <tr>
                 <th class="rollertable"><spring:message code="weblogPagesForm.slug"/></th>
@@ -55,7 +56,18 @@
 
             <c:forEach items="${pages}" var="p">
                 <tr data-page-id="${fn:escapeXml(p.id)}" data-page-slug="${fn:escapeXml(p.slug)}">
-                    <td class="data">/<c:out value="${p.slug}"/></td>
+                    <td class="data">
+                        <c:choose>
+                        <c:when test="${p.status.name() == 'PUBLISHED'}">
+                            <%-- Only published pages are served; a draft's URL
+                                 404s, so linking it would hand someone a
+                                 broken link from their own admin screen. --%>
+                            <a href="${actionWeblog.absoluteURL}page/${p.slug}"
+                               target="_blank" rel="noopener">/<c:out value="${p.slug}"/></a>
+                        </c:when>
+                        <c:otherwise>/<c:out value="${p.slug}"/></c:otherwise>
+                        </c:choose>
+                    </td>
                     <td>
                         <c:url var="editUrl" value="/roller-ui/authoring/pageEdit.rol">
                             <c:param name="weblog" value="${actionWeblog.handle}"/>
@@ -76,8 +88,8 @@
                     <td>${p.showInNav ? '&#10003;' : ''}</td>
                     <td class="data">${p.navOrder}</td>
                     <td>
-                        <a href="${editUrl}">
-                            <span class="bi bi-pencil-square" title="<spring:message code="generic.edit"/>"></span>
+                        <a href="${editUrl}" aria-label="<spring:message code='generic.edit'/>: ${fn:escapeXml(p.title)}">
+                            <span class="bi bi-pencil-square" aria-hidden="true" title="<spring:message code="generic.edit"/>"></span>
                         </a>
                     </td>
                     <td>
@@ -98,22 +110,21 @@
                 </tr>
             </c:forEach>
 
-        </c:when>
-        <c:otherwise>
-            <tr>
-                <td colspan="7">
-                    <div class="empty-state">
-                        <p class="empty-state-title"><spring:message code="weblogPagesForm.noneFound"/></p>
-                        <p class="empty-state-body"><spring:message code="empty.pages.body"/></p>
-                        <a href="${addUrl}" class="btn btn-primary">
-                            <spring:message code="weblogPagesForm.add"/>
-                        </a>
-                    </div>
-                </td>
-            </tr>
-        </c:otherwise>
-        </c:choose>
     </table>
+
+    </c:when>
+    <c:otherwise>
+
+    <div class="empty-state">
+        <p class="empty-state-title"><spring:message code="weblogPagesForm.noneFound"/></p>
+        <p class="empty-state-body"><spring:message code="empty.pages.body"/></p>
+        <a href="${addUrl}" class="btn btn-primary">
+            <spring:message code="weblogPagesForm.add"/>
+        </a>
+    </div>
+
+    </c:otherwise>
+    </c:choose>
 
 </form>
 

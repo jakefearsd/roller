@@ -43,12 +43,13 @@
                     <div class="row">
 
                         <div class="col-md-1">
-                            <input type="checkbox" name="selectedImages" value="${newImage.id}"/>
+                            <input type="checkbox" name="selectedImages" value="${newImage.id}"
+                                   aria-label="${fn:escapeXml(newImage.name)}"/>
                         </div>
 
                         <div class="col-md-2">
-                            <img align="center" class="mediaFileImage"
-                                 src='${newImage.thumbnailURL}' alt="thumbnail"/>
+                            <img class="mediaFileImage"
+                                 src='${newImage.thumbnailURL}' alt=""/>
                         </div>
 
                         <div class="col-md-9">
@@ -71,7 +72,22 @@
 
                             <p>
                                 <b><spring:message code="mediaFileSuccess.link"/></b>
-                                ${newImage.permalink}
+                            </p>
+                            <%-- Readonly input + clipbutton, the idiom
+                                 MediaFileEdit uses: the URL was plain text,
+                                 so the one thing an author wants off this
+                                 page had to be selected by hand. --%>
+                            <p>
+                                <input type="text" class="form-control-plaintext d-inline-block w-auto"
+                                       id="clip_image_${newImage.id}" size="57"
+                                       value='${newImage.permalink}' readonly
+                                       aria-label="<spring:message code='mediaFileSuccess.link'/>"/>
+                                <button class="clipbutton" type="button"
+                                        data-clipboard-target="#clip_image_${newImage.id}"
+                                        aria-label="<spring:message code='generic.copyToClipboard'/>">
+                                    <img src='<c:url value="/roller-ui/images/clippy.svg"/>' alt=""
+                                         style="width:0.9em; height:0.9em">
+                                </button>
                             </p>
                         </div>
 
@@ -99,6 +115,7 @@
 
                         <div class="col-md-1">
                             <input type="radio" name="enclosure"
+                                   aria-label="${fn:escapeXml(newFile.name)}"
                                    onchange="setEnclosure('${newFile.permalink}')"/>
                         </div>
 
@@ -113,14 +130,28 @@
                                 ${newFile.contentType},&nbsp;
 
                                 <b><spring:message code="mediaFileSuccess.size"/></b>
-                                ${newFile.length} <spring:message code="mediaFileSuccess.bytes"/>,
-                                ${newFile.width} x
-                                ${newFile.height} <spring:message code="mediaFileSuccess.pixels"/>
+                                <%-- No dimensions here: this loop is the
+                                     enclosure (non-image) list, where width
+                                     and height are 0 and "0 x 0 pixels" is a
+                                     confusing claim about a PDF. The image
+                                     loop above keeps them. --%>
+                                ${newFile.length} <spring:message code="mediaFileSuccess.bytes"/>
                             </p>
 
                             <p>
                                 <b><spring:message code="mediaFileSuccess.link"/></b>
-                                ${newFile.permalink}
+                            </p>
+                            <p>
+                                <input type="text" class="form-control-plaintext d-inline-block w-auto"
+                                       id="clip_file_${newFile.id}" size="57"
+                                       value='${newFile.permalink}' readonly
+                                       aria-label="<spring:message code='mediaFileSuccess.link'/>"/>
+                                <button class="clipbutton" type="button"
+                                        data-clipboard-target="#clip_file_${newFile.id}"
+                                        aria-label="<spring:message code='generic.copyToClipboard'/>">
+                                    <img src='<c:url value="/roller-ui/images/clippy.svg"/>' alt=""
+                                         style="width:0.9em; height:0.9em">
+                                </button>
                             </p>
                         </div>
 
@@ -135,7 +166,8 @@
                 <div class="row">
 
                     <div class="col-md-1">
-                        <input type="radio" name="enclosure" onchange="setEnclosure('')" />
+                        <input type="radio" name="enclosure" onchange="setEnclosure('')"
+                               aria-label="<spring:message code='mediaFileSuccess.noEnclosure'/>" />
                     </div>
 
                     <div class="col-md-10">
@@ -192,6 +224,14 @@
     var submitButton = $("#createPostButton");
 
     $(document).ready(function () {
+        // ClipboardJS is loaded globally by head.jsp.
+        var clipboard = new ClipboardJS('.clipbutton');
+        clipboard.on('success', function (e) {
+            e.trigger.classList.add('copied');
+            setTimeout(function () { e.trigger.classList.remove('copied'); }, 1500);
+            e.clearSelection();
+        });
+
         $("#createPostButton").prop("disabled", true);
 
         $("input[type='checkbox']").change(function () {

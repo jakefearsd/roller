@@ -34,6 +34,17 @@
      of the editor bootstrap, so it carries its own wiring too. Page scope is
      fine here: nothing is jsp:include-d. --%>
 <script src="<c:url value='/theme/scripts/roller-draft.js'/>"></script>
+<script>
+    // ClipboardJS is loaded globally by head.jsp.
+    $(document).ready(function () {
+        var clipboard = new ClipboardJS('.clipbutton');
+        clipboard.on('success', function (e) {
+            e.trigger.classList.add('copied');
+            setTimeout(function () { e.trigger.classList.remove('copied'); }, 1500);
+            e.clearSelection();
+        });
+    });
+</script>
 <c:set var="draftKey"
        value="roller.draft.v1:${pageContext.request.contextPath}:${actionWeblog.handle}:pageEdit:${empty bean.id ? 'new' : bean.id}"/>
 <c:set var="draftNewKey"
@@ -53,10 +64,24 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.id" value="${bean.id}"/>
 
+    <%-- The page's own URL, once it has one: same mono line + copy control
+         the entry editor carries. Only on a saved, published page -- an
+         unsaved page has no slug and a draft's URL 404s. --%>
+    <c:if test="${not empty bean.id and bean.status == 'PUBLISHED'}">
+        <p class="editor-permalink" role="status" aria-live="polite">
+            <a id="page_permalink" href="${actionWeblog.absoluteURL}page/${fn:escapeXml(bean.slug)}"
+               target="_blank" rel="noopener">${actionWeblog.absoluteURL}page/${fn:escapeXml(bean.slug)}</a>
+            &#183;
+            <button class="clipbutton editor-permalink-copy" type="button"
+                    data-clipboard-target="#page_permalink"
+                    aria-label="<spring:message code='generic.copyToClipboard'/>"><spring:message code="weblogEdit.copyPermalink"/></button>
+        </p>
+    </c:if>
+
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="page_bean_title"><spring:message code="weblogEdit.title"/></label>
         <div class="col-sm-9">
-            <input type="text" id="page_bean_title" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255" class="form-control"/>
+            <input type="text" id="page_bean_title" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255" autofocus class="form-control"/>
         </div>
     </div>
 
@@ -121,7 +146,8 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="page_bean_navOrder"><spring:message code="weblogPagesForm.navOrder"/></label>
         <div class="col-sm-3">
-            <input type="number" id="page_bean_navOrder" name="bean.navOrder" value="${bean.navOrder}" class="form-control"/>
+            <input type="number" id="page_bean_navOrder" name="bean.navOrder" value="${bean.navOrder}" min="0" class="form-control"/>
+            <div class="form-text"><spring:message code="weblogPagesForm.navOrder.tip"/></div>
         </div>
     </div>
 
@@ -146,10 +172,10 @@
             <ul class="dropdown-menu" aria-labelledby="shortcodeInsertButton">
                 <c:forEach items="${shortcodeCards}" var="card">
                     <li>
-                        <a class="dropdown-item shortcode-card" href="#"
-                           data-shortcode="<c:out value='${card.name}'/>"
-                           data-snippet="<c:out value='${card.snippet}'/>"
-                           data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></a>
+                        <button type="button" class="dropdown-item shortcode-card"
+                                data-shortcode="<c:out value='${card.name}'/>"
+                                data-snippet="<c:out value='${card.snippet}'/>"
+                                data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></button>
                     </li>
                 </c:forEach>
             </ul>
@@ -159,7 +185,8 @@
              before the SEO card is margin, and margin is what should express
              it. Same change as EntryEditor.jsp, whose shape this mirrors. --%>
         <div class="mb-4">
-            <a href="#" onclick="onClickPageMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></a>
+            <button type="button" class="btn btn-link p-0 align-baseline border-0"
+                    onclick="onClickPageMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></button>
         </div>
 
         <%-- ============================================================ --%>
@@ -190,8 +217,8 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <label class="col-sm-3 col-form-label"><spring:message code="weblogEdit.ogImage"/></label>
+                    <div class="row mb-3" role="group" aria-labelledby="seo_ogImage_label">
+                        <span class="col-sm-3 col-form-label" id="seo_ogImage_label"><spring:message code="weblogEdit.ogImage"/></span>
                         <div class="col-sm-9">
                             <input type="hidden" id="seo_ogImageId" name="bean.ogImageId" value="${bean.ogImageId}"/>
                             <div class="mb-2">
@@ -286,14 +313,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
             </div>
             <div class="modal-body">
                 <iframe id="pageMediaFileEditor" style="visibility:inherit" height="600" width="100%"
                         frameborder="no" scrolling="auto"></iframe>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><spring:message code="generic.close"/></button>
             </div>
         </div>
     </div>
@@ -302,6 +329,13 @@
 <script>
 
     var rollerEditor = null;
+
+    function rollerSavePage() {
+        var button = document.querySelector("#pageEditForm button[type='submit']");
+        if (button) {
+            button.click();
+        }
+    }
 
     $(document).ready(function () {
         rollerEditor = new EasyMDE({
@@ -312,7 +346,26 @@
             minHeight: '400px',
             toolbar: ['bold', 'italic', 'heading', '|',
                       'quote', 'unordered-list', 'ordered-list', '|',
-                      'link', 'table', '|', 'preview', 'side-by-side', 'guide']
+                      'link', 'table', '|', 'preview', 'side-by-side', 'guide'],
+            <%-- Same shortcuts as the entry editor. The page form has one
+                 Save button, so Ctrl-Enter and Ctrl-S do the same thing here
+                 rather than one of them doing nothing. --%>
+            extraKeys: {
+                'Cmd-S': rollerSavePage,
+                'Ctrl-S': rollerSavePage,
+                'Ctrl-Enter': rollerSavePage,
+                'Cmd-Enter': rollerSavePage
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (!(event.ctrlKey || event.metaKey)) {
+                return;
+            }
+            if (event.key === 's' || event.key === 'S' || event.key === 'Enter') {
+                event.preventDefault();
+                rollerSavePage();
+            }
         });
 
         <%-- Bound once, tracking a dirty flag -- the same fix as
@@ -333,9 +386,9 @@
                 return undefined;
             }
             if (event.originalEvent) {
-                event.originalEvent.returnValue = "Are you sure you want to leave?";
+                event.originalEvent.returnValue = "<spring:message code='weblogEdit.leaveWarning' javaScriptEscape='true'/>";
             }
-            return "Are you sure you want to leave?";
+            return "<spring:message code='weblogEdit.leaveWarning' javaScriptEscape='true'/>";
         });
         $("#pageEditForm").on('submit', function () {
             rollerPageDirty = false;
