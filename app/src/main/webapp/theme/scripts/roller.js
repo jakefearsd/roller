@@ -221,3 +221,61 @@ if (typeof jQuery !== "undefined") {
         });
     });
 }
+
+/*
+ * Confirmation prompts, driven by a data-confirm attribute rather than an
+ * inline onclick/onsubmit handler.
+ *
+ * THE INLINE FORM FAILS OPEN, WHICH IS WHY IT IS BANNED HERE. Writing
+ * onclick="return confirm('${fn:escapeXml(msg)}')" puts an HTML escape into a
+ * JS-string position: the HTML parser decodes &#039; back to a literal
+ * apostrophe BEFORE the JS is compiled, so one apostrophe anywhere in the
+ * message -- a translated value, or an address like o'brien@example.com --
+ * terminates the string, the handler fails to compile, and the click proceeds
+ * WITH NO CONFIRMATION AT ALL. The destructive action just happens.
+ *
+ * In an attribute value there is no second parser: fn:escapeXml is the
+ * correct escape for that position, the browser hands dataset.confirm the
+ * exact literal text, and quotes and apostrophes are simply characters.
+ *
+ * Both events are handled. A click covers the submit buttons that route by
+ * formaction (Maintenance); a submit covers a form whose confirmation belongs
+ * to the whole form and can be reached by pressing Enter in a field.
+ * Capture phase, so this runs before any other handler commits to the action.
+ */
+(function () {
+    "use strict";
+
+    function confirmed(element) {
+        var message = element.getAttribute("data-confirm");
+        return !message || window.confirm(message);
+    }
+
+    function nearestConfirmable(node) {
+        while (node && node.nodeType === 1) {
+            if (node.hasAttribute && node.hasAttribute("data-confirm")) {
+                return node;
+            }
+            node = node.parentNode;
+        }
+        return null;
+    }
+
+    document.addEventListener("click", function (event) {
+        var target = nearestConfirmable(event.target);
+        if (target && !confirmed(target)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+
+    document.addEventListener("submit", function (event) {
+        // A button's own data-confirm was already answered on the click that
+        // produced this submit; only the form's own attribute applies here.
+        var form = event.target;
+        if (form.hasAttribute && form.hasAttribute("data-confirm") && !confirmed(form)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+})();

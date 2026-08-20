@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -527,5 +528,91 @@ class AdminJspHygieneTest {
             }
         }
         assertTrue(missing.isEmpty(), "layouts whose <title> omits the weblog handle: " + missing);
+    }
+
+    // ------------------------------------------------- Review fix round 1
+
+    /**
+     * An inline {@code onclick="return confirm('${fn:escapeXml(msg)}')"} FAILS
+     * OPEN, which is why none may remain. fn:escapeXml is an HTML escape and
+     * the attribute body is a JS-string position: the HTML parser turns
+     * {@code &#039;} back into a literal apostrophe BEFORE the JS is compiled,
+     * so one apostrophe -- in a translated value, or in an address like
+     * o'brien@example.com -- terminates the string, the handler fails to
+     * compile, and the control acts with NO confirmation at all.
+     *
+     * <p>The replacement puts the message in {@code data-confirm}, where
+     * fn:escapeXml IS the correct escape because there is no second parser,
+     * and one delegated handler in roller.js reads it back through
+     * {@code dataset.confirm}.
+     */
+    @Test
+    void noAdminScreenBuildsAConfirmPromptInsideAnInlineHandler() throws IOException {
+        Pattern inlineConfirm = Pattern.compile(
+                "on(?:click|submit)\\s*=\\s*\"[^\"]*confirm\\s*\\([^\"]*\\$\\{");
+        List<String> found = new ArrayList<>();
+        for (String dir : List.of("admin", "core", "tiles")) {
+            try (Stream<Path> files = Files.walk(JSPS.resolve(dir))) {
+                files.filter(f -> f.toString().endsWith(".jsp")).forEach(f -> {
+                    Matcher m = inlineConfirm.matcher(read(f));
+                    while (m.find()) {
+                        found.add(f.getFileName() + ": " + m.group());
+                    }
+                });
+            }
+        }
+        assertTrue(found.isEmpty(),
+                "inline confirm() built from EL -- fails open on an apostrophe:\n  "
+                        + String.join("\n  ", found));
+    }
+
+    /** The three repaired prompts, and the handler that reads them back. */
+    @Test
+    void theRepairedPromptsUseTheDataConfirmSeam() {
+        List<String> missing = new ArrayList<>();
+        if (jsp("admin/Maintenance.jsp").split("data-confirm=", -1).length - 1 != 2) {
+            missing.add("admin/Maintenance.jsp needs two data-confirm buttons");
+        }
+        if (!jsp("admin/UserEdit.jsp").contains("data-confirm=")) {
+            missing.add("admin/UserEdit.jsp send-password-link form needs data-confirm");
+        }
+        String js = read(Path.of("src/main/webapp/theme/scripts/roller.js"));
+        if (!js.contains("data-confirm")) {
+            missing.add("theme/scripts/roller.js has no data-confirm handler");
+        }
+        assertTrue(missing.isEmpty(), String.join("; ", missing));
+    }
+
+    /**
+     * The data-confirm values are single-escaped: the message ARGUMENTS go
+     * through fn:escapeXml and the composed message is written into the
+     * attribute as-is, so the browser hands dataset.confirm the exact literal
+     * text. That is only safe while the bundle values themselves carry no raw
+     * double quote -- which would close the attribute. An apostrophe in a
+     * value is fine (the attribute is double-quoted) and an apostrophe in an
+     * ARGUMENT is fine (fn:escapeXml turns it into &#039;, which the parser
+     * decodes back). This is the assertion standing in for the o'brien case:
+     * the escaping that handles it is fn:escapeXml on the argument, and what
+     * would break it is a quote in the template.
+     */
+    @Test
+    void theConfirmPromptValuesCannotCloseTheirAttribute() throws IOException {
+        Properties bundle = new Properties();
+        try (var in = Files.newInputStream(
+                Path.of("src/main/resources/ApplicationResources.properties"))) {
+            bundle.load(in);
+        }
+        List<String> bad = new ArrayList<>();
+        for (String key : List.of("maintenance.confirm.index",
+                "maintenance.confirm.regenerateRenditions",
+                "userAdmin.sendPasswordLink.confirm")) {
+            String value = bundle.getProperty(key);
+            if (value == null) {
+                bad.add(key + " is missing");
+            } else if (value.indexOf('"') >= 0) {
+                bad.add(key + " contains a double quote: " + value);
+            }
+        }
+        assertTrue(bad.isEmpty(), "data-confirm message values: " + String.join("; ", bad));
     }
 }

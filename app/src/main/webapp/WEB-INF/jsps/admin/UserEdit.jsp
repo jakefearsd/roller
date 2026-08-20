@@ -249,8 +249,14 @@
     <spring:message code="userAdmin.sendPasswordLink.confirm"
                     arguments="${fn:escapeXml(bean.userName)},${fn:escapeXml(bean.emailAddress)}"
                     var="sendLinkConfirm"/>
+    <%-- data-confirm on the FORM, not onsubmit="return confirm('...')". The
+         inline form fails OPEN: fn:escapeXml is an HTML escape in a JS-string
+         position, so an address like o'brien@example.com terminated the
+         string, the handler failed to compile, and the link was mailed with
+         no confirmation at all. See roller.js; and see Maintenance.jsp for
+         why this is single-escaped. --%>
     <form method="post" action="<c:url value='/roller-ui/admin/userEdit!sendPasswordLink.rol'/>"
-          class="mt-3" onsubmit="return confirm('${fn:escapeXml(sendLinkConfirm)}');">
+          class="mt-3" data-confirm="${sendLinkConfirm}">
         <sec:csrfInput/>
         <input type="hidden" name="bean.userName" value="${fn:escapeXml(bean.userName)}"/>
         <%-- Quiet, not a second save: this mails a real person. .delete-link is

@@ -73,12 +73,22 @@
                 formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!flushCache.rol"><spring:message code="maintenance.button.flush"/></button>
     </div>
 
+    <%-- data-confirm, NOT onclick="return confirm('...')": an HTML escape in a
+         JS-string position is decoded by the HTML parser before the JS
+         compiles, so one apostrophe in a translated value breaks the handler
+         and the button submits with NO confirmation. See roller.js.
+         Single-escaped on purpose -- the ARGUMENT is entity-escaped above and
+         the attribute is quoted with a double quote, so the browser hands
+         dataset.confirm the exact literal text. Do NOT wrap this in
+         fn:escapeXml as well: that double-encodes and the dialog reads
+         "o&#039;brien". The bundle values must not contain a raw double
+         quote; AdminJspHygieneTest pins that. --%>
     <c:if test="${rc:getBooleanProp('search.enabled')}">
         <spring:message code="maintenance.confirm.index" arguments="${fn:escapeXml(selectedWeblogLabel)}" var="confirmIndex"/>
         <div class="maintenance-op">
             <p><spring:message code="maintenance.prompt.index"/></p>
             <button type="submit" class="btn"
-                    onclick="return confirm('${fn:escapeXml(confirmIndex)}');"
+                    data-confirm="${confirmIndex}"
                     formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!index.rol"><spring:message code="maintenance.button.index"/></button>
         </div>
     </c:if>
@@ -87,7 +97,7 @@
     <div class="maintenance-op">
         <p><spring:message code="maintenance.prompt.regenerateRenditions"/></p>
         <button type="submit" class="btn"
-                onclick="return confirm('${fn:escapeXml(confirmRenditions)}');"
+                data-confirm="${confirmRenditions}"
                 formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!regenerateRenditions.rol"><spring:message code="maintenance.button.regenerateRenditions"/></button>
     </div>
 
