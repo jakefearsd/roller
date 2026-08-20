@@ -113,7 +113,7 @@ class PageIT extends RollerIT {
         openPath("/" + handle + "/");
         $$("li.page-nav-item a").findBy(text("About Us")).should(exist).click();
         webdriver().shouldHave(urlContaining("/" + handle + "/about"));
-        $("h1").shouldHave(text("About Us"));
+        $("h2.pf-entry-title").shouldHave(text("About Us"));
         BrowserHealth.current().assertNoBrokenResources();
         BrowserHealth.current().assertNoFailedRequests();
 

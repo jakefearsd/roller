@@ -228,7 +228,7 @@ class EditorSeoIT extends RollerIT {
         $(EDITOR_BODY).should(visible);
 
         // insert via the chooser link above the editor, as an author would
-        $("a[onclick^='onClickMediaFileInsert']").click();
+        $("button[onclick^='onClickMediaFileInsert']").click();
         $("#mediafile_edit_lightbox").shouldBe(visible);
         switchTo().frame("mediaFileEditor");
         chooserTile(imageName).should(exist).click();
