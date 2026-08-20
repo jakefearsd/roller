@@ -56,7 +56,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="page_bean_title"><spring:message code="weblogEdit.title"/></label>
         <div class="col-sm-9">
-            <input type="text" id="page_bean_title" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255" class="form-control"/>
+            <input type="text" id="page_bean_title" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255" autofocus class="form-control"/>
         </div>
     </div>
 
@@ -121,7 +121,8 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="page_bean_navOrder"><spring:message code="weblogPagesForm.navOrder"/></label>
         <div class="col-sm-3">
-            <input type="number" id="page_bean_navOrder" name="bean.navOrder" value="${bean.navOrder}" class="form-control"/>
+            <input type="number" id="page_bean_navOrder" name="bean.navOrder" value="${bean.navOrder}" min="0" class="form-control"/>
+            <div class="form-text"><spring:message code="weblogPagesForm.navOrder.tip"/></div>
         </div>
     </div>
 

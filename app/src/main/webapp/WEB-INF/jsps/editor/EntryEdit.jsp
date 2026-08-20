@@ -51,6 +51,7 @@
 <%-- Local draft recovery. Static script, not a JSP include: every string it
      needs rides on the bar's data- attributes below. --%>
 <script src="<c:url value='/theme/scripts/roller-draft.js'/>"></script>
+<script src="<c:url value='/theme/scripts/roller-guard-submit.js'/>"></script>
 
 <%-- Request scope, not page scope: EntryEditor.jsp arrives via jsp:include
      and cannot see page-scoped variables set here. --%>
@@ -90,6 +91,7 @@
         <%-- title: the page's one piece of layout hierarchy. Large serif,
              borderless -- emphasis elsewhere is weight, never size. --%>
         <input type="text" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255"
+               autofocus
                class="editor-title"
                placeholder="<spring:message code="weblogEdit.title"/>"
                aria-label="<spring:message code="weblogEdit.title"/>"/>
@@ -480,7 +482,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <form action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!sendNewsletter.rol"
-                      method="post">
+                      method="post" class="guard-submit">
                     <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                     <input type="hidden" name="bean.id" value="${entry.id}"/>
 
@@ -494,7 +496,8 @@
                     </div>
 
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary" id="confirmSendNewsletterButton">
+                        <button type="submit" class="btn btn-primary" id="confirmSendNewsletterButton"
+                                data-busy-label="<spring:message code='newsletter.sending'/>">
                             <spring:message code="newsletter.send"/>
                         </button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">

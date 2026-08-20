@@ -47,7 +47,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="weblog_bean_name"><spring:message code="websiteSettings.websiteTitle"/></label>
         <div class="col-sm-9">
-            <input id="weblog_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="30" maxlength="40" class="form-control"/>
+            <input id="weblog_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="30" maxlength="255" class="form-control"/>
         </div>
     </div>
 
@@ -61,7 +61,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="weblog_bean_icon"><spring:message code="websiteSettings.icon"/></label>
         <div class="col-sm-9">
-            <input id="weblog_bean_icon" type="text" name="bean.icon" value="${fn:escapeXml(bean.icon)}" size="30" maxlength="40" class="form-control"/>
+            <input id="weblog_bean_icon" type="text" name="bean.icon" value="${fn:escapeXml(bean.icon)}" size="30" maxlength="255" class="form-control"/>
         </div>
     </div>
 
@@ -75,14 +75,17 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="weblog_bean_emailAddress"><spring:message code="websiteSettings.emailAddress"/></label>
         <div class="col-sm-9">
-            <input id="weblog_bean_emailAddress" type="text" name="bean.emailAddress" value="${fn:escapeXml(bean.emailAddress)}" size="30" maxlength="40" class="form-control"/>
+            <input id="weblog_bean_emailAddress" type="email" name="bean.emailAddress" value="${fn:escapeXml(bean.emailAddress)}" size="30" maxlength="255" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="weblog_bean_entryDisplayCount"><spring:message code="websiteSettings.entryDisplayCount"/></label>
         <div class="col-sm-9">
-            <input id="weblog_bean_entryDisplayCount" type="number" name="bean.entryDisplayCount" value="${bean.entryDisplayCount}" size="4" class="form-control"/>
+            <input id="weblog_bean_entryDisplayCount" type="number" name="bean.entryDisplayCount" value="${bean.entryDisplayCount}"
+                   min="1" max="${maxEntriesPerPage}" size="4" class="form-control"/>
+            <div class="form-text"><spring:message code="websiteSettings.entryDisplayCount.tip"
+                    arguments="${maxEntriesPerPage}"/></div>
         </div>
     </div>
 

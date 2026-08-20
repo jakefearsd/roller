@@ -61,7 +61,7 @@ function confirmMemberRemoval() {
         </label>
         <div class="col-sm-9">
             <input type="text" class="form-control" name="userName" id="grantUserName"
-                   size="30" maxlength="30"/>
+                   size="30" maxlength="255"/>
         </div>
     </div>
     <div class="row mb-3">

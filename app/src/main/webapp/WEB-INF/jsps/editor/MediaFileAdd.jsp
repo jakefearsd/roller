@@ -21,21 +21,23 @@
 <p class="subtitle"> <spring:message code="mediaFileAdd.title"/> </p>
 <p class="pagetip"> <spring:message code="mediaFileAdd.pageTip"/> </p>
 
-<form id="entry" class="form-stacked" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol" method="POST" enctype="multipart/form-data">
+<script src="<c:url value='/theme/scripts/roller-guard-submit.js'/>"></script>
+
+<form id="entry" class="form-stacked guard-submit" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="directoryName" value="${directoryName}"/>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfadd_bean_description"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
-            <textarea id="mfadd_bean_description" name="bean.description" rows="3" class="form-control">${fn:escapeXml(bean.description)}</textarea>
+            <textarea id="mfadd_bean_description" name="bean.description" rows="3" maxlength="255" class="form-control">${fn:escapeXml(bean.description)}</textarea>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfadd_bean_copyrightText"><spring:message code="mediaFileAdd.copyright"/></label>
         <div class="col-sm-9">
-            <textarea id="mfadd_bean_copyrightText" name="bean.copyrightText" rows="3" class="form-control">${fn:escapeXml(bean.copyrightText)}</textarea>
+            <textarea id="mfadd_bean_copyrightText" name="bean.copyrightText" rows="3" maxlength="1023" class="form-control">${fn:escapeXml(bean.copyrightText)}</textarea>
         </div>
     </div>
 
@@ -74,8 +76,13 @@
         </div>
     </div>
 
-    <button type="submit" id="uploadButton" class="btn btn-secondary" formaction="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol"><spring:message code="mediaFileAdd.upload"/></button>
-    <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!cancel.rol"><spring:message code="generic.cancel"/></button>
+    <button type="submit" id="uploadButton" class="btn btn-secondary"
+            data-busy-label="<spring:message code='mediaFileAdd.uploading'/>" formaction="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol"><spring:message code="mediaFileAdd.upload"/></button>
+    <c:url var="mediaFileCancelURL" value="/roller-ui/authoring/mediaFileView.rol">
+        <c:param name="weblog" value="${actionWeblog.handle}"/>
+        <c:param name="directoryId" value="${bean.directoryId}"/>
+    </c:url>
+    <a class="btn" href="${mediaFileCancelURL}"><spring:message code="generic.cancel"/></a>
 
 <sec:csrfInput/>
 </form>

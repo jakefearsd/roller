@@ -50,7 +50,7 @@
         <label for="newDirectoryName">
             <spring:message code="mediaFileView.directoryName"/>
         </label>
-        <input type="text" id="newDirectoryName" name="newDirectoryName" size="8" maxlength="25"/>
+        <input type="text" id="newDirectoryName" name="newDirectoryName" size="8" maxlength="255"/>
 
         <input type="button" id="newDirectoryButton" class="btn btn-primary" style="clear:left"
                value='<spring:message code="mediaFileView.create"/>' onclick="onCreateDirectory()"/>

@@ -193,10 +193,23 @@ public class MediaFileAddController extends MediaFileBase {
         return ".MediaFileAdd";
     }
 
+    /**
+     * Kept for a POST that arrives without script (the form's Cancel is a plain
+     * link now, so nothing in the shipped page posts here). The redirect
+     * carries the directory the author was uploading into: without it, cancel
+     * dropped them back at the media root and they had to navigate down to the
+     * folder again.
+     */
     @PostMapping("/mediaFileAdd!cancel.rol")
-    public String cancel(HttpServletRequest request) {
+    public String cancel(HttpServletRequest request,
+                         @RequestParam(name = "bean.directoryId", required = false) String directoryId) {
         Weblog weblog = getActionWeblog(request);
-        return "redirect:/roller-ui/authoring/mediaFileView.rol?weblog=" + (weblog != null ? weblog.getHandle() : "");
+        String url = "redirect:/roller-ui/authoring/mediaFileView.rol?weblog="
+                + (weblog != null ? weblog.getHandle() : "");
+        if (StringUtils.isNotBlank(directoryId)) {
+            url += "&directoryId=" + directoryId;
+        }
+        return url;
     }
 
     private MediaFileDirectory resolveDirectory(HttpServletRequest request, Model model, MediaFileBean bean) {

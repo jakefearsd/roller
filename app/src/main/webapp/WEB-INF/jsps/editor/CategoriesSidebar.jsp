@@ -55,5 +55,14 @@
         bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).show();
     }
 
+    <%-- Focus has to wait for shown.bs.modal: Bootstrap animates the dialog
+         in, and an element inside a display:none subtree cannot take focus.
+         Bound once on the element, not per open. --%>
+    $(document).ready(function () {
+        $('#category-edit-modal').on('shown.bs.modal', function () {
+            categoryField('bean.name').trigger('focus');
+        });
+    });
+
 </script>
 

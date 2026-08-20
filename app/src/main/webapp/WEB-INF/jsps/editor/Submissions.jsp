@@ -135,12 +135,45 @@
     </c:choose>
 
     <c:if test="${not empty submissions}">
-        <button type="submit" class="btn btn-danger" id="submissionsDeleteSelected">
+        <%-- type="button": the real submit lives in the modal below, so the
+             count can be shown BEFORE anything is deleted. Inquiries are
+             deleted permanently -- there is no trash for them. --%>
+        <button type="button" class="btn btn-danger" id="submissionsDeleteSelected">
             <spring:message code="generic.delete.selected"/>
         </button>
     </c:if>
 
 </form>
+
+<%-- Confirmation for the bulk delete, ported from Entries.jsp: a modal
+     rather than window.confirm, because the native dialog cannot say how
+     many inquiries are about to go. --%>
+<div id="submissions-delete-modal" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <h3><spring:message code="submissions.bulkDeleteConfirm"/></h3>
+                    <p><spring:message code="submissions.bulkDeleteWarning"/></p>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p id="submissionsDeleteCount" class="form-control-plaintext"></p>
+            </div>
+            <div class="modal-footer">
+                <%-- Outside the form, so form= names the one carrying the
+                     selection (same shape as Entries.jsp's confirm). --%>
+                <button type="submit" class="btn btn-danger" id="submissionsDeleteConfirm"
+                        form="submissionsDeleteForm">
+                    <spring:message code="generic.yes"/>
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <spring:message code="generic.no"/>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     (function () {
@@ -148,11 +181,35 @@
         if (!selectAll) {
             return;
         }
+        var rows = function () {
+            return document.querySelectorAll('.submission-select');
+        };
         selectAll.addEventListener('change', function () {
             var checked = this.checked;
-            document.querySelectorAll('.submission-select').forEach(function (cb) {
+            rows().forEach(function (cb) {
                 cb.checked = checked;
             });
         });
+
+        // A row unchecked by hand must not leave the header claiming all are
+        // selected -- that is the state that gets someone to delete more than
+        // they meant to. Same sync Entries.jsp carries.
+        rows().forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                selectAll.checked = document.querySelectorAll('.submission-select:checked')
+                        .length === rows().length;
+            });
+        });
+
+        var trigger = document.getElementById('submissionsDeleteSelected');
+        if (trigger) {
+            trigger.addEventListener('click', function () {
+                document.getElementById('submissionsDeleteCount').textContent =
+                        document.querySelectorAll('.submission-select:checked').length
+                        + " " + "<spring:message code='submissions.selectedCount' javaScriptEscape='true'/>";
+                bootstrap.Modal.getOrCreateInstance(
+                        document.getElementById('submissions-delete-modal')).show();
+            });
+        }
     })();
 </script>

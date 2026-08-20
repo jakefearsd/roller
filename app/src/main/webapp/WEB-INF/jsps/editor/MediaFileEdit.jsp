@@ -21,6 +21,8 @@
     <spring:message code="mediaFileEdit.pagetip"/>
 </p>
 
+<script src="<c:url value='/theme/scripts/roller-guard-submit.js'/>"></script>
+
 <form id="entry" class="form-stacked" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileEdit!save.rol" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="mediaFileId" value="${mediaFileId}" id="mediaFileId"/>
@@ -69,7 +71,7 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfedit_bean_name"><spring:message code="generic.name"/></label>
         <div class="col-sm-9">
-            <input id="mfedit_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="35" maxlength="100" class="form-control"/>
+            <input id="mfedit_bean_name" type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" size="35" maxlength="255" class="form-control"/>
         </div>
     </div>
 
@@ -123,14 +125,14 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfedit_bean_tagsAsString"><spring:message code="mediaFileEdit.tags"/></label>
         <div class="col-sm-9">
-            <input id="mfedit_bean_tagsAsString" type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="30" maxlength="100" class="form-control"/>
+            <input id="mfedit_bean_tagsAsString" type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" size="30" maxlength="255" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfedit_bean_copyrightText"><spring:message code="mediaFileEdit.copyright"/></label>
         <div class="col-sm-9">
-            <input id="mfedit_bean_copyrightText" type="text" name="bean.copyrightText" value="${fn:escapeXml(bean.copyrightText)}" size="30" maxlength="100" class="form-control"/>
+            <input id="mfedit_bean_copyrightText" type="text" name="bean.copyrightText" value="${fn:escapeXml(bean.copyrightText)}" size="30" maxlength="1023" class="form-control"/>
         </div>
     </div>
 
@@ -190,14 +192,15 @@
         </cropper-selection>
     </cropper-canvas>
 
-    <form id="cropForm" class="mt-2" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileEdit!crop.rol" method="POST">
+    <form id="cropForm" class="mt-2 guard-submit" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileEdit!crop.rol" method="POST">
         <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
         <input type="hidden" name="mediaFileId" value="${mediaFileId}"/>
         <input type="hidden" name="cropX" id="cropX" value="0"/>
         <input type="hidden" name="cropY" id="cropY" value="0"/>
         <input type="hidden" name="cropWidth" id="cropWidth" value="0"/>
         <input type="hidden" name="cropHeight" id="cropHeight" value="0"/>
-        <button type="submit" id="cropButton" class="btn btn-danger">
+        <button type="submit" id="cropButton" class="btn btn-danger"
+                data-busy-label="<spring:message code='mediaFileEdit.crop.applying'/>">
             <spring:message code="mediaFileEdit.crop.apply"/>
         </button>
         <sec:csrfInput/>

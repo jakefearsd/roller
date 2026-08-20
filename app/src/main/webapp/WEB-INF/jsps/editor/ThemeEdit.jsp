@@ -21,7 +21,9 @@
     <spring:message code="themeEditor.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/themeEdit!save.rol" method="post" class="form-vertical">
+<script src="<c:url value='/theme/scripts/roller-guard-submit.js'/>"></script>
+
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/themeEdit!save.rol" method="post" class="form-vertical guard-submit">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- Two choices side-by-side: choose Shared or Custom Theme --%>
@@ -131,7 +133,8 @@
             value="<spring:message code="themeEditor.preview"/>"
             onclick="fullPreview($('#themeSelector').get(0))"/>
 
-        <button type="submit" class="btn btn-secondary"><spring:message code="themeEditor.save"/></button>
+        <button type="submit" class="btn btn-secondary"
+                data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
 
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
@@ -155,7 +158,8 @@
             <label><input type="checkbox" name="importTheme" value="true" ${importTheme ? 'checked' : ''}/> <spring:message code="themeEditor.importAndOverwriteTemplates"/></label>
         </c:otherwise>
 </c:choose><%-- Update button --%>
-        <button type="submit" class="btn btn-secondary"><spring:message code="themeEditor.save"/></button>
+        <button type="submit" class="btn btn-secondary"
+                data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
 
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 
@@ -177,7 +181,8 @@
             value="<spring:message code="themeEditor.preview"/>"
             onclick="fullPreview($('#themeSelector').get(0))"/>
 
-        <button type="submit" class="btn btn-secondary"><spring:message code="themeEditor.save"/></button>
+        <button type="submit" class="btn btn-secondary"
+                data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
 
         <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
 

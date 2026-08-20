@@ -35,8 +35,9 @@
         <%-- Maybe show media directory selector --%>
 
         <c:if test="${not empty allDirectories}">
-            <select name="directoryId" class="form-select" onchange="onView()">
-<option value=""></option>
+            <label for="chooserDirectoryId"><spring:message code="mediaFileAdd.directory"/></label>
+            <select id="chooserDirectoryId" name="directoryId" class="form-select" onchange="onView()">
+<option value=""><spring:message code="mediaFileImageChooser.allDirectories"/></option>
 <c:forEach items="${allDirectories}" var="opt">
 <option value="${opt.id}" ${opt.id == directoryId ? 'selected' : ''}>${fn:escapeXml(opt.name)}</option>
 </c:forEach>
