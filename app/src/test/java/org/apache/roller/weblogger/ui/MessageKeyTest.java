@@ -34,6 +34,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -117,91 +118,220 @@ public class MessageKeyTest {
     }
 
     /**
-     * Bundle keys nothing refers to are dead weight in eight translated files.
+     * The Java-side twin of {@link #everyMessageCodeUsedInAJspExists()}: every
+     * key a controller names with a literal must exist in the base bundle too.
      *
-     * <p>Ratchet: after the Stage 1D i18n sweep the true orphan count is 0. The
-     * bundle still carries {@link #KNOWN_DYNAMIC_KEY_COUNT} keys this text scan
-     * cannot see, split across three buckets. The count below is measured
-     * directly off {@code reportsBundleKeysNoJspOrControllerUses()}'s own
-     * output, not derived by arithmetic from an earlier baseline -- an earlier
-     * version of this javadoc tried to walk the count forward wave by wave and
-     * drifted out of sync with the actual {@code tabbedmenu.*} total, which is
-     * why this one states each bucket's current size plainly instead:
+     * <p>This half fails <em>quietly</em> where the JSP half fails loudly.
+     * {@code BaseController.getText} passes the key itself as the default
+     * message, so a missing key is not an exception and not a log line -- the
+     * page simply shows {@code mediaFile.edit.title} where its heading should
+     * be. The same mechanism is what lets a raw English sentence be passed
+     * where a key belongs and look like it works: {@code addError(model,
+     * "Error updating configuration", request)} renders in English on an English
+     * install and in English on every other install too, untranslatable by
+     * construction.
+     *
+     * <p>Covered call shapes, all literal-key only (see {@link
+     * MessageUsageScanner}): {@code getText}, {@code addError} / {@code
+     * addMessage} / {@code addFlashError} / {@code addFlashMessage} in both
+     * their {@code BaseController} and {@code RollerMessages} forms, a {@code
+     * getPageTitle()} that returns a literal, and {@code
+     * addAttribute("pageTitle", "...")}.
+     */
+    @Test
+    public void everyMessageKeyNamedInJavaExists() throws IOException {
+        Properties bundle = loadDefaultBundle();
+        Set<String> missing = new TreeSet<>();
+        List<String> where = new ArrayList<>();
+        int checked = 0;
+
+        for (MessageUsageScanner.Usage usage : MessageUsageScanner.scanJavaSources()) {
+            checked++;
+            if (!bundle.containsKey(usage.key())) {
+                missing.add(usage.key());
+                where.add(usage.key() + "  (" + usage.where() + ")");
+            }
+        }
+
+        assertTrue(checked > 200,
+                "Only " + checked + " literal message keys were found under "
+                        + MessageUsageScanner.JAVA_ROOT.toAbsolutePath()
+                        + " -- the scan is not looking where it thinks it is.");
+
+        assertEquals(EXPECTED_MISSING_JAVA_KEYS, missing,
+                "Java code names message keys that ApplicationResources.properties does not "
+                        + "define. These do not throw -- getText() falls back to the key itself -- "
+                        + "so each one either prints a raw key or hard-codes untranslatable "
+                        + "English on a real screen:\n  " + String.join("\n  ", where));
+    }
+
+    /**
+     * Today's known missing keys, verbatim -- emptied by Task 8.
+     *
+     * <p>Three are genuine keys that were never added to the bundle (two of them
+     * page titles, one an error path in the theme importer); the rest are English
+     * sentences handed to {@code addError} where a key belongs. The assertion is
+     * equality rather than containment on purpose: a newly-introduced missing key
+     * fails the build, and so does one that gets fixed without this set shrinking
+     * to match.
+     */
+    private static final Set<String> EXPECTED_MISSING_JAVA_KEYS = Set.of(
+            // Real keys, never added to the bundle. The first two are page
+            // titles, so the raw key is what a reader sees as the heading; note
+            // "Imaeg" -- fixing the typo alone would orphan the key instead.
+            "mediaFileImaegChooser.title",
+            "mediaFile.edit.title",
+            "error.closingStream",
+            // English sentences passed where a key belongs: untranslatable, and
+            // indistinguishable at runtime from a working message because
+            // getText() answers with its own argument.
+            "Error adding new template - check Roller logs",
+            "Error applying search criteria - check Roller logs",
+            "Error building categories list",
+            "Error creating new directory",
+            "Error deleting template - check Roller logs",
+            "Error flushing page cache",
+            "Error getting template list - check Roller logs",
+            "Error looking up entries",
+            "Error looking up trashed entries",
+            "Error saving template - check Roller logs",
+            "Error updating configuration",
+            "Error updating template - check Roller logs",
+            "Theme not found",
+            "Unable to locate specified template",
+            "Unexpected error doing profile save",
+            "Unexpected error validating weblog -- check Roller logs");
+
+    /**
+     * Bundle keys nothing refers to are dead weight in eight translated files --
+     * and, worse, a magnet for the near-miss defect this whole class exists for:
+     * an orphan called {@code userAdmin.title} sits one dot away from the {@code
+     * userAdmin.title.editUser} that is actually used.
+     *
+     * <p><b>Matching is on whole keys, not substrings.</b> The obvious
+     * {@code allSources.contains(key)} reports a key as used whenever any
+     * <em>longer</em> key containing it is used, so it hid seven orphans behind
+     * their own siblings: {@code categoriesForm.root} behind {@code
+     * categoriesForm.rootPrompt}, {@code error.upload.file} behind {@code
+     * error.upload.filemax}, {@code pageForm.template} behind {@code
+     * pageForm.templateLanguage}, and so on. A key is counted as referenced only
+     * when it appears delimited by something that is not another key character
+     * -- letters, digits, {@code _} and {@code .} all continue a key.
+     *
+     * <p>Note what whole-key matching does <em>not</em> make an orphan: the
+     * one-word key {@code error} looks like the same near-miss and is not one --
+     * {@code tiles-errorpage.jsp} really does say {@code <spring:message
+     * code="error"/>}. It is listed here because it was proposed for deletion on
+     * the strength of the pattern rather than the reference, and deleting it
+     * would have turned every error page into a second error.
+     *
+     * <p>Keys addressed from XML rather than from a literal are excluded by
+     * <em>reading the XML</em> ({@link #dynamicallyAddressedKeys()}) rather than
+     * by a hand-maintained count, because the count drifted: it was written as
+     * "31 + 16 + 2 = 49" while the tabbedmenu bucket had grown to 17 -- the
+     * seventeenth, {@code tabbedmenu.website}, being invisible only because
+     * substring matching found it inside {@code tabbedmenu.website.members}.
+     * Two mechanisms feed it:
      * <ul>
-     *   <li>29 {@code configForm.*} keys read off {@code key="..."} attributes in
-     *       {@code runtimeConfigDefs.xml} (GlobalConfig.jsp renders display
-     *       groups/properties generically via {@code ${dg.key}} / property
-     *       metadata, not a literal code). W1's comment-removal wave deleted
-     *       the {@code commentSettings} display group -- {@code
-     *       configForm.commentSettings}, {@code configForm.enableComments},
-     *       {@code configForm.commentHtmlAllowed}, {@code
-     *       configForm.commentPlugins}, {@code configForm.emailComments},
-     *       {@code configForm.moderationRequired} and {@code
-     *       configForm.commentThrottle} -- seven keys, taking this bucket from
-     *       37 down to 30. W2 Task 5 deleted the dormant free-text analytics
-     *       override (never reachable: gated on {@code weblogAdminsUntrusted}
-     *       being off, and this fork keeps it on) -- {@code
-     *       configForm.defaultAnalyticsTrackingCode} and {@code
-     *       configForm.allowAnalyticsCodeOverride}, taking this bucket from 30
-     *       down to 28. ({@code configForm.webAnalytics}, the enclosing
-     *       display-group's key, was not in this bucket -- it was a literal
-     *       {@code code="..."} reference in {@code WeblogConfig.jsp} until that
-     *       section was deleted in the same commit, so it left the bundle
-     *       entirely rather than becoming a new orphan.) The W5 trash wave's
-     *       Task 4 added {@code configForm.entryTrashRetentionDays} for the
-     *       new {@code entry.trash.retention.days} runtime property, taking
-     *       this bucket from 28 to 29. The automation API wave's Task 4 added
-     *       {@code configForm.apiSettings} (the new display-group's key) and
-     *       {@code configForm.apiThrottleEnabled} (the {@code
-     *       api.throttle.enabled} property-def) for the new API Settings
-     *       group, taking this bucket from 29 to 31.</li>
-     *   <li>16 {@code tabbedmenu.*} keys read off {@code name="..."} attributes in
-     *       {@code admin-menu.xml} / {@code editor-menu.xml}: {@code MenuHelper}
-     *       copies the XML {@code name} into {@code MenuTab}/{@code MenuTabItem}
-     *       {@code key}, which the JSPs render as {@code <spring:message
-     *       code="${tab.key}">} -- see {@code tiles/bannerStatus.jsp} and
-     *       {@code admin/GlobalConfig.jsp}. (The Trash screen's {@code
-     *       tabbedmenu.trash} menu-item name joined this bucket in the W5 trash
-     *       wave, taking it from 15 to 16.)</li>
-     *   <li>2 keys -- {@code macro.weblog.datetime.toStringFormat} and
-     *       {@code macro.weblog.time.toStringFormat} -- that this scan cannot
-     *       find a literal reference to anywhere and that are <em>not</em>
-     *       addressed via either XML mechanism above. Pre-existing, unrelated
-     *       to comment removal, and left alone rather than investigated or
-     *       deleted as out of scope for this wave; flagged here for whoever
-     *       picks it up next; see W1 Task 6's report for the same.</li>
+     *   <li>{@code runtimeConfigDefs.xml} {@code key="configForm.x"} attributes.
+     *       GlobalConfig.jsp renders display groups and properties generically
+     *       via {@code ${dg.key}} / property metadata, never a literal code.</li>
+     *   <li>{@code admin-menu.xml} / {@code editor-menu.xml} {@code name="..."}
+     *       attributes: {@code MenuHelper} copies the XML {@code name} into
+     *       {@code MenuTab}/{@code MenuTabItem} {@code key}, which the JSPs render
+     *       as {@code <spring:message code="${tab.key}">} -- see {@code
+     *       tiles/bannerStatus.jsp} and {@code admin/GlobalConfig.jsp}.</li>
      * </ul>
-     * If this count grows beyond that known set, either a new key just went
-     * dynamic-only (extend the exclusion and document it here) or a genuine
-     * orphan was added (delete it instead of raising the ratchet).
      */
     @Test
     public void reportsBundleKeysNoJspOrControllerUses() throws IOException {
         Properties bundle = loadDefaultBundle();
-        String allSources = readAllSources();
-
-        List<String> unused = bundle.stringPropertyNames().stream()
-                .filter(key -> !allSources.contains(key))
-                .sorted()
-                .toList();
-
         assertFalse(bundle.isEmpty(), "Default bundle is empty");
-        assertTrue(unused.size() <= KNOWN_DYNAMIC_KEY_COUNT,
-                "Message keys with no textual reference grew to " + unused.size()
-                        + " (ratchet is " + KNOWN_DYNAMIC_KEY_COUNT + " of " + bundle.size()
-                        + "). New orphans should be deleted from the bundle rather than "
-                        + "raising this number; keys addressed dynamically (runtimeConfigDefs.xml, "
-                        + "admin/editor-menu.xml) should be added to the documented exclusion set "
-                        + "instead:\n  " + String.join("\n  ", unused));
+        String allSources = readAllSources();
+        Set<String> dynamic = dynamicallyAddressedKeys();
+
+        Set<String> orphans = new TreeSet<>();
+        for (String key : bundle.stringPropertyNames()) {
+            if (dynamic.contains(key) || UNEXPLAINED_UNREFERENCED_KEYS.contains(key)) {
+                continue;
+            }
+            if (!wholeKeyPattern(key).matcher(allSources).find()) {
+                orphans.add(key);
+            }
+        }
+
+        assertEquals(EXPECTED_ORPHANS, orphans,
+                "Bundle keys with no whole-key reference anywhere in the JSPs, tags, Velocity "
+                        + "templates or Java sources, and not addressed from runtimeConfigDefs.xml "
+                        + "or the menu XML either. Delete them from all eight bundles rather than "
+                        + "adding them here:\n  " + String.join("\n  ", orphans));
     }
 
     /**
-     * Keys the text scan cannot see: {@code runtimeConfigDefs.xml} {@code key=}
-     * attributes (31) + {@code admin-menu.xml}/{@code editor-menu.xml}
-     * {@code name=} attributes (16) + 2 unexplained pre-existing orphans. See
-     * the javadoc on {@link #reportsBundleKeysNoJspOrControllerUses()}.
+     * Today's true orphans, verbatim -- emptied by Task 22, which deletes them
+     * from the base bundle and the seven translations.
+     *
+     * <p>Every one of these is a shorter prefix of a key that IS used, which is
+     * exactly why substring matching never saw them. Equality rather than
+     * containment: a new orphan fails the build, and so does a deleted one that
+     * is not removed from here in the same commit.
      */
-    private static final int KNOWN_DYNAMIC_KEY_COUNT = 49;
+    private static final Set<String> EXPECTED_ORPHANS = Set.of(
+            "categoriesForm.root",            // hidden behind categoriesForm.rootPrompt/rootTitle
+            "error.upload.file",              // hidden behind error.upload.filemax
+            "macro.weblog.readMore",          // hidden behind macro.weblog.readMoreLink
+            "pageForm.template",              // hidden behind pageForm.templateLanguage
+            "uploadFiles.upload",             // hidden behind uploadFiles.uploadedFile(s)
+            "userAdmin.title",                // hidden behind userAdmin.title.editUser etc.
+            "websiteSettings.removeWebsite"); // hidden behind websiteSettings.removeWebsiteWarning
+
+    /**
+     * {@code macro.weblog.datetime.toStringFormat} and {@code
+     * macro.weblog.time.toStringFormat}: no literal reference anywhere, and NOT
+     * addressed via either XML mechanism. Pre-existing and long-standing; carried
+     * here rather than in {@link #EXPECTED_ORPHANS} because deleting them has
+     * never been anyone's task and would be a guess about a formatting hook, not
+     * a cleanup. See W1 Task 6's report.
+     */
+    private static final Set<String> UNEXPLAINED_UNREFERENCED_KEYS = Set.of(
+            "macro.weblog.datetime.toStringFormat",
+            "macro.weblog.time.toStringFormat");
+
+    /**
+     * A key character is a letter, a digit, {@code _} or {@code .}; a reference
+     * counts only when the key is not flanked by one, so {@code userAdmin.title}
+     * does not match inside {@code userAdmin.title.editUser}.
+     */
+    private static Pattern wholeKeyPattern(String key) {
+        return Pattern.compile("(?<![A-Za-z0-9_.])" + Pattern.quote(key) + "(?![A-Za-z0-9_.])");
+    }
+
+    /**
+     * Message keys named by an XML attribute instead of by a literal in code:
+     * {@code key="..."} in {@code runtimeConfigDefs.xml} and {@code name="..."}
+     * in the two menu files.
+     */
+    private static Set<String> dynamicallyAddressedKeys() throws IOException {
+        Set<String> keys = new TreeSet<>();
+        collectAttribute(keys, Paths.get(RESOURCE_ROOT, "config/runtimeConfigDefs.xml"), "key");
+        collectAttribute(keys, Paths.get(RESOURCE_ROOT, "ui/menu/admin-menu.xml"), "name");
+        collectAttribute(keys, Paths.get(RESOURCE_ROOT, "ui/menu/editor-menu.xml"), "name");
+        return keys;
+    }
+
+    private static void collectAttribute(Set<String> into, Path xml, String attribute) throws IOException {
+        assertTrue(Files.exists(xml), "Expected " + xml.toAbsolutePath()
+                + " -- the dynamic-key exclusion is reading a file that no longer exists.");
+        Matcher matcher = Pattern.compile("\\b" + attribute + "\\s*=\\s*\"([^\"]+)\"")
+                .matcher(Files.readString(xml, StandardCharsets.UTF_8));
+        while (matcher.find()) {
+            into.add(matcher.group(1));
+        }
+    }
+
+    private static final String RESOURCE_ROOT =
+            "src/main/resources/org/apache/roller/weblogger";
+
 
     private Properties loadDefaultBundle() throws IOException {
         Properties props = new Properties();

@@ -19,17 +19,26 @@ package org.apache.roller.weblogger.ui;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.context.NoSuchMessageException;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -132,6 +141,143 @@ public class MessageFormatRegressionTest {
         assertTrue(anyApostrophe,
                 "Expected at least one bundle value to contain an apostrophe -- "
                         + "this test would otherwise pass without checking anything.");
+    }
+
+    /**
+     * The base-bundle test above runs one bundle through the real bean. These
+     * two run the <em>rule</em> over all eight, because a translator's
+     * apostrophe is exactly as broken as an English one and nothing else looks
+     * at the translations at all.
+     *
+     * <p>Direction one: a value that declares a placeholder WILL be run through
+     * {@code MessageFormat}, and there a lone {@code '} opens a quoted section.
+     * {@code Edition de l'utilisateur [{0}]} does not render the username -- it
+     * renders {@code Edition de lutilisateur [{0}]}, apostrophe eaten and
+     * placeholder preserved, which is the opposite of what was wanted on both
+     * counts.
+     */
+    @Test
+    public void noValueWithAPlaceholderContainsALoneApostrophe() throws IOException {
+        Set<String> offenders = new TreeSet<>();
+        for (Path bundle : allBundles()) {
+            Properties props = load(bundle);
+            for (String key : props.stringPropertyNames()) {
+                String value = props.getProperty(key);
+                if (hasPlaceholder(value) && stripDoubledApostrophes(value).indexOf('\'') >= 0) {
+                    offenders.add(offender(bundle, key));
+                }
+            }
+        }
+        assertEquals(EXPECTED_LONE_APOSTROPHES, offenders,
+                "These values declare a {n} placeholder -- so MessageFormat runs -- and contain "
+                        + "a lone apostrophe, which MessageFormat swallows along with whatever "
+                        + "follows it. Double them ('') to render one:\n  "
+                        + String.join("\n  ", offenders));
+    }
+
+    /**
+     * Direction two, and the reason this file exists: with {@code
+     * alwaysUseMessageFormat} false a value with no placeholder is never run
+     * through {@code MessageFormat} at all, so a doubled {@code ''} is not an
+     * escape -- it is two apostrophes on the page. "Recréer l''index".
+     */
+    @Test
+    public void noValueWithoutAPlaceholderContainsADoubledApostrophe() throws IOException {
+        Set<String> offenders = new TreeSet<>();
+        for (Path bundle : allBundles()) {
+            Properties props = load(bundle);
+            for (String key : props.stringPropertyNames()) {
+                String value = props.getProperty(key);
+                if (!hasPlaceholder(value) && value.contains("''")) {
+                    offenders.add(offender(bundle, key));
+                }
+            }
+        }
+        assertEquals(EXPECTED_DOUBLED_APOSTROPHES, offenders,
+                "These values carry no {n} placeholder, so they are returned verbatim and a "
+                        + "doubled apostrophe renders literally. Use a single one:\n  "
+                        + String.join("\n  ", offenders));
+    }
+
+    /**
+     * Guards the two ratchets above: if the bundle scan stopped finding the
+     * translations, both would pass while looking at one file.
+     */
+    @Test
+    public void theScanCoversEveryTranslation() throws IOException {
+        Set<String> names = new TreeSet<>();
+        allBundles().forEach(p -> names.add(p.getFileName().toString()));
+        assertEquals(Set.of(
+                "ApplicationResources.properties",
+                "ApplicationResources_de.properties",
+                "ApplicationResources_es.properties",
+                "ApplicationResources_fr.properties",
+                "ApplicationResources_ja.properties",
+                "ApplicationResources_ko.properties",
+                "ApplicationResources_ru.properties",
+                "ApplicationResources_zh_CN.properties"), names,
+                "The set of shipped message bundles changed; update this list so the "
+                        + "apostrophe ratchets keep covering all of them.");
+    }
+
+    /**
+     * Today's known lone-apostrophe values, verbatim -- emptied by Task 8.
+     * Equality rather than containment, so a new one fails the build and a fixed
+     * one has to leave this set in the same commit.
+     */
+    private static final Set<String> EXPECTED_LONE_APOSTROPHES = Set.of(
+            "ApplicationResources_fr.properties#categoryForm.error.duplicateName",
+            "ApplicationResources_fr.properties#error.upload.dirmax",
+            "ApplicationResources_fr.properties#error.upload.forbiddenFile",
+            "ApplicationResources_fr.properties#memberPermissions.membersChanged",
+            "ApplicationResources_fr.properties#userAdmin.title.editUser",
+            "ApplicationResources_fr.properties#weblogEntry.pendingEntryContent");
+
+    /**
+     * Today's known doubled-apostrophe values, verbatim -- emptied by Task 8.
+     */
+    private static final Set<String> EXPECTED_DOUBLED_APOSTROPHES = Set.of(
+            "ApplicationResources_fr.properties#index.createUserHelp",
+            "ApplicationResources_fr.properties#maintenance.button.index",
+            "ApplicationResources_fr.properties#memberPermissions.title",
+            "ApplicationResources_zh_CN.properties#userSettings.tip.username");
+
+    private static final Path RESOURCE_ROOT = Paths.get("src/main/resources");
+
+    private static final Pattern ANY_PLACEHOLDER = Pattern.compile("\\{\\s*\\d+\\s*[,}]");
+
+    private static boolean hasPlaceholder(String value) {
+        return ANY_PLACEHOLDER.matcher(value).find();
+    }
+
+    private static String stripDoubledApostrophes(String value) {
+        return value.replace("''", "");
+    }
+
+    private static String offender(Path bundle, String key) {
+        return bundle.getFileName() + "#" + key;
+    }
+
+    private static List<Path> allBundles() throws IOException {
+        try (Stream<Path> paths = Files.list(RESOURCE_ROOT)) {
+            return paths.filter(p -> p.getFileName().toString().startsWith("ApplicationResources")
+                            && p.getFileName().toString().endsWith(".properties"))
+                    .sorted()
+                    .toList();
+        }
+    }
+
+    /**
+     * Read as UTF-8, not with the {@code InputStream} overload: every one of
+     * these files is UTF-8 or pure ASCII on disk, and {@code load(InputStream)}
+     * would decode the French and German ones as ISO-8859-1.
+     */
+    private static Properties load(Path bundle) throws IOException {
+        Properties props = new Properties();
+        try (Reader reader = Files.newBufferedReader(bundle, StandardCharsets.UTF_8)) {
+            props.load(reader);
+        }
+        return props;
     }
 
     /**
