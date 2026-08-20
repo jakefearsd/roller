@@ -72,7 +72,22 @@
 
                             <p>
                                 <b><spring:message code="mediaFileSuccess.link"/></b>
-                                ${newImage.permalink}
+                            </p>
+                            <%-- Readonly input + clipbutton, the idiom
+                                 MediaFileEdit uses: the URL was plain text,
+                                 so the one thing an author wants off this
+                                 page had to be selected by hand. --%>
+                            <p>
+                                <input type="text" class="form-control-plaintext d-inline-block w-auto"
+                                       id="clip_image_${newImage.id}" size="57"
+                                       value='${newImage.permalink}' readonly
+                                       aria-label="<spring:message code='mediaFileSuccess.link'/>"/>
+                                <button class="clipbutton" type="button"
+                                        data-clipboard-target="#clip_image_${newImage.id}"
+                                        aria-label="<spring:message code='generic.copyToClipboard'/>">
+                                    <img src='<c:url value="/roller-ui/images/clippy.svg"/>' alt=""
+                                         style="width:0.9em; height:0.9em">
+                                </button>
                             </p>
                         </div>
 
@@ -125,7 +140,18 @@
 
                             <p>
                                 <b><spring:message code="mediaFileSuccess.link"/></b>
-                                ${newFile.permalink}
+                            </p>
+                            <p>
+                                <input type="text" class="form-control-plaintext d-inline-block w-auto"
+                                       id="clip_file_${newFile.id}" size="57"
+                                       value='${newFile.permalink}' readonly
+                                       aria-label="<spring:message code='mediaFileSuccess.link'/>"/>
+                                <button class="clipbutton" type="button"
+                                        data-clipboard-target="#clip_file_${newFile.id}"
+                                        aria-label="<spring:message code='generic.copyToClipboard'/>">
+                                    <img src='<c:url value="/roller-ui/images/clippy.svg"/>' alt=""
+                                         style="width:0.9em; height:0.9em">
+                                </button>
                             </p>
                         </div>
 
@@ -198,6 +224,14 @@
     var submitButton = $("#createPostButton");
 
     $(document).ready(function () {
+        // ClipboardJS is loaded globally by head.jsp.
+        var clipboard = new ClipboardJS('.clipbutton');
+        clipboard.on('success', function (e) {
+            e.trigger.classList.add('copied');
+            setTimeout(function () { e.trigger.classList.remove('copied'); }, 1500);
+            e.clearSelection();
+        });
+
         $("#createPostButton").prop("disabled", true);
 
         $("input[type='checkbox']").change(function () {

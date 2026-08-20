@@ -34,6 +34,17 @@
      of the editor bootstrap, so it carries its own wiring too. Page scope is
      fine here: nothing is jsp:include-d. --%>
 <script src="<c:url value='/theme/scripts/roller-draft.js'/>"></script>
+<script>
+    // ClipboardJS is loaded globally by head.jsp.
+    $(document).ready(function () {
+        var clipboard = new ClipboardJS('.clipbutton');
+        clipboard.on('success', function (e) {
+            e.trigger.classList.add('copied');
+            setTimeout(function () { e.trigger.classList.remove('copied'); }, 1500);
+            e.clearSelection();
+        });
+    });
+</script>
 <c:set var="draftKey"
        value="roller.draft.v1:${pageContext.request.contextPath}:${actionWeblog.handle}:pageEdit:${empty bean.id ? 'new' : bean.id}"/>
 <c:set var="draftNewKey"
@@ -52,6 +63,20 @@
       action="${pageContext.request.contextPath}/roller-ui/authoring/pageEdit!save.rol">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.id" value="${bean.id}"/>
+
+    <%-- The page's own URL, once it has one: same mono line + copy control
+         the entry editor carries. Only on a saved, published page -- an
+         unsaved page has no slug and a draft's URL 404s. --%>
+    <c:if test="${not empty bean.id and bean.status == 'PUBLISHED'}">
+        <p class="editor-permalink" role="status" aria-live="polite">
+            <a id="page_permalink" href="${actionWeblog.absoluteURL}page/${fn:escapeXml(bean.slug)}"
+               target="_blank" rel="noopener">${actionWeblog.absoluteURL}page/${fn:escapeXml(bean.slug)}</a>
+            &#183;
+            <button class="clipbutton editor-permalink-copy" type="button"
+                    data-clipboard-target="#page_permalink"
+                    aria-label="<spring:message code='generic.copyToClipboard'/>"><spring:message code="weblogEdit.copyPermalink"/></button>
+        </p>
+    </c:if>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="page_bean_title"><spring:message code="weblogEdit.title"/></label>

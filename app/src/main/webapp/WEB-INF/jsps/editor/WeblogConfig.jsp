@@ -44,6 +44,23 @@
 
     <h3 class="section-head" id="settings-general"><spring:message code="websiteSettings.generalSettings"/></h3>
 
+    <%-- The one question this page never answered: what URL is this?
+         Read-only, because the handle (and the custom domain below) are what
+         change it. --%>
+    <div class="row mb-3">
+        <span class="col-sm-3 col-form-label"><spring:message code="websiteSettings.weblogUrl"/></span>
+        <div class="col-sm-9">
+            <a id="weblogAbsoluteUrl" href="${actionWeblog.absoluteURL}"
+               target="_blank" rel="noopener">${actionWeblog.absoluteURL}</a>
+            <button class="clipbutton" type="button"
+                    data-clipboard-text="${actionWeblog.absoluteURL}"
+                    aria-label="<spring:message code='generic.copyToClipboard'/>">
+                <img src='<c:url value="/roller-ui/images/clippy.svg"/>' alt=""
+                     style="width:0.9em; height:0.9em">
+            </button>
+        </div>
+    </div>
+
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="weblog_bean_name"><spring:message code="websiteSettings.websiteTitle"/></label>
         <div class="col-sm-9">
@@ -174,6 +191,12 @@
         <div class="col-sm-9">
             <input id="weblog_bean_customDomain" type="text" name="bean.customDomain" value="${fn:escapeXml(bean.customDomain)}" size="40" maxlength="255" class="form-control"/>
             <div class="form-text"><spring:message code="websiteSettings.customDomain.tip"/></div>
+            <c:if test="${not empty actionWeblog.customDomain}">
+                <div class="form-text">
+                    <a href="https://${fn:escapeXml(actionWeblog.customDomain)}/"
+                       target="_blank" rel="noopener">https://${fn:escapeXml(actionWeblog.customDomain)}/</a>
+                </div>
+            </c:if>
             <c:if test="${not empty customDomainWarning}">
                 <div class="form-text text-warning">
                     <spring:message code="websiteSettings.customDomain.outsideZone"/>
@@ -229,6 +252,16 @@
      are plain anchors, so scrolling is the browser's own -- no smooth-scroll
      behaviour to withhold from a reader who asked for reduced motion. --%>
 <script>
+(function () {
+    // ClipboardJS is loaded globally by head.jsp.
+    var clipboard = new ClipboardJS('.clipbutton');
+    clipboard.on('success', function (e) {
+        e.trigger.classList.add('copied');
+        setTimeout(function () { e.trigger.classList.remove('copied'); }, 1500);
+        e.clearSelection();
+    });
+})();
+
 (function () {
     var index = document.getElementById('settingsSectionIndex');
     if (!index || !('IntersectionObserver' in window)) {

@@ -156,4 +156,49 @@ class EditorJspMarkupHygieneTest {
         }
         assertTrue(violations.isEmpty(), String.join("\n", violations));
     }
+
+    /**
+     * The copy/view affordances Task 18 added, pinned by their markup: each
+     * is a one-line addition that a later edit could drop without any test
+     * noticing, and every one of them exists because the thing an author
+     * actually wanted off the screen was unreachable text.
+     */
+    @Test
+    void theCopyAndViewAffordancesArePresent() throws Exception {
+        List<String> missing = new ArrayList<>();
+        record Expected(String jsp, String needle, String what) { }
+        List<Expected> expected = List.of(
+                new Expected("MediaFileAddSuccess.jsp", "class=\"clipbutton\"",
+                        "the just-uploaded URL must be copyable"),
+                new Expected("MediaFileEdit.jsp", "clip_shortcode",
+                        "the canonical [image] embed string must be shown and copyable"),
+                new Expected("PageEdit.jsp", "id=\"page_permalink\"",
+                        "a saved page must show its own URL"),
+                new Expected("Pages.jsp", "${actionWeblog.absoluteURL}page/${p.slug}",
+                        "a published page's slug must link to the live page"),
+                new Expected("ThemeEdit.jsp", "themeEditor.viewYourBlog",
+                        "a persistent view-the-blog link, not only the Preview button"),
+                new Expected("WeblogConfig.jsp", "id=\"weblogAbsoluteUrl\"",
+                        "the settings page must say what URL the weblog has"));
+        for (Expected e : expected) {
+            String src = Files.readString(EDITOR_JSP_DIR.resolve(e.jsp()));
+            if (!src.contains(e.needle())) {
+                missing.add(e.jsp() + ": " + e.what() + " (looked for " + e.needle() + ")");
+            }
+        }
+        assertTrue(missing.isEmpty(), String.join("\n", missing));
+    }
+
+    /**
+     * {@code navigator.clipboard} is undefined on a non-HTTPS origin -- every
+     * plain-http deployment and every dev server -- so an unguarded call left
+     * the copy control silently dead there, a TypeError in the console and
+     * nothing on screen.
+     */
+    @Test
+    void theClipboardApiCallIsGuarded() throws Exception {
+        String src = Files.readString(EDITOR_JSP_DIR.resolve("EntryEdit.jsp"));
+        assertTrue(src.contains("if (navigator.clipboard)"),
+                "EntryEdit.jsp calls navigator.clipboard without a feature check");
+    }
 }

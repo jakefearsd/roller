@@ -98,19 +98,26 @@
 
         <%-- permalink: small mono line with a copy control --%>
         <c:if test="${actionName == 'entryEdit'}">
-            <p class="editor-permalink" title="<spring:message code="weblogEdit.permaLink"/>">
+            <p class="editor-permalink" title="<spring:message code="weblogEdit.permaLink"/>"
+               role="status" aria-live="polite">
                 <c:choose>
 <c:when test="${bean.published}">
-                    <a id="entry_bean_permalink" href='${entry.permalink}'>${entry.permalink}</a>
+                    <a id="entry_bean_permalink" href='${entry.permalink}'><span id="entry_bean_permalink_text">${entry.permalink}</span></a>
                 </c:when>
 <c:otherwise>
-                    ${entry.permalink}
+                    <span id="entry_bean_permalink_text">${entry.permalink}</span>
                 </c:otherwise>
 </c:choose>
+                <%-- Only offered on a published entry: a draft's permalink
+                     404s, so copying it hands someone a broken link. --%>
+                <c:if test="${bean.published}">
                 &#183;
                 <button type="button" class="editor-permalink-copy"
                         data-permalink="${entry.permalink}"
+                        data-label="<spring:message code='weblogEdit.copyPermalink'/>"
+                        data-copied="<spring:message code='weblogEdit.copiedPermalink'/>"
                         onclick="copyPermalink(this)"><spring:message code="weblogEdit.copyPermalink"/></button>
+                </c:if>
             </p>
         </c:if>
 
@@ -252,7 +259,7 @@
                         <div class="col-sm-9">
                             <div id="seo_snippet_preview" class="border rounded p-2 bg-body">
                                 <div id="seo_snippet_title" class="seo-snippet-title"></div>
-                                <div id="seo_snippet_url" class="seo-snippet-url"><c:if test="${actionName == 'entryEdit'}">${entry.permalink}</c:if></div>
+                                <div id="seo_snippet_url" class="seo-snippet-url"><c:choose><c:when test="${actionName == 'entryEdit'}">${entry.permalink}</c:when><c:otherwise>${actionWeblog.absoluteURL}<spring:message code="weblogEdit.snippetPreview.placeholderSlug"/></c:otherwise></c:choose></div>
                                 <div id="seo_snippet_description" class="seo-snippet-description"></div>
                             </div>
                         </div>
@@ -664,10 +671,37 @@
     <%-- permalink copy control --%>
 
     function copyPermalink(el) {
-        navigator.clipboard.writeText(el.dataset.permalink).then(function () {
+        var done = function () {
             el.classList.add('copied');
-            setTimeout(function () { el.classList.remove('copied'); }, 1500);
-        });
+            el.textContent = el.dataset.copied;
+            setTimeout(function () {
+                el.classList.remove('copied');
+                el.textContent = el.dataset.label;
+            }, 1500);
+        };
+        // navigator.clipboard is undefined on a non-HTTPS origin, which is
+        // every plain-http deployment and every dev server -- the control was
+        // silently dead there (a TypeError in the console, nothing on screen).
+        // The fallback selects the text so Ctrl-C still works, and the
+        // feedback is TEXT inside the existing role="status" region rather
+        // than colour alone.
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(el.dataset.permalink).then(done, selectPermalink);
+        } else {
+            selectPermalink();
+        }
+    }
+
+    function selectPermalink() {
+        var link = document.getElementById('entry_bean_permalink_text');
+        if (!link) {
+            return;
+        }
+        var range = document.createRange();
+        range.selectNodeContents(link);
+        var selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
     }
 
     <%-- SEO panel: search-snippet preview fed from the title/description fields --%>

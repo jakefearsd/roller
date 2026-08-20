@@ -106,6 +106,26 @@
         </div>
     </div>
 
+    <%-- The shortcode is the canonical way to put this file in an entry --
+         it picks up alt text and the rendition ladder, where a hand-pasted
+         URL does not -- and until now the string was only ever visible
+         inside the editor's own picker. --%>
+    <div class="row mb-3">
+        <label class="col-form-label col-sm-3" for="clip_shortcode"><spring:message code="mediaFileEdit.shortcode"/></label>
+
+        <div class="col-sm-9">
+
+            <input type="text" id="clip_shortcode" size="57"
+                   value='[image id="${fn:escapeXml(mediaFileId)}"]' readonly />
+
+            <button class="clipbutton" data-clipboard-target="#clip_shortcode" type="button"
+                    aria-label="<spring:message code='generic.copyToClipboard'/>">
+                <img src='${linkIconURL}' alt="" style="width:0.9em; height:0.9em">
+            </button>
+
+            <div class="form-text"><spring:message code="mediaFileEdit.shortcode.tip"/></div>
+    </div>
+
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfedit_bean_description"><spring:message code="generic.description"/></label>
         <div class="col-sm-9">
@@ -310,7 +330,14 @@
 
 <script>
     $(document).ready(function () {
-        new ClipboardJS('.clipbutton');
+        // Copying used to give no feedback at all -- the entry editor's
+        // permalink control already toggles .copied, so this matches it.
+        var clipboard = new ClipboardJS('.clipbutton');
+        clipboard.on('success', function (e) {
+            e.trigger.classList.add('copied');
+            setTimeout(function () { e.trigger.classList.remove('copied'); }, 1500);
+            e.clearSelection();
+        });
 
         // ------------------------------------------------- focal point
         var picker = document.getElementById('focalPicker');

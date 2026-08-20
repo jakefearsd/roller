@@ -56,7 +56,18 @@
 
             <c:forEach items="${pages}" var="p">
                 <tr data-page-id="${fn:escapeXml(p.id)}" data-page-slug="${fn:escapeXml(p.slug)}">
-                    <td class="data">/<c:out value="${p.slug}"/></td>
+                    <td class="data">
+                        <c:choose>
+                        <c:when test="${p.status.name() == 'PUBLISHED'}">
+                            <%-- Only published pages are served; a draft's URL
+                                 404s, so linking it would hand someone a
+                                 broken link from their own admin screen. --%>
+                            <a href="${actionWeblog.absoluteURL}page/${p.slug}"
+                               target="_blank" rel="noopener">/<c:out value="${p.slug}"/></a>
+                        </c:when>
+                        <c:otherwise>/<c:out value="${p.slug}"/></c:otherwise>
+                        </c:choose>
+                    </td>
                     <td>
                         <c:url var="editUrl" value="/roller-ui/authoring/pageEdit.rol">
                             <c:param name="weblog" value="${actionWeblog.handle}"/>

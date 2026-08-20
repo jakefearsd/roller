@@ -84,6 +84,9 @@
             </c:otherwise>
 </c:choose></p>
 
+        <p><a href="${actionWeblog.absoluteURL}" target="_blank" rel="noopener">
+            <spring:message code="themeEditor.viewYourBlog"/></a></p>
+
     </div>
 
     <%-- ================================================= --%>
@@ -167,6 +170,9 @@
 
     <div id="customNoChange" style="display:none;">
         <p class="lead"><spring:message code="themeEditor.youAreUsingACustomTheme"/></p>
+
+        <p><a href="${actionWeblog.absoluteURL}" target="_blank" rel="noopener">
+            <spring:message code="themeEditor.viewYourBlog"/></a></p>
     </div>
 
     <div id="customChangeToShared" style="display:none;">

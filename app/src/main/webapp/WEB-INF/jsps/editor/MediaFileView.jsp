@@ -208,8 +208,10 @@
                                     </str:truncateNicely>
 
                                     <c:if test="${mediaFile.imageFile and empty fn:trim(mediaFile.altText)}">
-                                        <span class="media-alt-missing"
-                                              title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></span>
+                                        <button type="button" class="media-alt-missing" data-alt-fix
+                                                data-media-file-id="${mediaFile.id}"
+                                                data-media-file-name="${fn:escapeXml(mediaFile.name)}"
+                                                title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></button>
                                     </c:if>
 
                                 </div>
@@ -260,8 +262,10 @@
                                     </str:truncateNicely>
 
                                     <c:if test="${mediaFile.imageFile and empty fn:trim(mediaFile.altText)}">
-                                        <span class="media-alt-missing"
-                                              title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></span>
+                                        <button type="button" class="media-alt-missing" data-alt-fix
+                                                data-media-file-id="${mediaFile.id}"
+                                                data-media-file-name="${fn:escapeXml(mediaFile.name)}"
+                                                title="<spring:message code='mediaFileView.altMissing.tip'/>"><spring:message code="mediaFileView.altMissing"/></button>
                                     </c:if>
 
                                 </div>
@@ -492,6 +496,14 @@
          apostrophe cannot break the handler the way it did when the id/name
          were concatenated into onclick="onClickEdit('...','...')". --%>
     $(document).on('click', '.mediaObject', function () {
+        onClickEdit(this.dataset.mediaFileId, this.dataset.mediaFileName);
+    });
+
+    <%-- The alt-text marker opens the same editor. stopPropagation keeps the
+         enclosing .mediaObject handler from firing a second time for the same
+         click. --%>
+    $(document).on('click', '[data-alt-fix]', function (event) {
+        event.stopPropagation();
         onClickEdit(this.dataset.mediaFileId, this.dataset.mediaFileName);
     });
 

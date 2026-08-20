@@ -72,7 +72,8 @@ class EditorJspScriptBindingTest {
             while (m.find()) {
                 String name = m.group(1);
                 if (Set.of("getElementById", "location", "body", "title", "createElement",
-                           "addEventListener", "querySelector", "querySelectorAll", "forms")
+                           "createRange", "addEventListener", "querySelector",
+                           "querySelectorAll", "forms")
                         .contains(name)) continue;
                 if (!(src.contains("name=\"" + name + "\"") || src.contains("id=\"" + name + "\""))) {
                     violations.add(jsp.getFileName() + " references document." + name
