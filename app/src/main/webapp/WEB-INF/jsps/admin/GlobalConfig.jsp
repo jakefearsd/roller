@@ -18,7 +18,9 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle"><spring:message code="configForm.subtitle"/></p>
-<p><spring:message code="configForm.prompt"/></p>
+<%-- configForm.prompt's value is itself a <p>...</p>; wrapping it in a
+     second one nested a block element inside a block element. --%>
+<spring:message code="configForm.prompt"/>
 
 
 <form method="post" action="<c:url value='/roller-ui/admin/globalConfig!save.rol'/>" class="form-stacked">
@@ -33,9 +35,11 @@
             <%-- special case for front page blog --%>
             <c:if test="${pd.name == 'site.frontpage.weblog.handle'}">
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
+                    <label class="col-sm-3 col-form-label"
+                           for='globalConfig_${pd.nameWithUnderbars}'><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9">
-                        <select name="${fn:escapeXml(pd.name)}" class="form-select">
+                        <select name="${fn:escapeXml(pd.name)}"
+                                id="globalConfig_${pd.nameWithUnderbars}" class="form-select">
                             <c:forEach var="weblog" items="${weblogs}">
                                 <option value="${fn:escapeXml(weblog.handle)}"
                                     <c:if test="${properties[pd.name].value == weblog.handle}">selected="selected"</c:if>
@@ -49,10 +53,12 @@
             <%-- "string" type means use a simple textbox --%>
             <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type == 'string'}">
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
+                    <label class="col-sm-3 col-form-label"
+                           for='globalConfig_${pd.nameWithUnderbars}'><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9">
                         <input type="text" name="${fn:escapeXml(pd.name)}" size="35"
                                value="${fn:escapeXml(properties[pd.name].value)}"
+                               id="globalConfig_${pd.nameWithUnderbars}"
                                class="form-control"/>
                     </div>
                 </div>
@@ -61,9 +67,11 @@
             <%-- "text" type means use a full textarea --%>
             <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type == 'text'}">
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
+                    <label class="col-sm-3 col-form-label"
+                           for='globalConfig_${pd.nameWithUnderbars}'><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9">
                         <textarea name="${fn:escapeXml(pd.name)}" rows="${pd.rows}" cols="${pd.cols}"
+                                  id="globalConfig_${pd.nameWithUnderbars}"
                                   class="form-control">${fn:escapeXml(properties[pd.name].value)}</textarea>
                     </div>
                 </div>
@@ -72,11 +80,13 @@
             <%-- "boolean" type means use a checkbox --%>
             <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type == 'boolean'}">
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
+                    <label class="col-sm-3 col-form-label"
+                           for='globalConfig_${pd.nameWithUnderbars}'><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9">
                         <input type="checkbox" name="${fn:escapeXml(pd.name)}" value="true"
                             <c:if test="${properties[pd.name].value == 'true'}">checked="checked"</c:if>
-                               onchange="formChanged()" class="boolean"/>
+                               id="globalConfig_${pd.nameWithUnderbars}"
+                               onchange="formChanged()" class="form-check-input boolean"/>
                     </div>
                 </div>
             </c:if>
@@ -116,10 +126,12 @@
             <%-- if it's something we don't understand then use textbox --%>
             <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type != 'string' && pd.type != 'text' && pd.type != 'boolean' && pd.type != 'integer' && pd.type != 'float'}">
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label"><spring:message code="${pd.key}"/></label>
+                    <label class="col-sm-3 col-form-label"
+                           for='globalConfig_${pd.nameWithUnderbars}'><spring:message code="${pd.key}"/></label>
                     <div class="col-sm-9">
                         <input type="text" name="${fn:escapeXml(pd.name)}" size="35"
                                value="${fn:escapeXml(properties[pd.name].value)}"
+                               id="globalConfig_${pd.nameWithUnderbars}"
                                class="form-control"/>
                     </div>
                 </div>
@@ -136,7 +148,7 @@
 
     </c:forEach>
 
-    <input id="saveButton" class="btn btn-secondary mt-3" type="submit" value="<spring:message code="generic.save"/>"/>
+    <button id="saveButton" class="btn btn-primary mt-3" type="submit"><spring:message code="generic.save"/></button>
 
 </form>
 
@@ -144,7 +156,7 @@
 <script type="text/javascript">
 
     function formChanged() {
-        var saveBookmarkButton = $('#saveButton:first');
+        var saveButton = $('#saveButton:first');
         var error = false;
 
         $("input").each(function () {
@@ -183,7 +195,7 @@
 
         });
 
-        saveBookmarkButton.prop("disabled", error);
+        saveButton.prop("disabled", error);
     }
 
 </script>

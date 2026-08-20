@@ -18,13 +18,17 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 <%@ include file="/WEB-INF/jsps/tiles/menu-model.jsp" %>
 <!DOCTYPE html>
-<html>
+<html lang="${pageContext.response.locale.toLanguageTag()}">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
-    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <spring:message code="${pageTitle}" text="${pageTitle}"/></title>
+    <%-- The weblog handle belongs in the tab: an admin with four weblogs open
+         had four tabs reading "Roller: Entries". Only where the model has it
+         -- these layouts serve un-scoped screens (Global Config, User Admin)
+         as well. --%>
+    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <spring:message code="${pageTitle}" text="${pageTitle}"/><c:if test="${not empty actionWeblog}"> &#8212; ${fn:escapeXml(actionWeblog.handle)}</c:if></title>
     <jsp:include page="${tile_head}"/>
     <style>
         <jsp:include page="${tile_styles}" />
@@ -87,18 +91,17 @@
 
         </div>
 
-        <div class="col-md-9 roller-column-right">
+        <main class="col-md-9 roller-column-right">
             <div class="card">
                 <div class="card-body roller-content-body">
 
+                    <h1 class="roller-page-title"><spring:message code="${pageTitle}" text="${pageTitle}"/></h1>
                     <jsp:include page="${tile_messages}"/>
-
-                    <h2 class="roller-page-title"><spring:message code="${pageTitle}" text="${pageTitle}"/></h2>
                     <jsp:include page="${tile_content}"/>
 
                 </div>
             </div>
-        </div>
+        </main>
 
 
     </div>

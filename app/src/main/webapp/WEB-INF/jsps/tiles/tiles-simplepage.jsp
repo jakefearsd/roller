@@ -17,7 +17,7 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 <!doctype html>
-<html>
+<html lang="${pageContext.response.locale.toLanguageTag()}">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -37,20 +37,26 @@
 
     <div class="row">
         <div class="col-md-1"></div>
-        <div class="col-md-10">
+        <main class="col-md-10">
 
             <h1 class="roller-page-title"><spring:message code="${pageTitle}" text="${pageTitle}"/></h1>
-            <p><jsp:include page="${tile_messages}"/>
+            <jsp:include page="${tile_messages}"/>
             <div class="card">
                 <div class="card-body">
                     <jsp:include page="${tile_content}"/>
                 </div>
             </div>
 
-        </div>
+        </main>
         <div class="col-md-1"></div>
     </div>
 </div>
+
+<footer class="footer">
+    <div class="container-fluid">
+        <jsp:include page="${tile_footer}"/>
+    </div>
+</footer>
 
 </body>
 </html>

@@ -30,8 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.config.AuthMethod;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
@@ -54,7 +52,6 @@ public class ProfileController extends BaseController {
 
     private static final Logger log = LoggerFactory.getLogger(ProfileController.class);
 
-    private final AuthMethod authMethod = WebloggerConfig.getAuthMethod();
 
     @Override
     public boolean isWeblogRequired() {
@@ -82,7 +79,6 @@ public class ProfileController extends BaseController {
                           @ModelAttribute("bean") ProfileBean bean) {
 
         populateCommonModel(request, model);
-        model.addAttribute("authMethod", authMethod.name());
         addListsToModel(model);
 
         User ud = getAuthenticatedUser(request);
@@ -98,7 +94,6 @@ public class ProfileController extends BaseController {
                        RedirectAttributes redirectAttributes) {
 
         populateCommonModel(request, model);
-        model.addAttribute("authMethod", authMethod.name());
         addListsToModel(model);
 
         myValidate(request, model, bean);

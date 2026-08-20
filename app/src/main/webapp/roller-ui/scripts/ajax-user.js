@@ -18,18 +18,10 @@
 
 // Used in: UserAdmin.jsp
 
-function createRequestObject() {
-    var ro;
-    var browser = navigator.appName;
-    if (browser === "Microsoft Internet Explorer") {
-        ro = new ActiveXObject("Microsoft.XMLHTTP");
-    } else {
-        ro = new XMLHttpRequest();
-    }
-    return ro;
-}
-
-var http = createRequestObject();
+// NOTE: this file is pulled in by a JSP include DIRECTIVE (translation time),
+// so the JSP scriptlet below IS interpolated. It is not a static resource
+// despite the .js extension -- do not "clean it up" into one.
+var http = new XMLHttpRequest();
 var init = false;
 var isBusy = false;
 var userURL = "<%= request.getContextPath() %>" + "/roller-ui/authoring/userdata?length=50";

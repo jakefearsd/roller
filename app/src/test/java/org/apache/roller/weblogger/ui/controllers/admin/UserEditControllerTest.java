@@ -107,7 +107,6 @@ class UserEditControllerTest {
         assertEquals(".UserEdit", view);
         assertEquals("createUser", model.getAttribute("actionName"));
         assertEquals("userAdmin.title.createNewUser", model.getAttribute("pageTitle"));
-        assertEquals("ROLLERDB", model.getAttribute("authMethod"));
         assertEquals("admin", model.getAttribute("desiredMenu"), "the page renders inside the admin menu");
 
         CreateUserBean bean = (CreateUserBean) model.getAttribute("bean");
@@ -281,7 +280,6 @@ class UserEditControllerTest {
 
         assertEquals(".UserAdmin", view);
         assertEquals(List.of("userAdmin.error.userNotFound"), ControllerTestFixture.errors(model));
-        assertEquals("ROLLERDB", model.getAttribute("authMethod"));
         assertFalse(((List<?>) model.getAttribute("localesList")).isEmpty(),
                 "the user-admin page is rendered from this model and still needs its pickers");
     }
@@ -310,7 +308,6 @@ class UserEditControllerTest {
         assertTrue(loaded.isAdministrator(), "the admin checkbox must reflect the role the user really holds");
         assertSame(permissions, model.getAttribute("permissions"));
         assertEquals("admin", model.getAttribute("desiredMenu"));
-        assertEquals("ROLLERDB", model.getAttribute("authMethod"));
         assertFalse(((List<?>) model.getAttribute("localesList")).isEmpty());
         assertFalse(((List<?>) model.getAttribute("timeZonesList")).isEmpty());
     }

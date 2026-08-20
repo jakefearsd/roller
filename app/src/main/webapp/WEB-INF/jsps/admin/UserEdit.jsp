@@ -59,9 +59,9 @@
     <c:choose>
         <c:when test="${actionName == 'modifyUser'}">
             <div class="row mb-3">
-                <label class="col-sm-3 col-form-label"><spring:message code="userSettings.username"/></label>
+                <label class="col-sm-3 col-form-label" for="bean_userName"><spring:message code="userSettings.username"/></label>
                 <div class="col-sm-9">
-                    <input type="text" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
+                    <input type="text" id="bean_userName" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
                            size="30" maxlength="30" onkeyup="formChanged()"
                            readonly="readonly" class="form-control"
                            title="<spring:message code='userSettings.tip.username'/>"/>
@@ -70,10 +70,10 @@
         </c:when>
         <c:otherwise>
             <div class="row mb-3">
-                <label class="col-sm-3 col-form-label"><spring:message code="userSettings.username"/></label>
+                <label class="col-sm-3 col-form-label" for="bean_userName"><spring:message code="userSettings.username"/></label>
                 <div class="col-sm-9">
-                    <input type="text" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
-                           size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
+                    <input type="text" id="bean_userName" name="bean.userName" value="${fn:escapeXml(bean.userName)}"
+                           size="30" maxlength="30" onkeyup="formChanged()" class="form-control" autofocus
                            title="<spring:message code='userAdmin.tip.userName'/>"/>
                 </div>
             </div>
@@ -81,16 +81,17 @@
     </c:choose>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.screenname"/></label>
+        <label class="col-sm-3 col-form-label" for="bean_screenName"><spring:message code="userSettings.screenname"/></label>
         <div class="col-sm-9">
-            <input type="text" id="bean_screenName" name="bean.screenName" value="${fn:escapeXml(bean.screenName)}"
+            <input type="text" id="bean_screenName" name="bean.screenName"
+                   <c:if test="${actionName == 'modifyUser'}">autofocus</c:if> value="${fn:escapeXml(bean.screenName)}"
                    size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
                    title="<spring:message code='userAdmin.tip.screenName'/>"/>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.fullname"/></label>
+        <label class="col-sm-3 col-form-label" for="bean_fullName"><spring:message code="userSettings.fullname"/></label>
         <div class="col-sm-9">
             <input type="text" id="bean_fullName" name="bean.fullName" value="${fn:escapeXml(bean.fullName)}"
                    size="30" maxlength="30" onkeyup="formChanged()" class="form-control"
@@ -99,9 +100,10 @@
     </div>
 
         <div class="row mb-3">
-            <label class="col-sm-3 col-form-label"><spring:message code="userSettings.password"/></label>
+            <label class="col-sm-3 col-form-label" for="bean_password"><spring:message code="userSettings.password"/></label>
             <div class="col-sm-9">
-                <input type="password" name="bean.password" size="30" maxlength="30"
+                <input type="password" id="bean_password" name="bean.password" size="30" maxlength="30"
+                       autocomplete="new-password"
                        onkeyup="formChanged()" class="form-control"
                        title="<spring:message code='userAdmin.tip.password'/>"/>
                 <c:if test="${actionName == 'createUser' && mailConfigured}">
@@ -112,7 +114,7 @@
 
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.email"/></label>
+        <label class="col-sm-3 col-form-label" for="bean_email"><spring:message code="userSettings.email"/></label>
         <div class="col-sm-9">
             <input type="text" id="bean_email" name="bean.emailAddress" value="${fn:escapeXml(bean.emailAddress)}"
                    size="30" maxlength="255" onkeyup="formChanged()" class="form-control"
@@ -121,9 +123,9 @@
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.locale"/></label>
+        <label class="col-sm-3 col-form-label" for="bean_locale"><spring:message code="userSettings.locale"/></label>
         <div class="col-sm-9">
-            <select name="bean.locale" class="form-select"
+            <select id="bean_locale" name="bean.locale" class="form-select"
                     title="<spring:message code='userAdmin.tip.locale'/>">
                 <c:forEach var="loc" items="${localesList}">
                     <option value="${fn:escapeXml(loc)}"
@@ -135,9 +137,9 @@
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="userSettings.timeZone"/></label>
+        <label class="col-sm-3 col-form-label" for="bean_timeZone"><spring:message code="userSettings.timeZone"/></label>
         <div class="col-sm-9">
-            <select name="bean.timeZone" class="form-select"
+            <select id="bean_timeZone" name="bean.timeZone" class="form-select"
                     title="<spring:message code='userAdmin.tip.timeZone'/>">
                 <c:forEach var="tz" items="${timeZonesList}">
                     <option value="${fn:escapeXml(tz)}"
@@ -149,18 +151,19 @@
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="userAdmin.enabled"/></label>
+        <label class="col-sm-3 col-form-label" for="bean_enabled"><spring:message code="userAdmin.enabled"/></label>
         <div class="col-sm-9">
-            <input type="checkbox" class="form-check-input" name="bean.enabled" value="true"
+            <input type="checkbox" id="bean_enabled" class="form-check-input" name="bean.enabled" value="true"
                 <c:if test="${bean.enabled}">checked="checked"</c:if>
                    title="<spring:message code='userAdmin.tip.enabled'/>"/>
+            <div class="form-text"><spring:message code="userAdmin.enabled.signsOutNote"/></div>
         </div>
     </div>
 
     <div class="row mb-3">
-        <label class="col-sm-3 col-form-label"><spring:message code="userAdmin.userAdmin"/></label>
+        <label class="col-sm-3 col-form-label" for="bean_administrator"><spring:message code="userAdmin.userAdmin"/></label>
         <div class="col-sm-9">
-            <input type="checkbox" class="form-check-input" name="bean.administrator" value="true"
+            <input type="checkbox" id="bean_administrator" class="form-check-input" name="bean.administrator" value="true"
                 <c:if test="${bean.administrator}">checked="checked"</c:if>
                    title="<spring:message code='userAdmin.tip.userAdmin'/>"/>
         </div>
@@ -178,10 +181,10 @@
                  first weblog's name would be rendered as the label. --%>
             <table class="rollertable table" style="width: 80%">
                 <tr>
-                    <th width="55%"><spring:message code="generic.name"/></th>
-                    <th width="15%">&nbsp;</th>
-                    <th width="15%">&nbsp;</th>
-                    <th width="15%">&nbsp;</th>
+                    <th scope="col" width="55%"><spring:message code="generic.name"/></th>
+                    <th scope="col" width="15%">&nbsp;</th>
+                    <th scope="col" width="15%">&nbsp;</th>
+                    <th scope="col" width="15%">&nbsp;</th>
                 </tr>
                 <c:forEach var="perms" items="${permissions}">
                     <tr>
@@ -194,7 +197,7 @@
                             <c:url var="newEntry" value="/roller-ui/authoring/entryAdd.rol">
                                 <c:param name="weblog" value="${perms.weblog.handle}" />
                             </c:url>
-                            <img src='<c:url value="/images/page_white_edit.png"/>' />
+                            <span class="bi bi-pencil" aria-hidden="true"></span>
                             <a href='${newEntry}'>
                             <spring:message code="userAdmin.newEntry" /></a>
                         </td>
@@ -202,7 +205,7 @@
                             <c:url var="editEntries" value="/roller-ui/authoring/entries.rol">
                                 <c:param name="weblog" value="${perms.weblog.handle}" />
                             </c:url>
-                            <img src='<c:url value="/images/page_white_edit.png"/>' />
+                            <span class="bi bi-pencil" aria-hidden="true"></span>
                             <a href='${editEntries}'>
                             <spring:message code="userAdmin.editEntries" /></a>
                         </td>
@@ -210,7 +213,7 @@
                             <c:url var="manageWeblog" value="/roller-ui/authoring/weblogConfig.rol">
                                 <c:param name="weblog" value="${perms.weblog.handle}" />
                             </c:url>
-                            <img src='<c:url value="/images/page_white_edit.png"/>' />
+                            <span class="bi bi-pencil" aria-hidden="true"></span>
                             <a href='${manageWeblog}'>
                             <spring:message code="userAdmin.manage" /></a>
                         </td>
@@ -229,11 +232,8 @@
         </c:if>
     </c:if>
 
-    <br />
-    <br />
-
-    <div class="control">
-        <button type="submit" class="btn btn-secondary" id="save_button">
+    <div class="control mt-4">
+        <button type="submit" class="btn btn-primary" id="save_button">
             <spring:message code="generic.save"/>
         </button>
         <a href="<c:url value='${cancelAction}'/>" class="btn">
@@ -246,11 +246,16 @@
 <c:if test="${actionName == 'modifyUser' && not empty bean.id}">
     <%-- A second, sibling form -- HTML does not allow nesting one inside the
          save form above, and this button posts to a different action. --%>
+    <spring:message code="userAdmin.sendPasswordLink.confirm"
+                    arguments="${fn:escapeXml(bean.userName)},${fn:escapeXml(bean.emailAddress)}"
+                    var="sendLinkConfirm"/>
     <form method="post" action="<c:url value='/roller-ui/admin/userEdit!sendPasswordLink.rol'/>"
-          class="mt-3">
+          class="mt-3" onsubmit="return confirm('${fn:escapeXml(sendLinkConfirm)}');">
         <sec:csrfInput/>
         <input type="hidden" name="bean.userName" value="${fn:escapeXml(bean.userName)}"/>
-        <button type="submit" class="btn btn-secondary">
+        <%-- Quiet, not a second save: this mails a real person. .delete-link is
+             deliberately NOT used -- its red hover means destructive. --%>
+        <button type="submit" class="btn btn-link p-0">
             <spring:message code="userAdmin.sendPasswordLink"/>
         </button>
     </form>
@@ -259,7 +264,10 @@
 
 <script>
 
-    document.forms[0].elements[0].focus();
+    <%-- A script here used to focus the form's first element on load. The
+         first element of this form is the hidden CSRF input, so it focused
+         the hidden input -- i.e. nothing. The autofocus attribute on the
+         first real field does what it was trying to do. --%>
     let saveButton;
 
     $( document ).ready(function() {

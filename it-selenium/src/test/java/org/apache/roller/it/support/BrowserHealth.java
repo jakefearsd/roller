@@ -62,13 +62,14 @@ public final class BrowserHealth {
      * costs us coverage, so add one only with evidence that the request is unavoidable
      * <em>and</em> harmless.
      *
-     * <ul>
-     *   <li>{@code /favicon.ico} - Chrome requests a favicon on every navigation whether
-     *       or not the page asks for one, and Roller ships none. Without this entry every
-     *       single test in the suite fails.</li>
-     * </ul>
+     * <p>EMPTY, and worth keeping empty. It used to hold {@code /favicon.ico}: Chrome
+     * requests a favicon on every navigation whether or not the page asks for one, and
+     * Roller shipped none, so without the entry every single test in the suite failed.
+     * Roller now ships a real {@code /favicon.ico} (rasterized from favicon.svg), so the
+     * request 200s and the exemption - which excused that 404 on every page in the
+     * suite - is gone. Do not reintroduce it to silence a 404; ship the file instead.
      */
-    private static final Set<String> IGNORED_PATH_SUFFIXES = Set.of("/favicon.ico");
+    private static final Set<String> IGNORED_PATH_SUFFIXES = Set.of();
 
     /**
      * Resource types a page may legitimately abandon mid-flight.

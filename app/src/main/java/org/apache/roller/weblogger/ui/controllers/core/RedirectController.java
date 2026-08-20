@@ -2,6 +2,7 @@ package org.apache.roller.weblogger.ui.controllers.core;
 
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -60,7 +61,13 @@ public class RedirectController extends BaseController {
      * with no head/banner/footer chrome and no design-system CSS at all.
      */
     @GetMapping("/access-denied.rol")
-    public String accessDenied() {
+    public String accessDenied(Model model) {
+        // The errorpage layout falls back to the generic `error` key when no
+        // pageTitle is set, which put "Error" in the tab for what is really a
+        // permission answer. Base-bundle-only key on purpose: every locale
+        // falls back to it, so the title can never disagree in language with
+        // denied.jsp's deliberately hardcoded English body.
+        model.addAttribute("pageTitle", "denied.title");
         return ".denied";
     }
 }

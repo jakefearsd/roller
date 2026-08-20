@@ -17,7 +17,7 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<p style="margin-bottom:2em"><spring:message code="index.prompt"/> </p>
+<p class="pagetip"><spring:message code="index.prompt"/></p>
 
 <%--
       Index page on Roller startup; tell the user how to complete their Roller install,
@@ -63,7 +63,7 @@
 
     <div class="card-body">
 
-        <spring:message code="index.createWeblogHelp"/><br/><br/>
+        <p><spring:message code="index.createWeblogHelp"/></p>
         <c:if test="${userCount > 0 && blogCount == 0}">
             <spring:message code="index.createWeblogBy"/>
             <a id="a_createBlog" href='<c:url value="/roller-ui/createWeblog.rol"/>'>
@@ -94,9 +94,9 @@
 
                 <div class="row mb-3">
                     <spring:message code="frontpageConfig.frontpageBlogName" var="frontpageBlogLabel"/>
-                    <label class="col-sm-3 col-form-label">${frontpageBlogLabel}</label>
+                    <label class="col-sm-3 col-form-label" for="frontpageBlog">${frontpageBlogLabel}</label>
                     <div class="col-sm-9">
-                        <select name="frontpageBlog" class="form-select">
+                        <select name="frontpageBlog" id="frontpageBlog" class="form-select">
                             <%-- Mirrors Maintenance.jsp's placeholder pattern: a
                                  disabled option carries "selected" only while
                                  nothing is configured yet, so a re-save can never
@@ -116,15 +116,15 @@
 
                 <div class="row mb-3">
                     <spring:message code="frontpageConfig.frontpageAggregated" var="aggregatedLabel"/>
-                    <label class="col-sm-3 col-form-label">${aggregatedLabel}</label>
+                    <label class="col-sm-3 col-form-label" for="frontpageAggregated">${aggregatedLabel}</label>
                     <div class="col-sm-9">
-                        <input type="checkbox" class="form-check-input" name="aggregated" value="true"
+                        <input type="checkbox" id="frontpageAggregated" class="form-check-input" name="aggregated" value="true"
                             <c:if test="${frontpageAggregated}">checked="checked"</c:if>
                         />
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-secondary"><spring:message code="generic.save"/></button>
+                <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
 
             </form>
 

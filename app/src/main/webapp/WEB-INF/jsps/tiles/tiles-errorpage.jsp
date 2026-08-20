@@ -17,13 +17,16 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 <!doctype html>
-<html>
+<html lang="${pageContext.response.locale.toLanguageTag()}">
     <head>
       <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
-      <title><spring:message code="error" /></title>
+      <%-- A denial or a stack trace both land here. RedirectController names
+           a pageTitle for the denied path; anything else falls back to the
+           generic `error` key rather than a blank tab. --%>
+      <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <c:choose><c:when test="${empty pageTitle}"><spring:message code="error"/></c:when><c:otherwise><spring:message code="${pageTitle}" text="${pageTitle}"/></c:otherwise></c:choose></title>
       <jsp:include page="${tile_head}" />
       <style>
           <jsp:include page="${tile_styles}" />
@@ -35,30 +38,25 @@
             <jsp:include page="${tile_banner}" />
         </div>
 
-        <div id="wrapper" class="container-fluid">
+        <%-- The six left/center/right wrapper ids this used to carry were a
+             pre-Bootstrap centring scheme; not one of them has had a CSS rule
+             for years. Bootstrap's grid does the centring. --%>
+        <div class="container-fluid">
             <div class="row">
-                <div id="leftcontent_wrap" class="col-md-1">
-                    <div id="leftcontent">
-                    </div>
-                </div>
-
-                <div id="centercontent_wrap" class="col-md-10">
-                    <div id="centercontent">
-                        <jsp:include page="${tile_messages}" />
-                        <jsp:include page="${tile_content}" />
-                    </div>
-                </div>
-
-                <div id="rightcontent_wrap" class="col-md-1">
-                    <div id="rightcontent">
-                    </div>
-                </div>
+                <div class="col-md-1"></div>
+                <main class="col-md-10">
+                    <jsp:include page="${tile_messages}" />
+                    <jsp:include page="${tile_content}" />
+                </main>
+                <div class="col-md-1"></div>
             </div>
         </div>
 
-        <div id="footer">
-            <jsp:include page="${tile_footer}" />
-        </div>
+        <footer class="footer">
+            <div class="container-fluid">
+                <jsp:include page="${tile_footer}" />
+            </div>
+        </footer>
 
     </body>
 </html>

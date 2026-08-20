@@ -17,9 +17,9 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h2><spring:message code="installer.cannotConnectToDatabase" /></h2>
+<h2 class="roller-page-title"><spring:message code="installer.cannotConnectToDatabase" /></h2>
 
-<h3><spring:message code="installer.whatHappened" /></h3>
+<h3 class="section-head"><spring:message code="installer.whatHappened" /></h3>
 
 <p><spring:message code="installer.whatHappenedDatabaseConnectionError" /></p>
 <ul>
@@ -28,7 +28,7 @@
    </c:forEach>
 </ul>
 
-<h3><spring:message code="installer.whyDidThatHappen" /></h3>
+<h3 class="section-head"><spring:message code="installer.whyDidThatHappen" /></h3>
 
 <p>
     <spring:message code="installer.aboutTheException" />
@@ -40,5 +40,4 @@
     [${fn:escapeXml(rootCauseStackTrace)}]
 </pre>
 
-<br />
-<br />
+<div class="mb-4"></div>

@@ -63,7 +63,6 @@ class UserAdminControllerTest {
         assertEquals("userAdmin.title.searchUser", model.getAttribute("pageTitle"));
         assertEquals("userAdmin", model.getAttribute("actionName"));
         assertEquals("admin", model.getAttribute("desiredMenu"));
-        assertEquals("ROLLERDB", model.getAttribute("authMethod"));
         assertNull(((CreateUserBean) model.getAttribute("bean")).getUserName());
         assertNotNull(model.getAttribute("menu"), "the admin menu is what makes the rest of the section reachable");
         // Nothing is searched until the admin submits a name.
@@ -78,7 +77,6 @@ class UserAdminControllerTest {
         String view = controller.edit(ControllerTestFixture.requestFor(user()), model, bean);
 
         assertEquals("redirect:/roller-ui/admin/modifyUser.rol?bean.userName=jake", view);
-        assertEquals("ROLLERDB", model.getAttribute("authMethod"));
         assertEquals("admin", model.getAttribute("desiredMenu"),
                 "the common model is populated in case the view is rendered rather than redirected");
     }

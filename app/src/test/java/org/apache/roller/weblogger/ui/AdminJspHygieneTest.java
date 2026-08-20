@@ -1,0 +1,531 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.ui;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Source scans pinning the 2026-08-20 fit-and-finish repairs to the admin
+ * JSP tree. Each one exists because the property it asserts is invisible in
+ * a rendered page and therefore cannot regress loudly: a flash region that
+ * stopped announcing itself, a layout that lost its {@code lang}, a table
+ * whose headers stopped being scoped, or a screen whose one primary action
+ * quietly became three.
+ *
+ * <p>Every test collects ALL violations before asserting, so one run names
+ * the whole repair list rather than the first file that happens to fail.
+ */
+class AdminJspHygieneTest {
+
+    private static final Path JSPS = Path.of("src/main/webapp/WEB-INF/jsps");
+    private static final Path STYLES = Path.of("src/main/webapp/roller-ui/styles/roller.css");
+
+    private static String read(Path p) {
+        try {
+            return Files.readString(p);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static String jsp(String relative) {
+        Path p = JSPS.resolve(relative);
+        assertTrue(Files.isRegularFile(p), "JSP moved or deleted? " + p.toAbsolutePath());
+        return read(p);
+    }
+
+    // ---------------------------------------------------------------- Task 11
+
+    /**
+     * A flash message that is not in a live region is invisible to a screen
+     * reader: the page has already finished loading when it arrives, so
+     * nothing re-reads it. #messages is polite (a success confirmation may
+     * wait for a pause), #errors is assertive.
+     */
+    @Test
+    void flashRegionsAnnounceThemselves() {
+        String src = jsp("tiles/messages.jsp");
+        List<String> missing = new ArrayList<>();
+        if (!src.contains("role=\"status\"") || !src.contains("aria-live=\"polite\"")) {
+            missing.add("#messages needs role=\"status\" aria-live=\"polite\"");
+        }
+        if (!src.contains("role=\"alert\"")) {
+            missing.add("#errors needs role=\"alert\"");
+        }
+        assertTrue(missing.isEmpty(), "tiles/messages.jsp: " + String.join("; ", missing));
+    }
+
+    /**
+     * The success block used to render each message as a nested
+     * {@code .alert-info} inside the {@code .alert-success} wrapper -- a box
+     * in a box, in the wrong colour. It is a flat list now, like the errors
+     * block beside it.
+     */
+    @Test
+    void successMessagesAreNotBoxedInsideTheSuccessBox() {
+        String src = jsp("tiles/messages.jsp");
+        assertTrue(!src.contains("alert alert-info"),
+                "tiles/messages.jsp still nests an .alert-info inside the .alert-success wrapper");
+    }
+
+    /**
+     * The 10-second auto-dismiss must never reach an error banner: an error
+     * the reader is still reading should not evaporate, and on GenericError
+     * -- whose whole body used to be the flash region -- it emptied the page.
+     */
+    @Test
+    void autoDismissIsScopedToSuccessMessages() {
+        String src = jsp("tiles/messages.jsp");
+        assertTrue(src.contains("#messages .alert"),
+                "tiles/messages.jsp: auto-dismiss must select #messages .alert, not every .alert");
+    }
+
+    /** The inline {@code <style>} block belongs with the other alert rules. */
+    @Test
+    void messagesJspCarriesNoInlineStyleBlock() {
+        assertTrue(!jsp("tiles/messages.jsp").contains("<style>"),
+                "tiles/messages.jsp: move the alert list styling into roller.css");
+        assertTrue(read(STYLES).contains(".alert ul"),
+                "roller.css: the .alert ul rule from messages.jsp should live here");
+    }
+
+    /**
+     * GenericError had no body at all: the "weblog creation is disabled" and
+     * "one weblog per user" answers rendered a single auto-dismissing alert
+     * on an otherwise blank page, which then emptied.
+     */
+    @Test
+    void genericErrorHasABody() {
+        String src = jsp("core/GenericError.jsp");
+        assertTrue(src.contains("empty-state"),
+                "core/GenericError.jsp needs an .empty-state body explaining what happened");
+        assertTrue(src.contains("menu.rol"),
+                "core/GenericError.jsp needs a way back to the weblog list");
+    }
+
+    /**
+     * Both chrome layouts must put the page title above the flash region:
+     * tabbedpage used to render messages first, so the two screens disagreed
+     * about where a confirmation appears.
+     */
+    @Test
+    void bothChromeLayoutsPutTheTitleBeforeTheMessages() {
+        List<String> wrong = new ArrayList<>();
+        for (String layout : List.of("tiles/tiles-tabbedpage.jsp", "tiles/tiles-mainmenupage.jsp")) {
+            String src = jsp(layout);
+            int title = src.indexOf("roller-page-title");
+            int messages = src.indexOf("${tile_messages}");
+            if (title < 0 || messages < 0 || title > messages) {
+                wrong.add(layout);
+            }
+        }
+        assertTrue(wrong.isEmpty(), "title must precede the flash region in: " + wrong);
+    }
+
+    // ---------------------------------------------------------------- Task 14
+
+    private static final List<String> TILES_LAYOUTS = List.of(
+            "tiles/tiles-barepage.jsp",
+            "tiles/tiles-errorpage.jsp",
+            "tiles/tiles-installpage.jsp",
+            "tiles/tiles-loginpage.jsp",
+            "tiles/tiles-mainmenupage.jsp",
+            "tiles/tiles-popuppage.jsp",
+            "tiles/tiles-simplepage.jsp",
+            "tiles/tiles-tabbedpage.jsp");
+
+    /**
+     * Without a document language a screen reader picks its own -- usually the
+     * user's OS locale -- and reads English admin copy with, say, German
+     * phonemes. Eight layouts, so one missing declaration hides in seven
+     * correct ones.
+     */
+    @Test
+    void everyLayoutDeclaresADocumentLanguage() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : TILES_LAYOUTS) {
+            if (!jsp(layout).contains("<html lang=")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts with no <html lang>: " + missing);
+    }
+
+    /** Every layout must name the tab; popuppage used to ship none at all. */
+    @Test
+    void everyChromeLayoutSetsATitle() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : TILES_LAYOUTS) {
+            // barepage is deliberately chrome-free -- see its own comment.
+            if (layout.endsWith("barepage.jsp")) {
+                continue;
+            }
+            if (!jsp(layout).contains("<title>")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts with no <title>: " + missing);
+    }
+
+    /**
+     * The page title is the document's h1. It was an h2 on both chrome
+     * layouts, so every admin screen started its heading outline at level 2
+     * and any real h2 inside the content tile read as a sibling of the title.
+     */
+    @Test
+    void thePageTitleIsTheDocumentHeading() {
+        List<String> wrong = new ArrayList<>();
+        for (String layout : List.of("tiles/tiles-tabbedpage.jsp", "tiles/tiles-mainmenupage.jsp")) {
+            if (!jsp(layout).contains("<h1 class=\"roller-page-title\"")) {
+                wrong.add(layout);
+            }
+        }
+        assertTrue(wrong.isEmpty(), "page title is not an <h1> in: " + wrong);
+    }
+
+    /** "Skip to content" has nowhere to go without a main landmark. */
+    @Test
+    void contentColumnsAreMainLandmarks() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : List.of("tiles/tiles-tabbedpage.jsp", "tiles/tiles-mainmenupage.jsp",
+                "tiles/tiles-simplepage.jsp", "tiles/tiles-loginpage.jsp")) {
+            String src = jsp(layout);
+            if (!src.contains("<main ") || !src.contains("</main>")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts with no <main> landmark: " + missing);
+    }
+
+    /**
+     * The sidebar's link headings were h4s under an h1 page title, skipping
+     * two levels.
+     */
+    @Test
+    void mainMenuSidebarDoesNotSkipHeadingLevels() {
+        String src = jsp("core/MainMenuSidebar.jsp");
+        assertTrue(!src.contains("<h4"),
+                "core/MainMenuSidebar.jsp still has <h4> headings under an <h1> page title");
+    }
+
+    /** A header cell with no scope is ambiguous to a screen reader's table mode. */
+    @Test
+    void userEditPermissionTableScopesItsHeaders() {
+        String src = jsp("admin/UserEdit.jsp");
+        int headers = src.split("<th", -1).length - 1;
+        int scoped = src.split("<th scope=\"col\"", -1).length - 1;
+        assertTrue(headers == scoped,
+                "admin/UserEdit.jsp: " + (headers - scoped) + " of " + headers
+                        + " <th> cells lack scope=\"col\"");
+    }
+
+    // ---------------------------------------------------------------- Task 16
+
+    /**
+     * .subtitle is the one-line orientation sentence under a page title, used
+     * on ~15 admin screens -- and styled nowhere, so every one of them
+     * rendered it as full-ink body prose competing with the title above.
+     */
+    @Test
+    void theSubtitleRoleIsActuallyStyled() {
+        assertTrue(read(STYLES).contains("p.subtitle"),
+                "roller.css has no p.subtitle rule, so the class is inert on ~15 screens");
+    }
+
+    /**
+     * One screen, one primary action -- the design system's button hierarchy.
+     * These six forms each had their save sitting at .btn-secondary, level
+     * with Cancel, so nothing on the page said which control finished the job.
+     */
+    @Test
+    void eachFormScreenHasExactlyOnePrimaryAction() {
+        List<String> wrong = new ArrayList<>();
+        for (String screen : List.of("admin/GlobalConfig.jsp", "admin/UserEdit.jsp",
+                "core/Profile.jsp", "core/CreateWeblog.jsp", "core/Setup.jsp",
+                "core/CreateDatabase.jsp")) {
+            int primaries = jsp(screen).split("btn-primary", -1).length - 1;
+            if (primaries != 1) {
+                wrong.add(screen + " has " + primaries);
+            }
+        }
+        assertTrue(wrong.isEmpty(), "expected exactly one btn-primary per screen: " + wrong);
+    }
+
+    /**
+     * Rebuild-index and regenerate-renditions run for minutes against the
+     * weblog named in a &lt;select&gt; the operator may well have scrolled
+     * past. Both confirm, and the confirmation names the weblog.
+     */
+    @Test
+    void theLongMaintenanceOperationsConfirmAndNameTheirWeblog() {
+        String src = jsp("admin/Maintenance.jsp");
+        List<String> missing = new ArrayList<>();
+        for (String key : List.of("maintenance.confirm.index",
+                "maintenance.confirm.regenerateRenditions")) {
+            if (!src.contains(key)) {
+                missing.add(key);
+            }
+        }
+        assertTrue(missing.isEmpty(), "admin/Maintenance.jsp: unconfirmed long operations: " + missing);
+    }
+
+    /**
+     * Both layouts declared a footer tile and neither rendered it, so the
+     * login and simple pages were the only admin screens with no footer.
+     */
+    @Test
+    void theLoginAndSimpleLayoutsRenderTheirFooter() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : List.of("tiles/tiles-loginpage.jsp", "tiles/tiles-simplepage.jsp")) {
+            if (!jsp(layout).contains("${tile_footer}")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts declaring but never including tile_footer: " + missing);
+    }
+
+    /**
+     * Six ids from a pre-Bootstrap centring scheme, none with a CSS rule for
+     * years, still wrapping the content of three layouts.
+     */
+    @Test
+    void noLayoutStillCarriesTheDeadCentringScaffolding() {
+        List<String> found = new ArrayList<>();
+        for (String layout : TILES_LAYOUTS) {
+            String src = jsp(layout);
+            if (src.contains("leftcontent") || src.contains("centercontent")
+                    || src.contains("rightcontent") || src.contains("id=\"footer\"")) {
+                found.add(layout);
+            }
+        }
+        assertTrue(found.isEmpty(), "dead #leftcontent-era scaffolding still in: " + found);
+    }
+
+    /** Inline style attributes on admin screens belong in roller.css. */
+    @Test
+    void theSweptScreensCarryNoInlineStyleAttributes() {
+        List<String> found = new ArrayList<>();
+        for (String screen : List.of("tiles/tiles-installpage.jsp", "core/Setup.jsp",
+                "core/CreateWeblog.jsp")) {
+            if (jsp(screen).contains("style=\"")) {
+                found.add(screen);
+            }
+        }
+        assertTrue(found.isEmpty(), "inline style= attributes remain in: " + found);
+    }
+
+    /**
+     * form-vertical is a Bootstrap 3 class that does nothing in Bootstrap 5.
+     * .form-stacked is this repo's real labels-above conversion.
+     */
+    @Test
+    void noAdminFormRidesTheDeadBootstrap3FormClass() {
+        List<String> found = new ArrayList<>();
+        for (String screen : List.of("admin/Maintenance.jsp", "admin/UserAdmin.jsp")) {
+            if (jsp(screen).contains("form-vertical")) {
+                found.add(screen);
+            }
+        }
+        assertTrue(found.isEmpty(), "dead form-vertical still in: " + found);
+    }
+
+    // ----------------------------------------------------------------- Task 9
+
+    /**
+     * Hardcoded English in the admin chrome and the login form -- the one
+     * screen every locale sees first. Scoped to the exact literals repaired
+     * here rather than a general English detector, so the failure list is
+     * always actionable: a placeholder, an aria-label and a visually-hidden
+     * label are all invisible to a translator reading the bundle.
+     */
+    @Test
+    void theAdminChromeAndLoginFormCarryNoHardcodedEnglish() {
+        List<String> found = new ArrayList<>();
+        record Literal(String file, String text) { }
+        for (Literal l : List.of(
+                new Literal("core/Login.jsp", "placeholder=\"Username\""),
+                new Literal("core/Login.jsp", "placeholder=\"Password\""),
+                new Literal("tiles/bannerStatus.jsp", "Toggle navigation"),
+                new Literal("tiles/bannerInstallation.jsp", "Toggle navigation"),
+                new Literal("tiles/messages.jsp", "aria-label=\"Close\""))) {
+            if (jsp(l.file()).contains(l.text())) {
+                found.add(l.file() + ": " + l.text());
+            }
+        }
+        assertTrue(found.isEmpty(), "hardcoded English still in the JSPs:\n  "
+                + String.join("\n  ", found));
+    }
+
+    // ---------------------------------------------------------------- Task 13
+
+    /**
+     * A {@code <label for="x">} with no {@code id="x"} on the page is not a
+     * label -- it is styled text. Clicking it does not focus the control, and
+     * a screen reader announces the input unlabelled. Two things make this
+     * easy to get wrong here and worth pinning rather than reviewing:
+     * Spring's {@code form:} tags emit {@code id="<path>"} by default (so the
+     * target often exists already and only the {@code for=} is missing), and
+     * a label with NO {@code for=} at all looks correct in a diff.
+     *
+     * <p>Scoped to the admin/core/tiles tree this package owns; the editor
+     * tree has its own scan (EditorJspLabelBindingTest).
+     *
+     * <p>Targets containing EL are skipped -- {@code globalConfig_$&#123;pd.x&#125;}
+     * resolves per property at render time and cannot be checked as a literal;
+     * the check is that a matching id EXPRESSION exists in the same file.
+     */
+    @Test
+    void everyLabelForTargetsAnIdInTheSameFile() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (String dir : List.of("admin", "core", "tiles")) {
+            try (Stream<Path> files = Files.walk(JSPS.resolve(dir))) {
+                files.filter(f -> f.toString().endsWith(".jsp")).forEach(f -> {
+                    String src = read(f);
+                    Matcher m = Pattern.compile("<label[^>]*\\bfor=[\"']([^\"']+)[\"']").matcher(src);
+                    while (m.find()) {
+                        String target = m.group(1);
+                        if (!src.contains("id=\"" + target + "\"") && !src.contains("id='" + target + "'")) {
+                            violations.add(f.getFileName() + ": label for=\"" + target + "\" has no target");
+                        }
+                    }
+                });
+            }
+        }
+        assertTrue(violations.isEmpty(), "dangling <label for=>:\n  " + String.join("\n  ", violations));
+    }
+
+    /**
+     * The complement of the test above, and the one that actually found the
+     * ~40 unbound controls on these five screens: a label that carries no
+     * {@code for=} at all. Restricted to the five form screens repaired here
+     * so the assertion stays a repair pin rather than a general style rule.
+     */
+    @Test
+    void theRepairedFormScreensBindEveryLabel() {
+        List<String> violations = new ArrayList<>();
+        for (String screen : List.of("admin/GlobalConfig.jsp", "admin/UserEdit.jsp",
+                "core/Profile.jsp", "core/CreateWeblog.jsp", "core/Setup.jsp")) {
+            String src = jsp(screen);
+            Matcher m = Pattern.compile("<label(?![^>]*\\bfor=)[^>]*>(?!\\s*</label>)").matcher(src);
+            while (m.find()) {
+                int line = (int) src.chars().limit(m.start()).filter(c -> c == '\n').count() + 1;
+                violations.add(screen + ":" + line + " label with no for=");
+            }
+        }
+        assertTrue(violations.isEmpty(), "unbound labels:\n  " + String.join("\n  ", violations));
+    }
+
+    // ---------------------------------------------------------------- Task 17
+
+    /**
+     * Without autocomplete hints a password manager guesses, and its usual
+     * guess on a change-password form is "this is a login" -- so it offers
+     * the OLD password and then quietly stores the new one under the wrong
+     * entry. Every password field on these four screens says which it is.
+     */
+    @Test
+    void credentialFieldsDeclareTheirAutocompleteRole() {
+        List<String> missing = new ArrayList<>();
+        record Field(String file, String id, String role) { }
+        for (Field f : List.of(
+                new Field("core/Login.jsp", "j_username", "username"),
+                new Field("core/Login.jsp", "j_password", "current-password"),
+                new Field("core/ResetPassword.jsp", "passwordText", "new-password"),
+                new Field("core/ResetPassword.jsp", "passwordConfirm", "new-password"),
+                new Field("core/Profile.jsp", "passwordText", "new-password"),
+                new Field("core/Profile.jsp", "passwordConfirm", "new-password"),
+                new Field("admin/UserEdit.jsp", "bean_password", "new-password"))) {
+            if (!jsp(f.file()).contains("autocomplete=\"" + f.role() + "\"")) {
+                missing.add(f.file() + " #" + f.id() + " -> " + f.role());
+            }
+        }
+        assertTrue(missing.isEmpty(), "credential fields with no autocomplete role: " + missing);
+    }
+
+    /**
+     * Two screens ran {@code document.forms[0].elements[0].focus()}. In a form
+     * whose first element is the hidden CSRF input -- both of these -- that
+     * focuses the hidden input, i.e. nothing at all. The attribute does what
+     * the script was trying to do, and does it without a script.
+     */
+    @Test
+    void noScreenFocusesTheHiddenCsrfInput() {
+        List<String> found = new ArrayList<>();
+        for (String screen : List.of("admin/UserEdit.jsp", "core/CreateWeblog.jsp")) {
+            String src = jsp(screen);
+            if (src.contains("elements[0].focus()")) {
+                found.add(screen + " still focuses elements[0]");
+            }
+            if (!src.contains("autofocus")) {
+                found.add(screen + " has no autofocus replacement");
+            }
+        }
+        assertTrue(found.isEmpty(), String.join("; ", found));
+    }
+
+    // ---------------------------------------------------------------- Task 19
+
+    /**
+     * Chrome asks for /favicon.ico on every navigation whether or not the page
+     * declares one, and the three bundled themes declare none -- so Roller
+     * shipping no .ico meant a 404 on every rendered weblog page, which
+     * BrowserHealth had to excuse blanket-wide to let the suite run at all.
+     * Shipping the file is what retires that exemption.
+     */
+    @Test
+    void aRealFaviconIcoIsShipped() throws IOException {
+        Path ico = Path.of("src/main/webapp/favicon.ico");
+        assertTrue(Files.isRegularFile(ico), "no /favicon.ico at " + ico.toAbsolutePath());
+        byte[] head = Files.readAllBytes(ico);
+        // ICONDIR: reserved 0x0000, type 0x0001 (icon), then the image count.
+        assertTrue(head.length > 6 && head[0] == 0 && head[1] == 0 && head[2] == 1 && head[3] == 0,
+                "favicon.ico is not an ICO file");
+        assertTrue(head[4] > 0, "favicon.ico declares no images");
+    }
+
+    /**
+     * An admin with four weblogs open had four tabs reading "Roller: Entries".
+     * Only the layouts whose model actually carries actionWeblog append it --
+     * these same layouts serve un-scoped screens (Global Config, User Admin).
+     */
+    @Test
+    void weblogScopedLayoutsNameTheirWeblogInTheTitle() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : List.of("tiles/tiles-tabbedpage.jsp", "tiles/tiles-mainmenupage.jsp")) {
+            String src = jsp(layout);
+            int title = src.indexOf("<title>");
+            int end = src.indexOf("</title>", title);
+            if (title < 0 || !src.substring(title, end).contains("actionWeblog.handle")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts whose <title> omits the weblog handle: " + missing);
+    }
+}

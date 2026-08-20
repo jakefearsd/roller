@@ -19,8 +19,6 @@
 
 <p class="subtitle"><spring:message code="createWebsite.prompt"/></p>
 
-<br/>
-
 <form:form modelAttribute="bean" action="${pageContext.request.contextPath}/roller-ui/createWeblog!save.rol"
            method="post" cssClass="validate-form form-stacked">
 
@@ -29,9 +27,9 @@
     <spring:message code="CreateWeblog.error.nameNull" var="nameRequired"/>
     <div class="row mb-3">
         <spring:message code="generic.name" var="nameLabel"/>
-        <label class="col-sm-3 col-form-label">${nameLabel}</label>
+        <label class="col-sm-3 col-form-label" for="name">${nameLabel}</label>
         <div class="col-sm-9">
-            <form:input path="name" cssClass="form-control" size="30" maxlength="30"
+            <form:input path="name" id="name" autofocus="autofocus" cssClass="form-control" size="30" maxlength="30"
                         data-msg-required="${nameRequired}" required="required"/>
         </div>
     </div>
@@ -39,9 +37,9 @@
     <spring:message code="CreateWeblog.error.handleNull" var="handleRequired"/>
     <div class="row mb-3">
         <spring:message code="createWebsite.handle" var="handleLabel"/>
-        <label class="col-sm-3 col-form-label">${handleLabel}</label>
+        <label class="col-sm-3 col-form-label" for="handle">${handleLabel}</label>
         <div class="col-sm-9">
-            <form:input path="handle" cssClass="form-control" size="30" maxlength="30"
+            <form:input path="handle" id="handle" cssClass="form-control" size="30" maxlength="30"
                         onkeyup="handlePreview(this)" data-msg-required="${handleRequired}" required="required"/>
         </div>
     </div>
@@ -52,7 +50,7 @@
             <spring:message code="createWebsite.weblogUrl" />:&nbsp;
             <%-- A live preview of the URL the handle will produce, not an
                  error: --accent, not the red it used to be hardcoded to. --%>
-            ${absoluteSiteURL}/<span id="handlePreview" style="color:var(--accent)"><c:choose><c:when test="${bean.handle != null}">${fn:escapeXml(bean.handle)}</c:when><c:otherwise>handle</c:otherwise></c:choose></span>
+            ${absoluteSiteURL}/<span id="handlePreview" class="handle-preview"><c:choose><c:when test="${bean.handle != null}">${fn:escapeXml(bean.handle)}</c:when><c:otherwise>handle</c:otherwise></c:choose></span>
             <br>
         </div>
     </div>
@@ -61,43 +59,45 @@
     <spring:message code="CreateWeblog.error.emailAddressInvalid" var="emailInvalid"/>
     <div class="row mb-3">
         <spring:message code="createWebsite.emailAddress" var="emailLabel"/>
-        <label class="col-sm-3 col-form-label">${emailLabel}</label>
+        <label class="col-sm-3 col-form-label" for="emailAddress">${emailLabel}</label>
         <div class="col-sm-9">
-            <form:input path="emailAddress" cssClass="form-control validate-email" size="40" maxlength="50"
+            <form:input path="emailAddress" id="emailAddress" cssClass="form-control validate-email" size="40" maxlength="50"
                         data-msg="${emailInvalid}" data-msg-required="${emailRequired}" required="required"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <spring:message code="createWebsite.locale" var="localeLabel"/>
-        <label class="col-sm-3 col-form-label">${localeLabel}</label>
+        <label class="col-sm-3 col-form-label" for="locale">${localeLabel}</label>
         <div class="col-sm-9">
-            <form:select path="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-select"/>
+            <form:select path="locale" id="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-select"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <spring:message code="createWebsite.timezone" var="tzLabel"/>
-        <label class="col-sm-3 col-form-label">${tzLabel}</label>
+        <label class="col-sm-3 col-form-label" for="timeZone">${tzLabel}</label>
         <div class="col-sm-9">
-            <form:select path="timeZone" items="${timeZonesList}" cssClass="form-select"/>
+            <form:select path="timeZone" id="timeZone" items="${timeZonesList}" cssClass="form-select"/>
         </div>
     </div>
 
-    <div class="row mb-3" ng-app="themeSelectModule" ng-controller="themeController">
-        <label class="col-sm-3 col-form-label">
+    <%-- ng-app/ng-controller removed: no Angular has ever been loaded on
+         this page, so both attributes were inert. --%>
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label" for="theme">
             <spring:message code="createWebsite.theme" />
         </label>
         <div class="col-sm-9">
-            <form:select path="theme" items="${themes}" itemValue="id" itemLabel="name" cssClass="form-select"
+            <form:select path="theme" id="theme" items="${themes}" itemValue="id" itemLabel="name" cssClass="form-select"
                          onchange="previewImage(this[selectedIndex].value)"/>
             <p id="themedescription"></p>
-            <p><img id="themeThumbnail" src="" class="img-fluid img-thumbnail" style="max-width: 30em" /></p>
+            <p><img id="themeThumbnail" src="" alt="" class="img-fluid img-thumbnail theme-thumb"/></p>
 
         </div>
     </div>
 
-    <button type="submit" class="btn btn-secondary"><spring:message code="createWebsite.button.save"/></button>
+    <button type="submit" class="btn btn-primary"><spring:message code="createWebsite.button.save"/></button>
 
     <input class="btn" type="button" value="<spring:message code='generic.cancel'/>"
            onclick="window.location='<c:url value='/roller-ui/menu.rol'/>'"/>
@@ -108,8 +108,8 @@
 
 <script>
 
-    document.forms[0].elements[0].focus();
-
+    <%-- A script here used to focus the form's first element, which is the
+         hidden CSRF input -- not the name field. autofocus on the field. --%>
     var saveButton;
 
     $( document ).ready(function() {

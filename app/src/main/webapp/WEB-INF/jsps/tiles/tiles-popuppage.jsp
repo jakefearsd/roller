@@ -17,12 +17,13 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 <!doctype html>
-<html>
+<html lang="${pageContext.response.locale.toLanguageTag()}">
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
+        <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <spring:message code="${pageTitle}" text="${pageTitle}"/></title>
         <jsp:include page="${tile_head}" />
         <style>
             <jsp:include page="${tile_styles}" />
@@ -31,24 +32,14 @@
 
     <body>
 
-        <div id="wrapper" class="container-fluid">
+        <div class="container-fluid">
             <div class="row">
-                <div id="leftcontent_wrap" class="col-md-1">
-                    <div id="leftcontent">
-                    </div>
-                </div>
-
-                <div id="centercontent_wrap" class="col-md-10">
-                    <div id="centercontent">
-                        <jsp:include page="${tile_messages}" />
-                        <jsp:include page="${tile_content}" />
-                    </div>
-                </div>
-
-                <div id="rightcontent_wrap" class="col-md-1">
-                    <div id="rightcontent">
-                    </div>
-                </div>
+                <div class="col-md-1"></div>
+                <main class="col-md-10">
+                    <jsp:include page="${tile_messages}" />
+                    <jsp:include page="${tile_content}" />
+                </main>
+                <div class="col-md-1"></div>
             </div>
         </div>
 

@@ -53,7 +53,6 @@ class LoginControllerTest {
         String view = controller.execute(ControllerTestFixture.requestFor(null), model, null);
 
         assertEquals(".Login", view);
-        assertEquals("ROLLERDB", model.getAttribute("authMethod"));
         assertEquals(List.of(), ControllerTestFixture.errors(model),
                 "an untried login form must not accuse the visitor of anything");
         assertEquals("loginPage.title", model.getAttribute("pageTitle"));

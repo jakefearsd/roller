@@ -26,54 +26,57 @@
 
     <div class="row mb-3">
         <spring:message code="userSettings.username" var="usernameLabel"/>
-        <label class="col-sm-3 col-form-label">${usernameLabel}</label>
+        <label class="col-sm-3 col-form-label" for="userName">${usernameLabel}</label>
         <div class="col-sm-9">
-            <form:input path="userName" cssClass="form-control" size="30" maxlength="30" readonly="true"
+            <form:input path="userName" id="userName" cssClass="form-control" size="30" maxlength="30" readonly="true"
                         onchange="formChanged()" onkeyup="formChanged()"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <spring:message code="userSettings.screenname" var="screennameLabel"/>
-        <label class="col-sm-3 col-form-label">${screennameLabel}</label>
+        <label class="col-sm-3 col-form-label" for="screenName">${screennameLabel}</label>
         <div class="col-sm-9">
-            <form:input path="screenName" cssClass="form-control" size="30" maxlength="30"
+            <form:input path="screenName" id="screenName" autofocus="autofocus"
+                        cssClass="form-control" size="30" maxlength="30"
                         onchange="formChanged()" onkeyup="formChanged()"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <spring:message code="userSettings.fullname" var="fullnameLabel"/>
-        <label class="col-sm-3 col-form-label">${fullnameLabel}</label>
+        <label class="col-sm-3 col-form-label" for="fullName">${fullnameLabel}</label>
         <div class="col-sm-9">
-            <form:input path="fullName" cssClass="form-control" size="30" maxlength="30"
+            <form:input path="fullName" id="fullName" cssClass="form-control" size="30" maxlength="30"
                         onchange="formChanged()" onkeyup="formChanged()"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <spring:message code="userSettings.email" var="emailLabel"/>
-        <label class="col-sm-3 col-form-label">${emailLabel}</label>
+        <label class="col-sm-3 col-form-label" for="emailAddress">${emailLabel}</label>
         <div class="col-sm-9">
-            <form:input path="emailAddress" cssClass="form-control" size="40" maxlength="40"
+            <form:input path="emailAddress" id="emailAddress" cssClass="form-control" size="40" maxlength="40"
                         onchange="formChanged()" onkeyup="formChanged()"/>
         </div>
     </div>
 
         <div class="row mb-3">
             <spring:message code="userSettings.password" var="passwordLabel"/>
-            <label class="col-sm-3 col-form-label">${passwordLabel}</label>
+            <label class="col-sm-3 col-form-label" for="passwordText">${passwordLabel}</label>
             <div class="col-sm-9">
-                <form:password path="passwordText" cssClass="form-control" size="20" maxlength="20"
+                <form:password path="passwordText" id="passwordText" autocomplete="new-password"
+                               cssClass="form-control" size="20" maxlength="20"
                                onchange="formChanged()" onkeyup="formChanged()"/>
             </div>
         </div>
 
         <div class="row mb-3">
             <spring:message code="userSettings.passwordConfirm" var="passwordConfirmLabel"/>
-            <label class="col-sm-3 col-form-label">${passwordConfirmLabel}</label>
+            <label class="col-sm-3 col-form-label" for="passwordConfirm">${passwordConfirmLabel}</label>
             <div class="col-sm-9">
-                <form:password path="passwordConfirm" cssClass="form-control" size="20" maxlength="20"
+                <form:password path="passwordConfirm" id="passwordConfirm" autocomplete="new-password"
+                               cssClass="form-control" size="20" maxlength="20"
                                onchange="formChanged()" onkeyup="formChanged()"/>
             </div>
         </div>
@@ -81,21 +84,21 @@
 
     <div class="row mb-3">
         <spring:message code="userSettings.locale" var="localeLabel"/>
-        <label class="col-sm-3 col-form-label">${localeLabel}</label>
+        <label class="col-sm-3 col-form-label" for="locale">${localeLabel}</label>
         <div class="col-sm-9">
-            <form:select path="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-select"/>
+            <form:select path="locale" id="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-select"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <spring:message code="userSettings.timeZone" var="tzLabel"/>
-        <label class="col-sm-3 col-form-label">${tzLabel}</label>
+        <label class="col-sm-3 col-form-label" for="timeZone">${tzLabel}</label>
         <div class="col-sm-9">
-            <form:select path="timeZone" items="${timeZonesList}" cssClass="form-select"/>
+            <form:select path="timeZone" id="timeZone" items="${timeZonesList}" cssClass="form-select"/>
         </div>
     </div>
 
-    <button type="submit" id="saveButton" class="btn btn-secondary"><spring:message code="generic.save"/></button>
+    <button type="submit" id="saveButton" class="btn btn-primary"><spring:message code="generic.save"/></button>
 
     <input class="btn" type="button" value="<spring:message code='generic.cancel'/>"
            onclick="window.location='<c:url value='/roller-ui/menu.rol'/>'"/>

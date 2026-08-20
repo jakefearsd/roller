@@ -596,6 +596,16 @@ label,
     margin: 10px;
 }
 
+/* The one-line orientation sentence under a page title. Used on ~15 admin
+   screens and, until now, styled NOWHERE -- so it rendered as body prose at
+   full ink and full size, competing with the title above it. Same quiet
+   register as p.pagetip below it, which sits one level further down. */
+p.subtitle {
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    margin: 0 0 1em;
+}
+
 /* page tips - instructional text below page subtitle */
 
 p.pagetip {
@@ -606,6 +616,14 @@ p.pagetip {
 }
 
 /* main menu */
+
+/* The icon/label gap used to be a hardcoded &nbsp; in MainMenu.jsp -- a
+   non-breaking space is content, and it does not scale with the type. */
+.mm_weblog_name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
 
 .mm_subtable_label {
     width: 8em;
@@ -748,7 +766,12 @@ table.mm_table_actions td {
 .editor-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 252px;
-    gap: 26px;
+    /* The rail stacks its own boxes 14px apart (.editor-rail's gap below),
+       so a uniform 26px gap here put a visible 26px seam between the rail
+       and .editor-rail-extra in the middle of an otherwise 14px stack. The
+       column gutter and the row rhythm are different measurements. */
+    column-gap: 26px;
+    row-gap: 14px;
     align-items: start;
 }
 
@@ -1403,6 +1426,36 @@ td.scheduledentry, tr.scheduledentry {
     border-top-right-radius: 0;
 }
 
+/* Replaces inline style="..." attributes that had accumulated on four
+   admin screens. Each is a single spacing or sizing decision that belongs
+   with the rest of the design system rather than in the markup. */
+.install-page {
+    margin-top: 5em;
+}
+
+.handle-preview {
+    color: var(--accent);
+}
+
+.theme-thumb {
+    max-width: 30em;
+}
+
+/* Maintenance: one bordered row per operation, so the three long-running
+   actions read as three choices instead of one paragraph with buttons in it. */
+.maintenance-op {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.maintenance-op p {
+    margin: 0 0 10px;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+}
+
 /* Sticky footer styles */
 
 html {
@@ -1619,6 +1672,12 @@ div.image-controls input {
     background-color: color-mix(in srgb, var(--bad) 25%, var(--surface)) !important;
     color: var(--ink) !important;
 }
+/* MainMenu's entry count was the one badge still shipping stock Bootstrap
+   grey next to four tokenized siblings. */
+.badge.bg-secondary {
+    background-color: color-mix(in srgb, var(--line) 55%, var(--surface)) !important;
+    color: var(--ink-soft) !important;
+}
 
 /* Quiet Instrument: flash messages (tiles/messages.jsp, #messages/#errors --
    ids pinned, restyled only) and the theme-change notices on ThemeEdit.jsp
@@ -1646,6 +1705,17 @@ div.image-controls input {
     --bs-alert-bg: color-mix(in srgb, var(--bad) 15%, var(--surface));
     --bs-alert-border-color: color-mix(in srgb, var(--bad) 45%, var(--surface));
     --bs-alert-color: var(--ink);
+}
+
+/* Flash messages render as a list even when there is only one of them, so
+   the markup is the same shape whether one thing or five things happened.
+   Bullets would read as a checklist rather than a confirmation. Moved here
+   from an inline <style> block in tiles/messages.jsp -- that block was
+   re-emitted on every admin page render. */
+.alert ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
 }
 
 
