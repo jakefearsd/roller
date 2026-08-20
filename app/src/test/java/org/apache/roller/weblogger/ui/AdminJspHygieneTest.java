@@ -25,6 +25,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -378,5 +381,64 @@ class AdminJspHygieneTest {
         }
         assertTrue(found.isEmpty(), "hardcoded English still in the JSPs:\n  "
                 + String.join("\n  ", found));
+    }
+
+    // ---------------------------------------------------------------- Task 13
+
+    /**
+     * A {@code <label for="x">} with no {@code id="x"} on the page is not a
+     * label -- it is styled text. Clicking it does not focus the control, and
+     * a screen reader announces the input unlabelled. Two things make this
+     * easy to get wrong here and worth pinning rather than reviewing:
+     * Spring's {@code form:} tags emit {@code id="<path>"} by default (so the
+     * target often exists already and only the {@code for=} is missing), and
+     * a label with NO {@code for=} at all looks correct in a diff.
+     *
+     * <p>Scoped to the admin/core/tiles tree this package owns; the editor
+     * tree has its own scan (EditorJspLabelBindingTest).
+     *
+     * <p>Targets containing EL are skipped -- {@code globalConfig_$&#123;pd.x&#125;}
+     * resolves per property at render time and cannot be checked as a literal;
+     * the check is that a matching id EXPRESSION exists in the same file.
+     */
+    @Test
+    void everyLabelForTargetsAnIdInTheSameFile() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (String dir : List.of("admin", "core", "tiles")) {
+            try (Stream<Path> files = Files.walk(JSPS.resolve(dir))) {
+                files.filter(f -> f.toString().endsWith(".jsp")).forEach(f -> {
+                    String src = read(f);
+                    Matcher m = Pattern.compile("<label[^>]*\\bfor=[\"']([^\"']+)[\"']").matcher(src);
+                    while (m.find()) {
+                        String target = m.group(1);
+                        if (!src.contains("id=\"" + target + "\"") && !src.contains("id='" + target + "'")) {
+                            violations.add(f.getFileName() + ": label for=\"" + target + "\" has no target");
+                        }
+                    }
+                });
+            }
+        }
+        assertTrue(violations.isEmpty(), "dangling <label for=>:\n  " + String.join("\n  ", violations));
+    }
+
+    /**
+     * The complement of the test above, and the one that actually found the
+     * ~40 unbound controls on these five screens: a label that carries no
+     * {@code for=} at all. Restricted to the five form screens repaired here
+     * so the assertion stays a repair pin rather than a general style rule.
+     */
+    @Test
+    void theRepairedFormScreensBindEveryLabel() {
+        List<String> violations = new ArrayList<>();
+        for (String screen : List.of("admin/GlobalConfig.jsp", "admin/UserEdit.jsp",
+                "core/Profile.jsp", "core/CreateWeblog.jsp", "core/Setup.jsp")) {
+            String src = jsp(screen);
+            Matcher m = Pattern.compile("<label(?![^>]*\\bfor=)[^>]*>(?!\\s*</label>)").matcher(src);
+            while (m.find()) {
+                int line = (int) src.chars().limit(m.start()).filter(c -> c == '\n').count() + 1;
+                violations.add(screen + ":" + line + " label with no for=");
+            }
+        }
+        assertTrue(violations.isEmpty(), "unbound labels:\n  " + String.join("\n  ", violations));
     }
 }

@@ -27,9 +27,9 @@
     <spring:message code="CreateWeblog.error.nameNull" var="nameRequired"/>
     <div class="row mb-3">
         <spring:message code="generic.name" var="nameLabel"/>
-        <label class="col-sm-3 col-form-label">${nameLabel}</label>
+        <label class="col-sm-3 col-form-label" for="name">${nameLabel}</label>
         <div class="col-sm-9">
-            <form:input path="name" cssClass="form-control" size="30" maxlength="30"
+            <form:input path="name" id="name" cssClass="form-control" size="30" maxlength="30"
                         data-msg-required="${nameRequired}" required="required"/>
         </div>
     </div>
@@ -37,9 +37,9 @@
     <spring:message code="CreateWeblog.error.handleNull" var="handleRequired"/>
     <div class="row mb-3">
         <spring:message code="createWebsite.handle" var="handleLabel"/>
-        <label class="col-sm-3 col-form-label">${handleLabel}</label>
+        <label class="col-sm-3 col-form-label" for="handle">${handleLabel}</label>
         <div class="col-sm-9">
-            <form:input path="handle" cssClass="form-control" size="30" maxlength="30"
+            <form:input path="handle" id="handle" cssClass="form-control" size="30" maxlength="30"
                         onkeyup="handlePreview(this)" data-msg-required="${handleRequired}" required="required"/>
         </div>
     </div>
@@ -59,35 +59,35 @@
     <spring:message code="CreateWeblog.error.emailAddressInvalid" var="emailInvalid"/>
     <div class="row mb-3">
         <spring:message code="createWebsite.emailAddress" var="emailLabel"/>
-        <label class="col-sm-3 col-form-label">${emailLabel}</label>
+        <label class="col-sm-3 col-form-label" for="emailAddress">${emailLabel}</label>
         <div class="col-sm-9">
-            <form:input path="emailAddress" cssClass="form-control validate-email" size="40" maxlength="50"
+            <form:input path="emailAddress" id="emailAddress" cssClass="form-control validate-email" size="40" maxlength="50"
                         data-msg="${emailInvalid}" data-msg-required="${emailRequired}" required="required"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <spring:message code="createWebsite.locale" var="localeLabel"/>
-        <label class="col-sm-3 col-form-label">${localeLabel}</label>
+        <label class="col-sm-3 col-form-label" for="locale">${localeLabel}</label>
         <div class="col-sm-9">
-            <form:select path="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-select"/>
+            <form:select path="locale" id="locale" items="${localesList}"  itemLabel="displayName" cssClass="form-select"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <spring:message code="createWebsite.timezone" var="tzLabel"/>
-        <label class="col-sm-3 col-form-label">${tzLabel}</label>
+        <label class="col-sm-3 col-form-label" for="timeZone">${tzLabel}</label>
         <div class="col-sm-9">
-            <form:select path="timeZone" items="${timeZonesList}" cssClass="form-select"/>
+            <form:select path="timeZone" id="timeZone" items="${timeZonesList}" cssClass="form-select"/>
         </div>
     </div>
 
     <div class="row mb-3" ng-app="themeSelectModule" ng-controller="themeController">
-        <label class="col-sm-3 col-form-label">
+        <label class="col-sm-3 col-form-label" for="theme">
             <spring:message code="createWebsite.theme" />
         </label>
         <div class="col-sm-9">
-            <form:select path="theme" items="${themes}" itemValue="id" itemLabel="name" cssClass="form-select"
+            <form:select path="theme" id="theme" items="${themes}" itemValue="id" itemLabel="name" cssClass="form-select"
                          onchange="previewImage(this[selectedIndex].value)"/>
             <p id="themedescription"></p>
             <p><img id="themeThumbnail" src="" alt="" class="img-fluid img-thumbnail theme-thumb"/></p>

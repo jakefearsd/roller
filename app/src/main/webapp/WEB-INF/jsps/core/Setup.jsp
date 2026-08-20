@@ -94,9 +94,9 @@
 
                 <div class="row mb-3">
                     <spring:message code="frontpageConfig.frontpageBlogName" var="frontpageBlogLabel"/>
-                    <label class="col-sm-3 col-form-label">${frontpageBlogLabel}</label>
+                    <label class="col-sm-3 col-form-label" for="frontpageBlog">${frontpageBlogLabel}</label>
                     <div class="col-sm-9">
-                        <select name="frontpageBlog" class="form-select">
+                        <select id="frontpageBlog" name="frontpageBlog" class="form-select">
                             <%-- Mirrors Maintenance.jsp's placeholder pattern: a
                                  disabled option carries "selected" only while
                                  nothing is configured yet, so a re-save can never
@@ -116,9 +116,9 @@
 
                 <div class="row mb-3">
                     <spring:message code="frontpageConfig.frontpageAggregated" var="aggregatedLabel"/>
-                    <label class="col-sm-3 col-form-label">${aggregatedLabel}</label>
+                    <label class="col-sm-3 col-form-label" for="frontpageAggregated">${aggregatedLabel}</label>
                     <div class="col-sm-9">
-                        <input type="checkbox" class="form-check-input" name="aggregated" value="true"
+                        <input type="checkbox" id="frontpageAggregated" class="form-check-input" name="aggregated" value="true"
                             <c:if test="${frontpageAggregated}">checked="checked"</c:if>
                         />
                     </div>
