@@ -52,6 +52,77 @@
      needs rides on the bar's data- attributes below. --%>
 <script src="<c:url value='/theme/scripts/roller-draft.js'/>"></script>
 <script src="<c:url value='/theme/scripts/roller-guard-submit.js'/>"></script>
+<script>
+    <%-- Last-used category. Keyed per install and per weblog, beside the
+         draft keys and for the same reason: two Roller installs on one origin
+         must not share storage, and a category id from weblog A means nothing
+         on weblog B. Purely a default for a NEW entry -- an entry being edited
+         already has its own category, and preselecting over that would silently
+         refile it. If the stored id is no longer in the list (the category was
+         renamed away or deleted) nothing happens; the select keeps its own
+         default. No schema, no server round trip. --%>
+    (function () {
+        var key = "roller.lastCategory.v1:${pageContext.request.contextPath}:${actionWeblog.handle}";
+        document.addEventListener('DOMContentLoaded', function () {
+            var select = document.getElementById('entry_bean_categoryId');
+            if (!select) {
+                return;
+            }
+            if ("${actionName}" === "entryAdd") {
+                var last = null;
+                try {
+                    last = window.localStorage.getItem(key);
+                } catch (e) {
+                    // Private-browsing modes throw on access rather than
+                    // returning null. A missing convenience, not an error.
+                    last = null;
+                }
+                if (last && select.querySelector("option[value='" + last + "']")) {
+                    select.value = last;
+                }
+            }
+            var form = document.getElementById('entry');
+            if (form) {
+                form.addEventListener('submit', function () {
+                    try {
+                        window.localStorage.setItem(key, select.value);
+                    } catch (e) {
+                        // Same as above: storage unavailable, nothing to do.
+                    }
+                });
+            }
+        });
+    })();
+
+    <%-- Session-expiry banner: see the markup comment above it. --%>
+    <%-- On ready: this script block sits above the markup it looks for. --%>
+    document.addEventListener('DOMContentLoaded', function () {
+        var bar = document.getElementById('sessionExpiryBar');
+        if (!bar) {
+            return;
+        }
+        var timeout = parseInt(bar.dataset.timeout, 10);
+        if (!(timeout > 180)) {
+            // A session shorter than the warning lead time would show the
+            // banner permanently, which teaches people to ignore it.
+            return;
+        }
+        var warnAfterMs = (timeout - 120) * 1000;
+        var timer = null;
+        var arm = function () {
+            bar.hidden = true;
+            window.clearTimeout(timer);
+            timer = window.setTimeout(function () {
+                bar.hidden = false;
+            }, warnAfterMs);
+        };
+        ['keydown', 'click', 'input'].forEach(function (type) {
+            document.addEventListener(type, arm, true);
+        });
+        arm();
+    });
+</script>
+
 
 <%-- Request scope, not page scope: EntryEditor.jsp arrives via jsp:include
      and cannot see page-scoped variables set here. --%>
@@ -75,6 +146,17 @@
     <%-- The writing surface: title, permalink, editor --%>
 
     <div class="editor-main">
+
+        <%-- Session-expiry warning. Purely local arithmetic against the
+             container's own maxInactiveInterval -- no endpoint, no polling,
+             nothing that would itself keep the session alive. The timer
+             restarts on any input, so it measures inactivity the same way the
+             container does; clock drift can only make it warn EARLY, which is
+             the safe direction. --%>
+        <div id="sessionExpiryBar" class="draft-bar" hidden role="status" aria-live="polite"
+             data-timeout="${pageContext.session.maxInactiveInterval}">
+            <span class="draft-bar-text"><spring:message code="session.expiringSoon"/></span>
+        </div>
 
         <%-- Draft recovery. Hidden until roller-draft.js finds a local
              snapshot the server does not have. type="button" is load-bearing:

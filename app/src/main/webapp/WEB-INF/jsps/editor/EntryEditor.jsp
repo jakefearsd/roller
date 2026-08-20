@@ -118,7 +118,40 @@
          day, but it would edit Markdown rather than produce HTML. --%>
     var rollerEditor = null;
 
+    <%-- Click the real buttons rather than submitting the form: the buttons
+         carry the formaction that decides draft-vs-publish, and a bare
+         form.submit() would post to the form's own action and silently pick
+         the wrong one. --%>
+    function rollerSaveDraft() {
+        var button = document.querySelector("#entry button[formaction$='saveDraft.rol']");
+        if (button) {
+            button.click();
+        }
+    }
+
+    function rollerPublish() {
+        var button = document.querySelector("#entry button[formaction$='publish.rol']");
+        if (button) {
+            button.click();
+        }
+    }
+
     $(document).ready(function () {
+        <%-- CodeMirror's extraKeys only fire with focus inside the editor.
+             This covers the title field, the rail and the SEO drawer. --%>
+        document.addEventListener('keydown', function (event) {
+            if (!(event.ctrlKey || event.metaKey)) {
+                return;
+            }
+            if (event.key === 's' || event.key === 'S') {
+                event.preventDefault();
+                rollerSaveDraft();
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                rollerPublish();
+            }
+        });
+
         rollerEditor = new EasyMDE({
             element: document.getElementById('edit_content'),
             autoDownloadFontAwesome: false,
@@ -128,7 +161,18 @@
             toolbar: ['bold', 'italic', 'heading', '|',
                       'quote', 'unordered-list', 'ordered-list', '|',
                       'link', 'table', '|', 'preview', 'side-by-side', 'guide'],
-            previewRender: rollerRenderPreview
+            previewRender: rollerRenderPreview,
+            <%-- Ctrl/Cmd-S saves the draft, Ctrl-Enter publishes. Both
+                 preventDefault: without it Ctrl-S opens the browser's Save
+                 dialog over the editor, which is what happens today. These
+                 only fire while focus is INSIDE CodeMirror; the document-level
+                 pair below covers the title field and the rail. --%>
+            extraKeys: {
+                'Cmd-S': rollerSaveDraft,
+                'Ctrl-S': rollerSaveDraft,
+                'Ctrl-Enter': rollerPublish,
+                'Cmd-Enter': rollerPublish
+            }
         });
 
         <%-- Warn before leaving with unsaved edits, and stand down on submit.

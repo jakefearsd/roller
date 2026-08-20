@@ -116,6 +116,17 @@
 
     $(document).ready(function () {
         $("#newDirectoryName").on("keyup", maintainDirectoryButtonState);
+        // Enter in a one-field flow should do the one thing the flow is for.
+        // The button is disabled until the field has content, so this checks
+        // the same state rather than duplicating the rule.
+        $("#newDirectoryName").on("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                if (!$("#newDirectoryButton").prop("disabled")) {
+                    onCreateDirectory();
+                }
+            }
+        });
         $("#newDirectoryButton").prop("disabled", true);
     });
 

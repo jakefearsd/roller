@@ -330,6 +330,13 @@
 
     var rollerEditor = null;
 
+    function rollerSavePage() {
+        var button = document.querySelector("#pageEditForm button[type='submit']");
+        if (button) {
+            button.click();
+        }
+    }
+
     $(document).ready(function () {
         rollerEditor = new EasyMDE({
             element: document.getElementById('edit_content'),
@@ -339,7 +346,26 @@
             minHeight: '400px',
             toolbar: ['bold', 'italic', 'heading', '|',
                       'quote', 'unordered-list', 'ordered-list', '|',
-                      'link', 'table', '|', 'preview', 'side-by-side', 'guide']
+                      'link', 'table', '|', 'preview', 'side-by-side', 'guide'],
+            <%-- Same shortcuts as the entry editor. The page form has one
+                 Save button, so Ctrl-Enter and Ctrl-S do the same thing here
+                 rather than one of them doing nothing. --%>
+            extraKeys: {
+                'Cmd-S': rollerSavePage,
+                'Ctrl-S': rollerSavePage,
+                'Ctrl-Enter': rollerSavePage,
+                'Cmd-Enter': rollerSavePage
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (!(event.ctrlKey || event.metaKey)) {
+                return;
+            }
+            if (event.key === 's' || event.key === 'S' || event.key === 'Enter') {
+                event.preventDefault();
+                rollerSavePage();
+            }
         });
 
         <%-- Bound once, tracking a dirty flag -- the same fix as

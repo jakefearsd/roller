@@ -244,6 +244,17 @@
         saveCategoryButton.prop("disabled", false);
     }
 
+    <%-- The modal's form carries no submit button, so the browser's implicit
+         submission never fires and Enter did nothing whatever. Bound on the
+         three text inputs only -- not on the form -- so a future textarea in
+         there keeps its newlines. --%>
+    $(document).on('keydown', "#category-edit-modal input[type='text']", function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            submitEditedCategory();
+        }
+    });
+
     function submitEditedCategory() {
 
         // if name is empty reject and show error message
