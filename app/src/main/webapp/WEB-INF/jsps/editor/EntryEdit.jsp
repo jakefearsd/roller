@@ -372,9 +372,16 @@
         </div>
 
         <c:if test="${actionName == 'entryEdit'}">
-            <%-- delete: a quiet text link, not a red button --%>
-            <button type="button" class="delete-link"
-                    onclick="showDeleteModal('${entry.id}', '${fn:escapeXml(entry.title)}' )"><spring:message code="weblogEdit.deleteEntry"/></button>
+            <%-- delete: a quiet text link, not a red button. id/title ride in
+                 data-* attributes rather than an interpolated onclick string --
+                 fn:escapeXml renders an apostrophe as &#039;, which the HTML
+                 parser decodes back to ' BEFORE the onclick attribute compiles
+                 as JavaScript, so an entry titled e.g. "Maiia's trip" made this
+                 button a permanent SyntaxError. See the delegated handler
+                 below (same convention as MediaFileView.jsp:493). --%>
+            <button type="button" id="deleteEntryButton" class="delete-link"
+                    data-entry-id="${entry.id}" data-entry-title="${fn:escapeXml(entry.title)}"
+                    aria-label="<spring:message code='weblogEdit.deleteEntry'/>: ${fn:escapeXml(entry.title)}"><spring:message code="weblogEdit.deleteEntry"/></button>
         </c:if>
 
     </div>
@@ -637,6 +644,18 @@
         $('#postTitleLabel').text(postTitle);
         $('#removeId').val(postId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-entry-modal')).show();
+    }
+
+    <%-- The delete button's id/title ride in data-* attributes (see the
+         comment above the button); this reads them rather than trusting an
+         onclick built by string concatenation. The button only renders on
+         entryEdit, not entryAdd, so this script (shared by both actions)
+         guards against the element being absent. --%>
+    var deleteEntryButton = document.getElementById('deleteEntryButton');
+    if (deleteEntryButton) {
+        deleteEntryButton.addEventListener('click', function () {
+            showDeleteModal(this.dataset.entryId, this.dataset.entryTitle);
+        });
     }
 
     <%-- permalink copy control --%>

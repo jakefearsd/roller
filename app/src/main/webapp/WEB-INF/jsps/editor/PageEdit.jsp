@@ -236,9 +236,18 @@
 
     <c:if test="${not empty bean.id}">
         <span style="float:right">
-            <input class="btn btn-danger" type="button"
-                   value="<spring:message code="generic.delete"/>"
-                   onclick="showPageDeleteModal('${bean.id}', '${fn:escapeXml(bean.title)}')"/>
+            <%-- id/title ride in data-* attributes, not an interpolated
+                 onclick string -- fn:escapeXml renders an apostrophe as
+                 &#039;, which the HTML parser decodes back to ' BEFORE the
+                 onclick attribute compiles as JavaScript, so a page titled
+                 e.g. "Maiia's bio" made this control a permanent
+                 SyntaxError. Delegated handler below (same convention as
+                 MediaFileView.jsp:493). --%>
+            <button type="button" id="pageDeleteButton" class="btn btn-danger"
+                    data-page-id="${bean.id}" data-page-title="${fn:escapeXml(bean.title)}"
+                    aria-label="<spring:message code='generic.delete'/>: ${fn:escapeXml(bean.title)}">
+                <spring:message code="generic.delete"/>
+            </button>
         </span>
     </c:if>
 
@@ -433,6 +442,16 @@
         $('#page-delete-id').val(pageId);
         $('#page-delete-title').text(pageTitle);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-page-modal')).show();
+    }
+
+    <%-- The delete button only renders once the page has an id (see the
+         c:if above), so this reads the id/title off it directly rather than
+         from a form-level dataset lookup. --%>
+    var pageDeleteButton = document.getElementById('pageDeleteButton');
+    if (pageDeleteButton) {
+        pageDeleteButton.addEventListener('click', function () {
+            showPageDeleteModal(this.dataset.pageId, this.dataset.pageTitle);
+        });
     }
 
 </script>

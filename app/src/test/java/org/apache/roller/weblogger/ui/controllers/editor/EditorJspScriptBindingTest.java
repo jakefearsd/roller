@@ -103,4 +103,20 @@ class EditorJspScriptBindingTest {
         }
         assertTrue(violations.isEmpty(), String.join("\n", violations));
     }
+
+    /** onclick attributes must not interpolate escaped author text -- the entity
+     *  decodes before the JS compiles and an apostrophe in a title becomes a
+     *  SyntaxError. Fix pattern: data-* + delegated handler (MediaFileView:493). */
+    @Test
+    void noOnclickInterpolatesAuthorText() throws Exception {
+        List<String> violations = new ArrayList<>();
+        Pattern bad = Pattern.compile("onclick=\"[^\"]*\\$\\{fn:escapeXml");
+        for (Path jsp : editorJsps()) {
+            String src = Files.readString(jsp);
+            if (bad.matcher(src).find()) {
+                violations.add(jsp.getFileName() + " interpolates escaped author text into onclick");
+            }
+        }
+        assertTrue(violations.isEmpty(), String.join("\n", violations));
+    }
 }

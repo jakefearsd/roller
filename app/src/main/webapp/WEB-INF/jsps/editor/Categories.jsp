@@ -63,13 +63,21 @@
                         <c:set var="categoryName" value="${fn:escapeXml(category.name)}"/>
                         <c:set var="categoryDesc" value="${fn:escapeXml(category.description)}"/>
                         <c:set var="categoryImage" value="${fn:escapeXml(category.image)}"/>
-                        <a href="#" onclick="showCategoryEditModal(
-                                '${categoryId}',
-                                '${categoryName}',
-                                '${categoryDesc}',
-                                '${categoryImage}' )">
-                            <span class="bi bi-pencil-square"></span>
-                        </a>
+                        <%-- id/name/description/image ride in data-*
+                             attributes, not an interpolated onclick string --
+                             fn:escapeXml renders an apostrophe as &#039;,
+                             which the HTML parser decodes back to ' BEFORE
+                             the onclick attribute compiles as JavaScript, so
+                             a category named e.g. "Maiia's Portraits" made
+                             this control a permanent SyntaxError. Delegated
+                             handler below (same convention as
+                             MediaFileView.jsp:493). --%>
+                        <button type="button" class="btn btn-link p-0 align-baseline border-0 category-edit-btn"
+                                data-category-id="${categoryId}" data-category-name="${categoryName}"
+                                data-category-desc="${categoryDesc}" data-category-image="${categoryImage}"
+                                aria-label="<spring:message code='generic.edit'/>: ${categoryName}">
+                            <span class="bi bi-pencil-square" aria-hidden="true"></span>
+                        </button>
 
                     </td>
 
@@ -79,12 +87,12 @@
                             <c:set var="categoryId" value="${category.id}"/>
                             <c:set var="categoryName" value="${fn:escapeXml(category.name)}"/>
                             <c:set var="categoryInUse" value="${category.inUse}"/>
-                            <a href="#" onclick="showCategoryDeleteModal(
-                                    '${categoryId}',
-                                    '${categoryName}',
-                                    ${categoryInUse} )" >
-                                <span class="bi bi-trash"></span>
-                            </a>
+                            <button type="button" class="btn btn-link p-0 align-baseline border-0 category-delete-btn"
+                                    data-category-id="${categoryId}" data-category-name="${categoryName}"
+                                    data-category-in-use="${categoryInUse}"
+                                    aria-label="<spring:message code='categoriesForm.remove'/>: ${categoryName}">
+                                <span class="bi bi-trash" aria-hidden="true"></span>
+                            </button>
 
                         </c:if>
                     </td>
@@ -99,9 +107,10 @@
 <%-- Empty state: an invitation, not a strip of table. showCategoryAddModal()
      is declared by CategoriesSidebar.jsp, which always renders alongside this
      tile, and drives the same #category-edit-modal the sidebar link opens.
-     A <button>, deliberately not an <a>: CategoryIT reaches the sidebar link
-     by "a[onclick*='showCategoryAddModal']" and must keep matching exactly
-     one element. --%>
+     Both this button and the sidebar's are now <button>s (a11y sweep), so
+     CategoryIT can no longer disambiguate them by element type; it reaches
+     the sidebar one by its id (#addCategoryButton, see CategoriesSidebar.jsp)
+     instead, which is why THIS button deliberately has no id of its own. --%>
 <c:if test="${empty allCategories}">
     <div class="empty-state">
         <p class="empty-state-title"><spring:message code="empty.categories.title"/></p>
@@ -185,6 +194,14 @@
     function categoryField( name ) {
         return $("#categoryEditForm [name='" + name + "']");
     }
+
+    <%-- Delegated: a row's id/name/description/image ride in data-*
+         attributes on the button (see the comment above it), never in an
+         inline onclick string. --%>
+    $(document).on('click', '.category-edit-btn', function () {
+        showCategoryEditModal(this.dataset.categoryId, this.dataset.categoryName,
+                this.dataset.categoryDesc, this.dataset.categoryImage);
+    });
 
     function showCategoryEditModal( id, name, desc, image ) {
         feedbackAreaEdit.html("");
@@ -341,6 +358,17 @@
 </div>
 
 <script>
+
+    <%-- Delegated: a row's id/name/in-use flag ride in data-* attributes on
+         the button (see the comment above it), never in an inline onclick
+         string. data-category-in-use is the string "true"/"false" (an EL
+         boolean stringified into an attribute), so it is compared as a
+         string here rather than passed through as the JS boolean the old
+         onclick built. --%>
+    $(document).on('click', '.category-delete-btn', function () {
+        showCategoryDeleteModal(this.dataset.categoryId, this.dataset.categoryName,
+                this.dataset.categoryInUse === 'true');
+    });
 
     function showCategoryDeleteModal( id, name, inUse ) {
         // Same story as the edit modal: this set #categoryRemove_removeId,

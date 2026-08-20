@@ -26,10 +26,16 @@
     <c:set var="categoryDesc" value="${post.description}"/>
     <c:set var="categoryImage" value="${post.image}"/>
 
-    <a href="#" onclick="showCategoryAddModal()">
-        <span class="bi bi-plus-lg"></span>
+    <%-- <button>, not <a>: a control that triggers a JS action rather than
+         navigating should be a button (a11y sweep). id="addCategoryButton"
+         is what CategoryIT keys on now that Categories.jsp's own empty-state
+         button is also a <button> and element type can no longer
+         disambiguate the two. showCategoryAddModal() itself carries no
+         author-controlled text, so it stays a plain onclick call. --%>
+    <button type="button" id="addCategoryButton" class="btn btn-link p-0 align-baseline border-0" onclick="showCategoryAddModal()">
+        <span class="bi bi-plus-lg" aria-hidden="true"></span>
         <spring:message code="categoriesForm.addCategory"/>
-    </a>
+    </button>
 </p>
 
 <script>

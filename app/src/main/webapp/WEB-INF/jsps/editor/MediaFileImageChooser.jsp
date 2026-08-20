@@ -87,11 +87,22 @@
                             <li class="align-images"
                                 onmouseover="highlight(this, true)" onmouseout="highlight(this, false)">
 
+                                <%-- name/url/id ride in data-* attributes, not
+                                     an onclick built by string concatenation --
+                                     this is the only route to insert an image
+                                     into an entry, and fn:escapeXml renders an
+                                     apostrophe as &#039;, which the HTML parser
+                                     decodes back to ' BEFORE this onclick
+                                     compiled as JavaScript -- so a file named
+                                     e.g. "Maiia's portrait.jpg" made the tile
+                                     permanently unclickable. See the delegated
+                                     click binding below (same convention as
+                                     MediaFileView.jsp:493). --%>
                                 <div class="mediaObject"
-                                     onclick="onSelectMediaFile('${fn:escapeXml(mediaFile.name)}',
-                                             '${mediaFileURL}',
-                                             '${mediaFile.isImageFile()}',
-                                             '${mediaFile.id}')">
+                                     data-media-file-name="${fn:escapeXml(mediaFile.name)}"
+                                     data-media-file-url="${fn:escapeXml(mediaFileURL)}"
+                                     data-media-file-is-image="${mediaFile.isImageFile()}"
+                                     data-media-file-id="${mediaFile.id}">
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
@@ -134,6 +145,17 @@
     function onSelectMediaFile(name, url, isImage, id) {
         window.parent.onSelectMediaFile(name, url, isImage, id);
     }
+
+    <%-- Delegated on the grid: a tile's name/url/isImage/id ride in data-*
+         attributes (see the comment above the loop), never in an inline
+         onclick string. isImage stays a string here ("true"/"false") because
+         window.parent.onSelectMediaFile (EntryEditor.jsp/PageEdit.jsp)
+         already compares it with === "true", the same way the old
+         onclick-built string argument was compared. --%>
+    $(document).on('click', '.mediaObject', function () {
+        onSelectMediaFile(this.dataset.mediaFileName, this.dataset.mediaFileUrl,
+                this.dataset.mediaFileIsImage, this.dataset.mediaFileId);
+    });
 
     function highlight(el, flag) {
         if (flag) {

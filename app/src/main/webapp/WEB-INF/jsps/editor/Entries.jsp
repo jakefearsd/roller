@@ -179,14 +179,19 @@
     </td>
 
     <td>
-        <c:set var="postId" value="${post.id}"/>
-        <c:set var="postTitle" value="${fn:escapeXml(post.title)}"/>
-        <a href="#"
-            onclick="showDeleteModal('${postId}', '${postTitle}' )">
-            <span class="bi bi-trash"
+        <%-- id/title ride in data-* attributes, not an interpolated onclick
+             string -- fn:escapeXml renders an apostrophe as &#039;, which the
+             HTML parser decodes back to ' BEFORE the onclick attribute
+             compiles as JavaScript, so an entry titled e.g. "Maiia's trip"
+             made this control a permanent SyntaxError. Delegated handler
+             below (same convention as MediaFileView.jsp:493). --%>
+        <button type="button" class="btn btn-link p-0 align-baseline border-0 entry-delete-btn"
+                data-entry-id="${post.id}" data-entry-title="${fn:escapeXml(post.title)}"
+                aria-label="<spring:message code='generic.delete'/>: ${fn:escapeXml(post.title)}">
+            <span class="bi bi-trash" aria-hidden="true"
                   title="<spring:message code="generic.delete"/>">
             </span>
-        </a>
+        </button>
     </td>
 
     </tr>
@@ -358,6 +363,13 @@
         $('#removeId').val(postId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-entry-modal')).show();
     }
+
+    <%-- Delegated on the table body: a row's id/title ride in data-*
+         attributes (see the comment above the button), never in an inline
+         onclick string. --%>
+    $(document).on('click', '.entry-delete-btn', function () {
+        showDeleteModal(this.dataset.entryId, this.dataset.entryTitle);
+    });
 
     $(function () {
         var selection = function () {

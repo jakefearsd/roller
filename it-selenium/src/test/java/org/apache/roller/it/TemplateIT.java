@@ -163,10 +163,15 @@ class TemplateIT extends RollerIT {
     /**
      * Removes a template through the list's trash control, which asks for
      * confirmation through a native dialog.
+     *
+     * <p>Targets the button by its {@code data-template-name} attribute, not
+     * an onclick substring: the delete control's id/name ride in data-*
+     * attributes now (apostrophe-in-onclick fix), so there is no onclick
+     * text to match against any more.
      */
     private void removeTemplate(String name) {
         openPath(TEMPLATES);
-        $("a[onclick*=\"confirmTemplateDelete\"][onclick*=\"'" + name + "'\"]")
+        $("button.template-delete-btn[data-template-name='" + name + "']")
                 .should(visible).click();
         confirm();
 

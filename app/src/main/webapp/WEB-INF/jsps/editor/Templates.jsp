@@ -73,14 +73,20 @@
                     <td class="center" style="vertical-align:middle">
                         <c:choose>
 <c:when test="${!p.required || !customTheme}">
-                            <c:url var="removeUrl" value="/roller-ui/authoring/templateRemove.rol">
-                                <c:param name="weblog" value="${actionWeblog.handle}"/>
-                                <c:param name="removeId" value="${p.id}"/>
-                            </c:url>
-                            <a href="#" onclick=
-                                    "confirmTemplateDelete('${p.id}', '${fn:escapeXml(p.name)}' )">
-                                <span class="bi bi-trash"></span>
-                            </a>
+                            <%-- id/name ride in data-* attributes, not an
+                                 interpolated onclick string -- fn:escapeXml
+                                 renders an apostrophe as &#039;, which the
+                                 HTML parser decodes back to ' BEFORE the
+                                 onclick attribute compiles as JavaScript, so
+                                 a template named e.g. "Maiia's Sidebar" made
+                                 this control a permanent SyntaxError.
+                                 Delegated handler below (same convention as
+                                 MediaFileView.jsp:493). --%>
+                            <button type="button" class="btn btn-link p-0 align-baseline border-0 template-delete-btn"
+                                    data-template-id="${p.id}" data-template-name="${fn:escapeXml(p.name)}"
+                                    aria-label="<spring:message code='generic.delete'/>: ${fn:escapeXml(p.name)}">
+                                <span class="bi bi-trash" aria-hidden="true"></span>
+                            </button>
 
                         </c:when>
 <c:otherwise>
@@ -111,6 +117,12 @@
 
 
 <script>
+    <%-- Delegated: a row's id/name ride in data-* attributes on the button
+         (see the comment above it), never in an inline onclick string. --%>
+    $(document).on('click', '.template-delete-btn', function () {
+        confirmTemplateDelete(this.dataset.templateId, this.dataset.templateName);
+    });
+
     function confirmTemplateDelete(templateId, templateName) {
         // The form is submitted by id. It used to be getElementById("templates")
         // -- an id Struts generated from the action name and the JSP never

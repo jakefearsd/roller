@@ -177,10 +177,17 @@ class CategoryIT extends RollerIT {
 
     // ---------------------------------------------------------------- helpers
 
-    /** Opens the add modal from the sidebar and saves a new category. */
+    /**
+     * Opens the add modal from the sidebar and saves a new category.
+     *
+     * <p>The sidebar control is a {@code <button>} now (a11y sweep), and so
+     * is Categories.jsp's own empty-state add button -- element type can no
+     * longer disambiguate the two the way "a[onclick*=...]" once did, so this
+     * targets the sidebar one by its id instead.
+     */
     private void addCategory(String name, String description) {
         openPath(CATEGORIES);
-        $("a[onclick*='showCategoryAddModal']").should(visible).click();
+        $("#addCategoryButton").should(visible).click();
         $(EDIT_MODAL).shouldBe(visible);
 
         $(EDIT_MODAL + " input[name='bean.name']").setValue(name);
@@ -245,14 +252,14 @@ class CategoryIT extends RollerIT {
      * exist, so an "edit" silently offered to create something instead.
      */
     private void openEditModalFor(String name) {
-        $(rowFor(name) + " a[onclick*='showCategoryEditModal']").should(visible).click();
+        $(rowFor(name) + " button.category-edit-btn").should(visible).click();
         $(EDIT_MODAL).shouldBe(visible);
         $(EDIT_MODAL + " input[name='bean.name']").shouldHave(value(name));
         $(EDIT_MODAL + " input[name='bean.id']").shouldNotHave(exactValue(""));
     }
 
     private void openDeleteModalFor(String name) {
-        $(rowFor(name) + " a[onclick*='showCategoryDeleteModal']").should(visible).click();
+        $(rowFor(name) + " button.category-delete-btn").should(visible).click();
         $(DELETE_MODAL).shouldBe(visible);
     }
 
