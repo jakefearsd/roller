@@ -33,12 +33,14 @@
 
             <div class="mb-3">
                 <label for="j_username" class="form-label"> <spring:message code="loginPage.userName"/> </label>
-                <input type="text" class="form-control" name="j_username" id="j_username" placeholder="Username"/>
+                <input type="text" class="form-control" name="j_username" id="j_username"
+                       placeholder="<spring:message code='loginPage.userName'/>"/>
             </div>
 
             <div class="mb-3">
                 <label for="j_password" class="form-label"> <spring:message code="loginPage.password"/> </label>
-                <input type="password" class="form-control" name="j_password" id="j_password" placeholder="Password"/>
+                <input type="password" class="form-control" name="j_password" id="j_password"
+                       placeholder="<spring:message code='loginPage.password'/>"/>
             </div>
 
             <c:if test="${rememberMeEnabled}">

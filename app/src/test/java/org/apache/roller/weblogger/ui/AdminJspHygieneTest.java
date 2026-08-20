@@ -352,4 +352,31 @@ class AdminJspHygieneTest {
         }
         assertTrue(found.isEmpty(), "dead form-vertical still in: " + found);
     }
+
+    // ----------------------------------------------------------------- Task 9
+
+    /**
+     * Hardcoded English in the admin chrome and the login form -- the one
+     * screen every locale sees first. Scoped to the exact literals repaired
+     * here rather than a general English detector, so the failure list is
+     * always actionable: a placeholder, an aria-label and a visually-hidden
+     * label are all invisible to a translator reading the bundle.
+     */
+    @Test
+    void theAdminChromeAndLoginFormCarryNoHardcodedEnglish() {
+        List<String> found = new ArrayList<>();
+        record Literal(String file, String text) { }
+        for (Literal l : List.of(
+                new Literal("core/Login.jsp", "placeholder=\"Username\""),
+                new Literal("core/Login.jsp", "placeholder=\"Password\""),
+                new Literal("tiles/bannerStatus.jsp", "Toggle navigation"),
+                new Literal("tiles/bannerInstallation.jsp", "Toggle navigation"),
+                new Literal("tiles/messages.jsp", "aria-label=\"Close\""))) {
+            if (jsp(l.file()).contains(l.text())) {
+                found.add(l.file() + ": " + l.text());
+            }
+        }
+        assertTrue(found.isEmpty(), "hardcoded English still in the JSPs:\n  "
+                + String.join("\n  ", found));
+    }
 }

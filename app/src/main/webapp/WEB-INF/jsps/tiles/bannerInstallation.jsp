@@ -24,8 +24,8 @@
 
         <button type="button" class="navbar-toggler collapsed"
                 data-bs-toggle="collapse" data-bs-target="#navbar" aria-expanded="false" aria-controls="navbar"
-                aria-label="Toggle navigation">
-            <span class="visually-hidden">Toggle navigation</span>
+                aria-label="<spring:message code='generic.toggle'/>">
+            <span class="visually-hidden"><spring:message code="generic.toggle"/></span>
             <span class="navbar-toggler-icon"></span>
         </button>
 
