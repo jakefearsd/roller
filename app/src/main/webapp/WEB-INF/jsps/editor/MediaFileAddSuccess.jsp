@@ -161,7 +161,7 @@
             <c:param name="directoryId" value="${bean.directoryId}"/>
         </c:url>
 
-        <button type="submit" id="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryAddWithMediaFile.rol"><spring:message code="mediaFileSuccess.createPost"/></button>
+        <button type="submit" id="createPostButton" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryAddWithMediaFile.rol"><spring:message code="mediaFileSuccess.createPost"/></button>
 
         <%-- Anchors, not buttons. These two navigate; only "create post" above
              submits. As typeless <button>s inside this action-less form they
@@ -189,17 +189,17 @@
 
 <script>
 
-    var submitButton = $("#submit");
+    var submitButton = $("#createPostButton");
 
     $(document).ready(function () {
-        $("#submit").attr("disabled", true);
+        $("#createPostButton").prop("disabled", true);
 
         $("input[type='checkbox']").change(function () {
-            if ($("#enclosureURL").get(0).getAttribute("value") !== '') {
-                $("#submit").attr("disabled", false);
+            if ($("#enclosureURL").val() !== '') {
+                $("#createPostButton").prop("disabled", false);
                 return;
             }
-            submitButton.attr("disabled", !isImageChecked());
+            submitButton.prop("disabled", !isImageChecked());
         });
     });
 
@@ -216,10 +216,10 @@
     function setEnclosure(url) {
         $("#enclosureURL").get(0).value = url;
         if (isImageChecked()) {
-            $("#submit").attr("disabled", false);
+            $("#createPostButton").prop("disabled", false);
             return;
         }
-        submitButton.attr("disabled", url === '');
+        submitButton.prop("disabled", url === '');
     }
 
 </script>

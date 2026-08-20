@@ -51,8 +51,6 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
 
     private static final String ENTRIES_REDIRECT =
             "redirect:/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE;
-    private static final String ADD_REDIRECT =
-            "redirect:/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
 
     private EntryRemoveController controller;
     private Model model;
@@ -80,10 +78,14 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
-    void removingAnEntrySendsTheAuthorOnToWriteANewOne() throws Exception {
+    void removingAnEntrySendsTheAuthorBackToTheList() throws Exception {
+        // This endpoint is orphaned in the UI (nothing posts to it directly
+        // any more), but it must still behave like its sibling
+        // entryRemoveViaList rather than dropping the author onto a blank
+        // entryAdd form.
         String view = controller.remove(request, model, "entry-1", redirectAttributes);
 
-        assertEquals(ADD_REDIRECT, view);
+        assertEquals(ENTRIES_REDIRECT, view);
         verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 
@@ -254,7 +256,7 @@ class EntryRemoveControllerTest extends EditorControllerTestSupport {
 
         String view = controller.remove(request, model, "entry-1", redirectAttributes);
 
-        assertEquals(ADD_REDIRECT, view);
+        assertEquals(ENTRIES_REDIRECT, view);
         verify(weblogger.getWeblogEntryManager()).trashWeblogEntry(entry);
     }
 

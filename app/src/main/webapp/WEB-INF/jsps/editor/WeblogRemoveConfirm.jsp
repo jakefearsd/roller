@@ -42,11 +42,14 @@
     </div>
     <div class="col-md-2">
 
-        <form action="${pageContext.request.contextPath}/roller-ui/authoring/weblogConfig.rol" method="post">
-<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-            <button type="submit" class="btn btn-success"><spring:message code="generic.cancel"/></button>
-        <sec:csrfInput/>
-</form>
+        <%-- weblogConfig.rol is GET-only; a <form method="post"> here 405s
+             the escape hatch of the most destructive screen in the admin
+             UI. A plain link is also correctly styled as the secondary
+             action next to the destructive btn-danger button above. --%>
+        <c:url value="/roller-ui/authoring/weblogConfig.rol" var="cancelUrl">
+            <c:param name="weblog" value="${actionWeblog.handle}"/>
+        </c:url>
+        <a href="${cancelUrl}" class="btn btn-secondary"><spring:message code="generic.cancel"/></a>
 
     </div>
     <div class="col-md-8"></div>

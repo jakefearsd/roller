@@ -282,9 +282,9 @@
             && validateEmail(email));
 
         if (valid) {
-            saveButton.attr("disabled", false);
+            saveButton.prop("disabled", false);
         } else {
-            saveButton.attr("disabled", true);
+            saveButton.prop("disabled", true);
         }
     }
 

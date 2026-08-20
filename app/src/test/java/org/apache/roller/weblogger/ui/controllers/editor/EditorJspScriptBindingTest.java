@@ -160,4 +160,32 @@ class EditorJspScriptBindingTest {
         }
         assertTrue(violations.isEmpty(), String.join("\n", violations));
     }
+
+    /**
+     * No JSP may declare a form control {@code name="submit"} or
+     * {@code id="submit"}. Either one clobbers the DOM's own
+     * {@code HTMLFormElement.submit} on the named/id'd form (and, for an
+     * {@code id}, the corresponding global lookup): once an element named
+     * "submit" exists, {@code document.formName.submit} (or a jQuery
+     * {@code #submit} selector standing in for the real button) resolves to
+     * the FORM CONTROL, not the submit function, so a later
+     * {@code form.submit()} call throws instead of submitting. This is not
+     * scoped to the editor JSPs the other scans above cover -- the hazard is
+     * the same wherever it appears in the JSP tree.
+     */
+    @Test
+    void noFormControlIsNamedOrIdentifiedSubmit() throws Exception {
+        Path jspRoot = Path.of("src/main/webapp/WEB-INF/jsps");
+        List<String> violations = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(jspRoot)) {
+            for (Path jsp : files.filter(p -> p.toString().endsWith(".jsp")).toList()) {
+                String src = Files.readString(jsp);
+                if (src.contains("name=\"submit\"") || src.contains("id=\"submit\"")) {
+                    violations.add(jsp + " declares a form control named/id'd \"submit\", "
+                            + "which clobbers HTMLFormElement.submit");
+                }
+            }
+        }
+        assertTrue(violations.isEmpty(), String.join("\n", violations));
+    }
 }

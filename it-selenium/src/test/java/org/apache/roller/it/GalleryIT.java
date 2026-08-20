@@ -209,7 +209,7 @@ class GalleryIT extends RollerIT {
         // top-level page. Wait out the iframe's fonts first (we are still
         // switched into the frame, so document.fonts here is the iframe's).
         waitForFontsReady();
-        $("input[name='submit']").click();
+        $("input[name='saveButton']").click();
         switchTo().defaultContent();
 
         // Wait for the modal to go before touching the top window. This one is

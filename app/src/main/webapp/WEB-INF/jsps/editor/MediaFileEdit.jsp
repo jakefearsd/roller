@@ -153,7 +153,7 @@
 
 
     <input type="submit" tabindex="7" class="btn btn-success"
-           value="<spring:message code="generic.save"/>" name="submit"/>
+           value="<spring:message code="generic.save"/>" name="saveButton"/>
     <input type="button" tabindex="8" class="btn"
            value="<spring:message code="generic.cancel"/>" onClick="window.parent.onEditCancelled();"/>
 

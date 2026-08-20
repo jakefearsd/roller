@@ -100,7 +100,7 @@ public class SearchServlet extends HttpServlet {
             // now make sure the specified weblog really exists
             weblog = searchRequest.getWeblog();
             if (weblog == null) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Weblog not found");
+                RenderingServletUtils.sendNotFound(response);
                 return;
             }
         } catch (Exception e) {

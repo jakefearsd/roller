@@ -352,7 +352,7 @@ class MediaBulkUploadIT extends RollerIT {
         $("input[name='bean.altText']").setValue(altText);
 
         waitForFontsReady();
-        $("input[name='submit']").click();
+        $("input[name='saveButton']").click();
         switchTo().defaultContent();
 
         $("#mediafile_edit_lightbox").should(disappear, Duration.ofSeconds(30));

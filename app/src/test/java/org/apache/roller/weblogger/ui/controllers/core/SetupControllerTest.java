@@ -93,6 +93,21 @@ class SetupControllerTest {
     }
 
     @Test
+    void thePageReflectsTheCurrentlyStoredFrontpageChoice() throws Exception {
+        // Without this, the select and checkbox always render at their
+        // defaults regardless of what is actually stored, so any re-save
+        // silently reverts the front-page weblog to whatever happened to be
+        // first in the <select> (or clears "aggregated").
+        property(FRONTPAGE_HANDLE, "travelguide");
+        property(FRONTPAGE_AGGREGATED, "true");
+
+        controller.execute(ControllerTestFixture.requestFor(admin()), model);
+
+        assertEquals("travelguide", model.getAttribute("frontpageWeblogHandle"));
+        assertEquals(Boolean.TRUE, model.getAttribute("frontpageAggregated"));
+    }
+
+    @Test
     void aFailedWeblogLookupIsReportedButThePageStillRenders() throws Exception {
         when(weblogger.weblogManager().getWeblogs(anyBoolean(), any(), any(), any(), anyInt(), anyInt()))
                 .thenThrow(new WebloggerException("database down"));
@@ -122,7 +137,7 @@ class SetupControllerTest {
         String view = controller.save(
                 ControllerTestFixture.requestFor(admin()), model, "travelguide", Boolean.TRUE, redirectAttributes);
 
-        assertEquals("redirect:/", view);
+        assertEquals("redirect:/roller-ui/setup.rol", view);
         assertEquals("travelguide", handle.getValue());
         assertEquals("true", aggregated.getValue());
         verify(weblogger.propertiesManager()).saveProperty(handle);
@@ -153,7 +168,7 @@ class SetupControllerTest {
         String view = controller.save(
                 ControllerTestFixture.requestFor(admin()), model, "travelguide", Boolean.TRUE, redirectAttributes);
 
-        assertEquals("redirect:/", view);
+        assertEquals("redirect:/roller-ui/setup.rol", view);
         assertEquals(List.of("frontpageConfig.values.error"), ControllerTestFixture.flashErrors(redirectAttributes));
         assertEquals(List.of(), ControllerTestFixture.flashMessages(redirectAttributes));
         verify(weblogger.propertiesManager(), never()).saveProperty(any());

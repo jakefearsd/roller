@@ -183,7 +183,7 @@
 
         });
 
-        saveBookmarkButton.attr("disabled", error);
+        saveBookmarkButton.prop("disabled", error);
     }
 
 </script>

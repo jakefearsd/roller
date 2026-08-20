@@ -97,8 +97,18 @@
                     <label class="col-sm-3 col-form-label">${frontpageBlogLabel}</label>
                     <div class="col-sm-9">
                         <select name="frontpageBlog" class="form-select">
+                            <%-- Mirrors Maintenance.jsp's placeholder pattern: a
+                                 disabled option carries "selected" only while
+                                 nothing is configured yet, so a re-save can never
+                                 silently pick whichever weblog happens to be
+                                 first in the list. --%>
+                            <option value=""
+                                <c:if test="${empty frontpageWeblogHandle}">selected="selected"</c:if>
+                                disabled="disabled"><spring:message code="frontpageConfig.select.placeholder"/></option>
                             <c:forEach items="${weblogs}" var="w">
-                                <option value="${fn:escapeXml(w.handle)}">${fn:escapeXml(w.name)}</option>
+                                <option value="${fn:escapeXml(w.handle)}"
+                                    <c:if test="${frontpageWeblogHandle == w.handle}">selected="selected"</c:if>
+                                >${fn:escapeXml(w.name)}</option>
                             </c:forEach>
                         </select>
                     </div>
@@ -108,7 +118,9 @@
                     <spring:message code="frontpageConfig.frontpageAggregated" var="aggregatedLabel"/>
                     <label class="col-sm-3 col-form-label">${aggregatedLabel}</label>
                     <div class="col-sm-9">
-                        <input type="checkbox" class="form-check-input" name="aggregated" value="true"/>
+                        <input type="checkbox" class="form-check-input" name="aggregated" value="true"
+                            <c:if test="${frontpageAggregated}">checked="checked"</c:if>
+                        />
                     </div>
                 </div>
 

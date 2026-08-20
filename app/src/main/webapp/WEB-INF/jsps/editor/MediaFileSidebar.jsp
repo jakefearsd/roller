@@ -124,14 +124,14 @@
 
     $(document).ready(function () {
         $("#newDirectoryName").on("keyup", maintainDirectoryButtonState);
-        $("#newDirectoryButton").attr("disabled", true);
+        $("#newDirectoryButton").prop("disabled", true);
     });
 
     function maintainDirectoryButtonState(e) {
         if ($("#newDirectoryName").get(0).value.trim().length === 0) {
-            $("#newDirectoryButton").attr("disabled", true);
+            $("#newDirectoryButton").prop("disabled", true);
         } else {
-            $("#newDirectoryButton").attr("disabled", false);
+            $("#newDirectoryButton").prop("disabled", false);
         }
     }
 
@@ -157,9 +157,9 @@
             && $("#beanTags").get(0).value.trim().length === 0
             && (beanSize.trim().length === 0 || beanSize === 0)
             && (beanType.length === 0 || beanType === "mediaFileView.any")) {
-            $("#searchButton").attr("disabled", true);
+            $("#searchButton").prop("disabled", true);
         } else {
-            $("#searchButton").attr("disabled", false);
+            $("#searchButton").prop("disabled", false);
         }
     }
 

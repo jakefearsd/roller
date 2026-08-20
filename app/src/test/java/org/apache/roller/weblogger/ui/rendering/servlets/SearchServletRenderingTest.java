@@ -52,14 +52,16 @@ class SearchServletRenderingTest {
     }
 
     @Test
-    void unknownWeblogSearchIsBadRequest() throws Exception {
+    void unknownWeblogSearchIsNotFound() throws Exception {
         MockHttpServletRequest request = RenderingTestSupport
                 .anonymousGet("/roller-ui/rendering/search", "/nosuchblog");
         request.setParameter("q", "anything");
         MockHttpServletResponse response = RenderingTestSupport
                 .execute(RenderingTestSupport.searchServlet(), request);
 
-        // SearchServlet sends SC_BAD_REQUEST (not 404) for a missing weblog
-        assertEquals(400, response.getStatus());
+        // A missing weblog is a 404, matching every sibling rendering
+        // servlet (WebContainerConfig renders the 404 page body for this
+        // status; a 400 here used to disagree with that body).
+        assertEquals(404, response.getStatus());
     }
 }

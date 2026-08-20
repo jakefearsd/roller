@@ -75,8 +75,11 @@ public class EntryRemoveController extends BaseController {
 
                 addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);
 
-                // redirect to entryAdd
-                return "redirect:/roller-ui/authoring/entryAdd.rol?weblog="
+                // This endpoint is orphaned in the UI (nothing posts to it
+                // directly any more), but it must still land the author
+                // back on the entry list like its sibling
+                // entryRemoveViaList, not on a blank entryAdd form.
+                return "redirect:/roller-ui/authoring/entries.rol?weblog="
                         + getActionWeblog(request).getHandle();
 
             } catch (Exception e) {

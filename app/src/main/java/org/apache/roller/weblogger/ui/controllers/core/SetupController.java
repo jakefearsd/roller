@@ -87,6 +87,22 @@ public class SetupController extends BaseController {
             model.addAttribute("blogCount", 0L);
         }
 
+        // Reflect the currently stored front-page choice so the form below
+        // shows what is actually configured -- otherwise a re-save silently
+        // reverts it to whatever the <select> happens to default to.
+        try {
+            PropertiesManager mgr = weblogger.getPropertiesManager();
+            RuntimeConfigProperty handleProp = mgr.getProperty("site.frontpage.weblog.handle");
+            RuntimeConfigProperty aggregatedProp = mgr.getProperty("site.frontpage.weblog.aggregated");
+            String frontpageWeblogHandle = handleProp != null ? handleProp.getValue() : null;
+            boolean frontpageAggregated =
+                    aggregatedProp != null && Boolean.parseBoolean(aggregatedProp.getValue());
+            model.addAttribute("frontpageWeblogHandle", frontpageWeblogHandle);
+            model.addAttribute("frontpageAggregated", frontpageAggregated);
+        } catch (WebloggerException ex) {
+            log.error("Error getting frontpage configuration", ex);
+        }
+
         return ".Setup";
     }
 
@@ -117,6 +133,6 @@ public class SetupController extends BaseController {
             addFlashError(redirectAttributes, "frontpageConfig.values.error", request);
         }
 
-        return "redirect:/";
+        return "redirect:/roller-ui/setup.rol";
     }
 }

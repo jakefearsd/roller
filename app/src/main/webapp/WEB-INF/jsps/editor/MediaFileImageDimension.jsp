@@ -96,7 +96,7 @@ function addImage() {
     </table>
     <br />
     <div class="control">
-       <input type="submit" value="Insert" name="submit" />
+       <input type="submit" value="Insert" name="insertButton" />
        <input type="button" value="Skip" name="Skip" />
     </div>
 
