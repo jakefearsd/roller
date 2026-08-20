@@ -88,8 +88,14 @@ class WeblogConfigSettingsRailTest {
                         + "the same way every sibling section heading does, rather than the "
                         + "field label's code -- otherwise \"Custom domain\" renders twice, stacked");
 
-        assertTrue(jsp.contains("<label class=\"col-sm-3 col-form-label\">"
+        // Matched by the two things that carry the meaning -- the label's own
+        // message code, and the field it binds to -- rather than the exact
+        // attribute string, which the label-binding sweep of 2026-08-20
+        // rightly changed by adding for="weblog_bean_customDomain".
+        assertTrue(jsp.contains("<label class=\"col-sm-3 col-form-label\" "
+                        + "for=\"weblog_bean_customDomain\">"
                         + "<spring:message code=\"websiteSettings.customDomain\"/></label>"),
-                "the custom-domain field label must still use websiteSettings.customDomain");
+                "the custom-domain field label must still use websiteSettings.customDomain "
+                        + "and must still bind to the custom-domain input");
     }
 }

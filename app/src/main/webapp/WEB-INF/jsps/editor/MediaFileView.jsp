@@ -295,6 +295,14 @@
 
                     <input id="moveButton" type="button" class="btn btn-primary" style="display: inline"
                            value='<spring:message code="mediaFileView.moveSelected"/>' onclick="onMoveSelected()"/>
+
+                    <%-- The one route from "these photos" to "a post about
+                         these photos". #createPostForm has sat below,
+                         reachable by nothing, since the control that used to
+                         drive it was removed. --%>
+                    <input id="newEntryButton" type="button" class="btn" style="display: inline"
+                           value='<spring:message code="mediaFileView.newEntryWithSelected"/>'
+                           onclick="onNewEntryWithSelected()"/>
                 </c:if>
 
                 <select name="selectedDirectory" id="moveTargetMenu" class="form-select" style="display: inline; width: 15em">
@@ -446,12 +454,14 @@
             toggleFunction(true, 'selectedMediaFiles');
             $("#deleteButton").attr('disabled', false);
             $("#moveButton").attr('disabled', false);
+            $("#newEntryButton").attr('disabled', false);
             $("#moveTargetMenu").attr('disabled', false);
         } else {
             toggleState = 'Off';
             toggleFunction(false, 'selectedMediaFiles');
             $("#deleteButton").attr('disabled', true);
             $("#moveButton").attr('disabled', true);
+            $("#newEntryButton").attr('disabled', true);
             $("#moveTargetMenu").attr('disabled', true);
         }
     }
@@ -507,11 +517,39 @@
         onClickEdit(this.dataset.mediaFileId, this.dataset.mediaFileName);
     });
 
+    <%-- Hands the checked ids to entryAddWithMediaFile.rol, which seeds a
+         draft with an [image id=".."] shortcode per file. The parameter name
+         is selectedImages (plural, repeated) -- the pre-existing
+         #createPostForm carries only the singular selectedImage, which that
+         controller also accepts but only for one file, so the ids are added
+         as fresh inputs rather than stuffed into it. Rebuilt on every click
+         so a changed selection cannot leave stale ids behind. --%>
+    function onNewEntryWithSelected() {
+        var form = document.getElementById('createPostForm');
+        form.querySelectorAll("input[name='selectedImages']").forEach(function (el) {
+            el.remove();
+        });
+        var selected = document.querySelectorAll("input[name='selectedMediaFiles']:checked");
+        if (selected.length === 0) {
+            return;
+        }
+        selected.forEach(function (checkbox) {
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'selectedImages';
+            hidden.value = checkbox.value;
+            form.appendChild(hidden);
+        });
+        form.action = '<c:url value="/roller-ui/authoring/entryAddWithMediaFile.rol"/>';
+        form.submit();
+    }
+
     <%-- code to toggle buttons on/off as media file/directory selections change --%>
 
     $(document).ready(function () {
         $("#deleteButton").attr('disabled', true);
         $("#moveButton").attr('disabled', true);
+        $("#newEntryButton").attr('disabled', true);
         $("#moveTargetMenu").attr('disabled', true);
 
         $("input[type=checkbox]").change(function () {
@@ -522,10 +560,12 @@
             if (count === 0) {
                 $("#deleteButton").attr('disabled', true);
                 $("#moveButton").attr('disabled', true);
+                $("#newEntryButton").attr('disabled', true);
                 $("#moveTargetMenu").attr('disabled', true);
             } else {
                 $("#deleteButton").attr('disabled', false);
                 $("#moveButton").attr('disabled', false);
+                $("#newEntryButton").attr('disabled', false);
                 $("#moveTargetMenu").attr('disabled', false);
             }
         });
