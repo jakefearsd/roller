@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -38,6 +39,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * StylesheetEdit's case, actively wrong (the exception aborts before
  * {@code return false}, so the submit button's default action -- saving --
  * fires anyway).
+ *
+ * <p>Both scans below collect every violation before failing, rather than
+ * asserting inside the loop: an {@code assertTrue} inside a loop stops at the
+ * FIRST offender, so a single run can never demonstrate two independent
+ * defects in the same file list at once, and a regression run only ever names
+ * one offender per fix-rerun cycle instead of the whole set.</p>
  */
 class EditorJspScriptBindingTest {
 
@@ -56,6 +63,7 @@ class EditorJspScriptBindingTest {
      *  to submit). */
     @Test
     void everyDocumentFormReferenceResolves() throws Exception {
+        List<String> violations = new ArrayList<>();
         for (Path jsp : editorJsps()) {
             String src = Files.readString(jsp);
             Matcher m = Pattern.compile("document\\.([A-Za-z][A-Za-z0-9_]*)\\b(?!\\.getElementById)")
@@ -65,10 +73,13 @@ class EditorJspScriptBindingTest {
                 if (Set.of("getElementById", "location", "body", "title", "createElement",
                            "addEventListener", "querySelector", "querySelectorAll", "forms")
                         .contains(name)) continue;
-                assertTrue(src.contains("name=\"" + name + "\"") || src.contains("id=\"" + name + "\""),
-                    jsp.getFileName() + " references document." + name + " but no form declares it");
+                if (!(src.contains("name=\"" + name + "\"") || src.contains("id=\"" + name + "\""))) {
+                    violations.add(jsp.getFileName() + " references document." + name
+                            + " but no form declares it");
+                }
             }
         }
+        assertTrue(violations.isEmpty(), String.join("\n", violations));
     }
 
     /**
@@ -82,11 +93,14 @@ class EditorJspScriptBindingTest {
     @Test
     void theTemplateEditIdBindingMatchesRealIds() throws Exception {
         String jsp = Files.readString(EDITOR_JSP_DIR.resolve("TemplateEdit.jsp"));
+        List<String> violations = new ArrayList<>();
         Matcher sel = Pattern.compile("\\$\\(\"#([A-Za-z0-9_-]+)\"\\)").matcher(jsp);
         while (sel.find()) {
             String id = sel.group(1);
-            assertTrue(jsp.contains("id=\"" + id + "\""),
-                "script binds #" + id + " but no element has that id");
+            if (!jsp.contains("id=\"" + id + "\"")) {
+                violations.add("script binds #" + id + " but no element has that id");
+            }
         }
+        assertTrue(violations.isEmpty(), String.join("\n", violations));
     }
 }
