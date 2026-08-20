@@ -23,7 +23,17 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="<%= request.getContextPath() %>/favicon.svg" type="image/x-icon">
-    <title><%= org.apache.roller.weblogger.config.WebloggerRuntimeConfig.getProperty("site.shortName") %>: <spring:message code="${pageTitle}" text="${pageTitle}"/></title>
+    <%-- STATIC literal, and it must stay static: every screen this layout
+         serves -- CreateDatabase, UpgradeDatabase, DatabaseError, Bootstrap --
+         renders BEFORE the business tier is up. The sibling layouts' scriptlet
+         call to WebloggerRuntimeConfig.getProperty("site.shortName") returns
+         null there AND logs a WARN with a stack trace on every single render,
+         so the tab read "null: Create Database" and the log filled up. No
+         business-tier call may be load-bearing on this layout. "Roller" is
+         also the honest answer: site.shortName's own default is "Roller"
+         (runtimeConfigDefs.xml), and pre-bootstrap there is no configured
+         value to prefer over it. --%>
+    <title>Roller: <spring:message code="${pageTitle}" text="${pageTitle}"/></title>
     <jsp:include page="${tile_head}"/>
     <style>
         <jsp:include page="${tile_styles}" />
