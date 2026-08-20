@@ -24,7 +24,7 @@
      which BrowserHealth rightly reports as a failed request. Do not "fix"
      this layout by including ${tile_head}. --%>
 <!doctype html>
-<html>
+<html lang="${pageContext.response.locale.toLanguageTag()}">
     <head>
         <meta charset="utf-8">
     </head>

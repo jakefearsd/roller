@@ -22,6 +22,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.ui.ExtendedModelMap;
+import org.springframework.ui.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -61,9 +63,13 @@ class RedirectControllerTest {
         // layout's head/banner/footer chrome and design-system CSS -- see
         // RollerViewResolverTest for the view registration, and denied.jsp
         // still exists on disk as the content that view forwards to.
-        assertEquals(".denied", controller.accessDenied());
+        Model model = new ExtendedModelMap();
+        assertEquals(".denied", controller.accessDenied(model));
         assertTrue(Files.exists(WEBAPP.resolve("roller-ui/errors/denied.jsp")),
                 ".denied's tiles content target is missing");
+        // Without a pageTitle the errorpage layout falls back to the generic
+        // `error` key, which put "Error" in the tab for a permission answer.
+        assertEquals("denied.title", model.getAttribute("pageTitle"));
     }
 
     @Test

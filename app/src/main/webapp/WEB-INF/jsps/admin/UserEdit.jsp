@@ -178,10 +178,10 @@
                  first weblog's name would be rendered as the label. --%>
             <table class="rollertable table" style="width: 80%">
                 <tr>
-                    <th width="55%"><spring:message code="generic.name"/></th>
-                    <th width="15%">&nbsp;</th>
-                    <th width="15%">&nbsp;</th>
-                    <th width="15%">&nbsp;</th>
+                    <th scope="col" width="55%"><spring:message code="generic.name"/></th>
+                    <th scope="col" width="15%">&nbsp;</th>
+                    <th scope="col" width="15%">&nbsp;</th>
+                    <th scope="col" width="15%">&nbsp;</th>
                 </tr>
                 <c:forEach var="perms" items="${permissions}">
                     <tr>

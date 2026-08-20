@@ -18,7 +18,7 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 <%@ include file="/WEB-INF/jsps/tiles/menu-model.jsp" %>
 <!doctype html>
-<html>
+<html lang="${pageContext.response.locale.toLanguageTag()}">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -88,19 +88,19 @@
 
         </div>
 
-        <div class="col-md-9 roller-column-right">
+        <main class="col-md-9 roller-column-right">
 
             <div class="card">
                 <div class="card-body">
 
-                    <h2 class="roller-page-title"><spring:message code="${pageTitle}" text="${pageTitle}"/></h2>
+                    <h1 class="roller-page-title"><spring:message code="${pageTitle}" text="${pageTitle}"/></h1>
                     <jsp:include page="${tile_messages}"/>
                     <jsp:include page="${tile_content}"/>
 
                 </div>
             </div>
 
-        </div>
+        </main>
     </div>
 </div>
 

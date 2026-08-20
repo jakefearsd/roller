@@ -145,4 +145,101 @@ class AdminJspHygieneTest {
         }
         assertTrue(wrong.isEmpty(), "title must precede the flash region in: " + wrong);
     }
+
+    // ---------------------------------------------------------------- Task 14
+
+    private static final List<String> TILES_LAYOUTS = List.of(
+            "tiles/tiles-barepage.jsp",
+            "tiles/tiles-errorpage.jsp",
+            "tiles/tiles-installpage.jsp",
+            "tiles/tiles-loginpage.jsp",
+            "tiles/tiles-mainmenupage.jsp",
+            "tiles/tiles-popuppage.jsp",
+            "tiles/tiles-simplepage.jsp",
+            "tiles/tiles-tabbedpage.jsp");
+
+    /**
+     * Without a document language a screen reader picks its own -- usually the
+     * user's OS locale -- and reads English admin copy with, say, German
+     * phonemes. Eight layouts, so one missing declaration hides in seven
+     * correct ones.
+     */
+    @Test
+    void everyLayoutDeclaresADocumentLanguage() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : TILES_LAYOUTS) {
+            if (!jsp(layout).contains("<html lang=")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts with no <html lang>: " + missing);
+    }
+
+    /** Every layout must name the tab; popuppage used to ship none at all. */
+    @Test
+    void everyChromeLayoutSetsATitle() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : TILES_LAYOUTS) {
+            // barepage is deliberately chrome-free -- see its own comment.
+            if (layout.endsWith("barepage.jsp")) {
+                continue;
+            }
+            if (!jsp(layout).contains("<title>")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts with no <title>: " + missing);
+    }
+
+    /**
+     * The page title is the document's h1. It was an h2 on both chrome
+     * layouts, so every admin screen started its heading outline at level 2
+     * and any real h2 inside the content tile read as a sibling of the title.
+     */
+    @Test
+    void thePageTitleIsTheDocumentHeading() {
+        List<String> wrong = new ArrayList<>();
+        for (String layout : List.of("tiles/tiles-tabbedpage.jsp", "tiles/tiles-mainmenupage.jsp")) {
+            if (!jsp(layout).contains("<h1 class=\"roller-page-title\"")) {
+                wrong.add(layout);
+            }
+        }
+        assertTrue(wrong.isEmpty(), "page title is not an <h1> in: " + wrong);
+    }
+
+    /** "Skip to content" has nowhere to go without a main landmark. */
+    @Test
+    void contentColumnsAreMainLandmarks() {
+        List<String> missing = new ArrayList<>();
+        for (String layout : List.of("tiles/tiles-tabbedpage.jsp", "tiles/tiles-mainmenupage.jsp",
+                "tiles/tiles-simplepage.jsp", "tiles/tiles-loginpage.jsp")) {
+            String src = jsp(layout);
+            if (!src.contains("<main ") || !src.contains("</main>")) {
+                missing.add(layout);
+            }
+        }
+        assertTrue(missing.isEmpty(), "layouts with no <main> landmark: " + missing);
+    }
+
+    /**
+     * The sidebar's link headings were h4s under an h1 page title, skipping
+     * two levels.
+     */
+    @Test
+    void mainMenuSidebarDoesNotSkipHeadingLevels() {
+        String src = jsp("core/MainMenuSidebar.jsp");
+        assertTrue(!src.contains("<h4"),
+                "core/MainMenuSidebar.jsp still has <h4> headings under an <h1> page title");
+    }
+
+    /** A header cell with no scope is ambiguous to a screen reader's table mode. */
+    @Test
+    void userEditPermissionTableScopesItsHeaders() {
+        String src = jsp("admin/UserEdit.jsp");
+        int headers = src.split("<th", -1).length - 1;
+        int scoped = src.split("<th scope=\"col\"", -1).length - 1;
+        assertTrue(headers == scoped,
+                "admin/UserEdit.jsp: " + (headers - scoped) + " of " + headers
+                        + " <th> cells lack scope=\"col\"");
+    }
 }
