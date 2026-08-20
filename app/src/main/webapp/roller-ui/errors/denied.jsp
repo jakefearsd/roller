@@ -27,15 +27,14 @@
      the container-level error pages. Hardcoded English. --%>
 <div class="card card-body">
     <h2 class="roller-page-title">Access denied</h2>
-    <p>You don't have permission to do that. Possible reasons:</p>
+    <p>You don't have permission to do that. The usual reasons:</p>
     <ul>
-        <li>You requested a weblog entry that you don't have permission to
-            edit (maybe one you already submitted for review?)</li>
-        <li>You tried to save something from a stale page left over from an
-            earlier login under a different account.</li>
-        <li>You signed in using the wrong capitalization of your username.
+        <li>The entry belongs to a weblog you can't edit -- or you already
+            submitted it for review, which hands it to a weblog admin.</li>
+        <li>You submitted a stale page left over from an earlier sign-in
+            under a different account. Reload and try again.</li>
+        <li>You signed in with the wrong capitalization of your username.
             Sign out and back in with the correct one.</li>
-        <li>Your blog server's database connection is misconfigured.
-            Contact your site administrator.</li>
     </ul>
+    <p>If none of those fit, ask your site administrator.</p>
 </div>

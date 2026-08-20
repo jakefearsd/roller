@@ -617,6 +617,14 @@ p.pagetip {
 
 /* main menu */
 
+/* The icon/label gap used to be a hardcoded &nbsp; in MainMenu.jsp -- a
+   non-breaking space is content, and it does not scale with the type. */
+.mm_weblog_name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .mm_subtable_label {
     width: 8em;
     font-weight: bold; 

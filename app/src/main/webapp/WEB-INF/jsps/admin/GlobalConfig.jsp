@@ -18,7 +18,9 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 <p class="subtitle"><spring:message code="configForm.subtitle"/></p>
-<p><spring:message code="configForm.prompt"/></p>
+<%-- configForm.prompt's value is itself a <p>...</p>; wrapping it in a
+     second one nested a block element inside a block element. --%>
+<spring:message code="configForm.prompt"/>
 
 
 <form method="post" action="<c:url value='/roller-ui/admin/globalConfig!save.rol'/>" class="form-stacked">

@@ -30,7 +30,7 @@
     <sec:csrfInput/>
 
     <div class="mb-3">
-        <label for="userName" class="form-label"><spring:message code="inviteMember.userName"/></label>
+        <label for="userName" class="form-label"><spring:message code="userSettings.username"/></label>
         <input type="text" class="form-control" id="userName" name="bean.userName"
                value="${fn:escapeXml(bean.userName)}"
                onfocus="onUserNameFocus(null)"

@@ -48,13 +48,14 @@
         <div class="card card-body yourWeblogBox">
 
             <%-- .section-head carries the caps-label type role; mm_weblog_name
-                 has no CSS of its own and stays only because RouteSweepIT
-                 identifies menu.rol by "h3.mm_weblog_name" (Routes.java).
-                 Rename neither the element nor the class without moving that
-                 marker in the same commit. --%>
+                 now also carries the icon/label gap (roller.css) that used to
+                 be a hardcoded &nbsp;, and stays regardless because
+                 RouteSweepIT identifies menu.rol by "h3.mm_weblog_name"
+                 (Routes.java). Rename neither the element nor the class
+                 without moving that marker in the same commit. --%>
             <h3 class="mm_weblog_name section-head">
                 <span class="bi bi-folder2-open" aria-hidden="true"></span>
-                &nbsp;${fn:escapeXml(perms.weblog.name)}
+                ${fn:escapeXml(perms.weblog.name)}
             </h3>
 
             <p> <a href='${fn:escapeXml(perms.weblog.absoluteURL)}'>
@@ -69,14 +70,21 @@
                  bundle) from the deleted invite screen; reused here rather
                  than adding new keys. This page is their only remaining
                  consumer -- do not delete them as orphans. --%>
-            <c:set var="permLabels" value="false"/>
-            <p>You have
-            <c:if test='${perms.hasAction("admin")}'><spring:message code="inviteMember.administrator"/><c:set var="permLabels" value="true"/></c:if>
-            <c:if test='${perms.hasAction("post")}'><c:if test="${permLabels}">, </c:if><spring:message code="inviteMember.author"/><c:set var="permLabels" value="true"/></c:if>
-            <c:if test='${perms.hasAction("edit_draft")}'><c:if test="${permLabels}">, </c:if><spring:message code="inviteMember.limited"/><c:set var="permLabels" value="true"/></c:if>
-            <spring:message code='yourWebsites.permission'/></p>
+            <%-- The sentence around the role list was hardcoded English
+                 ("You have ... Permission"), so a translated build printed
+                 localized role names inside an English frame. The whole
+                 sentence is one parameterized key now, and the joined,
+                 localized role list is its single argument. --%>
+            <c:set var="permLabels" value=""/>
+            <c:if test='${perms.hasAction("admin")}'><spring:message code="inviteMember.administrator" var="roleLabel"/><c:set var="permLabels" value="${roleLabel}"/></c:if>
+            <c:if test='${perms.hasAction("post")}'><spring:message code="inviteMember.author" var="roleLabel"/><c:set var="permLabels" value="${empty permLabels ? roleLabel : permLabels.concat(', ').concat(roleLabel)}"/></c:if>
+            <c:if test='${perms.hasAction("edit_draft")}'><spring:message code="inviteMember.limited" var="roleLabel"/><c:set var="permLabels" value="${empty permLabels ? roleLabel : permLabels.concat(', ').concat(roleLabel)}"/></c:if>
+            <p><spring:message code="yourWebsites.permission.summary" arguments="${fn:escapeXml(permLabels)}"/></p>
 
-            <div class="btn-group" role="group" aria-label="...">
+            <%-- The label was the literal string "..." -- a placeholder that
+                 shipped. It names the weblog its buttons act on. --%>
+            <div class="btn-group" role="group"
+                 aria-label="${fn:escapeXml(perms.weblog.name)}">
 
                 <%-- New entry button --%>
                 <c:url value="/roller-ui/authoring/entryAdd.rol" var="newEntry">
