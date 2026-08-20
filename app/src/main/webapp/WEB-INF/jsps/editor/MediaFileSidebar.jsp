@@ -37,8 +37,15 @@
                 </div>
 
                 <c:if test="${empty pager}">
-                    <%-- Only show Create New Directory control when NOT showing search results --%>
+                    <%-- Only show Create New Directory control when NOT showing search results.
+                         Its own tiny form -- the sidebar is included into MediaFileView.jsp, but
+                         that view's own mediaFileViewForm doesn't render at all in an empty
+                         library (see the childFiles/pager guard in MediaFileView.jsp), so this
+                         control cannot depend on it. --%>
 
+                    <form id="createDirectoryForm" method="post"
+                          action="<c:url value='/roller-ui/authoring/mediaFileView!createNewDirectory.rol'/>">
+<input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                     <div style="clear:right; margin-top: 1em">
 
                         <span class="bi bi-folder2-open"></span>
@@ -53,6 +60,8 @@
                                value='<spring:message code="mediaFileView.create"/>' onclick="onCreateDirectory()"/>
 
                     </div>
+                    <sec:csrfInput/>
+                    </form>
                 </c:if>
 
                 <hr size="1" noshade="noshade"/>
@@ -93,7 +102,7 @@
 
                     <button type="submit" id="searchButton" class="btn btn-primary" style="margin:5px 0;"><spring:message code="mediaFileView.search"/></button>
 
-                    <c:if test="${pager}">
+                    <c:if test="${not empty pager}">
                         <input id="resetButton" style="margin:5px 0;" type="button" class="btn"
                                name="reset" value='<spring:message code="mediaFileView.reset"/>'/>
                     </c:if>
@@ -110,9 +119,7 @@
 <script>
 
     function onCreateDirectory() {
-        document.mediaFileViewForm.newDirectoryName.value = $("#newDirectoryName").get(0).value;
-        document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!createNewDirectory.rol"/>';
-        document.mediaFileViewForm.submit();
+        document.getElementById('createDirectoryForm').submit();
     }
 
     $(document).ready(function () {

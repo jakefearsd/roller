@@ -18,17 +18,19 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
         
 <script>
-// <!--  
-function save() {
-    radios = document.getElementsByTagName("input");
+// <!--
+function confirmMemberRemoval() {
+    var radios = document.getElementById("memberPermissionsForm").getElementsByTagName("input");
     var removing = false;
     for (var i=0; i<radios.length; i++) {
-        if (radios[i].value === -1 && radios[i].checked) {
+        if (radios[i].type === "radio" && radios[i].value === "-1" && radios[i].checked) {
             removing = true;
         }
     }
-    if (removing && !confirm("<spring:message code="memberPermissions.confirmRemove"/>")) return;
-    document.memberPermissionsForm.submit();
+    if (removing) {
+        return confirm("<spring:message code="memberPermissions.confirmRemove"/>");
+    }
+    return true;
 }
 // -->
 </script>
@@ -87,7 +89,7 @@ function save() {
 </form>
 </c:if>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post">
+<form id="memberPermissionsForm" onsubmit="return confirmMemberRemoval();" action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- Table is gated on there being members to show; the <form>

@@ -65,7 +65,7 @@
                 <label class="col-sm-3 col-form-label"><spring:message code="pageForm.link"/></label>
                 <div class="col-sm-9">
                     <%-- allow setting the path for a custom template --%>
-                    <input type="text" name="bean.link" value="${fn:escapeXml(bean.link)}" size="50" class="form-control" onkeyup="updatePageURLDisplay()"/>
+                    <input type="text" id="template_bean_link" name="bean.link" value="${fn:escapeXml(bean.link)}" size="50" class="form-control" onkeyup="updatePageURLDisplay()"/>
                 </div>
             </div>
 
@@ -81,7 +81,7 @@
                 ${actionWeblog.absoluteURL}page/
                 <span id="linkPreview" style="color:var(--bad)">${fn:escapeXml(bean.link)}</span>
                 <c:if test="${template.link != null}">
-                    [<a id="launchLink" onClick="launchPage()"><spring:message code="pageForm.launch"/></a>]
+                    [<button type="button" class="btn btn-link" id="launchLink" onclick="launchPage()"><spring:message code="pageForm.launch"/></button>]
                 </c:if>
             </div>
 
@@ -169,7 +169,7 @@
                     <div class="row mb-3">
                         <div class="offset-sm-3 col-sm-9">
                             <div class="form-check">
-                                <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.autoContentType" value="true" ${bean.autoContentType ? 'checked' : ''}/> <spring:message code="pageForm.useAutoContentType"/></label>
+                                <label class="form-check-label"><input type="checkbox" class="form-check-input" id="template_bean_autoContentType" name="bean.autoContentType" value="true" ${bean.autoContentType ? 'checked' : ''}/> <spring:message code="pageForm.useAutoContentType"/></label>
                             </div>
                         </div>
                     </div>
@@ -198,8 +198,6 @@
     var type = '${bean.type}';
 
     $(document).ready(function () {
-
-        $("#template-code-tabs").tabs();
 
         showContentTypeField();
         $("#template_bean_autoContentType").click(function(e) {
