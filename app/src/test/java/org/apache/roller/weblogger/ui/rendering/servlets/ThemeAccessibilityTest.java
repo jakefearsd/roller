@@ -197,4 +197,39 @@ class ThemeAccessibilityTest {
         }
         assertTrue(offenders.isEmpty(), String.join("\n  ", offenders));
     }
+
+    // ----------------------------------------------- the shared search forms
+
+    /**
+     * {@code #showWeblogSearchForm} and {@code #showWeblogSearchAgainForm} are
+     * the two macros that build a search control for every theme, and both
+     * were unlabelled: a bare {@code <input type="text">} beside a bare
+     * {@code <select>}, announced as "edit text" and "combo box".
+     *
+     * <p>They also both emitted {@code id="q"}. The frontpage renders both on
+     * one page when a search returns results, so that document carried a
+     * duplicate id -- which is invalid, and makes any {@code #q} selector or
+     * {@code getElementById} pick whichever came first. The forms' own
+     * validator reads {@code form.q} by NAME, which is unaffected.
+     */
+    @Test
+    void theSharedSearchMacrosNameTheirControlsAndDoNotShareAnId() throws IOException {
+        String macros = read(Paths.get("src/main/webapp/WEB-INF/velocity/weblog.vm"));
+
+        assertFalse(macros.contains("id=\"q\""),
+                "the two search macros must not both claim id=\"q\":\n" + macros);
+        assertTrue(macros.contains("id=\"q-main\"") && macros.contains("id=\"q-again\""),
+                "each search macro needs its own input id");
+
+        for (String macro : new String[] {"showWeblogSearchForm", "showWeblogSearchAgainForm"}) {
+            int start = macros.indexOf("#macro(" + macro);
+            assertTrue(start >= 0, macro + " must exist");
+            String body = macros.substring(start, macros.indexOf("\n#end", start));
+            assertTrue(body.contains("<input type=\"text\"") && body.contains("aria-label="),
+                    macro + ": its text input must be named for assistive technology:\n" + body);
+            assertTrue(!body.contains("<select name=\"cat\">")
+                            && !body.contains("<select name=\"cat\" class=\"select\">"),
+                    macro + ": its category select must be named too:\n" + body);
+        }
+    }
 }

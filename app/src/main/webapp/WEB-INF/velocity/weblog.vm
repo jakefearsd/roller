@@ -1134,17 +1134,28 @@ Show weblog author menu with vertical or horizontal orientation.
 
 #**
 Show search form for a weblog.
+
+The input's id is q-main, not q: #showWeblogSearchAgainForm below builds a
+second search control, the frontpage renders BOTH on one document when a
+search returns results, and two elements sharing one id is invalid markup
+that makes any id selector or getElementById pick whichever came first. The
+validator below reads form.q by NAME and is unaffected by the id.
 *#
 #macro(showWeblogSearchForm $weblog $showCatChooser)
-    <form id="searchForm" method="get" action="$url.search" style="margin: 0; padding: 0" onsubmit="return validateSearch(this)">
+    <form id="searchForm" role="search" method="get" action="$url.search" style="margin: 0; padding: 0" onsubmit="return validateSearch(this)">
         <p>
-          <input type="text" id="q" name="q" size="10" class="text small" maxlength="255" value="#if($model.term)$model.term#end" />
+          <input type="text" id="q-main" name="q" size="10" class="text small" maxlength="255" value="#if($model.term)$model.term#end" aria-label="$text.get( "macro.weblog.searchbutton" )" />
           #if( $showCatChooser )
             #set( $cats = $model.weblog.getWeblogCategories())
-            <select name="cat">
+            <select name="cat" aria-label="$text.get( "mainPage.category" )">
               <option value="">- $text.get("mainPage.category") -</option>
+              ## Compared against $model.weblogCategory.name, not $model.term:
+              ## the term is the search query, so this select never re-selected
+              ## the category the reader was already in unless the two happened
+              ## to be the same string. The twin in #showWeblogSearchAgainForm
+              ## has always had it right.
               #foreach( $cat in $cats )
-                <option #if($cat.name == $model.term)selected="selected"#end>$utils.escapeHTML($cat.name)</option>
+                <option #if($model.weblogCategory && $cat.name == $model.weblogCategory.name)selected="selected"#end>$utils.escapeHTML($cat.name)</option>
               #end
             </select>
           #end
@@ -1170,11 +1181,11 @@ Show search again form for a weblog.
 #macro(showWeblogSearchAgainForm $weblog)
     <div id="searchAgain">
         $text.get( "macro.weblog.searchhits", [$model.term, $model.hits])
-        <form method="get" action="$url.search" style="margin: 5px">
-          <input type="text" id="q" name="q" class="text medium" maxlength="255" value="$model.term" style="padding-left: 1px" /><br />
+        <form role="search" method="get" action="$url.search" style="margin: 5px">
+          <input type="text" id="q-again" name="q" class="text medium" maxlength="255" value="$model.term" style="padding-left: 1px" aria-label="$text.get( "macro.weblog.searchbutton" )" /><br />
           #set( $cats = $model.weblog.getWeblogCategories())
           #if(!$site && $cats && $cats.size() > 1)
-            <select name="cat" class="select">
+            <select name="cat" class="select" aria-label="$text.get( "mainPage.category" )">
               <option value="">$text.get( "macro.searchresults.incategory" )</option>
               #foreach( $cat in $cats )
                 <option #if($cat.name == $model.weblogCategory.name)selected="selected"#end>$utils.escapeHTML($cat.name)</option>
