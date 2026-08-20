@@ -291,3 +291,6 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
     color: var(--fd-ink-soft);
 }
 .fd-footer a { color: var(--fd-ink-soft); }
+
+/* #showNextPrevSearchControl's hit count (was an <h3>, now a status line). */
+body.fd .search-summary { margin: 0 0 .75rem; font-size: .75rem; color: var(--fd-ink-soft); }

@@ -222,13 +222,15 @@ class PortfolioThemeRenderingTest {
                 "no responsive image may be emitted without a featured image:\n" + body);
         // The no-image card trades its former bare title for title + mono
         // date, the same $utils.formatDate idiom the permalink's
-        // .pf-entry-meta already uses ("MMMM d, yyyy").
+        // .pf-entry-meta already uses ("MMMM d, yyyy") -- now inside a
+        // <time datetime> so the day survives as a machine value too.
         assertTrue(DATE_SPAN.matcher(body).find(),
-                "the no-image card must carry a formatted pf-card-date span:\n" + body);
+                "the no-image card must carry a machine-readable pf-card-date:\n" + body);
     }
 
-    private static final Pattern DATE_SPAN =
-            Pattern.compile("<span class=\"pf-card-date\">[A-Za-z]+ \\d{1,2}, \\d{4}</span>");
+    private static final Pattern DATE_SPAN = Pattern.compile(
+            "<time class=\"pf-card-date\" datetime=\"\\d{4}-\\d{2}-\\d{2}\">"
+                    + "[A-Za-z]+ \\d{1,2}, \\d{4}</time>");
 
     // ------------------------------------------------------------- permalink
 

@@ -470,3 +470,105 @@ body.pf .audience-message {
         padding-top: 2.25rem;
     }
 }
+
+/* ---- empty entry list ---- */
+.pf-list-empty {
+    margin: 1.5rem 0 0;
+    color: var(--pf-muted);
+    font-size: .90625rem;
+}
+
+/* ---- newsletter prompt (see journal-custom.css for the shared rationale) ---- */
+body.pf .newsletter-prompt {
+    margin: 0 0 0.5rem;
+    font-size: .75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--pf-muted);
+}
+
+body.pf .newsletter-subscribe-block {
+    margin-top: 1.5rem;
+}
+
+/* ---- shortcode blocks ----
+ * Ported from travel-custom.css with portfolio's tokens; before this a [cta]
+ * on a portfolio entry collapsed to an unstyled inline anchor and a [map] had
+ * no frame at all. */
+body.pf .travel-map {
+    height: 380px;
+    margin: 1.75rem 0;
+    border: 1px solid var(--pf-line);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+@media (max-width: 640px) {
+    body.pf .travel-map {
+        height: 280px;
+    }
+}
+
+body.pf .faq {
+    margin: 1.75rem 0;
+    padding: 0.25rem 1.25rem 1rem;
+    background: var(--pf-surface);
+    border: 1px solid var(--pf-line);
+    border-radius: 2px;
+}
+
+body.pf .faq dt {
+    margin-top: 1rem;
+    font-weight: 600;
+}
+
+body.pf .faq dd {
+    margin: 0.35rem 0 0;
+    color: var(--pf-muted);
+}
+
+body.pf .cta-card {
+    display: block;
+    margin: 1.75rem 0;
+    padding: 1.1rem 1.25rem;
+    background: var(--pf-accent);
+    color: var(--pf-bg);
+    border-radius: 2px;
+    text-decoration: none;
+}
+
+body.pf .cta-card:hover {
+    background: color-mix(in srgb, var(--pf-accent) 85%, white);
+}
+
+body.pf .cta-card .cta-label {
+    display: block;
+    font-weight: 600;
+}
+
+body.pf .cta-card .cta-note {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: .90625rem;
+    opacity: 0.85;
+}
+
+body.pf .shortcode-image {
+    margin: 1.75rem 0;
+}
+
+body.pf .jgrid {
+    margin: 1.75rem 0;
+}
+
+body.pf .video-figure {
+    margin: 1.75rem 0;
+}
+
+/* #showNextPrevSearchControl's hit count (was an <h3>, now a status line). */
+body.pf .search-summary {
+    margin: 0 0 0.75rem;
+    font-size: .75rem;
+    color: var(--pf-muted);
+}

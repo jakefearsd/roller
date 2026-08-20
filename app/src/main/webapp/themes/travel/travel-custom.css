@@ -282,3 +282,49 @@ body.tg .newsletter-subscribe button:hover {
     background: var(--tg-accent-dark);
 }
 body.tg .audience-message { margin-top: .75rem; color: var(--tg-muted); }
+
+/* ---- search results page ----
+ * Same reason as journal-custom.css's block: #showWeblogSearchAgainForm's
+ * unclassed controls otherwise render as raw OS widgets. */
+#searchAgain input.text {
+    background: #fff;
+    border: 1px solid var(--tg-line);
+    color: var(--tg-ink);
+    padding: .55rem .75rem;
+    font: inherit;
+    font-size: .90625rem;
+    border-radius: var(--tg-radius);
+}
+#searchAgain input.text:focus { border-color: var(--tg-accent); }
+#searchAgain select,
+#searchAgain input.button {
+    background: #fff;
+    border: 1px solid var(--tg-line);
+    color: var(--tg-ink);
+    padding: .45rem .75rem;
+    font: inherit;
+    font-size: .90625rem;
+    border-radius: var(--tg-radius);
+}
+#searchAgain input.button { cursor: pointer; }
+
+/* ---- empty entry list ---- */
+.tg-list-empty { margin: 1.5rem 0 0; color: var(--tg-muted); }
+
+/* ---- newsletter prompt (see journal-custom.css for the shared rationale) ---- */
+body.tg .newsletter-prompt {
+    margin: 0 0 .5rem;
+    font-size: .75rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--tg-muted);
+}
+body.tg .newsletter-subscribe-block { margin-top: 1.5rem; }
+
+/* [video] framing, the one shortcode block this theme had not framed. */
+body.tg .video-figure { margin: 1.75rem 0; }
+body.tg .video-embed { border-radius: var(--tg-radius); overflow: hidden; }
+
+/* #showNextPrevSearchControl's hit count (was an <h3>, now a status line). */
+body.tg .search-summary { margin: 0 0 .75rem; font-size: .75rem; color: var(--tg-muted); }

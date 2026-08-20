@@ -7,7 +7,15 @@
     ## $model.weblog.name is pre-escaped by WeblogWrapper#getName
     ## (StringEscapeUtils.escapeHtml4) -- emit it bare, or it double-encodes
     ## ("&amp;" -> "&amp;amp;"), same as frontpage/weblog.vm's $blog.name.
+    ## $model.term is already escaped by SearchResultsModel#getTerm
+    ## (escapeXml10), so it is emitted bare here exactly like
+    ## $model.weblog.name above; escaping it again would double-encode.
+    #if($utils.isNotEmpty($model.term))
+    <title>Search: $model.term : $model.weblog.name</title>
+    #else
     <title>Search results : $model.weblog.name</title>
+    #end
+    <link href="$url.absoluteSite/favicon.svg" rel="icon" type="image/svg+xml" />
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href="$model.weblog.stylesheet">
@@ -36,7 +44,7 @@
     <div class="qj-search-head">
         #showWeblogSearchAgainForm($model.weblog)
         #if($model.hits > 0)
-        <nav class="qj-pager" aria-label="More search results">
+        <nav class="qj-pager qj-search-pager" aria-label="More search results">
             #showNextPrevSearchControl($pager)
         </nav>
         #end

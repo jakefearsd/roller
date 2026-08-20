@@ -4,7 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; font-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
+    ## directory.vm #sets $fdPageTitle before including this header and
+    ## weblog.vm does not, so the front door keeps the bare site name while
+    ## the directory says which view it is. #includeTemplate is a #parse, and
+    ## a #parse shares the caller's context -- that is what makes a plain #set
+    ## in the including template visible here.
+    #if($fdPageTitle)
+    <title>$utils.escapeHTML($fdPageTitle) : $utils.escapeHTML($config.siteName)</title>
+    #else
     <title>$utils.escapeHTML($config.siteName)</title>
+    #end
     <link href="$url.absoluteSite/favicon.svg" rel="icon" type="image/svg+xml" />
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)

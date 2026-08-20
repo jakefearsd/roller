@@ -8,6 +8,7 @@
     ## (StringEscapeUtils.escapeHtml4) -- emit it bare, or it double-encodes
     ## ("&amp;" -> "&amp;amp;"), same as frontpage/weblog.vm's $blog.name.
     <title>#showEntryTitle($model.weblogEntry) : $model.weblog.name</title>
+    <link href="$url.absoluteSite/favicon.svg" rel="icon" type="image/svg+xml" />
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)
     <link rel="stylesheet" href="$model.weblog.stylesheet">

@@ -495,4 +495,92 @@ class JournalThemeRenderingTest {
         }
         return n;
     }
+
+    // ------------------------------------------------------------ polish
+
+    /**
+     * The zero-entry branch has to be proven by a real render, not only by
+     * the source scan in {@code ThemePolishTest}: Velocity is lenient here, so
+     * an {@code #if($pagerDays.isEmpty())} whose reference failed to resolve
+     * would quietly take the else branch and the sentence would never appear
+     * on the one page it exists for. This weblog has no entries at all.
+     */
+    @Test
+    void aWeblogWithNoEntriesSaysSoInsteadOfRenderingABlankColumn() throws Exception {
+        String body = render("/" + HANDLE + "/");
+
+        assertTrue(body.contains("class=\"qj-list-empty\""),
+                "an empty entry list must say something:\n" + body);
+        assertTrue(body.contains("Nothing has been published here yet."),
+                "the home-page wording must be the home-page one:\n" + body);
+        assertFalse(body.contains("$pagerDays"),
+                "a reference Velocity could not resolve prints as literal text:\n" + body);
+    }
+
+    /**
+     * The category view renders through weblog.vm, the same template as the
+     * home page, and used to share its title. Also proves the empty-state
+     * wording branches: this category has no entries either, and must say the
+     * category-specific sentence rather than the home-page one.
+     */
+    @Test
+    void theCategoryViewTitlesItselfAndSaysSoWhenEmpty() throws Exception {
+        TestUtils.setupWeblogCategory(TestUtils.getManagedWebsite(weblog), "Field Notes");
+        TestUtils.endSession(true);
+
+        String body = render("/" + HANDLE + "/category/Field Notes");
+
+        assertTrue(body.contains("<title>Field Notes : Test Weblog</title>"),
+                "the category view must name itself in the title:\n" + body);
+        assertTrue(body.contains("Nothing has been filed under this category yet."),
+                "the empty wording must be the category one:\n" + body);
+    }
+
+    /** A search results tab that says only "Search results" names nothing. */
+    @Test
+    void theSearchResultsTitleNamesTheQuery() throws Exception {
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/search", "/" + HANDLE);
+        request.setParameter("q", "lighthouse");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.searchServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+
+        assertTrue(body.contains("<title>Search: lighthouse : Test Weblog</title>"),
+                "the query must reach the title, escaped exactly once "
+                        + "(SearchResultsModel#getTerm has already escaped it):\n" + body);
+        // The hit-count status line itself is NOT assertable from here:
+        // #showNextPrevSearchControl only renders when $model.hits > 0, and no
+        // unit fixture can produce a hit (indexing is asynchronous). It is
+        // pinned by source scan instead -- see ThemePolishTest
+        // #theSearchHitCountIsAStatusLineNotAHeading.
+    }
+
+    /** Dates carry the ISO value beside the human one. */
+    @Test
+    void entryDatesAreMachineReadable() throws Exception {
+        entryWithSummary("dated-entry", "A summary.");
+
+        String body = render("/" + HANDLE + "/");
+
+        assertTrue(body.matches("(?s).*<time datetime=\"\\d{4}-\\d{2}-\\d{2}\">.*"),
+                "the entry-list date must carry a machine-readable datetime:\n" + body);
+        assertFalse(body.contains("$utils.formatIso8601Day"),
+                "an unresolved reference prints as literal text:\n" + body);
+    }
+
+    /** The category crumb on a reading view is a link back to the category. */
+    @Test
+    void theReadingViewsCategoryCrumbLinksBackToTheCategory() throws Exception {
+        entryWithSummary("crumb-entry", "A summary.");
+
+        String body = render("/" + HANDLE + "/entry/crumb-entry");
+
+        assertTrue(body.contains("<p class=\"qj-crumb\"><a href="),
+                "the crumb must be a link, not dead text:\n" + body);
+        assertTrue(body.contains("/category/"),
+                "the crumb link must point at the entry's category:\n" + body);
+    }
 }

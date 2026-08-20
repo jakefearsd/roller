@@ -312,6 +312,12 @@ class FrontpageRenderingTest {
                 "the contributing weblog must be listed in the full directory:\n" + body);
         assertTrue(body.contains("class=\"fd-letters\""),
                 "the A-Z letter index must be present:\n" + body);
+        // directory.vm #sets $fdPageTitle before including _header, which is
+        // the only thing that distinguishes this tab's <title> from the front
+        // door's -- they were identical, and #includeTemplate is a #parse, so
+        // if context sharing ever stops working this is where it shows.
+        assertTrue(body.contains("<title>Weblog Directory : "),
+                "the directory page must name itself in the title:\n" + body);
     }
 
     /**

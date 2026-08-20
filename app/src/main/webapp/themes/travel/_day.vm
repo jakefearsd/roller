@@ -25,7 +25,7 @@
         #end
         <h2 class="tg-entry-title">$entry.title</h2>
         <p class="tg-entry-meta">
-            $utils.formatDate($entry.pubTime, "MMMM d, yyyy")
+            <time datetime="$utils.formatIso8601Day($entry.pubTime)">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</time>
             &middot; <a href="$url.category($entry.category.name)">$utils.escapeHTML($entry.category.name)</a>
             #if($utils.isUserAuthorizedToAuthor($entry.website))
             &middot; <a href="$url.editEntry($entry.anchor)">Edit</a>
@@ -48,7 +48,7 @@
             <h2 class="tg-card-title">
                 <a href="$url.entry($entry.anchor)">$entry.title</a>
             </h2>
-            <p class="tg-card-meta">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</p>
+            <p class="tg-card-meta"><time datetime="$utils.formatIso8601Day($entry.pubTime)">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</time></p>
             #if($utils.isNotEmpty($entry.searchDescription))
             <p class="tg-card-excerpt">$utils.escapeHTML($entry.searchDescription)</p>
             #end
