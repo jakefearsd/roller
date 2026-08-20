@@ -247,6 +247,33 @@ class EntriesControllerTest extends EditorControllerTestSupport {
     }
 
     /**
+     * A bulk action must come back to the list the author was LOOKING at.
+     * Before this, deleting three drafts out of a status=DRAFT view returned
+     * to the unfiltered list of everything, with nothing on screen to say the
+     * filter had been discarded -- so the next bulk selection was made against
+     * a different set of rows than the one just acted on.
+     */
+    @Test
+    void aBulkActionReturnsToTheFilteredListItWasRunFrom() throws Exception {
+        bean.setStatus("DRAFT");
+        bean.setCategoryName("Travel");
+        when(weblogger.getUrlStrategy().getActionURL(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    Map<String, String> params = (Map<String, String>) invocation.getArgument(3);
+                    return "/roller-ui/authoring/entries.rol?" + new LinkedHashMap<>(params).entrySet().stream()
+                            .map(e -> e.getKey() + "=" + e.getValue())
+                            .collect(Collectors.joining("&"));
+                });
+
+        String view = controller.bulkDelete(request, null, bean, newRedirectAttributes());
+
+        assertTrue(view.startsWith("redirect:"), view);
+        assertTrue(view.contains("bean.status=DRAFT"), view);
+        assertTrue(view.contains("bean.categoryName=Travel"), view);
+    }
+
+    /**
      * Every {@code $("#id")} selector in the sidebar's script block must
      * reference an {@code id=} present in the file, or the datepicker never
      * binds and the readonly-by-history date fields stay unfillable.
@@ -365,7 +392,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         WeblogEntry notSelected = ownedDraft("entry-2");
 
         RedirectAttributes redirect = newRedirectAttributes();
-        controller.bulkPublish(request, List.of("entry-1"), redirect);
+        controller.bulkPublish(request, List.of("entry-1"), bean, redirect);
 
         assertEquals(WeblogEntry.PubStatus.PUBLISHED, selected.getStatus());
         assertEquals(WeblogEntry.PubStatus.DRAFT, notSelected.getStatus(),
@@ -385,7 +412,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         WeblogEntry entry = ownedDraft("entry-1");
         assertNull(entry.getPubTime());
 
-        controller.bulkPublish(request, List.of("entry-1"), newRedirectAttributes());
+        controller.bulkPublish(request, List.of("entry-1"), bean, newRedirectAttributes());
 
         assertNotNull(entry.getPubTime(), "a published entry must carry a publication time");
         assertEquals(Boolean.TRUE, entry.getRefreshAggregates(),
@@ -400,7 +427,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
     void anAuthorWithoutPostPermissionCanOnlySubmitForReview() throws Exception {
         WeblogEntry entry = ownedDraft("entry-1");
 
-        controller.bulkPublish(request, List.of("entry-1"), newRedirectAttributes());
+        controller.bulkPublish(request, List.of("entry-1"), bean, newRedirectAttributes());
 
         assertEquals(WeblogEntry.PubStatus.PENDING, entry.getStatus());
     }
@@ -417,7 +444,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         trashed.setStatus(WeblogEntry.PubStatus.TRASHED);
 
         RedirectAttributes redirect = newRedirectAttributes();
-        controller.bulkPublish(request, List.of("entry-1"), redirect);
+        controller.bulkPublish(request, List.of("entry-1"), bean, redirect);
 
         assertEquals(WeblogEntry.PubStatus.TRASHED, trashed.getStatus(),
                 "a trashed entry must not be flipped to PUBLISHED by a bulk action");
@@ -432,7 +459,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         WeblogEntry second = ownedDraft("entry-2");
         second.setStatus(WeblogEntry.PubStatus.PUBLISHED);
 
-        controller.bulkDelete(request, List.of("entry-1", "entry-2"), newRedirectAttributes());
+        controller.bulkDelete(request, List.of("entry-1", "entry-2"), bean, newRedirectAttributes());
 
         // A bulk JPQL delete would skip exactly this, leaving the index holding
         // documents that link to pages which now 404. Bulk delete trashes
@@ -461,7 +488,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         when(weblogger.getWeblogEntryManager().getWeblogEntry("entry-2")).thenReturn(foreign);
 
         RedirectAttributes redirect = newRedirectAttributes();
-        controller.bulkPublish(request, List.of("entry-1", "entry-2"), redirect);
+        controller.bulkPublish(request, List.of("entry-1", "entry-2"), bean, redirect);
 
         assertEquals(WeblogEntry.PubStatus.PUBLISHED, mine.getStatus());
         assertEquals(WeblogEntry.PubStatus.DRAFT, foreign.getStatus(),
@@ -483,7 +510,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
                 .when(weblogger.getWeblogEntryManager()).saveWeblogEntry(bad);
 
         RedirectAttributes redirect = newRedirectAttributes();
-        controller.bulkPublish(request, List.of("entry-1", "entry-2"), redirect);
+        controller.bulkPublish(request, List.of("entry-1", "entry-2"), bean, redirect);
 
         verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(good);
         assertEquals(List.of("weblogEntryQuery.bulkFailed"), flashErrors(redirect));
@@ -494,7 +521,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
     void bulkTagAddsTheTagToEverySelectedEntry() throws Exception {
         WeblogEntry entry = ownedDraft("entry-1");
 
-        controller.bulkTag(request, List.of("entry-1"), "cycling", newRedirectAttributes());
+        controller.bulkTag(request, List.of("entry-1"), "cycling", bean, newRedirectAttributes());
 
         assertTrue(entry.getTagsAsString().contains("cycling"));
         verify(weblogger.getWeblogEntryManager()).saveWeblogEntry(entry);
@@ -505,7 +532,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         WeblogEntry entry = ownedDraft("entry-1");
 
         RedirectAttributes redirect = newRedirectAttributes();
-        controller.bulkTag(request, List.of("entry-1"), "   ", redirect);
+        controller.bulkTag(request, List.of("entry-1"), "   ", bean, redirect);
 
         assertTrue(entry.getTags().isEmpty());
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
@@ -515,7 +542,7 @@ class EntriesControllerTest extends EditorControllerTestSupport {
     @Test
     void anEmptySelectionSaysSoInsteadOfClaimingSuccess() throws Exception {
         RedirectAttributes redirect = newRedirectAttributes();
-        String view = controller.bulkDelete(request, null, redirect);
+        String view = controller.bulkDelete(request, null, bean, redirect);
 
         assertEquals("redirect:/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE, view);
         assertEquals(List.of("weblogEntryQuery.bulkNothingSelected"), flashErrors(redirect));

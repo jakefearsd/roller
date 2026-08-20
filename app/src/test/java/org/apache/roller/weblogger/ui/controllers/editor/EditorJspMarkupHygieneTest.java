@@ -201,4 +201,25 @@ class EditorJspMarkupHygieneTest {
         assertTrue(src.contains("if (navigator.clipboard)"),
                 "EntryEdit.jsp calls navigator.clipboard without a feature check");
     }
+
+    /**
+     * Status was carried by the row tint alone -- {@code .draftentry},
+     * {@code .pendingentry}, {@code .scheduledentry} -- which is colour-only
+     * information a screen reader never receives and a colour-blind reader
+     * cannot separate. The badge column and the GET filter chips are both one
+     * block of markup that a later edit could drop without any other test
+     * noticing.
+     */
+    @Test
+    void theEntriesListStatesStatusInTextAndOffersItAsAFilter() throws Exception {
+        String src = Files.readString(EDITOR_JSP_DIR.resolve("Entries.jsp"));
+        List<String> missing = new ArrayList<>();
+        if (!src.contains("badge bg-success")) {
+            missing.add("Entries.jsp: no status badge column (colour-only rows)");
+        }
+        if (!src.contains("entries-status-chips")) {
+            missing.add("Entries.jsp: no status filter chips");
+        }
+        assertTrue(missing.isEmpty(), String.join("\n", missing));
+    }
 }
