@@ -481,18 +481,14 @@
     }
 
     function onMoveSelected() {
-        <%-- The fit-and-finish sweep wanted this confirm dropped: a move is
-             reversible and loses nothing, and confirming it trains people to
-             click through the two dialogs that matter (delete file, delete
-             folder). It stays for now because removing the only use of
-             mediaFile.move.confirm orphans that key, and the orphan ratchet
-             (MessageKeyTest) plus the eight bundles it would have to be
-             deleted from are owned by a different package in this wave.
-             Drop this confirm and the key together. --%>
-        if (confirm("<spring:message code="mediaFile.move.confirm"/>")) {
-            document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!moveSelected.rol"/>';
-            document.mediaFileViewForm.submit();
-        }
+        <%-- No confirm here on purpose: a move is reversible and loses nothing,
+             and confirming it trains people to click through the two dialogs
+             that do matter (delete file, delete folder). The confirm message it
+             used was deleted from all eight bundles along with this call --
+             deliberately not named here, since the orphan ratchet counts a bare
+             mention in a comment as a live reference. --%>
+        document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!moveSelected.rol"/>';
+        document.mediaFileViewForm.submit();
     }
 
     function onView() {

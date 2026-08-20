@@ -111,27 +111,6 @@ public class MessagePlaceholderContractTest {
     private static final Set<String> EXPECTED_LEGACY_OFFENDERS = Set.of();
 
     /**
-     * Not message renders at all: two marker literals inside {@code
-     * Categories.jsp}'s AJAX handler, which {@code indexOf}es the message text
-     * against the HTML the save POST answered with in order to guess whether the
-     * category was rejected as a duplicate ("kludge: scrape response status from
-     * HTML returned by Struts" is the file's own comment). The tag renders the
-     * pattern verbatim there on purpose -- it is a needle, not a sentence shown
-     * to anybody -- so it can no more pass an argument than a regex can.
-     *
-     * <p>The scrape is already dead in this tree, which is why exempting it is
-     * safe rather than a hole worth worrying about: {@code
-     * CategoryEditController.categoryEditSave} answers every validation failure
-     * with a 302 and a flash {@code generic.error.check.logs}, so the duplicate
-     * message never appears in the body jQuery receives. Deleting the scrape
-     * belongs to the admin-JSP lane; {@link
-     * #theResponseScrapeMarkersStillExist()} fails once it is gone, so this
-     * exemption cannot outlive it.
-     */
-    private static final Set<String> RESPONSE_SCRAPE_MARKERS = Set.of(
-            "WEB-INF/jsps/editor/Categories.jsp -> categoryForm.error.duplicateName");
-
-    /**
      * Call sites whose argument count cannot be read off the source: both pass a
      * local {@code String[] args} whose length is not visible at the call.
      * (Both happen to be correct -- two-element arrays against two-placeholder
@@ -154,8 +133,7 @@ public class MessagePlaceholderContractTest {
         for (MessageUsageScanner.Usage usage : MessageUsageScanner.scanAll()) {
             String value = bundle.getProperty(usage.key());
             if (value == null || usage.argCount() == MessageUsageScanner.UNRESOLVED
-                    || CLIENT_SIDE_SUBSTITUTION.contains(usage.key())
-                    || RESPONSE_SCRAPE_MARKERS.contains(fileAndKey(usage))) {
+                    || CLIENT_SIDE_SUBSTITUTION.contains(usage.key())) {
                 continue;
             }
             checked++;
@@ -224,8 +202,10 @@ public class MessagePlaceholderContractTest {
      */
     private static Map<String, Integer> highestPlaceholderPerKeyAcrossAllBundles() throws IOException {
         Map<String, Integer> highest = new TreeMap<>();
+        Set<String> scanned = new TreeSet<>();
         try (Stream<Path> paths = Files.list(RESOURCE_ROOT)) {
             for (Path bundle : paths.filter(MessagePlaceholderContractTest::isMessageBundle).toList()) {
+                scanned.add(bundle.getFileName().toString());
                 Properties props = new Properties();
                 try (Reader reader = Files.newBufferedReader(bundle, StandardCharsets.UTF_8)) {
                     props.load(reader);
@@ -236,8 +216,29 @@ public class MessagePlaceholderContractTest {
             }
         }
         assertFalse(highest.isEmpty(), "No message bundles found under " + RESOURCE_ROOT.toAbsolutePath());
+        assertEquals(SHIPPED_BUNDLES, scanned,
+                "The set of shipped message bundles changed. A non-empty result is not "
+                        + "enough of a floor here: this scan takes the MAXIMUM placeholder "
+                        + "count across every translation, so a scan that quietly found only "
+                        + "the base bundle would still pass while checking one file. Update "
+                        + "this list (and MessageFormatRegressionTest's twin) deliberately.");
         return highest;
     }
+
+    /**
+     * Mirrors {@code MessageFormatRegressionTest.theScanCoversEveryTranslation}'s
+     * pinned list. Both ratchets read every translation and both are silently
+     * weakened by a scan that stops finding them, so both pin the set by name.
+     */
+    private static final Set<String> SHIPPED_BUNDLES = Set.of(
+            "ApplicationResources.properties",
+            "ApplicationResources_de.properties",
+            "ApplicationResources_es.properties",
+            "ApplicationResources_fr.properties",
+            "ApplicationResources_ja.properties",
+            "ApplicationResources_ko.properties",
+            "ApplicationResources_ru.properties",
+            "ApplicationResources_zh_CN.properties");
 
     private static boolean isMessageBundle(Path path) {
         String name = path.getFileName().toString();
@@ -245,30 +246,6 @@ public class MessagePlaceholderContractTest {
     }
 
     private static final Path RESOURCE_ROOT = Paths.get("src/main/resources");
-
-    /**
-     * Guards {@link #RESPONSE_SCRAPE_MARKERS}: the moment the admin-JSP lane
-     * deletes the response scrape, this fails and the exemption above has to go
-     * with it rather than quietly excusing nothing.
-     */
-    @Test
-    public void theResponseScrapeMarkersStillExist() throws IOException {
-        Set<String> present = new TreeSet<>();
-        for (MessageUsageScanner.Usage usage : MessageUsageScanner.scanAll()) {
-            if (RESPONSE_SCRAPE_MARKERS.contains(fileAndKey(usage))) {
-                present.add(fileAndKey(usage));
-            }
-        }
-        assertEquals(RESPONSE_SCRAPE_MARKERS, present,
-                "A response-scrape marker this test exempts is no longer in the tree. "
-                        + "Drop it from RESPONSE_SCRAPE_MARKERS instead of leaving an "
-                        + "exemption behind that excuses nothing.");
-    }
-
-    private static String fileAndKey(MessageUsageScanner.Usage usage) {
-        String path = usage.where().substring(0, usage.where().lastIndexOf(':'));
-        return path.replace('\\', '/') + " -> " + usage.key();
-    }
 
     private static String shortSite(MessageUsageScanner.Usage usage) {
         String path = usage.where().substring(0, usage.where().lastIndexOf(':'));

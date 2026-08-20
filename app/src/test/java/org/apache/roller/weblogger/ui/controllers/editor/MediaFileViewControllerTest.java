@@ -279,8 +279,9 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
 
         controller.delete(request, model, "dir-1", "file-1", null);
 
-        assertTrue(errors(model).contains("mediaFile.delete.error"),
-                "Expected a delete error, got: " + errors(model));
+        assertTrue(errors(model).contains("mediaFile.delete.error.single"),
+                "A single-file delete must report the singular copy, not the bulk "
+                        + "\"selected media files\" one, got: " + errors(model));
         assertTrue(messages(model).isEmpty(),
                 "A failed delete must not also report success");
     }
@@ -548,8 +549,9 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
         controller.delete(request, model, "dir-1", "file-x", null);
 
         verify(weblogger.getMediaFileManager(), never()).removeMediaFile(any(), any());
-        assertTrue(errors(model).contains("mediaFile.delete.error"),
-                "Expected the delete to be refused, got: " + errors(model));
+        assertTrue(errors(model).contains("mediaFile.delete.error.single"),
+                "A refused single-file delete must report the singular copy, got: "
+                        + errors(model));
     }
 
     @Test
