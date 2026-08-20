@@ -62,19 +62,7 @@
             <templateLanguage>velocity</templateLanguage>
         </rendition>
     </template>
-    
-    <template action="custom">
-        <name>_day</name>
-        <description>_day</description>
-        <navbar>false</navbar>
-        <hidden>true</hidden>
-        <contentType>text/html</contentType>
-        <rendition>
-            <contentsFile>_day.vm</contentsFile>
-            <templateLanguage>velocity</templateLanguage>
-        </rendition>
-    </template>
-    
+
     <template action="custom">
         <name>_decorator</name>
         <description>_decorator</description>

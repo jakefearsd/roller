@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
@@ -183,6 +184,26 @@ class FrontpageRenderingTest {
     }
 
     /**
+     * Pins an entry (site.getPinnedWeblogEntries) and backdates its pubTime
+     * so it is deliberately the OLDEST entry across the site -- outside the
+     * ordinary pager's top-25 window once enough newer filler entries exist.
+     * That is what makes the assertion below prove the dedicated pinned
+     * block rendered, rather than the entry merely showing up because it was
+     * recent.
+     */
+    private WeblogEntry pinnedContributorEntry(String anchor) throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, contributorWeblog, contributorUser);
+        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
+        managed.setPinnedToMain(true);
+        managed.setPubTime(new java.sql.Timestamp(
+                System.currentTimeMillis() - java.util.concurrent.TimeUnit.DAYS.toMillis(1)));
+        mgr.saveWeblogEntry(managed);
+        TestUtils.endSession(true);
+        return entry;
+    }
+
+    /**
      * Mirrors AnalyticsInjectionRenderingTest's pattern for driving a
      * runtime property from a real (non-mocked) rendering test: read the
      * live map through PropertiesManager, mutate, save, flush, end the
@@ -291,6 +312,32 @@ class FrontpageRenderingTest {
                 "the contributing weblog must be listed in the full directory:\n" + body);
         assertTrue(body.contains("class=\"fd-letters\""),
                 "the A-Z letter index must be present:\n" + body);
+    }
+
+    /**
+     * weblog.vm gated the pinned-entries block on {@code
+     * #if(!$pager.nextLink)} -- true only on the LAST page of the site-wide
+     * pager -- instead of {@code #if(!$pager.prevLink)}, true only on the
+     * FIRST page. Pinned entries belong at the top of the front page, so on
+     * any site with more than one page of entries (more than 25, the
+     * template's hardcoded page size) they never rendered at all. This test
+     * forces a second page (26 filler entries, all newer than the pinned
+     * one) so the pinned entry falls outside the ordinary top-25 window --
+     * the only way it can appear in the response is through the dedicated
+     * pinned block on page one.
+     */
+    @Test
+    void theFirstPageShowsPinnedEntriesEvenWhenTheSiteHasMultiplePages() throws Exception {
+        pinnedContributorEntry("pinned-coastal-showcase");
+        for (int i = 0; i < 26; i++) {
+            contributorEntry("filler-entry-" + i);
+        }
+
+        String body = render("/" + SITE_HANDLE + "/");
+
+        assertTrue(body.contains("pinned-coastal-showcase"),
+                "the pinned entry -- backdated outside the top-25 window -- must still "
+                        + "render on the first page via the pinned-entries block:\n" + body);
     }
 
     // -------------------------------------------------------------- escaping

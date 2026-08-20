@@ -46,18 +46,24 @@
     ## and the pager supplies nothing worth printing as a title.
     #if($pager.prevLink || $pager.nextLink)
     <nav class="qj-pager qj-steps" aria-label="More entries">
+        ## getPrevLink() moves toward the present (newer entries); getNextLink()
+        ## moves further back through the archive (older entries) --
+        ## AbstractWeblogEntriesPager.java:146-178. The rel attributes below
+        ## already track that correctly and must not move; only the label and
+        ## the qj-step-back/qj-step-fwd grid-column class (older stays visually
+        ## left) are tied to the correct link here.
         #if($pager.prevLink)
-        <a class="qj-step qj-step-back" href="$pager.prevLink" rel="prev">
-            <span class="qj-step-label">Older</span>
-            <span class="qj-step-title">Earlier entries</span>
+        <a class="qj-step qj-step-fwd" href="$pager.prevLink" rel="prev">
+            <span class="qj-step-label">Newer</span>
+            <span class="qj-step-title">More recent entries</span>
         </a>
         #else
         <span class="qj-step qj-step-empty"></span>
         #end
         #if($pager.nextLink)
-        <a class="qj-step qj-step-fwd" href="$pager.nextLink" rel="next">
-            <span class="qj-step-label">Newer</span>
-            <span class="qj-step-title">More recent entries</span>
+        <a class="qj-step qj-step-back" href="$pager.nextLink" rel="next">
+            <span class="qj-step-label">Older</span>
+            <span class="qj-step-title">Earlier entries</span>
         </a>
         #end
     </nav>

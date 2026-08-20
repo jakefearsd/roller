@@ -17,6 +17,9 @@
  */
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -198,6 +201,56 @@ class JournalThemeRenderingTest {
                 "the nav block must be present:\n" + body);
         assertFalse(body.contains("#showPageLinks"),
                 "a Velocity error resolving the macro would leak the raw directive:\n" + body);
+    }
+
+    // -------------------------------------------------------------- pagination
+
+    /**
+     * {@code AbstractWeblogEntriesPager.getNextLink()} moves further BACK
+     * through the archive (older entries); {@code getPrevLink()} moves
+     * toward the present (newer entries) -- AbstractWeblogEntriesPager.java:
+     * 146-178. The template's {@code rel="prev"}/{@code rel="next"}
+     * attributes already track that correctly (prevLink carries rel="prev",
+     * nextLink carries rel="next"); this pins that the human-visible LABEL
+     * on each link matches its real direction rather than the inverted
+     * labels the template shipped with.
+     */
+    @Test
+    void pageTwoLabelsOlderOnTheRelNextLinkAndNewerOnTheRelPrevLink() throws Exception {
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setEntryDisplayCount(1);
+        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.endSession(true);
+
+        // Three entries at one-per-page: page 1 (0-indexed) then has both a
+        // newer page behind it (prevLink) and an older page ahead of it
+        // (nextLink), so both links render on the same response.
+        TestUtils.setupWeblogEntry("newest-entry", weblog, user);
+        TestUtils.setupWeblogEntry("middle-entry", weblog, user);
+        TestUtils.setupWeblogEntry("oldest-entry", weblog, user);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/" + HANDLE + "/");
+        request.setParameter("page", "1");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), request);
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+
+        Matcher nextLink = Pattern.compile("rel=\"next\">(.*?)</a>", Pattern.DOTALL).matcher(body);
+        assertTrue(nextLink.find(), "no rel=\"next\" link rendered on page 2:\n" + body);
+        assertTrue(nextLink.group(1).contains("Older"),
+                "the rel=\"next\" link moves to OLDER entries and must say so:\n" + nextLink.group(1));
+        assertFalse(nextLink.group(1).contains("Newer"),
+                "the rel=\"next\" link must not carry the newer-entries label:\n" + nextLink.group(1));
+
+        Matcher prevLink = Pattern.compile("rel=\"prev\">(.*?)</a>", Pattern.DOTALL).matcher(body);
+        assertTrue(prevLink.find(), "no rel=\"prev\" link rendered on page 2:\n" + body);
+        assertTrue(prevLink.group(1).contains("Newer"),
+                "the rel=\"prev\" link moves to NEWER entries and must say so:\n" + prevLink.group(1));
+        assertFalse(prevLink.group(1).contains("Older"),
+                "the rel=\"prev\" link must not carry the older-entries label:\n" + prevLink.group(1));
     }
 
     // ------------------------------------------------------------- permalink

@@ -236,7 +236,7 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
 .fd-feed a { color: var(--fd-accent); text-decoration: none; font-weight: 600; }
 
 .fd-search { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--fd-line); }
-.fd-search input.searchButton,
+.fd-search input.button,
 .fd-search input.text {
     font: inherit;
     font-size: .90625rem;
@@ -246,7 +246,7 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
     background: var(--fd-surface);
     color: var(--fd-ink);
 }
-.fd-search input.searchButton {
+.fd-search input.button {
     background: var(--fd-accent);
     border-color: var(--fd-accent);
     color: var(--fd-surface);
@@ -260,19 +260,6 @@ body.fd :focus-visible { outline: 2px solid var(--fd-focus); outline-offset: 2px
 .fd-letters { margin: 0 0 1.25rem; font-size: .90625rem; color: var(--fd-ink-soft); }
 .fd-letters a { color: var(--fd-ink-soft); text-decoration: none; padding: 0 .15rem; }
 .fd-letters a:hover, .fd-letters .current { color: var(--fd-accent); font-weight: 600; }
-
-.fd-crumb { margin: 0 0 1.25rem; font-size: .75rem; }
-.fd-crumb a { color: var(--fd-accent); text-decoration: none; font-weight: 600; }
-
-table.fd-table { width: 100%; border-collapse: collapse; font-size: .90625rem; margin-bottom: 1.25rem; }
-table.fd-table th, table.fd-table td {
-    text-align: left;
-    padding: .5rem .75rem .5rem 0;
-    border-bottom: 1px solid var(--fd-line);
-}
-table.fd-table th { color: var(--fd-ink-soft); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }
-table.fd-table a { color: var(--fd-ink); text-decoration: none; font-weight: 600; }
-table.fd-table a:hover { color: var(--fd-accent); }
 
 /* ---- footer ---- */
 

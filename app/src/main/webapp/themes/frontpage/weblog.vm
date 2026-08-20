@@ -13,7 +13,9 @@
 
     <p class="fd-label">Latest across the site</p>
     <div class="fd-posts">
-    #if(!$pager.nextLink)
+    ## Pinned entries belong at the top of the front page -- that's the
+    ## FIRST page of the pager (prevLink null), not the LAST (nextLink null).
+    #if(!$pager.prevLink)
         #set($pinnedEntries = $site.getPinnedWeblogEntries(5))
         #foreach($pinnedEntry in $pinnedEntries)
             #set($entry = $pinnedEntry)
@@ -22,21 +24,19 @@
     #end
 
     #foreach($entry in $pager.items)
-        #if($foreach.index <= $maxResults)
-            #includeTemplate($model.weblog "_entry")
-        #end
+        #includeTemplate($model.weblog "_entry")
     #end
     </div>
 
     <nav class="fd-pager">
-    #if($pager.nextLink)
-       <a href="$pager.nextLink">&lt; $pager.nextName</a>
+    #if($pager.prevLink)
+       <a href="$pager.prevLink">&lt; $pager.prevName</a>
     #end
     #if($pager.nextLink && $pager.prevLink)
        &nbsp;|&nbsp;
     #end
-    #if($pager.prevLink)
-       <a href="$pager.prevLink">$pager.prevName &gt;</a>
+    #if($pager.nextLink)
+       <a href="$pager.nextLink">$pager.nextName &gt;</a>
     #end
     </nav>
 
@@ -64,9 +64,10 @@
 
 #end
 
+#set($newblogs = $site.getNewWeblogs($since, $maxResults))
+#if(!$newblogs.isEmpty())
 <p class="fd-label">Weblogs</p>
 <div class="fd-dir">
-#set($newblogs = $site.getNewWeblogs($since, $maxResults))
 ## $blog.name is a WeblogWrapper property -- WeblogWrapper#getName already
 ## runs it through StringEscapeUtils.escapeHtml4, so escaping it again here
 ## would double-encode ("&amp;" -> "&amp;amp;"). $blog.tagline is NOT
@@ -82,6 +83,7 @@
     </a>
 #end
 </div>
+#end
 
 <div class="fd-feed">
     <a href='$url.feed.entries.atom' title='Combined Atom feed for site.'>Subscribe to the combined Atom feed</a>

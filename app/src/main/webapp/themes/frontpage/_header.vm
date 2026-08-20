@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; font-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'">
     <title>$utils.escapeHTML($config.siteName)</title>
-    <link href="$url.absoluteSite/favicon.svg" rel="shortcut icon" type="image/x-icon" />
+    <link href="$url.absoluteSite/favicon.svg" rel="icon" type="image/svg+xml" />
     #showAutodiscoveryLinks($model.weblog)
     #showAnalyticsTrackingCode($model.weblog)
     #showSeoHead()
@@ -13,16 +13,17 @@
     #showGalleryGridStyles()
     #showGalleryAssets()
     #showMapAssets()
+    #showAudienceAssets()
 </head>
 <body class="fd">
 
 <header class="fd-topbar">
     <a class="fd-topbar-brand" href="$url.absoluteSite">$utils.escapeHTML($config.siteName)</a>
     <nav class="fd-topbar-links">
-        <a href="$url.absoluteSite/roller-ui/menu.rol">Main Menu</a>
         #if(!$utils.isUserAuthenticated())
         <a href="$url.login">Login</a>
         #else
+        <a href="$url.absoluteSite/roller-ui/menu.rol">Main Menu</a>
         <a href="$url.logout">Logout</a>
         #end
     </nav>

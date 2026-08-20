@@ -15,7 +15,7 @@
     #set($firstLetterDone = 1)
     #set($letterCount = $weblogLetterMap.get($letter))
     #if($letterCount > 0)
-       <a class="#if($letter == $chosenLetter)current#end" href="?letter=$letter" title="$letterCount weblogs">$letter</a>
+       <a class="#if($letter == $chosenLetter)current#end" href="?letter=$letter" title="$letterCount weblog#if($letterCount != 1)s#end">$letter</a>
     #else
        <span>$letter</span>
     #end
@@ -31,7 +31,7 @@
 #set($weblogsPager = $site.getWeblogsByLetterPager($chosenLetter, -1, $pageLength))
 <div class="fd-dir">
 #foreach($loopblog in $weblogsPager.items)
-    <a class="fd-blog" href="$url.absoluteSite/$loopblog.handle">
+    <a class="fd-blog" href="$utils.escapeHTML($loopblog.absoluteURL)">
         <p class="n">$loopblog.name</p>
         <p class="h"><span class="live"></span>$utils.escapeHTML($loopblog.handle)</p>
     </a>

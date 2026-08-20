@@ -1,7 +1,7 @@
 </main>
 
 <footer class="fd-footer">
-    <p class="fd-credit">Powered by Roller $config.rollerVersion</p>
+    <p class="fd-credit">Powered by Roller</p>
 </footer>
 
 </body>
