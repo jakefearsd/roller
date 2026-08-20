@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -104,17 +105,57 @@ class EditorJspScriptBindingTest {
         assertTrue(violations.isEmpty(), String.join("\n", violations));
     }
 
-    /** onclick attributes must not interpolate escaped author text -- the entity
-     *  decodes before the JS compiles and an apostrophe in a title becomes a
-     *  SyntaxError. Fix pattern: data-* + delegated handler (MediaFileView:493). */
+    /**
+     * onclick attributes must not interpolate escaped author text -- the
+     * entity decodes before the JS compiles and an apostrophe in a title
+     * becomes a SyntaxError. Fix pattern: data-* + delegated handler
+     * (MediaFileView:493).
+     *
+     * <p>A naive same-line {@code onclick="...${fn:escapeXml"} match turned
+     * out to miss the ACTUAL shape of this bug at three of its own fixed
+     * sites, not a hypothetical evasion: Templates.jsp split the attribute
+     * across a line ({@code onclick=\n        "..."}), and Entries.jsp /
+     * Categories.jsp interpolated a {@code <c:set>} variable that was itself
+     * assigned {@code ${fn:escapeXml(...)}} one line earlier rather than
+     * inlining the call. Both carry the identical bug -- an escaped, then
+     * HTML-entity-decoded, apostrophe reaching the onclick's JS -- so this
+     * scan normalizes whitespace first (collapsing a split attribute back to
+     * one line) and resolves one level of {@code <c:set>} indirection (an
+     * onclick referencing {@code ${x}} is flagged when {@code x} was set from
+     * an escapeXml expression), rather than matching only the literal inline
+     * case.
+     */
     @Test
     void noOnclickInterpolatesAuthorText() throws Exception {
         List<String> violations = new ArrayList<>();
-        Pattern bad = Pattern.compile("onclick=\"[^\"]*\\$\\{fn:escapeXml");
+        Pattern setPattern = Pattern.compile(
+                "<c:set\\s+var=\"([A-Za-z0-9_]+)\"\\s+value=\"[^\"]*fn:escapeXml[^\"]*\"\\s*/?>");
+        Pattern onclickPattern = Pattern.compile("onclick=\"([^\"]*)\"");
         for (Path jsp : editorJsps()) {
-            String src = Files.readString(jsp);
-            if (bad.matcher(src).find()) {
-                violations.add(jsp.getFileName() + " interpolates escaped author text into onclick");
+            // Collapse all whitespace (including newlines) to a single space,
+            // then close up "= " before a quote -- a split attribute like
+            // onclick=\n        "..." reads as one contiguous onclick="..."
+            // for the matching below.
+            String normalized = Files.readString(jsp)
+                    .replaceAll("\\s+", " ")
+                    .replaceAll("=\\s+\"", "=\"");
+
+            Set<String> escapedVars = new HashSet<>();
+            Matcher setMatcher = setPattern.matcher(normalized);
+            while (setMatcher.find()) {
+                escapedVars.add(setMatcher.group(1));
+            }
+
+            Matcher onclickMatcher = onclickPattern.matcher(normalized);
+            while (onclickMatcher.find()) {
+                String value = onclickMatcher.group(1);
+                boolean direct = value.contains("${fn:escapeXml");
+                boolean indirect = escapedVars.stream()
+                        .anyMatch(var -> value.contains("${" + var + "}"));
+                if (direct || indirect) {
+                    violations.add(jsp.getFileName() + " interpolates escaped author text into onclick");
+                    break;
+                }
             }
         }
         assertTrue(violations.isEmpty(), String.join("\n", violations));
