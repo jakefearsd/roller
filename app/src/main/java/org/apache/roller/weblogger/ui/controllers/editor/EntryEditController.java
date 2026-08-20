@@ -727,6 +727,20 @@ public class EntryEditController extends BaseController {
 
     private void addEntryModelAttributes(HttpServletRequest request, Model model, WeblogEntry entry,
                                          EntryBean bean) {
+        // Name the browser tab after the entry. With a dozen editor tabs open
+        // -- the normal way this screen gets used -- every one of them read
+        // "Edit entry" and the only way to find the right one was to click
+        // through them. Overwrites the generic title set by the caller, and
+        // only once the entry has one: an unsaved entry has no title to show.
+        // getDisplayTitle() strips HTML and falls back to the entry's opening
+        // text, so it is blank only on the add screen's scratch entry -- which
+        // an id check alone does NOT exclude (a unit test caught the add
+        // screen rendering a leading em dash with nothing before it).
+        if (StringUtils.isNotBlank(entry.getDisplayTitle())) {
+            model.addAttribute("pageTitle", entry.getDisplayTitle()
+                    + " \u2014 " + model.getAttribute("pageTitle"));
+        }
+
         model.addAttribute("categories", getCategories(request));
         model.addAttribute("userAnAuthor", getActionWeblog(request).hasUserPermission(
                 getAuthenticatedUser(request), WeblogPermission.POST));

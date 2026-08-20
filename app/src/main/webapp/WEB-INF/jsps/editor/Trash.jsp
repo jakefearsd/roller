@@ -21,6 +21,25 @@
     <spring:message code="trash.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
+<%-- What "trash" actually promises, in the three cases the retention
+     property has. Without this the page says an entry is recoverable but
+     never says for how long -- and at -1 (the value that keeps everything)
+     it never says that either, which is the case people most want to know
+     about before they rely on it. --%>
+<p class="pagetip">
+    <c:choose>
+    <c:when test="${trashRetentionDays lt 0}">
+        <spring:message code="trash.retention.forever"/>
+    </c:when>
+    <c:when test="${trashRetentionDays eq 0}">
+        <spring:message code="trash.retention.nextSweep"/>
+    </c:when>
+    <c:otherwise>
+        <spring:message code="trash.retention.days" arguments="${trashRetentionDays}"/>
+    </c:otherwise>
+    </c:choose>
+</p>
+
 <%-- One form around the whole table, following Entries.jsp's pattern: every
      row's Restore/Delete forever control is a submit button carrying its own
      name/value and formaction, not a form of its own (a form nested inside

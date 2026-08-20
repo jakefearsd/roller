@@ -281,29 +281,26 @@
             data: $("#categoryEditForm").serialize(),
             context: document.body
 
-        }).done(function (data) {
+        }).done(function () {
 
-            // kludge: scrape response status from HTML returned by Struts
-            var alertEnd = data.indexOf("ALERT_END");
-            var notUnique = data.indexOf('<spring:message code="categoryForm.error.duplicateName"/>');
-            var notValid = data.indexOf('<spring:message code="categoryForm.error.invalidName"/>');
-            if (notUnique > 0 && notUnique < alertEnd) {
-                feedbackAreaEdit.css("color", "var(--bad)");
-                feedbackAreaEdit.html('<spring:message code="categoryForm.error.duplicateName"/>');
-            } else if (notValid > 0 && notValid < alertEnd) {
-                feedbackAreaEdit.css("color", "var(--bad)");
-                feedbackAreaEdit.html('<spring:message code="categoryForm.error.invalidName"/>');
-            } else {
-                feedbackAreaEdit.css("color", "var(--good)");
-                feedbackAreaEdit.html('<spring:message code="generic.success"/>');
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).hide();
-                location.reload(true);
-            }
+            // The response is never inspected. It used to be scraped for the
+            // duplicate-name and invalid-name strings inside an "ALERT_END"
+            // marker -- a Struts-era kludge that has not been able to match
+            // anything since CategoryEditController started answering with a
+            // 302 and a flash message: jQuery follows the redirect, so `data`
+            // is the redirected page, and the flash renders on the reload
+            // below anyway. Scraping localized text is also the shape that
+            // breaks the moment a message gains a placeholder, which is
+            // exactly what happened.
+            feedbackAreaEdit.css("color", "var(--good)");
+            feedbackAreaEdit.html('<spring:message code="generic.success"/>');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('category-edit-modal')).hide();
+            location.reload(true);
 
         // .fail, not .error: jQuery removed .error() in 3.0, so this threw
         // "TypeError: $.ajax(...).done(...).error is not a function" on every
         // single save.
-        }).fail(function (data) {
+        }).fail(function () {
             feedbackAreaEdit.html('<spring:message code="generic.error.check.logs"/>');
             feedbackAreaEdit.css("color", "var(--bad)");
         });

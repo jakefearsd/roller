@@ -26,6 +26,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.runnable.TrashPurgeTask;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -101,6 +103,12 @@ public class TrashController extends BaseController {
             addError(model, "Error looking up trashed entries", request);
         }
         model.addAttribute("trashedEntries", trashedEntries);
+        // Read per request, not latched: entry.trash.retention.days is a
+        // RUNTIME property (Admin Settings), so a value cached at init would
+        // show a retention the purge task no longer honours. TrashPurgeTask
+        // re-reads it per sweep for the same reason.
+        model.addAttribute("trashRetentionDays",
+                WebloggerRuntimeConfig.getIntProperty(TrashPurgeTask.RETENTION_PROPERTY));
 
         return ".Trash";
     }
