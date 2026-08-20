@@ -95,6 +95,15 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Declared rather than inherited. These are the same two grants the
+    # workflow-level block above makes, so this changes nothing today -- it is
+    # here so that a step added to this job later cannot pick up write access
+    # by accident, and so the one job that genuinely publishes says so at the
+    # point a reader is looking. The `test` job above narrows to contents:read
+    # for the same reason.
+    permissions:
+      contents: write    # create the GitHub Release
+      packages: write    # push to ghcr.io
 
     steps:
       - name: Checkout Project
@@ -182,16 +191,47 @@ jobs:
           cp bin/roller-api release-assets/roller-api
           ls -l release-assets
 
+      # Deliberately the GitHub CLI rather than a third-party action.
+      #
+      # This step runs in the one job holding contents:write + packages:write,
+      # with a live GHCR credential in its environment -- the highest-value
+      # position in this repository for someone else's code to occupy. It used
+      # to be softprops/action-gh-release@v3, pinned to a MUTABLE major tag, so
+      # whatever that tag pointed at on release day ran here with rights to
+      # publish images and rewrite releases.
+      #
+      # Pinning it to a commit SHA would have frozen that risk rather than
+      # removed it: a pin still runs that maintainer's code, and every bump
+      # (Dependabot's included) re-extends the trust. `gh` is preinstalled on
+      # GitHub-hosted runners and maintained by the same party that already
+      # owns the token, so this adds no trust relationship at all. The action's
+      # features that were actually used map one-to-one, so nothing is lost.
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          name: Roller ${{ steps.version.outputs.version }}
-          generate_release_notes: true
-          # A production host has no checkout, so everything it needs is here.
-          files: |
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          # The action's fail_on_unmatched_files: true. Worth keeping -- a
+          # release whose deploy bundle is silently missing a file is worse
+          # than a failed release, because the deploy fails on someone's host
+          # instead of in CI. Explicit paths (not globs), so a missing asset is
+          # a missing file rather than an unexpanded pattern.
+          assets=(
             release-assets/roller.war
             release-assets/docker-compose.prod.yml
             release-assets/env.example
             release-assets/deploy.sh
             release-assets/roller-api
-          fail_on_unmatched_files: true
+          )
+          for asset in "${assets[@]}"; do
+            if [ ! -f "$asset" ]; then
+              echo "::error::release asset missing: $asset" >&2
+              exit 1
+            fi
+          done
+          # A production host has no checkout, so everything it needs is here.
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "Roller ${VERSION}" \
+            --generate-notes \
+            "${assets[@]}"

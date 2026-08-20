@@ -44,6 +44,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege, declared rather than relied upon.
+#
+# Nothing in this workflow writes to the repository: it builds, tests, checks
+# diff coverage, and uploads an artifact. The repository's default workflow
+# token is already read-only, so this block grants nothing new -- it is here so
+# the guarantee survives someone flipping that org/repo default, which is a
+# setting no reviewer of this file can see. Jobs needing more must say so
+# themselves; release.yml is where publishing rights live.
+permissions:
+  contents: read
+
 jobs:
   build-test:
     name: Build+Test on Linux/JDK ${{ matrix.java }}
@@ -96,7 +107,11 @@ jobs:
           bin/check-diff-coverage.sh "$BASE"
 
       - name: Publish JUnit Report
-        uses: test-summary/action@v2
+        # Third-party: pinned to a commit SHA, not the mutable v2 tag.
+        # Runs with the read-only token above, so its blast radius is far
+        # smaller than the release action's was -- but it is still someone
+        # else's code on every push, and a tag can be moved.
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
         if: always()
         with:
           paths: "app/target/surefire-reports/TEST-*.xml"
@@ -140,7 +155,11 @@ jobs:
         run: mvn -V -ntp verify -Pit
 
       - name: Publish IT Report
-        uses: test-summary/action@v2
+        # Third-party: pinned to a commit SHA, not the mutable v2 tag.
+        # Runs with the read-only token above, so its blast radius is far
+        # smaller than the release action's was -- but it is still someone
+        # else's code on every push, and a tag can be moved.
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
         if: always()
         with:
           paths: "it-selenium/target/failsafe-reports/TEST-*.xml"
