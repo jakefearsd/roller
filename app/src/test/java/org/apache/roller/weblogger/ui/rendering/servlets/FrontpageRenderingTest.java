@@ -321,23 +321,44 @@ class FrontpageRenderingTest {
      * FIRST page. Pinned entries belong at the top of the front page, so on
      * any site with more than one page of entries (more than 25, the
      * template's hardcoded page size) they never rendered at all. This test
-     * forces a second page (26 filler entries, all newer than the pinned
-     * one) so the pinned entry falls outside the ordinary top-25 window --
-     * the only way it can appear in the response is through the dedicated
-     * pinned block on page one.
+     * forces a second page (54 filler entries, all newer than the pinned
+     * one -- comfortably more than the 50 entries spanning pages one and
+     * two combined, so the pinned entry sits beyond BOTH pages' ordinary
+     * item windows, not just page one's) so the pinned entry can only
+     * appear in either response through the dedicated pinned block, never
+     * through ordinary pagination.
+     *
+     * <p>The negative half matters as much as the positive one: the bug was
+     * directional (which page the gate fires on), so a test that only
+     * asserts presence on page one would pass just as happily against a
+     * gate of {@code #if(true)} (pinned entries on every page) as against
+     * the correct {@code #if(!$pager.prevLink)}. Asserting ABSENCE on page
+     * two is what actually pins the direction.
      */
     @Test
     void theFirstPageShowsPinnedEntriesEvenWhenTheSiteHasMultiplePages() throws Exception {
         pinnedContributorEntry("pinned-coastal-showcase");
-        for (int i = 0; i < 26; i++) {
+        for (int i = 0; i < 54; i++) {
             contributorEntry("filler-entry-" + i);
         }
 
-        String body = render("/" + SITE_HANDLE + "/");
+        String firstPage = render("/" + SITE_HANDLE + "/");
 
-        assertTrue(body.contains("pinned-coastal-showcase"),
+        assertTrue(firstPage.contains("pinned-coastal-showcase"),
                 "the pinned entry -- backdated outside the top-25 window -- must still "
-                        + "render on the first page via the pinned-entries block:\n" + body);
+                        + "render on the first page via the pinned-entries block:\n" + firstPage);
+
+        MockHttpServletRequest secondPageRequest = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/page", "/" + SITE_HANDLE + "/");
+        secondPageRequest.setParameter("page", "1");
+        MockHttpServletResponse secondPageResponse = RenderingTestSupport
+                .execute(RenderingTestSupport.pageServlet(), secondPageRequest);
+        assertEquals(200, secondPageResponse.getStatus());
+        String secondPage = secondPageResponse.getContentAsString();
+
+        assertFalse(secondPage.contains("pinned-coastal-showcase"),
+                "the pinned-entries block only belongs on the FIRST page -- it must not "
+                        + "repeat (or newly appear) on page two:\n" + secondPage);
     }
 
     // -------------------------------------------------------------- escaping
