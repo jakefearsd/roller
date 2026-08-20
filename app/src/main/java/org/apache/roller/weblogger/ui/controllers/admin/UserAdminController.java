@@ -22,8 +22,6 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.roller.weblogger.config.AuthMethod;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
@@ -75,8 +73,6 @@ public class UserAdminController extends BaseController {
     public String execute(HttpServletRequest request, Model model) {
         populateCommonModel(request, model);
 
-        AuthMethod authMethod = WebloggerConfig.getAuthMethod();
-        model.addAttribute("authMethod", authMethod.name());
         model.addAttribute("bean", new CreateUserBean());
 
         return ".UserAdmin";
@@ -87,7 +83,6 @@ public class UserAdminController extends BaseController {
                        @ModelAttribute("bean") CreateUserBean bean) {
         populateCommonModel(request, model);
 
-        model.addAttribute("authMethod", WebloggerConfig.getAuthMethod().name());
         model.addAttribute("bean", bean);
 
         return "redirect:/roller-ui/admin/modifyUser.rol?bean.userName=" + bean.getUserName();

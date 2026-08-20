@@ -17,38 +17,30 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<div class="sidebarFade">
-    <div class="menu-tr">
-        <div class="menu-tl">
+<%-- The four nested wrappers that used to sit here (.sidebarFade,
+     .menu-tr, .menu-tl, .sidebarInner) were a pre-Bootstrap rounded-corner
+     scheme; none of the four has a CSS rule any more. --%>
+<%-- Edit profile --%>
 
-            <div class="sidebarInner">
+<h3><span class="bi bi-person" aria-hidden="true"></span>
+<a href="<c:url value='/roller-ui/profile.rol'/>"><spring:message code="yourWebsites.editProfile" /></a></h3>
+<p><spring:message code="yourWebsites.editProfile.desc" /></p>
 
-                <%-- Edit profile --%>
+<%-- Create weblog --%>
 
-                <h3><span class="bi bi-person" aria-hidden="true"></span>
-                <a href="<c:url value='/roller-ui/profile.rol'/>"><spring:message code="yourWebsites.editProfile" /></a></h3>
-                <p><spring:message code="yourWebsites.editProfile.desc" /></p>
+<c:if test="${rc:getBooleanProp('site.allowUserWeblogCreation') && (rc:getBooleanProp('groupblogging.enabled') || empty existingPermissions)}">
+    <h3><span class="bi bi-plus-lg" aria-hidden="true"></span>
+    <a href="<c:url value='/roller-ui/createWeblog.rol'/>"><spring:message code="yourWebsites.createWeblog" /></a></h3>
+    <p><spring:message code="yourWebsites.createWeblog.desc" /></p>
+</c:if>
 
-                <%-- Create weblog --%>
+<c:if test="${userIsAdmin}">
 
-                <c:if test="${rc:getBooleanProp('site.allowUserWeblogCreation') && (rc:getBooleanProp('groupblogging.enabled') || empty existingPermissions)}">
-                    <h3><span class="bi bi-plus-lg" aria-hidden="true"></span>
-                    <a href="<c:url value='/roller-ui/createWeblog.rol'/>"><spring:message code="yourWebsites.createWeblog" /></a></h3>
-                    <p><spring:message code="yourWebsites.createWeblog.desc" /></p>
-                </c:if>
+    <%-- Roller settings --%>
 
-                <c:if test="${userIsAdmin}">
+    <h3><span class="bi bi-wrench" aria-hidden="true"></span>
+    <a href="<c:url value='/roller-ui/admin/globalConfig.rol'/>"><spring:message code="yourWebsites.globalAdmin" /></a></h3>
+    <p><spring:message code="yourWebsites.globalAdmin.desc" /></p>
 
-                    <%-- Roller settings --%>
+</c:if>
 
-                    <h3><span class="bi bi-wrench" aria-hidden="true"></span>
-                    <a href="<c:url value='/roller-ui/admin/globalConfig.rol'/>"><spring:message code="yourWebsites.globalAdmin" /></a></h3>
-                    <p><spring:message code="yourWebsites.globalAdmin.desc" /></p>
-
-                </c:if>
-
-            </div>
-
-        </div>
-    </div>
-</div>

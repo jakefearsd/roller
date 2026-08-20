@@ -20,8 +20,6 @@ package org.apache.roller.weblogger.ui.controllers.core;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.roller.weblogger.config.AuthMethod;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -37,7 +35,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/roller-ui")
 public class LoginController extends BaseController {
 
-    private final AuthMethod authMethod = WebloggerConfig.getAuthMethod();
 
     @Override
     public boolean isUserRequired() {
@@ -59,7 +56,6 @@ public class LoginController extends BaseController {
                           @RequestParam(value = "error", required = false) String error) {
 
         populateCommonModel(request, model);
-        model.addAttribute("authMethod", authMethod.name());
 
         // set action error message if there was login error
         if (error != null) {

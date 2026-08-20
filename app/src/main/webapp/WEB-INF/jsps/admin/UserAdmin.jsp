@@ -51,16 +51,16 @@
 
 </form>
 
-<c:if test="${authMethod != 'LDAP'}"> <%-- if we're not doing LDAP we can create new users in Roller --%>
-
-    <h3 class="section-head"><spring:message code="userAdmin.subtitle.userCreation" /></h3>
-    <spring:message code="userAdmin.prompt.orYouCan" />
-    <c:url var="createUserUrl" value="/roller-ui/admin/createUser.rol" />
-    <a href="${createUserUrl}">
-        <spring:message code="userAdmin.prompt.createANewUser" />
-    </a>
-
-</c:if>
+<%-- The c:if that used to wrap this tested authMethod != 'LDAP'. AuthMethod
+     has exactly one constant (ROLLERDB) since LDAP/OpenID/container-managed
+     were removed, so the test could never be false and the branch it guarded
+     was unreachable-in-reverse: always taken, never exercised as a choice. --%>
+<h3 class="section-head"><spring:message code="userAdmin.subtitle.userCreation" /></h3>
+<spring:message code="userAdmin.prompt.orYouCan" />
+<c:url var="createUserUrl" value="/roller-ui/admin/createUser.rol" />
+<a href="${createUserUrl}">
+    <spring:message code="userAdmin.prompt.createANewUser" />
+</a>
 
 <script>
 

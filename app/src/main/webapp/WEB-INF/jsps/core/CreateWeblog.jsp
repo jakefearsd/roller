@@ -82,7 +82,9 @@
         </div>
     </div>
 
-    <div class="row mb-3" ng-app="themeSelectModule" ng-controller="themeController">
+    <%-- ng-app/ng-controller removed: no Angular has ever been loaded on
+         this page, so both attributes were inert. --%>
+    <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="theme">
             <spring:message code="createWebsite.theme" />
         </label>

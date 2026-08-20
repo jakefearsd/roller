@@ -89,7 +89,6 @@ class ProfileControllerTest {
         assertEquals("jake@example.com", bean.getEmailAddress());
         assertEquals("en_GB", bean.getLocale());
         assertEquals("Europe/Berlin", bean.getTimeZone());
-        assertEquals("ROLLERDB", model.getAttribute("authMethod"));
         assertFalse(((List<?>) model.getAttribute("localesList")).isEmpty());
         assertFalse(((List<?>) model.getAttribute("timeZonesList")).isEmpty());
         assertEquals("yourProfile.title", model.getAttribute("pageTitle"));

@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.config.AuthMethod;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
@@ -59,7 +58,6 @@ public class UserEditController extends BaseController {
 
     private static final Logger log = LoggerFactory.getLogger(UserEditController.class);
 
-    private final AuthMethod authMethod = WebloggerConfig.getAuthMethod();
 
     @Override
     public boolean isWeblogRequired() {
@@ -94,7 +92,6 @@ public class UserEditController extends BaseController {
         bean.setTimeZone(java.util.TimeZone.getDefault().getID());
 
         model.addAttribute("bean", bean);
-        model.addAttribute("authMethod", authMethod.name());
         model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         addLocalesAndTimezones(model);
 
@@ -108,7 +105,6 @@ public class UserEditController extends BaseController {
         model.addAttribute("actionName", "createUser");
         model.addAttribute("pageTitle", "userAdmin.title.createNewUser");
         model.addAttribute("bean", bean);
-        model.addAttribute("authMethod", authMethod.name());
         model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         addLocalesAndTimezones(model);
 
@@ -176,7 +172,6 @@ public class UserEditController extends BaseController {
         if (user == null) {
             addError(model, "userAdmin.error.userNotFound", request);
             model.addAttribute("bean", bean);
-            model.addAttribute("authMethod", authMethod.name());
             model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
             addLocalesAndTimezones(model);
             return ".UserAdmin";
@@ -185,7 +180,6 @@ public class UserEditController extends BaseController {
         // populate form data from user profile data
         bean.copyFrom(user);
         model.addAttribute("bean", bean);
-        model.addAttribute("authMethod", authMethod.name());
         model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         model.addAttribute("permissions", getPermissions(user));
         addLocalesAndTimezones(model);
@@ -207,7 +201,6 @@ public class UserEditController extends BaseController {
         model.addAttribute("actionName", "modifyUser");
         model.addAttribute("pageTitle", "userAdmin.title.editUser");
         model.addAttribute("bean", bean);
-        model.addAttribute("authMethod", authMethod.name());
         model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         addLocalesAndTimezones(model);
 
@@ -304,7 +297,6 @@ public class UserEditController extends BaseController {
         populateCommonModel(request, model);
         model.addAttribute("actionName", "modifyUser");
         model.addAttribute("pageTitle", "userAdmin.title.editUser");
-        model.addAttribute("authMethod", authMethod.name());
         model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         addLocalesAndTimezones(model);
 
