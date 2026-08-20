@@ -243,22 +243,22 @@ public class MessageKeyTest {
     }
 
     /**
-     * Today's true orphans, verbatim -- emptied by Task 22, which deletes them
-     * from the base bundle and the seven translations.
+     * Empty, and it stays empty.
      *
-     * <p>Every one of these is a shorter prefix of a key that IS used, which is
-     * exactly why substring matching never saw them. Equality rather than
-     * containment: a new orphan fails the build, and so does a deleted one that
-     * is not removed from here in the same commit.
+     * <p>Task 7 found seven orphans, every one a shorter prefix of a key that
+     * IS used -- which is exactly why substring matching had never seen them --
+     * and Task 22 deleted all seven from the base bundle and the seven
+     * translations. Equality rather than containment: the next key that loses
+     * its last reference fails the build here instead of quietly riding along
+     * in eight files.
+     *
+     * <p>What is deliberately NOT in this history: {@code error}. It was
+     * proposed for deletion on the strength of the same prefix pattern, and
+     * {@code tiles-errorpage.jsp} really does render it -- deleting it would
+     * have turned every error page into a second error. See this test's own
+     * javadoc.
      */
-    private static final Set<String> EXPECTED_ORPHANS = Set.of(
-            "categoriesForm.root",            // hidden behind categoriesForm.rootPrompt/rootTitle
-            "error.upload.file",              // hidden behind error.upload.filemax
-            "macro.weblog.readMore",          // hidden behind macro.weblog.readMoreLink
-            "pageForm.template",              // hidden behind pageForm.templateLanguage
-            "uploadFiles.upload",             // hidden behind uploadFiles.uploadedFile(s)
-            "userAdmin.title",                // hidden behind userAdmin.title.editUser etc.
-            "websiteSettings.removeWebsite"); // hidden behind websiteSettings.removeWebsiteWarning
+    private static final Set<String> EXPECTED_ORPHANS = Set.of();
 
     /**
      * {@code macro.weblog.datetime.toStringFormat} and {@code
