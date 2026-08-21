@@ -128,6 +128,57 @@ public final class MenuHelper {
     }
 
     /**
+     * Whether one menu element -- a tab or an item, they are gated identically
+     * -- should appear for this user on this weblog.
+     *
+     * <p>Three rules, in order: an enabled/disabled property, then global
+     * permissions, then weblog permissions. buildMenu used to apply all three
+     * twice, once per level, which is most of why it reached cyclomatic
+     * complexity 30.
+     *
+     * <p>A failed <em>global</em> permission lookup hides the element rather
+     * than propagating: an admin menu that renders without a tab is better than
+     * one that 500s, and the same store outage should not produce a different
+     * outcome depending on which level of the menu asked. Before this was
+     * shared, only the tab level did that -- the item level let the exception
+     * out and took the whole page with it, which was an oversight rather than a
+     * decision (see aFailedPermissionLookupHidesTheTab, which pins the tab
+     * half, and its item counterpart added alongside this change). The weblog
+     * permission lookup deliberately still propagates, exactly as it did at
+     * both levels before.
+     */
+    private static boolean isVisible(MenuGated config, User user, Weblog weblog,
+            UserManager umgr, Predicate<String> propertyEnabled)
+            throws WebloggerException {
+
+        if (config.getEnabledProperty() != null) {
+            if (!propertyEnabled.test(config.getEnabledProperty())) {
+                return false;
+            }
+        } else if (config.getDisabledProperty() != null
+                && propertyEnabled.test(config.getDisabledProperty())) {
+            return false;
+        }
+
+        List<String> globalActions = config.getGlobalPermissionActions();
+        if (globalActions != null && !globalActions.isEmpty()) {
+            try {
+                if (!umgr.checkPermission(new GlobalPermission(globalActions), user)) {
+                    return false;
+                }
+            } catch (WebloggerException ex) {
+                log.error("ERROR: fetching user roles", ex);
+                return false;
+            }
+        }
+
+        List<String> weblogActions = config.getWeblogPermissionActions();
+        return weblogActions == null || weblogActions.isEmpty()
+                || umgr.checkPermission(new WeblogPermission(weblog, weblogActions), user);
+    }
+
+
+    /**
      * Builds the menu.
      *
      * <p>The user manager and the property lookup are parameters rather than
@@ -155,6 +206,8 @@ public final class MenuHelper {
      * @throws WebloggerException
      *             the weblogger exception
      */
+
+
     static Menu buildMenu(String menuId, ParsedMenu menuConfig,
             String currentAction, User user, Weblog weblog, UserManager umgr,
             Predicate<String> propertyEnabled)
@@ -176,36 +229,7 @@ public final class MenuHelper {
 
             // log.debug("config tab = " + configTab.getName());
 
-            // does this tab have an enabledProperty?
-            boolean includeTab = true;
-            if (configTab.getEnabledProperty() != null) {
-                includeTab = propertyEnabled.test(configTab.getEnabledProperty());
-            } else if (configTab.getDisabledProperty() != null) {
-                includeTab = !propertyEnabled.test(configTab.getDisabledProperty());
-            }
-
-            // user roles check
-            if (includeTab && configTab.getGlobalPermissionActions() != null
-                    && !configTab.getGlobalPermissionActions().isEmpty()) {
-                try {
-                    GlobalPermission perm = new GlobalPermission( configTab.getGlobalPermissionActions());
-                    if (!umgr.checkPermission(perm, user)) {
-                        includeTab = false;
-                    }
-                } catch (WebloggerException ex) {
-                    log.error("ERROR: fetching user roles", ex);
-                    includeTab = false;
-                }
-            }
-
-            // weblog permissions check
-            if (includeTab && configTab.getWeblogPermissionActions() != null
-                    && !configTab.getWeblogPermissionActions().isEmpty()) {
-                WeblogPermission perm = new WeblogPermission(weblog, configTab.getWeblogPermissionActions());
-                includeTab = umgr.checkPermission(perm, user);
-            }
-
-            if (includeTab) {
+            if (isVisible(configTab, user, weblog, umgr, propertyEnabled)) {
 
                 // log.debug("tab allowed - " + configTab.getName());
 
@@ -219,34 +243,7 @@ public final class MenuHelper {
 
                 for (ParsedTabItem configTabItem : configTab.getTabItems()) {
 
-                    boolean includeItem = true;
-
-                    if (configTabItem.getEnabledProperty() != null) {
-                        includeItem = propertyEnabled.test(configTabItem.getEnabledProperty());
-                    } else if (configTabItem.getDisabledProperty() != null) {
-                        includeItem = !propertyEnabled.test(configTabItem.getDisabledProperty());
-                    }
-
-                    // user roles check
-                    if (includeItem
-                            && configTabItem.getGlobalPermissionActions() != null
-                            && !configTabItem.getGlobalPermissionActions() .isEmpty()) {
-                        GlobalPermission perm = new GlobalPermission(
-                                configTabItem.getGlobalPermissionActions());
-                        if (!umgr.checkPermission(perm, user)) {
-                            includeItem = false;
-                        }
-                    }
-
-                    // weblog permissions check
-                    if (includeItem
-                            && configTabItem.getWeblogPermissionActions() != null
-                            && !configTabItem.getWeblogPermissionActions().isEmpty()) {
-                        WeblogPermission perm = new WeblogPermission(weblog, configTabItem.getWeblogPermissionActions());
-                        includeItem = umgr.checkPermission(perm, user);
-                    }
-
-                    if (includeItem) {
+                    if (isVisible(configTabItem, user, weblog, umgr, propertyEnabled)) {
 
                         // log.debug("tab item allowed - "
                         // + configTabItem.getName());

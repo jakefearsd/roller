@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -527,6 +528,48 @@ class MenuHelperTest {
                 "When the permission lookup fails the tab must be hidden. Showing it would "
                         + "expose administration screens to a user whose rights could not be "
                         + "checked.");
+    }
+
+    /**
+     * The item-level counterpart of the test above, and the reason the two
+     * levels now share one gate.
+     *
+     * <p>They used to filter independently, and only the tab level caught a
+     * failed global-permission lookup: at the item level the exception escaped
+     * buildMenu and took the whole page with it. Nothing shipped could reach
+     * it -- no bundled menu item declares globalPerms, only the tabs do -- so
+     * this was a trap laid for whoever added the first one, not a live bug.
+     * It is closed now, and pinned here so it stays closed.
+     */
+    @Test
+    void aFailedPermissionLookupHidesTheItemToo() throws Exception {
+        UserManager failing = mock(UserManager.class);
+        when(failing.checkPermission(any(), any()))
+                .thenThrow(new WebloggerException("user store unavailable"));
+
+        ParsedTabItem gatedItem = new ParsedTabItem();
+        gatedItem.setName("tabbedmenu.item");
+        gatedItem.setAction("something");
+        gatedItem.setGlobalPermissionActions(List.of("admin"));
+
+        ParsedTab ungatedTab = new ParsedTab();
+        ungatedTab.setName("tabbedmenu.tab");
+        ungatedTab.setTabItems(List.of(gatedItem));
+
+        ParsedMenu menuConfig = new ParsedMenu();
+        menuConfig.addTab(ungatedTab);
+
+        Menu menu = assertDoesNotThrow(() -> MenuHelper.buildMenu("custom", menuConfig, null,
+                        user, weblog, failing, enabledProperties::contains),
+                "A permission lookup that fails one level down must not take the whole menu "
+                        + "with it -- the tab level has always survived this");
+
+        assertEquals(List.of("tabbedmenu.tab"), tabKeys(menu),
+                "the tab itself is ungated, so it stays");
+        assertEquals(List.of(), menu.getTabs().get(0).getItems().stream()
+                        .map(MenuTabItem::getKey).toList(),
+                "but the item whose rights could not be established is hidden, exactly as a "
+                        + "tab in the same position would be");
     }
 
     // ------------------------------------------------------------------

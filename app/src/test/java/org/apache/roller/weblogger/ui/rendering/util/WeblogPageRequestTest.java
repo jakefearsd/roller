@@ -433,4 +433,80 @@ class WeblogPageRequestTest {
                 .mapToObj(i -> "t" + i)
                 .toList();
     }
+
+    // --------------------------------------------- edges found by coverage
+
+    /**
+     * A path of nothing but whitespace is the homepage, not a context named
+     * " ". The blank check is separate from the null check and had never been
+     * exercised.
+     */
+    @Test
+    void aBlankPathIsTheHomepage() throws InvalidRequestException {
+        WeblogPageRequest request = parse("/myblog/   ");
+
+        assertNull(request.getContext(), "whitespace names no context");
+        assertNull(request.getPageSlug(), "and is not taken for a page slug");
+    }
+
+    /**
+     * "entry" present but empty suppresses "anchor" rather than falling through
+     * to it: the parser commits to "entry" the moment it is present at all.
+     * Worth pinning because the obvious simplification -- take the first
+     * non-empty of the two -- quietly changes it.
+     */
+    @Test
+    void anEmptyEntryParamDoesNotFallThroughToAnchor() throws InvalidRequestException {
+        WeblogPageRequest request = parse(null, "entry", "", "anchor", "my-post");
+
+        assertNull(request.getWeblogAnchor(),
+                "entry was present, so anchor is never consulted, and entry was empty, "
+                        + "so nothing is set");
+    }
+
+    @Test
+    void anEmptyAnchorParamSetsNothing() throws InvalidRequestException {
+        WeblogPageRequest request = parse(null, "anchor", "");
+
+        assertNull(request.getWeblogAnchor(), "an empty anchor names no entry");
+    }
+
+    @Test
+    void anAnchorParamIsUsedWhenEntryIsAbsent() throws InvalidRequestException {
+        WeblogPageRequest request = parse(null, "anchor", "my-post");
+
+        assertEquals("my-post", request.getWeblogAnchor());
+    }
+
+    // ------------------------------------------------------- date validity
+
+    @Test
+    void aSixDigitDateIsAMonth() throws InvalidRequestException {
+        assertEquals("200511", parse("/myblog/date/200511").getWeblogDate());
+    }
+
+    @Test
+    void anEightDigitDateIsADay() throws InvalidRequestException {
+        assertEquals("20051110", parse("/myblog/date/20051110").getWeblogDate());
+    }
+
+    @Test
+    void aDateOfAnyOtherLengthIsRejected() {
+        assertThrows(InvalidRequestException.class, () -> parse("/myblog/date/2005"),
+                "four digits is neither a month nor a day");
+        assertThrows(InvalidRequestException.class, () -> parse("/myblog/date/2005111"),
+                "and seven is neither either");
+    }
+
+    @Test
+    void aNonNumericDateIsRejected() {
+        assertThrows(InvalidRequestException.class, () -> parse("/myblog/date/2005XX"),
+                "a date is all digits or it is not a date");
+    }
+
+    @Test
+    void aDateQueryParamIsValidatedTheSameWayAsAPathDate() {
+        assertThrows(InvalidRequestException.class, () -> parse(null, "date", "2005XX"),
+                "the query-param route must not be a way around the path route's check");
+    }
 }

@@ -108,172 +108,9 @@ public class WeblogPageRequest extends WeblogRequest {
                             + request.getRequestURL());
         }
 
-        /*
-         * parse path info
-         * 
-         * we expect one of the following forms of url ...
-         * 
-         * /entry/<anchor> - permalink /date/<YYYYMMDD> - date collection view
-         * /category/<category> - category collection view /tags/<tag>+<tag> -
-         * tags /page/<pagelink> - custom page
-         * 
-         * path info may be null, which indicates the weblog homepage
-         */
-        if (pathInfo != null && !pathInfo.isBlank()) {
-
-            // all views use 2 path elements
-            String[] pathElements = pathInfo.split("/", 2);
-
-            // the first part of the path always represents the context
-            this.context = pathElements[0];
-
-            // now check the rest of the path and extract other details
-            if (pathElements.length == 2) {
-
-                if ("entry".equals(this.context)) {
-                    this.weblogAnchor = decodeOrReject(pathElements[1], request);
-
-                    // Other page
-                    otherPageHit = true;
-
-                } else if ("date".equals(this.context)) {
-                    if (this.isValidDateString(pathElements[1])) {
-                        this.weblogDate = pathElements[1];
-                    } else {
-                        throw new InvalidRequestException("invalid date, "
-                                + request.getRequestURL());
-                    }
-
-                    // Other page
-                    otherPageHit = true;
-
-                } else if ("category".equals(this.context)) {
-                    this.weblogCategoryName = decodeOrReject(pathElements[1],
-                            request);
-
-                    // Other page
-                    otherPageHit = true;
-
-                } else if ("page".equals(this.context)) {
-                    this.weblogPageName = pathElements[1];
-                    String tagsString = request.getParameter("tags");
-                    if (tagsString != null) {
-                        this.tags = parseTags(tagsString, request);
-                    }
-
-                    // Other page, we do not want css etc stuff so filter out
-                    if (!pathElements[1].contains(".")) {
-                        otherPageHit = true;
-                    }
-
-                } else if ("tags".equals(this.context)) {
-                    this.tags = parseTags(pathElements[1].replace('+', ' '), request);
-
-                    // Other page
-                    otherPageHit = true;
-
-                } else {
-                    throw new InvalidRequestException("context " + this.context
-                            + "not supported, " + request.getRequestURL());
-                }
-
-            } else {
-                // A single path element. It is either /tags (the one context
-                // that takes no argument) or a page slug: /<handle>/about.
-                // Reserved words are rejected here (a cheap string check, no
-                // database); resolving the slug against the database is
-                // deferred to getWeblogPageContent() -- see its javadoc --
-                // so that a cache hit never pays for a lookup that its
-                // answer doesn't need. A slug that turns out not to name a
-                // published page 404s at the servlet, not here.
-                if (!"tags".equals(this.context)) {
-                    // decodeOrReject mirrors the entry/category branches above:
-                    // URLModel#staticPage encodes the slug with URLUtilities.encode
-                    // (a space becomes '+'), and the servlet container's own path
-                    // decoding never touches '+' -- only URLDecoder does. Without
-                    // this, a slug with a space round-trips as a literal '+' and
-                    // 404s.
-                    String slug = decodeOrReject(this.context, request);
-                    if (ReservedSlugs.isReserved(slug)) {
-                        throw new InvalidRequestException("invalid index page, "
-                                + request.getRequestURL());
-                    }
-                    this.pageSlug = slug;
-                    otherPageHit = true;
-                }
-            }
-        } else {
-            // default page
-            websitePageHit = true;
-        }
-
-        /*
-         * parse request parameters
-         * 
-         * the only params we currently allow are: date - specifies a weblog
-         * date string cat - specifies a weblog category anchor - specifies a
-         * weblog entry (old way) entry - specifies a weblog entry
-         * 
-         * we only allow request params if the path info is null or on user
-         * defined pages (for backwards compatability). this way we prevent
-         * mixing of path based and query param style urls.
-         */
-        if (pathInfo == null || this.weblogPageName != null) {
-
-            // check for entry/anchor params which indicate permalink
-            if (request.getParameter("entry") != null) {
-                String anchor = request.getParameter("entry");
-                if (StringUtils.isNotEmpty(anchor)) {
-                    this.weblogAnchor = anchor;
-                }
-            } else if (request.getParameter("anchor") != null) {
-                String anchor = request.getParameter("anchor");
-                if (StringUtils.isNotEmpty(anchor)) {
-                    this.weblogAnchor = anchor;
-                }
-            }
-
-            // only check for other params if we didn't find an anchor above or
-            // tags
-            if (this.weblogAnchor == null && this.tags == null) {
-                if (request.getParameter("date") != null) {
-                    String date = request.getParameter("date");
-                    if (this.isValidDateString(date)) {
-                        this.weblogDate = date;
-                    } else {
-                        throw new InvalidRequestException("invalid date, "
-                                + request.getRequestURL());
-                    }
-                }
-
-                if (request.getParameter("cat") != null) {
-                    this.weblogCategoryName = decodeOrReject(
-                            request.getParameter("cat"), request);
-                }
-            }
-        }
-
-        // page request param is supported in all views
-        if (request.getParameter("page") != null) {
-            String pageInt = request.getParameter("page");
-            try {
-                this.pageNum = Integer.parseInt(pageInt);
-            } catch (NumberFormatException ignored) {
-                // A malformed "page" parameter is routine, not a request
-                // error -- crawlers and hand-edited URLs send these
-                // constantly; parsing simply keeps the default page.
-            }
-        }
-
-        // build customParams Map, we remove built-in params because we only
-        // want this map to represent params defined by the template author
-        customParams = new HashMap<>(request.getParameterMap());
-        customParams.remove("entry");
-        customParams.remove("anchor");
-        customParams.remove("date");
-        customParams.remove("cat");
-        customParams.remove("page");
-        customParams.remove("tags");
+        parsePathInfo(pathInfo, request);
+        parseQueryParameters(pathInfo, request);
+        this.customParams = buildCustomParams(request);
 
         log.debug("context = {}", this.context);
         log.debug("weblogAnchor = {}", this.weblogAnchor);
@@ -282,6 +119,187 @@ public class WeblogPageRequest extends WeblogRequest {
         log.debug("tags = {}", this.tags);
         log.debug("weblogPage = {}", this.weblogPageName);
         log.debug("pageNum = {}", this.pageNum);
+    }
+
+    /**
+     * Reads the view out of the path: which context was asked for, and the one
+     * argument that context takes.
+     *
+     * <p>Extracted from the constructor, which was cyclomatic complexity 33
+     * with all three parsing phases inline. The phases are independent -- this
+     * one reads only the path, the next only the query string -- but written
+     * end to end they read as one long decision.
+     *
+     * <p>We expect one of:
+     * <pre>
+     *   /entry/&lt;anchor&gt;      permalink
+     *   /date/&lt;YYYYMMDD&gt;     date collection view
+     *   /category/&lt;category&gt; category collection view
+     *   /tags/&lt;tag&gt;+&lt;tag&gt;    tags
+     *   /page/&lt;pagelink&gt;     custom page
+     * </pre>
+     * A null or blank path is the weblog homepage.
+     */
+    private void parsePathInfo(String pathInfo, HttpServletRequest request)
+            throws InvalidRequestException {
+
+        if (pathInfo == null || pathInfo.isBlank()) {
+            // default page
+            websitePageHit = true;
+            return;
+        }
+
+        // all views use 2 path elements
+        String[] pathElements = pathInfo.split("/", 2);
+
+        // the first part of the path always represents the context
+        this.context = pathElements[0];
+
+        if (pathElements.length == 2) {
+            parseContextArgument(pathElements[1], request);
+        } else {
+            parseSinglePathElement(request);
+        }
+    }
+
+    /** The {@code /<context>/<argument>} forms. */
+    private void parseContextArgument(String argument, HttpServletRequest request)
+            throws InvalidRequestException {
+
+        switch (this.context) {
+            case "entry" -> {
+                this.weblogAnchor = decodeOrReject(argument, request);
+                otherPageHit = true;
+            }
+            case "date" -> {
+                if (!this.isValidDateString(argument)) {
+                    throw new InvalidRequestException("invalid date, "
+                            + request.getRequestURL());
+                }
+                this.weblogDate = argument;
+                otherPageHit = true;
+            }
+            case "category" -> {
+                this.weblogCategoryName = decodeOrReject(argument, request);
+                otherPageHit = true;
+            }
+            case "page" -> {
+                this.weblogPageName = argument;
+                String tagsString = request.getParameter("tags");
+                if (tagsString != null) {
+                    this.tags = parseTags(tagsString, request);
+                }
+                // we do not want css etc stuff so filter out
+                if (!argument.contains(".")) {
+                    otherPageHit = true;
+                }
+            }
+            case "tags" -> {
+                this.tags = parseTags(argument.replace('+', ' '), request);
+                otherPageHit = true;
+            }
+            default -> throw new InvalidRequestException("context " + this.context
+                    + "not supported, " + request.getRequestURL());
+        }
+    }
+
+    /**
+     * A single path element. It is either /tags (the one context that takes no
+     * argument) or a page slug: /&lt;handle&gt;/about.
+     *
+     * <p>Reserved words are rejected here (a cheap string check, no database);
+     * resolving the slug against the database is deferred to
+     * getWeblogPageContent() -- see its javadoc -- so that a cache hit never
+     * pays for a lookup that its answer doesn't need. A slug that turns out not
+     * to name a published page 404s at the servlet, not here.
+     */
+    private void parseSinglePathElement(HttpServletRequest request)
+            throws InvalidRequestException {
+
+        if ("tags".equals(this.context)) {
+            return;
+        }
+
+        // decodeOrReject mirrors the entry/category branches above: URLModel#staticPage
+        // encodes the slug with URLUtilities.encode (a space becomes '+'), and the
+        // servlet container's own path decoding never touches '+' -- only URLDecoder
+        // does. Without this, a slug with a space round-trips as a literal '+' and 404s.
+        String slug = decodeOrReject(this.context, request);
+        if (ReservedSlugs.isReserved(slug)) {
+            throw new InvalidRequestException("invalid index page, "
+                    + request.getRequestURL());
+        }
+        this.pageSlug = slug;
+        otherPageHit = true;
+    }
+
+    /**
+     * Reads the query string.
+     *
+     * <p>Params are only honoured when the path carried no view of its own, or
+     * on user-defined pages (for backwards compatibility). That is what keeps
+     * path-based and query-param urls from being mixed.
+     */
+    private void parseQueryParameters(String pathInfo, HttpServletRequest request)
+            throws InvalidRequestException {
+
+        if (pathInfo == null || this.weblogPageName != null) {
+
+            // "entry" wins outright when present -- including when it is
+            // present but empty, which suppresses "anchor" rather than falling
+            // through to it. Collapsing these into a first-non-empty-of-the-two
+            // would quietly change that.
+            String anchor = request.getParameter("entry") != null
+                    ? request.getParameter("entry")
+                    : request.getParameter("anchor");
+            if (StringUtils.isNotEmpty(anchor)) {
+                this.weblogAnchor = anchor;
+            }
+
+            // only check for other params if we didn't find an anchor above or tags
+            if (this.weblogAnchor == null && this.tags == null) {
+                String date = request.getParameter("date");
+                if (date != null) {
+                    if (!this.isValidDateString(date)) {
+                        throw new InvalidRequestException("invalid date, "
+                                + request.getRequestURL());
+                    }
+                    this.weblogDate = date;
+                }
+
+                String cat = request.getParameter("cat");
+                if (cat != null) {
+                    this.weblogCategoryName = decodeOrReject(cat, request);
+                }
+            }
+        }
+
+        // page request param is supported in all views
+        String pageInt = request.getParameter("page");
+        if (pageInt != null) {
+            try {
+                this.pageNum = Integer.parseInt(pageInt);
+            } catch (NumberFormatException ignored) {
+                // A malformed "page" parameter is routine, not a request
+                // error -- crawlers and hand-edited URLs send these
+                // constantly; parsing simply keeps the default page.
+            }
+        }
+    }
+
+    /**
+     * Everything in the query string that this class did not claim, which is
+     * what a template author sees.
+     */
+    private static Map<String, String[]> buildCustomParams(HttpServletRequest request) {
+        Map<String, String[]> params = new HashMap<>(request.getParameterMap());
+        params.remove("entry");
+        params.remove("anchor");
+        params.remove("date");
+        params.remove("cat");
+        params.remove("page");
+        params.remove("tags");
+        return params;
     }
 
     boolean isValidDestination(String servlet) {

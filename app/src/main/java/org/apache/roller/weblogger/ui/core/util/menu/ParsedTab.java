@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * A parsed "tab" from an xml defined menu config.
  */
-public class ParsedTab {
+public class ParsedTab implements MenuGated {
     
     private String name = null;
     private List<String> weblogPermissionActions = null;
@@ -47,6 +47,7 @@ public class ParsedTab {
         this.name = name;
     }
 
+    @Override
     public List<String> getWeblogPermissionActions() {
         return weblogPermissionActions;
     }
@@ -55,6 +56,7 @@ public class ParsedTab {
         this.weblogPermissionActions = actions;
     }
 
+    @Override
     public List<String> getGlobalPermissionActions() {
         return globalPermissionActions;
     }
@@ -63,6 +65,7 @@ public class ParsedTab {
         this.globalPermissionActions = actions;
     }
 
+    @Override
     public String getEnabledProperty() {
         return enabledProperty;
     }
@@ -79,6 +82,7 @@ public class ParsedTab {
         this.tabItems = tabItems;
     }
 
+    @Override
     public String getDisabledProperty() {
         return disabledProperty;
     }
