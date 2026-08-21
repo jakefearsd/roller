@@ -1,0 +1,214 @@
+package org.apache.roller.weblogger.ui.restapi;
+
+import java.util.List;
+
+import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.pojos.GlobalPermission;
+import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.ui.controllers.RollerHandlerInterceptor;
+import org.apache.roller.weblogger.ui.controllers.UISecurityEnforced;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.web.method.HandlerMethod;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+/**
+ * What a refused REST caller gets, as opposed to a refused browser.
+ *
+ * <p>The interceptor decides between the two by the controller's package, so
+ * these tests live in the api package rather than beside
+ * RollerHandlerInterceptorTest -- a controller declared anywhere else is a
+ * browser controller by definition and cannot exercise this path. That is why
+ * the api half had no tests: the other test class is structurally incapable of
+ * reaching it.
+ *
+ * <p>The distinction is not cosmetic. Redirecting an api client to the login
+ * page hands it a 302 and a page of HTML where it expected a problem
+ * document -- the caller sees "success, weird body" rather than "denied", which
+ * is the failure mode this whole branch exists to prevent.
+ */
+class ApiSecurityRefusalTest {
+
+    private static final String CONTEXT = "/roller";
+
+    private RollerHandlerInterceptor interceptor;
+    private MockHttpServletRequest request;
+    private MockHttpServletResponse response;
+    private MockWeblogger weblogger;
+
+    private User alice;
+    private Weblog aliceBlog;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        interceptor = new RollerHandlerInterceptor();
+        request = new MockHttpServletRequest();
+        request.setContextPath(CONTEXT);
+        response = new MockHttpServletResponse();
+        weblogger = MockWeblogger.install();
+
+        alice = new User();
+        alice.setUserName("alice");
+        alice.setId("user-alice");
+
+        aliceBlog = new Weblog();
+        aliceBlog.setHandle("aliceblog");
+        aliceBlog.setId("weblog-alice");
+
+        when(weblogger.userManager().getUserByUserName("alice")).thenReturn(alice);
+        when(weblogger.weblogManager().getWeblogByHandle("aliceblog")).thenReturn(aliceBlog);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+        MockWeblogger.uninstall();
+    }
+
+    private void signInAsAlice() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("alice", "x",
+                        AuthorityUtils.createAuthorityList("ROLE_USER")));
+    }
+
+    private static HandlerMethod handlerFor(Object controller) throws Exception {
+        return new HandlerMethod(controller, controller.getClass().getMethod("handle"));
+    }
+
+    private ApiException refusalFrom(ApiController controller) {
+        return assertThrows(ApiException.class,
+                () -> interceptor.preHandle(request, response, handlerFor(controller)));
+    }
+
+    // --- the four refusals -------------------------------------------------
+
+    @Test
+    void anAnonymousApiCallerIsToldToAuthenticateRatherThanRedirected() {
+        ApiException refusal = refusalFrom(
+                new ApiController(true, List.of(), false, List.of()));
+
+        assertEquals(401, refusal.getStatus(),
+                "an api client must be told it is unauthenticated");
+        assertNull(response.getRedirectedUrl(),
+                "and must never be redirected to a login page, which it cannot follow "
+                        + "and would read as a successful response with an odd body");
+    }
+
+    @Test
+    void anApiCallerWithoutTheRequiredGlobalPermissionIsForbidden() throws Exception {
+        signInAsAlice();
+        when(weblogger.userManager().checkPermission(any(GlobalPermission.class), any()))
+                .thenReturn(false);
+
+        ApiException refusal = refusalFrom(
+                new ApiController(true, List.of("admin"), false, List.of()));
+
+        assertEquals(403, refusal.getStatus());
+        assertNull(response.getRedirectedUrl(), "no redirect on the api path");
+    }
+
+    /**
+     * Deliberately 404 rather than 403: no weblog was resolved, so there is
+     * nothing to be forbidden from. This mirrors
+     * BaseApiController.requireActionWeblog's contract for the same condition,
+     * and the asymmetry is easy to "fix" into a 403 by someone tidying up.
+     */
+    @Test
+    void anApiCallerWhoseWeblogDidNotResolveGetsNotFoundNotForbidden() throws Exception {
+        signInAsAlice();
+
+        ApiException refusal = refusalFrom(
+                new ApiController(true, List.of(), true, List.of("post")));
+
+        assertEquals(404, refusal.getStatus(),
+                "an unresolved weblog is a missing resource, not a forbidden one");
+    }
+
+    @Test
+    void anApiCallerWithoutPermissionOnTheWeblogIsForbidden() throws Exception {
+        signInAsAlice();
+        request.setParameter("weblog", "aliceblog");
+        when(weblogger.userManager().checkPermission(any(WeblogPermission.class), any()))
+                .thenReturn(false);
+
+        ApiException refusal = refusalFrom(
+                new ApiController(true, List.of(), true, List.of("post")));
+
+        assertEquals(403, refusal.getStatus());
+    }
+
+    // --- and what is not refused ------------------------------------------
+
+    @Test
+    void anApiControllerThatRequiresNoUserRunsForAnonymousCallers() throws Exception {
+        assertTrue(interceptor.preHandle(request, response,
+                        handlerFor(new ApiController(false, List.of(), false, List.of()))),
+                "a public api endpoint is reachable without signing in");
+        assertNull(response.getRedirectedUrl());
+    }
+
+    @Test
+    void anApiCallerHoldingEveryRequirementProceeds() throws Exception {
+        signInAsAlice();
+        request.setParameter("weblog", "aliceblog");
+        when(weblogger.userManager().checkPermission(any(), any())).thenReturn(true);
+
+        assertTrue(interceptor.preHandle(request, response,
+                        handlerFor(new ApiController(true, List.of("login"), true, List.of("post")))),
+                "nothing is refused when every requirement is met");
+    }
+
+    /** A controller in the api package, declaring whatever a test needs. */
+    public static class ApiController implements UISecurityEnforced {
+        private final boolean userRequired;
+        private final List<String> globalActions;
+        private final boolean weblogRequired;
+        private final List<String> weblogActions;
+
+        ApiController(boolean userRequired, List<String> globalActions,
+                boolean weblogRequired, List<String> weblogActions) {
+            this.userRequired = userRequired;
+            this.globalActions = globalActions;
+            this.weblogRequired = weblogRequired;
+            this.weblogActions = weblogActions;
+        }
+
+        public String handle() {
+            return "ok";
+        }
+
+        @Override
+        public boolean isUserRequired() {
+            return userRequired;
+        }
+
+        @Override
+        public boolean isWeblogRequired() {
+            return weblogRequired;
+        }
+
+        @Override
+        public List<String> requiredGlobalPermissionActions() {
+            return globalActions;
+        }
+
+        @Override
+        public List<String> requiredWeblogPermissionActions() {
+            return weblogActions;
+        }
+    }
+}

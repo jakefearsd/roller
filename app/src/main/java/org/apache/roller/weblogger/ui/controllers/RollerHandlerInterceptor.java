@@ -33,6 +33,9 @@ import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import java.util.function.Supplier;
+import java.util.List;
+import java.io.IOException;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
@@ -59,6 +62,96 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
 
     private static final String LOGIN_URL = "/roller-ui/login.rol";
     private static final String ACCESS_DENIED_URL = "/roller-ui/access-denied.rol";
+
+    /**
+     * The access check for a controller that asks for one.
+     *
+     * <p>Extracted from preHandle, which reached cyclomatic complexity 28 with
+     * this inline and nested four deep. Four separate denials each repeated the
+     * same shape -- throw for an api caller, redirect for a browser, return
+     * false either way -- which is now {@link #deny}.
+     *
+     * @return true to let the request continue; false when the response has
+     *         already been committed to a redirect
+     */
+    private boolean enforceSecurity(UISecurityEnforced secured, HandlerMethod handlerMethod,
+                                    HttpServletRequest request, HttpServletResponse response,
+                                    User authenticatedUser, Weblog actionWeblog)
+            throws Exception {
+
+        if (!secured.isUserRequired()) {
+            return true;
+        }
+
+        boolean apiHandler = isApiHandler(handlerMethod);
+
+        if (authenticatedUser == null) {
+            log.debug("DENIED: required user not found, redirecting to login");
+            return deny(apiHandler, () -> ApiException.unauthorized("Authentication required."),
+                    LOGIN_URL, request, response);
+        }
+
+        UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+
+        List<String> globalActions = secured.requiredGlobalPermissionActions();
+        if (globalActions != null && !globalActions.isEmpty()) {
+            GlobalPermission perm = new GlobalPermission(globalActions);
+            if (!umgr.checkPermission(perm, authenticatedUser)) {
+                log.debug("DENIED: user {} does not have global permission = {}",
+                        authenticatedUser.getUserName(), perm);
+                return deny(apiHandler, RollerHandlerInterceptor::forbidden,
+                        ACCESS_DENIED_URL, request, response);
+            }
+        }
+
+        if (!secured.isWeblogRequired()) {
+            return true;
+        }
+
+        if (actionWeblog == null) {
+            log.warn("User {} unable to process action because no weblog was defined "
+                            + "(check that the form provides the weblog value).",
+                    authenticatedUser.getUserName());
+            // Not found, not forbidden: no weblog was even resolved to check a
+            // permission against, so there is nothing to be "forbidden" from --
+            // matches BaseApiController.requireActionWeblog's identical
+            // contract for the same condition.
+            return deny(apiHandler, () -> ApiException.notFound("No such weblog."),
+                    ACCESS_DENIED_URL, request, response);
+        }
+
+        List<String> weblogActions = secured.requiredWeblogPermissionActions();
+        if (weblogActions != null && !weblogActions.isEmpty()) {
+            WeblogPermission required = new WeblogPermission(actionWeblog, weblogActions);
+            if (!umgr.checkPermission(required, authenticatedUser)) {
+                log.debug("DENIED: user {} does not have weblog permission = {}",
+                        authenticatedUser.getUserName(), required);
+                return deny(apiHandler, RollerHandlerInterceptor::forbidden,
+                        ACCESS_DENIED_URL, request, response);
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Turns one refused request away.
+     *
+     * <p>An api caller gets a problem response built from {@code apiFailure};
+     * a browser gets a redirect. The failure is supplied lazily so that the
+     * browser path never builds an exception it will not throw.
+     */
+    private boolean deny(boolean apiHandler, Supplier<ApiException> apiFailure,
+                         String redirectUrl, HttpServletRequest request,
+                         HttpServletResponse response) throws IOException {
+
+        if (apiHandler) {
+            throw apiFailure.get();
+        }
+        response.sendRedirect(request.getContextPath() + redirectUrl);
+        return false;
+    }
+
 
     @Override
     public boolean preHandle(HttpServletRequest request,
@@ -101,73 +194,10 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
         }
 
         // --- 3. Enforce security if controller implements UISecurityEnforced ---
-        if (controller instanceof UISecurityEnforced secured) {
-            UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
-            boolean apiHandler = isApiHandler(handlerMethod);
-
-            // Check if user is required
-            if (secured.isUserRequired()) {
-                if (authenticatedUser == null) {
-                    if (apiHandler) {
-                        throw ApiException.unauthorized("Authentication required.");
-                    }
-                    log.debug("DENIED: required user not found, redirecting to login");
-                    response.sendRedirect(request.getContextPath() + LOGIN_URL);
-                    return false;
-                }
-
-                // Check global permissions
-                if (secured.requiredGlobalPermissionActions() != null
-                        && !secured.requiredGlobalPermissionActions().isEmpty()) {
-                    GlobalPermission perm = new GlobalPermission(
-                            secured.requiredGlobalPermissionActions());
-                    if (!umgr.checkPermission(perm, authenticatedUser)) {
-                        log.debug("DENIED: user {} does not have global permission = {}",
-                                authenticatedUser.getUserName(), perm);
-                        if (apiHandler) {
-                            throw forbidden();
-                        }
-                        response.sendRedirect(request.getContextPath() + ACCESS_DENIED_URL);
-                        return false;
-                    }
-                }
-
-                // Check if weblog is required
-                if (secured.isWeblogRequired()) {
-                    if (actionWeblog == null) {
-                        log.warn("User {} unable to process action because no weblog was defined "
-                                        + "(check that the form provides the weblog value).",
-                                authenticatedUser.getUserName());
-                        if (apiHandler) {
-                            // Not found, not forbidden: no weblog was even
-                            // resolved to check a permission against, so
-                            // there is nothing to be "forbidden" from --
-                            // matches BaseApiController.requireActionWeblog's
-                            // identical contract for the same condition.
-                            throw ApiException.notFound("No such weblog.");
-                        }
-                        response.sendRedirect(request.getContextPath() + ACCESS_DENIED_URL);
-                        return false;
-                    }
-
-                    // Check weblog-level permissions
-                    if (secured.requiredWeblogPermissionActions() != null
-                            && !secured.requiredWeblogPermissionActions().isEmpty()) {
-                        WeblogPermission required = new WeblogPermission(
-                                actionWeblog,
-                                secured.requiredWeblogPermissionActions());
-                        if (!umgr.checkPermission(required, authenticatedUser)) {
-                            log.debug("DENIED: user {} does not have weblog permission = {}",
-                                    authenticatedUser.getUserName(), required);
-                            if (apiHandler) {
-                                throw forbidden();
-                            }
-                            response.sendRedirect(request.getContextPath() + ACCESS_DENIED_URL);
-                            return false;
-                        }
-                    }
-                }
-            }
+        if (controller instanceof UISecurityEnforced secured
+                && !enforceSecurity(secured, handlerMethod, request, response,
+                        authenticatedUser, actionWeblog)) {
+            return false;
         }
 
         // --- 4. Call myPrepare() if controller implements UIActionPreparable ---
