@@ -32,7 +32,6 @@ import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.StaticTemplate;
 import org.apache.roller.weblogger.pojos.Template;
@@ -42,7 +41,6 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
-import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCache;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCaches;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
@@ -237,22 +235,10 @@ public class FeedServlet extends HttpServlet {
             // define url strategy
             initData.put("urlStrategy", WebloggerFactory.getWeblogger()
                     .getUrlStrategy());
-
-            // Load models for feeds
-            String feedModels = WebloggerConfig
-                    .getProperty("rendering.feedModels");
-            ModelLoader.loadModels(feedModels, model, initData, true);
-
-            // Load special models for site-wide blog
-
-            if (siteWide) {
-                String siteModels = WebloggerConfig
-                        .getProperty("rendering.siteModels");
-                ModelLoader.loadModels(siteModels, model, initData, true);
-            }
+            RenderingServletUtils.loadModels("rendering.feedModels", model, initData, siteWide);
 
         } catch (WebloggerException ex) {
-            log.error("ERROR loading model for page", ex);
+            log.error("ERROR building the rendering model for feed", ex);
 
             if (!response.isCommitted()) {
                 response.reset();

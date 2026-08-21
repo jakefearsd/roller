@@ -43,7 +43,6 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
-import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogSearchRequest;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCaches;
@@ -181,18 +180,11 @@ public class SearchServlet extends HttpServlet {
             initData.put("searchRequest", searchRequest);
             initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy());
 
-            // Load models for pages
-            String searchModels = WebloggerConfig.getProperty("rendering.searchModels");
-            ModelLoader.loadModels(searchModels, model, initData, true);
-
-            // Load special models for site-wide blog
-            if (WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle())) {
-                String siteModels = WebloggerConfig.getProperty("rendering.siteModels");
-                ModelLoader.loadModels(siteModels, model, initData, true);
-            }
+            RenderingServletUtils.loadModels("rendering.searchModels", model, initData,
+                    WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle()));
 
         } catch (WebloggerException ex) {
-            log.error("Error loading model objects for page", ex);
+            log.error("Error building the rendering model for search", ex);
 
             if (!response.isCommitted()) {
                 response.reset();

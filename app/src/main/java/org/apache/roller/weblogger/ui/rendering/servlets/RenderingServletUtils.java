@@ -20,7 +20,10 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
+import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -41,6 +44,36 @@ final class RenderingServletUtils {
             response.reset();
         }
         response.sendError(HttpServletResponse.SC_NOT_FOUND);
+    }
+
+    /**
+     * Fills the rendering model, plus the site-wide models when this request is
+     * for the front-page weblog.
+     *
+     * <p>All four rendering servlets loaded their own model list and then
+     * conditionally loaded the site-wide one, in four identical copies that
+     * differed only in which config key named the first list.
+     *
+     * <p>This deliberately does not handle failure: every caller already sits
+     * inside a try that turns a WebloggerException into a reset-and-500, and
+     * catching here as well would mean either duplicating that or handing back
+     * a status flag the caller has to re-test -- which costs a branch in each
+     * servlet to save one, and buys nothing.
+     *
+     * @param modelsProperty config key naming this servlet's model list
+     * @param siteWide       whether to also load the site-wide models
+     */
+    static void loadModels(String modelsProperty, Map<String, Object> model,
+                           Map<String, Object> initData, boolean siteWide)
+            throws WebloggerException {
+
+        ModelLoader.loadModels(WebloggerConfig.getProperty(modelsProperty),
+                model, initData, true);
+
+        if (siteWide) {
+            ModelLoader.loadModels(WebloggerConfig.getProperty("rendering.siteModels"),
+                    model, initData, true);
+        }
     }
 
     /**

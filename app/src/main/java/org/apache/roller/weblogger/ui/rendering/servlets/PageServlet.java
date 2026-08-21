@@ -38,7 +38,6 @@ import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
-import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCache;
@@ -235,6 +234,7 @@ public class PageServlet extends HttpServlet {
         String contentType = resolveContentType(page);
 
         Map<String, Object> model = new HashMap<>();
+
         try {
             PageContext pageContext = JspFactory.getDefaultFactory()
                     .getPageContext(this, request, response, "", false,
@@ -253,19 +253,10 @@ public class PageServlet extends HttpServlet {
             initData.put("urlStrategy", WebloggerFactory.getWeblogger()
                     .getUrlStrategy());
 
-            // Load models for pages
-            String pageModels = WebloggerConfig
-                    .getProperty("rendering.pageModels");
-            ModelLoader.loadModels(pageModels, model, initData, true);
-            // Load special models for site-wide blog
-            if (WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle())) {
-                String siteModels = WebloggerConfig
-                        .getProperty("rendering.siteModels");
-                ModelLoader.loadModels(siteModels, model, initData, true);
-            }
+            RenderingServletUtils.loadModels("rendering.pageModels", model, initData, isSiteWide);
 
         } catch (WebloggerException ex) {
-            log.error("Error loading model objects for page", ex);
+            log.error("Error building the rendering model for page", ex);
 
             if (!response.isCommitted()) {
                 response.reset();

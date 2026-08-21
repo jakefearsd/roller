@@ -28,12 +28,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
-import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPreviewRequest;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 
@@ -213,18 +211,11 @@ public class PreviewServlet extends HttpServlet {
             // define url strategy
             initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy().getPreviewURLStrategy(previewRequest.getThemeName()));
             
-            // Load models for page previewing
-            String pageModels = WebloggerConfig.getProperty("rendering.previewModels");
-            ModelLoader.loadModels(pageModels, model, initData, true);
-            
-            // Load special models for site-wide blog
-            if (WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle())) {
-                String siteModels = WebloggerConfig.getProperty("rendering.siteModels");
-                ModelLoader.loadModels(siteModels, model, initData, true);
-            }
+            RenderingServletUtils.loadModels("rendering.previewModels", model, initData,
+                    WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle()));
 
         } catch (WebloggerException ex) {
-            log.error("ERROR loading model for page", ex);
+            log.error("ERROR building the rendering model for preview", ex);
             
             if (!response.isCommitted()) {
                 response.reset();
