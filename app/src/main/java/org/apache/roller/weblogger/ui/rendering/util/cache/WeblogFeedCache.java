@@ -18,32 +18,22 @@
 
 package org.apache.roller.weblogger.ui.rendering.util.cache;
 
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
-import org.apache.roller.weblogger.util.cache.Cache;
-import org.apache.roller.weblogger.util.cache.CacheManager;
-import org.apache.roller.weblogger.util.cache.LazyExpiringCacheEntry;
 
 
 /**
  * Cache for weblog feed content.
  */
-public final class WeblogFeedCache {
+public final class WeblogFeedCache extends LazyExpiringRenderCache {
     
     private static final Logger log = LoggerFactory.getLogger(WeblogFeedCache.class);
     
     // a unique identifier for this cache, this is used as the prefix for
     // roller config properties that apply to this cache
     public static final String CACHE_ID = "cache.weblogfeed";
-    
-    // keep cached content
-    private boolean cacheEnabled = true;
-    private Cache contentCache = null;
     
     // reference to our singleton instance
     private static final WeblogFeedCache singletonInstance = new WeblogFeedCache();
@@ -61,31 +51,7 @@ public final class WeblogFeedCache {
      * supported (and, in development, the usual) configuration.
      */
     private WeblogFeedCache(boolean cacheEnabled) {
-
-        this.cacheEnabled = cacheEnabled;
-
-        Map<String, String> cacheProps = new HashMap<>();
-        cacheProps.put("id", CACHE_ID);
-        
-        Enumeration<Object> allProps = WebloggerConfig.keys();
-        String prop;
-        while(allProps.hasMoreElements()) {
-            prop = (String) allProps.nextElement();
-            
-            // we are only interested in props for this cache
-            if(prop.startsWith(CACHE_ID+".")) {
-                cacheProps.put(prop.substring(CACHE_ID.length()+1), 
-                        WebloggerConfig.getProperty(prop));
-            }
-        }
-        
-        log.info("{}", cacheProps);
-        
-        if(cacheEnabled) {
-            contentCache = CacheManager.constructCache(null, cacheProps);
-        } else {
-            log.warn("Caching has been DISABLED");
-        }
+        super(CACHE_ID, cacheEnabled, log);
     }
     
     
@@ -104,80 +70,9 @@ public final class WeblogFeedCache {
     }
 
 
-    // CPD-OFF -- This accessor block is duplicated in WeblogPageCache and
-    // WeblogFeedCache. Unlike the generateKey duplication these two caches
-    // share, this pair is NOT justified by differing contracts: they are
-    // identical. Both register no CacheHandler (constructCache(null, ...)) and
-    // both expire lazily against weblog.lastModified. An earlier version of
-    // this comment claimed WeblogFeedCache was invalidated through
-    // CacheManager; it never was, and that error is what kept the pair
-    // unexamined.
-    //
-    // The suppression stands on a narrower reason: these are two independent
-    // singletons over different content, and what they share is four
-    // boilerplate accessors. Giving them a common base to save those lines is a
-    // real refactor of the caches themselves, and it is a live opportunity
-    // rather than a closed question -- it is simply not what the RenderCache
-    // adapter pass set out to do. See CLAUDE.md, Templates.
-    public Object get(String key, long lastModified) {
-
-        if (!cacheEnabled) {
-            return null;
-        }
-
-        Object entry = null;
-
-        LazyExpiringCacheEntry lazyEntry =
-                (LazyExpiringCacheEntry) this.contentCache.get(key);
-        if(lazyEntry != null) {
-            entry = lazyEntry.getValue(lastModified);
-
-            if(entry != null) {
-                log.debug("HIT {}", key);
-            } else {
-                log.debug("HIT-EXPIRED {}", key);
-            }
-
-        } else {
-            log.debug("MISS {}", key);
-        }
-
-        return entry;
-    }
-
-
-    public void put(String key, Object value) {
-
-        if (!cacheEnabled) {
-            return;
-        }
-
-        contentCache.put(key, new LazyExpiringCacheEntry(value));
-        log.debug("PUT {}", key);
-    }
-
-
-    public void remove(String key) {
-
-        if (!cacheEnabled) {
-            return;
-        }
-
-        contentCache.remove(key);
-        log.debug("REMOVE {}", key);
-    }
-
-
-    public void clear() {
-
-        if (!cacheEnabled) {
-            return;
-        }
-
-        contentCache.clear();
-        log.debug("CLEAR");
-    }
-    // CPD-ON
+    // get/put/remove/clear now live on LazyExpiringRenderCache, which both
+    // per-weblog render caches share. The CPD-OFF that used to bracket them
+    // here is gone with the duplication it excused.
 
 
     /**

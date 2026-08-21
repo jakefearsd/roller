@@ -24,6 +24,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -78,6 +79,37 @@ public class WeblogCacheWarmupJobTest {
 
         assertNull(WeblogFeedCache.getInstance().get("cache.weblogfeed:myblog/entries/atom", 0L),
                 "Naming a weblog is not on its own an instruction to render anything");
+    }
+
+    @Test
+    public void oneWeblogFailingToRenderDoesNotAbortTheWarmup() {
+        // The job is scheduled, so it runs unattended against whatever weblogs
+        // it is handed. A weblog that cannot be rendered -- deleted since the
+        // schedule was written, or broken template, or (as here) no rendering
+        // stack behind it at all -- must be logged and stepped over, not
+        // allowed to take the rest of the batch with it. The loop's try/catch
+        // is the whole of that guarantee.
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("weblogs", List.of("first-blog", "second-blog"));
+        inputs.put("feed-entries-atom", "true");
+        job.input(inputs);
+
+        assertDoesNotThrow(job::execute,
+                "A weblog that fails to render must not escape the job. If this throws, a "
+                        + "single bad weblog silently kills every scheduled warmup after it");
+
+        assertEquals(Map.of(), job.output(),
+                "and the job still reports normally to its scheduler afterwards");
+
+        // nothing was rendered, so nothing may have been cached under either
+        // handle -- a half-rendered feed served to readers would be worse than
+        // no warmup at all
+        assertNull(WeblogFeedCache.getInstance()
+                        .get("cache.weblogfeed:first-blog/entries/atom", 0L),
+                "A weblog whose render failed must leave nothing behind in the feed cache");
+        assertNull(WeblogFeedCache.getInstance()
+                        .get("cache.weblogfeed:second-blog/entries/atom", 0L),
+                "and the same for the weblog after it, which the job must still have tried");
     }
 
     @Test

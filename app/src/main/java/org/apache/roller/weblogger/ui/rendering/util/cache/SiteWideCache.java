@@ -205,15 +205,18 @@ public final class SiteWideCache implements CacheHandler {
     
     
     // CPD-OFF -- This key builder is duplicated in SiteWideCache and
-    // WeblogPageCache, and the pair is deliberately NOT collapsed into a shared
-    // base, because the two caches' expiry contracts genuinely differ:
-    // SiteWideCache is the one render cache registered as a CacheHandler
-    // (constructCache(this, ...)), so CacheManager invalidates it eagerly and
-    // wholesale; WeblogPageCache registers none (constructCache(null, ...)) and
-    // a rendered page is only ever expired lazily against weblog.lastModified.
-    // Unifying them would be a behavioural change wearing cleanup's clothes.
-    // Callers that just want "the cache for this request" have RenderCache,
-    // which adapts both without merging either. See CLAUDE.md, Templates.
+    // WeblogPageCache. Note that WeblogPageCache *does* now sit on a shared
+    // base (LazyExpiringRenderCache) -- just not one shared with SiteWideCache,
+    // and that is the distinction this marker records. The two caches' expiry
+    // contracts genuinely differ: SiteWideCache is the one render cache
+    // registered as a CacheHandler (constructCache(this, ...)), so CacheManager
+    // invalidates it eagerly and wholesale; WeblogPageCache registers none
+    // (constructCache(null, ...)) and a rendered page is only ever expired
+    // lazily against weblog.lastModified. Giving SiteWideCache that base would
+    // hand it an expiry contract it does not have -- a behavioural change
+    // wearing cleanup's clothes. Callers that just want "the cache for this
+    // request" have RenderCache, which adapts all three without merging any.
+    // See CLAUDE.md, Templates.
     /**
      * Generate a cache key from a parsed weblog page request.
      * This generates a key of the form ...

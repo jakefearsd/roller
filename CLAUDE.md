@@ -332,25 +332,32 @@ single most common pre-existing bug the migration surfaced — JCL's
 and it is exactly as easy to reintroduce by hand as it was to inherit from
 JCL. There is no compiler check for it; read the argument list.
 
-CPD runs at **200 tokens**. Two of the four blocks it flags at that threshold
-already are the render caches (the other two are the entry pagers, genuinely
-extractable) — the `CPD-OFF` markers around them are load-bearing at 200, not
-a precaution against some lower setting. **Those two blocks are suppressed for
-two different reasons, and for years carried one copy-pasted comment that
-stated the wrong one.** Get this right before touching either:
+CPD runs at **200 tokens**. One of the blocks it flags at that threshold is a
+render cache pair (the others are the entry pagers, genuinely extractable) —
+the `CPD-OFF` marker around it is load-bearing at 200, not a precaution against
+some lower setting. There used to be **two** render-cache blocks, suppressed
+for two different reasons behind one copy-pasted comment that stated the wrong
+one. Only one is left, and the distinction still matters:
 
-- `SiteWideCache.generateKey` ↔ `WeblogPageCache.generateKey` (306 tokens).
-  Collapsing *this* pair would be a behavioural change, because the two caches'
-  expiry contracts genuinely differ. `SiteWideCache` is the **only** render
-  cache registered as a `CacheHandler` (`constructCache(this, ...)`), so
-  `CacheManager` invalidates it eagerly and wholesale.
+- `SiteWideCache.generateKey` ↔ `WeblogPageCache.generateKey` (306 tokens),
+  **still suppressed.** Collapsing this pair would be a behavioural change,
+  because the two caches' expiry contracts genuinely differ. `SiteWideCache` is
+  the **only** render cache registered as a `CacheHandler`
+  (`constructCache(this, ...)`), so `CacheManager` invalidates it eagerly and
+  wholesale. Giving it the per-weblog base would hand it an expiry contract it
+  does not have.
 - `WeblogPageCache` ↔ `WeblogFeedCache`, the `get`/`put`/`remove`/`clear` block
-  (200 tokens). This pair is **not** justified by differing contracts —
-  they are identical. Both pass `constructCache(null, ...)`, register no
-  handler, and expire lazily against `weblog.lastModified`. It stays suppressed
-  only because they are two independent singletons whose shared code is four
-  boilerplate accessors; giving them a common base is a real and still-open
-  refactor, not a closed question.
+  (200 tokens), **gone — the duplication was removed, not re-suppressed.**
+  That pair was never justified by differing contracts: the two are identical,
+  both passing `constructCache(null, ...)` and expiring lazily against
+  `weblog.lastModified`. They now share `LazyExpiringRenderCache`, which owns
+  the config read, the backing `Cache`, and the four accessors. The subclasses
+  keep only their `CACHE_ID`, their singleton, and their own `generateKey`.
+  Each passes its **own** logger to the base, so `HIT`/`MISS` lines are still
+  attributed to the concrete cache rather than relabelled to the base.
+  `LazyRenderCacheEquivalenceCharacterisationTest` pins the equivalence that
+  makes the shared base legitimate — if the two caches ever stop agreeing, or
+  one starts reading the other's `CACHE_ID`-prefixed configuration, it fails.
 
 **`WeblogFeedCache` has no `CacheHandler`.** The retired comment claimed it was
 invalidated through `CacheManager`, which it never was, and that error is what
@@ -1173,6 +1180,13 @@ excused whatever its type.
   drops it wholesale. `RenderCacheHandlerRegistrationTest` pins that split so
   the claim cannot rot back into prose: adding a CacheHandler to a render cache
   fails that test, which is the intended way to find this note.
+  Because the two lazy caches are identical in contract, they share
+  `LazyExpiringRenderCache` — it owns the config read, the backing `Cache` and
+  `get`/`put`/`remove`/`clear`, while each subclass keeps its `CACHE_ID`, its
+  singleton and its own `generateKey`. **`SiteWideCache` is deliberately not in
+  that hierarchy**, for the same reason it is not a sibling in the sentence
+  above: its `get` takes no timestamp because it has no per-weblog expiry to
+  apply, and inheriting one would be a behavioural change.
 - **Velocity in this codebase is lenient, and that is a live hazard whenever
   you delete a Java member.** `velocity.properties` sets no
   `runtime.references.strict` and turns off `runtime.log.invalid.reference`.
