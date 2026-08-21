@@ -173,22 +173,14 @@ public class WeblogRequestMapper implements RequestMapper {
         // second mapper that would have to reimplement it.
         String vhostHandle = VirtualHostRegistry.handleFor(request.getHeader("Host"));
 
-        String servlet = request.getRequestURI();
-        String pathInfo = null;
-
-        if (servlet == null) {
+        NormalizedPath normalized =
+                normalizePath(request.getRequestURI(), request.getContextPath());
+        if (normalized == null) {
             return false;
         }
-        if (request.getContextPath() != null) {
-            servlet = servlet.substring(request.getContextPath().length());
-        }
-        if (servlet.startsWith("/")) {
-            servlet = servlet.substring(1);
-        }
-        if (servlet.endsWith("/")) {
-            servlet = servlet.substring(0, servlet.length() - 1);
-            trailingSlash = true;
-        }
+        String servlet = normalized.path();
+        trailingSlash = normalized.trailingSlash();
+        String pathInfo = null;
 
         // The first path segment, whatever it turns out to mean. On a custom
         // domain it is content; otherwise it is the candidate weblog handle.
@@ -272,42 +264,10 @@ public class WeblogRequestMapper implements RequestMapper {
         
         // parse the rest of the url and build forward url
         if(pathInfo != null) {
-            
-            // parse the next portion of the url
-            // we expect [locale/]<context>/<extra>/<info>
-            String[] urlPath = pathInfo.split("/", 3);
-            
-            // if we have a locale, deal with it
-            if(this.isLocale(urlPath[0])) {
-                weblogLocale = urlPath[0];
-                
-                // no extra path info specified
-                if(urlPath.length == 2) {
-                    weblogRequestContext = urlPath[1];
-                    weblogRequestData = null;
-                    
-                // request contains extra path info
-                } else if(urlPath.length == 3) {
-                    weblogRequestContext = urlPath[1];
-                    weblogRequestData = urlPath[2];
-                }
-            
-            // otherwise locale is empty
-            } else {
-                weblogLocale = null;
-                weblogRequestContext = urlPath[0];
-                
-                // last part of request is extra path info
-                if(urlPath.length == 2) {
-                    weblogRequestData = urlPath[1];
-                    
-                // if we didn't have a locale then we have split too much
-                // so we reassemble the last 2 path elements together
-                } else if(urlPath.length == 3) {
-                    weblogRequestData = urlPath[1] + "/" + urlPath[2];
-                }
-            }
-            
+            WeblogPathInfo parsed = parsePathInfo(pathInfo);
+            weblogLocale = parsed.locale();
+            weblogRequestContext = parsed.context();
+            weblogRequestData = parsed.data();
         }
         
         // special handling for trailing slash issue
@@ -478,6 +438,108 @@ public class WeblogRequestMapper implements RequestMapper {
     }
     
     
+    /**
+     * A request path with the deployment's context path and its outer slashes
+     * removed, plus whether it had a trailing one.
+     *
+     * <p>The trailing slash is kept rather than discarded because http treats
+     * {@code /foo} and {@code /foo/} as different resources, and this mapper
+     * redirects the first to the second for a weblog home page.
+     */
+    record NormalizedPath(String path, boolean trailingSlash) {
+    }
+
+    /**
+     * Strips the context path and the outer slashes from a request uri.
+     *
+     * <p>Extracted from handleRequest for its complexity. Pure and package
+     * private so it can be tested at both context paths, which matters: this
+     * repo has already shipped a bug from assuming the root context, and a
+     * deployment under a prefix exercises the substring below rather than
+     * skipping it.
+     *
+     * @return null when there is no uri to work with, which the caller treats
+     *         as "not a request for this mapper"
+     */
+    static NormalizedPath normalizePath(String requestUri, String contextPath) {
+
+        if (requestUri == null) {
+            return null;
+        }
+
+        String path = requestUri;
+        if (contextPath != null) {
+            // the container guarantees the uri starts with the context path
+            path = path.substring(contextPath.length());
+        }
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+        boolean trailingSlash = path.endsWith("/");
+        if (trailingSlash) {
+            path = path.substring(0, path.length() - 1);
+        }
+
+        return new NormalizedPath(path, trailingSlash);
+    }
+
+
+    /**
+     * The three things a weblog-relative path can carry, once the leading
+     * locale segment (if any) has been told apart from the context.
+     *
+     * @param locale  the locale segment, or null when the path did not open
+     *                with one
+     * @param context the request context -- "entry", "feed", a page slug, and
+     *                so on
+     * @param data    everything after the context, reassembled with its
+     *                separators intact, or null when there was none
+     */
+    record WeblogPathInfo(String locale, String context, String data) {
+    }
+
+    /**
+     * Splits {@code [locale/]<context>/<data>} into its parts.
+     *
+     * <p>Extracted from handleRequest, which had this inline and was CC 42.
+     * Pure and package private so the splitting can be tested for what it is:
+     * whether a first segment is a locale decides what every later segment
+     * means, and getting it wrong silently reinterprets the whole url.
+     *
+     * <p>Note the reassembly in the no-locale case. The split is capped at
+     * three parts on the assumption that the first is a locale; when it turns
+     * out not to be, the path has been split one time too many and the last
+     * two parts have to be glued back together, separator included, or a
+     * permalink like {@code entry/2005/my-post} loses its slash.
+     */
+    WeblogPathInfo parsePathInfo(String pathInfo) {
+
+        // we expect [locale/]<context>/<extra>/<info>
+        String[] urlPath = pathInfo.split("/", 3);
+
+        if (isLocale(urlPath[0])) {
+            String locale = urlPath[0];
+            if (urlPath.length == 2) {
+                return new WeblogPathInfo(locale, urlPath[1], null);
+            }
+            if (urlPath.length == 3) {
+                return new WeblogPathInfo(locale, urlPath[1], urlPath[2]);
+            }
+            // a bare locale and nothing else
+            return new WeblogPathInfo(locale, null, null);
+        }
+
+        if (urlPath.length == 2) {
+            return new WeblogPathInfo(null, urlPath[0], urlPath[1]);
+        }
+        if (urlPath.length == 3) {
+            return new WeblogPathInfo(null, urlPath[0], urlPath[1] + "/" + urlPath[2]);
+        }
+        return new WeblogPathInfo(null, urlPath[0], null);
+    }
+
+
     /**
      * Convenience method which determines if the given string is a valid
      * locale string.
