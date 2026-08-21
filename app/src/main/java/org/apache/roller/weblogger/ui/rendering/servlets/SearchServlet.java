@@ -35,19 +35,14 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
-import org.apache.roller.weblogger.ui.rendering.Renderer;
-import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogSearchRequest;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCaches;
-import org.apache.roller.weblogger.util.I18nMessages;
-import org.apache.roller.weblogger.util.cache.CachedContent;
 
 /**
  * Handles search queries for weblogs.
@@ -111,19 +106,9 @@ public class SearchServlet extends HttpServlet {
         // Development only. Reload if theme has been modified
         if (themeReload && !WeblogTheme.CUSTOM.equals(weblog.getEditorTheme())) {
 
-            try {
-                ThemeManager manager = WebloggerFactory.getWeblogger().getThemeManager();
-                boolean reloaded = manager.reLoadThemeFromDisk(weblog.getEditorTheme());
-                if (reloaded) {
+            RenderingServletUtils.reloadThemeFromDisk(weblog,
                     RenderCaches.forPage(WebloggerRuntimeConfig
-                            .isSiteWideWeblog(searchRequest.getWeblogHandle()))
-                            .clear();
-                    I18nMessages.reloadBundle(weblog.getLocaleInstance());
-                }
-
-            } catch (Exception ex) {
-                log.error("ERROR - reloading theme", ex);
-            }
+                            .isSiteWideWeblog(searchRequest.getWeblogHandle())));
         }
 
         // Multi-locale weblogs are gone: a weblog's search always covers
@@ -193,32 +178,12 @@ public class SearchServlet extends HttpServlet {
             return;
         }
 
-        // lookup Renderer we are going to use
-        Renderer renderer;
-        try {
-            log.debug("Looking up renderer");
-            renderer = RendererManager.getRenderer(page);
-        } catch (Exception e) {
-            // nobody wants to render my content :(
-            log.error("Couldn't find renderer for search template", e);
-            RenderingServletUtils.sendNotFound(response);
+        // render and write out; the content type was set above
+        if (RenderingServletUtils.renderAndFlush(page, model,
+                RollerConstants.FOUR_KB_IN_BYTES, null, "search template",
+                "Couldn't find renderer for search template", response) == null) {
             return;
         }
-
-        // render content
-        CachedContent rendererOutput = RenderingServletUtils.render(
-                renderer, model, RollerConstants.FOUR_KB_IN_BYTES,
-                "search template", response);
-        if (rendererOutput == null) {
-            return;
-        }
-
-        // post rendering process
-
-        // flush rendered content to response
-        log.debug("Flushing response output");
-        response.setContentLength(rendererOutput.getContent().length);
-        response.getOutputStream().write(rendererOutput.getContent());
 
         log.debug("Exiting");
     }

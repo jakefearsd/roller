@@ -22,7 +22,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.Template;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCache;
+import org.apache.roller.weblogger.util.I18nMessages;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
+import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 
@@ -74,6 +80,109 @@ final class RenderingServletUtils {
             ModelLoader.loadModels(WebloggerConfig.getProperty("rendering.siteModels"),
                     model, initData, true);
         }
+    }
+
+    /**
+     * Reports a server-side failure, discarding anything already written.
+     *
+     * <p>The reset is the part worth having in one place: without it a failure
+     * partway through building a response leaves the bytes written so far in
+     * front of the error, and the client sees a 500 stapled to half a page.
+     */
+    static void sendServerError(HttpServletResponse response, String message, Exception cause)
+            throws IOException {
+
+        log.error(message, cause);
+        if (!response.isCommitted()) {
+            response.reset();
+        }
+        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * Development-mode theme reloading: if the theme's files have changed on
+     * disk, drop the rendered content that was built from them.
+     *
+     * <p>Whether to attempt this at all stays with the caller, because the
+     * guards differ -- PageServlet additionally skips stylesheet requests. What
+     * is shared is the part that must not drift: reloading and dropping the
+     * cache have to happen together, since a reloaded theme behind a stale
+     * cache serves the old page and looks like the reload silently failed.
+     *
+     * <p>Failure is logged and swallowed deliberately. This is a developer
+     * convenience; a theme that will not reload must not turn a reader's page
+     * into an error.
+     */
+    static void reloadThemeFromDisk(Weblog weblog, RenderCache<?> renderCache) {
+        try {
+            boolean reloaded = WebloggerFactory.getWeblogger().getThemeManager()
+                    .reLoadThemeFromDisk(weblog.getEditorTheme());
+            if (reloaded) {
+                renderCache.clear();
+                I18nMessages.reloadBundle(weblog.getLocaleInstance());
+            }
+        } catch (Exception ex) {
+            log.error("ERROR - reloading theme", ex);
+        }
+    }
+
+    /**
+     * The last three steps every rendering servlet ends with: find the renderer
+     * for a template, run the model through it, and write the bytes out.
+     *
+     * <p>All four had these open-coded, identically apart from a buffer size, a
+     * log message and whether they set a content type. Two of the three steps
+     * fail by completing the response themselves, so a caller that got the
+     * order or the early returns wrong would send a body after an error -- which
+     * is the reason to have this in one place rather than the twenty lines it
+     * saves.
+     *
+     * @param contentType  set on the response before the body is written, and
+     *                     carried on the returned buffer so that a cached copy
+     *                     replayed later announces the same type. Null means the
+     *                     caller has already set it (or does not set one).
+     * @param missingRendererMessage logged at error level when no renderer can
+     *                     be found, or null to log nothing. FeedServlet passes
+     *                     null deliberately: feed template ids are built from
+     *                     request data and are routinely bunk, so this fires for
+     *                     ordinary bad input rather than for anything an
+     *                     operator can act on.
+     * @return the rendered bytes, for a caller that wants to cache them, or
+     *         null when the response has already been completed with an error
+     *         and the caller must simply return
+     */
+    static CachedContent renderAndFlush(Template template, Map<String, Object> model,
+                                        int bufferSize, String contentType,
+                                        String logContext, String missingRendererMessage,
+                                        HttpServletResponse response) throws IOException {
+
+        Renderer renderer;
+        try {
+            log.debug("Looking up renderer");
+            renderer = RendererManager.getRenderer(template);
+        } catch (Exception e) {
+            // nobody wants to render my content :(
+            if (missingRendererMessage != null) {
+                log.error(missingRendererMessage, e);
+            }
+            sendNotFound(response);
+            return null;
+        }
+
+        CachedContent rendererOutput =
+                render(renderer, model, bufferSize, contentType, logContext, response);
+        if (rendererOutput == null) {
+            return null;
+        }
+
+        log.debug("Flushing response output");
+        if (contentType != null) {
+            response.setContentType(contentType);
+        }
+        response.setContentLength(rendererOutput.getContent().length);
+        response.getOutputStream().write(rendererOutput.getContent());
+
+        return rendererOutput;
     }
 
     /**

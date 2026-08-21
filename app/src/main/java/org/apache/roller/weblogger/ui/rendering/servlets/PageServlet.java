@@ -25,7 +25,6 @@ import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.StaticThemeTemplate;
@@ -36,13 +35,10 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.apache.roller.weblogger.ui.core.RollerContext;
-import org.apache.roller.weblogger.ui.rendering.Renderer;
-import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCache;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCaches;
-import org.apache.roller.weblogger.util.I18nMessages;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 
 import jakarta.servlet.ServletConfig;
@@ -98,12 +94,10 @@ public class PageServlet extends HttpServlet {
     /**
      * Handle GET requests for weblog pages.
      */
-    // Two CachedContent sites here are false positives for CloseResource:
-    // the cache-hit object (siteWideCache/weblogPageCache.get(...)) is owned
-    // by the render cache and may still be serving other concurrent
-    // requests -- this method must not close it. The cache-miss object
-    // (RenderingServletUtils.render(...)) is already flushed and closed
-    // internally before it is returned; there is nothing left to close here.
+    // The CachedContent returned by RenderingServletUtils.renderAndFlush() is
+    // already flushed and closed internally before it comes back -- nothing
+    // left for this method to close. (The cache-hit object has its own
+    // justification, on servedFromCache below.)
     @SuppressWarnings("PMD.CloseResource")
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -164,41 +158,12 @@ public class PageServlet extends HttpServlet {
                 && (pageRequest.getPathInfo() == null || pageRequest
                         .getPathInfo() != null
                         && !pageRequest.getPathInfo().endsWith(".css"))) {
-            try {
-                ThemeManager manager = WebloggerFactory.getWeblogger()
-                        .getThemeManager();
-                boolean reloaded = manager.reLoadThemeFromDisk(weblog
-                        .getEditorTheme());
-                if (reloaded) {
-                    renderCache.clear();
-                    I18nMessages.reloadBundle(weblog.getLocaleInstance());
-                }
-
-            } catch (Exception ex) {
-                log.error("ERROR - reloading theme", ex);
-            }
+            RenderingServletUtils.reloadThemeFromDisk(weblog, renderCache);
         }
 
-        // cached content checking
-        if ((!this.excludeOwnerPages || !pageRequest.isLoggedIn())
-                && request.getAttribute("skipCache") == null
-                && request.getParameter("skipCache") == null) {
-
-            CachedContent cachedContent = renderCache.get(cacheKey, lastModified);
-
-            if (cachedContent != null) {
-                log.debug("HIT {}", cacheKey);
-
-                // hit counting used to gate on isWebsitePageHit()/isOtherPageHit()
-                // here; Umami owns traffic counting now (see WeblogPageRequest).
-
-                response.setContentLength(cachedContent.getContent().length);
-                response.setContentType(cachedContent.getContentType());
-                response.getOutputStream().write(cachedContent.getContent());
-                return;
-            } else {
-                log.debug("MISS {}", cacheKey);
-            }
+        if (servedFromCache(request, response, pageRequest, renderCache,
+                cacheKey, lastModified)) {
+            return;
         }
 
         log.debug("Looking for template to use for rendering");
@@ -233,76 +198,136 @@ public class PageServlet extends HttpServlet {
         // set the content deviceType
         String contentType = resolveContentType(page);
 
-        Map<String, Object> model = new HashMap<>();
-
+        Map<String, Object> model;
         try {
-            PageContext pageContext = JspFactory.getDefaultFactory()
-                    .getPageContext(this, request, response, "", false,
-                            RollerConstants.EIGHT_KB_IN_BYTES, true);
-
-            // special hack for menu tag
-            request.setAttribute("pageRequest", pageRequest);
-
-            // populate the rendering model
-            Map<String, Object> initData = new HashMap<>();
-            initData.put("requestParameters", request.getParameterMap());
-            initData.put("parsedRequest", pageRequest);
-            initData.put("pageContext", pageContext);
-
-            // define url strategy
-            initData.put("urlStrategy", WebloggerFactory.getWeblogger()
-                    .getUrlStrategy());
-
-            RenderingServletUtils.loadModels("rendering.pageModels", model, initData, isSiteWide);
-
+            model = buildModel(request, response, pageRequest, isSiteWide);
         } catch (WebloggerException ex) {
-            log.error("Error building the rendering model for page", ex);
-
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            RenderingServletUtils.sendServerError(response, "Error building the rendering model for page", ex);
             return;
         }
 
-        // lookup Renderer we are going to use
-        Renderer renderer;
-        try {
-            log.debug("Looking up renderer");
-            renderer = RendererManager.getRenderer(page);
-        } catch (Exception e) {
-            // nobody wants to render my content :(
-            log.error("Couldn't find renderer for page {}", page.getId(), e);
-            RenderingServletUtils.sendNotFound(response);
-            return;
-        }
-
-        // render content
-        CachedContent rendererOutput = RenderingServletUtils.render(
-                renderer, model, RollerConstants.TWENTYFOUR_KB_IN_BYTES, contentType,
-                "page " + page.getId(), response);
+        CachedContent rendererOutput = RenderingServletUtils.renderAndFlush(page, model,
+                RollerConstants.TWENTYFOUR_KB_IN_BYTES, contentType,
+                "page " + page.getId(),
+                "Couldn't find renderer for page " + page.getId(), response);
         if (rendererOutput == null) {
             return;
         }
 
-        // post rendering process
-        // flush rendered content to response
-        log.debug("Flushing response output");
-        response.setContentType(contentType);
-        response.setContentLength(rendererOutput.getContent().length);
-        response.getOutputStream().write(rendererOutput.getContent());
+        cacheRendered(request, pageRequest, renderCache, cacheKey, rendererOutput);
 
-        // cache rendered content. only cache if user is not logged in?
+        log.debug("Exiting");
+    }
+
+
+    /**
+     * The model the template renders against, or null when building it failed
+     * and a 500 has already been sent.
+     *
+     * <p>Kept apart from doGet because it is the one step here that is about
+     * Velocity rather than about http: everything else in the request decides
+     * what to serve or whether to serve it, while this decides what the
+     * template can see.
+     */
+    private Map<String, Object> buildModel(HttpServletRequest request,
+                                           HttpServletResponse response,
+                                           WeblogPageRequest pageRequest,
+                                           boolean isSiteWide) throws WebloggerException {
+
+        Map<String, Object> model = new HashMap<>();
+        PageContext pageContext = JspFactory.getDefaultFactory()
+                .getPageContext(this, request, response, "", false,
+                        RollerConstants.EIGHT_KB_IN_BYTES, true);
+
+        // special hack for menu tag
+        request.setAttribute("pageRequest", pageRequest);
+
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("requestParameters", request.getParameterMap());
+        initData.put("parsedRequest", pageRequest);
+        initData.put("pageContext", pageContext);
+        initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy());
+
+        RenderingServletUtils.loadModels("rendering.pageModels", model, initData, isSiteWide);
+        return model;
+
+    }
+
+
+    /**
+     * Writes the cached rendering of this request, if there is one to write.
+     *
+     * <p>The three conditions guarding the read are the caching policy, not an
+     * optimisation: an owner viewing their own weblog must not be served a copy
+     * rendered for anonymous readers (it would be missing their edit links),
+     * and either "skipCache" is an explicit request for freshly rendered
+     * output.
+     *
+     * @return true when the response has been completed from cache and the
+     *         caller must return; false when the request has to be rendered
+     */
+    // False positive for CloseResource: the object read here is owned by the
+    // render cache and may still be serving other concurrent requests. Closing
+    // it would pull the content out from under them.
+    @SuppressWarnings("PMD.CloseResource")
+    private boolean servedFromCache(HttpServletRequest request, HttpServletResponse response,
+                                    WeblogPageRequest pageRequest,
+                                    RenderCache<WeblogPageRequest> renderCache,
+                                    String cacheKey, long lastModified) throws IOException {
+
+        if (!cacheReadable(request, pageRequest)) {
+            return false;
+        }
+
+        CachedContent cachedContent = renderCache.get(cacheKey, lastModified);
+        if (cachedContent == null) {
+            log.debug("MISS {}", cacheKey);
+            return false;
+        }
+
+        log.debug("HIT {}", cacheKey);
+
+        // hit counting used to gate on isWebsitePageHit()/isOtherPageHit()
+        // here; Umami owns traffic counting now (see WeblogPageRequest).
+
+        response.setContentLength(cachedContent.getContent().length);
+        response.setContentType(cachedContent.getContentType());
+        response.getOutputStream().write(cachedContent.getContent());
+        return true;
+    }
+
+    /**
+     * Stores this rendering, unless the caching policy says not to.
+     *
+     * <p>Note the asymmetry with the read side: a "skipCache" query PARAMETER
+     * suppresses the read but not the write, so a reader can force a fresh
+     * render and have the result repopulate the cache for everyone behind them.
+     * Only the request ATTRIBUTE -- set internally, for content that must never
+     * be cached -- suppresses both.
+     */
+    private void cacheRendered(HttpServletRequest request, WeblogPageRequest pageRequest,
+                               RenderCache<WeblogPageRequest> renderCache,
+                               String cacheKey, CachedContent rendererOutput) {
+
         if ((!this.excludeOwnerPages || !pageRequest.isLoggedIn())
                 && request.getAttribute("skipCache") == null) {
             log.debug("PUT {}", cacheKey);
-
             renderCache.put(cacheKey, rendererOutput);
         } else {
             log.debug("SKIPPED {}", cacheKey);
         }
+    }
 
-        log.debug("Exiting");
+
+    /**
+     * Whether this request may be answered from cache. The write side asks the
+     * same question minus the "skipCache" query parameter, which suppresses a
+     * read without suppressing the write that repopulates it.
+     */
+    private boolean cacheReadable(HttpServletRequest request, WeblogPageRequest pageRequest) {
+        return (!this.excludeOwnerPages || !pageRequest.isLoggedIn())
+                && request.getAttribute("skipCache") == null
+                && request.getParameter("skipCache") == null;
     }
 
 

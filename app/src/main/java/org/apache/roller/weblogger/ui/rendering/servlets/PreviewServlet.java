@@ -30,10 +30,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
-import org.apache.roller.weblogger.ui.rendering.Renderer;
-import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPreviewRequest;
-import org.apache.roller.weblogger.util.cache.CachedContent;
 
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -136,45 +133,11 @@ public class PreviewServlet extends HttpServlet {
         // weblog's own locale here -- the old showAllLangs=false behaviour --
         // no longer has anything to trigger it.
 
-        Template page = null;
-        if("page".equals(previewRequest.getContext())) {
-            page = previewRequest.getWeblogPage();
-            
-        // If request specified tags section index, then look for custom template
-        } else if("tags".equals(previewRequest.getContext()) &&
-                previewRequest.getTags() == null) {
-            try {
-                page = weblog.getTheme().getTemplateByAction(ComponentType.TAGSINDEX);
-            } catch(Exception e) {
-                log.error("Error getting weblog page for action 'tagsIndex'", e);
-            }
-            
-            // if we don't have a custom tags page then 404, we don't let
-            // this one fall through to the default template
-            if(page == null) {
-                RenderingServletUtils.sendNotFound(response);
-                return;
-            }
-            
-        // If this is a permalink then look for a permalink template
-        } else if(previewRequest.getWeblogAnchor() != null) {
-            try {
-                page = weblog.getTheme().getTemplateByAction(ComponentType.PERMALINK);
-            } catch(Exception e) {
-                log.error("Error getting weblog page for action 'permalink'", e);
-            }
-        }
-        
-        if(page == null) {
-            try {
-                page = tmpWebsite.getTheme().getDefaultTemplate();
-            } catch(WebloggerException re) {
-                log.error("Error getting default page for preview", re);
-            }
-        }
-        
-        // Still no page?  Then that is a 404
+        Template page = selectTemplate(previewRequest, weblog, tmpWebsite);
         if (page == null) {
+            // Either the tags rung refused outright (a tags preview without a
+            // tags template must not fall through to the front page) or nothing
+            // in the ladder matched. Both are a 404.
             RenderingServletUtils.sendNotFound(response);
             return;
         }
@@ -195,66 +158,109 @@ public class PreviewServlet extends HttpServlet {
         }
         
         // looks like we need to render content
-        Map<String, Object> model = new HashMap<>();
+        Map<String, Object> model;
         try {
-            PageContext pageContext = JspFactory.getDefaultFactory().getPageContext(
-                    this, request, response,"", false, RollerConstants.EIGHT_KB_IN_BYTES, true);
-            
-            // special hack for menu tag
-            request.setAttribute("pageRequest", previewRequest);
-            
-            // populate the rendering model
-            Map<String, Object> initData = new HashMap<>();
-            initData.put("parsedRequest", previewRequest);
-            initData.put("pageContext", pageContext);
-            
-            // define url strategy
-            initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy().getPreviewURLStrategy(previewRequest.getThemeName()));
-            
-            RenderingServletUtils.loadModels("rendering.previewModels", model, initData,
-                    WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle()));
-
+            model = buildModel(request, response, previewRequest, weblog);
         } catch (WebloggerException ex) {
-            log.error("ERROR building the rendering model for preview", ex);
-            
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            RenderingServletUtils.sendServerError(response, "ERROR building the rendering model for preview", ex);
             return;
         }
         
         
-        // lookup Renderer we are going to use
-        Renderer renderer;
-        try {
-            log.debug("Looking up renderer");
-            renderer = RendererManager.getRenderer(page);
-        } catch(Exception e) {
-            // nobody wants to render my content :(
-            log.error("Couldn't find renderer for page {}", page.getId(), e);
-            RenderingServletUtils.sendNotFound(response);
+        if (RenderingServletUtils.renderAndFlush(page, model,
+                RollerConstants.TWENTYFOUR_KB_IN_BYTES, contentType,
+                "page " + page.getId(),
+                "Couldn't find renderer for preview page " + page.getId(),
+                response) == null) {
             return;
         }
-
-        // render content
-        CachedContent rendererOutput = RenderingServletUtils.render(
-                renderer, model, RollerConstants.TWENTYFOUR_KB_IN_BYTES,
-                "page " + page.getId(), response);
-        if (rendererOutput == null) {
-            return;
-        }
-        
-        
-        // post rendering process
-        
-        // flush rendered content to response
-        log.debug("Flushing response output");
-        response.setContentType(contentType);
-        response.setContentLength(rendererOutput.getContent().length);
-        response.getOutputStream().write(rendererOutput.getContent());
         
         log.debug("Exiting");
     }
-    
+
+    /**
+     * The model the preview template renders against, or null when building it
+     * failed and a 500 has already been sent.
+     *
+     * <p>Note the url strategy: preview links have to point back into the
+     * preview, carrying the theme being previewed, or every link on the page
+     * would leave the preview and show the live weblog instead.
+     */
+    private Map<String, Object> buildModel(HttpServletRequest request,
+                                           HttpServletResponse response,
+                                           WeblogPreviewRequest previewRequest,
+                                           Weblog weblog) throws WebloggerException {
+
+        Map<String, Object> model = new HashMap<>();
+        PageContext pageContext = JspFactory.getDefaultFactory().getPageContext(
+                this, request, response,"", false, RollerConstants.EIGHT_KB_IN_BYTES, true);
+        
+        // special hack for menu tag
+        request.setAttribute("pageRequest", previewRequest);
+        
+        // populate the rendering model
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("parsedRequest", previewRequest);
+        initData.put("pageContext", pageContext);
+        
+        // define url strategy
+        initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy().getPreviewURLStrategy(previewRequest.getThemeName()));
+        
+        RenderingServletUtils.loadModels("rendering.previewModels", model, initData,
+                WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle()));
+
+        return model;
+    }
+
+    /**
+     * The template this preview renders with, or null for a 404.
+     *
+     * <p>A ladder, in order: a page named on the url, then the tags index, then
+     * the permalink template, then the theme's default. One rung does not fall
+     * through -- a tags-index request against a theme with no tags template
+     * returns null rather than dropping to the default, because rendering the
+     * front page for a /tags preview would tell an author their tags page works
+     * when the theme has no such page at all.
+     */
+    private Template selectTemplate(WeblogPreviewRequest previewRequest, Weblog weblog,
+                                    Weblog tmpWebsite) {
+
+        Template page = null;
+
+        if ("page".equals(previewRequest.getContext())) {
+            page = previewRequest.getWeblogPage();
+
+        } else if ("tags".equals(previewRequest.getContext())
+                && previewRequest.getTags() == null) {
+            page = templateForAction(weblog, ComponentType.TAGSINDEX, "tagsIndex");
+            // deliberately no fall-through: null here means 404
+            return page;
+
+        } else if (previewRequest.getWeblogAnchor() != null) {
+            page = templateForAction(weblog, ComponentType.PERMALINK, "permalink");
+        }
+
+        if (page == null) {
+            try {
+                page = tmpWebsite.getTheme().getDefaultTemplate();
+            } catch (WebloggerException re) {
+                log.error("Error getting default page for preview", re);
+            }
+        }
+        return page;
+    }
+
+    /**
+     * One template by action, or null when the theme does not define it or
+     * cannot be read. Failing soft here is what lets the ladder above try the
+     * next rung.
+     */
+    private Template templateForAction(Weblog weblog, ComponentType action, String label) {
+        try {
+            return weblog.getTheme().getTemplateByAction(action);
+        } catch (Exception e) {
+            log.error("Error getting weblog page for action '{}'", label, e);
+            return null;
+        }
+    }
 }

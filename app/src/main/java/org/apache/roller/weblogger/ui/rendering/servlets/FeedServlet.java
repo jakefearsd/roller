@@ -31,16 +31,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.StaticTemplate;
-import org.apache.roller.weblogger.pojos.Template;
 import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
 import org.apache.roller.weblogger.util.cache.CachedContent;
-import org.apache.roller.weblogger.ui.rendering.Renderer;
-import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCache;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCaches;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
@@ -134,75 +130,19 @@ public class FeedServlet extends HttpServlet {
         // set last-modified date
         ModDateHeaderUtil.setLastModifiedHeader(response, lastModified);
 
-        // set content type
-        String accepts = request.getHeader("Accept");
-        String userAgent = request.getHeader("User-Agent");
-        if (WebloggerRuntimeConfig
-                .getBooleanProperty("site.newsfeeds.styledFeeds")
-                && accepts != null
-                && accepts.contains("*/*")
-                && userAgent != null && userAgent.startsWith("Mozilla")) {
-            // client is a browser and feed style is enabled so we want
-            // browsers to load the page rather than popping up the download
-            // dialog, so we provide a content-type that browsers will display
-            response.setContentType("text/xml");
-        } else if ("atom".equals(feedRequest.getFormat())) {
-            response.setContentType("application/atom+xml; charset=utf-8");
+        String contentType = negotiateContentType(request, feedRequest);
+        if (contentType != null) {
+            response.setContentType(contentType);
         }
 
         // generate cache key
         String cacheKey = renderCache.generateKey(feedRequest);
 
-        // cached content checking
-        CachedContent cachedContent = renderCache.get(cacheKey, lastModified);
-
-        if (cachedContent != null) {
-            log.debug("HIT {}", cacheKey);
-
-            response.setContentLength(cachedContent.getContent().length);
-            response.getOutputStream().write(cachedContent.getContent());
+        if (servedFromCache(response, renderCache, cacheKey, lastModified)) {
             return;
-
-        } else {
-            log.debug("MISS {}", cacheKey);
         }
 
-        // validation. make sure that request input makes sense.
-        // multi-locale weblogs are gone: a feed request naming a locale is
-        // never servable, the same outcome this check already produced for
-        // every real weblog (the flag defaulted false).
-        boolean invalid = false;
-        if (feedRequest.getLocale() != null) {
-            invalid = true;
-        }
-        // Search feeds are gone (W2: Atom only). A term on a feed request used
-        // to select the search-atom template and SearchResultsFeedModel; with
-        // both deleted, a "q" parameter must 404 rather than silently fall
-        // through to the unfiltered entries/files feed for that type/format.
-        if (feedRequest.getTerm() != null) {
-            invalid = true;
-        }
-        if (feedRequest.getWeblogCategoryName() != null) {
-
-            // category specified. category must exist.
-            if (feedRequest.getWeblogCategory() == null) {
-                invalid = true;
-            }
-
-        } else if (feedRequest.getTags() != null && !feedRequest.getTags().isEmpty()) {
-
-            try {
-                // tags specified. make sure they exist.
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger()
-                        .getWeblogEntryManager();
-                invalid = !wmgr.getTagComboExists(feedRequest.getTags(),
-                        isSiteWide ? null : weblog);
-            } catch (WebloggerException ex) {
-                invalid = true;
-            }
-        }
-
-        if (invalid) {
+        if (!isServable(feedRequest, weblog, isSiteWide)) {
             RenderingServletUtils.sendNotFound(response);
             return;
         }
@@ -213,76 +153,33 @@ public class FeedServlet extends HttpServlet {
         // has anything to trigger it.
 
         // looks like we need to render content
-        Map<String, Object> model = new HashMap<>();
-        String pageId;
+        // Recomputed from the resolved weblog rather than reusing isSiteWide
+        // above, which asks the same question of the handle parsed out of the
+        // url. They agree for every request that gets this far; keeping the
+        // original expression avoids making that an assumption.
+        boolean siteWide = WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle());
+        String pageId = feedTemplateId(feedRequest, siteWide);
+
+        Map<String, Object> model;
         try {
-            // determine what template to render with
-            boolean siteWide = WebloggerRuntimeConfig.isSiteWideWeblog(weblog
-                    .getHandle());
-            if (siteWide) {
-                pageId = "site-" + feedRequest.getType() + "-"
-                        + feedRequest.getFormat() + ".vm";
-
-            } else {
-                pageId = "weblog-" + feedRequest.getType() + "-"
-                        + feedRequest.getFormat() + ".vm";
-            }
-
-            // populate the rendering model
-            Map<String, Object> initData = new HashMap<>();
-            initData.put("parsedRequest", feedRequest);
-
-            // define url strategy
-            initData.put("urlStrategy", WebloggerFactory.getWeblogger()
-                    .getUrlStrategy());
-            RenderingServletUtils.loadModels("rendering.feedModels", model, initData, siteWide);
-
+            model = buildModel(feedRequest, siteWide);
         } catch (WebloggerException ex) {
-            log.error("ERROR building the rendering model for feed", ex);
-
-            if (!response.isCommitted()) {
-                response.reset();
-            }
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            RenderingServletUtils.sendServerError(response, "ERROR building the rendering model for feed", ex);
             return;
         }
 
-        // lookup Renderer we are going to use
-        Renderer renderer;
-        try {
-            log.debug("Looking up renderer");
-            Template template = new StaticTemplate(pageId, TemplateLanguage.VELOCITY);
-            renderer = RendererManager.getRenderer(template);
-        } catch (Exception e) {
-            // nobody wants to render my content :(
-
-            // TODO: this log message has been disabled because it fills up
-            // the logs with useless errors due to the fact that the way these
-            // template ids are formed comes directly from the request and it
-            // often gets bunk data causing invalid template ids.
-            // at some point we should have better validation on the input so
-            // that we can quickly dispatch invalid feed requests and only
-            // get this far if we expect the template to be found
-            // log.error("Couldn't find renderer for page "+pageId, e);
-
-            RenderingServletUtils.sendNotFound(response);
-            return;
-        }
-
-        // render content. use default size of 24K for a standard page
-        CachedContent rendererOutput = RenderingServletUtils.render(
-                renderer, model, RollerConstants.TWENTYFOUR_KB_IN_BYTES,
-                "feed " + pageId, response);
+        // The missing-renderer log is deliberately suppressed here (null below).
+        // Feed template ids are built straight from request data and are often
+        // bunk, so this fires for ordinary bad input rather than for anything
+        // an operator can act on. Better input validation would let it come
+        // back; until then it would only fill the logs.
+        CachedContent rendererOutput = RenderingServletUtils.renderAndFlush(
+                new StaticTemplate(pageId, TemplateLanguage.VELOCITY), model,
+                RollerConstants.TWENTYFOUR_KB_IN_BYTES, null,
+                "feed " + pageId, null, response);
         if (rendererOutput == null) {
             return;
         }
-
-        // post rendering process
-
-        // flush rendered content to response
-        log.debug("Flushing response output");
-        response.setContentLength(rendererOutput.getContent().length);
-        response.getOutputStream().write(rendererOutput.getContent());
 
         // cache rendered content. only cache if user is not logged in?
         log.debug("PUT {}", cacheKey);
@@ -291,4 +188,126 @@ public class FeedServlet extends HttpServlet {
         log.debug("Exiting");
     }
 
+    /**
+     * The Velocity template that renders this feed. The site-wide front page
+     * has its own family of feed templates; an ordinary weblog uses the
+     * weblog-* set.
+     */
+    private static String feedTemplateId(WeblogFeedRequest feedRequest, boolean siteWide) {
+        String prefix = siteWide ? "site-" : "weblog-";
+        return prefix + feedRequest.getType() + "-" + feedRequest.getFormat() + ".vm";
+    }
+
+    /**
+     * The model the feed template renders against, or null when building it
+     * failed and a 500 has already been sent.
+     */
+    private Map<String, Object> buildModel(WeblogFeedRequest feedRequest, boolean siteWide)
+            throws WebloggerException {
+
+        Map<String, Object> model = new HashMap<>();
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("parsedRequest", feedRequest);
+        initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy());
+
+        RenderingServletUtils.loadModels("rendering.feedModels", model, initData, siteWide);
+        return model;
+
+    }
+
+    /**
+     * Writes the cached feed if there is one. Unlike the page cache there is no
+     * owner-versus-reader distinction here: a feed renders the same for
+     * everybody, so anything cached is servable to anybody.
+     *
+     * @return true when the response has been completed from cache
+     */
+    // False positive for CloseResource: the object read here is owned by the
+    // render cache and may still be serving other concurrent requests.
+    @SuppressWarnings("PMD.CloseResource")
+    private boolean servedFromCache(HttpServletResponse response,
+                                    RenderCache<WeblogFeedRequest> renderCache,
+                                    String cacheKey, long lastModified) throws IOException {
+
+        CachedContent cachedContent = renderCache.get(cacheKey, lastModified);
+        if (cachedContent == null) {
+            log.debug("MISS {}", cacheKey);
+            return false;
+        }
+
+        log.debug("HIT {}", cacheKey);
+        response.setContentLength(cachedContent.getContent().length);
+        response.getOutputStream().write(cachedContent.getContent());
+        return true;
+    }
+
+    /**
+     * The content type a feed should be served as, or null to leave whatever
+     * the container defaults to.
+     *
+     * <p>The browser case is the interesting one: a browser asking for a feed
+     * gets text/xml so it renders in the window, rather than the correct feed
+     * type, which makes it offer a download instead. That is a deliberate
+     * lie told to browsers and only to browsers, and only when the site has
+     * styled feeds turned on.
+     */
+    private static String negotiateContentType(HttpServletRequest request,
+                                               WeblogFeedRequest feedRequest) {
+
+        String accepts = request.getHeader("Accept");
+        String userAgent = request.getHeader("User-Agent");
+
+        if (WebloggerRuntimeConfig.getBooleanProperty("site.newsfeeds.styledFeeds")
+                && accepts != null && accepts.contains("*/*")
+                && userAgent != null && userAgent.startsWith("Mozilla")) {
+            return "text/xml";
+        }
+        if ("atom".equals(feedRequest.getFormat())) {
+            return "application/atom+xml; charset=utf-8";
+        }
+        return null;
+    }
+
+    /**
+     * Whether this feed request names something that can actually be served.
+     *
+     * <p>Everything here 404s rather than degrading to a wider feed, and that
+     * is the point: silently serving the unfiltered feed for a category that
+     * does not exist gives a subscriber a feed they did not ask for and no
+     * indication that anything went wrong.
+     *
+     * <ul>
+     *   <li>A locale: multi-locale weblogs are gone, so a feed request naming
+     *       one is never servable.</li>
+     *   <li>A search term: search feeds are gone (W2, Atom only). The template
+     *       and model that served them were deleted, so a "q" must 404 rather
+     *       than fall through to the unfiltered feed.</li>
+     *   <li>A category that does not exist, or a tag combination nothing
+     *       carries.</li>
+     * </ul>
+     */
+    private static boolean isServable(WeblogFeedRequest feedRequest, Weblog weblog,
+                                      boolean isSiteWide) {
+
+        if (feedRequest.getLocale() != null || feedRequest.getTerm() != null) {
+            return false;
+        }
+
+        if (feedRequest.getWeblogCategoryName() != null) {
+            return feedRequest.getWeblogCategory() != null;
+        }
+
+        if (feedRequest.getTags() != null && !feedRequest.getTags().isEmpty()) {
+            try {
+                return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+                        .getTagComboExists(feedRequest.getTags(),
+                                isSiteWide ? null : weblog);
+            } catch (WebloggerException ex) {
+                log.debug("Tag lookup failed for feed request", ex);
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
