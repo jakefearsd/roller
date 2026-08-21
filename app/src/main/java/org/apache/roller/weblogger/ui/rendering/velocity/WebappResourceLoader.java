@@ -141,10 +141,10 @@ public class WebappResourceLoader extends ResourceLoader {
 		// names are <template>|<renditionType>
 		// loading weblog.vm etc will not have the type so only check for
 		// one.
+		// split always yields at least one element -- name is known non-empty
+		// above, and String.split never returns a zero-length array -- so there
+		// is nothing here to guard against.
 		String[] split = name.split("\\|", 2);
-		if (split.length < 1) {
-			throw new ResourceNotFoundException("Invalid ThemeRL key " + name);
-		}
 
 		if (servletContext == null) {
 			// getResourceAsStream() below would otherwise throw an
@@ -212,11 +212,13 @@ public class WebappResourceLoader extends ResourceLoader {
 	 */
 	private File getCachedFile(String rootPath, String fileName) {
 
-		// We do this when we cache a resource, so do it again to ensure a match
-		while (fileName.startsWith("/")) {
-			fileName = fileName.substring(1);
-		}
-
+		// Looked up under the name exactly as getResourceReader stored it. This
+		// used to strip leading slashes first, with a comment claiming the same
+		// was done at cache time -- it is not, and never was, so a name that
+		// began with '/' was stored under one key and looked for under another.
+		// The miss was silent: savedPath came back null and concatenated into
+		// the path below as the literal text "null", which cannot exist, so the
+		// resource was reported modified on every check and reloaded forever.
 		String savedPath = templatePaths.get(fileName);
 
 		// names are <template>|<renditionType>

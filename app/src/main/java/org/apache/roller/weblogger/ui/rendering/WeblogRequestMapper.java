@@ -21,6 +21,7 @@ package org.apache.roller.weblogger.ui.rendering;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
@@ -53,6 +54,49 @@ public class WeblogRequestMapper implements RequestMapper {
     private static final String RESOURCE_SERVLET = "/roller-ui/rendering/resources";
     private static final String MEDIA_SERVLET = "/roller-ui/rendering/media-resources";
     private static final String SEARCH_SERVLET = "/roller-ui/rendering/search";
+
+    /**
+     * Where one public weblog url shape is forwarded, and which of its parts
+     * survive the trip.
+     *
+     * <p>This replaced a nine-label switch whose every arm rebuilt the same
+     * {@code SERVLET/handle[/locale][/context][/data]} assembly by hand. The
+     * arms differed only in the servlet and in these three booleans, but with
+     * the assembly written out nine times that was close to unreadable -- and
+     * the reason a reader could not tell, for instance, that a resource url
+     * deliberately drops the locale while a feed url keeps it.
+     *
+     * @param servlet     servlet path to forward to
+     * @param withLocale  carry the locale segment, when the request has one
+     * @param withContext keep the context word itself in the path
+     * @param withData    carry the trailing data segment, when there is one
+     */
+    private record ForwardTarget(String servlet, boolean withLocale,
+                                 boolean withContext, boolean withData) {
+    }
+
+    /** No context word at all: the weblog's own home page. */
+    private static final ForwardTarget HOME =
+            new ForwardTarget(PAGE_SERVLET, true, false, false);
+
+    /**
+     * An unreserved first segment with nothing after it -- a static page slug.
+     * WeblogPageRequest resolves it against WeblogPageManager and 404s itself,
+     * drafts included, exactly as an unknown "page"/"entry" name does.
+     */
+    private static final ForwardTarget PAGE_SLUG =
+            new ForwardTarget(PAGE_SERVLET, true, true, false);
+
+    private static final Map<String, ForwardTarget> FORWARD_TARGETS = Map.of(
+            "page",          new ForwardTarget(PAGE_SERVLET, true, true, true),
+            "entry",         new ForwardTarget(PAGE_SERVLET, true, true, true),
+            "date",          new ForwardTarget(PAGE_SERVLET, true, true, true),
+            "category",      new ForwardTarget(PAGE_SERVLET, true, true, true),
+            "tags",          new ForwardTarget(PAGE_SERVLET, true, true, true),
+            "feed",          new ForwardTarget(FEED_SERVLET, true, false, true),
+            "resource",      new ForwardTarget(RESOURCE_SERVLET, false, false, true),
+            "mediaresource", new ForwardTarget(MEDIA_SERVLET, false, false, true),
+            "search",        new ForwardTarget(SEARCH_SERVLET, true, false, false));
 
 
     // url patterns that are not allowed to be considered weblog handles
@@ -348,142 +392,61 @@ public class WeblogRequestMapper implements RequestMapper {
 
     
     /**
-     * Convenience method for caculating the servlet forward url given a set
-     * of information to make the decision with.
+     * The servlet forward url for one parsed weblog request, or null when the
+     * request is not one this mapper serves.
      *
-     * handle is always assumed valid, all other params may be null.
+     * <p>{@code handle} is always assumed valid; every other parameter may be
+     * null. Which parts of the url survive is decided by {@link ForwardTarget},
+     * not here.
+     *
+     * <p>Package private so the forward-url table can be exercised directly.
+     * The alternative is driving every case through handleRequest, which needs
+     * a weblog lookup and a virtual-host registry standing behind it to reach a
+     * pure string-building decision.
      */
-    private String calculateForwardUrl(HttpServletRequest request,
-                                       String handle, String locale,
-                                       String context, String data) {
-        
+    String calculateForwardUrl(HttpServletRequest request,
+                               String handle, String locale,
+                               String context, String data) {
+
         log.debug("{},{},{},{}", handle, locale, context, data);
-        
-        StringBuilder forwardUrl = new StringBuilder(64);
 
         // POST used to be routed here only for comment submission -- the
         // permalink, carrying a "content" param, forwarded to the comment
         // servlet. That servlet is gone with the comment subsystem, and
         // nothing else in the public url space accepts a POST, so every POST
         // is declined and falls through to the next filter/servlet.
-        if("POST".equals(request.getMethod())) {
+        if ("POST".equals(request.getMethod())) {
             return null;
-
-        } else {
-            // no context means weblog homepage
-            if(context == null) {
-                
-                forwardUrl.append(PAGE_SERVLET);
-                forwardUrl.append('/');
-                forwardUrl.append(handle);
-                if(locale != null) {
-                    forwardUrl.append('/');
-                    forwardUrl.append(locale);
-                }
-                
-            } else {
-                
-                switch (context) {
-                    // requests handled by PageServlet
-                    case "page":
-                    case "entry":
-                    case "date":
-                    case "category":
-                    case "tags":
-                        forwardUrl.append(PAGE_SERVLET);
-                        forwardUrl.append('/');
-                        forwardUrl.append(handle);
-                        if(locale != null) {
-                            forwardUrl.append('/');
-                            forwardUrl.append(locale);
-                        }
-                        forwardUrl.append('/');
-                        forwardUrl.append(context);
-                        if(data != null) {
-                            forwardUrl.append('/');
-                            forwardUrl.append(data);
-                        }
-                        break;
-                        
-                    // requests handled by FeedServlet
-                    case "feed":
-                        forwardUrl.append(FEED_SERVLET);
-                        forwardUrl.append('/');
-                        forwardUrl.append(handle);
-                        if(locale != null) {
-                            forwardUrl.append('/');
-                            forwardUrl.append(locale);
-                        }
-                        if(data != null) {
-                            forwardUrl.append('/');
-                            forwardUrl.append(data);
-                        }
-                        break;
-                        
-                    // requests handled by ResourceServlet
-                    case "resource":
-                        forwardUrl.append(RESOURCE_SERVLET);
-                        forwardUrl.append('/');
-                        forwardUrl.append(handle);
-                        if(data != null) {
-                            forwardUrl.append('/');
-                            forwardUrl.append(data);
-                        }
-                        break;
-                        
-                    // requests handled by MediaResourceServlet
-                    case "mediaresource":
-                        forwardUrl.append(MEDIA_SERVLET);
-                        forwardUrl.append('/');
-                        forwardUrl.append(handle);
-                        if(data != null) {
-                            forwardUrl.append('/');
-                            forwardUrl.append(data);
-                        }
-                        break;
-                        
-                    // requests handled by SearchServlet
-                    case "search":
-                        forwardUrl.append(SEARCH_SERVLET);
-                        forwardUrl.append('/');
-                        forwardUrl.append(handle);
-                        if(locale != null) {
-                            forwardUrl.append('/');
-                            forwardUrl.append(locale);
-                        }
-                        break;
-
-                    // Every reserved first-segment word (page/entry/date/
-                    // category/tags/feed/resource/mediaresource/search) is
-                    // one of the cases above, so anything that reaches here
-                    // is either a static-page slug (/<handle>/<slug>, no
-                    // further path data) or truly unsupported
-                    // (/<handle>/<foo>/<bar>). Forward the first kind to
-                    // PageServlet -- WeblogPageRequest resolves the slug
-                    // (WeblogPageManager) and 404s itself, drafts included,
-                    // exactly like an unknown "page"/"entry" name already
-                    // does above. The second kind stays unsupported: a
-                    // second path segment is never a page slug.
-                    default:
-                        if (data == null) {
-                            forwardUrl.append(PAGE_SERVLET);
-                            forwardUrl.append('/');
-                            forwardUrl.append(handle);
-                            if(locale != null) {
-                                forwardUrl.append('/');
-                                forwardUrl.append(locale);
-                            }
-                            forwardUrl.append('/');
-                            forwardUrl.append(context);
-                            break;
-                        }
-                        return null;
-                }
-            }
         }
-        
-        log.debug("FORWARD_URL {}", forwardUrl.toString());
-        
+
+        ForwardTarget target = (context == null) ? HOME : FORWARD_TARGETS.get(context);
+
+        if (target == null) {
+            // Every reserved first-segment word is a key in FORWARD_TARGETS, so
+            // anything reaching here is either a static-page slug
+            // (/<handle>/<slug>, nothing after it) or unsupported
+            // (/<handle>/<foo>/<bar>). A second path segment is never part of a
+            // page slug, so that second kind is not a weblog url at all.
+            if (data != null) {
+                return null;
+            }
+            target = PAGE_SLUG;
+        }
+
+        StringBuilder forwardUrl = new StringBuilder(64);
+        forwardUrl.append(target.servlet()).append('/').append(handle);
+        if (target.withLocale() && locale != null) {
+            forwardUrl.append('/').append(locale);
+        }
+        if (target.withContext()) {
+            forwardUrl.append('/').append(context);
+        }
+        if (target.withData() && data != null) {
+            forwardUrl.append('/').append(data);
+        }
+
+        log.debug("FORWARD_URL {}", forwardUrl);
+
         return forwardUrl.toString();
     }
     
