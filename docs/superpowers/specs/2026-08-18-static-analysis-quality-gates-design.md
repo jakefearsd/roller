@@ -114,6 +114,19 @@ Settled before design; recorded so a later reader does not relitigate them.
    a behavioural change wearing cleanup's clothes. They get `// CPD-OFF`
    markers carrying that reason.
 
+   > **Correction (2026-08-21).** "Unlike its siblings" is wrong, and the
+   > `CPD-OFF` markers inherited the error. `WeblogFeedCache` has no
+   > CacheHandler either — it passes `constructCache(null, ...)` and expires
+   > lazily just as the page cache does; only `SiteWideCache` is invalidated
+   > through `CacheManager`. That matters here because it means the two
+   > suppressed blocks are *not* the same situation:
+   > `SiteWideCache.generateKey` ↔ `WeblogPageCache.generateKey` does span
+   > differing contracts, while the `WeblogPageCache` ↔ `WeblogFeedCache`
+   > accessor block duplicates two caches that are contract-identical, and is
+   > suppressed on the narrower ground that collapsing two singletons to share
+   > four accessors is a refactor nobody has taken yet. See `CLAUDE.md`,
+   > Templates; `RenderCacheHandlerRegistrationTest` now enforces the split.
+
    The threshold is 200 rather than 100 (20 blocks) for the same why: at 100
    the gate starts demanding refactors whose risk exceeds the duplication's
    cost.

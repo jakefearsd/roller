@@ -335,10 +335,32 @@ JCL. There is no compiler check for it; read the argument list.
 CPD runs at **200 tokens**. Two of the four blocks it flags at that threshold
 already are the render caches (the other two are the entry pagers, genuinely
 extractable) — the `CPD-OFF` markers around them are load-bearing at 200, not
-a precaution against some lower setting. Collapsing the caches into a shared
-base would be a behavioural change — `WeblogPageCache` has no CacheHandler and
-expires only against `weblog.lastModified` while its siblings are invalidated
-through `CacheManager`. The threshold stays at 200 rather than dropping to 100
+a precaution against some lower setting. **Those two blocks are suppressed for
+two different reasons, and for years carried one copy-pasted comment that
+stated the wrong one.** Get this right before touching either:
+
+- `SiteWideCache.generateKey` ↔ `WeblogPageCache.generateKey` (306 tokens).
+  Collapsing *this* pair would be a behavioural change, because the two caches'
+  expiry contracts genuinely differ. `SiteWideCache` is the **only** render
+  cache registered as a `CacheHandler` (`constructCache(this, ...)`), so
+  `CacheManager` invalidates it eagerly and wholesale.
+- `WeblogPageCache` ↔ `WeblogFeedCache`, the `get`/`put`/`remove`/`clear` block
+  (200 tokens). This pair is **not** justified by differing contracts —
+  they are identical. Both pass `constructCache(null, ...)`, register no
+  handler, and expire lazily against `weblog.lastModified`. It stays suppressed
+  only because they are two independent singletons whose shared code is four
+  boilerplate accessors; giving them a common base is a real and still-open
+  refactor, not a closed question.
+
+**`WeblogFeedCache` has no `CacheHandler`.** The retired comment claimed it was
+invalidated through `CacheManager`, which it never was, and that error is what
+kept the second pair unexamined. Only `SiteWideCache` is on the eager side.
+`RenderCache`/`RenderCaches` give the rendering servlets one name for "the
+cache for this request" by adapting all three without merging any of them; that
+adapter layer is the place to add a caller-facing cache concern, not a shared
+base.
+
+The threshold stays at 200 rather than dropping to 100
 for a separate reason: 100 finds twenty blocks, not zero, and the gate starts
 demanding refactors whose risk exceeds the duplication's cost.
 
@@ -1143,6 +1165,14 @@ excused whatever its type.
   expires the rendered page in `WeblogPageCache` — that cache has no
   CacheHandler, so `CacheManager.invalidate(...)` never reaches it, and a page
   is only ever evicted lazily against `weblog.lastModified`.
+- **`WeblogFeedCache` works exactly the same way, and saying otherwise is a
+  mistake this repo has already made.** It also passes `constructCache(null,
+  ...)`, also registers no CacheHandler, and also expires only lazily against
+  `weblog.lastModified`. `SiteWideCache` is the sole render cache on the eager
+  side — it registers itself (`constructCache(this, ...)`) and `CacheManager`
+  drops it wholesale. `RenderCacheHandlerRegistrationTest` pins that split so
+  the claim cannot rot back into prose: adding a CacheHandler to a render cache
+  fails that test, which is the intended way to find this note.
 - **Velocity in this codebase is lenient, and that is a live hazard whenever
   you delete a Java member.** `velocity.properties` sets no
   `runtime.references.strict` and turns off `runtime.log.invalid.reference`.

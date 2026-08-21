@@ -46,8 +46,7 @@ import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogSearchRequest;
-import org.apache.roller.weblogger.ui.rendering.util.cache.SiteWideCache;
-import org.apache.roller.weblogger.ui.rendering.util.cache.WeblogPageCache;
+import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCaches;
 import org.apache.roller.weblogger.util.I18nMessages;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 
@@ -117,11 +116,9 @@ public class SearchServlet extends HttpServlet {
                 ThemeManager manager = WebloggerFactory.getWeblogger().getThemeManager();
                 boolean reloaded = manager.reLoadThemeFromDisk(weblog.getEditorTheme());
                 if (reloaded) {
-                    if (WebloggerRuntimeConfig.isSiteWideWeblog(searchRequest.getWeblogHandle())) {
-                        SiteWideCache.getInstance().clear();
-                    } else {
-                        WeblogPageCache.getInstance().clear();
-                    }
+                    RenderCaches.forPage(WebloggerRuntimeConfig
+                            .isSiteWideWeblog(searchRequest.getWeblogHandle()))
+                            .clear();
                     I18nMessages.reloadBundle(weblog.getLocaleInstance());
                 }
 

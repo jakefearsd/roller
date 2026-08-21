@@ -43,8 +43,8 @@ import org.apache.roller.weblogger.util.cache.CachedContent;
 import org.apache.roller.weblogger.ui.rendering.Renderer;
 import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
-import org.apache.roller.weblogger.ui.rendering.util.cache.SiteWideCache;
-import org.apache.roller.weblogger.ui.rendering.util.cache.WeblogFeedCache;
+import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCache;
+import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCaches;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
 
 
@@ -57,8 +57,8 @@ public class FeedServlet extends HttpServlet {
 
     private static final Logger log = LoggerFactory.getLogger(FeedServlet.class);
 
-    private transient WeblogFeedCache weblogFeedCache = null;
-    private transient SiteWideCache siteWideCache = null;
+    private transient RenderCache<WeblogFeedRequest> siteWideRenderCache = null;
+    private transient RenderCache<WeblogFeedRequest> weblogRenderCache = null;
 
 
     /**
@@ -71,11 +71,10 @@ public class FeedServlet extends HttpServlet {
 
         log.info("Initializing FeedServlet");
 
-        // get a reference to the weblog feed cache
-        this.weblogFeedCache = WeblogFeedCache.getInstance();
-
-        // get a reference to the site wide cache
-        this.siteWideCache = SiteWideCache.getInstance();
+        // one RenderCache per side of the site-wide question; which one a
+        // request uses is decided once, in doGet
+        this.siteWideRenderCache = RenderCaches.forFeed(true);
+        this.weblogRenderCache = RenderCaches.forFeed(false);
     }
 
 
@@ -120,13 +119,13 @@ public class FeedServlet extends HttpServlet {
             return;
         }
 
+        // the site-wide question is asked once, here, and answered by holding
+        // the cache it selects for the rest of the request
+        RenderCache<WeblogFeedRequest> renderCache =
+                isSiteWide ? siteWideRenderCache : weblogRenderCache;
+
         // determine the lastModified date for this content
-        long lastModified = System.currentTimeMillis();
-        if (isSiteWide) {
-            lastModified = siteWideCache.getLastModified().getTime();
-        } else if (weblog.getLastModified() != null) {
-            lastModified = weblog.getLastModified().getTime();
-        }
+        long lastModified = renderCache.lastModified(weblog);
 
         // Respond with 304 Not Modified if it is not modified.
         if (ModDateHeaderUtil.respondIfNotModified(request, response,
@@ -154,21 +153,10 @@ public class FeedServlet extends HttpServlet {
         }
 
         // generate cache key
-        String cacheKey;
-        if (isSiteWide) {
-            cacheKey = siteWideCache.generateKey(feedRequest);
-        } else {
-            cacheKey = weblogFeedCache.generateKey(feedRequest);
-        }
+        String cacheKey = renderCache.generateKey(feedRequest);
 
         // cached content checking
-        CachedContent cachedContent;
-        if (isSiteWide) {
-            cachedContent = (CachedContent) siteWideCache.get(cacheKey);
-        } else {
-            cachedContent = (CachedContent) weblogFeedCache.get(cacheKey,
-                    lastModified);
-        }
+        CachedContent cachedContent = renderCache.get(cacheKey, lastModified);
 
         if (cachedContent != null) {
             log.debug("HIT {}", cacheKey);
@@ -312,11 +300,7 @@ public class FeedServlet extends HttpServlet {
 
         // cache rendered content. only cache if user is not logged in?
         log.debug("PUT {}", cacheKey);
-        if (isSiteWide) {
-            siteWideCache.put(cacheKey, rendererOutput);
-        } else {
-            weblogFeedCache.put(cacheKey, rendererOutput);
-        }
+        renderCache.put(cacheKey, rendererOutput);
 
         log.debug("Exiting");
     }

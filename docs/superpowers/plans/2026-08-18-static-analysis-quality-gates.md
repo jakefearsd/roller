@@ -628,6 +628,20 @@ The superclass already exists and is already the parent of all three, so this is
 
 In `SiteWideCache`, `WeblogPageCache` and `WeblogFeedCache`, bracket the flagged region:
 
+> **Correction (2026-08-21).** The comment text below is wrong about
+> `WeblogFeedCache` and shipped that way. The feed cache passes
+> `constructCache(null, ...)`, registers **no** CacheHandler, and expires
+> lazily against `weblog.lastModified` exactly as `WeblogPageCache` does;
+> `SiteWideCache` is the only render cache CacheManager invalidates. The
+> error mattered: it described the two suppressed blocks as one situation
+> when they are two. `SiteWideCache.generateKey` ↔ `WeblogPageCache.generateKey`
+> really does span differing contracts, but the `WeblogPageCache` ↔
+> `WeblogFeedCache` accessor block is duplicated between two caches whose
+> contracts are *identical*. The in-code notes and `CLAUDE.md` now say so,
+> and `RenderCacheHandlerRegistrationTest` enforces it. This plan text is
+> left as written, as the record of what was done at the time.
+
+
 ```java
 // CPD-OFF -- The three render caches are deliberately NOT collapsed into a
 // shared base. Their expiry contracts genuinely differ: WeblogPageCache has no
@@ -1589,6 +1603,11 @@ render caches, and collapsing those into a shared base would be a behavioural
 change — `WeblogPageCache` has no CacheHandler and expires only against
 `weblog.lastModified` while its siblings are invalidated through
 `CacheManager`. Those blocks carry `CPD-OFF` markers stating that reason.
+
+> **Correction (2026-08-21).** As above: `WeblogFeedCache` has no CacheHandler
+> either, so "its siblings" is wrong — only `SiteWideCache` is invalidated
+> through `CacheManager`. See `CLAUDE.md`, Templates, for the corrected split
+> and the test that now enforces it.
 
 One-off suppressions go at the call site (`@SuppressWarnings("PMD.Rule")`,
 `@SuppressFBWarnings`, `// CPD-OFF`) **with a reason**; the two config files

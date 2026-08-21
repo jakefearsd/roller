@@ -44,11 +44,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * events out to everything that registered an interest.
  *
  * The fan-out is the part worth guarding. Every manager that changes a weblog
- * entry, category, template, user or weblog tells the CacheManager,
- * and the CacheManager is the only thing that tells the page cache, the feed
- * cache and the site-wide cache to drop what they are holding. A handler that
- * silently stops being called does not fail anything -- it just leaves readers
- * looking at yesterday's blog.
+ * entry, category, template, user or weblog tells the CacheManager, and the
+ * CacheManager tells everything that registered an interest to drop what it is
+ * holding. A handler that silently stops being called does not fail anything --
+ * it just leaves readers looking at yesterday's blog.
+ *
+ * Note that of the three render caches only SiteWideCache is such a handler;
+ * the page and feed caches register nothing and expire lazily against
+ * weblog.lastModified instead. RenderCacheHandlerRegistrationTest pins that
+ * split.
  */
 public class CacheManagerTest {
 

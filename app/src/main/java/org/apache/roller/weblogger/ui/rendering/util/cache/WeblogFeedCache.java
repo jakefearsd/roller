@@ -104,12 +104,21 @@ public final class WeblogFeedCache {
     }
 
 
-    // CPD-OFF -- The three render caches are deliberately NOT collapsed into a
-    // shared base. Their expiry contracts genuinely differ: WeblogPageCache has
-    // no CacheHandler and is expired only lazily against weblog.lastModified,
-    // while its siblings are invalidated through CacheManager. Unifying them
-    // would be a behavioural change wearing cleanup's clothes. See CLAUDE.md,
-    // Templates.
+    // CPD-OFF -- This accessor block is duplicated in WeblogPageCache and
+    // WeblogFeedCache. Unlike the generateKey duplication these two caches
+    // share, this pair is NOT justified by differing contracts: they are
+    // identical. Both register no CacheHandler (constructCache(null, ...)) and
+    // both expire lazily against weblog.lastModified. An earlier version of
+    // this comment claimed WeblogFeedCache was invalidated through
+    // CacheManager; it never was, and that error is what kept the pair
+    // unexamined.
+    //
+    // The suppression stands on a narrower reason: these are two independent
+    // singletons over different content, and what they share is four
+    // boilerplate accessors. Giving them a common base to save those lines is a
+    // real refactor of the caches themselves, and it is a live opportunity
+    // rather than a closed question -- it is simply not what the RenderCache
+    // adapter pass set out to do. See CLAUDE.md, Templates.
     public Object get(String key, long lastModified) {
 
         if (!cacheEnabled) {

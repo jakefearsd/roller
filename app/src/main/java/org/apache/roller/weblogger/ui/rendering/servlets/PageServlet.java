@@ -41,8 +41,8 @@ import org.apache.roller.weblogger.ui.rendering.RendererManager;
 import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
-import org.apache.roller.weblogger.ui.rendering.util.cache.SiteWideCache;
-import org.apache.roller.weblogger.ui.rendering.util.cache.WeblogPageCache;
+import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCache;
+import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCaches;
 import org.apache.roller.weblogger.util.I18nMessages;
 import org.apache.roller.weblogger.util.cache.CachedContent;
 
@@ -68,8 +68,8 @@ public class PageServlet extends HttpServlet {
     private static final Logger log = LoggerFactory.getLogger(PageServlet.class);
     // for caching
     private boolean excludeOwnerPages = false;
-    private transient WeblogPageCache weblogPageCache = null;
-    private transient SiteWideCache siteWideCache = null;
+    private transient RenderCache<WeblogPageRequest> siteWideRenderCache = null;
+    private transient RenderCache<WeblogPageRequest> weblogRenderCache = null;
 
     // Development theme reloading
     Boolean themeReload = false;
@@ -87,11 +87,10 @@ public class PageServlet extends HttpServlet {
         this.excludeOwnerPages = WebloggerConfig
                 .getBooleanProperty("cache.excludeOwnerEditPages");
 
-        // get a reference to the weblog page cache
-        this.weblogPageCache = WeblogPageCache.getInstance();
-
-        // get a reference to the site wide cache
-        this.siteWideCache = SiteWideCache.getInstance();
+        // one RenderCache per side of the site-wide question; which one a
+        // request uses is decided once, in doGet
+        this.siteWideRenderCache = RenderCaches.forPage(true);
+        this.weblogRenderCache = RenderCaches.forPage(false);
 
         // Development theme reloading
         themeReload = WebloggerConfig.getBooleanProperty("themes.reload.mode");
@@ -136,13 +135,13 @@ public class PageServlet extends HttpServlet {
             return;
         }
 
+        // the site-wide question is asked once, here, and answered by holding
+        // the cache it selects for the rest of the request
+        RenderCache<WeblogPageRequest> renderCache =
+                isSiteWide ? siteWideRenderCache : weblogRenderCache;
+
         // determine the lastModified date for this content
-        long lastModified = System.currentTimeMillis();
-        if (isSiteWide) {
-            lastModified = siteWideCache.getLastModified().getTime();
-        } else if (weblog.getLastModified() != null) {
-            lastModified = weblog.getLastModified().getTime();
-        }
+        long lastModified = renderCache.lastModified(weblog);
 
         // 304 Not Modified handling.
         // We skip this for logged in users to avoid the scenerio where a user
@@ -158,12 +157,7 @@ public class PageServlet extends HttpServlet {
         }
 
         // generate cache key
-        String cacheKey;
-        if (isSiteWide) {
-            cacheKey = siteWideCache.generateKey(pageRequest);
-        } else {
-            cacheKey = weblogPageCache.generateKey(pageRequest);
-        }
+        String cacheKey = renderCache.generateKey(pageRequest);
 
         // Development only. Reload if theme has been modified
         if (themeReload
@@ -177,11 +171,7 @@ public class PageServlet extends HttpServlet {
                 boolean reloaded = manager.reLoadThemeFromDisk(weblog
                         .getEditorTheme());
                 if (reloaded) {
-                    if (isSiteWide) {
-                        siteWideCache.clear();
-                    } else {
-                        weblogPageCache.clear();
-                    }
+                    renderCache.clear();
                     I18nMessages.reloadBundle(weblog.getLocaleInstance());
                 }
 
@@ -195,13 +185,7 @@ public class PageServlet extends HttpServlet {
                 && request.getAttribute("skipCache") == null
                 && request.getParameter("skipCache") == null) {
 
-            CachedContent cachedContent;
-            if (isSiteWide) {
-                cachedContent = (CachedContent) siteWideCache.get(cacheKey);
-            } else {
-                cachedContent = (CachedContent) weblogPageCache.get(cacheKey,
-                        lastModified);
-            }
+            CachedContent cachedContent = renderCache.get(cacheKey, lastModified);
 
             if (cachedContent != null) {
                 log.debug("HIT {}", cacheKey);
@@ -322,12 +306,7 @@ public class PageServlet extends HttpServlet {
                 && request.getAttribute("skipCache") == null) {
             log.debug("PUT {}", cacheKey);
 
-            // put it in the right cache
-            if (isSiteWide) {
-                siteWideCache.put(cacheKey, rendererOutput);
-            } else {
-                weblogPageCache.put(cacheKey, rendererOutput);
-            }
+            renderCache.put(cacheKey, rendererOutput);
         } else {
             log.debug("SKIPPED {}", cacheKey);
         }
