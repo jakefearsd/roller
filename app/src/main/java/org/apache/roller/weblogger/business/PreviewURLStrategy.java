@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
@@ -220,7 +221,10 @@ public class PreviewURLStrategy extends MultiWeblogURLStrategy {
         }
         
         if(pageLink != null) {
-            pathinfo.append("page/").append(pageLink);
+            // encoded, as MultiWeblogURLStrategy encodes it. Left raw, an author
+            // who named a page "a?theme=x" prepended their own theme parameter
+            // ahead of the real one in the query string built below.
+            pathinfo.append("page/").append(URLUtilities.encode(pageLink));
             
             // for custom pages we only allow query params
             if(dateString != null) {
@@ -250,7 +254,10 @@ public class PreviewURLStrategy extends MultiWeblogURLStrategy {
     @Override
     public String getWeblogResourceURL(Weblog weblog, String filePath, boolean absolute) {
         
-        if(weblog == null) {
+        // filePath is checked for the same reason the parent checks it: this is
+        // reached from templates, and a missing path must produce no url rather
+        // than a NullPointerException on the startsWith below.
+        if(weblog == null || StringUtils.isEmpty(filePath)) {
             return null;
         }
         
@@ -264,10 +271,13 @@ public class PreviewURLStrategy extends MultiWeblogURLStrategy {
         
         url.append("/roller-ui/authoring/previewresource/").append(weblog.getHandle()).append('/');
         
+        // encodePath rather than a raw append, again matching the parent: it
+        // escapes each segment and leaves '/' alone, so a file name with a
+        // space or a '?' cannot break out of the path.
         if(filePath.startsWith("/")) {
-            url.append(filePath.substring(1));
+            url.append(URLUtilities.encodePath(filePath.substring(1)));
         } else {
-            url.append(filePath);
+            url.append(URLUtilities.encodePath(filePath));
         }
         
         Map<String, String> params = Collections.emptyMap();
