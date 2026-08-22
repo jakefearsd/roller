@@ -74,7 +74,7 @@ public class WeblogEntriesPermalinkPager extends AbstractWeblogEntriesPager {
                 WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 currEntry = wmgr.getWeblogEntryByAnchor(weblog, entryAnchor);
                 if (currEntry != null && currEntry.getStatus().equals(PubStatus.PUBLISHED)) {
-                    entries = Map.of(new Date(currEntry.getPubTime().getTime()), List.of(WeblogEntryWrapper.wrap(currEntry, urlStrategy)));
+                    entries = Map.of(new Date(currEntry.getPubTime().getTime()), List.of(WeblogEntryWrapper.wrap(currEntry, urlStrategy, weblogger)));
                 }
             } catch (Exception e) {
                 log.error("ERROR: fetching entry");

@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -46,19 +46,28 @@ public final class WeblogEntryWrapper {
     
     // url strategy to use for any url building
     private final URLStrategy urlStrategy;
+
+    // the business tier, for the lookups the template API needs
+    private final Weblogger weblogger;
     
     
     // this is private so that we can force the use of the .wrap(pojo) method
-    private WeblogEntryWrapper(WeblogEntry toWrap, URLStrategy strat) {
+    private WeblogEntryWrapper(WeblogEntry toWrap, URLStrategy strat, Weblogger weblogger) {
         this.pojo = toWrap;
         this.urlStrategy = strat;
+        this.weblogger = weblogger;
     }
     
     
-    // wrap the given pojo if it is not null
-    public static WeblogEntryWrapper wrap(WeblogEntry toWrap, URLStrategy strat) {
+    /**
+     * Wrap the given pojo if it is not null. The wrapper is the template API
+     * and does its own lookups: it is handed the (possibly preview-aware)
+     * {@link URLStrategy} every URL it emits must come from, and the business
+     * tier it resolves related objects through -- never a static locator.
+     */
+    public static WeblogEntryWrapper wrap(WeblogEntry toWrap, URLStrategy strat, Weblogger weblogger) {
         if(toWrap != null) {
-            return new WeblogEntryWrapper(toWrap, strat);
+            return new WeblogEntryWrapper(toWrap, strat, weblogger);
         }
         return null;
     }
@@ -70,19 +79,19 @@ public final class WeblogEntryWrapper {
     
     
     public WeblogCategoryWrapper getCategory() {
-        return WeblogCategoryWrapper.wrap(this.pojo.getCategory(), urlStrategy);
+        return WeblogCategoryWrapper.wrap(this.pojo.getCategory(), urlStrategy, weblogger);
     }
     
     
     public List<WeblogCategoryWrapper> getCategories() {      
         return this.pojo.getCategories().stream()
-                .map(cat -> WeblogCategoryWrapper.wrap(cat, urlStrategy))
+                .map(cat -> WeblogCategoryWrapper.wrap(cat, urlStrategy, weblogger))
                 .collect(Collectors.toList());
     }
     
     
     public WeblogWrapper getWebsite() {
-        return WeblogWrapper.wrap(this.pojo.getWebsite(), urlStrategy);
+        return WeblogWrapper.wrap(this.pojo.getWebsite(), urlStrategy, weblogger);
     }
     
     
@@ -164,7 +173,7 @@ public final class WeblogEntryWrapper {
     public List<WeblogEntryTagWrapper> getTags() {
         return this.pojo.getTags().stream()
                 .sorted(new WeblogEntryTagComparator()) // by name
-                .map(WeblogEntryTagWrapper::wrap)
+                .map(tag -> WeblogEntryTagWrapper.wrap(tag, weblogger))
                 .collect(Collectors.toList());
     }
     
@@ -184,8 +193,13 @@ public final class WeblogEntryWrapper {
     }
     
     
+    /**
+     * Absolute permalink, built from the strategy this wrapper was given --
+     * so a theme preview links within the preview and the live site links to
+     * itself, whichever strategy the caller installed.
+     */
     public String getPermalink() {
-        return this.pojo.getPermalink();
+        return urlStrategy.getWeblogEntryURL(this.pojo.getWebsite(), null, this.pojo.getAnchor(), true);
     }
     
     
@@ -305,8 +319,8 @@ public final class WeblogEntryWrapper {
             return null;
         }
         try {
-            MediaFile mediaFile = WebloggerFactory.getWeblogger().getMediaFileManager().getMediaFile(mediaFileId);
-            return MediaFileWrapper.wrap(mediaFile);
+            MediaFile mediaFile = weblogger.getMediaFileManager().getMediaFile(mediaFileId);
+            return MediaFileWrapper.wrap(mediaFile, urlStrategy, weblogger);
         } catch (Exception e) {
             log.debug("Could not resolve media file {}", mediaFileId, e);
             return null;

@@ -111,7 +111,7 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
 
         return weblogger.getWeblogEntryManager()
                 .getWeblogEntries(wesc).stream()
-                .map(e -> WeblogEntryWrapper.wrap(e, urlStrategy))
+                .map(e -> WeblogEntryWrapper.wrap(e, urlStrategy, weblogger))
                 .toList();
     }
 

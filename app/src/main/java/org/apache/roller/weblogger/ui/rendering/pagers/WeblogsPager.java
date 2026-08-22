@@ -115,7 +115,7 @@ public class WeblogsPager extends AbstractPager<WeblogWrapper> {
                 ? wmgr.getWeblogs(Boolean.TRUE, Boolean.TRUE, startDate, null, offset, limit)
                 : wmgr.getWeblogsByLetter(letter.charAt(0), offset, limit);
 
-        return rawWeblogs.stream().map(w -> WeblogWrapper.wrap(w, urlStrategy)).toList();
+        return rawWeblogs.stream().map(w -> WeblogWrapper.wrap(w, urlStrategy, weblogger)).toList();
     }
 
 

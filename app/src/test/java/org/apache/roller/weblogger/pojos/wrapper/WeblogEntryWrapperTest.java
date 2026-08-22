@@ -59,6 +59,7 @@ class WeblogEntryWrapperTest {
     private Weblog weblog;
     private WeblogEntry entry;
     private URLStrategy urls;
+    private Weblogger weblogger;
     private WeblogEntryWrapper wrapper;
 
     @BeforeEach
@@ -83,7 +84,8 @@ class WeblogEntryWrapperTest {
         entry.setSearchDescription("A search description");
 
         urls = mock(URLStrategy.class);
-        wrapper = WeblogEntryWrapper.wrap(entry, urls);
+        weblogger = mock(Weblogger.class);
+        wrapper = WeblogEntryWrapper.wrap(entry, urls, weblogger);
     }
 
     @Test
@@ -153,7 +155,7 @@ class WeblogEntryWrapperTest {
 
     @Test
     void wrappingNullGivesNull() {
-        assertNull(WeblogEntryWrapper.wrap(null, urls),
+        assertNull(WeblogEntryWrapper.wrap(null, urls, weblogger),
                 "Templates test entries for presence before dereferencing them");
     }
 
@@ -221,19 +223,16 @@ class WeblogEntryWrapperTest {
 
     @Test
     void permalinksComeFromTheUrlStrategyAndTheDeprecatedFormsFromTheHandle() throws Exception {
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getUrlStrategy()).thenReturn(urls);
         when(urls.getWeblogEntryURL(weblog, null, "hello-world", true))
                 .thenReturn("http://example.com/roller/testblog/entry/hello-world");
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertEquals("http://example.com/roller/testblog/entry/hello-world",
-                    wrapper.getPermalink(),
-                    "The canonical permalink is whatever the URL strategy says, absolute "
-                            + "so it survives being copied into a feed");
-        }
+        // No static locator: the strategy the wrapper was GIVEN is the only
+        // source of its permalink (spec Decision 6 -- a preview installs a
+        // preview-aware one, and the wrapper used to bypass it).
+        assertEquals("http://example.com/roller/testblog/entry/hello-world",
+                wrapper.getPermalink(),
+                "The canonical permalink is whatever the injected URL strategy says, absolute "
+                        + "so it survives being copied into a feed");
 
         assertEquals("/testblog/entry/hello-world", wrapper.getPermaLink(),
                 "The deprecated relative form is built from the handle and anchor");
@@ -250,6 +249,8 @@ class WeblogEntryWrapperTest {
 
     @Test
     void renderedContentAccessorsDelegateToTheEntry() throws Exception {
+        // WeblogEntry.render() itself still locates the plugin manager
+        // statically -- that moves to EntryRenderer in Stage D (plan Task 14).
         org.apache.roller.weblogger.business.plugins.PluginManager plugins =
                 mock(org.apache.roller.weblogger.business.plugins.PluginManager.class);
         Weblogger weblogger = mock(Weblogger.class);
@@ -276,6 +277,7 @@ class WeblogEntryWrapperTest {
 
     @Test
     void theCreatorIsReadThroughTheEntry() throws Exception {
+        // WeblogEntry.getCreator() still locates statically -- Stage D (Task 16).
         org.apache.roller.weblogger.business.UserManager users =
                 mock(org.apache.roller.weblogger.business.UserManager.class);
         Weblogger weblogger = mock(Weblogger.class);
@@ -380,16 +382,12 @@ class WeblogEntryWrapperTest {
         MediaFileManager mediaFiles = mock(MediaFileManager.class);
         when(mediaFiles.getMediaFile("mf-featured-1")).thenReturn(featured);
         when(mediaFiles.getMediaFile("mf-og-1")).thenReturn(og);
-        Weblogger weblogger = mock(Weblogger.class);
         when(weblogger.getMediaFileManager()).thenReturn(mediaFiles);
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertEquals("featured.jpg", wrapper.getFeaturedImage().getName(),
-                    "getFeaturedImage() must resolve the id via the media file manager, wrapped");
-            assertEquals("og.jpg", wrapper.getOgImage().getName());
-        }
+        assertEquals("featured.jpg", wrapper.getFeaturedImage().getName(),
+                "getFeaturedImage() must resolve the id via the INJECTED tier's media file "
+                        + "manager, wrapped");
+        assertEquals("og.jpg", wrapper.getOgImage().getName());
     }
 
     @Test
@@ -411,14 +409,9 @@ class WeblogEntryWrapperTest {
         MediaFileManager mediaFiles = mock(MediaFileManager.class);
         when(mediaFiles.getMediaFile("mf-deleted"))
                 .thenThrow(new org.apache.roller.weblogger.WebloggerException("not found"));
-        Weblogger weblogger = mock(Weblogger.class);
         when(weblogger.getMediaFileManager()).thenReturn(mediaFiles);
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertNull(wrapper.getFeaturedImage());
-        }
+        assertNull(wrapper.getFeaturedImage());
     }
 
     @Test

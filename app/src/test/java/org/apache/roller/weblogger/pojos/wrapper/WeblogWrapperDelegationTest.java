@@ -83,7 +83,7 @@ class WeblogWrapperDelegationTest {
         when(weblogger.getThemeManager()).thenReturn(themes);
         when(themes.getTheme(weblog)).thenReturn(theme);
 
-        wrapper = WeblogWrapper.wrap(weblog, urls);
+        wrapper = WeblogWrapper.wrap(weblog, urls, weblogger);
     }
 
     private <T> T withWeblogger(Supplier<T> body) {
@@ -98,8 +98,10 @@ class WeblogWrapperDelegationTest {
         when(urls.getWeblogURL(weblog, null, false)).thenReturn("/roller/testblog/");
         when(urls.getWeblogURL(weblog, null, true)).thenReturn("http://example.com/testblog/");
 
-        assertEquals("/roller/testblog/", withWeblogger(wrapper::getURL));
-        assertEquals("http://example.com/testblog/", withWeblogger(wrapper::getAbsoluteURL),
+        // No static locator: the strategy the wrapper was GIVEN is the only
+        // source of its urls (spec Decision 6).
+        assertEquals("/roller/testblog/", wrapper.getURL());
+        assertEquals("http://example.com/testblog/", wrapper.getAbsoluteURL(),
                 "Feeds and notification e-mails are read away from the site and need the "
                         + "absolute form; swapping the two produces links that 404 in a "
                         + "reader and work in a browser");

@@ -282,7 +282,7 @@ public abstract class AbstractWeblogEntriesPager implements WeblogEntriesPager {
             List<WeblogEntry> unwrapped = entry.getValue();
             for (int i = 0; i < unwrapped.size(); i++) {
                 if (count++ < length) {
-                    wrapped.add(i, WeblogEntryWrapper.wrap(unwrapped.get(i), urlStrategy));
+                    wrapped.add(i, WeblogEntryWrapper.wrap(unwrapped.get(i), urlStrategy, weblogger));
                 } else {
                     moreEntries = true;
                 }

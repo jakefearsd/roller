@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
@@ -85,7 +86,8 @@ public class GalleryShortcode implements ShortcodeHandler {
 
         List<MediaFileWrapper> images;
         try {
-            MediaFileDirectory directory = WebloggerFactory.getWeblogger()
+            Weblogger weblogger = WebloggerFactory.getWeblogger();
+            MediaFileDirectory directory = weblogger
                     .getMediaFileManager().getMediaFileDirectoryByName(weblog, directoryName);
             if (directory == null) {
                 log.debug("[gallery] shortcode dir \"{}\" does not exist in weblog {}",
@@ -102,7 +104,7 @@ public class GalleryShortcode implements ShortcodeHandler {
             images = directory.getMediaFiles().stream()
                     .filter(MediaFile::isImageFile)
                     .sorted(GalleryMarkup.GALLERY_ORDER)
-                    .map(MediaFileWrapper::wrap)
+                    .map(f -> MediaFileWrapper.wrap(f, weblogger.getUrlStrategy(), weblogger))
                     .toList();
         } catch (Exception e) {
             log.warn("[gallery] shortcode could not resolve directory \"{}\"",

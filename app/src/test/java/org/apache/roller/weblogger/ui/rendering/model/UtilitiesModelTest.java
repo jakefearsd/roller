@@ -645,7 +645,7 @@ class UtilitiesModelTest {
         // be an author, and a permission lookup here would be a wasted database
         // round-trip on every anonymous page view.
         Weblog permissionSource = mock(Weblog.class);
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null);
+        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
 
         UtilitiesModel model = modelFor(weblog("en_US", "UTC"));
 
@@ -664,7 +664,7 @@ class UtilitiesModelTest {
         Weblog permissionSource = mock(Weblog.class);
         when(permissionSource.hasUserPermission(user, WeblogPermission.POST)).thenReturn(true);
         when(permissionSource.hasUserPermission(user, WeblogPermission.ADMIN)).thenReturn(false);
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null);
+        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
 
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(weblog("en_US", "UTC"));
@@ -688,7 +688,7 @@ class UtilitiesModelTest {
         Weblog permissionSource = mock(Weblog.class);
         when(permissionSource.hasUserPermission(user, WeblogPermission.POST)).thenReturn(false);
         when(permissionSource.hasUserPermission(user, WeblogPermission.ADMIN)).thenReturn(true);
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null);
+        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
 
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(weblog("en_US", "UTC"));
@@ -713,7 +713,7 @@ class UtilitiesModelTest {
         Weblog permissionSource = mock(Weblog.class);
         when(permissionSource.hasUserPermission(user, WeblogPermission.POST))
                 .thenThrow(new IllegalStateException("database is down"));
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null);
+        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
 
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(weblog("en_US", "UTC"));
@@ -734,7 +734,7 @@ class UtilitiesModelTest {
         Weblog permissionSource = mock(Weblog.class);
         when(permissionSource.hasUserPermission(user, WeblogPermission.ADMIN))
                 .thenThrow(new IllegalStateException("database is down"));
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null);
+        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
 
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(weblog("en_US", "UTC"));

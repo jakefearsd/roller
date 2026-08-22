@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.RenditionSupport;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
@@ -72,13 +73,13 @@ public class ImageShortcode implements ShortcodeHandler {
 
         MediaFileWrapper media;
         try {
-            MediaFile mediaFile = WebloggerFactory.getWeblogger()
-                    .getMediaFileManager().getMediaFile(id);
+            Weblogger weblogger = WebloggerFactory.getWeblogger();
+            MediaFile mediaFile = weblogger.getMediaFileManager().getMediaFile(id);
             if (mediaFile == null || !mediaFile.isImageFile()) {
                 log.debug("[image] shortcode id {} is not an image media file", id);
                 return null;
             }
-            media = MediaFileWrapper.wrap(mediaFile);
+            media = MediaFileWrapper.wrap(mediaFile, weblogger.getUrlStrategy(), weblogger);
         } catch (Exception e) {
             log.warn("[image] shortcode could not resolve media file {}", id, e);
             return null;

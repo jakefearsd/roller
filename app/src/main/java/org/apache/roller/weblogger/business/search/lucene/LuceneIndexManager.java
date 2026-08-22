@@ -522,7 +522,7 @@ public class LuceneIndexManager implements IndexManager {
                 // being current, the same defence ReIndexEntryOperation
                 // already applies on the write side.
                 if (entry != null && entry.isPublished() && entry.getPubTime().before(now)) {
-                    results.add(WeblogEntryWrapper.wrap(entry, urlStrategy));
+                    results.add(WeblogEntryWrapper.wrap(entry, urlStrategy, roller));
                 }
             }
 

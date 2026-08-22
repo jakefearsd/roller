@@ -151,7 +151,7 @@ class PojoComparatorTest {
         entry.setWebsite(weblog);
         entry.setPubTime(pubTime);
         entry.setTitle(title);
-        return org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper.wrap(entry, null);
+        return org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper.wrap(entry, null, null);
     }
 
     @Test

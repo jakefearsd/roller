@@ -290,7 +290,7 @@ public class SiteModel implements Model {
             User user = umgr.getUserByUserName(userName);
             List<WeblogPermission> perms = umgr.getWeblogPermissions(user);
             for (WeblogPermission perm : perms) {
-                results.add(WeblogWrapper.wrap(perm.getWeblog(), urlStrategy));
+                results.add(WeblogWrapper.wrap(perm.getWeblog(), urlStrategy, weblogger));
             }
         } catch (Exception e) {
             log.error("ERROR: fetching weblog list", e);
@@ -340,7 +340,7 @@ public class SiteModel implements Model {
         WeblogWrapper wrappedWebsite = null;
         try {            
             Weblog website = weblogger.getWeblogManager().getWeblogByHandle(handle);
-            wrappedWebsite = WeblogWrapper.wrap(website, urlStrategy);
+            wrappedWebsite = WeblogWrapper.wrap(website, urlStrategy, weblogger);
         } catch (Exception e) {
             log.error("ERROR: fetching users by letter", e);
         }
@@ -363,7 +363,7 @@ public class SiteModel implements Model {
             List<Weblog> weblogs = weblogger.getWeblogManager().getWeblogs(
                 Boolean.TRUE, Boolean.TRUE, startDate, null, 0, length);
             for (Weblog website : weblogs) {
-                results.add(WeblogWrapper.wrap(website, urlStrategy));
+                results.add(WeblogWrapper.wrap(website, urlStrategy, weblogger));
             }
         } catch (Exception e) {
             log.error("ERROR: fetching weblog list", e);
@@ -404,7 +404,7 @@ public class SiteModel implements Model {
             WeblogEntryManager wmgr = roller.getWeblogEntryManager();
             List<WeblogEntry> weblogEntries = wmgr.getWeblogEntriesPinnedToMain(length);
             for (WeblogEntry entry : weblogEntries) {
-                results.add(WeblogEntryWrapper.wrap(entry, urlStrategy));
+                results.add(WeblogEntryWrapper.wrap(entry, urlStrategy, weblogger));
             }
         } catch (Exception e) {
             log.error("ERROR: fetching pinned weblog entries", e);

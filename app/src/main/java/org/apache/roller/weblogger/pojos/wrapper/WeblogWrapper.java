@@ -25,6 +25,7 @@ import java.util.TimeZone;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 
@@ -45,16 +46,25 @@ public final class WeblogWrapper {
     private final URLStrategy urlStrategy;
 
     // this is private so that we can force the use of the .wrap(pojo) method
-    private WeblogWrapper(Weblog toWrap, URLStrategy strat) {
+    // the business tier, for the lookups the template API needs
+    private final Weblogger weblogger;
+
+    private WeblogWrapper(Weblog toWrap, URLStrategy strat, Weblogger weblogger) {
         this.pojo = toWrap;
         this.urlStrategy = strat;
+        this.weblogger = weblogger;
     }
     
     
-    // wrap the given pojo if it is not null with detected type
-    public static WeblogWrapper wrap(Weblog toWrap, URLStrategy strat) {
+    /**
+     * Wrap the given pojo if it is not null. The wrapper is the template API
+     * and does its own lookups: it is handed the (possibly preview-aware)
+     * {@link URLStrategy} every URL it emits must come from, and the business
+     * tier it resolves related objects through -- never a static locator.
+     */
+    public static WeblogWrapper wrap(Weblog toWrap, URLStrategy strat, Weblogger weblogger) {
         if (toWrap != null) {
-            return new WeblogWrapper(toWrap, strat);
+            return new WeblogWrapper(toWrap, strat, weblogger);
         }
         return null;
     }
@@ -245,42 +255,46 @@ public final class WeblogWrapper {
     
     
     
+    /**
+     * Relative weblog url, from the strategy this wrapper was given -- a
+     * theme preview stays inside the preview, the live site links to itself.
+     */
     public String getURL() {
-        return this.pojo.getURL();
+        return urlStrategy.getWeblogURL(this.pojo, null, false);
     }
-    
-    
+
+
     public String getAbsoluteURL() {
-        return this.pojo.getAbsoluteURL();
+        return urlStrategy.getWeblogURL(this.pojo, null, true);
     }
     
     
     public WeblogEntryWrapper getWeblogEntry(String anchor) {
-        return WeblogEntryWrapper.wrap(this.pojo.getWeblogEntry(anchor), urlStrategy);
+        return WeblogEntryWrapper.wrap(this.pojo.getWeblogEntry(anchor), urlStrategy, weblogger);
     }
 
 
     public List<WeblogCategoryWrapper> getWeblogCategories() {
         return this.pojo.getWeblogCategories().stream()
-                .map(cat -> WeblogCategoryWrapper.wrap(cat, urlStrategy))
+                .map(cat -> WeblogCategoryWrapper.wrap(cat, urlStrategy, weblogger))
                 .collect(Collectors.toList());
     }
 
     public WeblogCategoryWrapper getWeblogCategory(String categoryName) {
-        return WeblogCategoryWrapper.wrap(this.pojo.getWeblogCategory(categoryName), urlStrategy);
+        return WeblogCategoryWrapper.wrap(this.pojo.getWeblogCategory(categoryName), urlStrategy, weblogger);
     }
 
     
     public List<WeblogEntryWrapper> getRecentWeblogEntries(String cat, int length) {
         return this.pojo.getRecentWeblogEntries(cat, length).stream()
-                .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy))
+                .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy, weblogger))
                 .collect(Collectors.toList());
     }
     
     
     public List<WeblogEntryWrapper> getRecentWeblogEntriesByTag(String tag, int length) {
         return this.pojo.getRecentWeblogEntriesByTag(tag, length).stream()
-                .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy))
+                .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy, weblogger))
                 .collect(Collectors.toList());
     }
     

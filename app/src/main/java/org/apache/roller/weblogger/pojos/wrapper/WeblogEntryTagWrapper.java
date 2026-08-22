@@ -19,35 +19,54 @@
 package org.apache.roller.weblogger.pojos.wrapper;
 
 import java.sql.Timestamp;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.WeblogEntryTag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
  * Pojo safety wrapper for WeblogEntryTag objects.
  */
 public final class WeblogEntryTagWrapper {
-    
+
+    private static final Logger log = LoggerFactory.getLogger(WeblogEntryTagWrapper.class);
+
     // keep a reference to the wrapped pojo
     private final WeblogEntryTag pojo;
-    
-    
+
+    // the business tier, for the lookups the template API needs
+    private final Weblogger weblogger;
+
+
     // this is private so that we can force the use of the .wrap(pojo) method
-    private WeblogEntryTagWrapper(WeblogEntryTag toWrap) {
+    private WeblogEntryTagWrapper(WeblogEntryTag toWrap, Weblogger weblogger) {
         this.pojo = toWrap;
+        this.weblogger = weblogger;
     }
-    
-    
+
+
     // wrap the given pojo if it is not null
-    public static WeblogEntryTagWrapper wrap(WeblogEntryTag toWrap) {
+    public static WeblogEntryTagWrapper wrap(WeblogEntryTag toWrap, Weblogger weblogger) {
         if (toWrap != null) {
-            return new WeblogEntryTagWrapper(toWrap);
+            return new WeblogEntryTagWrapper(toWrap, weblogger);
         }
-        
+
         return null;
     }
-    
+
+    /**
+     * The tagger, resolved by name through the tier this wrapper was given;
+     * null (never an exception) when the name no longer resolves.
+     */
     public UserWrapper getUser() {
-        return UserWrapper.wrap(this.pojo.getUser());
+        try {
+            return UserWrapper.wrap(weblogger.getUserManager()
+                    .getUserByUserName(this.pojo.getCreatorUserName()));
+        } catch (Exception e) {
+            log.error("ERROR fetching user object for username: {}", this.pojo.getCreatorUserName(), e);
+            return null;
+        }
     }
     
     

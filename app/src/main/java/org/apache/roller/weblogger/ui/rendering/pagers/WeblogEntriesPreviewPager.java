@@ -78,7 +78,7 @@ public class WeblogEntriesPreviewPager extends WeblogEntriesPermalinkPager {
                     }
 
                     // store the entry in the collection
-                    entries = Map.of(tmpEntry.getPubTime(), List.of(WeblogEntryWrapper.wrap(tmpEntry, urlStrategy)));
+                    entries = Map.of(tmpEntry.getPubTime(), List.of(WeblogEntryWrapper.wrap(tmpEntry, urlStrategy, weblogger)));
                 }
             } catch (Exception e) {
                 log.error("ERROR: fetching entry", e);

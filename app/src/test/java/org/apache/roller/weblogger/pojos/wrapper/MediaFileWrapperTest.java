@@ -19,15 +19,16 @@ package org.apache.roller.weblogger.pojos.wrapper;
 
 import java.sql.Timestamp;
 
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -48,6 +48,8 @@ class MediaFileWrapperTest {
 
     private Weblog weblog;
     private MediaFile pojo;
+    private URLStrategy urls;
+    private Weblogger weblogger;
     private MediaFileWrapper wrapper;
 
     @BeforeEach
@@ -78,12 +80,14 @@ class MediaFileWrapperTest {
         pojo.setFocalX(0.31);
         pojo.setFocalY(0.62);
 
-        wrapper = MediaFileWrapper.wrap(pojo);
+        urls = mock(URLStrategy.class);
+        weblogger = mock(Weblogger.class);
+        wrapper = MediaFileWrapper.wrap(pojo, urls, weblogger);
     }
 
     @Test
     void wrappingNullGivesNull() {
-        assertNull(MediaFileWrapper.wrap(null),
+        assertNull(MediaFileWrapper.wrap(null, urls, weblogger),
                 "Templates test media files for presence before dereferencing them");
     }
 
@@ -176,15 +180,39 @@ class MediaFileWrapperTest {
     private static final String PERMALINK = "http://example.com/roller/testblog/media-resources/abc123";
 
     private void withMockedPermalink(Runnable body) {
-        URLStrategy strategy = mock(URLStrategy.class);
-        when(strategy.getMediaFileURL(weblog, pojo.getId(), true)).thenReturn(PERMALINK);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getUrlStrategy()).thenReturn(strategy);
+        // The strategy the wrapper was GIVEN is the only source of its urls
+        // (spec Decision 6) -- no static locator is consulted.
+        when(urls.getMediaFileURL(weblog, pojo.getId(), true)).thenReturn(PERMALINK);
+        body.run();
+    }
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            body.run();
-        }
+    @Test
+    void urlsComeFromTheInjectedStrategy() {
+        when(urls.getMediaFileURL(weblog, pojo.getId(), true)).thenReturn(PERMALINK);
+        when(urls.getMediaFileThumbnailURL(weblog, pojo.getId(), true)).thenReturn(PERMALINK + "?t=true");
+
+        assertEquals(PERMALINK, wrapper.getPermalink(),
+                "a theme preview hands the wrapper a preview-aware strategy; the wrapper "
+                        + "must build its urls from that, not from the production strategy");
+        assertEquals(PERMALINK + "?t=true", wrapper.getThumbnailURL());
+    }
+
+    @Test
+    void theCreatorIsResolvedThroughTheInjectedTierAndDegradesToNull() throws Exception {
+        pojo.setCreatorUserName("alice");
+        User alice = new User();
+        alice.setUserName("alice");
+        alice.setScreenName("Alice A");
+        UserManager users = mock(UserManager.class);
+        when(weblogger.getUserManager()).thenReturn(users);
+        when(users.getUserByUserName("alice")).thenReturn(alice);
+
+        assertEquals("Alice A", wrapper.getCreator().getScreenName(),
+                "the uploader must be reachable, wrapped, through the tier the wrapper was given");
+
+        when(users.getUserByUserName("alice")).thenThrow(new WebloggerException("gone"));
+        assertNull(wrapper.getCreator(),
+                "a creator that no longer resolves must not take the page down");
     }
 
     @Test

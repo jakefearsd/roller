@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 
 
@@ -38,16 +39,20 @@ public final class WeblogCategoryWrapper {
     
     
     // this is private so that we can force the use of the .wrap(pojo) method
-    private WeblogCategoryWrapper(WeblogCategory toWrap, URLStrategy strat) {
+    // the business tier, for the lookups the template API needs
+    private final Weblogger weblogger;
+
+    private WeblogCategoryWrapper(WeblogCategory toWrap, URLStrategy strat, Weblogger weblogger) {
         this.pojo = toWrap;
         this.urlStrategy = strat;
+        this.weblogger = weblogger;
     }
     
     
     // wrap the given pojo if it is not null
-    public static WeblogCategoryWrapper wrap(WeblogCategory toWrap, URLStrategy strat) {
+    public static WeblogCategoryWrapper wrap(WeblogCategory toWrap, URLStrategy strat, Weblogger weblogger) {
         if (toWrap != null) {
-            return new WeblogCategoryWrapper(toWrap, strat);
+            return new WeblogCategoryWrapper(toWrap, strat, weblogger);
         }
         
         return null;
@@ -74,12 +79,12 @@ public final class WeblogCategoryWrapper {
     }
 
     public WeblogWrapper getWebsite() {
-        return WeblogWrapper.wrap(this.pojo.getWeblog(), urlStrategy);
+        return WeblogWrapper.wrap(this.pojo.getWeblog(), urlStrategy, weblogger);
     }
 
     public List<WeblogEntryWrapper> retrieveWeblogEntries(boolean publishedOnly) throws WebloggerException {
         return this.pojo.retrieveWeblogEntries(publishedOnly).stream()
-                .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy))
+                .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy, weblogger))
                 .collect(Collectors.toList());
     }
     

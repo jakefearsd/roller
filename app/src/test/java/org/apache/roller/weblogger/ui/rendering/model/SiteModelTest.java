@@ -266,7 +266,7 @@ class SiteModelTest {
         SiteModel model = modelFor(request);
         String expected = "http://blogs.example.com/roller/frontpage/feed/entries/atom";
         WeblogWrapper wrapper = WeblogWrapper.wrap(otherWeblog("other", "Other"),
-                new MultiWeblogURLStrategy());
+                new MultiWeblogURLStrategy(), weblogger);
 
         assertEquals(expected, model.getWeblogEntriesPager(wrapper, 30, 10).getHomeLink(),
                 "The weblog-scoped entries pager must page within the feed.");
@@ -325,7 +325,7 @@ class SiteModelTest {
         // $site.getWeblogEntriesPager($someBlog, 30, 10) is how a front page
         // features a single blog.
         WeblogWrapper wrapper = WeblogWrapper.wrap(otherWeblog("other", "Other"),
-                new MultiWeblogURLStrategy());
+                new MultiWeblogURLStrategy(), weblogger);
 
         SiteModel model = model();
 

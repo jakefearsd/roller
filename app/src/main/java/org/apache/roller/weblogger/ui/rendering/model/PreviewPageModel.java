@@ -78,7 +78,7 @@ public class PreviewPageModel extends PageModel {
         
         if(previewRequest.getPreviewEntry() != null ||
                 previewRequest.getWeblogAnchor() != null) {
-            return WeblogEntryWrapper.wrap(previewRequest.getWeblogEntry(), urlStrategy);
+            return WeblogEntryWrapper.wrap(previewRequest.getWeblogEntry(), urlStrategy, weblogger);
         }
         return null;
     }

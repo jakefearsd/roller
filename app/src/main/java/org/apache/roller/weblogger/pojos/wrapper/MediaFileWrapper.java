@@ -24,9 +24,13 @@ import java.util.stream.Collectors;
 
 import org.apache.roller.weblogger.business.BlurHash;
 import org.apache.roller.weblogger.business.RenditionSupport;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileTag;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Pojo safety wrapper for MediaFile objects, adding srcset-ready accessors
@@ -36,18 +40,33 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  */
 public final class MediaFileWrapper {
 
+    private static final Logger log = LoggerFactory.getLogger(MediaFileWrapper.class);
+
     // keep a reference to the wrapped pojo
     private final MediaFile pojo;
 
+    // url strategy to use for any url building
+    private final URLStrategy urlStrategy;
+
+    // the business tier, for the lookups the template API needs
+    private final Weblogger weblogger;
+
     // this is private so that we can force the use of the .wrap(pojo) method
-    private MediaFileWrapper(MediaFile toWrap) {
+    private MediaFileWrapper(MediaFile toWrap, URLStrategy strat, Weblogger weblogger) {
         this.pojo = toWrap;
+        this.urlStrategy = strat;
+        this.weblogger = weblogger;
     }
 
-    // wrap the given pojo if it is not null
-    public static MediaFileWrapper wrap(MediaFile toWrap) {
+    /**
+     * Wrap the given pojo if it is not null. The wrapper is the template API
+     * and does its own lookups: it is handed the (possibly preview-aware)
+     * {@link URLStrategy} every URL it emits must come from, and the business
+     * tier it resolves related objects through -- never a static locator.
+     */
+    public static MediaFileWrapper wrap(MediaFile toWrap, URLStrategy strat, Weblogger weblogger) {
         if (toWrap != null) {
-            return new MediaFileWrapper(toWrap);
+            return new MediaFileWrapper(toWrap, strat, weblogger);
         }
         return null;
     }
@@ -96,8 +115,19 @@ public final class MediaFileWrapper {
         return this.pojo.getLastUpdated();
     }
 
+    /**
+     * The uploader, resolved by name through the tier this wrapper was given;
+     * null (never an exception) when the name no longer resolves, so a
+     * byline cannot break a page.
+     */
     public UserWrapper getCreator() {
-        return UserWrapper.wrap(this.pojo.getCreator());
+        try {
+            return UserWrapper.wrap(weblogger.getUserManager()
+                    .getUserByUserName(this.pojo.getCreatorUserName()));
+        } catch (Exception e) {
+            log.error("ERROR fetching user object for username: {}", this.pojo.getCreatorUserName(), e);
+            return null;
+        }
     }
 
     public List<MediaFileTag> getTags() {
@@ -106,14 +136,17 @@ public final class MediaFileWrapper {
                 .collect(Collectors.toList());
     }
 
-    /** Permalink to the original, full-size file. */
+    /**
+     * Permalink to the original, full-size file, from the strategy this
+     * wrapper was given -- a theme preview stays inside the preview.
+     */
     public String getPermalink() {
-        return this.pojo.getPermalink();
+        return urlStrategy.getMediaFileURL(this.pojo.getWeblog(), this.pojo.getId(), true);
     }
 
     /** Permalink to the admin/feed thumbnail (the {@code _sm} rendition). */
     public String getThumbnailURL() {
-        return this.pojo.getThumbnailURL();
+        return urlStrategy.getMediaFileThumbnailURL(this.pojo.getWeblog(), this.pojo.getId(), true);
     }
 
     /**

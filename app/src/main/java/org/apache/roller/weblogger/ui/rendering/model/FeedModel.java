@@ -107,7 +107,7 @@ public class FeedModel implements Model {
      * Get weblog being displayed.
      */
     public WeblogWrapper getWeblog() {
-        return WeblogWrapper.wrap(weblog, urlStrategy);
+        return WeblogWrapper.wrap(weblog, urlStrategy, weblogger);
     }
     
     

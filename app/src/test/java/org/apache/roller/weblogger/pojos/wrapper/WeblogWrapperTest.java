@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.pojos.wrapper;
 
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
@@ -46,6 +47,7 @@ class WeblogWrapperTest {
 
     private Weblog weblog;
     private URLStrategy urls;
+    private Weblogger weblogger;
     private WeblogWrapper wrapper;
 
     @BeforeEach
@@ -68,7 +70,8 @@ class WeblogWrapperTest {
         weblog.setActive(Boolean.TRUE);
 
         urls = mock(URLStrategy.class);
-        wrapper = WeblogWrapper.wrap(weblog, urls);
+        weblogger = mock(Weblogger.class);
+        wrapper = WeblogWrapper.wrap(weblog, urls, weblogger);
     }
 
     @Test
@@ -236,7 +239,7 @@ class WeblogWrapperTest {
 
     @Test
     void wrappingNullGivesNull() {
-        assertNull(WeblogWrapper.wrap(null, urls));
+        assertNull(WeblogWrapper.wrap(null, urls, weblogger));
     }
 
     @Test

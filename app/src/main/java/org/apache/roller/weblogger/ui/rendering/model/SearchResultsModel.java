@@ -197,7 +197,7 @@ public class SearchResultsModel extends PageModel {
 	@Override
 	public WeblogCategoryWrapper getWeblogCategory() {
 		if (searchRequest.getWeblogCategory() != null) {
-			return WeblogCategoryWrapper.wrap(searchRequest.getWeblogCategory(), urlStrategy);
+			return WeblogCategoryWrapper.wrap(searchRequest.getWeblogCategory(), urlStrategy, weblogger);
 		}
 		return null;
 	}

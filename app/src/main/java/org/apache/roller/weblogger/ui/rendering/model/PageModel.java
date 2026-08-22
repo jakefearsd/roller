@@ -143,7 +143,7 @@ public class PageModel implements Model {
      * Get weblog being displayed.
      */
     public WeblogWrapper getWeblog() {
-        return WeblogWrapper.wrap(weblog, urlStrategy);
+        return WeblogWrapper.wrap(weblog, urlStrategy, weblogger);
     }
     
     
@@ -234,7 +234,7 @@ public class PageModel implements Model {
      */
     public WeblogEntryWrapper getWeblogEntry() {
         if(pageRequest.getWeblogEntry() != null) {
-            return WeblogEntryWrapper.wrap(pageRequest.getWeblogEntry(), urlStrategy);
+            return WeblogEntryWrapper.wrap(pageRequest.getWeblogEntry(), urlStrategy, weblogger);
         }
         return null;
     }
@@ -264,7 +264,7 @@ public class PageModel implements Model {
         try {
             MediaFile mediaFile = weblogger
                     .getMediaFileManager().getMediaFile(page.getOgImageId());
-            return MediaFileWrapper.wrap(mediaFile);
+            return MediaFileWrapper.wrap(mediaFile, urlStrategy, weblogger);
         } catch (Exception ex) {
             log.debug("Could not resolve media file {}", page.getOgImageId(), ex);
             return null;
@@ -319,7 +319,7 @@ public class PageModel implements Model {
      */
     public WeblogCategoryWrapper getWeblogCategory() {
         if(pageRequest.getWeblogCategory() != null) {
-            return WeblogCategoryWrapper.wrap(pageRequest.getWeblogCategory(), urlStrategy);
+            return WeblogCategoryWrapper.wrap(pageRequest.getWeblogCategory(), urlStrategy, weblogger);
         }
         return null;
     }

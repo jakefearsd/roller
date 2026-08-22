@@ -61,6 +61,7 @@ import static org.mockito.Mockito.when;
 class SmallWrapperDelegationTest {
 
     private final URLStrategy urls = mock(URLStrategy.class);
+    private final Weblogger tier = mock(Weblogger.class);
 
     // ------------------------------------------------------------- category
 
@@ -74,7 +75,7 @@ class SmallWrapperDelegationTest {
         category.setImage("suitcase.png");
         category.setWeblog(weblog);
 
-        WeblogCategoryWrapper wrapper = WeblogCategoryWrapper.wrap(category, urls);
+        WeblogCategoryWrapper wrapper = WeblogCategoryWrapper.wrap(category, urls, tier);
 
         assertEquals(category.getId(), wrapper.getId());
         assertEquals("Travel", wrapper.getName());
@@ -82,7 +83,7 @@ class SmallWrapperDelegationTest {
         assertEquals("suitcase.png", wrapper.getImage());
         assertEquals("testblog", wrapper.getWebsite().getHandle(),
                 "The owning weblog is reachable through the wrapper, itself wrapped");
-        assertNull(WeblogCategoryWrapper.wrap(null, urls));
+        assertNull(WeblogCategoryWrapper.wrap(null, urls, tier));
     }
 
     @Test
@@ -97,9 +98,11 @@ class SmallWrapperDelegationTest {
         Weblogger weblogger = mock(Weblogger.class);
         when(weblogger.getWeblogEntryManager()).thenReturn(entries);
 
+        // WeblogCategory.isInUse() itself still locates the entry manager
+        // statically -- that moves to the wrapper in Stage D (plan Task 16).
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
             factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            WeblogCategoryWrapper wrapper = WeblogCategoryWrapper.wrap(category, urls);
+            WeblogCategoryWrapper wrapper = WeblogCategoryWrapper.wrap(category, urls, weblogger);
 
             when(entries.isWeblogCategoryInUse(category)).thenReturn(true);
             assertTrue(wrapper.isInUse());
@@ -157,8 +160,9 @@ class SmallWrapperDelegationTest {
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
             factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
 
+            // WeblogCategory.retrieveWeblogEntries() still locates statically (Stage D).
             List<WeblogEntryWrapper> wrapped =
-                    WeblogCategoryWrapper.wrap(category, urls).retrieveWeblogEntries(true);
+                    WeblogCategoryWrapper.wrap(category, urls, weblogger).retrieveWeblogEntries(true);
 
             assertEquals(1, wrapped.size());
             assertEquals("A trip", wrapped.get(0).getTitle(),
@@ -175,11 +179,11 @@ class SmallWrapperDelegationTest {
         tag.setName("java");
         tag.setTime(Timestamp.valueOf("2024-03-09 15:30:00"));
 
-        WeblogEntryTagWrapper wrapper = WeblogEntryTagWrapper.wrap(tag);
+        WeblogEntryTagWrapper wrapper = WeblogEntryTagWrapper.wrap(tag, tier);
 
         assertEquals("java", wrapper.getName());
         assertEquals(Timestamp.valueOf("2024-03-09 15:30:00"), wrapper.getTime());
-        assertNull(WeblogEntryTagWrapper.wrap(null));
+        assertNull(WeblogEntryTagWrapper.wrap(null, tier));
     }
 
     // ------------------------------------------------------------ attribute
@@ -308,12 +312,8 @@ class SmallWrapperDelegationTest {
         when(weblogger.getUserManager()).thenReturn(users);
         when(users.getUserByUserName("alice")).thenReturn(alice);
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertEquals("Alice A", WeblogEntryTagWrapper.wrap(tag).getUser().getScreenName(),
-                    "The tag's creator must be reachable, wrapped");
-        }
+        assertEquals("Alice A", WeblogEntryTagWrapper.wrap(tag, weblogger).getUser().getScreenName(),
+                "The tag's creator must be reachable, wrapped, through the tier the wrapper was given");
     }
 
     @Test
@@ -328,12 +328,8 @@ class SmallWrapperDelegationTest {
         when(users.getUserByUserName("deleted-user"))
                 .thenThrow(new WebloggerException("no such user"));
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertNull(WeblogEntryTagWrapper.wrap(tag).getUser(),
-                    "A tag left behind by a deleted user must render as having no user "
-                            + "rather than taking the page down");
-        }
+        assertNull(WeblogEntryTagWrapper.wrap(tag, weblogger).getUser(),
+                "A tag left behind by a deleted user must render as having no user "
+                        + "rather than taking the page down");
     }
 }
