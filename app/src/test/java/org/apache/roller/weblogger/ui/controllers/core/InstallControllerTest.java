@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.roller.weblogger.business.DatabaseProvider;
-import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.business.startup.MigrationCatalog;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
@@ -36,7 +36,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
-import org.springframework.context.ApplicationContext;
 import org.springframework.ui.ExtendedModelMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,6 +63,14 @@ import static org.mockito.Mockito.when;
  */
 class InstallControllerTest {
 
+    /**
+     * A Mockito mock: {@code isBootstrapped()} is false by default, which is
+     * the "still installing" state every test but one wants; the one that
+     * wants "already running" stubs it true. Replaces the JVM-wide
+     * {@code MockWeblogger.installNotBootstrapped()} the controller used to
+     * depend on through the static factory.
+     */
+    private WebloggerProvider webloggerProvider;
     private InstallController controller;
     private ExtendedModelMap model;
     private StartupException previousDbException;
@@ -74,10 +82,8 @@ class InstallControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Not exercised: every path a test hits either short-circuits on
-        // WebloggerFactory.isBootstrapped() or fails in WebloggerFactory.bootstrap()
-        // (unprepared app) before the context is ever dereferenced.
-        controller = ControllerTestFixture.withMessages(new InstallController(mock(ApplicationContext.class)));
+        webloggerProvider = mock(WebloggerProvider.class);
+        controller = ControllerTestFixture.withMessages(new InstallController(webloggerProvider));
         model = new ExtendedModelMap();
         previousDbException = WebloggerStartup.getDatabaseProviderException();
         previousPrepared = WebloggerStartup.isPrepared();
@@ -86,7 +92,6 @@ class InstallControllerTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
         setStartupField("dbProviderException", previousDbException);
         setStartupField("prepared", previousPrepared);
         setStartupField("dbProvider", previousDbProvider);
@@ -94,7 +99,7 @@ class InstallControllerTest {
 
     @Test
     void everyInstallUrlBouncesToTheSiteOnceRollerIsRunning() {
-        MockWeblogger.install();
+        when(webloggerProvider.isBootstrapped()).thenReturn(true);
 
         assertEquals("redirect:/", controller.execute(request(), model));
         assertEquals("redirect:/", controller.create(request(), model));
@@ -106,7 +111,6 @@ class InstallControllerTest {
     void aDatabaseConnectionFailureIsShownWithItsCauseAndStartupLog() {
         // This is the page an administrator sees when the JDBC settings are
         // wrong, so the underlying cause and the log have to reach the view.
-        MockWeblogger.installNotBootstrapped();
         Throwable rootCause = new IllegalStateException("connection refused");
         StartupException failure =
                 new StartupException("could not connect", rootCause, List.of("tried localhost:5432"));
@@ -125,7 +129,6 @@ class InstallControllerTest {
 
     @Test
     void aStartupFailureWithNoDeeperCauseReportsItself() {
-        MockWeblogger.installNotBootstrapped();
         StartupException failure = new StartupException("no database configured");
         setStartupField("dbProviderException", failure);
 
@@ -137,11 +140,14 @@ class InstallControllerTest {
     }
 
     @Test
-    void bootstrappingBeforeTheApplicationIsPreparedFailsOntoTheBootstrapPage() {
+    void bootstrappingBeforeTheApplicationIsPreparedFailsOntoTheBootstrapPage() throws Exception {
         // Hitting install!bootstrap.rol out of order must produce the error page
         // rather than an exception escaping to the container.
-        MockWeblogger.installNotBootstrapped();
         setStartupField("prepared", false);
+        // What the real provider throws for an unprepared application (the
+        // guard itself is pinned in SpringWebloggerProviderTest).
+        doThrow(new IllegalStateException("Cannot bootstrap until application has been properly prepared"))
+                .when(webloggerProvider).bootstrap();
 
         String view = controller.bootstrap(request(), model);
 
@@ -155,7 +161,6 @@ class InstallControllerTest {
     void anEmptyDatabaseIsOfferedTheSchemaCreationPage() throws Exception {
         // Pointing the installer at a database with no tables in it is the
         // ordinary first-run case, and this is the page that gets it going.
-        MockWeblogger.installNotBootstrapped();
         setStartupField("dbProviderException", null);
         installDatabaseProvider(new String[0]);
 
@@ -177,7 +182,6 @@ class InstallControllerTest {
     void aFullyMigratedDatabaseIsSentStraightToBootstrapping() throws Exception {
         // Nothing to create and nothing to upgrade: the installer has no work
         // left, and the remaining step is starting the application.
-        MockWeblogger.installNotBootstrapped();
         setStartupField("dbProviderException", null);
         installDatabaseProvider(new String[]{"schema_migrations", "roller_user"},
                 MigrationCatalog.versions().toArray(new String[0]));
@@ -193,7 +197,6 @@ class InstallControllerTest {
         // Tables exist and some migrations have been applied, but not all of
         // them: that is an upgrade, and offering to create the schema instead
         // would be offering to re-run the baseline over live data.
-        MockWeblogger.installNotBootstrapped();
         setStartupField("dbProviderException", null);
         installDatabaseProvider(new String[]{"schema_migrations", "roller_user"}, "V001__baseline");
 
@@ -209,7 +212,6 @@ class InstallControllerTest {
     void aSchemaCreationThatFailsStaysOnTheCreationPageWithTheLog() throws Exception {
         // The startup log is the only diagnosis an administrator gets when the
         // installer cannot write to the database.
-        MockWeblogger.installNotBootstrapped();
         installUnreachableDatabase();
 
         String view = controller.create(request(), model);
@@ -251,7 +253,6 @@ class InstallControllerTest {
 
     @Test
     void anUpgradeThatFailsStaysOnTheUpgradePageWithTheLog() throws Exception {
-        MockWeblogger.installNotBootstrapped();
         installUnreachableDatabase();
 
         String view = controller.upgrade(request(), model);

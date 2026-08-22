@@ -28,14 +28,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.SpringWebloggerProvider;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.beans.FatalBeanException;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,10 +51,10 @@ public class InstallController extends BaseController {
 
     private static final Logger log = LoggerFactory.getLogger(InstallController.class);
 
-    private final ApplicationContext applicationContext;
+    private final WebloggerProvider webloggerProvider;
 
-    public InstallController(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
+    public InstallController(WebloggerProvider webloggerProvider) {
+        this.webloggerProvider = webloggerProvider;
     }
 
     @Override
@@ -73,7 +71,7 @@ public class InstallController extends BaseController {
     public String execute(HttpServletRequest request, Model model) {
         // populateCommonModel skipped - runs before bootstrap
 
-        if (WebloggerFactory.isBootstrapped()) {
+        if (webloggerProvider.isBootstrapped()) {
             return "redirect:/";
         }
 
@@ -121,7 +119,7 @@ public class InstallController extends BaseController {
     public String create(HttpServletRequest request, Model model) {
         // populateCommonModel skipped - runs before bootstrap
 
-        if (WebloggerFactory.isBootstrapped()) {
+        if (webloggerProvider.isBootstrapped()) {
             return "redirect:/";
         }
 
@@ -143,7 +141,7 @@ public class InstallController extends BaseController {
     public String upgrade(HttpServletRequest request, Model model) {
         // populateCommonModel skipped - runs before bootstrap
 
-        if (WebloggerFactory.isBootstrapped()) {
+        if (webloggerProvider.isBootstrapped()) {
             return "redirect:/";
         }
 
@@ -167,19 +165,17 @@ public class InstallController extends BaseController {
 
         log.info("ENTERING");
 
-        if (WebloggerFactory.isBootstrapped()) {
+        if (webloggerProvider.isBootstrapped()) {
             log.info("EXITING - already bootstrapped, forwarding to Roller");
             return "redirect:/";
         }
 
         try {
-            // trigger bootstrapping process, reusing the root web application
-            // context (which already imports WebloggerBeanConfig) so that
-            // controllers and the business tier share a single Spring context
-            WebloggerFactory.bootstrap(new SpringWebloggerProvider(applicationContext));
-
-            // trigger initialization process
-            WebloggerFactory.getWeblogger().initialize();
+            // trigger bootstrapping: the provider bean builds the tier from the
+            // root web application context (which already imports
+            // WebloggerBeanConfig) so controllers and the business tier share
+            // a single Spring context, then initializes it
+            webloggerProvider.bootstrap();
 
             log.info("EXITING - Bootstrap successful, forwarding to Roller");
             return "redirect:/";

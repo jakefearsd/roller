@@ -19,7 +19,7 @@ package org.apache.roller.weblogger.boot;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.ui.core.security.RollerRememberMeAuthenticationProvider;
@@ -363,10 +363,21 @@ public class SecurityConfig {
         return new ApiProblemWriter(objectMapper);
     }
 
+    /**
+     * The token manager is supplied through the {@link WebloggerProvider}
+     * rather than a {@code @Lazy Weblogger} proxy on purpose: this filter sits
+     * in the Security chain (order 40), AHEAD of {@code BootstrapFilter}
+     * (order 50), so it is one of the few places that can see a request before
+     * the tier is up. {@code provider.getWeblogger()} throws there -- which the
+     * filter already catches and treats as "not authenticated" -- whereas a
+     * {@code @Lazy} proxy would try to build the graph.
+     */
     @Bean
-    public ApiTokenAuthFilter apiTokenAuthFilter(ApiProblemWriter apiProblemWriter) {
+    public ApiTokenAuthFilter apiTokenAuthFilter(ApiProblemWriter apiProblemWriter,
+                                                 WebloggerProvider webloggerProvider) {
         return new ApiTokenAuthFilter(
-                () -> WebloggerFactory.getWeblogger().getApiTokenManager(), apiProblemWriter);
+                () -> webloggerProvider.getWeblogger().getApiTokenManager(),
+                webloggerProvider, apiProblemWriter);
     }
 
     /**

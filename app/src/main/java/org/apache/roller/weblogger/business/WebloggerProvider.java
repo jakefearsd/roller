@@ -20,19 +20,35 @@ package org.apache.roller.weblogger.business;
 
 
 /**
- * Provides access to a Weblogger instance.
+ * Provides access to a Weblogger instance, and owns the answer to "is the
+ * business tier up?".
+ *
+ * <p>This is the bean that replaces the {@code WebloggerFactory} static
+ * (see {@code docs/superpowers/specs/2026-08-22-retire-static-service-locator-design.md},
+ * Decision 2). Inject it where that question is genuinely a runtime one --
+ * the bootstrap filter, the persistence-session filter, the install wizard,
+ * the lifecycle bean; everywhere else take a {@code @Lazy Weblogger}.
  */
 public interface WebloggerProvider {
-    
+
     /**
-     * Trigger bootstrapping.
+     * True once {@link #bootstrap()} has obtained a Weblogger; false before.
+     */
+    boolean isBootstrapped();
+
+    /**
+     * Trigger bootstrapping: build or locate the business tier, initialize
+     * it, and release the bootstrapping thread's persistence session.
+     * Idempotent.
      */
     void bootstrap() throws BootstrapException;
-    
-    
+
+
     /**
      * Get a Weblogger instance.
+     *
+     * @throws IllegalStateException if not yet bootstrapped.
      */
     Weblogger getWeblogger();
-    
+
 }

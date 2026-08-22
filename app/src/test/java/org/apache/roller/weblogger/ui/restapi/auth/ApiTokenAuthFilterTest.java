@@ -2,7 +2,8 @@ package org.apache.roller.weblogger.ui.restapi.auth;
 
 import jakarta.servlet.FilterChain;
 import org.apache.roller.weblogger.business.ApiTokenManager;
-import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.restapi.ApiProblemWriter;
@@ -21,6 +22,17 @@ class ApiTokenAuthFilterTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final ApiProblemWriter PROBLEM_WRITER = new ApiProblemWriter(OBJECT_MAPPER);
+
+    /** A provider reporting a bootstrapped tier whose facade is a Mockito mock. */
+    private final Weblogger weblogger = mock(Weblogger.class);
+    private final WebloggerProvider provider = bootstrappedProvider(weblogger);
+
+    private static WebloggerProvider bootstrappedProvider(Weblogger weblogger) {
+        WebloggerProvider p = mock(WebloggerProvider.class);
+        when(p.isBootstrapped()).thenReturn(true);
+        when(p.getWeblogger()).thenReturn(weblogger);
+        return p;
+    }
 
     @AfterEach
     void clearContext() {
@@ -46,7 +58,7 @@ class ApiTokenAuthFilterTest {
         request.addHeader("Authorization", "Bearer rlr_good");
         FilterChain chain = mock(FilterChain.class);
 
-        new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
+        new ApiTokenAuthFilter(() -> mgr, provider, PROBLEM_WRITER)
                 .doFilter(request, new MockHttpServletResponse(), chain);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -69,7 +81,7 @@ class ApiTokenAuthFilterTest {
         request.addHeader("Authorization", "Bearer rlr_bad");
         FilterChain chain = mock(FilterChain.class);
 
-        new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
+        new ApiTokenAuthFilter(() -> mgr, provider, PROBLEM_WRITER)
                 .doFilter(request, new MockHttpServletResponse(), chain);
 
         // The filter never rejects; authorization is the chain's job, so an
@@ -94,22 +106,41 @@ class ApiTokenAuthFilterTest {
      */
     @Test
     void aFailedAuthenticationReleasesThePersistenceSessionSinceOrder60NeverRuns() throws Exception {
-        MockWeblogger mocks = MockWeblogger.install();
-        try {
-            ApiTokenManager mgr = mock(ApiTokenManager.class);
-            when(mgr.authenticate(anyString())).thenReturn(null);
+        ApiTokenManager mgr = mock(ApiTokenManager.class);
+        when(mgr.authenticate(anyString())).thenReturn(null);
 
-            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/me");
-            request.addHeader("Authorization", "Bearer rlr_bad");
-            FilterChain chain = mock(FilterChain.class);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/me");
+        request.addHeader("Authorization", "Bearer rlr_bad");
+        FilterChain chain = mock(FilterChain.class);
 
-            new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
-                    .doFilter(request, new MockHttpServletResponse(), chain);
+        new ApiTokenAuthFilter(() -> mgr, provider, PROBLEM_WRITER)
+                .doFilter(request, new MockHttpServletResponse(), chain);
 
-            verify(mocks.weblogger()).release();
-        } finally {
-            MockWeblogger.uninstall();
-        }
+        verify(weblogger).release();
+    }
+
+    /**
+     * Before the tier is bootstrapped there is no session to release -- and
+     * asking the provider for the Weblogger would throw. This filter runs
+     * ahead of {@code BootstrapFilter}, so it genuinely can see such a request.
+     */
+    @Test
+    void aFailedAuthenticationBeforeBootstrapReleasesNothing() throws Exception {
+        WebloggerProvider notUp = mock(WebloggerProvider.class);
+        when(notUp.isBootstrapped()).thenReturn(false);
+        when(notUp.getWeblogger()).thenThrow(new IllegalStateException("not bootstrapped"));
+        ApiTokenManager mgr = mock(ApiTokenManager.class);
+        when(mgr.authenticate(anyString())).thenReturn(null);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/me");
+        request.addHeader("Authorization", "Bearer rlr_bad");
+        FilterChain chain = mock(FilterChain.class);
+
+        assertDoesNotThrow(() -> new ApiTokenAuthFilter(() -> mgr, notUp, PROBLEM_WRITER)
+                .doFilter(request, new MockHttpServletResponse(), chain));
+
+        verify(notUp, never()).getWeblogger();
+        verify(chain).doFilter(any(), any());
     }
 
     /**
@@ -127,22 +158,17 @@ class ApiTokenAuthFilterTest {
      */
     @Test
     void aSuccessfulAuthenticationDoesNotReleaseHere() throws Exception {
-        MockWeblogger mocks = MockWeblogger.install();
-        try {
-            ApiTokenManager mgr = mock(ApiTokenManager.class);
-            when(mgr.authenticate("rlr_good")).thenReturn(token("testblog", ApiToken.Role.POST));
+        ApiTokenManager mgr = mock(ApiTokenManager.class);
+        when(mgr.authenticate("rlr_good")).thenReturn(token("testblog", ApiToken.Role.POST));
 
-            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/ping");
-            request.addHeader("Authorization", "Bearer rlr_good");
-            FilterChain chain = mock(FilterChain.class);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/ping");
+        request.addHeader("Authorization", "Bearer rlr_good");
+        FilterChain chain = mock(FilterChain.class);
 
-            new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
-                    .doFilter(request, new MockHttpServletResponse(), chain);
+        new ApiTokenAuthFilter(() -> mgr, provider, PROBLEM_WRITER)
+                .doFilter(request, new MockHttpServletResponse(), chain);
 
-            verify(mocks.weblogger(), never()).release();
-        } finally {
-            MockWeblogger.uninstall();
-        }
+        verify(weblogger, never()).release();
     }
 
     @Test
@@ -152,7 +178,7 @@ class ApiTokenAuthFilterTest {
         request.addHeader("Authorization", "Basic am9objpwdw==");
         FilterChain chain = mock(FilterChain.class);
 
-        new ApiTokenAuthFilter(() -> mgr, PROBLEM_WRITER)
+        new ApiTokenAuthFilter(() -> mgr, provider, PROBLEM_WRITER)
                 .doFilter(request, new MockHttpServletResponse(), chain);
 
         assertNull(SecurityContextHolder.getContext().getAuthentication());
@@ -171,7 +197,7 @@ class ApiTokenAuthFilterTest {
         when(mgr.authenticate(anyString())).thenReturn(null);
         // threshold 1: the first call is allowed through, the second is not.
         ApiThrottle throttle = ApiThrottle.forTesting(1, 60);
-        ApiTokenAuthFilter filter = new ApiTokenAuthFilter(() -> mgr, throttle, PROBLEM_WRITER);
+        ApiTokenAuthFilter filter = new ApiTokenAuthFilter(() -> mgr, provider, throttle, PROBLEM_WRITER);
 
         MockHttpServletRequest first = new MockHttpServletRequest("GET", "/api/v1/ping");
         first.addHeader("Authorization", "Bearer rlr_same");

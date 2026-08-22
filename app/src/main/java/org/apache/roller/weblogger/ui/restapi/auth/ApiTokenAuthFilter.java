@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.ApiTokenManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.ApiProblem;
@@ -31,7 +31,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * unauthenticated responses.
  *
  * <p>The manager arrives through a Supplier because the business tier is
- * built lazily at {@code WebloggerFactory.bootstrap()}, after this filter
+ * built lazily at {@code WebloggerProvider.bootstrap()}, after this filter
  * bean is constructed.
  */
 public class ApiTokenAuthFilter extends OncePerRequestFilter {
@@ -40,16 +40,27 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
     private static final String BEARER = "Bearer ";
 
     private final Supplier<ApiTokenManager> tokenManager;
+    private final WebloggerProvider webloggerProvider;
     private final ApiThrottle throttle;
     private final ApiProblemWriter problemWriter;
 
-    public ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager, ApiProblemWriter problemWriter) {
-        this(tokenManager, ApiThrottle.create(), problemWriter);
+    /**
+     * @param tokenManager resolved per authentication, not latched -- this
+     *        filter is constructed at context refresh, before the tier exists
+     * @param webloggerProvider answers "is the tier up?" for the
+     *        release-on-failure path below; this filter runs ahead of
+     *        {@code BootstrapFilter} and so can see requests before bootstrap
+     */
+    public ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager,
+                              WebloggerProvider webloggerProvider,
+                              ApiProblemWriter problemWriter) {
+        this(tokenManager, webloggerProvider, ApiThrottle.create(), problemWriter);
     }
 
-    ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager, ApiThrottle throttle,
-                       ApiProblemWriter problemWriter) {
+    ApiTokenAuthFilter(Supplier<ApiTokenManager> tokenManager, WebloggerProvider webloggerProvider,
+                       ApiThrottle throttle, ApiProblemWriter problemWriter) {
         this.tokenManager = tokenManager;
+        this.webloggerProvider = webloggerProvider;
         this.throttle = throttle;
         this.problemWriter = problemWriter;
     }
@@ -171,8 +182,8 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
             // Never let a lookup failure become an authenticated request.
             log.error("Error authenticating API token", e);
         } finally {
-            if (!authenticated && WebloggerFactory.isBootstrapped()) {
-                WebloggerFactory.getWeblogger().release();
+            if (!authenticated && webloggerProvider.isBootstrapped()) {
+                webloggerProvider.getWeblogger().release();
             }
         }
     }

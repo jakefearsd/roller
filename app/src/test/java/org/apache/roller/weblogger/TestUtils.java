@@ -82,11 +82,10 @@ public final class TestUtils {
             // do core services preparation
             WebloggerStartup.prepare();
 
-            // do application bootstrapping
-            WebloggerFactory.bootstrap(new SpringWebloggerProvider());
-
-            // always initialize the properties manager and flush
-            WebloggerFactory.getWeblogger().initialize();
+            // do application bootstrapping -- the provider's bootstrap() also
+            // runs initialize(), so there is no separate call here (a second
+            // initialize() would start the task-scheduler thread twice)
+            WebloggerFactory.bootstrap(SpringWebloggerProvider.standalone());
         }
     }
 

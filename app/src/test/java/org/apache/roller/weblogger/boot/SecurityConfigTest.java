@@ -20,6 +20,7 @@ import java.lang.reflect.Method;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.ui.core.security.RollerUserDetailsService;
 import org.junit.jupiter.api.AfterAll;
@@ -168,6 +169,17 @@ class SecurityConfigTest {
         @Bean
         ObjectMapper objectMapper() {
             return new ObjectMapper();
+        }
+
+        /**
+         * {@code apiTokenAuthFilter} takes the provider bean (component-scanned
+         * in the running application); this hand-assembled context has no
+         * scan, so stand one in. Never bootstrapped: nothing here reaches the
+         * business tier.
+         */
+        @Bean
+        WebloggerProvider webloggerProvider() {
+            return mock(WebloggerProvider.class);
         }
     }
 

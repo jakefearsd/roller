@@ -137,6 +137,11 @@ public final class MockWeblogger {
         previousProvider = WebloggerFactory.currentProvider();
         WebloggerFactory.installProvider(new WebloggerProvider() {
             @Override
+            public boolean isBootstrapped() {
+                return true;
+            }
+
+            @Override
             public void bootstrap() {
                 // already built
             }

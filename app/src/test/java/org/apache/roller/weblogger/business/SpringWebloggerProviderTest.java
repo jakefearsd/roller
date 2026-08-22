@@ -17,20 +17,131 @@
  */
 package org.apache.roller.weblogger.business;
 
-import org.apache.roller.testing.RollerDatabaseExtension;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
 
+import org.mockito.MockedStatic;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SpringWebloggerProviderTest {
 
+    /**
+     * {@code bootstrap()} still installs the provider into the legacy static
+     * (transitional, until Task 20 deletes {@code WebloggerFactory}), so the
+     * tests below that bootstrap throwaway providers over mock contexts must
+     * put back whatever the JVM had -- otherwise a later {@code
+     * TestUtils.setupWeblogger()} sees "already bootstrapped" and the rest of
+     * the suite runs against a mock. Same discipline as {@code MockWeblogger}.
+     */
+    private WebloggerProvider previouslyInstalled;
+
+    @BeforeEach
+    void rememberInstalledProvider() {
+        previouslyInstalled = WebloggerFactory.currentProvider();
+    }
+
+    @AfterEach
+    void restoreInstalledProvider() {
+        WebloggerFactory.installProvider(previouslyInstalled);
+    }
+
+    // ------------------------------------------------ the bean contract (D2)
+
     @Test
-    void bootstrapReusesAnExistingApplicationContextInsteadOfBuildingOne() {
+    void isNotBootstrappedAndRefusesToHandOutAWebloggerBeforeBootstrap() {
+        SpringWebloggerProvider provider = new SpringWebloggerProvider(mock(ApplicationContext.class));
+
+        assertFalse(provider.isBootstrapped());
+        assertThrows(IllegalStateException.class, provider::getWeblogger,
+                "a provider that has not bootstrapped must throw, not return null or build the graph");
+    }
+
+    @Test
+    void bootstrapRefusesUntilTheApplicationIsPrepared() {
+        ApplicationContext ctx = mock(ApplicationContext.class);
+        SpringWebloggerProvider provider = new SpringWebloggerProvider(ctx);
+
+        try (MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
+            startup.when(WebloggerStartup::isPrepared).thenReturn(false);
+
+            assertThrows(IllegalStateException.class, provider::bootstrap,
+                    "the prepare-before-construct guard that used to live in WebloggerFactory.bootstrap "
+                            + "must survive in the provider");
+            assertFalse(provider.isBootstrapped());
+        }
+    }
+
+    @Test
+    void bootstrapInitializesOnceReleasesAndReportsBootstrapped() throws Exception {
+        Weblogger weblogger = mock(Weblogger.class);
+        ApplicationContext ctx = mock(ApplicationContext.class);
+        when(ctx.getBean(Weblogger.class)).thenReturn(weblogger);
+        SpringWebloggerProvider provider = new SpringWebloggerProvider(ctx);
+
+        try (MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
+            startup.when(WebloggerStartup::isPrepared).thenReturn(true);
+
+            provider.bootstrap();
+            provider.bootstrap();   // idempotent: a repeat must not initialize again
+
+            assertTrue(provider.isBootstrapped());
+            assertSame(weblogger, provider.getWeblogger());
+            var order = inOrder(weblogger);
+            order.verify(weblogger, times(1)).initialize();
+            order.verify(weblogger, times(1)).release();
+        }
+    }
+
+    @Test
+    void anInitializeFailureStillReleasesAndSurfacesAsBootstrapException() throws Exception {
+        Weblogger weblogger = mock(Weblogger.class);
+        doThrow(new InitializationException("boom")).when(weblogger).initialize();
+        ApplicationContext ctx = mock(ApplicationContext.class);
+        when(ctx.getBean(Weblogger.class)).thenReturn(weblogger);
+        SpringWebloggerProvider provider = new SpringWebloggerProvider(ctx);
+
+        try (MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
+            startup.when(WebloggerStartup::isPrepared).thenReturn(true);
+
+            assertThrows(BootstrapException.class, provider::bootstrap);
+            verify(weblogger).release();
+            // Same shape as before: the tier IS bootstrapped (the graph exists and
+            // BootstrapFilter lets requests through) even though initialize() failed.
+            assertTrue(provider.isBootstrapped());
+        }
+    }
+
+    @Test
+    void aNullWebloggerBeanIsABootstrapFailure() {
+        ApplicationContext ctx = mock(ApplicationContext.class);
+        when(ctx.getBean(Weblogger.class)).thenReturn(null);
+        SpringWebloggerProvider provider = new SpringWebloggerProvider(ctx);
+
+        try (MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
+            startup.when(WebloggerStartup::isPrepared).thenReturn(true);
+
+            assertThrows(BootstrapException.class, provider::bootstrap);
+            assertFalse(provider.isBootstrapped());
+        }
+    }
+
+    @Test
+    void bootstrapReusesAnExistingApplicationContextInsteadOfBuildingOne() throws Exception {
         // The two-arg constructor exists precisely so the webapp's root Spring
         // context (which already imports WebloggerBeanConfig) is reused rather
         // than a second, independent context being built and left orphaned.
@@ -39,22 +150,36 @@ class SpringWebloggerProviderTest {
         when(existingContext.getBean(Weblogger.class)).thenReturn(fakeWeblogger);
 
         SpringWebloggerProvider provider = new SpringWebloggerProvider(existingContext);
-        provider.bootstrap();
+        try (MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
+            startup.when(WebloggerStartup::isPrepared).thenReturn(true);
+            provider.bootstrap();
+        }
 
         assertSame(fakeWeblogger, provider.getWeblogger(),
                 "bootstrap() must resolve the Weblogger bean from the supplied context, "
                         + "not build a new self-owned one");
     }
 
+    // -------------------------------------------------- the real graph
+
+    /**
+     * The two tests below exercise the provider the suite itself bootstrapped
+     * ({@code TestUtils.setupWeblogger()}) rather than building a second
+     * standalone context: since {@code bootstrap()} now also runs
+     * {@code initialize()}, a second graph would start a second task-scheduler
+     * thread and open a second Lucene index on the same directory for the rest
+     * of the JVM. The no-arg constructor's own-context path is what
+     * {@code TestUtils} drives on every run, so it is covered regardless.
+     */
+    private static SpringWebloggerProvider suiteProvider() throws Exception {
+        org.apache.roller.weblogger.TestUtils.setupWeblogger();
+        return (SpringWebloggerProvider) WebloggerFactory.currentProvider();
+    }
+
     @Test
     void bootstrapBuildsTheFullGraphWithSingletons() throws Exception {
-        RollerDatabaseExtension.ensureSchema();
-        if (!WebloggerStartup.isPrepared()) {
-            WebloggerStartup.prepare();
-        }
-
-        SpringWebloggerProvider provider = new SpringWebloggerProvider();
-        provider.bootstrap();
+        SpringWebloggerProvider provider = suiteProvider();
+        assertTrue(provider.isBootstrapped());
         Weblogger weblogger = provider.getWeblogger();
 
         assertNotNull(weblogger.getWeblogManager());
@@ -74,16 +199,11 @@ class SpringWebloggerProviderTest {
 
     @Test
     void repeatBootstrapIsIdempotent() throws Exception {
-        RollerDatabaseExtension.ensureSchema();
-        if (!WebloggerStartup.isPrepared()) {
-            WebloggerStartup.prepare();
-        }
-
-        SpringWebloggerProvider provider = new SpringWebloggerProvider();
-        provider.bootstrap();
+        SpringWebloggerProvider provider = suiteProvider();
         Weblogger first = provider.getWeblogger();
 
-        // a second bootstrap() call must not build a second (leaked) context
+        // a second bootstrap() call must not build a second (leaked) context,
+        // nor initialize the tier again
         provider.bootstrap();
         Weblogger second = provider.getWeblogger();
 

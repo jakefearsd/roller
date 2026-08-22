@@ -24,9 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.BootstrapException;
-import org.apache.roller.weblogger.business.SpringWebloggerProvider;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -34,7 +33,6 @@ import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
@@ -75,12 +73,18 @@ public class RollerLifecycle implements SmartLifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(RollerLifecycle.class);
 
-    private final ApplicationContext applicationContext;
+    private final WebloggerProvider webloggerProvider;
     private final ServletContext servletContext;
     private volatile boolean running;
 
-    public RollerLifecycle(ApplicationContext applicationContext, ServletContext servletContext) {
-        this.applicationContext = applicationContext;
+    /**
+     * @param webloggerProvider the bean that bootstraps the business tier and
+     *        answers "is it up?" (plain injection -- constructing it does
+     *        nothing; the tier is only built inside {@link #start()}, after
+     *        {@code WebloggerStartup.prepare()}).
+     */
+    public RollerLifecycle(WebloggerProvider webloggerProvider, ServletContext servletContext) {
+        this.webloggerProvider = webloggerProvider;
         this.servletContext = servletContext;
     }
 
@@ -113,7 +117,7 @@ public class RollerLifecycle implements SmartLifecycle {
         // path, do NOT try to bootstrap the business tier -- same as before,
         // this is a normal "not installed yet" state, not a failure.
         // BootstrapFilter forwards every request to the install wizard while
-        // WebloggerFactory.isBootstrapped() is false, exactly as today.
+        // the provider reports not bootstrapped, exactly as today.
         if (!WebloggerStartup.isPrepared() && !ittest) {
 
             log.info("\n--------------------------------------------------------------"
@@ -135,17 +139,14 @@ public class RollerLifecycle implements SmartLifecycle {
 
             Weblogger weblogger = null;
             try {
-                // Bootstrap against the Boot application context, which
-                // already imports WebloggerBeanConfig via component scan
-                // (scanBasePackages = "org.apache.roller.weblogger"), so
-                // controllers and the business tier share a single Spring
-                // context -- same intent as the old code's reuse of the
-                // root WebApplicationContext via
-                // WebApplicationContextUtils.getRequiredWebApplicationContext.
-                WebloggerFactory.bootstrap(new SpringWebloggerProvider(applicationContext));
-
-                weblogger = WebloggerFactory.getWeblogger();
-                weblogger.initialize();
+                // The provider bean bootstraps against the Boot application
+                // context, which already imports WebloggerBeanConfig via
+                // component scan (scanBasePackages =
+                // "org.apache.roller.weblogger"), so controllers and the
+                // business tier share a single Spring context. bootstrap()
+                // also runs initialize() and releases its own session.
+                webloggerProvider.bootstrap();
+                weblogger = webloggerProvider.getWeblogger();
 
                 // I2: site.absoluteurl becomes required the moment any
                 // weblog has a custom domain (see needsSiteAbsoluteUrlWarning's
@@ -255,8 +256,8 @@ public class RollerLifecycle implements SmartLifecycle {
 
     @Override
     public void stop() {
-        if (WebloggerFactory.isBootstrapped()) {
-            WebloggerFactory.getWeblogger().shutdown();
+        if (webloggerProvider.isBootstrapped()) {
+            webloggerProvider.getWeblogger().shutdown();
         }
         // do we need a more generic mechanism for presentation layer shutdown?
         CacheManager.shutdown();

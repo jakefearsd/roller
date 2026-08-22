@@ -1,10 +1,9 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -12,20 +11,22 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License.
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
  */
 package org.apache.roller.weblogger.boot;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.servlet.ServletContext;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.BootstrapException;
-import org.apache.roller.weblogger.business.InitializationException;
-import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.business.startup.StartupException;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -33,16 +34,18 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.springframework.context.ApplicationContext;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,15 +58,10 @@ import static org.mockito.Mockito.when;
  *
  * <p>Every {@code start()}-exercising test here mock-installs
  * {@link WebloggerStartup} and {@link WebloggerConfig} so no real database or
- * classpath config is touched, and every test that lets {@code start()} reach
- * the real {@link org.apache.roller.weblogger.business.WebloggerFactory#bootstrap}
- * call wraps itself in {@code MockWeblogger.installNotBootstrapped()}/{@code
- * uninstall()} so the JVM-wide {@code WebloggerFactory} static state a
- * database-backed test elsewhere in the suite depends on is restored
- * afterward, regardless of what this test's own {@code start()} call did to
- * it in between -- {@code uninstall()} always restores the value captured
- * before this test ran, not whatever is installed when it is called (see
- * {@code MockWeblogger.uninstall}'s own javadoc).
+ * classpath config is touched, and the business tier is a mock
+ * {@link WebloggerProvider} handed to the constructor -- the lifecycle never
+ * touches JVM-wide static state any more, so nothing here needs bracketing or
+ * restoring.
  *
  * <p>Full end-to-end startup against a real application context and database
  * is exercised live instead (see the Task 2/2b reports: both a
@@ -89,15 +87,26 @@ class RollerLifecycleTest {
      */
     private static final int WEB_SERVER_START_STOP_LIFECYCLE_PHASE = Integer.MAX_VALUE - 2048;
 
-    private ApplicationContext applicationContext;
+    private WebloggerProvider provider;
+    private Weblogger weblogger;
     private ServletContext servletContext;
     private RollerLifecycle lifecycle;
 
     @BeforeEach
     void setUp() {
-        applicationContext = mock(ApplicationContext.class);
+        provider = mock(WebloggerProvider.class);
+        weblogger = mock(Weblogger.class);
         servletContext = mock(ServletContext.class);
-        lifecycle = new RollerLifecycle(applicationContext, servletContext);
+        lifecycle = new RollerLifecycle(provider, servletContext);
+    }
+
+    /** Makes the mock provider behave like one whose {@code bootstrap()} succeeded. */
+    private void providerBootstraps() throws BootstrapException {
+        doAnswer(inv -> {
+            when(provider.isBootstrapped()).thenReturn(true);
+            when(provider.getWeblogger()).thenReturn(weblogger);
+            return null;
+        }).when(provider).bootstrap();
     }
 
     @Test
@@ -115,26 +124,21 @@ class RollerLifecycleTest {
 
     @Test
     void stopIsSafeWhenStartWasNeverCalled() {
-        MockWeblogger.installNotBootstrapped();
-        try {
-            assertFalse(lifecycle.isRunning());
-            assertDoesNotThrow(() -> lifecycle.stop());
-            assertFalse(lifecycle.isRunning());
-        } finally {
-            MockWeblogger.uninstall();
-        }
+        assertFalse(lifecycle.isRunning());
+        assertDoesNotThrow(() -> lifecycle.stop());
+        assertFalse(lifecycle.isRunning());
+        verify(provider, never()).getWeblogger();
     }
 
     @Test
     void stopShutsDownTheBootstrappedWeblogger() {
-        MockWeblogger mocks = MockWeblogger.install();
-        try {
-            lifecycle.stop();
-            verify(mocks.weblogger()).shutdown();
-            assertFalse(lifecycle.isRunning());
-        } finally {
-            MockWeblogger.uninstall();
-        }
+        when(provider.isBootstrapped()).thenReturn(true);
+        when(provider.getWeblogger()).thenReturn(weblogger);
+
+        lifecycle.stop();
+
+        verify(weblogger).shutdown();
+        assertFalse(lifecycle.isRunning());
     }
 
     // ------------------------------------------------- resolveDirectories()
@@ -176,10 +180,9 @@ class RollerLifecycleTest {
     // --------------------------------------------- installation state branches
 
     @Test
-    void startLogsIncompleteAndSkipsBootstrapWhenNotPreparedAndNotIttest() {
+    void startLogsIncompleteAndSkipsBootstrapWhenNotPreparedAndNotIttest() throws Exception {
         when(servletContext.getRealPath("/")).thenReturn("/tmp/roller-lifecycle-test");
 
-        MockWeblogger.installNotBootstrapped();
         try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class);
                 MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
 
@@ -189,9 +192,8 @@ class RollerLifecycleTest {
 
             lifecycle.start();
 
+            verify(provider, never()).bootstrap();
             assertTrue(lifecycle.isRunning());
-        } finally {
-            MockWeblogger.uninstall();
         }
     }
 
@@ -200,10 +202,8 @@ class RollerLifecycleTest {
     @Test
     void startCreatesDatabaseThenBootstrapsWhenInstallationTypeIsIttest() throws Exception {
         when(servletContext.getRealPath("/")).thenReturn("/tmp/roller-lifecycle-test");
-        Weblogger mockWeblogger = mock(Weblogger.class);
-        when(applicationContext.getBean(Weblogger.class)).thenReturn(mockWeblogger);
+        providerBootstraps();
 
-        MockWeblogger.installNotBootstrapped();
         try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class);
                 MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
 
@@ -215,11 +215,9 @@ class RollerLifecycleTest {
             lifecycle.start();
 
             startup.verify(WebloggerStartup::createDatabase);
-            verify(mockWeblogger).initialize();
-            verify(mockWeblogger).release();
+            verify(provider).bootstrap();
+            verify(weblogger).release();
             assertTrue(lifecycle.isRunning());
-        } finally {
-            MockWeblogger.uninstall();
         }
     }
 
@@ -227,7 +225,6 @@ class RollerLifecycleTest {
     void startWrapsCreateDatabaseFailureDuringIttestAsIllegalState() throws Exception {
         when(servletContext.getRealPath("/")).thenReturn("/tmp/roller-lifecycle-test");
 
-        MockWeblogger.installNotBootstrapped();
         try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class);
                 MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
 
@@ -240,71 +237,55 @@ class RollerLifecycleTest {
             assertThrows(IllegalStateException.class, () -> lifecycle.start(),
                     "a broken IT-test bootstrap must stop startup rather than being logged and "
                             + "swallowed like the normal-deployment StartupException case");
-        } finally {
-            MockWeblogger.uninstall();
+            verify(provider, never()).bootstrap();
         }
     }
 
     // ------------------------------------------------------ bootstrap branch
 
+    /**
+     * The ordering invariant the whole provider design exists to preserve:
+     * {@code WebloggerStartup.prepare()} strictly before
+     * {@code WebloggerProvider.bootstrap()}, on the same thread, before the
+     * connector opens (see the phase test above).
+     */
     @Test
-    void startBootstrapsAndInitializesTheBusinessTierWhenPrepared() throws Exception {
+    void startPreparesThenBootstrapsThroughTheProvider() throws Exception {
         when(servletContext.getRealPath("/")).thenReturn("/tmp/roller-lifecycle-test");
-        Weblogger mockWeblogger = mock(Weblogger.class);
-        when(applicationContext.getBean(Weblogger.class)).thenReturn(mockWeblogger);
+        List<String> sequence = new ArrayList<>();
+        doAnswer(inv -> {
+            sequence.add("bootstrap");
+            when(provider.isBootstrapped()).thenReturn(true);
+            when(provider.getWeblogger()).thenReturn(weblogger);
+            return null;
+        }).when(provider).bootstrap();
 
-        MockWeblogger.installNotBootstrapped();
         try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class);
                 MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
 
-            startup.when(WebloggerStartup::prepare).thenAnswer(inv -> null);
+            startup.when(WebloggerStartup::prepare).thenAnswer(inv -> {
+                sequence.add("prepare");
+                return null;
+            });
             startup.when(WebloggerStartup::isPrepared).thenReturn(true);
             config.when(() -> WebloggerConfig.getProperty("installation.type")).thenReturn("manual");
 
             lifecycle.start();
 
-            verify(mockWeblogger).initialize();
-            verify(mockWeblogger).release();
+            assertEquals(List.of("prepare", "bootstrap"), sequence);
+            // the lifecycle's own post-bootstrap work (the site.absoluteurl
+            // check) opens a session it must release; the provider released
+            // the bootstrapping session itself, inside bootstrap()
+            verify(weblogger).release();
             assertTrue(lifecycle.isRunning());
-        } finally {
-            MockWeblogger.uninstall();
         }
     }
 
     @Test
-    void startStillReleasesTheWebloggerWhenInitializeThrows() throws Exception {
+    void startSwallowsABootstrapExceptionFromTheProviderAndStaysUp() throws Exception {
         when(servletContext.getRealPath("/")).thenReturn("/tmp/roller-lifecycle-test");
-        Weblogger mockWeblogger = mock(Weblogger.class);
-        when(applicationContext.getBean(Weblogger.class)).thenReturn(mockWeblogger);
-        doThrow(new InitializationException("boom")).when(mockWeblogger).initialize();
+        doThrow(new BootstrapException("boom")).when(provider).bootstrap();
 
-        MockWeblogger.installNotBootstrapped();
-        try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class);
-                MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
-
-            startup.when(WebloggerStartup::prepare).thenAnswer(inv -> null);
-            startup.when(WebloggerStartup::isPrepared).thenReturn(true);
-            config.when(() -> WebloggerConfig.getProperty("installation.type")).thenReturn("manual");
-
-            assertDoesNotThrow(() -> lifecycle.start(),
-                    "a WebloggerException from initialize() must be logged and swallowed, matching "
-                            + "the old contextInitialized behavior, not abort SpringApplication.run()");
-
-            verify(mockWeblogger).release();
-            assertTrue(lifecycle.isRunning());
-        } finally {
-            MockWeblogger.uninstall();
-        }
-    }
-
-    @Test
-    void startDoesNotReleaseWhenBootstrapItselfFails() {
-        when(servletContext.getRealPath("/")).thenReturn("/tmp/roller-lifecycle-test");
-        // A null Weblogger from the provider is exactly what makes
-        // WebloggerFactory.bootstrap(...) throw BootstrapException.
-        when(applicationContext.getBean(Weblogger.class)).thenReturn(null);
-
-        MockWeblogger.installNotBootstrapped();
         try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class);
                 MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
 
@@ -316,9 +297,9 @@ class RollerLifecycleTest {
                     "BootstrapException must be logged and swallowed, same as every other failure "
                             + "mode start() absorbs rather than aborting SpringApplication.run()");
 
+            // nothing to release on this side: the provider never handed out a Weblogger
+            verify(provider, never()).getWeblogger();
             assertTrue(lifecycle.isRunning());
-        } finally {
-            MockWeblogger.uninstall();
         }
     }
 
@@ -329,11 +310,10 @@ class RollerLifecycleTest {
      * rather than by driving {@code start()} and capturing log output: it is
      * pure decision logic (no logging itself), taking the already-resolved
      * {@code site.absoluteurl} value as a parameter rather than reading it
-     * via the static {@code WebloggerFactory}/{@code WebloggerRuntimeConfig}
-     * seam {@code start()} itself uses -- the same reasoning that keeps
-     * {@code CustomDomainRules} pure (see its own javadoc): resolving
-     * configuration is the caller's job, deciding what to do with it is
-     * this method's.
+     * via the static {@code WebloggerRuntimeConfig} seam {@code start()}
+     * itself uses -- the same reasoning that keeps {@code CustomDomainRules}
+     * pure (see its own javadoc): resolving configuration is the caller's
+     * job, deciding what to do with it is this method's.
      */
     @Test
     void needsSiteAbsoluteUrlWarningIsTrueWhenAWeblogHasADomainAndSiteAbsoluteUrlIsBlank() throws Exception {
@@ -400,10 +380,8 @@ class RollerLifecycleTest {
     @Test
     void startChecksForCustomDomainsNeedingSiteAbsoluteUrlWithoutDisruptingBootstrap() throws Exception {
         when(servletContext.getRealPath("/")).thenReturn("/tmp/roller-lifecycle-test");
-        Weblogger mockWeblogger = mock(Weblogger.class);
-        when(applicationContext.getBean(Weblogger.class)).thenReturn(mockWeblogger);
+        providerBootstraps();
 
-        MockWeblogger.installNotBootstrapped();
         try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class);
                 MockedStatic<WebloggerStartup> startup = mockStatic(WebloggerStartup.class)) {
 
@@ -414,11 +392,9 @@ class RollerLifecycleTest {
             assertDoesNotThrow(() -> lifecycle.start(),
                     "the site.absoluteurl check must never itself abort startup, whatever it finds");
 
-            verify(mockWeblogger).initialize();
-            verify(mockWeblogger).release();
+            verify(provider).bootstrap();
+            verify(weblogger).release();
             assertTrue(lifecycle.isRunning());
-        } finally {
-            MockWeblogger.uninstall();
         }
     }
 }
