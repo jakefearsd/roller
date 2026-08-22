@@ -1,7 +1,7 @@
 # Retire the static service locator — Design
 
 **Date:** 2026-08-22
-**Status:** proposed, not yet implemented
+**Status:** implemented 2026-08-22 (plan `docs/superpowers/plans/2026-08-22-retire-static-service-locator.md`, Tasks 1–21, landed on master `23d0e8042..` as one commit per task). Final measurements: `WebloggerFactory` deleted; 73 main-source files / 164 call sites migrated; 81 test files / 474 direct calls moved to `TestUtils.weblogger()`; 33 `mockStatic` users and 28 `MockWeblogger.install()` users converted; `pojos/*` imports no business-tier type. Acceptance criteria 1–13 hold; criterion 10's `/roller` browser run is green except `RouteSweepIT` on `sitemap.xml`/`robots.txt`, which fails identically on the pre-wave tree (Chrome's origin-root favicon probe under a context prefix — fixed in `BrowserHealth` in a follow-up commit, not a wave regression). Two facade accessors were added rather than one (`getEntryRenderer()`, `getVirtualHostRegistry()` — Decision 5 note); the pojo-import rule excepts the wrappers (Decision 5). Everything else landed as designed.
 **Scope:** how code *obtains* the business tier. Every `WebloggerFactory`
 call site in `app/src/main/java` goes away, the class is deleted, and the
 behaviour JPA entities currently reach into the container for moves to

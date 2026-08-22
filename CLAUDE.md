@@ -221,7 +221,16 @@ schema. Tests create fixtures through `TestUtils.setupX(...)` and must remove th
 `@AfterEach` (`teardownWeblog`/`teardownUser` + `endSession(true)`) — nothing
 truncates tables between tests. Render caches are per-JVM singletons; tests
 touching the rendering path call `CacheManager.clear()` in `@BeforeEach`
-(see `RenderingTestSupport`).
+(see `RenderingTestSupport`). **A test reaches the real business tier through
+`TestUtils.weblogger()`** (one graph per JVM, built by
+`TestUtils.setupWeblogger()` via `SpringWebloggerProvider.standalone()`) and
+hands it -- or `MockWeblogger.create()`'s mocked facade -- to the class under
+test by constructor/`init`/field; there is no global to install, no
+`mockStatic`. `MockWeblogger.attached()` additionally attaches the mock's
+`PropertiesManager` to `WebloggerRuntimeConfig` for tests that drive runtime-
+config reads (`RuntimeConfigAttachment` is the try-with-resources form; both
+restore the previous attachment, because DB-backed tests bootstrapped the
+real tier into that same static).
 
 ### Coverage gates
 
@@ -593,16 +602,49 @@ Roller is a multi-user blog server built with:
   escapes the quotes in `[gallery dir="x"]`). Raw HTML passes through commonmark
   by design, so `HTMLSanitizer` (OWASP policy) is the only boundary.
 - **Search**: Apache Lucene 10 for full-text search (embedded, index on local disk)
-- **DI Container**: Single Spring container. Business beans are defined in
-  `WebloggerBeanConfig` (`@Configuration @Lazy`, in
-  `org.apache.roller.weblogger.business.jpa`) and are constructed lazily at
-  `WebloggerFactory.bootstrap()`, after `WebloggerStartup.prepare()`.
-  Controllers get the `Weblogger` facade via the `@Autowired @Lazy` field on
-  `BaseController`. Rendering servlets/models/pagers, background tasks/beans,
-  and `RollerHandlerInterceptor` intentionally still go through the
-  `WebloggerFactory` static shim -- out of scope for the Spring Boot
-  conversion (Stage 1B), which targeted the deployment/servlet layer, not
-  this DI seam; a candidate for a later stage.
+- **DI Container**: Single Spring container, and **no static service
+  locator** -- `WebloggerFactory` was deleted on 2026-08-22 (spec:
+  `docs/superpowers/specs/2026-08-22-retire-static-service-locator-design.md`).
+  Business beans are defined in `WebloggerBeanConfig` (`@Configuration @Lazy`,
+  in `org.apache.roller.weblogger.business.jpa`) and are built lazily by
+  `SpringWebloggerProvider.bootstrap()` (a `@Component` implementing
+  `WebloggerProvider`: `isBootstrapped()` / `bootstrap()` / `getWeblogger()`),
+  which runs after `WebloggerStartup.prepare()` from `RollerLifecycle` (phase
+  0) or the install wizard. **How a class reaches the tier depends only on
+  how it is constructed:** container-managed classes (controllers, the nine
+  rendering/ajax servlets, the filters, the interceptors, the business beans)
+  take `@Lazy Weblogger` in the constructor -- the `@Lazy` is load-bearing,
+  since those beans are created at context refresh, before `prepare()` has
+  run, and `ContextRefreshDoesNotBootstrapTest` fails the build if a
+  forgotten `@Lazy` makes refresh build the tier; `WebloggerProvider` is
+  injected only where "is the tier up?" is a real runtime question
+  (`BootstrapFilter`, `PersistenceSessionFilter`, `ControlPlaneHostFilter`,
+  `InitFilter`, `RequestMappingFilter`/`WeblogRequestMapper`,
+  `RollerHandlerInterceptor`, `RollerUserDetailsService`, `ApiTokenAuthFilter`,
+  `RollerSession`); models read `weblogger` (and `urlStrategy`) from
+  `initData` (`ModelLoader` refuses an `initData` without it); pagers,
+  `*Request` objects, wrappers, shortcode handlers, theme subclasses and
+  background tasks take it in their constructor / `init`; the two Velocity
+  resource loaders read it from the engine's application attribute, set by
+  `RollerVelocity.initialize(servletContext, weblogger)` at bootstrap.
+  **Entities under `pojos/` are data plus invariants and import no
+  business-tier type** -- URL building lives in `URLStrategy` (JSPs use the
+  `urls` helper, `AdminUrls`, exposed by `BaseController`; themes use the
+  wrappers, which hold the facade), rendering in `EntryRenderer`
+  (`Weblogger.getEntryRenderer()`), queries/identity/authorisation in the
+  managers and the wrappers. `StaticServiceLocatorTest` pins all of this as a
+  source scan: no main/test/webapp source names `WebloggerFactory`; no
+  main-source `static` field has a business-tier type except the two named
+  residuals (`WebloggerRuntimeConfig`'s attached `PropertiesManager`, which
+  is how runtime config reaches the tier until the config wave retires it,
+  and `RollerVelocity`'s engine); no entity references a business-tier type.
+  Two lessons from the wave worth keeping: **JSP scriptlets are callers**
+  (`footer.jsp`/`login-redirect.jsp` reach beans through
+  `WebApplicationContextUtils`; a clean build's `jspc-validate` is what
+  catches a broken one, incremental builds do not), and **an `.orm.xml`
+  `<transient>` row must be deleted with the getter it names** -- EclipseLink
+  validates transient names against getters and the tier fails to bootstrap
+  otherwise.
 
 ### Core Package Structure
 ```
