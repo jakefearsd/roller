@@ -249,7 +249,11 @@ public class TemplatesController extends BaseController {
                 addError(model, "pagesForm.error.alreadyExists", newTmplName, request);
             }
         } catch (WebloggerException ex) {
+            // Fail closed: the caller adds this template only when no errors
+            // were recorded, so swallowing here creates the duplicate the
+            // check exists to prevent.
             log.error("Error checking for existing template", ex);
+            addError(model, "generic.error.check.logs", request);
         }
     }
 }

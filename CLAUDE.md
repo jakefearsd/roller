@@ -124,6 +124,44 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   does not mistake a passing-on-arrival test for one that was written
   backwards.
 
+- **A `catch` that logs and falls through is fine in a display path and a bug in
+  a decision path, and the difference is what the caller does with the answer.**
+  There are ~170 of them in this tree. Most are correct: a sidebar model that
+  cannot load its data renders an empty sidebar rather than 500-ing the whole
+  blog page, and that is the right trade. The ones that are not correct share a
+  shape worth recognising:
+
+  ```java
+  private void myValidate(...) {
+      try {
+          if (weblogManager.getTemplateByName(weblog, bean.getName()) != null) {
+              addError(model, "pagesForm.error.alreadyExists", ...);
+          }
+      } catch (WebloggerException ex) {
+          log.error("Error checking page name uniqueness", ex);   // <-- no error added
+      }
+  }
+  // caller:
+  myValidate(bean, template, request, model);
+  if (!hasErrors(model)) { ...save... }
+  ```
+
+  The caller reads an empty error list as "this passed". So the one condition
+  under which the duplicate check was skipped entirely — the store being
+  unreachable — was also the one condition under which the save went through
+  unchecked. **A check that could not run is not a check that passed.**
+  `TemplateEditController` and `TemplatesController` both did this and now add
+  an error instead; their tests pin it.
+
+  When adding a `catch` that only logs, ask what the caller does next. If the
+  answer is "proceeds as though nothing was wrong", fail closed instead. Two
+  sweeps worth repeating if you touch this: methods named `*validate*`/`check*`
+  that contain a log-only catch, and `boolean` methods that swallow — for the
+  latter, what matters is the value they fall through to (every one in the tree
+  today falls through to `false`, i.e. deny or degrade, and
+  `RollerHandlerInterceptor.preHandle` is fail-closed because a swallowed weblog
+  lookup leaves `actionWeblog` null and `enforceSecurity` then refuses).
+
 ## Build and Development Commands
 
 ### Basic Build Commands

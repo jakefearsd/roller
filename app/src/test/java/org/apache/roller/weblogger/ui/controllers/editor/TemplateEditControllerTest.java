@@ -34,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -438,5 +440,48 @@ class TemplateEditControllerTest extends EditorControllerTestSupport {
         foreign.setAction(ComponentType.CUSTOM);
         foreign.setWeblog(otherWeblog);
         when(weblogger.getWeblogManager().getTemplate("foreign-tmpl")).thenReturn(foreign);
+    }
+
+    /**
+     * A uniqueness check that cannot be performed must not be read as "unique".
+     *
+     * <p>myValidate logged the failure and added no error, so the caller's
+     * {@code if (!hasErrors(model))} saw a clean form and saved -- the template
+     * store being unreachable was the one condition under which the duplicate
+     * check was skipped entirely. Two templates sharing a name make lookup by
+     * name ambiguous, which is the thing the check exists to prevent.
+     */
+    @Test
+    void aNameUniquenessCheckThatFailsRefusesTheSave() throws Exception {
+        givenRendition("");
+        when(weblogger.getWeblogManager().getTemplateByName(eq(weblog), any()))
+                .thenThrow(new WebloggerException("template store unreachable"));
+
+        bean.setId("tmpl-1");
+        bean.setName("Footer");
+
+        controller.save(request, model, bean);
+
+        assertFalse(errors(model).isEmpty(),
+                "the author must be told the save did not happen, got: " + errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveTemplate(any());
+    }
+
+    @Test
+    void aLinkUniquenessCheckThatFailsRefusesTheSave() throws Exception {
+        givenRendition("");
+        when(weblogger.getWeblogManager().getTemplateByLink(eq(weblog), any()))
+                .thenThrow(new WebloggerException("template store unreachable"));
+
+        bean.setId("tmpl-1");
+        bean.setName("Sidebar");
+        // a DIFFERENT link from the template's own, or the check is skipped
+        bean.setLink("footer");
+
+        controller.save(request, model, bean);
+
+        assertFalse(errors(model).isEmpty(),
+                "same for the link, which is what a page is served under: " + errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveTemplate(any());
     }
 }

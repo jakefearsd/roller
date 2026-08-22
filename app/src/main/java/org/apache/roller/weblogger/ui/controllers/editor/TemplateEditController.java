@@ -144,7 +144,11 @@ public class TemplateEditController extends BaseController {
                     addError(model, "pagesForm.error.alreadyExists", bean.getName(), request);
                 }
             } catch (WebloggerException ex) {
+                // Fail closed. A uniqueness check that could not run is not a
+                // check that passed, and the caller's hasErrors() gate would
+                // otherwise read the empty error list as "this name is free".
                 log.error("Error checking page name uniqueness", ex);
+                addError(model, "generic.error.check.logs", request);
             }
         }
 
@@ -155,7 +159,10 @@ public class TemplateEditController extends BaseController {
                     addError(model, "pagesForm.error.alreadyExists", bean.getLink(), request);
                 }
             } catch (WebloggerException ex) {
+                // Fail closed, as above -- the link is what the page is served
+                // under, so a collision is worse here than for the name.
                 log.error("Error checking page link uniqueness", ex);
+                addError(model, "generic.error.check.logs", request);
             }
         }
     }
