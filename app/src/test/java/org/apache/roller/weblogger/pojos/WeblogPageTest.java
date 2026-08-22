@@ -34,19 +34,6 @@ class WeblogPageTest {
     }
 
     @Test
-    void contentIsRenderedAsMarkdown() {
-        assertTrue(page("**bold**").getRenderedContent().contains("<strong>bold</strong>"));
-    }
-
-    @Test
-    void scriptInContentIsSanitizedAway() {
-        String html = page("ok<script>alert(1)</script>").getRenderedContent();
-
-        assertTrue(html.contains("ok"));
-        assertFalse(html.contains("<script"));
-    }
-
-    @Test
     void aNewPageStartsAsADraft() {
         assertEquals(WeblogPage.PubStatus.DRAFT, new WeblogPage().getStatus(),
                 "publishing must be a deliberate act");
@@ -55,10 +42,5 @@ class WeblogPageTest {
     @Test
     void aNewPageShowsInNavByDefault() {
         assertTrue(new WeblogPage().getShowInNav());
-    }
-
-    @Test
-    void nullContentRendersAsNullRatherThanThrowing() {
-        page(null).getRenderedContent();
     }
 }

@@ -248,31 +248,30 @@ class WeblogEntryWrapperTest {
     }
 
     @Test
-    void renderedContentAccessorsDelegateToTheEntry() throws Exception {
-        // WeblogEntry.render() itself still locates the plugin manager
-        // statically -- that moves to EntryRenderer in Stage D (plan Task 14).
+    void renderedContentAccessorsGoThroughTheInjectedFacadesRenderer() {
+        // The wrapper renders through the facade it was constructed with --
+        // a real EntryRenderer here, over that same facade -- never through
+        // anything static.
         org.apache.roller.weblogger.business.plugins.PluginManager plugins =
                 mock(org.apache.roller.weblogger.business.plugins.PluginManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getPluginManager()).thenReturn(plugins);
         when(plugins.getWeblogEntryPlugins(weblog)).thenReturn(java.util.Map.of());
+        when(weblogger.getEntryRenderer()).thenReturn(new org.apache.roller.weblogger.business.EntryRenderer(
+                org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander.builtIn(
+                        weblogger, mock(org.apache.roller.weblogger.business.MediaFileManager.class)),
+                plugins));
         entry.setText("The whole post");
         entry.setSummary("Just a taste");
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            // Every entry is markdown, so even a bare line of prose comes back
-            // as a rendered paragraph -- there is no pass-through path left.
-            assertEquals("<p>The whole post</p>\n", wrapper.getTransformedText());
-            assertEquals("<p>Just a taste</p>\n", wrapper.getTransformedSummary(),
-                    "The summary accessor must not quietly return the body");
-            assertEquals("<p>The whole post</p>\n", wrapper.getDisplayContent(),
-                    "With no read-more link the permalink form is used");
-            assertTrue(wrapper.displayContent("http://example.com/entry")
-                            .startsWith("<p>Just a taste</p>"),
-                    "and with one, the teaser form");
-        }
+        // Every entry is markdown, so even a bare line of prose comes back
+        // as a rendered paragraph -- there is no pass-through path left.
+        assertEquals("<p>The whole post</p>\n", wrapper.getTransformedText());
+        assertEquals("<p>Just a taste</p>\n", wrapper.getTransformedSummary(),
+                "The summary accessor must not quietly return the body");
+        assertEquals("<p>The whole post</p>\n", wrapper.getDisplayContent(),
+                "With no read-more link the permalink form is used");
+        assertTrue(wrapper.displayContent("http://example.com/entry")
+                        .startsWith("<p>Just a taste</p>"),
+                "and with one, the teaser form");
     }
 
     @Test

@@ -110,7 +110,6 @@
 			<transient name="absoluteURL"/>
 			<transient name="URL"/>
 			<transient name="entryCount"/>
-            <transient name="initializedPlugins"/>
             <transient name="localeInstance"/>
             <transient name="timeZoneInstance" />
 		</attributes>

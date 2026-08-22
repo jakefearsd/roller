@@ -24,12 +24,10 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
@@ -44,14 +42,8 @@ import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.ContentRenderer;
-import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeContext;
-import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
-import org.apache.roller.weblogger.util.HTMLSanitizer;
-import org.apache.roller.weblogger.util.I18nMessages;
 import org.apache.roller.weblogger.util.Utilities;
 
 /**
@@ -67,21 +59,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     // it is added last anyway, as the habit to keep if that mapping ever
     // changes to ordinal.
     public enum PubStatus {DRAFT, PUBLISHED, PENDING, SCHEDULED, TRASHED}
-
-    /**
-     * Word separator for generated anchors.
-     *
-     * <p>Read per call rather than cached in a static: the setting is
-     * runtime-settable, and a {@code static final} initialised at class load
-     * could not see a change made from the site settings. It only affects
-     * anchors generated from here on -- anchors already stored on entries keep
-     * whichever separator was in force when they were created, which is what
-     * keeps existing permalinks working across a change.
-     */
-    private static char titleSeparator() {
-        return WebloggerRuntimeConfig.getBooleanProperty("weblogentry.title.useUnderscoreSeparator")
-                ? '_' : '-';
-    }
 
     // Simple properies
     private String    id            = UUIDGenerator.generateUUID();
@@ -936,13 +913,16 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
         return ret;
     }
     
-    /** Create anchor for weblog entry, based on title or text */
-    protected String createAnchor() throws WebloggerException {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager().createAnchor(this);
-    }
     
-    /** Create anchor for weblog entry, based on title or text */
-    public String createAnchorBase() {
+    /**
+     * Create the anchor base for this entry from its title or text, using the
+     * given word separator. The separator is a runtime site setting; the
+     * manager that calls this reads it per call so a change is seen without a
+     * restart (see {@code JPAWeblogEntryManagerImpl.createAnchor}). Anchors
+     * already stored on entries keep whichever separator was in force when
+     * they were created, which is what keeps existing permalinks working.
+     */
+    public String createAnchorBase(char separator) {
         
         // Use title (minus non-alphanumeric characters)
         String base = null;
@@ -960,7 +940,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
             StringTokenizer toker = new StringTokenizer(base);
             String tmp = null;
             int count = 0;
-            char separator = titleSeparator();
             while (toker.hasMoreTokens() && count < 5) {
                 String s = toker.nextToken();
                 s = s.toLowerCase(Locale.ROOT);
@@ -1037,134 +1016,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
         return getStatus().equals(PubStatus.PUBLISHED);
     }
 
-    /**
-     * Get entry text, transformed by plugins enabled for entry.
-     */
-    public String getTransformedText() {
-        return render(getText());
-    }
-
-    /**
-     * Get entry summary, transformed by plugins enabled for entry.
-     */
-    public String getTransformedSummary() {
-        return render(getSummary());
-    }
-
-    /**
-     * Determine if the specified user has permissions to edit this entry.
-     */
-    public boolean hasWritePermissions(User user) throws WebloggerException {
-        
-        // global admins can hack whatever they want
-        GlobalPermission adminPerm = 
-            new GlobalPermission(Collections.singletonList(GlobalPermission.ADMIN));
-        boolean hasAdmin = WebloggerFactory.getWeblogger().getUserManager()
-            .checkPermission(adminPerm, user); 
-        if (hasAdmin) {
-            return true;
-        }
-        
-        WeblogPermission perm;
-        try {
-            // if user is an author then post status defaults to PUBLISHED, otherwise PENDING
-            UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
-            perm = umgr.getWeblogPermission(getWebsite(), user);
-            
-        } catch (WebloggerException ex) {
-            // security interceptor should ensure this never happens
-            log.error("ERROR retrieving user's permission", ex);
-            return false;
-        }
-
-        boolean author = perm.hasAction(WeblogPermission.POST) || perm.hasAction(WeblogPermission.ADMIN);
-        boolean limited = !author && perm.hasAction(WeblogPermission.EDIT_DRAFT);
-        
-        return author || (limited && (status == PubStatus.DRAFT || status == PubStatus.PENDING));
-    }
-    
-    /**
-     * Transform string based on plugins registered for this weblog entry's
-     * site.
-     *
-     * <p>Per-entry opt-in died with {@code weblogentry.plugins} (V021, the
-     * entry editor's last plugin checkbox) -- there is no more per-entry list
-     * to filter against, so every plugin the site has registered
-     * ({@link Weblog#getInitializedPlugins()}) is applied unconditionally,
-     * the same way shortcodes already are. In production that map is always
-     * empty ({@code plugins.page} is no longer configured), so this loop is
-     * presently a no-op; it stays as the render seam a future page plugin
-     * would use.
-     */
-    private String render(String str) {
-        String ret = str;
-        log.debug("Applying page plugins to string");
-        Map<String, WeblogEntryPlugin> inPlugins = getWebsite().getInitializedPlugins();
-        if (str != null && inPlugins != null) {
-            for (WeblogEntryPlugin pagePlugin : inPlugins.values()) {
-                try {
-                    ret = pagePlugin.render(this, ret);
-                } catch (Exception e) {
-                    log.error("ERROR from plugin: {}", pagePlugin.getName(), e);
-                }
-            }
-        }
-        // Everything below -- shortcodes, markdown, sanitization -- is
-        // universal and lives in ContentRenderer so WeblogPage gets the
-        // identical pipeline.
-        return ContentRenderer.render(this, ret);
-    }
-    
-    
-    /**
-     * Get the right transformed display content depending on the situation.
-     *
-     * If the readMoreLink is specified then we assume the caller wants to
-     * prefer summary over content and we include a "Read More" link at the
-     * end of the summary if it exists.  Otherwise, if the readMoreLink is
-     * empty or null then we assume the caller prefers content over summary.
-     */
-    public String displayContent(String readMoreLink) {
-        
-        String displayContent;
-        
-        if(readMoreLink == null || readMoreLink.isBlank() || "nil".equals(readMoreLink)) {
-            
-            // no readMore link means permalink, so prefer text over summary
-            if(StringUtils.isNotEmpty(this.getText())) {
-                displayContent = this.getTransformedText();
-            } else {
-                displayContent = this.getTransformedSummary();
-            }
-        } else {
-            // not a permalink, so prefer summary over text
-            // include a "read more" link if needed
-            if(StringUtils.isNotEmpty(this.getSummary())) {
-                displayContent = this.getTransformedSummary();
-                if(StringUtils.isNotEmpty(this.getText())) {
-                    // add read more
-                    List<String> args = List.of(readMoreLink);
-                    
-                    // TODO: we need a more appropriate way to get the view locale here
-                    String readMore = I18nMessages.getMessages(getWebsite().getLocaleInstance()).getString("macro.weblog.readMoreLink", args);
-                    
-                    displayContent += readMore;
-                }
-            } else {
-                displayContent = this.getTransformedText();
-            }
-        }
-        
-        return HTMLSanitizer.conditionallySanitize(displayContent);
-    }
-    
-    
-    /**
-     * Get the right transformed display content.
-     */
-    public String getDisplayContent() { 
-        return displayContent(null);
-    }
 
     public Boolean getRefreshAggregates() {
         return refreshAggregates;

@@ -115,7 +115,7 @@ class VideoShortcodeTest {
 
     @Test
     void theHandlerIsRegisteredInTheDefaultExpander() {
-        assertTrue(ShortcodeExpander.defaultExpander().cards().stream()
+        assertTrue(BuiltInExpanders.withMocks().cards().stream()
                         .anyMatch(c -> "video".equals(c.name())),
                 "an unregistered shortcode is undiscoverable in the editor");
     }

@@ -55,6 +55,13 @@ class EntriesWriteApiControllerTest {
         // EntryDeletion.trashEntryWithIndex/deleteEntryForeverWithIndex both
         // reach the index manager before touching the entry manager.
         when(weblogger.getIndexManager()).thenReturn(mock(IndexManager.class));
+        // preview renders through the tier's renderer; a real one over this
+        // facade's mocks gives real markdown output
+        when(weblogger.getEntryRenderer()).thenReturn(
+                new org.apache.roller.weblogger.business.EntryRenderer(
+                        org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander.builtIn(
+                                weblogger, mock(org.apache.roller.weblogger.business.MediaFileManager.class)),
+                        mock(org.apache.roller.weblogger.business.plugins.PluginManager.class)));
         return weblogger;
     }
 

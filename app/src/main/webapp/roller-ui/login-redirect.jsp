@@ -20,9 +20,17 @@
 <%@ page import="org.apache.roller.weblogger.pojos.*" %>
 <%@ page import="org.apache.roller.weblogger.ui.core.RollerSession" %>
 <%@ page import="java.util.List" %>
+<%@ page import="org.springframework.web.context.support.WebApplicationContextUtils" %>
 <%
-User user = RollerSession.getRollerSession(request).getAuthenticatedUser();
-List weblogs = WebloggerFactory.getWeblogger().getWeblogManager().getUserWeblogs(user, true);
+// The session factory and the user lookup take their collaborators since the
+// DI wave (plan Task 6b); a scriptlet reaches the provider bean through the
+// web application context the way a bean would be injected.
+WebloggerProvider provider = WebApplicationContextUtils
+        .getRequiredWebApplicationContext(application).getBean(WebloggerProvider.class);
+Weblogger weblogger = provider.getWeblogger();
+User user = RollerSession.getRollerSession(request, provider)
+        .getAuthenticatedUser(weblogger.getUserManager());
+List weblogs = weblogger.getWeblogManager().getUserWeblogs(user, true);
 
 if (user == null) {
     response.sendRedirect(request.getContextPath()+"/roller-ui/login.rol");

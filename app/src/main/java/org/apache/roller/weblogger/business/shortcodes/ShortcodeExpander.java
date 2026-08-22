@@ -25,10 +25,11 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Expands {@code [name attr="value"]body[/name]} shortcodes in entry text
@@ -109,25 +110,8 @@ public final class ShortcodeExpander {
     private static final Pattern ATTRIBUTE = Pattern.compile(
             "([\\w-]+)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s\\]]+))");
 
-    /**
-     * The default registry: every built-in shortcode, applied everywhere.
-     * ([pin], [q], and [a] are deliberately NOT registered: they are child
-     * tags that MapPins/FaqBlocks parse out of the [map]/[faq] bodies.)
-     */
-    private static final ShortcodeExpander DEFAULT =
-            new ShortcodeExpander(List.of(new ImageShortcode(), new GalleryShortcode(),
-                    new MapShortcode(), new CtaShortcode(), new FaqShortcode(),
-                    new VideoShortcode(), new ContactShortcode(), new SubscribeShortcode()));
-
     private final Map<String, ShortcodeHandler> handlers;
 
-    @SuppressFBWarnings(
-            value = "SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR",
-            justification = "DEFAULT is a canonical default instance, not the only instance "
-                    + "this class permits -- MapShortcode.pinsInEntry builds its own expander "
-                    + "with a single collecting handler (production, same package), and the "
-                    + "test suite builds others with fixture handlers. This class was never a "
-                    + "strict singleton; a private constructor would break the real caller.")
     public ShortcodeExpander(List<ShortcodeHandler> handlerList) {
         Map<String, ShortcodeHandler> byName = new LinkedHashMap<>();
         for (ShortcodeHandler handler : handlerList) {
@@ -136,9 +120,31 @@ public final class ShortcodeExpander {
         this.handlers = Collections.unmodifiableMap(byName);
     }
 
-    /** The expander both render call-sites use, with all built-in handlers registered. */
-    public static ShortcodeExpander defaultExpander() {
-        return DEFAULT;
+    /**
+     * The built-in registry: every shipped shortcode, in the order the
+     * editor's insert menu lists them. ([pin], [q], and [a] are deliberately
+     * NOT registered: they are child tags that MapPins/FaqBlocks parse out of
+     * the [map]/[faq] bodies.)
+     *
+     * <p>This used to be a static {@code DEFAULT} instance; the handlers that
+     * resolve media ([image], [gallery], [map auto=..]) reached the business
+     * tier through the static service locator. They now take what they use,
+     * so the registry is built once by {@code WebloggerBeanConfig} with the
+     * tier's own collaborators and reached through
+     * {@link org.apache.roller.weblogger.business.EntryRenderer}; tests build
+     * one over mocks.
+     *
+     * @param weblogger  the facade the media-rendering handlers wrap files
+     *                   with (url strategy + media manager); may be a lazy
+     *                   proxy -- it is not dereferenced here
+     * @param mediaFiles the media manager [map auto=..] resolves directories
+     *                   through
+     */
+    public static ShortcodeExpander builtIn(Weblogger weblogger, MediaFileManager mediaFiles) {
+        return new ShortcodeExpander(List.of(new ImageShortcode(weblogger),
+                new GalleryShortcode(weblogger), new MapShortcode(mediaFiles),
+                new CtaShortcode(), new FaqShortcode(), new VideoShortcode(),
+                new ContactShortcode(), new SubscribeShortcode()));
     }
 
     /**

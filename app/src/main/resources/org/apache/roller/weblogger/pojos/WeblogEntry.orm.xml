@@ -154,7 +154,6 @@
             </one-to-many>
             <transient name="creator"/>
             <transient name="categories"/>
-            <transient name="displayContent"/>
             <transient name="displayTitle"/>
             <transient name="draft"/>
             <transient name="pending"/>
@@ -163,8 +162,6 @@
             <transient name="published"/>
             <transient name="rss09xDescription"/>
             <transient name="tagsAsString"/>
-            <transient name="transformedText"/>
-            <transient name="transformedSummary"/>
             <transient name="addedTags"/>
             <transient name="removedTags"/>
             <transient name="refreshAggregates"/>

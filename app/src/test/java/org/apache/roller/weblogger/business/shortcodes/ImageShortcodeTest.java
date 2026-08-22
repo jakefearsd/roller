@@ -18,26 +18,22 @@
 package org.apache.roller.weblogger.business.shortcodes;
 
 import java.util.Map;
-import java.util.function.Supplier;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -49,7 +45,7 @@ class ImageShortcodeTest {
 
     private static final String URL = "http://example.com/roller/blog/mediaresource/mf-1";
 
-    private final ImageShortcode shortcode = new ImageShortcode();
+    private ImageShortcode shortcode;
     private Weblog weblog;
     private WeblogEntry entry;
     private Weblogger weblogger;
@@ -80,17 +76,11 @@ class ImageShortcodeTest {
         weblogger = mock(Weblogger.class);
         when(weblogger.getMediaFileManager()).thenReturn(mediaFileManager);
         when(weblogger.getUrlStrategy()).thenReturn(urls);
-    }
-
-    private <T> T withWeblogger(Supplier<T> body) {
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            return body.get();
-        }
+        shortcode = new ImageShortcode(weblogger);
     }
 
     private String render(Map<String, String> attributes, String body) {
-        return withWeblogger(() -> shortcode.render(attributes, body, entry));
+        return (shortcode.render(attributes, body, entry));
     }
 
     // -------------------------------------------------------------- happy path
@@ -354,7 +344,7 @@ class ImageShortcodeTest {
         // Review Important #2 repro: brackets inside a quoted caption are an
         // ordinary thing to type and must neither truncate the caption nor
         // leak raw shortcode syntax around the figure.
-        String rendered = withWeblogger(() -> ShortcodeExpander.defaultExpander()
+        String rendered = (ShortcodeExpander.builtIn(weblogger, mediaFileManager)
                 .expand(entry, "[image id=mf-1 caption=\"Paris [2023]\"] after"));
 
         assertTrue(rendered.contains("<figcaption>Paris [2023]</figcaption>"), rendered);
@@ -365,7 +355,7 @@ class ImageShortcodeTest {
 
     @Test
     void theDefaultExpanderShipsWithTheImageShortcodeRegistered() {
-        String rendered = withWeblogger(() -> ShortcodeExpander.defaultExpander()
+        String rendered = (ShortcodeExpander.builtIn(weblogger, mediaFileManager)
                 .expand(entry, "look [image id=mf-1 caption=\"A hawk\"] here"));
 
         assertTrue(rendered.contains("<figure class=\"shortcode-image\">"), rendered);

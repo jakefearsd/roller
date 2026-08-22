@@ -197,7 +197,7 @@ class CtaShortcodeTest {
 
     @Test
     void theDefaultExpanderShipsWithTheCtaShortcodeRegistered() {
-        String rendered = ShortcodeExpander.defaultExpander().expand(entry,
+        String rendered = BuiltInExpanders.withMocks().expand(entry,
                 "see [cta href=\"https://example.com/book\" label=\"Book now\"] ok");
 
         assertTrue(rendered.contains("<a class=\"cta-card\""), rendered);
@@ -206,7 +206,7 @@ class CtaShortcodeTest {
 
     @Test
     void anInvalidHrefLeavesTheShortcodeTextVisibleThroughTheExpander() {
-        String rendered = ShortcodeExpander.defaultExpander().expand(entry,
+        String rendered = BuiltInExpanders.withMocks().expand(entry,
                 "[cta href=\"/book\" label=\"Book now\"]");
 
         assertEquals("[cta href=\"/book\" label=\"Book now\"]", rendered,

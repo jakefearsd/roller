@@ -24,7 +24,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -66,6 +65,17 @@ public class GalleryShortcode implements ShortcodeHandler {
         return "gallery";
     }
 
+    private final Weblogger weblogger;
+
+    /**
+     * @param weblogger the tier whose media manager resolves the directory and
+     *                  whose url strategy the files are wrapped with; never
+     *                  dereferenced at construction, so a lazy proxy is fine
+     */
+    public GalleryShortcode(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
+
     @Override
     public ShortcodeCard getCard() {
         return ShortcodeCard.snippet("gallery", "shortcode.gallery.label",
@@ -86,7 +96,6 @@ public class GalleryShortcode implements ShortcodeHandler {
 
         List<MediaFileWrapper> images;
         try {
-            Weblogger weblogger = WebloggerFactory.getWeblogger();
             MediaFileDirectory directory = weblogger
                     .getMediaFileManager().getMediaFileDirectoryByName(weblog, directoryName);
             if (directory == null) {

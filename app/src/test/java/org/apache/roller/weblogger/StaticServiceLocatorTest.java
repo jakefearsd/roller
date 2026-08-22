@@ -90,9 +90,6 @@ class StaticServiceLocatorTest {
      * 73 files, 164 call sites.
      */
     static final Set<String> ALLOWED = Set.of(
-            PKG + "business/shortcodes/GalleryShortcode.java",
-            PKG + "business/shortcodes/ImageShortcode.java",
-            PKG + "business/shortcodes/MapShortcode.java",
             PKG + "config/WebloggerRuntimeConfig.java",
             PKG + "pojos/GlobalPermission.java",
             PKG + "pojos/MediaFile.java",

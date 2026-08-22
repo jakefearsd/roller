@@ -27,6 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.jsonld.EntryJsonLd;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
@@ -50,6 +51,7 @@ public class UtilitiesModel implements Model {
     
     private ParsedRequest parsedRequest = null;
     private Weblog weblog = null;
+    private Weblogger weblogger = null;
     
     
     /**
@@ -87,6 +89,12 @@ public class UtilitiesModel implements Model {
             WeblogRequest weblogRequest = (WeblogRequest) parsedRequest;
             weblog = weblogRequest.getWeblog();
         }
+
+        // The only thing this model needs the tier for is resolving a
+        // [map auto=..] directory into the travel JSON-LD itinerary, so the
+        // facade is read when present rather than required -- ModelLoader
+        // already refuses to load any model without it in production.
+        weblogger = (Weblogger) initData.get(ModelLoader.WEBLOGGER);
     }
      
     
@@ -269,7 +277,8 @@ public class UtilitiesModel implements Model {
      */
     public String travelJsonLd(WeblogEntry entry, String name, String description,
             String imageUrl, String url) {
-        return EntryJsonLd.build(entry, name, description, imageUrl, url);
+        return EntryJsonLd.build(entry, name, description, imageUrl, url,
+                weblogger == null ? null : weblogger.getMediaFileManager());
     }
 
     public String replace(String src, String target, String rWith) {

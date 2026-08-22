@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -215,7 +214,7 @@ public class PageEditController extends BaseController {
         // itself so it can never advertise a shortcode that does not render,
         // or omit one that does. Pages go through the same shortcode-expanding
         // render pipeline as entries (WeblogPage implements ShortcodeContext).
-        model.addAttribute("shortcodeCards", ShortcodeExpander.defaultExpander().cards());
+        model.addAttribute("shortcodeCards", weblogger.getEntryRenderer().shortcodeCards());
 
         // Thumbnail preview for the SEO panel's social-image picker. Read off
         // the bean rather than the page so a save that failed validation

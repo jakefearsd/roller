@@ -131,7 +131,7 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
                 org.mockito.ArgumentCaptor.forClass(String.class);
         verify(listmonk).sendCampaign(anyString(), anyString(), htmlCaptor.capture());
         String html = htmlCaptor.getValue();
-        assertTrue(html.contains(entry.getTransformedText()),
+        assertTrue(html.contains(weblogger.entryRenderer().transformedText(entry)),
                 "the sent html must carry the rendered entry body: " + html);
         assertTrue(html.contains(entry.getPermalink()),
                 "the sent html must link back to the permalink: " + html);

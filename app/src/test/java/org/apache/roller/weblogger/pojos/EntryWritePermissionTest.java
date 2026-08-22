@@ -40,15 +40,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Covers {@link WeblogEntry#hasWritePermissions} and the permission helpers on
- * {@link Weblog} and {@link User}.
- *
- * <p>These three methods are the ones the editor UI actually calls to decide
- * whether to show someone an edit form. The interesting rule is the "limited"
- * one: a member with only {@code edit_draft} may edit a post while it is a
- * draft or pending moderation, but must lose that ability the moment the post
- * is published -- otherwise a contributor could rewrite live content. That rule
- * exists nowhere else, so it is asserted for every publication status.
+ * Covers the permission helpers on {@link Weblog} and {@link User}, which still
+ * reach the user manager through the static locator until plan Task 16 moves
+ * them to their callers. ({@code WeblogEntry.hasWritePermissions} used to be
+ * covered here too; it had no production caller and was deleted in Task 14 --
+ * the edit-draft rule it implemented lived only in that dead method.)
  */
 class EntryWritePermissionTest {
 
@@ -88,112 +84,6 @@ class EntryWritePermissionTest {
     private interface ThrowingSupplier<T> {
         T get() throws Exception;
     }
-
-    private void grantOnWeblog(String... actions) throws Exception {
-        WeblogPermission perm = new WeblogPermission();
-        perm.setActionsAsList(List.of(actions));
-        perm.setObjectId(weblog.getHandle());
-        perm.setUserName(user.getUserName());
-        when(userManager.getWeblogPermission(weblog, user)).thenReturn(perm);
-    }
-
-    @Test
-    void aSiteAdminMayEditAnyEntryInAnyState() throws Exception {
-        when(userManager.checkPermission(any(GlobalPermission.class), org.mockito.ArgumentMatchers.eq(user)))
-                .thenReturn(true);
-        grantOnWeblog();
-
-        for (PubStatus status : PubStatus.values()) {
-            entry.setStatus(status);
-            assertTrue(withWeblogger(() -> entry.hasWritePermissions(user)),
-                    "A site admin must be able to edit a " + status + " entry even with no "
-                            + "permission on the weblog itself -- this is the escape hatch "
-                            + "the admin UI depends on");
-        }
-    }
-
-    @Test
-    void theGlobalCheckAsksForAdminSpecifically() throws Exception {
-        grantOnWeblog(WeblogPermission.EDIT_DRAFT);
-        entry.setStatus(PubStatus.PUBLISHED);
-
-        ArgumentCaptor<GlobalPermission> captor = ArgumentCaptor.forClass(GlobalPermission.class);
-        withWeblogger(() -> entry.hasWritePermissions(user));
-
-        verify(userManager).checkPermission(captor.capture(), org.mockito.ArgumentMatchers.eq(user));
-        assertEquals(List.of(GlobalPermission.ADMIN), captor.getValue().getActionsAsList(),
-                "The site-wide escape hatch must demand admin. Asking for a weaker action "
-                        + "would let every logged-in user edit every blog's posts.");
-    }
-
-    @Test
-    void anAuthorMayEditTheirWeblogsEntriesInAnyState() throws Exception {
-        grantOnWeblog(WeblogPermission.POST);
-
-        for (PubStatus status : PubStatus.values()) {
-            entry.setStatus(status);
-            assertTrue(withWeblogger(() -> entry.hasWritePermissions(user)),
-                    "Someone who may publish may also edit a " + status + " entry");
-        }
-    }
-
-    @Test
-    void aWeblogAdminMayEditItsEntriesInAnyState() throws Exception {
-        grantOnWeblog(WeblogPermission.ADMIN);
-
-        for (PubStatus status : PubStatus.values()) {
-            entry.setStatus(status);
-            assertTrue(withWeblogger(() -> entry.hasWritePermissions(user)),
-                    "A weblog admin may edit a " + status + " entry");
-        }
-    }
-
-    @Test
-    void aLimitedMemberMayOnlyEditEntriesThatAreNotYetLive() throws Exception {
-        grantOnWeblog(WeblogPermission.EDIT_DRAFT);
-
-        entry.setStatus(PubStatus.DRAFT);
-        assertTrue(withWeblogger(() -> entry.hasWritePermissions(user)),
-                "A limited member may work on their own draft");
-
-        entry.setStatus(PubStatus.PENDING);
-        assertTrue(withWeblogger(() -> entry.hasWritePermissions(user)),
-                "and may still revise it while it waits for moderation");
-
-        entry.setStatus(PubStatus.PUBLISHED);
-        assertFalse(withWeblogger(() -> entry.hasWritePermissions(user)),
-                "but must NOT be able to edit a published entry -- that is the whole "
-                        + "point of the limited role");
-
-        entry.setStatus(PubStatus.SCHEDULED);
-        assertFalse(withWeblogger(() -> entry.hasWritePermissions(user)),
-                "and must not be able to edit one already queued to go live");
-    }
-
-    @Test
-    void someoneWithNoPermissionOnTheWeblogMayEditNothing() throws Exception {
-        grantOnWeblog();
-
-        for (PubStatus status : PubStatus.values()) {
-            entry.setStatus(status);
-            assertFalse(withWeblogger(() -> entry.hasWritePermissions(user)),
-                    "A user with no grant on the weblog must not be able to edit a "
-                            + status + " entry");
-        }
-    }
-
-    @Test
-    void aFailureToLoadThePermissionDeniesAccess() throws Exception {
-        when(userManager.getWeblogPermission(weblog, user))
-                .thenThrow(new WebloggerException("database down"));
-        entry.setStatus(PubStatus.DRAFT);
-
-        assertFalse(withWeblogger(() -> entry.hasWritePermissions(user)),
-                "If the permission cannot be read the answer must be no. Failing open "
-                        + "here would hand the editor to anyone during a database outage.");
-    }
-
-    // -------------------------------------------------- weblog-level helpers
 
     @Test
     void weblogPermissionCheckAsksForTheActionsRequested() throws Exception {

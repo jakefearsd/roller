@@ -22,7 +22,6 @@ import java.sql.Timestamp;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.roller.util.UUIDGenerator;
-import org.apache.roller.weblogger.business.ContentRenderer;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeContext;
 
 /**
@@ -126,14 +125,6 @@ public class WeblogPage implements ShortcodeContext, Serializable {
     @Override
     public String getRawText() {
         return content;
-    }
-
-    /**
-     * The page's content, rendered through the same pipeline entries use:
-     * shortcodes, then markdown, then sanitization.
-     */
-    public String getRenderedContent() {
-        return ContentRenderer.render(this, getContent());
     }
 
     /**

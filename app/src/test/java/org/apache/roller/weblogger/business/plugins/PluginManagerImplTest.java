@@ -29,12 +29,14 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.Property;
+import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
 
 /**
  * {@code plugins.page} is unset in the test configuration (the registry is
@@ -48,7 +50,7 @@ class PluginManagerImplTest {
 
     @Test
     void hasPagePluginsIsFalseWhenNoneAreRegistered() {
-        PluginManagerImpl mgr = new PluginManagerImpl();
+        PluginManagerImpl mgr = new PluginManagerImpl(mock(ShortcodeExpander.class));
         assertFalse(mgr.hasPagePlugins());
     }
 
@@ -87,7 +89,7 @@ class PluginManagerImplTest {
                 .getLoggerConfig(PluginManagerImpl.class.getName());
         loggerConfig.addAppender(appender, null, null);
         try {
-            new PluginManagerImpl();
+            new PluginManagerImpl(mock(ShortcodeExpander.class));
         } finally {
             loggerConfig.removeAppender("PluginManagerImplTest-capture");
             appender.stop();

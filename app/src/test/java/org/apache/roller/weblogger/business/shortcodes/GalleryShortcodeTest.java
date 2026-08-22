@@ -18,20 +18,17 @@
 package org.apache.roller.weblogger.business.shortcodes;
 
 import java.util.Map;
-import java.util.function.Supplier;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -41,7 +38,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -54,7 +50,7 @@ class GalleryShortcodeTest {
 
     private static final String BASE = "http://example.com/roller/blog/mediaresource/";
 
-    private final GalleryShortcode shortcode = new GalleryShortcode();
+    private GalleryShortcode shortcode;
     private Weblog weblog;
     private WeblogEntry entry;
     private Weblogger weblogger;
@@ -84,6 +80,7 @@ class GalleryShortcodeTest {
         weblogger = mock(Weblogger.class);
         when(weblogger.getMediaFileManager()).thenReturn(mediaFileManager);
         when(weblogger.getUrlStrategy()).thenReturn(urls);
+        shortcode = new GalleryShortcode(weblogger);
     }
 
     private MediaFile image(String id, String name, int width, int height) {
@@ -98,15 +95,8 @@ class GalleryShortcodeTest {
         return file;
     }
 
-    private <T> T withWeblogger(Supplier<T> body) {
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            return body.get();
-        }
-    }
-
     private String render(Map<String, String> attributes) {
-        return withWeblogger(() -> shortcode.render(attributes, null, entry));
+        return (shortcode.render(attributes, null, entry));
     }
 
     // -------------------------------------------------------------- happy path
@@ -413,7 +403,7 @@ class GalleryShortcodeTest {
     void anEntryWithoutAWeblogIsLeftAsWritten() {
         entry.setWebsite(null);
         assertNull(render(Map.of("dir", "album")));
-        assertNull(withWeblogger(() -> shortcode.render(Map.of("dir", "album"), null, null)));
+        assertNull((shortcode.render(Map.of("dir", "album"), null, null)));
     }
 
     // ---------------------------------------------------------- via expander
@@ -422,7 +412,7 @@ class GalleryShortcodeTest {
     void theDefaultExpanderShipsWithTheGalleryShortcodeRegistered() {
         image("mf-1", "hawk.jpg", 1200, 800);
 
-        String rendered = withWeblogger(() -> ShortcodeExpander.defaultExpander()
+        String rendered = (ShortcodeExpander.builtIn(weblogger, mediaFileManager)
                 .expand(entry, "look [gallery dir=\"album\"] here"));
 
         assertTrue(rendered.contains("<div class=\"jgrid\">"), rendered);
@@ -435,7 +425,7 @@ class GalleryShortcodeTest {
     void anUnknownDirectoryLeavesTheShortcodeTextVisibleThroughTheExpander() throws Exception {
         when(mediaFileManager.getMediaFileDirectoryByName(weblog, "ghost")).thenReturn(null);
 
-        String rendered = withWeblogger(() -> ShortcodeExpander.defaultExpander()
+        String rendered = (ShortcodeExpander.builtIn(weblogger, mediaFileManager)
                 .expand(entry, "[gallery dir=\"ghost\"]"));
 
         assertEquals("[gallery dir=\"ghost\"]", rendered,

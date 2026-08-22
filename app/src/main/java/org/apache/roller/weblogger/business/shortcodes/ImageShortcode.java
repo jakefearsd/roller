@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
@@ -48,6 +47,17 @@ public class ImageShortcode implements ShortcodeHandler {
 
     /** The browser hint for how wide the image renders; themes show entry images full-column. */
     private static final String SIZES = "100vw";
+
+    private final Weblogger weblogger;
+
+    /**
+     * @param weblogger the tier whose media manager resolves the id and whose
+     *                  url strategy the rendered file is wrapped with; never
+     *                  dereferenced at construction, so a lazy proxy is fine
+     */
+    public ImageShortcode(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
 
     @Override
     public String getName() {
@@ -73,7 +83,6 @@ public class ImageShortcode implements ShortcodeHandler {
 
         MediaFileWrapper media;
         try {
-            Weblogger weblogger = WebloggerFactory.getWeblogger();
             MediaFile mediaFile = weblogger.getMediaFileManager().getMediaFile(id);
             if (mediaFile == null || !mediaFile.isImageFile()) {
                 log.debug("[image] shortcode id {} is not an image media file", id);

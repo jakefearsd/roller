@@ -23,13 +23,11 @@ import java.util.Map;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,7 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -527,12 +524,8 @@ class ShortcodeExpanderTest {
             WeblogEntry imageEntry = new WeblogEntry();
             imageEntry.setWebsite(weblog);
 
-            String out;
-            try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-                factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-                out = ShortcodeExpander.defaultExpander()
-                        .expand(imageEntry, "[image id=\"x\" alt=\"\"]");
-            }
+            String out = ShortcodeExpander.builtIn(weblogger, mediaFileManager)
+                    .expand(imageEntry, "[image id=\"x\" alt=\"\"]");
 
             assertTrue(out.contains("alt=\"\""),
                     "alt=\"\" in the raw shortcode text must parse through and be honoured "

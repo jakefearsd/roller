@@ -126,9 +126,9 @@ class SubscribeShortcodeTest {
 
     @Test
     void bothHandlersAreRegisteredInTheDefaultExpander() {
-        assertTrue(ShortcodeExpander.defaultExpander().cards().stream()
+        assertTrue(BuiltInExpanders.withMocks().cards().stream()
                 .anyMatch(c -> "contact".equals(c.name())));
-        assertTrue(ShortcodeExpander.defaultExpander().cards().stream()
+        assertTrue(BuiltInExpanders.withMocks().cards().stream()
                 .anyMatch(c -> "subscribe".equals(c.name())));
     }
 }

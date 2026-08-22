@@ -25,7 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -76,6 +76,17 @@ public class MapShortcode implements ShortcodeHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MapShortcode.class);
 
+    private final MediaFileManager mediaFiles;
+
+    /**
+     * @param mediaFiles the manager {@code [map auto=..]} resolves its
+     *                   directory through; never dereferenced at
+     *                   construction, so a lazy proxy is fine
+     */
+    public MapShortcode(MediaFileManager mediaFiles) {
+        this.mediaFiles = mediaFiles;
+    }
+
     @Override
     public String getName() {
         return "map";
@@ -97,7 +108,7 @@ public class MapShortcode implements ShortcodeHandler {
 
     @Override
     public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
-        List<MapPins.Pin> pins = resolvePins(attributes, body, content);
+        List<MapPins.Pin> pins = resolvePins(attributes, body, content, mediaFiles);
         if (pins == null) {
             return null;
         }
@@ -157,10 +168,10 @@ public class MapShortcode implements ShortcodeHandler {
      */
     @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     public static List<MapPins.Pin> resolvePins(Map<String, String> attributes,
-            String body, ShortcodeContext content) {
+            String body, ShortcodeContext content, MediaFileManager mediaFiles) {
         String auto = StringUtils.trimToNull(attributes.get("auto"));
         if (auto != null) {
-            return autoPins(auto, content);
+            return autoPins(auto, content, mediaFiles);
         }
         List<MapPins.Pin> pins = MapPins.parse(body);
         if (pins.isEmpty() && StringUtils.containsIgnoreCase(body, "[pin")) {
@@ -185,7 +196,7 @@ public class MapShortcode implements ShortcodeHandler {
      * construction. The collector returns null so nothing is rewritten; the
      * expanded text is discarded and only the pins are kept.
      */
-    public static List<MapPins.Pin> pinsInEntry(ShortcodeContext content) {
+    public static List<MapPins.Pin> pinsInEntry(ShortcodeContext content, MediaFileManager mediaFiles) {
         if (content == null || content.getRawText() == null) {
             return List.of();
         }
@@ -203,7 +214,7 @@ public class MapShortcode implements ShortcodeHandler {
 
             @Override
             public String render(Map<String, String> attributes, String body, ShortcodeContext c) {
-                List<MapPins.Pin> pins = resolvePins(attributes, body, c);
+                List<MapPins.Pin> pins = resolvePins(attributes, body, c, mediaFiles);
                 if (pins != null) {
                     collected.addAll(pins);
                 }
@@ -227,15 +238,15 @@ public class MapShortcode implements ShortcodeHandler {
      * {@link #resolvePins}.
      */
     @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
-    private static List<MapPins.Pin> autoPins(String directoryName, ShortcodeContext content) {
+    private static List<MapPins.Pin> autoPins(String directoryName, ShortcodeContext content,
+            MediaFileManager mediaFiles) {
         Weblog weblog = content == null ? null : content.getWeblog();
         if (weblog == null) {
             return null;
         }
         List<MapPins.Pin> pins;
         try {
-            MediaFileDirectory directory = WebloggerFactory.getWeblogger()
-                    .getMediaFileManager().getMediaFileDirectoryByName(weblog, directoryName);
+            MediaFileDirectory directory = mediaFiles.getMediaFileDirectoryByName(weblog, directoryName);
             if (directory == null) {
                 log.debug("[map] shortcode auto directory \"{}\" does not exist in weblog {}",
                         directoryName, weblog.getHandle());

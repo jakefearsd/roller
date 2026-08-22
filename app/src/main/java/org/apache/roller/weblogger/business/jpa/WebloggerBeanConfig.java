@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.business.jpa;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.ApiTokenManager;
 import org.apache.roller.weblogger.business.DatabaseProvider;
+import org.apache.roller.weblogger.business.EntryRenderer;
 import org.apache.roller.weblogger.business.EventManager;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.FileContentManagerImpl;
@@ -40,6 +41,7 @@ import org.apache.roller.weblogger.business.plugins.PluginManagerImpl;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.search.lucene.LuceneIndexManager;
+import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.themes.ThemeManagerImpl;
@@ -164,9 +166,25 @@ public class WebloggerBeanConfig {
         return new LuceneIndexManager(weblogger);
     }
 
+    /**
+     * The shortcode registry, built once with the tier's own collaborators.
+     * The facade is a lazy proxy here (the {@code Weblogger} bean depends on
+     * this one through the renderer, so a real reference would be a cycle);
+     * the handlers never dereference it at construction.
+     */
     @Bean
-    public PluginManager pluginManager() {
-        return new PluginManagerImpl();
+    public ShortcodeExpander shortcodeExpander(@Lazy Weblogger weblogger, MediaFileManager mediaFileManager) {
+        return ShortcodeExpander.builtIn(weblogger, mediaFileManager);
+    }
+
+    @Bean
+    public PluginManager pluginManager(ShortcodeExpander shortcodeExpander) {
+        return new PluginManagerImpl(shortcodeExpander);
+    }
+
+    @Bean
+    public EntryRenderer entryRenderer(ShortcodeExpander shortcodeExpander, PluginManager pluginManager) {
+        return new EntryRenderer(shortcodeExpander, pluginManager);
     }
 
     @Bean
@@ -198,7 +216,8 @@ public class WebloggerBeanConfig {
             WeblogManager weblogManager,
             WeblogEntryManager weblogEntryManager,
             URLStrategy urlStrategy,
-            VirtualHostRegistry virtualHostRegistry) throws WebloggerException {
+            VirtualHostRegistry virtualHostRegistry,
+            EntryRenderer entryRenderer) throws WebloggerException {
         return new JPAWebloggerImpl(
                 strategy,
                 indexManager,
@@ -217,6 +236,7 @@ public class WebloggerBeanConfig {
                 weblogManager,
                 weblogEntryManager,
                 urlStrategy,
-                virtualHostRegistry);
+                virtualHostRegistry,
+                entryRenderer);
     }
 }

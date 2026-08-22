@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.business;
 
 import org.apache.roller.weblogger.business.plugins.PluginManager;
+import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.mockito.Mockito;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
@@ -75,6 +76,14 @@ public final class MockWeblogger {
     private final FormSubmissionManager formSubmissionManager = mock(FormSubmissionManager.class);
     private final EventManager eventManager = mock(EventManager.class);
     private final UserTokenManager userTokenManager = mock(UserTokenManager.class);
+    /**
+     * A REAL renderer over the mocked collaborators, not a mock: rendering is a
+     * pure function of the expander (built over this facade and its media
+     * manager mock) and the plugin manager mock (whose empty answer means
+     * "no plugins"), so a controller or wrapper test that renders an entry
+     * gets real markdown/shortcode output without stubbing anything.
+     */
+    private final EntryRenderer entryRenderer;
 
     private int flushCount;
 
@@ -94,6 +103,9 @@ public final class MockWeblogger {
         when(weblogger.getFormSubmissionManager()).thenReturn(formSubmissionManager);
         when(weblogger.getEventManager()).thenReturn(eventManager);
         when(weblogger.getUserTokenManager()).thenReturn(userTokenManager);
+        entryRenderer = new EntryRenderer(
+                ShortcodeExpander.builtIn(weblogger, mediaFileManager), pluginManager);
+        when(weblogger.getEntryRenderer()).thenReturn(entryRenderer);
 
         // Count commits. A manager call that is never flushed is a change that
         // never reaches the database, and nothing else these tests can observe
@@ -106,6 +118,14 @@ public final class MockWeblogger {
 
     public URLStrategy getUrlStrategy() {
         return urlStrategy;
+    }
+
+    public EntryRenderer getEntryRenderer() {
+        return entryRenderer;
+    }
+
+    public EntryRenderer entryRenderer() {
+        return entryRenderer;
     }
 
     public URLStrategy urlStrategy() {

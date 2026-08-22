@@ -51,7 +51,7 @@ class ShortcodeCardTest {
 
     private static final String BUNDLE = "/ApplicationResources.properties";
 
-    private final List<ShortcodeCard> cards = ShortcodeExpander.defaultExpander().cards();
+    private final List<ShortcodeCard> cards = BuiltInExpanders.withMocks().cards();
 
     @Test
     void everyShippedShortcodeIsOfferedExactlyOnce() {

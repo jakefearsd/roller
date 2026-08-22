@@ -61,6 +61,7 @@ public abstract class WebloggerImpl implements Weblogger {
     // url strategy
     private final URLStrategy          urlStrategy;
     private final VirtualHostRegistry  virtualHostRegistry;
+    private final EntryRenderer        entryRenderer;
     
     // some simple attributes
     private final String version;
@@ -86,7 +87,8 @@ public abstract class WebloggerImpl implements Weblogger {
         WeblogManager        weblogManager,
         WeblogEntryManager   weblogEntryManager,
         URLStrategy          urlStrategy,
-        VirtualHostRegistry  virtualHostRegistry) throws WebloggerException {
+        VirtualHostRegistry  virtualHostRegistry,
+        EntryRenderer        entryRenderer) throws WebloggerException {
 
         this.indexManager        = indexManager;
         this.mediaFileManager    = mediaFileManager;
@@ -105,6 +107,7 @@ public abstract class WebloggerImpl implements Weblogger {
         this.weblogEntryManager  = weblogEntryManager;
         this.urlStrategy         = urlStrategy;
         this.virtualHostRegistry = virtualHostRegistry;
+        this.entryRenderer       = entryRenderer;
 
         Properties props = new Properties();
         // WebloggerImpl.class, not getClass(): this class is abstract and
@@ -299,6 +302,11 @@ public abstract class WebloggerImpl implements Weblogger {
     @Override
     public VirtualHostRegistry getVirtualHostRegistry() {
         return virtualHostRegistry;
+    }
+
+    @Override
+    public EntryRenderer getEntryRenderer() {
+        return entryRenderer;
     }
 	
     /**

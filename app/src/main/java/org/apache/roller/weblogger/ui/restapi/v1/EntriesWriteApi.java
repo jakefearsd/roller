@@ -212,7 +212,7 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
     /**
      * Sets the scratch entry's text and renders it through the real
      * pipeline -- shortcode expansion, then Markdown, then sanitization --
-     * exactly as {@code WeblogEntry.getTransformedText()} does for a
+     * exactly as {@code EntryRenderer.transformedText()} does for a
      * published entry, so a preview cannot disagree with what gets
      * published. A missing or blank {@code text} renders an empty draft
      * rather than failing: previewing a blank editor is a normal moment, not
@@ -225,7 +225,7 @@ public class EntriesWriteApi extends BaseApiController implements UISecurityEnfo
         // saveWeblogEntry -- a future change adding either here would
         // silently persist preview text over the stored entry.
         entry.setText(body == null || body.text() == null ? "" : body.text());
-        return new EntryDtos.PreviewView(entry.getTransformedText());
+        return new EntryDtos.PreviewView(weblogger.getEntryRenderer().transformedText(entry));
     }
 
     /**

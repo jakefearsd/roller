@@ -229,22 +229,22 @@ public final class WeblogEntryWrapper {
 
 
     public String getTransformedText() {
-        return this.pojo.getTransformedText();
+        return weblogger.getEntryRenderer().transformedText(this.pojo);
     }
     
     
     public String getTransformedSummary() {
-        return this.pojo.getTransformedSummary();
+        return weblogger.getEntryRenderer().transformedSummary(this.pojo);
     }
     
     
     public String displayContent(String readMoreLink) {
-        return this.pojo.displayContent(readMoreLink);
+        return weblogger.getEntryRenderer().displayContent(this.pojo, readMoreLink);
     }
     
     
     public String getDisplayContent() {
-        return this.pojo.getDisplayContent();
+        return weblogger.getEntryRenderer().displayContent(this.pojo, null);
     }
 
 	public String getSearchDescription() {

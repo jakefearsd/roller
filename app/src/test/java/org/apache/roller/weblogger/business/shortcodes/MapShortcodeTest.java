@@ -18,21 +18,18 @@
 package org.apache.roller.weblogger.business.shortcodes;
 
 import java.util.Map;
-import java.util.function.Supplier;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -43,7 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -55,7 +51,7 @@ import static org.mockito.Mockito.when;
  */
 class MapShortcodeTest {
 
-    private final MapShortcode shortcode = new MapShortcode();
+    private MapShortcode shortcode;
     private Weblog weblog;
     private WeblogEntry entry;
     private Weblogger weblogger;
@@ -80,6 +76,7 @@ class MapShortcodeTest {
 
         weblogger = mock(Weblogger.class);
         when(weblogger.getMediaFileManager()).thenReturn(mediaFileManager);
+        shortcode = new MapShortcode(mediaFileManager);
     }
 
     private MediaFile photo(String name, Double lat, Double lng) {
@@ -94,15 +91,8 @@ class MapShortcodeTest {
         return file;
     }
 
-    private <T> T withWeblogger(Supplier<T> body) {
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            return body.get();
-        }
-    }
-
     private String render(Map<String, String> attributes, String body) {
-        return withWeblogger(() -> shortcode.render(attributes, body, entry));
+        return (shortcode.render(attributes, body, entry));
     }
 
     // ------------------------------------------------------------ manual pins
@@ -263,11 +253,11 @@ class MapShortcodeTest {
 
     @Test
     void aNullEntryRendersNoCenterAndNoAutoMap() {
-        assertNull(withWeblogger(() -> shortcode.render(Map.of(), null, null)));
-        assertNull(withWeblogger(() -> shortcode.render(
+        assertNull((shortcode.render(Map.of(), null, null)));
+        assertNull((shortcode.render(
                 Map.of("auto", "trip"), null, null)));
         // manual pins need no entry context at all
-        String html = withWeblogger(() -> shortcode.render(
+        String html = (shortcode.render(
                 Map.of(), "[pin lat=\"1\" lng=\"2\"]", null));
         assertTrue(html.contains("data-pins"), html);
     }
@@ -370,7 +360,7 @@ class MapShortcodeTest {
 
     @Test
     void theDefaultExpanderShipsWithTheMapShortcodeRegistered() {
-        String rendered = withWeblogger(() -> ShortcodeExpander.defaultExpander()
+        String rendered = (ShortcodeExpander.builtIn(weblogger, mediaFileManager)
                 .expand(entry, "go [map][pin lat=\"1\" lng=\"2\" label=\"X\"][/map] now"));
 
         assertTrue(rendered.contains("<div class=\"travel-map\""), rendered);
@@ -382,7 +372,7 @@ class MapShortcodeTest {
 
     @Test
     void anUnrenderableMapLeavesTheShortcodeTextVisibleThroughTheExpander() {
-        String rendered = withWeblogger(() -> ShortcodeExpander.defaultExpander()
+        String rendered = (ShortcodeExpander.builtIn(weblogger, mediaFileManager)
                 .expand(entry, "[map auto=\"trip\"]"));
 
         assertEquals("[map auto=\"trip\"]", rendered,

@@ -45,10 +45,16 @@ public class PluginManagerImpl implements PluginManager {
     private static final Map<String, Class<? extends WeblogEntryPlugin>> mPagePlugins = new LinkedHashMap<>();
 
 
+    private final ShortcodeExpander expander;
+
     /**
-     * Creates a new instance of PluginManagerImpl
+     * @param expander the shortcode registry the business render seam expands
+     *                 with -- the same instance {@code EntryRenderer} uses, so
+     *                 the two render paths cannot drift on which shortcodes
+     *                 exist
      */
-    public PluginManagerImpl() {
+    public PluginManagerImpl(ShortcodeExpander expander) {
+        this.expander = expander;
         // load weblog entry plugins
         loadPagePluginClasses();
     }
@@ -104,10 +110,10 @@ public class PluginManagerImpl implements PluginManager {
         // Shortcodes are NOT opt-in the way named plugins are: they expand
         // unconditionally in every render path, before sanitization
         // (see docs/superpowers/plans/2026-08-01-stage2-wave1-media-seo.md).
-        ret = ShortcodeExpander.defaultExpander().expand(entry, ret);
+        ret = expander.expand(entry, ret);
 
         // ...and markdown converts after them, so this seam matches
-        // WeblogEntry.render() exactly. Every entry is markdown; leaving one of
+        // EntryRenderer exactly. Every entry is markdown; leaving one of
         // the two render seams behind is precisely the drift the shared
         // shortcode parsers exist to prevent.
         ret = MarkdownRenderer.render(ret);

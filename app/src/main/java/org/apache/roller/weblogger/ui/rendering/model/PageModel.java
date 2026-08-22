@@ -38,6 +38,7 @@ import org.apache.roller.weblogger.pojos.wrapper.MediaFileWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.ThemeTemplateWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogCategoryWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
+import org.apache.roller.weblogger.pojos.wrapper.WeblogPageWrapper;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesDayPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesLatestPager;
@@ -242,9 +243,15 @@ public class PageModel implements Model {
     
     /**
      * The static page being rendered, or null on every other weblog view.
+     *
+     * <p>A {@link WeblogPageWrapper} rather than the raw pojo since the DI
+     * wave: the page's rendered content comes from the tier's
+     * {@code EntryRenderer}, which the wrapper reaches through the facade it
+     * holds -- the entity itself no longer renders.
      */
-    public WeblogPage getPage() {
-        return pageRequest.getWeblogPageContent();
+    public WeblogPageWrapper getPage() {
+        WeblogPage page = pageRequest.getWeblogPageContent();
+        return page == null ? null : WeblogPageWrapper.wrap(page, urlStrategy, weblogger);
     }
 
 
@@ -252,12 +259,12 @@ public class PageModel implements Model {
      * Resolves {@link #getPage()}'s {@code ogImageId} to its
      * {@link MediaFileWrapper}, or null if the page has no Open Graph image
      * set, isn't being rendered, or the id no longer resolves (the media
-     * file was deleted independently). {@link WeblogPage} has no pojo
-     * wrapper of its own -- unlike {@link WeblogEntryWrapper#getOgImage()},
-     * which this mirrors -- so the resolution lives here instead.
+     * file was deleted independently). Mirrors
+     * {@link WeblogEntryWrapper#getOgImage()}; lives here rather than on
+     * {@link WeblogPageWrapper} because it predates that wrapper.
      */
     public MediaFileWrapper getPageOgImage() {
-        WeblogPage page = getPage();
+        WeblogPage page = pageRequest.getWeblogPageContent();
         if (page == null || page.getOgImageId() == null) {
             return null;
         }

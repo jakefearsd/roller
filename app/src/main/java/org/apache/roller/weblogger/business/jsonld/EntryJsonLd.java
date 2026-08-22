@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.weblogger.business.shortcodes.FaqBlocks;
+import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.shortcodes.MapPins;
 import org.apache.roller.weblogger.business.shortcodes.MapShortcode;
 import org.apache.roller.weblogger.pojos.JsonLdType;
@@ -125,9 +126,12 @@ public final class EntryJsonLd {
      * @param description resolved description, RAW text; blank means absent
      * @param imageUrl    resolved absolute image URL; blank means absent
      * @param url         resolved canonical URL; blank means absent
+     * @param mediaFiles  the media manager a {@code [map auto=..]} resolves its
+     *                    directory through, so the itinerary is exactly the
+     *                    map readers see
      */
     public static String build(WeblogEntry entry, String name, String description,
-            String imageUrl, String url) {
+            String imageUrl, String url, MediaFileManager mediaFiles) {
 
         JsonLdType type = entry == null ? null : entry.getJsonLdType();
         if (type == null || type == JsonLdType.BLOG_POSTING) {
@@ -149,7 +153,7 @@ public final class EntryJsonLd {
 
         switch (type) {
             case TOURIST_ATTRACTION -> put(node, "geo", geoOf(entry));
-            case TOURIST_TRIP -> put(node, "itinerary", itineraryOf(entry));
+            case TOURIST_TRIP -> put(node, "itinerary", itineraryOf(entry, mediaFiles));
             case EVENT -> {
                 if (!addEvent(node, entry)) {
                     return null;
@@ -219,8 +223,8 @@ public final class EntryJsonLd {
      * omission.
      */
     @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
-    private static Map<String, Object> itineraryOf(WeblogEntry entry) {
-        List<MapPins.Pin> pins = MapShortcode.pinsInEntry(entry);
+    private static Map<String, Object> itineraryOf(WeblogEntry entry, MediaFileManager mediaFiles) {
+        List<MapPins.Pin> pins = MapShortcode.pinsInEntry(entry, mediaFiles);
         if (pins.isEmpty()) {
             return null;
         }

@@ -62,6 +62,11 @@ class WeblogEntryMarkdownRenderingTest {
         TestUtils.endSession(true);
     }
 
+    /** The tier's renderer -- the entity no longer renders itself. */
+    private static EntryRenderer renderer() {
+        return WebloggerFactory.getWeblogger().getEntryRenderer();
+    }
+
     private WeblogEntry entry(String text) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(
                 "md-" + Long.toString(System.nanoTime(), 36), weblog, user);
@@ -76,7 +81,7 @@ class WeblogEntryMarkdownRenderingTest {
     @Test
     void everyEntryIsMarkdown() throws Exception {
         // No flag, no opt-in, no second format: markdown is what an entry is.
-        String rendered = entry("## Day one\n\nA **long** drive.\n").getTransformedText();
+        String rendered = renderer().transformedText(entry("## Day one\n\nA **long** drive.\n"));
 
         assertTrue(rendered.contains("<h2>Day one</h2>"), rendered);
         assertTrue(rendered.contains("<strong>long</strong>"), rendered);
@@ -89,8 +94,7 @@ class WeblogEntryMarkdownRenderingTest {
         // Markdown being mandatory does not mean HTML is impossible: raw HTML
         // passes through the parser untouched, which is what lets an author
         // paste an embed snippet and what lets the shortcodes emit markup.
-        String rendered = entry("Before\n\n<div class=\"embed\">kept</div>\n\nAfter")
-                .getTransformedText();
+        String rendered = renderer().transformedText(entry("Before\n\n<div class=\"embed\">kept</div>\n\nAfter"));
 
         assertTrue(rendered.contains("<div class=\"embed\">kept</div>"), rendered);
         assertFalse(rendered.contains("&lt;div"), rendered);
@@ -112,7 +116,7 @@ class WeblogEntryMarkdownRenderingTest {
         TestUtils.endSession(true);
         WeblogEntry entry = entry("> Notes:\n>\n> - first\n> - second\n\n[image id=\""
                         + imageId + "\"]\n");
-        String rendered = entry.getTransformedText();
+        String rendered = renderer().transformedText(entry);
 
         assertTrue(rendered.contains("<blockquote>"), "markdown ran: " + rendered);
         assertTrue(rendered.contains("<li>first</li>"), "and produced the list: " + rendered);
@@ -128,7 +132,7 @@ class WeblogEntryMarkdownRenderingTest {
         // commonmark passes raw HTML through by design, so the sanitizer is
         // the boundary -- and it runs last, after markdown and shortcodes.
         WeblogEntry entry = entry("Careful now\n\n<script>alert(1)</script>\n");
-        String rendered = entry.getTransformedText();
+        String rendered = renderer().transformedText(entry);
         assertFalse(rendered.contains("<script"),
                 "the sanitizer must strip script from markdown output too: " + rendered);
     }
@@ -137,9 +141,9 @@ class WeblogEntryMarkdownRenderingTest {
     void theSummaryTakesTheSamePath() throws Exception {
         WeblogEntry entry = entry("unused");
         entry.setSummary("A **bold** summary.");
-        assertTrue(entry.getTransformedSummary().contains("<strong>bold</strong>"),
-                "getTransformedSummary must honour the flag too: "
-                        + entry.getTransformedSummary());
+        assertTrue(renderer().transformedSummary(entry).contains("<strong>bold</strong>"),
+                "transformedSummary must honour the flag too: "
+                        + renderer().transformedSummary(entry));
     }
 
 }

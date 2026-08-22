@@ -93,7 +93,7 @@ class ContactShortcodeTest {
 
     @Test
     void isRegisteredInTheDefaultExpander() {
-        assertTrue(ShortcodeExpander.defaultExpander().cards().stream()
+        assertTrue(BuiltInExpanders.withMocks().cards().stream()
                 .anyMatch(c -> "contact".equals(c.name())));
     }
 }

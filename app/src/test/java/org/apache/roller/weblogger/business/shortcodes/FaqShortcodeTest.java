@@ -96,7 +96,7 @@ class FaqShortcodeTest {
 
     @Test
     void theDefaultExpanderShipsWithTheFaqShortcodeRegistered() {
-        String rendered = ShortcodeExpander.defaultExpander().expand(new WeblogEntry(),
+        String rendered = BuiltInExpanders.withMocks().expand(new WeblogEntry(),
                 "intro [faq][q]Q1[/q][a]A1[/a][/faq] outro");
 
         assertEquals("intro <dl class=\"faq\">\n<dt>Q1</dt>\n<dd>A1</dd>\n</dl> outro",
@@ -105,7 +105,7 @@ class FaqShortcodeTest {
 
     @Test
     void aMalformedFaqLeavesTheShortcodeTextVisibleThroughTheExpander() {
-        String rendered = ShortcodeExpander.defaultExpander().expand(new WeblogEntry(),
+        String rendered = BuiltInExpanders.withMocks().expand(new WeblogEntry(),
                 "[faq][q]dangling question[/q][/faq]");
 
         assertEquals("[faq][q]dangling question[/q][/faq]", rendered,

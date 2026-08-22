@@ -128,6 +128,13 @@ public interface Weblogger {
      * of the tier so it resolves from the first request.
      */
     VirtualHostRegistry getVirtualHostRegistry();
+
+    /**
+     * The content pipeline (entry plugins, shortcodes, markdown, sanitization)
+     * as a service; what the template wrappers render entry and page text
+     * through.
+     */
+    EntryRenderer getEntryRenderer();
     
     /**
      * Flush object states.

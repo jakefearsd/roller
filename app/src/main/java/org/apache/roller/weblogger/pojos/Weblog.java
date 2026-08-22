@@ -25,11 +25,9 @@ import java.util.*;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.plugins.entry.WeblogEntryPlugin;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -77,7 +75,6 @@ public class Weblog implements Serializable {
     private String  newsletterListUuid = null;
     private String  customDomain     = null;
 
-    private transient Map<String, WeblogEntryPlugin> initializedPlugins = null;
 
     private transient List<WeblogCategory> weblogCategories = new ArrayList<>();
 
@@ -498,21 +495,6 @@ public class Weblog implements Serializable {
     }
     
     
-    /**
-     * Get initialized plugins for use during rendering process.
-     */
-    public Map<String, WeblogEntryPlugin> getInitializedPlugins() {
-        if (initializedPlugins == null) {
-            try {
-                Weblogger roller = WebloggerFactory.getWeblogger();
-                PluginManager ppmgr = roller.getPluginManager();
-                initializedPlugins = ppmgr.getWeblogEntryPlugins(this);
-            } catch (Exception e) {
-                log.error("ERROR: initializing plugins");
-            }
-        }
-        return initializedPlugins;
-    }
     
     /** 
      * Get weblog entry specified by anchor or null if no such entry exists.

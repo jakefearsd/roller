@@ -44,6 +44,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class EntryJsonLdTest {
 
+    /**
+     * The media manager a [map auto=..] would resolve its directory through;
+     * inert here, since every itinerary in this class is written with inline
+     * [pin] tags.
+     */
+    private static final org.apache.roller.weblogger.business.MediaFileManager MEDIA =
+            org.mockito.Mockito.mock(org.apache.roller.weblogger.business.MediaFileManager.class);
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static final String NAME = "Eiffel Tower";
@@ -59,7 +67,7 @@ class EntryJsonLdTest {
     }
 
     private static JsonNode build(WeblogEntry entry) {
-        String json = EntryJsonLd.build(entry, NAME, DESCRIPTION, IMAGE, URL);
+        String json = EntryJsonLd.build(entry, NAME, DESCRIPTION, IMAGE, URL, MEDIA);
         assertTrue(json != null, "expected a typed block for " + entry.getJsonLdType());
         return MAPPER.readTree(json);
     }
@@ -68,7 +76,7 @@ class EntryJsonLdTest {
 
     @Test
     void anEntryWithNoTypeGetsNoTypedBlock() {
-        assertNull(EntryJsonLd.build(entry(null), NAME, DESCRIPTION, IMAGE, URL),
+        assertNull(EntryJsonLd.build(entry(null), NAME, DESCRIPTION, IMAGE, URL, MEDIA),
                 "a null type is what every entry written before this field existed"
                         + " carries; it must keep its BlogPosting");
     }
@@ -80,12 +88,12 @@ class EntryJsonLdTest {
         // If BLOG_POSTING emitted anything, every re-saved entry would suddenly
         // sprout a second block duplicating the BlogPosting one.
         assertNull(EntryJsonLd.build(entry(JsonLdType.BLOG_POSTING),
-                NAME, DESCRIPTION, IMAGE, URL));
+                NAME, DESCRIPTION, IMAGE, URL, MEDIA));
     }
 
     @Test
     void aNullEntryIsNotAnError() {
-        assertNull(EntryJsonLd.build(null, NAME, DESCRIPTION, IMAGE, URL));
+        assertNull(EntryJsonLd.build(null, NAME, DESCRIPTION, IMAGE, URL, MEDIA));
     }
 
     // ---------------------------------------------------- shared properties
@@ -108,7 +116,7 @@ class EntryJsonLdTest {
     @Test
     void blankSharedValuesAreOmittedRatherThanEmitted() {
         String json = EntryJsonLd.build(entry(JsonLdType.TOURIST_ATTRACTION),
-                NAME, "  ", "", null);
+                NAME, "  ", "", null, MEDIA);
         JsonNode node = MAPPER.readTree(json);
 
         assertEquals(NAME, node.path("name").asString());
@@ -125,7 +133,7 @@ class EntryJsonLdTest {
         // point. A quote must not end the JSON string and "</script>" must not
         // end the element the JSON is emitted into.
         String json = EntryJsonLd.build(entry(JsonLdType.TOURIST_ATTRACTION),
-                "Chez \"Nous\"", "Ends with </script> and a \\ backslash", IMAGE, URL);
+                "Chez \"Nous\"", "Ends with </script> and a \\ backslash", IMAGE, URL, MEDIA);
 
         assertFalse(json.contains("</script>"),
                 "the forward slash must be escaped so the block cannot self-terminate: " + json);
@@ -280,7 +288,7 @@ class EntryJsonLdTest {
         WeblogEntry entry = entry(JsonLdType.EVENT);
         entry.setEventLocation("Champ de Mars");
 
-        assertNull(EntryJsonLd.build(entry, NAME, DESCRIPTION, IMAGE, URL));
+        assertNull(EntryJsonLd.build(entry, NAME, DESCRIPTION, IMAGE, URL, MEDIA));
     }
 
     // -------------------------------------------------------------- FAQPage
@@ -327,14 +335,14 @@ class EntryJsonLdTest {
         // with an empty mainEntity is invalid.
         WeblogEntry noBlock = entry(JsonLdType.FAQ_PAGE);
         noBlock.setText("Just prose, no FAQ at all.");
-        assertNull(EntryJsonLd.build(noBlock, NAME, DESCRIPTION, IMAGE, URL));
+        assertNull(EntryJsonLd.build(noBlock, NAME, DESCRIPTION, IMAGE, URL, MEDIA));
 
         WeblogEntry malformed = entry(JsonLdType.FAQ_PAGE);
         malformed.setText("[faq][q]A question with no answer[/q][/faq]");
-        assertNull(EntryJsonLd.build(malformed, NAME, DESCRIPTION, IMAGE, URL),
+        assertNull(EntryJsonLd.build(malformed, NAME, DESCRIPTION, IMAGE, URL, MEDIA),
                 "a half-written FAQ must not become half a FAQPage");
 
         WeblogEntry noText = entry(JsonLdType.FAQ_PAGE);
-        assertNull(EntryJsonLd.build(noText, NAME, DESCRIPTION, IMAGE, URL));
+        assertNull(EntryJsonLd.build(noText, NAME, DESCRIPTION, IMAGE, URL, MEDIA));
     }
 }

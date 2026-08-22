@@ -787,8 +787,17 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
      */
     @Override
     public String createAnchor(WeblogEntry entry) throws WebloggerException {
+        // Word separator for generated anchors. Read per call rather than
+        // cached in a static: the setting is runtime-settable, and a value
+        // latched at class load could not see a change made from the site
+        // settings. It only affects anchors generated from here on -- anchors
+        // already stored on entries keep whichever separator was in force when
+        // they were created, which is what keeps existing permalinks working
+        // across a change.
+        char separator = WebloggerRuntimeConfig
+                .getBooleanProperty("weblogentry.title.useUnderscoreSeparator") ? '_' : '-';
         // Check for uniqueness of anchor
-        String base = entry.createAnchorBase();
+        String base = entry.createAnchorBase(separator);
         String name = base;
         int count = 0;
         

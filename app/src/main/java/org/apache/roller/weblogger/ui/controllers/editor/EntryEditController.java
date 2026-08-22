@@ -38,7 +38,6 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.ListmonkClient;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
-import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -234,7 +233,7 @@ public class EntryEditController extends BaseController {
         entry.setText(text == null ? "" : text);
         return ResponseEntity.ok()
                 .contentType(MediaType.valueOf("text/html;charset=UTF-8"))
-                .body(entry.getTransformedText());
+                .body(weblogger.getEntryRenderer().transformedText(entry));
     }
 
     /**
@@ -479,7 +478,7 @@ public class EntryEditController extends BaseController {
     /**
      * The actual send, isolated so {@link #entryEditSendNewsletter} reads as
      * the guard sequence it is. Builds the campaign HTML from the same
-     * theme-independent seam feeds use ({@code getTransformedText()}) so the
+     * theme-independent seam feeds use ({@code EntryRenderer.transformedText()}) so the
      * newsletter body matches what the entry renders as, escapes only the
      * title (the body is already-sanitized HTML by the time it reaches
      * here), and stamps {@code newsletterSentAt} strictly after
@@ -498,7 +497,7 @@ public class EntryEditController extends BaseController {
     private void sendNewsletterCampaign(WeblogEntry entry, String listUuid, ListmonkClient client,
                                         Model model, HttpServletRequest request) {
         String html = "<h1>" + StringEscapeUtils.escapeHtml4(entry.getTitle()) + "</h1>\n"
-                + entry.getTransformedText()
+                + weblogger.getEntryRenderer().transformedText(entry)
                 + "\n<p><a href=\"" + entry.getPermalink() + "\">Read on the site</a></p>";
         try {
             client.sendCampaign(listUuid, entry.getTitle(), html);
@@ -778,7 +777,7 @@ public class EntryEditController extends BaseController {
         // The editor's insert menu, generated from the shortcode registry
         // itself so it can never advertise a shortcode that does not render,
         // or omit one that does.
-        model.addAttribute("shortcodeCards", ShortcodeExpander.defaultExpander().cards());
+        model.addAttribute("shortcodeCards", weblogger.getEntryRenderer().shortcodeCards());
 
         if (entry.getId() != null) {
             try {
