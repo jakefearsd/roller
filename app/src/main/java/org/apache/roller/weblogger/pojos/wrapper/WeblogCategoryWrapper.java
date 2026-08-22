@@ -24,6 +24,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
+import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 
 
 /**
@@ -82,15 +83,31 @@ public final class WeblogCategoryWrapper {
         return WeblogWrapper.wrap(this.pojo.getWeblog(), urlStrategy, weblogger);
     }
 
+    /**
+     * Retrieve all weblog entries in this category.
+     *
+     * @param publishedOnly True if desired to return only published entries;
+     *                      false is the "all, trash included" form (see
+     *                      {@link WeblogEntrySearchCriteria#forCategory})
+     */
     public List<WeblogEntryWrapper> retrieveWeblogEntries(boolean publishedOnly) throws WebloggerException {
-        return this.pojo.retrieveWeblogEntries(publishedOnly).stream()
+        return weblogger.getWeblogEntryManager()
+                .getWeblogEntries(WeblogEntrySearchCriteria.forCategory(this.pojo, publishedOnly))
+                .stream()
                 .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy, weblogger))
                 .collect(Collectors.toList());
     }
     
     
+    /**
+     * Returns true if category is in use.
+     */
     public boolean isInUse() {
-        return this.pojo.isInUse();
+        try {
+            return weblogger.getWeblogEntryManager().isWeblogCategoryInUse(this.pojo);
+        } catch (WebloggerException e) {
+            throw new RuntimeException(e);
+        }
     }
     
 }

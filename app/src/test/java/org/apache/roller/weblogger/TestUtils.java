@@ -46,6 +46,8 @@ import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.util.RollerMessages;
+import org.apache.roller.weblogger.util.Utilities;
+import org.apache.roller.weblogger.WebloggerException;
 
 /**
  * Utility class for unit test classes.
@@ -219,7 +221,9 @@ public final class TestUtils {
 
         // remove all permissions
         UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
-        mgr.revokeWeblogPermission(perm.getWeblog(), perm.getUser(),
+        Weblog weblog = WebloggerFactory.getWeblogger().getWeblogManager()
+                .getWeblogByHandle(perm.getObjectId(), null);
+        mgr.revokeWeblogPermission(weblog, mgr.getUserByUserName(perm.getUserName()),
                 WeblogPermission.ALL_ACTIONS);
 
         // flush to db
@@ -473,5 +477,25 @@ public final class TestUtils {
 
     public void testNothing() {
         // TODO: remove this method
+    }
+
+    /**
+     * The weblog's category of that name, through the entry manager. This is
+     * what {@code Weblog.getWeblogCategory(name)} used to do from inside the
+     * entity (plan Task 16 moved it); fixtures ask the manager.
+     */
+    public static WeblogCategory categoryNamed(Weblog weblog, String name) throws WebloggerException {
+        return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+                .getWeblogCategoryByName(weblog, name);
+    }
+
+    /**
+     * Replace a media file's tags from a space-separated string, through the
+     * media manager -- what {@code MediaFile.setTagsAsString} used to do from
+     * inside the entity (plan Task 16 moved the write to the manager).
+     */
+    public static void setMediaTags(MediaFile file, String tags) throws WebloggerException {
+        WebloggerFactory.getWeblogger().getMediaFileManager()
+                .updateTags(file, Utilities.splitStringAsTags(tags));
     }
 }

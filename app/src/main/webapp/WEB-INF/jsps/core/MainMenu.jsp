@@ -104,7 +104,7 @@
                     <a href="${editEntries}" class="btn btn-secondary">
                         <span class="bi bi-list" aria-hidden="true"></span>
                         <spring:message code="yourWebsites.editEntries"/>
-                        <span class="badge bg-secondary">${perms.weblog.entryCount}</span>
+                        <span class="badge bg-secondary">${perms.entryCount}</span>
                     </a>
 
                 </c:if>

@@ -18,6 +18,8 @@
 
 package org.apache.roller.weblogger.pojos.wrapper;
 
+import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -28,7 +30,12 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.TagStat;
+import org.apache.roller.weblogger.pojos.WeblogCategory;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.stream.Collectors;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
@@ -39,10 +46,15 @@ import org.apache.roller.weblogger.pojos.Weblog;
  * Pojo safety wrapper for Weblog objects.
  */
 public final class WeblogWrapper {
-    
+
+    private static final Logger log = LoggerFactory.getLogger(WeblogWrapper.class);
+
+    /** The template API's cap on a recent-entries request, whatever length was asked for. */
+    private static final int MAX_ENTRIES = 100;
+
     // keep a reference to the wrapped pojo
     private final Weblog pojo;
-    
+
     // url strategy to use for any url building
     private final URLStrategy urlStrategy;
 
@@ -111,8 +123,19 @@ public final class WeblogWrapper {
         return HTMLSanitizer.conditionallySanitizeText(this.pojo.getTagline());
     }
 
+    /**
+     * The weblog's creator, resolved by name through the tier this wrapper
+     * was given; null (never an exception) when the name no longer resolves,
+     * so a byline cannot break a page.
+     */
     public UserWrapper getCreator() {
-        return UserWrapper.wrap(this.pojo.getCreator());
+        try {
+            return UserWrapper.wrap(weblogger.getUserManager()
+                    .getUserByUserName(this.pojo.getCreatorUserName()));
+        } catch (Exception e) {
+            log.error("ERROR fetching user object for username: {}", this.pojo.getCreatorUserName(), e);
+            return null;
+        }
     }
 
     /**
@@ -284,8 +307,17 @@ public final class WeblogWrapper {
     }
     
     
+    /**
+     * Get weblog entry specified by anchor or null if no such entry exists.
+     */
     public WeblogEntryWrapper getWeblogEntry(String anchor) {
-        return WeblogEntryWrapper.wrap(this.pojo.getWeblogEntry(anchor), urlStrategy, weblogger);
+        WeblogEntry entry = null;
+        try {
+            entry = weblogger.getWeblogEntryManager().getWeblogEntryByAnchor(this.pojo, anchor);
+        } catch (WebloggerException e) {
+            log.error("ERROR: getting entry by anchor");
+        }
+        return WeblogEntryWrapper.wrap(entry, urlStrategy, weblogger);
     }
 
 
@@ -296,31 +328,113 @@ public final class WeblogWrapper {
     }
 
     public WeblogCategoryWrapper getWeblogCategory(String categoryName) {
-        return WeblogCategoryWrapper.wrap(this.pojo.getWeblogCategory(categoryName), urlStrategy, weblogger);
+        WeblogCategory category = null;
+        try {
+            if (categoryName != null && !"nil".equals(categoryName)) {
+                category = weblogger.getWeblogEntryManager()
+                        .getWeblogCategoryByName(this.pojo, categoryName);
+            } else if (!this.pojo.getWeblogCategories().isEmpty()) {
+                // Same "first category found" fallback saveWeblogEntry uses, and
+                // the same reason for the guard: this is reachable from a
+                // template, where an unchecked NoSuchElementException escapes the
+                // catch below and takes the whole render with it. Returning null
+                // is what every other failure here already does.
+                category = this.pojo.getWeblogCategories().getFirst();
+            }
+        } catch (WebloggerException e) {
+            log.error("ERROR: fetching category: {}", categoryName, e);
+        }
+        return WeblogCategoryWrapper.wrap(category, urlStrategy, weblogger);
     }
 
     
+    /**
+     * Get up to 100 most recent published entries in weblog.
+     * @param cat Category name or null (or "nil") for no category restriction
+     * @param length Max entries to return (1-100)
+     */
     public List<WeblogEntryWrapper> getRecentWeblogEntries(String cat, int length) {
-        return this.pojo.getRecentWeblogEntries(cat, length).stream()
-                .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy, weblogger))
-                .collect(Collectors.toList());
+        if (cat != null && "nil".equals(cat)) {
+            cat = null;
+        }
+        WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
+        wesc.setCatName(cat);
+        return recentEntries(wesc, length);
     }
     
     
+    /**
+     * Get up to 100 most recent published entries in weblog.
+     * @param tag Blog entry tag to query by, or null (or "nil") for any
+     * @param length Max entries to return (1-100)
+     */
     public List<WeblogEntryWrapper> getRecentWeblogEntriesByTag(String tag, int length) {
-        return this.pojo.getRecentWeblogEntriesByTag(tag, length).stream()
-                .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy, weblogger))
-                .collect(Collectors.toList());
+        if (tag != null && "nil".equals(tag)) {
+            tag = null;
+        }
+        WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
+        wesc.setTags(tag != null ? List.of(tag) : Collections.emptyList());
+        return recentEntries(wesc, length);
+    }
+
+    /**
+     * The template API's recent-entries contract: published only, at most
+     * {@link #MAX_ENTRIES} however many were asked for, nothing for a
+     * non-positive length, and an empty list (logged) rather than an exception
+     * when the query fails -- a sidebar must not take the page down.
+     */
+    private List<WeblogEntryWrapper> recentEntries(WeblogEntrySearchCriteria wesc, int length) {
+        if (length > MAX_ENTRIES) {
+            length = MAX_ENTRIES;
+        }
+        if (length < 1) {
+            return Collections.emptyList();
+        }
+        try {
+            wesc.setWeblog(this.pojo);
+            wesc.setStatus(WeblogEntry.PubStatus.PUBLISHED);
+            wesc.setMaxResults(length);
+            return weblogger.getWeblogEntryManager().getWeblogEntries(wesc).stream()
+                    .map(entry -> WeblogEntryWrapper.wrap(entry, urlStrategy, weblogger))
+                    .collect(Collectors.toList());
+        } catch (WebloggerException e) {
+            log.error("ERROR: getting recent entries", e);
+        }
+        return Collections.emptyList();
     }
     
     
-    public List<TagStat> getPopularTags(int sinceDays,int length) {
-        return this.pojo.getPopularTags(sinceDays,length);
+    /**
+     * Get a list of TagStats objects for the most popular tags
+     *
+     * @param sinceDays Number of days into past (or -1 for all days)
+     * @param length    Max number of tags to return.
+     */
+    public List<TagStat> getPopularTags(int sinceDays, int length) {
+        Date startDate = null;
+        if (sinceDays > 0) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(new Date());
+            cal.add(Calendar.DATE, -1 * sinceDays);
+            startDate = cal.getTime();
+        }
+        try {
+            return weblogger.getWeblogEntryManager().getPopularTags(this.pojo, startDate, 0, length);
+        } catch (Exception e) {
+            log.error("ERROR: fetching popular tags for weblog {}", this.pojo.getName(), e);
+        }
+        return Collections.emptyList();
     }
 
 
     public long getEntryCount() {
-        return this.pojo.getEntryCount();
+        long count = 0;
+        try {
+            count = weblogger.getWeblogEntryManager().getEntryCount(this.pojo);
+        } catch (WebloggerException e) {
+            log.error("Error getting entry count for weblog {}", this.pojo.getName(), e);
+        }
+        return count;
     }
     
     

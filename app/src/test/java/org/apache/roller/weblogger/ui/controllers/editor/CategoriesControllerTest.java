@@ -74,6 +74,27 @@ class CategoriesControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void theInUseCategoriesAreNamedForTheDeleteButton() throws Exception {
+        // Categories.jsp used to ask each raw category ${category.inUse}, a
+        // getter that located the entry manager statically. The controller now
+        // answers that question once per row and the JSP reads the set.
+        WeblogCategory travel = new WeblogCategory();
+        travel.setId("cat-1");
+        travel.setName("Travel");
+        WeblogCategory empty = new WeblogCategory();
+        empty.setId("cat-2");
+        empty.setName("Empty");
+        when(weblogger.getWeblogEntryManager().getWeblogCategories(weblog))
+                .thenReturn(List.of(travel, empty));
+        when(weblogger.getWeblogEntryManager().isWeblogCategoryInUse(travel)).thenReturn(true);
+        when(weblogger.getWeblogEntryManager().isWeblogCategoryInUse(empty)).thenReturn(false);
+
+        controller.execute(request, model);
+
+        assertEquals(java.util.Set.of("cat-1"), model.getAttribute("categoriesInUse"));
+    }
+
+    @Test
     void theListPageShowsTheWeblogsCategories() throws Exception {
         WeblogCategory travel = new WeblogCategory();
         travel.setId("cat-1");

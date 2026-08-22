@@ -87,6 +87,11 @@ public class LuceneIndexManager implements IndexManager {
     private final ReadWriteLock rwl = new ReentrantReadWriteLock();
 
 
+    /** The tier an {@link IndexOperation} resolves entry authors through. */
+    Weblogger weblogger() {
+        return roller;
+    }
+
     /**
      * Creates a new lucene index manager. This should only be created once.
      * Creating the index manager more than once will definitely result in

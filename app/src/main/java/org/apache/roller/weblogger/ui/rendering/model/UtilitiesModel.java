@@ -41,6 +41,8 @@ import org.apache.roller.weblogger.pojos.wrapper.UserWrapper;
 import org.apache.roller.weblogger.ui.rendering.util.ParsedRequest;
 import org.apache.roller.weblogger.util.URLUtilities;
 import org.apache.roller.weblogger.util.Utilities;
+import java.util.List;
+import org.apache.roller.weblogger.pojos.User;
 
 /**
  * Model which provides access to a set of general utilities.
@@ -103,8 +105,7 @@ public class UtilitiesModel implements Model {
     public boolean isUserAuthorizedToAuthor(WeblogWrapper weblog) {
         try {
             if (parsedRequest.getAuthenticUser() != null) {
-                return weblog.getPojo().hasUserPermission(
-                        parsedRequest.getUser(), WeblogPermission.POST);
+                return hasWeblogAction(weblog, WeblogPermission.POST);
             }
         } catch (Exception e) {
             log.warn("ERROR: checking user authorization", e);
@@ -115,8 +116,7 @@ public class UtilitiesModel implements Model {
     public boolean isUserAuthorizedToAdmin(WeblogWrapper weblog) {
         try {
             if (parsedRequest.getAuthenticUser() != null) {
-                return weblog.getPojo().hasUserPermission(
-                        parsedRequest.getUser(), WeblogPermission.ADMIN);
+                return hasWeblogAction(weblog, WeblogPermission.ADMIN);
             }
         } catch (Exception e) {
             log.warn("ERROR: checking user authorization", e);
@@ -124,6 +124,17 @@ public class UtilitiesModel implements Model {
         return false;
     }
         
+    /**
+     * Whether the request's user holds {@code action} on the weblog, asked of
+     * the user manager of the facade this model was given (was
+     * {@code Weblog.hasUserPermission}, an entity method that located it).
+     */
+    private boolean hasWeblogAction(WeblogWrapper weblog, String action) throws WebloggerException {
+        User user = parsedRequest.getUser();
+        return weblogger.getUserManager().checkPermission(
+                new WeblogPermission(weblog.getPojo(), user, List.of(action)), user);
+    }
+
     public boolean isUserAuthenticated() {
         return parsedRequest.getAuthenticUser() != null;
     }

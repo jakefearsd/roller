@@ -133,7 +133,7 @@ public class MediaFileEditController extends MediaFileBase {
                     addError(model, "MediaFile.error.view", request);
                     return ".MediaFileEdit";
                 }
-                bean.copyTo(mediaFile);
+                bean.copyTo(mediaFile, weblogger.getMediaFileManager());
 
                 if (uploadedFile != null && !uploadedFile.isEmpty()) {
                     mediaFile.setLength(uploadedFile.getSize());

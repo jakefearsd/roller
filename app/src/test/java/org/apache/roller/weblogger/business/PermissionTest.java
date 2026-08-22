@@ -141,7 +141,7 @@ public class PermissionTest  {
         TestUtils.endSession(true);
         
         // revoke those same permissions
-        mgr.revokeWeblogPermission(perm.getWeblog(), perm.getUser(), WeblogPermission.ALL_ACTIONS);
+        mgr.revokeWeblogPermission(testWeblog, testUser, WeblogPermission.ALL_ACTIONS);
         TestUtils.endSession(true);
         
         // add only draft permission

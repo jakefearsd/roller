@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.apache.roller.weblogger.business.UserManager;
 
 /**
  * What Roller actually puts in the mail it sends.
@@ -85,10 +86,10 @@ class MailUtilTest {
      * is handed, not through the static factory. The two tiers in this test
      * answer differently -- the explicit one knows a reviewer, the globally
      * installed mock knows nobody -- so the recipient list proves which one was
-     * consulted. (The global mock is still needed for the entity getters the
-     * notice reads, {@code entry.getCreator()} and
-     * {@code weblog.hasUserPermission()}; moving those off the static is the
-     * entity stage of the DI wave, not this one's.)
+     * consulted. (The global mock is installed only as a decoy: since plan
+     * Task 16 the notice resolves the author and the reviewers' permission
+     * through the tier it is given too, so if it regressed to the static one
+     * the recipients would come from the decoy's -- empty -- answers.)
      */
     @Test
     void pendingEntryNoticeGoesToTheReviewersOfTheTierItIsGiven() throws Exception {
@@ -109,8 +110,12 @@ class MailUtilTest {
             URLStrategy urls = mock(URLStrategy.class);
             when(urls.getEntryEditURL("mailblog", "entry-1", true))
                     .thenReturn("https://site.invalid/edit/entry-1");
+            UserManager explicitUsers = mock(UserManager.class);
+            when(explicitUsers.getUserByUserName("author")).thenReturn(author);
+            when(explicitUsers.checkPermission(any(), eq(reviewer))).thenReturn(true);
             Weblogger explicit = mock(Weblogger.class);
             when(explicit.getWeblogManager()).thenReturn(explicitWeblogs);
+            when(explicit.getUserManager()).thenReturn(explicitUsers);
             when(explicit.getUrlStrategy()).thenReturn(urls);
 
             WeblogEntry entry = new WeblogEntry();

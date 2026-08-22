@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.apache.roller.weblogger.ui.controllers.WeblogPermissionView;
 
 /**
  * Tests for {@link MembersController}, which changes who can do what on a blog.
@@ -270,7 +271,7 @@ class MembersControllerTest extends EditorControllerTestSupport {
 
         verify(weblogger.getUserManager(), org.mockito.Mockito.times(2))
                 .getWeblogPermissions(weblog);
-        assertEquals(storedPermissions, model.getAttribute("weblogPermissions"));
+        assertEquals(storedPermissions, permissionsOf(model.getAttribute("weblogPermissions")));
     }
 
     @Test
@@ -522,5 +523,12 @@ class MembersControllerTest extends EditorControllerTestSupport {
     /** Simulate the form posting {@code perm-<userId>=<value>}. */
     private void submit(User member, String value) {
         when(request.getParameter("perm-" + member.getId())).thenReturn(value);
+    }
+
+    /** The permissions behind the {@code WeblogPermissionView} rows a controller now hands the JSP. */
+    private static List<WeblogPermission> permissionsOf(Object rows) {
+        return ((List<?>) rows).stream()
+                .map(row -> ((WeblogPermissionView) row).getPermission())
+                .toList();
     }
 }

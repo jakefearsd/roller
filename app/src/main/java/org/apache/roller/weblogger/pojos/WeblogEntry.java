@@ -42,7 +42,6 @@ import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeContext;
 import org.apache.roller.weblogger.util.Utilities;
 
@@ -352,15 +351,6 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
         return getText();
     }
 
-    public User getCreator() {
-        try {
-            return WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(getCreatorUserName());
-        } catch (Exception e) {
-            log.error("ERROR fetching user object for username: {}", getCreatorUserName(), e);
-        }
-        return null;
-    }   
-    
     public String getCreatorUserName() {
         return creatorUserName;
     }

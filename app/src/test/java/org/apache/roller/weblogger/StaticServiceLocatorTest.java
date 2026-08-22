@@ -91,14 +91,7 @@ class StaticServiceLocatorTest {
      */
     static final Set<String> ALLOWED = Set.of(
             PKG + "config/WebloggerRuntimeConfig.java",
-            PKG + "pojos/GlobalPermission.java",
-            PKG + "pojos/MediaFile.java",
-            PKG + "pojos/User.java",
             PKG + "pojos/Weblog.java",
-            PKG + "pojos/WeblogCategory.java",
-            PKG + "pojos/WeblogEntry.java",
-            PKG + "pojos/WeblogEntryTag.java",
-            PKG + "pojos/WeblogPermission.java",
             // TRANSITIONAL (Task 3): bootstrap() self-installs into the shim so unmigrated
             // callers keep working; Task 20 deletes that line with the shim.
             PKG + "business/SpringWebloggerProvider.java");
@@ -125,14 +118,8 @@ class StaticServiceLocatorTest {
      * Emptied by Stage D (plan Tasks 14-17).
      */
     static final Set<String> POJO_ALLOWED = Set.of(
-            PKG + "pojos/GlobalPermission.java",
-            PKG + "pojos/MediaFile.java",
-            PKG + "pojos/User.java",
-            PKG + "pojos/Weblog.java",
-            PKG + "pojos/WeblogCategory.java",
-            PKG + "pojos/WeblogEntry.java",
-            PKG + "pojos/WeblogEntryTag.java",
-            PKG + "pojos/WeblogPermission.java");
+            // getTheme() -- plan Task 17
+            PKG + "pojos/Weblog.java");
 
     /**
      * The business-tier types, named explicitly rather than by a

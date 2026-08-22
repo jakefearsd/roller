@@ -37,6 +37,8 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.pojos.Weblog;
 
 /**
  * Edit a new or existing weblog category.
@@ -159,10 +161,25 @@ public class CategoryEditController extends BaseController {
                 addError(model, "categoryForm.error.duplicateName", bean.getName(), request);
             }
         } else {
-            WeblogCategory wc = getActionWeblog(request).getWeblogCategory(bean.getName());
+            WeblogCategory wc = categoryNamed(getActionWeblog(request), bean.getName());
             if (wc != null && !wc.getId().equals(bean.getId())) {
                 addError(model, "categoryForm.error.duplicateName", bean.getName(), request);
             }
+        }
+    }
+
+    /**
+     * The weblog's category of that name, or null when there is none -- or
+     * when the lookup fails, which is what {@code Weblog.getWeblogCategory}
+     * (the entity getter this replaces) answered too. Kept as a move, not a
+     * fix: on a failed lookup the duplicate-name check does not fire.
+     */
+    private WeblogCategory categoryNamed(Weblog weblog, String name) {
+        try {
+            return weblogger.getWeblogEntryManager().getWeblogCategoryByName(weblog, name);
+        } catch (WebloggerException e) {
+            log.error("ERROR: fetching category: {}", name, e);
+            return null;
         }
     }
 

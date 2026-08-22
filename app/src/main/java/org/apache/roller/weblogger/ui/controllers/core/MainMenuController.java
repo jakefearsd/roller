@@ -26,12 +26,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
-import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.apache.roller.weblogger.ui.controllers.WeblogPermissionView;
 
 
 /**
@@ -64,10 +64,10 @@ public class MainMenuController extends BaseController {
         model.addAttribute("userIsAdmin", isUserIsAdmin(user));
     }
 
-    private List<WeblogPermission> getExistingPermissions(User user) {
+    private List<WeblogPermissionView> getExistingPermissions(User user) {
         try {
             UserManager mgr = weblogger.getUserManager();
-            return mgr.getWeblogPermissions(user);
+            return WeblogPermissionView.resolve(mgr.getWeblogPermissions(user), weblogger);
         } catch (Exception e) {
             return Collections.emptyList();
         }

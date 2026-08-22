@@ -21,19 +21,14 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.util.Utilities;
 
 /**
@@ -44,7 +39,6 @@ public class MediaFile implements Serializable {
 
     private static final long serialVersionUID = -6704258422169734004L;
 
-    private static final Logger log = LoggerFactory.getLogger(MediaFile.class);
 
     private String id = UUIDGenerator.generateUUID();
 
@@ -88,6 +82,15 @@ public class MediaFile implements Serializable {
 
     // TODO: anchor to be populated
     // private String anchor;
+
+    /**
+     * The thumbnail's bounding box. Declared here rather than on the manager
+     * interface because {@link #figureThumbnailSize()} is the entity's own
+     * arithmetic and an entity does not reference the business tier;
+     * {@code MediaFileManager.MAX_WIDTH}/{@code MAX_HEIGHT} alias these.
+     */
+    public static final int THUMBNAIL_MAX_WIDTH = 120;
+    public static final int THUMBNAIL_MAX_HEIGHT = 120;
 
     private transient Set<MediaFileTag> tagSet = new HashSet<>();
     private transient Set<String> removedTags = new HashSet<>();
@@ -269,43 +272,6 @@ public class MediaFile implements Serializable {
         return removedTags;
     }
 
-    public void updateTags(List<String> updatedTags) throws WebloggerException {
-
-        if (updatedTags == null) {
-            return;
-        }
-
-        Set<String> newTags = new HashSet<>(updatedTags.size());
-        Locale localeObject = getWeblog() != null ? getWeblog()
-                .getLocaleInstance() : Locale.getDefault();
-
-        for (String inName : updatedTags) {
-            newTags.add(Utilities.normalizeTag(inName, localeObject));
-        }
-
-        Set<String> removeTags = new HashSet<>();
-
-        // remove old ones no longer passed.
-        for (MediaFileTag tag : getTags()) {
-            if (!newTags.contains(tag.getName())) {
-                removeTags.add(tag.getName());
-            } else {
-                newTags.remove(tag.getName());
-            }
-        }
-
-        MediaFileManager mediaManager = WebloggerFactory.getWeblogger()
-                .getMediaFileManager();
-
-        for (String tag : removeTags) {
-            mediaManager.removeMediaFileTag(tag, this);
-        }
-
-        for (String tag : newTags) {
-            addTag(tag);
-        }
-    }
-
     public String getTagsAsString() {
         StringBuilder sb = new StringBuilder();
         for (MediaFileTag tag : getTags()) {
@@ -316,15 +282,6 @@ public class MediaFile implements Serializable {
         }
 
         return sb.toString();
-    }
-
-    public void setTagsAsString(String tags) throws WebloggerException {
-        if (tags == null) {
-            tagSet.clear();
-            return;
-        }
-
-        updateTags(Utilities.splitStringAsTags(tags));
     }
 
     /**
@@ -388,22 +345,6 @@ public class MediaFile implements Serializable {
         this.creatorUserName = creatorUserName;
     }
 
-    public User getCreator() {
-        try {
-            return WebloggerFactory.getWeblogger().getUserManager()
-                    .getUserByUserName(getCreatorUserName());
-        } catch (Exception e) {
-            log.error("ERROR fetching user object for username: {}", getCreatorUserName(), e);
-        }
-        return null;
-    }
-
-    /**
-     * For old migrated files and theme resource files, orignal path of file can
-     * never change.
-     * 
-     * @return the originalPath
-     */
     public String getOriginalPath() {
         return originalPath;
     }
@@ -507,15 +448,15 @@ public class MediaFile implements Serializable {
         int newHeight = getHeight();
 
         if (getWidth() > getHeight()) {
-            if (getWidth() > MediaFileManager.MAX_WIDTH) {
-                newHeight = (int) ((float) getHeight() * ((float) MediaFileManager.MAX_WIDTH / (float) getWidth()));
-                newWidth = MediaFileManager.MAX_WIDTH;
+            if (getWidth() > THUMBNAIL_MAX_WIDTH) {
+                newHeight = (int) ((float) getHeight() * ((float) THUMBNAIL_MAX_WIDTH / (float) getWidth()));
+                newWidth = THUMBNAIL_MAX_WIDTH;
             }
 
         } else {
-            if (getHeight() > MediaFileManager.MAX_HEIGHT) {
-                newWidth = (int) ((float) getWidth() * ((float) MediaFileManager.MAX_HEIGHT / (float) getHeight()));
-                newHeight = MediaFileManager.MAX_HEIGHT;
+            if (getHeight() > THUMBNAIL_MAX_HEIGHT) {
+                newWidth = (int) ((float) getWidth() * ((float) THUMBNAIL_MAX_HEIGHT / (float) getHeight()));
+                newHeight = THUMBNAIL_MAX_HEIGHT;
             }
         }
         thumbnailHeight = newHeight;

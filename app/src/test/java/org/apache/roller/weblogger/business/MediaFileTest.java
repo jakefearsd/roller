@@ -301,7 +301,7 @@ public class MediaFileTest  {
         mediaFile.setInputStream(getClass().getResourceAsStream(TEST_IMAGE));
 
         // Add tags
-        mediaFile.setTagsAsString("tst4work tst4home");
+        TestUtils.setMediaTags(mediaFile, "tst4work tst4home");
 
         mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
         String id = mediaFile.getId();
@@ -368,7 +368,7 @@ public class MediaFileTest  {
         rootDirectory.getMediaFiles().add(mediaFile);
 
         // Add tags
-        mediaFile.setTagsAsString("work home");
+        TestUtils.setMediaTags(mediaFile, "work home");
 
         mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
         TestUtils.endSession(true);
@@ -422,7 +422,7 @@ public class MediaFileTest  {
                 mfMgr.createMediaFile(testWeblog, mf, new RollerMessages());
 
                 // Add tags
-                mf.setTagsAsString("work");
+                TestUtils.setMediaTags(mf, "work");
                 mfMgr.updateMediaFile(testWeblog, mf);
 
                 mfMgr.createMediaFile(testWeblog, mf, new RollerMessages());
@@ -453,7 +453,7 @@ public class MediaFileTest  {
                 mfMgr.createMediaFile(testWeblog, mf, new RollerMessages());
 
                 // Add tags
-                mf.setTagsAsString("home");
+                TestUtils.setMediaTags(mf, "home");
                 mfMgr.updateMediaFile(testWeblog, mf);
 
                 TestUtils.endSession(true);
@@ -483,7 +483,7 @@ public class MediaFileTest  {
                 mfMgr.createMediaFile(testWeblog, mf, new RollerMessages());
 
                 // Add tags
-                mf.setTagsAsString("home");
+                TestUtils.setMediaTags(mf, "home");
                 mfMgr.updateMediaFile(testWeblog, mf);
 
                 TestUtils.endSession(true);
@@ -820,7 +820,7 @@ public class MediaFileTest  {
         mediaFile.setContentType("image/jpeg");
 
         // Add tags
-        mediaFile.setTagsAsString("tst5work tst5home");
+        TestUtils.setMediaTags(mediaFile, "tst5work tst5home");
 
         mfMgr.createMediaFile(testWeblog, mediaFile, new RollerMessages());
         rootDirectory.getMediaFiles().add(mediaFile);

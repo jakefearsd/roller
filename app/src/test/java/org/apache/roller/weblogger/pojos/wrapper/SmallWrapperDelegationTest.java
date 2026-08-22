@@ -22,7 +22,6 @@ import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
@@ -31,11 +30,13 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogEntryAttribute;
 import org.apache.roller.weblogger.pojos.WeblogEntryTag;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import java.sql.Timestamp;
@@ -49,6 +50,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -98,18 +101,44 @@ class SmallWrapperDelegationTest {
         Weblogger weblogger = mock(Weblogger.class);
         when(weblogger.getWeblogEntryManager()).thenReturn(entries);
 
-        // WeblogCategory.isInUse() itself still locates the entry manager
-        // statically -- that moves to the wrapper in Stage D (plan Task 16).
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            WeblogCategoryWrapper wrapper = WeblogCategoryWrapper.wrap(category, urls, weblogger);
+        // The wrapper asks the entry manager of the facade it was given; the
+        // pojo no longer has an isInUse() at all (plan Task 16).
+        WeblogCategoryWrapper wrapper = WeblogCategoryWrapper.wrap(category, urls, weblogger);
 
-            when(entries.isWeblogCategoryInUse(category)).thenReturn(true);
-            assertTrue(wrapper.isInUse());
+        when(entries.isWeblogCategoryInUse(category)).thenReturn(true);
+        assertTrue(wrapper.isInUse());
 
-            when(entries.isWeblogCategoryInUse(category)).thenReturn(false);
-            assertFalse(wrapper.isInUse());
-        }
+        when(entries.isWeblogCategoryInUse(category)).thenReturn(false);
+        assertFalse(wrapper.isInUse());
+    }
+
+    @Test
+    void categoryWrapperAsksForAllEntriesIncludingTrashedWhenNotPublishedOnly() throws Exception {
+        // The "all entries" form is what the category-deletion guard and the
+        // move-contents sequence rely on, and it must see trashed entries (a
+        // trashed entry still blocks deleting its category). The published-only
+        // form is the theme's view and excludes them by construction.
+        WeblogCategory category = new WeblogCategory();
+        category.setName("Travel");
+        WeblogEntryManager entries = mock(WeblogEntryManager.class);
+        Weblogger weblogger = mock(Weblogger.class);
+        when(weblogger.getWeblogEntryManager()).thenReturn(entries);
+        when(entries.getWeblogEntries(any())).thenReturn(List.of());
+        WeblogCategoryWrapper wrapper = WeblogCategoryWrapper.wrap(category, urls, weblogger);
+
+        wrapper.retrieveWeblogEntries(false);
+        wrapper.retrieveWeblogEntries(true);
+
+        ArgumentCaptor<WeblogEntrySearchCriteria> criteria =
+                ArgumentCaptor.forClass(WeblogEntrySearchCriteria.class);
+        verify(entries, times(2)).getWeblogEntries(criteria.capture());
+        WeblogEntrySearchCriteria all = criteria.getAllValues().get(0);
+        WeblogEntrySearchCriteria published = criteria.getAllValues().get(1);
+        assertTrue(all.isIncludeTrashed());
+        assertNull(all.getStatus());
+        assertEquals("Travel", all.getCatName());
+        assertFalse(published.isIncludeTrashed());
+        assertEquals(WeblogEntry.PubStatus.PUBLISHED, published.getStatus());
     }
 
     @Test
@@ -157,18 +186,13 @@ class SmallWrapperDelegationTest {
         when(weblogger.getWeblogEntryManager()).thenReturn(entries);
         when(entries.getWeblogEntries(any())).thenReturn(List.of(entry));
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        List<WeblogEntryWrapper> wrapped =
+                WeblogCategoryWrapper.wrap(category, urls, weblogger).retrieveWeblogEntries(true);
 
-            // WeblogCategory.retrieveWeblogEntries() still locates statically (Stage D).
-            List<WeblogEntryWrapper> wrapped =
-                    WeblogCategoryWrapper.wrap(category, urls, weblogger).retrieveWeblogEntries(true);
-
-            assertEquals(1, wrapped.size());
-            assertEquals("A trip", wrapped.get(0).getTitle(),
-                    "Entries reached through a category must come back wrapped too, or "
-                            + "the read-only barrier has a hole in it");
-        }
+        assertEquals(1, wrapped.size());
+        assertEquals("A trip", wrapped.get(0).getTitle(),
+                "Entries reached through a category must come back wrapped too, or "
+                        + "the read-only barrier has a hole in it");
     }
 
     // ------------------------------------------------------------------ tag

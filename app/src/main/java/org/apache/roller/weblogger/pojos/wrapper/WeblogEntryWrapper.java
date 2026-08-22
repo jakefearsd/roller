@@ -95,8 +95,19 @@ public final class WeblogEntryWrapper {
     }
     
     
+    /**
+     * The author, resolved by name through the tier this wrapper was given;
+     * null (never an exception) when the name no longer resolves, so a
+     * byline cannot break a page.
+     */
     public UserWrapper getCreator() {
-        return UserWrapper.wrap(this.pojo.getCreator());
+        try {
+            return UserWrapper.wrap(weblogger.getUserManager()
+                    .getUserByUserName(this.pojo.getCreatorUserName()));
+        } catch (Exception e) {
+            log.error("ERROR fetching user object for username: {}", this.pojo.getCreatorUserName(), e);
+            return null;
+        }
     }
     
     

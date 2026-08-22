@@ -20,7 +20,6 @@ package org.apache.roller.weblogger.pojos.wrapper;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -29,7 +28,6 @@ import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -41,7 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -276,10 +273,10 @@ class WeblogEntryWrapperTest {
 
     @Test
     void theCreatorIsReadThroughTheEntry() throws Exception {
-        // WeblogEntry.getCreator() still locates statically -- Stage D (Task 16).
+        // The author is resolved by name through the facade the wrapper was
+        // given; WeblogEntry.getCreator() is gone (plan Task 16).
         org.apache.roller.weblogger.business.UserManager users =
                 mock(org.apache.roller.weblogger.business.UserManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
         when(weblogger.getUserManager()).thenReturn(users);
 
         org.apache.roller.weblogger.pojos.User alice =
@@ -290,12 +287,8 @@ class WeblogEntryWrapperTest {
 
         entry.setCreatorUserName("alice");
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertEquals("Alice A", wrapper.getCreator().getScreenName(),
-                    "The author must be reachable, wrapped, for the byline");
-        }
+        assertEquals("Alice A", wrapper.getCreator().getScreenName(),
+                "The author must be reachable, wrapped, for the byline");
     }
 
     @Test

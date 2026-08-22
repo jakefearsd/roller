@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import org.apache.roller.weblogger.ui.controllers.WeblogPermissionView;
 
 /**
  * Tests for {@link MainMenuController}, the page a user lands on after signing
@@ -71,7 +72,8 @@ class MainMenuControllerTest {
         String view = controller.execute(ControllerTestFixture.requestFor(user), model);
 
         assertEquals(".MainMenu", view);
-        assertSame(existing, model.getAttribute("existingPermissions"));
+        assertEquals(existing, permissionsOf(model.getAttribute("existingPermissions")),
+                "the menu iterates resolved rows (weblog + user) built from exactly these permissions");
         assertEquals(true, model.getAttribute("userIsAdmin"),
                 "the admin section of the menu is shown from this flag");
         assertEquals("yourWebsites.title", model.getAttribute("pageTitle"));
@@ -115,5 +117,12 @@ class MainMenuControllerTest {
         user.setUserName(userName);
         user.setEnabled(Boolean.TRUE);
         return user;
+    }
+
+    /** The permissions behind the {@code WeblogPermissionView} rows a controller now hands the JSP. */
+    private static List<WeblogPermission> permissionsOf(Object rows) {
+        return ((List<?>) rows).stream()
+                .map(row -> ((WeblogPermissionView) row).getPermission())
+                .toList();
     }
 }

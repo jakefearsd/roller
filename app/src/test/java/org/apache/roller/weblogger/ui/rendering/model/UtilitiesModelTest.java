@@ -51,6 +51,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.apache.roller.weblogger.business.UserManager;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 
 /**
  * Unit tests for {@link UtilitiesModel}, the {@code $utils} object every
@@ -82,8 +85,16 @@ class UtilitiesModelTest {
     }
 
     private static UtilitiesModel modelFor(ParsedRequest request) {
+        return modelFor(request, null);
+    }
+
+    /** A model whose permission checks go to {@code weblogger}'s user manager. */
+    private static UtilitiesModel modelFor(ParsedRequest request, Weblogger weblogger) {
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", request);
+        if (weblogger != null) {
+            initData.put(ModelLoader.WEBLOGGER, weblogger);
+        }
         UtilitiesModel model = new UtilitiesModel();
         try {
             model.init(initData);
@@ -639,21 +650,61 @@ class UtilitiesModelTest {
                 "The wrapper must expose the user the request authenticated as.");
     }
 
+    /**
+     * A facade whose user manager answers the weblog-permission checks the
+     * model now issues itself (it used to ask {@code Weblog.hasUserPermission},
+     * an entity getter): POST -> {@code author}, ADMIN -> {@code admin}.
+     */
+    private static Weblogger permissionOracle(User user, boolean author, boolean admin) {
+        try {
+            Weblogger weblogger = mock(Weblogger.class);
+            UserManager users = mock(UserManager.class);
+            when(weblogger.getUserManager()).thenReturn(users);
+            when(users.checkPermission(
+                    argThat(p -> p instanceof WeblogPermission && p.hasAction(WeblogPermission.POST)), eq(user)))
+                    .thenReturn(author);
+            when(users.checkPermission(
+                    argThat(p -> p instanceof WeblogPermission && p.hasAction(WeblogPermission.ADMIN)), eq(user)))
+                    .thenReturn(admin);
+            return weblogger;
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    /** A facade whose user manager cannot answer any permission check. */
+    private static Weblogger failingPermissionOracle() {
+        try {
+            Weblogger weblogger = mock(Weblogger.class);
+            UserManager users = mock(UserManager.class);
+            when(weblogger.getUserManager()).thenReturn(users);
+            when(users.checkPermission(any(), any()))
+                    .thenThrow(new IllegalStateException("database is down"));
+            return weblogger;
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
     @Test
-    void authorisationChecksAreSkippedEntirelyForAnonymousVisitors() {
+    void authorisationChecksAreSkippedEntirelyForAnonymousVisitors() throws Exception {
         // The weblog must not even be consulted: an anonymous visitor can never
         // be an author, and a permission lookup here would be a wasted database
         // round-trip on every anonymous page view.
-        Weblog permissionSource = mock(Weblog.class);
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
+        Weblogger weblogger = mock(Weblogger.class);
+        UserManager users = mock(UserManager.class);
+        when(weblogger.getUserManager()).thenReturn(users);
+        WeblogWrapper wrapper = WeblogWrapper.wrap(weblog("en_US", "UTC"), null, weblogger);
 
-        UtilitiesModel model = modelFor(weblog("en_US", "UTC"));
+        WeblogRequest request = new WeblogRequest();
+        request.setWeblog(weblog("en_US", "UTC"));
+        UtilitiesModel model = modelFor(request, weblogger);
 
         assertFalse(model.isUserAuthorizedToAuthor(wrapper),
                 "An anonymous visitor must never be reported as an author.");
         assertFalse(model.isUserAuthorizedToAdmin(wrapper),
                 "An anonymous visitor must never be reported as an admin.");
-        verify(permissionSource, never()).hasUserPermission(any(), anyString());
+        verify(users, never()).checkPermission(any(), any());
     }
 
     @Test
@@ -661,16 +712,14 @@ class UtilitiesModelTest {
         User user = new User();
         user.setUserName("bob");
 
-        Weblog permissionSource = mock(Weblog.class);
-        when(permissionSource.hasUserPermission(user, WeblogPermission.POST)).thenReturn(true);
-        when(permissionSource.hasUserPermission(user, WeblogPermission.ADMIN)).thenReturn(false);
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
+        Weblogger weblogger = permissionOracle(user, true, false);
+        WeblogWrapper wrapper = WeblogWrapper.wrap(weblog("en_US", "UTC"), null, weblogger);
 
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(weblog("en_US", "UTC"));
         request.setAuthenticUser("bob");
         request.setUser(user);
-        UtilitiesModel model = modelFor(request);
+        UtilitiesModel model = modelFor(request, weblogger);
 
         assertTrue(model.isUserAuthorizedToAuthor(wrapper),
                 "POST permission must make $utils.isUserAuthorizedToAuthor true.");
@@ -685,16 +734,14 @@ class UtilitiesModelTest {
         User user = new User();
         user.setUserName("carol");
 
-        Weblog permissionSource = mock(Weblog.class);
-        when(permissionSource.hasUserPermission(user, WeblogPermission.POST)).thenReturn(false);
-        when(permissionSource.hasUserPermission(user, WeblogPermission.ADMIN)).thenReturn(true);
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
+        Weblogger weblogger = permissionOracle(user, false, true);
+        WeblogWrapper wrapper = WeblogWrapper.wrap(weblog("en_US", "UTC"), null, weblogger);
 
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(weblog("en_US", "UTC"));
         request.setAuthenticUser("carol");
         request.setUser(user);
-        UtilitiesModel model = modelFor(request);
+        UtilitiesModel model = modelFor(request, weblogger);
 
         assertFalse(model.isUserAuthorizedToAuthor(wrapper),
                 "Being logged in is not authorisation; without POST permission the "
@@ -710,17 +757,15 @@ class UtilitiesModelTest {
         User user = new User();
         user.setUserName("bob");
 
-        Weblog permissionSource = mock(Weblog.class);
-        when(permissionSource.hasUserPermission(user, WeblogPermission.POST))
-                .thenThrow(new IllegalStateException("database is down"));
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
+        Weblogger weblogger = failingPermissionOracle();
+        WeblogWrapper wrapper = WeblogWrapper.wrap(weblog("en_US", "UTC"), null, weblogger);
 
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(weblog("en_US", "UTC"));
         request.setAuthenticUser("bob");
         request.setUser(user);
 
-        assertFalse(modelFor(request).isUserAuthorizedToAuthor(wrapper),
+        assertFalse(modelFor(request, weblogger).isUserAuthorizedToAuthor(wrapper),
                 "A permission lookup that blows up must deny access, not grant it.");
     }
 
@@ -731,17 +776,15 @@ class UtilitiesModelTest {
         User user = new User();
         user.setUserName("bob");
 
-        Weblog permissionSource = mock(Weblog.class);
-        when(permissionSource.hasUserPermission(user, WeblogPermission.ADMIN))
-                .thenThrow(new IllegalStateException("database is down"));
-        WeblogWrapper wrapper = WeblogWrapper.wrap(permissionSource, null, null);
+        Weblogger weblogger = failingPermissionOracle();
+        WeblogWrapper wrapper = WeblogWrapper.wrap(weblog("en_US", "UTC"), null, weblogger);
 
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(weblog("en_US", "UTC"));
         request.setAuthenticUser("bob");
         request.setUser(user);
 
-        assertFalse(modelFor(request).isUserAuthorizedToAdmin(wrapper),
+        assertFalse(modelFor(request, weblogger).isUserAuthorizedToAdmin(wrapper),
                 "A failed admin permission lookup must deny access, not grant it.");
     }
 }

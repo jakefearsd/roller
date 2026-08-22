@@ -28,7 +28,6 @@
             <many-to-one name="weblogEntry" target-entity="org.apache.roller.weblogger.pojos.WeblogEntry">
                 <join-column name="entryid" insertable="true" updatable="true"/>
             </many-to-one>
-            <transient name="user" />
         </attributes>
     </entity>
 </entity-mappings>

@@ -190,48 +190,6 @@ class MediaFileLogicTest {
     }
 
     @Test
-    void aNonEmptyTagFieldReplacesTheTags() throws Exception {
-        Weblog weblog = new Weblog();
-        weblog.setLocale("en_US");
-        file.setWeblog(weblog);
-
-        MediaFileManager mediaFiles = mock(MediaFileManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getMediaFileManager()).thenReturn(mediaFiles);
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            file.setTagsAsString("Holiday beach");
-        }
-
-        assertEquals(java.util.Set.of("holiday", "beach"),
-                file.getTags().stream().map(MediaFileTag::getName)
-                        .collect(java.util.stream.Collectors.toSet()),
-                "The field is split on whitespace and each tag normalised, the same way "
-                        + "the entry tag field is");
-    }
-
-    @Test
-    void updatingTagsAlsoUsesTheWeblogsLocale() throws Exception {
-        Weblog turkish = new Weblog();
-        turkish.setLocale("tr");
-        file.setWeblog(turkish);
-
-        MediaFileManager mediaFiles = mock(MediaFileManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getMediaFileManager()).thenReturn(mediaFiles);
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            file.updateTags(List.of("TITLE"));
-        }
-
-        assertEquals("tıtle", file.getTags().iterator().next().getName(),
-                "updateTags and addTag must normalise identically, or a tag added through "
-                        + "the bulk update would not match the same tag added singly");
-    }
-
-    @Test
     void aFileWithNoContentAtAllReadsAsNull() {
         assertNull(file.getInputStream(),
                 "A media file whose content has not been loaded must read as null so the "
@@ -352,17 +310,6 @@ class MediaFileLogicTest {
     }
 
     @Test
-    void clearingTheTagFieldRemovesEveryTag() throws Exception {
-        file.addTag("holiday");
-        file.addTag("beach");
-
-        file.setTagsAsString(null);
-
-        assertTrue(file.getTags().isEmpty(),
-                "A null tag field means the user cleared it, which must clear the tags");
-    }
-
-    @Test
     void removedTagsAreRecordedForTheDeleteToReplay() throws Exception {
         file.onRemoveTag("holiday");
 
@@ -371,42 +318,4 @@ class MediaFileLogicTest {
                         + "without being recorded stays in the database forever");
     }
 
-    @Test
-    void updatingTagsAddsTheNewOnesAndDeletesTheOnesLeftOut() throws Exception {
-        Weblog weblog = new Weblog();
-        weblog.setLocale("en_US");
-        file.setWeblog(weblog);
-        file.addTag("keep");
-        file.addTag("drop");
-
-        MediaFileManager mediaFiles = mock(MediaFileManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getMediaFileManager()).thenReturn(mediaFiles);
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            file.updateTags(List.of("keep", "add"));
-        }
-
-        verify(mediaFiles).removeMediaFileTag("drop", file);
-        verify(mediaFiles, never()).removeMediaFileTag("keep", file);
-        assertTrue(file.getTags().stream().anyMatch(tag -> "add".equals(tag.getName())),
-                "A tag the user typed must be added");
-        assertTrue(file.getTags().stream().anyMatch(tag -> "keep".equals(tag.getName())),
-                "and one they left in place must survive -- removing and re-adding it "
-                        + "would churn the tag rows on every save");
-    }
-
-    @Test
-    void aNullTagListLeavesTheTagsAlone() throws Exception {
-        // "no tags supplied" is not the same as "the user cleared the field";
-        // treating it as the latter would wipe tags on any save that does not
-        // include the field.
-        file.addTag("holiday");
-
-        file.updateTags(null);
-
-        assertEquals(1, file.getTags().size(),
-                "A null update must leave the existing tags untouched");
-    }
 }

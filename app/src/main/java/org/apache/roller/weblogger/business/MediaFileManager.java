@@ -33,8 +33,8 @@ import org.apache.roller.weblogger.util.RollerMessages;
  */
 public interface MediaFileManager {
 
-    int MAX_WIDTH = 120;
-    int MAX_HEIGHT = 120;
+    int MAX_WIDTH = MediaFile.THUMBNAIL_MAX_WIDTH;
+    int MAX_HEIGHT = MediaFile.THUMBNAIL_MAX_HEIGHT;
 
     /**
      * Initialization; deal with upgrade migrations, etc.
@@ -175,6 +175,15 @@ public interface MediaFileManager {
      */
     void removeMediaFileDirectory(MediaFileDirectory mediaFileDir)
             throws WebloggerException;
+
+    /**
+     * Replace a media file's tags with {@code tags}: tags no longer named are
+     * removed (through {@link #removeMediaFileTag}), new ones added, names
+     * normalised in the weblog's locale. A null list leaves the tags alone.
+     * This used to be {@code MediaFile.updateTags} -- a write issued from
+     * inside the entity through the static service locator.
+     */
+    void updateTags(MediaFile file, List<String> tags) throws WebloggerException;
 
     /**
      * Remove tag with given name from given MediaFile

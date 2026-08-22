@@ -33,6 +33,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import java.util.HashSet;
+import java.util.Set;
+import org.apache.roller.weblogger.pojos.WeblogCategory;
 
 /**
  * Manage weblog categories.
@@ -69,7 +72,17 @@ public class CategoriesController extends BaseController {
 
         try {
             WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
-            model.addAttribute("allCategories", wmgr.getWeblogCategories(getActionWeblog(request)));
+            List<WeblogCategory> categories = wmgr.getWeblogCategories(getActionWeblog(request));
+            model.addAttribute("allCategories", categories);
+            // Categories.jsp used to ask each category ${category.inUse} -- a
+            // query behind an entity getter. Answered here, once per row.
+            Set<String> inUse = new HashSet<>();
+            for (WeblogCategory category : categories) {
+                if (wmgr.isWeblogCategoryInUse(category)) {
+                    inUse.add(category.getId());
+                }
+            }
+            model.addAttribute("categoriesInUse", inUse);
         } catch (WebloggerException ex) {
             log.error("Error building categories list", ex);
             addError(model, "generic.error.check.logs", request);

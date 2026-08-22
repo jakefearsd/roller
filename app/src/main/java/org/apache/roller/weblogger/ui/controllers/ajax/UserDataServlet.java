@@ -32,6 +32,8 @@ import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
+import java.util.Collections;
+import org.apache.roller.weblogger.pojos.GlobalPermission;
 
 /**
  * Return list of users matching a startsWith strings. <br />
@@ -91,7 +93,7 @@ public class UserDataServlet extends HttpServlet {
                 // user not found
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
-            } else if (user.hasGlobalPermission("admin")) {
+            } else if (isGlobalAdmin(user)) {
                 // admin
                 admin = true;
             }
@@ -146,4 +148,17 @@ public class UserDataServlet extends HttpServlet {
         }
     }
 
+
+    /**
+     * Whether the user holds the global {@code admin} action; a check that
+     * cannot be answered is a denial (was {@code User.hasGlobalPermission}).
+     */
+    private boolean isGlobalAdmin(User user) {
+        try {
+            return weblogger.getUserManager().checkPermission(
+                    new GlobalPermission(Collections.singletonList("admin")), user);
+        } catch (WebloggerException e) {
+            return false;
+        }
+    }
 }

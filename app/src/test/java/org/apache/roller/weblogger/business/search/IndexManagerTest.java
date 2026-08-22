@@ -146,7 +146,7 @@ public class IndexManagerTest {
             // fill in relationship fields to make JPA happy
 
             WeblogCategory cat = entryManager.getWeblogCategory(
-                testWeblog.getWeblogCategory("General").getId());
+                TestUtils.categoryNamed(testWeblog, "General").getId());
             entry.setCategory(cat);
             entry.setWebsite(TestUtils.getManagedWebsite(testWeblog));
             entry.setEntryAttributes(Collections.emptySet());

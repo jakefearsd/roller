@@ -438,7 +438,7 @@ public class EntryEditController extends BaseController {
     public String entryEditSendNewsletter(
             @RequestParam(name = "bean.id") String entryId,
             HttpServletRequest request, Model model) {
-        if (!getActionWeblog(request).hasUserPermission(
+        if (!hasWeblogAction(getActionWeblog(request),
                 getAuthenticatedUser(request), WeblogPermission.POST)) {
             return "redirect:/roller-ui/access-denied.rol";
         }
@@ -602,7 +602,7 @@ public class EntryEditController extends BaseController {
 
     private void setPublishStatus(EntryBean bean, WeblogEntry entry, Timestamp pubTime,
                                   HttpServletRequest request) {
-        if (getActionWeblog(request).hasUserPermission(
+        if (hasWeblogAction(getActionWeblog(request),
                 getAuthenticatedUser(request), WeblogPermission.POST)) {
             if (pubTime != null && pubTime.after(
                     new Date(System.currentTimeMillis() + RollerConstants.MIN_IN_MS))) {
@@ -771,8 +771,11 @@ public class EntryEditController extends BaseController {
         }
 
         model.addAttribute("categories", getCategories(request));
-        model.addAttribute("userAnAuthor", getActionWeblog(request).hasUserPermission(
+        model.addAttribute("userAnAuthor", hasWeblogAction(getActionWeblog(request),
                 getAuthenticatedUser(request), WeblogPermission.POST));
+        // EntryEdit.jsp used to ask ${authenticatedUser.hasGlobalPermission('admin')}
+        // for the pin-to-front-page box; the entity no longer answers that.
+        model.addAttribute("isGlobalAdmin", isGlobalAdmin(getAuthenticatedUser(request)));
 
         // The editor's insert menu, generated from the shortcode registry
         // itself so it can never advertise a shortcode that does not render,

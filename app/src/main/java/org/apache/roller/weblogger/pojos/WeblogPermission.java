@@ -23,8 +23,6 @@ import java.security.Permission;
 import java.util.List;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 
 
 /**
@@ -67,20 +65,6 @@ public class WeblogPermission extends ObjectPermission implements Serializable {
         objectId = weblog.getHandle();
     }
     
-    public Weblog getWeblog() throws WebloggerException {
-        if (objectId != null) {
-            return WebloggerFactory.getWeblogger().getWeblogManager().getWeblogByHandle(objectId, null);
-        }
-        return null;
-    }
-
-    public User getUser() throws WebloggerException {
-        if (userName != null) {
-            return WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(userName);
-        }
-        return null;
-    }
-
     @Override
     public boolean implies(Permission perm) {
         if (getActionsAsList().isEmpty()) {

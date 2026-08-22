@@ -41,6 +41,7 @@ import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
+import org.apache.roller.weblogger.pojos.Weblog;
 
 
 /**
@@ -64,6 +65,20 @@ public final class MailUtil {
     }
     
     /**
+     * Whether {@code user} may post on {@code weblog}; a check that cannot be
+     * answered is a denial, logged (was {@code Weblog.hasUserPermission}).
+     */
+    private static boolean isAuthor(Weblogger weblogger, Weblog weblog, User user) {
+        try {
+            return weblogger.getUserManager().checkPermission(
+                    new WeblogPermission(weblog, user, List.of(WeblogPermission.POST)), user);
+        } catch (WebloggerException ex) {
+            log.error("ERROR checking user permssion", ex);
+            return false;
+        }
+    }
+
+    /**
      * Send an email notice that a new pending entry has been submitted.
      *
      * @param weblogger the business tier, handed in by the caller: it answers
@@ -82,8 +97,9 @@ public final class MailUtil {
         try {
             WeblogManager wmgr = weblogger.getWeblogManager();
 
-            String userName = entry.getCreator().getUserName();
-            String from = entry.getCreator().getEmailAddress();
+            User creator = weblogger.getUserManager().getUserByUserName(entry.getCreatorUserName());
+            String userName = creator.getUserName();
+            String from = creator.getEmailAddress();
             String cc[] = new String[] {from};
             String bcc[] = new String[0];
             String to[];
@@ -96,8 +112,7 @@ public final class MailUtil {
             
             // build list of reviewers (website users with author permission)
             for (User websiteUser : websiteUsers) {
-                if (entry.getWebsite().hasUserPermission(
-                        websiteUser, WeblogPermission.POST)
+                if (isAuthor(weblogger, entry.getWebsite(), websiteUser)
                         && websiteUser.getEmailAddress() != null) {
                     reviewers.add(websiteUser.getEmailAddress());
                 }

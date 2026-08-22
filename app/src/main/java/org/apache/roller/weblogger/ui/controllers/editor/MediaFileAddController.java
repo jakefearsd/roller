@@ -105,7 +105,7 @@ public class MediaFileAddController extends MediaFileBase {
 
                 try {
                     MediaFile mediaFile = new MediaFile();
-                    bean.copyTo(mediaFile);
+                    bean.copyTo(mediaFile, weblogger.getMediaFileManager());
 
                     String fileName = uploadedFile.getOriginalFilename();
                     if (fileName != null) {

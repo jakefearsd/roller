@@ -23,6 +23,39 @@ import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 
 public class WeblogEntrySearchCriteria {
 
+    /**
+     * Every entry in one category. {@code publishedOnly} is the theme's view
+     * (published entries, trash excluded by construction); the other form is
+     * what category deletion's in-use guard and the move-contents-then-delete
+     * sequence rely on, and it must still see trashed entries. A trashed entry
+     * still blocks deleting its category (there is nothing to restore it into
+     * once the category is gone), and moving a category's contents must carry
+     * a trashed entry along to the destination rather than silently leaving
+     * it pointed at a row about to be removed. Without {@code includeTrashed},
+     * the default exclusion this class applies to a query naming no explicit
+     * status makes a category whose only entries are trashed look empty here
+     * even though {@code WeblogEntry.getByCategory} ({@code isWeblogCategoryInUse}'s
+     * query) still counts it as in use -- and {@code moveWeblogCategoryContents}
+     * would move zero entries out of the way before the category is removed
+     * out from under them.
+     *
+     * <p>This used to be {@code WeblogCategory.retrieveWeblogEntries(boolean)},
+     * an entity method that located the entry manager statically; the query
+     * spec lives here so the wrapper (the template API) and the entry manager
+     * build the same one.
+     */
+    public static WeblogEntrySearchCriteria forCategory(WeblogCategory category, boolean publishedOnly) {
+        WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
+        wesc.setWeblog(category.getWeblog());
+        wesc.setCatName(category.getName());
+        if (publishedOnly) {
+            wesc.setStatus(PubStatus.PUBLISHED);
+        } else {
+            wesc.setIncludeTrashed(true);
+        }
+        return wesc;
+    }
+
     public enum SortOrder {ASCENDING, DESCENDING}
     // TRASH_TIME sorts by e.trashedAt, the only field guaranteed non-null
     // for a trashed entry -- pubTime is null for a draft that was trashed

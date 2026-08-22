@@ -223,7 +223,8 @@ public class JPAWeblogManagerImpl implements WeblogManager {
 
         // remove permissions
         for (WeblogPermission perm : umgr.getWeblogPermissions(weblog)) {
-            umgr.revokeWeblogPermission(perm.getWeblog(), perm.getUser(), WeblogPermission.ALL_ACTIONS);
+            umgr.revokeWeblogPermission(weblog, umgr.getUserByUserName(perm.getUserName()),
+                    WeblogPermission.ALL_ACTIONS);
         }
         
         // flush the changes before returning. This is required as there is a
@@ -285,7 +286,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         List<String> actions = new ArrayList<>();
         actions.add(WeblogPermission.ADMIN);
         roller.getUserManager().grantWeblogPermission(
-                newWeblog, newWeblog.getCreator(), actions);
+                newWeblog, roller.getUserManager().getUserByUserName(newWeblog.getCreatorUserName()), actions);
         
         String cats = WebloggerConfig.getProperty("newuser.categories");
         if (cats != null) {
@@ -493,7 +494,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         }
         List<WeblogPermission> perms = roller.getUserManager().getWeblogPermissions(user);
         for (WeblogPermission perm : perms) {
-            Weblog weblog = perm.getWeblog();
+            Weblog weblog = getWeblogByHandle(perm.getObjectId(), null);
             if ((!enabledOnly || weblog.getVisible()) && BooleanUtils.isTrue(weblog.getActive())) {
                 weblogs.add(weblog);
             }
@@ -506,7 +507,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         List<User> users = new ArrayList<>();
         List<WeblogPermission> perms = roller.getUserManager().getWeblogPermissions(weblog);
         for (WeblogPermission perm : perms) {
-            User user = perm.getUser();
+            User user = roller.getUserManager().getUserByUserName(perm.getUserName());
             if (user == null) {
                 log.error("ERROR user is null, userName:{}", perm.getUserName());
                 continue;

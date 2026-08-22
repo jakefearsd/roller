@@ -24,17 +24,13 @@ import java.util.*;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.util.UUIDGenerator;
-import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.util.I18nUtils;
 import org.apache.roller.weblogger.util.Utilities;
+import org.apache.roller.weblogger.business.WebloggerFactory;
 
 
 /**
@@ -50,7 +46,6 @@ public class Weblog implements Serializable {
     
     private static final Logger log = LoggerFactory.getLogger(Weblog.class);
 
-    private static final int MAX_ENTRIES = 100;
     
     // Simple properties
     private String  id               = UUIDGenerator.generateUUID();
@@ -194,18 +189,6 @@ public class Weblog implements Serializable {
     }
     
     /**
-     * Original creator of website.
-     */
-    public User getCreator() {
-        try {
-            return WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(creator);
-        } catch (Exception e) {
-            log.error("ERROR fetching user object for username: {}", creator, e);
-        }
-        return null;
-    }
-    
-    /**
      * Username of original creator of website.
      */
     public String getCreatorUserName() {
@@ -317,31 +300,6 @@ public class Weblog implements Serializable {
             this.setTimeZone( TimeZone.getDefault().getID() );
         }
         return TimeZone.getTimeZone(getTimeZone());
-    }
-    
-    /**
-     * Returns true if user has all permission action specified.
-     */
-    public boolean hasUserPermission(User user, String action) {
-        return hasUserPermissions(user, Collections.singletonList(action));
-    }
-    
-    
-    /**
-     * Returns true if user has all permissions actions specified in the weblog.
-     */
-    public boolean hasUserPermissions(User user, List<String> actions) {
-        try {
-            // look for user in website's permissions
-            UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
-            WeblogPermission userPerms = new WeblogPermission(this, user, actions);
-            return umgr.checkPermission(userPerms, user);
-            
-        } catch (WebloggerException ex) {
-            // something is going seriously wrong, not much we can do here
-            log.error("ERROR checking user permssion", ex);
-        }
-        return false;
     }
     
     public int getEntryDisplayCount() {
@@ -474,147 +432,6 @@ public class Weblog implements Serializable {
     
     
     
-    /** 
-     * Get weblog entry specified by anchor or null if no such entry exists.
-     * @param anchor Weblog entry anchor
-     * @return Weblog entry specified by anchor
-     */
-    public WeblogEntry getWeblogEntry(String anchor) {
-        WeblogEntry entry = null;
-        try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
-            WeblogEntryManager wmgr = roller.getWeblogEntryManager();
-            entry = wmgr.getWeblogEntryByAnchor(this, anchor);
-        } catch (WebloggerException e) {
-            log.error("ERROR: getting entry by anchor");
-        }
-        return entry;
-    }
-
-    public WeblogCategory getWeblogCategory(String categoryName) {
-        WeblogCategory category = null;
-        try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
-            WeblogEntryManager wmgr = roller.getWeblogEntryManager();
-            if (categoryName != null && !"nil".equals(categoryName)) {
-                category = wmgr.getWeblogCategoryByName(this, categoryName);
-            } else if (!getWeblogCategories().isEmpty()) {
-                // Same "first category found" fallback saveWeblogEntry uses, and
-                // the same reason for the guard: this is reachable from a
-                // template, where an unchecked NoSuchElementException escapes the
-                // catch below and takes the whole render with it. Returning null
-                // is what every other failure here already does.
-                category = getWeblogCategories().getFirst();
-            }
-        } catch (WebloggerException e) {
-            log.error("ERROR: fetching category: {}", categoryName, e);
-        }
-        return category;
-    }
-
-    
-    /**
-     * Get up to 100 most recent published entries in weblog.
-     * @param cat Category name or null for no category restriction
-     * @param length Max entries to return (1-100)
-     * @return List of weblog entry objects.
-     */
-    public List<WeblogEntry> getRecentWeblogEntries(String cat, int length) {
-        if (cat != null && "nil".equals(cat)) {
-            cat = null;
-        }
-        if (length > MAX_ENTRIES) {
-            length = MAX_ENTRIES;
-        }
-        if (length < 1) {
-            return Collections.emptyList();
-        }
-        try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-            WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
-            wesc.setWeblog(this);
-            wesc.setCatName(cat);
-            wesc.setStatus(PubStatus.PUBLISHED);
-            wesc.setMaxResults(length);
-            return wmgr.getWeblogEntries(wesc);
-        } catch (WebloggerException e) {
-            log.error("ERROR: getting recent entries", e);
-        }
-        return Collections.emptyList();
-    }
-    
-    /**
-     * Get up to 100 most recent published entries in weblog.
-     * @param tag Blog entry tag to query by
-     * @param length Max entries to return (1-100)
-     * @return List of weblog entry objects.
-     */
-    public List<WeblogEntry> getRecentWeblogEntriesByTag(String tag, int length) {
-        if (tag != null && "nil".equals(tag)) {
-            tag = null;
-        }
-        if (length > MAX_ENTRIES) {
-            length = MAX_ENTRIES;
-        }
-        if (length < 1) {
-            return Collections.emptyList();
-        }
-        List<String> tags = Collections.emptyList();
-        if (tag != null) {
-            tags = List.of(tag);
-        }
-        try {
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-            WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
-            wesc.setWeblog(this);
-            wesc.setTags(tags);
-            wesc.setStatus(PubStatus.PUBLISHED);
-            wesc.setMaxResults(length);
-            return wmgr.getWeblogEntries(wesc);
-        } catch (WebloggerException e) {
-            log.error("ERROR: getting recent entries", e);
-        }
-        return Collections.emptyList();
-    }   
-    
-    /**
-     * Get a list of TagStats objects for the most popular tags
-     *
-     * @param sinceDays Number of days into past (or -1 for all days)
-     * @param length    Max number of tags to return.
-     * @return          Collection of WeblogEntryTag objects
-     */
-    public List<TagStat> getPopularTags(int sinceDays, int length) {
-        Date startDate = null;
-        if(sinceDays > 0) {
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(new Date());
-            cal.add(Calendar.DATE, -1 * sinceDays);        
-            startDate = cal.getTime();     
-        }        
-        try {            
-            Weblogger roller = WebloggerFactory.getWeblogger();
-            WeblogEntryManager wmgr = roller.getWeblogEntryManager();
-            return wmgr.getPopularTags(this, startDate, 0, length);
-        } catch (Exception e) {
-            log.error("ERROR: fetching popular tags for weblog {}", this.getName(), e);
-        }
-        return Collections.emptyList();
-    }      
-
-    public long getEntryCount() {
-        long count = 0;
-        try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
-            WeblogEntryManager mgr = roller.getWeblogEntryManager();
-            count = mgr.getEntryCount(this);            
-        } catch (WebloggerException e) {
-            log.error("Error getting entry count for weblog {}", this.getName(), e);
-        }
-        return count;
-    }
-
-
     /**
      * Add a category as a child of this category.
      */

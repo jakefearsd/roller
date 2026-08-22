@@ -103,7 +103,7 @@ public class WeblogEntryTest  {
         testEntry.setWebsite(testWeblog);
         testEntry.setCreatorUserName(testUser.getUserName());
 
-        WeblogCategory cat = testWeblog.getWeblogCategory("General");
+        WeblogCategory cat = TestUtils.categoryNamed(testWeblog, "General");
         testEntry.setCategory(cat);
         
         // create a weblog entry
@@ -358,7 +358,7 @@ public class WeblogEntryTest  {
                     new java.sql.Timestamp(new java.util.Date().getTime()));
             testEntry.setWebsite(testWeblog);
             testEntry.setCreatorUserName(testUser.getUserName());
-            testEntry.setCategory(testWeblog.getWeblogCategory("General"));
+            testEntry.setCategory(TestUtils.categoryNamed(testWeblog, "General"));
 
             // shortcut
             testEntry.addTag("testTag");
@@ -935,7 +935,7 @@ public class WeblogEntryTest  {
         testEntry.setWebsite(testWeblog);
         testEntry.setCreatorUserName(testUser.getUserName());
 
-        WeblogCategory cat = testWeblog.getWeblogCategory("General");
+        WeblogCategory cat = TestUtils.categoryNamed(testWeblog, "General");
         testEntry.setCategory(cat);
         
         // create a weblog entry
@@ -1108,8 +1108,8 @@ public class WeblogEntryTest  {
             blog1 = wmgr.getWeblog(blog1.getId());
             blog2 = wmgr.getWeblog(blog2.getId());
 
-            assertEquals(2L, blog1.getEntryCount());
-            assertEquals(3L, blog2.getEntryCount());
+            assertEquals(2L, emgr.getEntryCount(blog1));
+            assertEquals(3L, emgr.getEntryCount(blog2));
             assertEquals(5L, emgr.getEntryCount());
 
             assertEquals(4L, wmgr.getWeblogCount());

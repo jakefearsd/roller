@@ -17,11 +17,7 @@
  */
 package org.apache.roller.weblogger.pojos;
 
-import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import java.security.BasicPermission;
 import java.util.List;
@@ -30,9 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
 
 /**
  * Pins down {@link GlobalPermission}, the site-wide half of Roller's
@@ -132,16 +125,11 @@ class GlobalPermissionTest {
         User user = new User();
         user.setUserName("bob");
 
-        Weblogger weblogger = mock(Weblogger.class);
-        UserManager userManager = mock(UserManager.class);
-        when(weblogger.getUserManager()).thenReturn(userManager);
-        when(userManager.getRoles(user)).thenReturn(List.of("admin", "editor"));
-
-        GlobalPermission perm;
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            perm = new GlobalPermission(user);
-        }
+        // The mapping is a pure function of the user's roles and the
+        // role.action.<role> config; resolving the roles is the user manager's
+        // job (JPAUserManagerImpl.globalPermissionOf) and no longer happens
+        // inside a pojo constructor through the static service locator.
+        GlobalPermission perm = GlobalPermission.impliedByRoles(user, List.of("admin", "editor"));
 
         List<String> actions = perm.getActionsAsList();
         assertTrue(actions.contains(GlobalPermission.ADMIN),
@@ -162,16 +150,7 @@ class GlobalPermissionTest {
         User user = new User();
         user.setUserName("nobody");
 
-        Weblogger weblogger = mock(Weblogger.class);
-        UserManager userManager = mock(UserManager.class);
-        when(weblogger.getUserManager()).thenReturn(userManager);
-        when(userManager.getRoles(user)).thenReturn(List.of("role-with-no-mapping"));
-
-        GlobalPermission perm;
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            perm = new GlobalPermission(user);
-        }
+        GlobalPermission perm = GlobalPermission.impliedByRoles(user, List.of("role-with-no-mapping"));
 
         assertTrue(perm.isEmpty(),
                 "A role with no role.action.<role> mapping must contribute no actions "

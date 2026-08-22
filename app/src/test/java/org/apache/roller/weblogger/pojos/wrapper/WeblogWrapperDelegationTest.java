@@ -17,11 +17,11 @@
  */
 package org.apache.roller.weblogger.pojos.wrapper;
 
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
@@ -29,11 +29,12 @@ import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
+import org.mockito.ArgumentCaptor;
 
 import java.util.Date;
 import java.util.List;
@@ -41,10 +42,17 @@ import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.mockito.MockedStatic;
+import static org.mockito.Mockito.mockStatic;
 
 /**
  * Covers the {@link WeblogWrapper} accessors that reach through the business
@@ -86,11 +94,144 @@ class WeblogWrapperDelegationTest {
         wrapper = WeblogWrapper.wrap(weblog, urls, weblogger);
     }
 
+    /**
+     * Runs {@code body} with the static locator answering a facade that knows
+     * ONLY the theme manager: {@code Weblog.getTheme()} still locates statically
+     * (plan Task 17). Every other lookup the wrapper makes -- entries, counts,
+     * tags, categories, creator -- goes through the facade it was GIVEN, which
+     * is why the static facade deliberately carries no entry or user manager:
+     * a wrapper that regressed to locating them would NPE here.
+     */
     private <T> T withWeblogger(Supplier<T> body) {
+        Weblogger themeOnly = mock(Weblogger.class);
+        when(themeOnly.getThemeManager()).thenReturn(themes);
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+            factory.when(WebloggerFactory::getWeblogger).thenReturn(themeOnly);
             return body.get();
         }
+    }
+
+    @Test
+    void recentEntryRequestsAreClampedToOneHundredAndAskForPublishedOnly() throws Exception {
+        when(entries.getWeblogEntries(any())).thenReturn(List.of());
+        ArgumentCaptor<WeblogEntrySearchCriteria> criteria =
+                ArgumentCaptor.forClass(WeblogEntrySearchCriteria.class);
+
+        wrapper.getRecentWeblogEntries("General", 500);
+        wrapper.getRecentWeblogEntriesByTag("java", 500);
+
+        verify(entries, times(2)).getWeblogEntries(criteria.capture());
+        for (WeblogEntrySearchCriteria c : criteria.getAllValues()) {
+            assertEquals(100, c.getMaxResults(),
+                    "The template API caps a theme's recent-entries request at 100, "
+                            + "whatever number the template asked for");
+            assertEquals(WeblogEntry.PubStatus.PUBLISHED, c.getStatus());
+            assertSame(weblog, c.getWeblog());
+        }
+        assertEquals("General", criteria.getAllValues().get(0).getCatName());
+        assertEquals(List.of("java"), criteria.getAllValues().get(1).getTags());
+    }
+
+    @Test
+    void aNonPositiveLengthAndANilNameAreTheTemplateApisNulls() throws Exception {
+        assertTrue(wrapper.getRecentWeblogEntries("General", 0).isEmpty());
+        verifyNoInteractions(entries);
+
+        when(entries.getWeblogEntries(any())).thenReturn(List.of());
+        wrapper.getRecentWeblogEntries("nil", 5);
+        ArgumentCaptor<WeblogEntrySearchCriteria> criteria =
+                ArgumentCaptor.forClass(WeblogEntrySearchCriteria.class);
+        verify(entries).getWeblogEntries(criteria.capture());
+        assertNull(criteria.getValue().getCatName(), "\"nil\" is how a template says no category");
+    }
+
+    @Test
+    void aNilCategoryNameFallsBackToTheWeblogsFirstCategory() throws Exception {
+        // Same "first category found" fallback saveWeblogEntry uses, kept on
+        // the wrapper because a template reaches it; an unchecked exception
+        // here would take the whole render with it.
+        WeblogCategory first = new WeblogCategory();
+        first.setName("First");
+        weblog.addCategory(first);
+
+        assertEquals("First", wrapper.getWeblogCategory("nil").getName());
+        assertEquals("First", wrapper.getWeblogCategory(null).getName());
+        verifyNoInteractions(entries);
+    }
+
+    @Test
+    void aWeblogWithNoCategoriesAnswersNullForNilRatherThanThrowing() throws Exception {
+        assertNull(wrapper.getWeblogCategory("nil"));
+    }
+
+    @Test
+    void askingForASingleEntryIsAValidRequest() throws Exception {
+        // One is the smallest useful request and sits directly on the "too few"
+        // boundary; a sidebar showing the latest post asks for exactly this.
+        when(entries.getWeblogEntries(any())).thenReturn(List.of());
+        ArgumentCaptor<WeblogEntrySearchCriteria> criteria =
+                ArgumentCaptor.forClass(WeblogEntrySearchCriteria.class);
+
+        wrapper.getRecentWeblogEntries("General", 1);
+
+        verify(entries).getWeblogEntries(criteria.capture());
+        assertEquals(1, criteria.getValue().getMaxResults(),
+                "A request for one entry must reach the database, not be rejected as if "
+                        + "it were a request for none");
+    }
+
+    @Test
+    void popularTagsWindowIsOnlyAppliedWhenAPositiveNumberOfDaysIsGiven() throws Exception {
+        TagStat popular = new TagStat();
+        popular.setName("java");
+        when(entries.getPopularTags(any(), any(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt())).thenReturn(List.of(popular));
+        ArgumentCaptor<Date> startDate = ArgumentCaptor.forClass(Date.class);
+
+        List<TagStat> returned = wrapper.getPopularTags(-1, 10);
+        wrapper.getPopularTags(0, 10);
+        wrapper.getPopularTags(30, 10);
+
+        verify(entries, times(3)).getPopularTags(org.mockito.ArgumentMatchers.eq(weblog),
+                startDate.capture(), org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.eq(10));
+        List<Date> starts = startDate.getAllValues();
+        assertEquals(List.of(popular), returned, "The tag cloud must render the tags the query returned");
+        assertNull(starts.get(0),
+                "-1 days means 'all time', which has to reach the query as a null start "
+                        + "date rather than a date 1 day in the past");
+        assertNull(starts.get(1), "0 days means 'all time' too");
+        long thirtyDaysAgo = System.currentTimeMillis() - java.util.concurrent.TimeUnit.DAYS.toMillis(30);
+        assertTrue(Math.abs(starts.get(2).getTime() - thirtyDaysAgo)
+                        < java.util.concurrent.TimeUnit.MINUTES.toMillis(5),
+                "A 30 day window must start 30 days ago, not 30 days in the future: " + starts.get(2));
+    }
+
+    @Test
+    void lookupsAndCountsFailSoftRatherThanBreakingTheRender() throws Exception {
+        // These are called from templates. An exception escaping here takes out
+        // the whole page, so the accessors swallow it and report nothing.
+        when(entries.getEntryCount(weblog)).thenThrow(new WebloggerException("boom"));
+        when(entries.getWeblogEntryByAnchor(org.mockito.ArgumentMatchers.eq(weblog),
+                org.mockito.ArgumentMatchers.isNull())).thenThrow(new WebloggerException("bad anchor"));
+        when(entries.getPopularTags(any(), any(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt())).thenThrow(new WebloggerException("boom"));
+        when(entries.getWeblogEntries(any())).thenThrow(new WebloggerException("boom"));
+
+        assertEquals(0L, wrapper.getEntryCount());
+        assertNull(wrapper.getWeblogEntry(null),
+                "A lookup failure must read as 'no such entry' so the permalink page "
+                        + "can render a 404 instead of a stack trace");
+        assertTrue(wrapper.getPopularTags(30, 10).isEmpty());
+        assertTrue(wrapper.getRecentWeblogEntries("General", 5).isEmpty());
+    }
+
+    @Test
+    void aCreatorThatCannotBeResolvedIsNullNotAnException() throws Exception {
+        UserManager users = mock(UserManager.class);
+        when(weblogger.getUserManager()).thenReturn(users);
+        when(users.getUserByUserName("alice")).thenThrow(new WebloggerException("database down"));
+
+        assertNull(wrapper.getCreator(), "A byline must not be able to break the page");
     }
 
     @Test

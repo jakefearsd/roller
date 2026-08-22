@@ -56,6 +56,9 @@ import org.apache.roller.weblogger.pojos.MediaFileTag;
 import org.apache.roller.weblogger.pojos.MediaFileType;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.RollerMessages;
+import java.util.HashSet;
+import java.util.Locale;
+import org.apache.roller.weblogger.util.Utilities;
 
 public class JPAMediaFileManagerImpl implements MediaFileManager {
 
@@ -929,6 +932,40 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             throw e;
         } catch (Exception e) {
             throw new WebloggerException("Error cropping media file " + mediaFile.getId(), e);
+        }
+    }
+
+    @Override
+    public void updateTags(MediaFile file, List<String> updatedTags) throws WebloggerException {
+        if (updatedTags == null) {
+            return;
+        }
+
+        Set<String> newTags = new HashSet<>(updatedTags.size());
+        Locale localeObject = file.getWeblog() != null ? file.getWeblog()
+                .getLocaleInstance() : Locale.getDefault();
+
+        for (String inName : updatedTags) {
+            newTags.add(Utilities.normalizeTag(inName, localeObject));
+        }
+
+        Set<String> removeTags = new HashSet<>();
+
+        // remove old ones no longer passed.
+        for (MediaFileTag tag : file.getTags()) {
+            if (!newTags.contains(tag.getName())) {
+                removeTags.add(tag.getName());
+            } else {
+                newTags.remove(tag.getName());
+            }
+        }
+
+        for (String tag : removeTags) {
+            removeMediaFileTag(tag, file);
+        }
+
+        for (String tag : newTags) {
+            file.addTag(tag);
         }
     }
 

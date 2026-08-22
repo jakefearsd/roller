@@ -33,6 +33,9 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 
 /**
  * Test Weblog Category related business operations.
@@ -213,10 +216,10 @@ public class WeblogCategoryFunctionalityTest  {
             dest = mgr.getWeblogCategory(dest.getId());
 
             // verify number of entries in each category
-            assertEquals(0, dest.retrieveWeblogEntries(true).size());
-            assertEquals(0, dest.retrieveWeblogEntries(false).size());
-            assertEquals(2, c1.retrieveWeblogEntries(false).size());
-            assertEquals(1, c1.retrieveWeblogEntries(true).size());
+            assertEquals(0, entriesIn(dest, true).size());
+            assertEquals(0, entriesIn(dest, false).size());
+            assertEquals(2, entriesIn(c1, false).size());
+            assertEquals(1, entriesIn(c1, true).size());
 
             // move contents of source category c1 to destination category dest
             mgr.moveWeblogCategoryContents(c1, dest);
@@ -228,11 +231,11 @@ public class WeblogCategoryFunctionalityTest  {
             c1 = mgr.getWeblogCategory(c1.getId());
 
             // Hierarchy is flattened under dest      
-            assertEquals(2, dest.retrieveWeblogEntries(false).size());
-            assertEquals(1, dest.retrieveWeblogEntries(true).size());
+            assertEquals(2, entriesIn(dest, false).size());
+            assertEquals(1, entriesIn(dest, true).size());
 
             // c1 category should be empty now
-            assertEquals(0, c1.retrieveWeblogEntries(false).size());
+            assertEquals(0, entriesIn(c1, false).size());
 
         } finally {
             mgr.removeWeblogEntry(TestUtils.getManagedWeblogEntry(e1));
@@ -242,4 +245,11 @@ public class WeblogCategoryFunctionalityTest  {
         log.info("END");
     }
     
+
+    /** All (or only published) entries in a category, through the entry manager. */
+    private static List<WeblogEntry> entriesIn(WeblogCategory category, boolean publishedOnly)
+            throws WebloggerException {
+        return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+                .getWeblogEntries(WeblogEntrySearchCriteria.forCategory(category, publishedOnly));
+    }
 }

@@ -259,7 +259,8 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
     void beanRoundTripsTheEditableFields() throws Exception {
         mediaFile.setDescription("A photo");
         mediaFile.setCopyrightText("(c) me");
-        mediaFile.setTagsAsString("holiday beach");
+        mediaFile.addTag("holiday");
+        mediaFile.addTag("beach");
         mediaFile.setOriginalPath("/orig/photo.jpg");
         mediaFile.setLength(1234L);
         mediaFile.setAltText("A red kite riding the thermal");
@@ -278,7 +279,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         assertTrue(copy.isIsImage(), "A jpeg must be recognised as an image for the gallery view");
 
         MediaFile target = new MediaFile();
-        copy.copyTo(target);
+        copy.copyTo(target, weblogger.mediaFileManager());
 
         assertEquals("photo.jpg", target.getName());
         assertEquals("A photo", target.getDescription());
@@ -300,7 +301,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
 
         MediaFile target = new MediaFile();
         target.setAltText("stale value from before the edit");
-        copy.copyTo(target);
+        copy.copyTo(target, weblogger.mediaFileManager());
 
         assertEquals("", target.getAltText());
     }
@@ -315,7 +316,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         copy.setDirectoryId("dir-2");
 
         MediaFile target = new MediaFile();
-        copy.copyTo(target);
+        copy.copyTo(target, weblogger.mediaFileManager());
 
         org.junit.jupiter.api.Assertions.assertNull(target.getDirectory(),
                 "copyTo must leave the directory to the explicit move path");
@@ -422,7 +423,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         assertEquals(0.75, copy.getFocalY());
 
         MediaFile target = new MediaFile();
-        copy.copyTo(target);
+        copy.copyTo(target, weblogger.mediaFileManager());
         assertEquals(0.25, target.getFocalX());
         assertEquals(0.75, target.getFocalY());
     }
@@ -465,7 +466,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         lone.setFocalX(0.4);
 
         MediaFile target = new MediaFile();
-        lone.copyTo(target);
+        lone.copyTo(target, weblogger.mediaFileManager());
 
         org.junit.jupiter.api.Assertions.assertNull(target.getFocalX(),
                 "half a focal point cannot position anything and must not persist");
@@ -479,7 +480,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         outOfRange.setFocalY(-0.2);
 
         MediaFile target = new MediaFile();
-        outOfRange.copyTo(target);
+        outOfRange.copyTo(target, weblogger.mediaFileManager());
 
         assertEquals(1.0, target.getFocalX());
         assertEquals(0.0, target.getFocalY());

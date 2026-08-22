@@ -25,7 +25,6 @@ import java.util.List;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.util.Utilities;
 
@@ -49,17 +48,19 @@ public class GlobalPermission extends RollerPermission {
     public static final String ADMIN  = "admin";
     
     /**
-     * Create global permission for one specific user initialized with the
-     * actions that are implied by the user's roles.
-     * @param user User of permission.
-     * @throws org.apache.roller.weblogger.WebloggerException
+     * The global permission implied by a user's roles: the union, without
+     * repeats, of the actions {@code role.action.<role>} names for each role.
+     *
+     * <p>This used to be a constructor, {@code GlobalPermission(User)}, that
+     * asked the user manager for the roles itself through the static service
+     * locator. Resolving the roles is {@code UserManager}'s job
+     * ({@code JPAUserManagerImpl.globalPermissionOf(User)}); what is left here
+     * is the pure mapping from roles to actions.
+     *
+     * @param user  the user the permission is for (names the permission)
+     * @param roles the user's roles, as the user manager reports them
      */
-    @SuppressWarnings("deprecation") // getRoles() is needed to build permission from user's actual roles
-    public GlobalPermission(User user) throws WebloggerException {
-        super("GlobalPermission user: " + user.getUserName());
-
-        // loop through user's roles, adding actions implied by each
-        List<String> roles = WebloggerFactory.getWeblogger().getUserManager().getRoles(user);
+    public static GlobalPermission impliedByRoles(User user, List<String> roles) throws WebloggerException {
         List<String> actionsList = new ArrayList<>();
         for (String role : roles) {
             String impliedActions = WebloggerConfig.getProperty("role.action." + role);
@@ -72,9 +73,9 @@ public class GlobalPermission extends RollerPermission {
                 }
             }
         }
-        setActionsAsList(actionsList);
+        return new GlobalPermission(user, actionsList);
     }
-        
+
     /** 
      * Create global permission with the actions specified by array.
      * @param actions actions to add to permission

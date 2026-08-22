@@ -45,6 +45,9 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import java.util.Collections;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstract base controller for Spring MVC controllers in Roller.
@@ -52,6 +55,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * for authentication, authorization, message resolution, and model population.
  */
 public abstract class BaseController implements UISecurityEnforced, UIActionPreparable {
+
+    private static final Logger log = LoggerFactory.getLogger(BaseController.class);
 
     @Autowired
     protected MessageSource messageSource;
@@ -443,6 +448,41 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
             value = WebloggerRuntimeConfig.getProperty(key);
         }
         return (value != null) && Boolean.parseBoolean(value);
+    }
+
+    // --- Permission checks ---
+
+    /**
+     * Whether {@code user} holds {@code action} on {@code weblog}. This used to
+     * be {@code Weblog.hasUserPermission(User, String)}, an entity method that
+     * located the user manager statically; a check that cannot be answered is
+     * a denial (logged), exactly as before.
+     */
+    protected boolean hasWeblogAction(Weblog weblog, User user, String action) {
+        try {
+            WeblogPermission userPerms =
+                    new WeblogPermission(weblog, user, Collections.singletonList(action));
+            return weblogger.getUserManager().checkPermission(userPerms, user);
+        } catch (WebloggerException ex) {
+            // something is going seriously wrong, not much we can do here
+            log.error("ERROR checking user permssion", ex);
+        }
+        return false;
+    }
+
+    /**
+     * Whether {@code user} holds the global {@code admin} action. This used to
+     * be {@code User.hasGlobalPermission("admin")}; a check that cannot be
+     * answered is a denial, as before.
+     */
+    protected boolean isGlobalAdmin(User user) {
+        try {
+            GlobalPermission perm =
+                    new GlobalPermission(Collections.singletonList(GlobalPermission.ADMIN));
+            return weblogger.getUserManager().checkPermission(perm, user);
+        } catch (WebloggerException ex) {
+            return false;
+        }
     }
 
     // --- Common model population ---

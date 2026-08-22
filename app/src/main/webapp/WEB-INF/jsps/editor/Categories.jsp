@@ -86,7 +86,7 @@
 
                             <c:set var="categoryId" value="${category.id}"/>
                             <c:set var="categoryName" value="${fn:escapeXml(category.name)}"/>
-                            <c:set var="categoryInUse" value="${category.inUse}"/>
+                            <c:set var="categoryInUse" value="${categoriesInUse.contains(category.id)}"/>
                             <button type="button" class="btn btn-link p-0 align-baseline border-0 category-delete-btn"
                                     data-category-id="${categoryId}" data-category-name="${categoryName}"
                                     data-category-in-use="${categoryInUse}"

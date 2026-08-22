@@ -210,7 +210,7 @@ public class WeblogEntryDuplicateTest {
         entry.setText("Body of " + title);
         entry.setWebsite(managedWeblog);
         entry.setCreatorUserName(TestUtils.getManagedUser(testUser).getUserName());
-        entry.setCategory(managedWeblog.getWeblogCategory("General"));
+        entry.setCategory(TestUtils.categoryNamed(managedWeblog, "General"));
         entry.setStatus(PubStatus.PUBLISHED);
         entry.setPubTime(new Timestamp(System.currentTimeMillis()));
         entry.setUpdateTime(new Timestamp(System.currentTimeMillis()));

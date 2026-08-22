@@ -192,8 +192,8 @@ public class EntriesController extends BaseController {
                               List<String> selectedEntries,
                               @ModelAttribute("bean") EntriesBean bean,
                               RedirectAttributes redirectAttributes) {
-        boolean mayPublish = getActionWeblog(request)
-                .hasUserPermission(getAuthenticatedUser(request), WeblogPermission.POST);
+        boolean mayPublish = hasWeblogAction(getActionWeblog(request),
+                getAuthenticatedUser(request), WeblogPermission.POST);
         PubStatus target = mayPublish ? PubStatus.PUBLISHED : PubStatus.PENDING;
 
         return applyToSelection(request, selectedEntries, bean, redirectAttributes,

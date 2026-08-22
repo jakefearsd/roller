@@ -21,6 +21,8 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.business.MediaFileManager;
+import org.apache.roller.weblogger.util.Utilities;
 
 /**
  * Bean for managing media file.
@@ -105,13 +107,21 @@ public class MediaFileBean {
      * Copies the contents of this bean to a media file object
      * 
      */
-    public void copyTo(MediaFile dataHolder) throws WebloggerException {
+    public void copyTo(MediaFile dataHolder, MediaFileManager mediaFileManager) throws WebloggerException {
 
         dataHolder.setName(this.name);
         dataHolder.setDescription(this.description);
         dataHolder.setAltText(this.altText);
         dataHolder.setCopyrightText(this.copyrightText);
-        dataHolder.setTagsAsString(this.tagsAsString);
+        // The tags go through the manager the caller hands in -- replacing a
+        // file's tags removes the ones no longer named, a write the entity used
+        // to issue itself through the static service locator; a form bean must
+        // not locate anything either. A null string clears them, as before.
+        if (this.tagsAsString == null) {
+            dataHolder.getTags().clear();
+        } else {
+            mediaFileManager.updateTags(dataHolder, Utilities.splitStringAsTags(this.tagsAsString));
+        }
         dataHolder.setOriginalPath(this.originalPath);
         // The focal point is both-or-neither: a lone coordinate cannot
         // position anything, so it degrades to "no focal point" rather than

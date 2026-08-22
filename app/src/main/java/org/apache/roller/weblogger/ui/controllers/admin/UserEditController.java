@@ -34,7 +34,6 @@ import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.UserToken;
-import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.controllers.core.PasswordLinkMailer;
 import org.apache.roller.weblogger.ui.core.RollerLoginSessionManager;
@@ -47,6 +46,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.apache.roller.weblogger.ui.controllers.WeblogPermissionView;
 
 
 /**
@@ -391,9 +391,10 @@ public class UserEditController extends BaseController {
         }
     }
 
-    private List<WeblogPermission> getPermissions(User user) {
+    private List<WeblogPermissionView> getPermissions(User user) {
         try {
-            return weblogger.getUserManager().getWeblogPermissions(user);
+            return WeblogPermissionView.resolve(
+                    weblogger.getUserManager().getWeblogPermissions(user), weblogger);
         } catch (WebloggerException ex) {
             log.error("ERROR getting permissions for user {}", user.getUserName(), ex);
         }

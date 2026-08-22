@@ -99,7 +99,9 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
     @Override
     public void removeWeblogCategory(WeblogCategory cat)
     throws WebloggerException {
-        if(!cat.retrieveWeblogEntries(false).isEmpty()) {
+        // All entries, trash included -- see WeblogEntrySearchCriteria.forCategory
+        // for why a trashed entry still blocks deleting its category.
+        if(!getWeblogEntries(WeblogEntrySearchCriteria.forCategory(cat, false)).isEmpty()) {
             throw new WebloggerException("Cannot remove category with entries");
         }
 
@@ -134,7 +136,9 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
             throws WebloggerException {
         
         // get all entries in category and subcats
-        List<WeblogEntry> results = srcCat.retrieveWeblogEntries(false);
+        // Trash included: a trashed entry must move with the category, not be
+        // left pointing at a row about to be removed (WeblogEntrySearchCriteria.forCategory).
+        List<WeblogEntry> results = getWeblogEntries(WeblogEntrySearchCriteria.forCategory(srcCat, false));
         
         // Loop through entries in src cat, assign them to dest cat
         Weblog website = destCat.getWeblog();

@@ -40,6 +40,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.apache.roller.weblogger.ui.controllers.WeblogPermissionView;
+import org.apache.roller.weblogger.pojos.Weblog;
 
 /**
  * Allows weblog admin to list/modify member permissions, and to grant a
@@ -94,14 +96,16 @@ public class MembersController extends BaseController {
             }
 
             User user = getAuthenticatedUser(request);
+            Weblog weblog = getActionWeblog(request);
             boolean error = false;
             for (WeblogPermission perms : permsList) {
-                String sval = request.getParameter("perm-" + perms.getUser().getId());
+                User permUser = userMgr.getUserByUserName(perms.getUserName());
+                String sval = request.getParameter("perm-" + permUser.getId());
                 if (sval != null) {
                     if (WeblogPermission.ADMIN.equals(sval)) {
                         numAdmins++;
                     }
-                    if (perms.getUser().getUserName().equals(user.getUserName())) {
+                    if (perms.getUserName().equals(user.getUserName())) {
                         if (!WeblogPermission.ADMIN.equals(sval)) {
                             error = true;
                             addError(model, "memberPermissions.noSelfModifications", request);
@@ -115,18 +119,19 @@ public class MembersController extends BaseController {
             }
 
             for (WeblogPermission perms : permsList) {
-                String sval = request.getParameter("perm-" + perms.getUser().getId());
+                User permUser = userMgr.getUserByUserName(perms.getUserName());
+                String sval = request.getParameter("perm-" + permUser.getId());
                 if (sval != null) {
                     if (!error && !perms.hasAction(sval)) {
                         if ("-1".equals(sval)) {
                             userMgr.revokeWeblogPermission(
-                                    perms.getWeblog(), perms.getUser(), WeblogPermission.ALL_ACTIONS);
+                                    weblog, permUser, WeblogPermission.ALL_ACTIONS);
                             removed++;
                         } else {
                             userMgr.revokeWeblogPermission(
-                                    perms.getWeblog(), perms.getUser(), WeblogPermission.ALL_ACTIONS);
+                                    weblog, permUser, WeblogPermission.ALL_ACTIONS);
                             userMgr.grantWeblogPermission(
-                                    perms.getWeblog(), perms.getUser(),
+                                    weblog, permUser,
                                     Utilities.stringToStringList(sval, ","));
                             changed++;
                         }
@@ -235,10 +240,10 @@ public class MembersController extends BaseController {
         return ".Members";
     }
 
-    private List<WeblogPermission> getWeblogPermissions(HttpServletRequest request) {
+    private List<WeblogPermissionView> getWeblogPermissions(HttpServletRequest request) {
         try {
-            return weblogger.getUserManager()
-                    .getWeblogPermissions(getActionWeblog(request));
+            return WeblogPermissionView.resolve(weblogger.getUserManager()
+                    .getWeblogPermissions(getActionWeblog(request)), weblogger);
         } catch (WebloggerException ex) {
             log.error("ERROR getting weblog permissions", ex);
         }

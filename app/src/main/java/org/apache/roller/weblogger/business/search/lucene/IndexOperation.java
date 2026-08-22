@@ -37,6 +37,7 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
+import org.apache.roller.weblogger.pojos.User;
 
 /**
  * This is the base class for all index operation. These operations include:<br>
@@ -67,6 +68,21 @@ public abstract class IndexOperation implements Runnable {
         this.manager = manager;
     }
 
+    /**
+     * The entry's author, resolved by name through the tier; null (logged)
+     * when the name no longer resolves, which is how a deleted author's
+     * entries stay indexed under no user. This used to be
+     * {@code WeblogEntry.getCreator()}.
+     */
+    private User resolveCreator(WeblogEntry data) {
+        try {
+            return manager.weblogger().getUserManager().getUserByUserName(data.getCreatorUserName());
+        } catch (Exception e) {
+            log.error("ERROR fetching user object for username: {}", data.getCreatorUserName(), e);
+            return null;
+        }
+    }
+
     // ~ Methods
     // ================================================================
     protected Document getDocument(WeblogEntry data) {
@@ -82,8 +98,9 @@ public abstract class IndexOperation implements Runnable {
                 .getWebsite().getHandle(), Field.Store.YES));
 
         // text, don't index deleted/disabled users of a group blog
-        if (data.getCreator() != null) {
-            doc.add(new TextField(FieldConstants.USERNAME, data.getCreator()
+        User creator = resolveCreator(data);
+        if (creator != null) {
+            doc.add(new TextField(FieldConstants.USERNAME, creator
                     .getUserName().toLowerCase(Locale.ROOT), Field.Store.YES));
         }
 

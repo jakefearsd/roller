@@ -353,7 +353,7 @@ public class JPAUserManagerImpl implements UserManager {
             // if user has specified permission in weblog return true
             WeblogPermission permToCheck = (WeblogPermission)perm;
             try {
-                RollerPermission existingPerm = getWeblogPermission(permToCheck.getWeblog(), user);
+                RollerPermission existingPerm = getWeblogPermission(permToCheck.getObjectId(), user);
                 if (existingPerm != null && existingPerm.implies(perm)) {
                     return true;
                 }
@@ -362,7 +362,7 @@ public class JPAUserManagerImpl implements UserManager {
         }
 
         // if Blog Server admin would still have weblog permission above
-        GlobalPermission globalPerm = new GlobalPermission(user);
+        GlobalPermission globalPerm = globalPermissionOf(user);
         if (globalPerm.implies(perm)) {
             return true;
         }
@@ -374,15 +374,35 @@ public class JPAUserManagerImpl implements UserManager {
     
     @Override
     public WeblogPermission getWeblogPermission(Weblog weblog, User user) throws WebloggerException {
+        return getWeblogPermission(weblog.getHandle(), user);
+    }
+
+    /**
+     * The permission row for a user on the weblog named by {@code handle} --
+     * what a {@code WeblogPermission}'s {@code objectId} is. {@code checkPermission}
+     * uses this form so it never has to resolve the weblog entity just to
+     * look the row up again by its handle.
+     */
+    private WeblogPermission getWeblogPermission(String handle, User user) throws WebloggerException {
         TypedQuery<WeblogPermission> q = strategy.getNamedQuery("WeblogPermission.getByUserName&WeblogId"
                 , WeblogPermission.class);
         q.setParameter(1, user.getUserName());
-        q.setParameter(2, weblog.getHandle());
+        q.setParameter(2, handle);
         try {
             return q.getSingleResult();
         } catch (NoResultException ignored) {
             return null;
         }
+    }
+
+    /**
+     * The global permission a user's roles imply. This used to be the
+     * {@code GlobalPermission(User)} constructor, which asked this manager for
+     * the roles through the static service locator; resolving the roles is
+     * this manager's job, the role-to-action mapping stays on the permission.
+     */
+    public GlobalPermission globalPermissionOf(User user) throws WebloggerException {
+        return GlobalPermission.impliedByRoles(user, getRoles(user));
     }
 
     @Override

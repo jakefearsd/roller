@@ -21,8 +21,6 @@
         </named-query>
 
         <attributes>
-            <transient name="user"/>
-            <transient name="weblog"/>
         </attributes>
     </entity>
 </entity-mappings>

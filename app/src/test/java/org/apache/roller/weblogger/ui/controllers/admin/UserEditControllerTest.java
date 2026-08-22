@@ -50,6 +50,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.apache.roller.weblogger.ui.controllers.WeblogPermissionView;
 
 /**
  * Tests for {@link UserEditController}, the only screen in Roller that can mint
@@ -306,7 +307,7 @@ class UserEditControllerTest {
         assertEquals("Jake", loaded.getScreenName());
         assertEquals("fr_FR", loaded.getLocale());
         assertTrue(loaded.isAdministrator(), "the admin checkbox must reflect the role the user really holds");
-        assertSame(permissions, model.getAttribute("permissions"));
+        assertEquals(permissions, permissionsOf(model.getAttribute("permissions")));
         assertEquals("admin", model.getAttribute("desiredMenu"));
         assertFalse(((List<?>) model.getAttribute("localesList")).isEmpty());
         assertFalse(((List<?>) model.getAttribute("timeZonesList")).isEmpty());
@@ -624,5 +625,12 @@ class UserEditControllerTest {
         RollerSession session = org.mockito.Mockito.mock(RollerSession.class);
         RollerLoginSessionManager.getInstance().register(userName, session);
         return session;
+    }
+
+    /** The permissions behind the {@code WeblogPermissionView} rows a controller now hands the JSP. */
+    private static List<WeblogPermission> permissionsOf(Object rows) {
+        return ((List<?>) rows).stream()
+                .map(row -> ((WeblogPermissionView) row).getPermission())
+                .toList();
     }
 }

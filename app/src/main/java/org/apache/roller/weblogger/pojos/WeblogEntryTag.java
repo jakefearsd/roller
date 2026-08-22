@@ -21,10 +21,7 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.roller.util.UUIDGenerator;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 
 
 /**
@@ -32,7 +29,6 @@ import org.apache.roller.weblogger.business.WebloggerFactory;
  * @author Elias Torres
  */
 public class WeblogEntryTag implements Serializable {
-    private static final Logger log = LoggerFactory.getLogger(WeblogEntryTag.class);
     
     private static final long serialVersionUID = -2602052289337573384L;
     
@@ -96,15 +92,6 @@ public class WeblogEntryTag implements Serializable {
         weblogEntry = data;
     }
     
-    
-    public User getUser() {
-        try {
-            return WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(getCreatorUserName());
-        } catch (Exception e) {
-            log.error("ERROR fetching user object for username: {}", getCreatorUserName(), e);
-        }
-        return null;
-    }
     
     public String getCreatorUserName() {
         return userName;

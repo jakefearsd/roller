@@ -268,7 +268,7 @@
             </c:if>
 
             <%-- global admin can pin items to front page weblog --%>
-            <c:if test="${authenticatedUser.hasGlobalPermission('admin')}">
+            <c:if test="${isGlobalAdmin}">
                 <div class="form-check editor-quiet-check">
                     <label class="form-check-label"><input type="checkbox" class="form-check-input" name="bean.pinnedToMain" value="true" ${bean.pinnedToMain ? 'checked' : ''}/> <spring:message code="weblogEdit.pinnedToMain"/></label>
                 </div>

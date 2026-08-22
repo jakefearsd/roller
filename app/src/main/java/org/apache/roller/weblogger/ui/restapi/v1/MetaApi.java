@@ -13,6 +13,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * Liveness for the API surface. Mapped at {@code /v1} because the container
@@ -22,6 +27,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/v1")
 public class MetaApi {
+
+    /**
+     * {@code @Lazy} is load-bearing, as on {@code BaseApiController}: this
+     * controller is constructed at context refresh, before the business tier
+     * has been bootstrapped; only {@link #me} ever touches it.
+     */
+    @Autowired
+    @Lazy
+    private Weblogger weblogger;
 
     /**
      * A weblog-scoped token has no weblog to check on this route -- exempt,
@@ -57,9 +71,22 @@ public class MetaApi {
         return ResponseEntity.ok(Map.of(
                 "userName", user.getUserName(),
                 "screenName", user.getScreenName(),
-                "globalAdmin", user.hasGlobalPermission(GlobalPermission.ADMIN),
+                "globalAdmin", isGlobalAdmin(user),
                 "tokenScope", principal == null ? Map.of() : Map.of(
                         "weblog", principal.scopeWeblog() == null ? "" : principal.scopeWeblog(),
                         "role", principal.scopeRole().name())));
+    }
+
+    /**
+     * Whether the user holds the global {@code admin} action; a check that
+     * cannot be answered is a denial (was {@code User.hasGlobalPermission}).
+     */
+    private boolean isGlobalAdmin(User user) {
+        try {
+            return weblogger.getUserManager().checkPermission(
+                    new GlobalPermission(List.of(GlobalPermission.ADMIN)), user);
+        } catch (WebloggerException e) {
+            return false;
+        }
     }
 }

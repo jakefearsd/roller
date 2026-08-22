@@ -106,8 +106,6 @@
                 </cascade>
             </one-to-many>
 			<transient name="theme"/>
-			<transient name="creator"/>
-			<transient name="entryCount"/>
             <transient name="localeInstance"/>
             <transient name="timeZoneInstance" />
 		</attributes>

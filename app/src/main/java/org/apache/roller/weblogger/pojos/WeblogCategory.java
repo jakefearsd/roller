@@ -19,13 +19,8 @@
 package org.apache.roller.weblogger.pojos;
 
 import java.io.Serializable;
-import java.util.List;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.util.Utilities;
 
@@ -180,51 +175,6 @@ public class WeblogCategory implements Serializable, Comparable<WeblogCategory> 
     
     public void setWeblog(Weblog weblog) {
         this.weblog = weblog;
-    }
-
-    /**
-     * Retrieve all weblog entries in this category.
-     *
-     * @param publishedOnly True if desired to return only published entries
-     * @return List of WeblogEntryData objects.
-     * @throws WebloggerException
-     */
-    public List<WeblogEntry> retrieveWeblogEntries(boolean publishedOnly) throws WebloggerException {
-        WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-        WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
-        wesc.setWeblog(weblog);
-        wesc.setCatName(this.getName());
-        if (publishedOnly) {
-            wesc.setStatus(PubStatus.PUBLISHED);
-        } else {
-            // Callers asking for "all" entries in this category -- category
-            // deletion's in-use guard and the move-contents-then-delete
-            // sequence -- must still see trashed entries. A trashed entry
-            // still blocks deleting its category (there is nothing to
-            // restore it into once the category is gone), and moving a
-            // category's contents must carry a trashed entry along to the
-            // destination rather than silently leaving it pointed at a row
-            // about to be removed. Without this, the default exclusion
-            // WeblogEntrySearchCriteria applies to a query naming no
-            // explicit status makes a category whose only entries are
-            // trashed look empty here even though WeblogEntry.getByCategory
-            // (isWeblogCategoryInUse's query) still counts it as in use --
-            // and moveWeblogCategoryContents would move zero entries out of
-            // the way before the category is removed out from under them.
-            wesc.setIncludeTrashed(true);
-        }
-        return wmgr.getWeblogEntries(wesc);
-    }
-    
-    /**
-     * Returns true if category is in use.
-     */
-    public boolean isInUse() {
-        try {
-            return WebloggerFactory.getWeblogger().getWeblogEntryManager().isWeblogCategoryInUse(this);
-        } catch (WebloggerException e) {
-            throw new RuntimeException(e);
-        }
     }
 
 }
