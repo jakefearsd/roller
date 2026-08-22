@@ -24,7 +24,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -36,6 +37,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.function.Supplier;
 import java.util.List;
 import java.io.IOException;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
@@ -56,12 +59,31 @@ import java.util.Map;
  *   <li>Calls {@link UIActionPreparable#myPrepare()} if applicable.</li>
  * </ol>
  */
+@Component
 public class RollerHandlerInterceptor implements HandlerInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(RollerHandlerInterceptor.class);
 
     private static final String LOGIN_URL = "/roller-ui/login.rol";
     private static final String ACCESS_DENIED_URL = "/roller-ui/access-denied.rol";
+
+    private final WebloggerProvider provider;
+    private final Weblogger weblogger;
+
+    /**
+     * @param provider  answers "is the business tier up?" -- the install and
+     *                  setup controllers must run before it is, so every
+     *                  check below is skipped until then
+     * @param weblogger the facade the checks run against. {@code @Lazy} is
+     *                  load-bearing: this interceptor is constructed at
+     *                  context refresh, before {@code WebloggerStartup.prepare()}
+     *                  has run, and a non-lazy injection would build the
+     *                  business tier then and there.
+     */
+    public RollerHandlerInterceptor(WebloggerProvider provider, @Lazy Weblogger weblogger) {
+        this.provider = provider;
+        this.weblogger = weblogger;
+    }
 
     /**
      * The access check for a controller that asks for one.
@@ -91,7 +113,7 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
                     LOGIN_URL, request, response);
         }
 
-        UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager umgr = weblogger.getUserManager();
 
         List<String> globalActions = secured.requiredGlobalPermissionActions();
         if (globalActions != null && !globalActions.isEmpty()) {
@@ -167,7 +189,7 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
 
         // Skip all checks if the application hasn't been bootstrapped yet
         // (install/setup controllers need to run before bootstrap)
-        if (!WebloggerFactory.isBootstrapped()) {
+        if (!provider.isBootstrapped()) {
             return true;
         }
 
@@ -182,9 +204,7 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
         Weblog actionWeblog = null;
         if (weblogHandle != null && !weblogHandle.isBlank()) {
             try {
-                actionWeblog = WebloggerFactory.getWeblogger()
-                        .getWeblogManager()
-                        .getWeblogByHandle(weblogHandle);
+                actionWeblog = weblogger.getWeblogManager().getWeblogByHandle(weblogHandle);
             } catch (Exception e) {
                 log.warn("Error looking up weblog with handle: {}", weblogHandle, e);
             }
@@ -319,9 +339,7 @@ public class RollerHandlerInterceptor implements HandlerInterceptor {
         }
 
         try {
-            return WebloggerFactory.getWeblogger()
-                    .getUserManager()
-                    .getUserByUserName(username);
+            return weblogger.getUserManager().getUserByUserName(username);
         } catch (Exception e) {
             log.error("Error looking up user: {}", username, e);
             return null;

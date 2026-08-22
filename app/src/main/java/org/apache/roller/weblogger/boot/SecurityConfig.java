@@ -98,8 +98,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public RollerUserDetailsService rollerUserDetailsService() {
-        return new RollerUserDetailsService();
+    public RollerUserDetailsService rollerUserDetailsService(WebloggerProvider webloggerProvider) {
+        return new RollerUserDetailsService(webloggerProvider);
     }
 
     @Bean

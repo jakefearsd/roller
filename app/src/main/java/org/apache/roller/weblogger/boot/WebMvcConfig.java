@@ -53,9 +53,21 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
+    private final RollerHandlerInterceptor rollerHandlerInterceptor;
+
+    /**
+     * @param rollerHandlerInterceptor the {@code @Component} interceptor,
+     *        constructor-injected with its {@code WebloggerProvider} and a lazy
+     *        {@code Weblogger}; registering the bean rather than a {@code new}
+     *        instance is what lets it hold those dependencies at all.
+     */
+    public WebMvcConfig(RollerHandlerInterceptor rollerHandlerInterceptor) {
+        this.rollerHandlerInterceptor = rollerHandlerInterceptor;
+    }
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new RollerHandlerInterceptor());
+        registry.addInterceptor(rollerHandlerInterceptor);
         // "/v1/**", not "/api/**": ServletRegistrationConfig.API_URL_PATTERNS
         // ("/api/*") is a servlet-spec PREFIX mapping, so the container
         // strips "/api" before the request ever reaches Spring MVC's lookup

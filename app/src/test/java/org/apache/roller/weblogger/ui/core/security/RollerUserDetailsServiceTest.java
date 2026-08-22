@@ -18,6 +18,13 @@
 package org.apache.roller.weblogger.ui.core.security;
 
 import org.apache.roller.weblogger.business.MockWeblogger;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import org.apache.roller.weblogger.business.WebloggerProvider;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
@@ -36,17 +43,44 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 class RollerUserDetailsServiceTest {
 
-    private final RollerUserDetailsService service = new RollerUserDetailsService();
+    private final WebloggerProvider provider = mock(WebloggerProvider.class);
+    private final RollerUserDetailsService service = new RollerUserDetailsService(provider);
 
     @Test
-    void anUnbootstrappedFactoryProducesASoftFailureCarryingItsCause() {
-        MockWeblogger.installNotBootstrapped();
-        try {
-            UsernameNotFoundException thrown = assertThrows(UsernameNotFoundException.class,
-                    () -> service.loadUserByUsername("anyone"));
+    void anUnbootstrappedProviderProducesASoftFailureCarryingItsCause() {
+        doThrow(new IllegalStateException("not bootstrapped")).when(provider).getWeblogger();
 
-            assertNotNull(thrown.getCause(),
-                    "the IllegalStateException from getWeblogger() must survive as the cause");
+        UsernameNotFoundException thrown = assertThrows(UsernameNotFoundException.class,
+                () -> service.loadUserByUsername("anyone"));
+
+        assertNotNull(thrown.getCause(),
+                "the IllegalStateException from the provider must survive as the cause");
+    }
+
+    /**
+     * Once the tier is up the lookup goes through the facade the provider
+     * hands out -- not through any static. The provider here returns a
+     * {@link MockWeblogger} facade and nothing else is installed, so a
+     * regression to the static locator would throw, not pass.
+     */
+    @Test
+    void aBootstrappedProviderIsAskedForTheUserManager() throws Exception {
+        MockWeblogger weblogger = MockWeblogger.install();
+        try {
+            MockWeblogger.uninstall(); // the facade must reach the service only through the provider
+            Weblogger facade = weblogger.weblogger();
+            when(provider.getWeblogger()).thenReturn(facade);
+            org.apache.roller.weblogger.pojos.User alice = new org.apache.roller.weblogger.pojos.User();
+            alice.setUserName("alice");
+            alice.setPassword("{bcrypt}x");
+            when(weblogger.userManager().getUserByUserName("alice")).thenReturn(alice);
+            when(weblogger.userManager().getRoles(alice)).thenReturn(java.util.List.of("editor"));
+
+            org.springframework.security.core.userdetails.UserDetails details =
+                    service.loadUserByUsername("alice");
+
+            assertEquals("alice", details.getUsername());
+            verify(weblogger.userManager()).getUserByUserName("alice");
         } finally {
             MockWeblogger.uninstall();
         }

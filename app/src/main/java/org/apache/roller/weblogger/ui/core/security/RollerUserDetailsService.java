@@ -10,7 +10,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.User;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -21,7 +21,21 @@ import org.springframework.dao.DataRetrievalFailureException;
  */
 public class RollerUserDetailsService implements UserDetailsService {
     private static final Logger log = LoggerFactory.getLogger(RollerUserDetailsService.class);
-    
+
+    private final WebloggerProvider provider;
+
+    /**
+     * @param provider the business tier, asked for on every lookup rather than
+     *                 held as a lazy facade: Spring Security calls this service
+     *                 before the tier is bootstrapped (first-time setup), and
+     *                 the provider throws there, which is mapped to a soft
+     *                 failure below -- a lazy proxy would instead try to build
+     *                 the graph.
+     */
+    public RollerUserDetailsService(WebloggerProvider provider) {
+        this.provider = provider;
+    }
+
     /**
      * @throws UsernameNotFoundException, DataAccessException
      */
@@ -29,7 +43,7 @@ public class RollerUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String userName) {
         Weblogger roller;
         try {
-            roller = WebloggerFactory.getWeblogger();
+            roller = provider.getWeblogger();
         } catch (Exception e) {
             // Should only happen in case of 1st time startup, setup required
             log.debug("Ignorable error getting Roller instance", e);

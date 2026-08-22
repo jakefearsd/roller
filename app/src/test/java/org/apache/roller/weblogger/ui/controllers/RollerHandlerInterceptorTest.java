@@ -22,6 +22,8 @@ import java.util.List;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
@@ -49,6 +51,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
  * The gate in front of every authoring and admin route.
@@ -82,17 +85,20 @@ class RollerHandlerInterceptorTest {
     private MockHttpServletRequest request;
     private MockHttpServletResponse response;
     private MockWeblogger weblogger;
+    private WebloggerProvider provider;
 
     private User alice;
     private Weblog aliceBlog;
 
     @BeforeEach
     void setUp() throws Exception {
-        interceptor = new RollerHandlerInterceptor();
         request = new MockHttpServletRequest();
         request.setContextPath(CONTEXT);
         response = new MockHttpServletResponse();
         weblogger = MockWeblogger.install();
+        provider = mock(WebloggerProvider.class);
+        when(provider.isBootstrapped()).thenReturn(true);
+        interceptor = new RollerHandlerInterceptor(provider, weblogger.weblogger());
 
         alice = new User();
         alice.setUserName("alice");
@@ -128,18 +134,33 @@ class RollerHandlerInterceptorTest {
      */
     @Test
     void nothingIsCheckedBeforeTheApplicationIsBootstrapped() throws Exception {
-        MockWeblogger.uninstall();
-        MockWeblogger.installNotBootstrapped();
-        try {
-            assertTrue(interceptor.preHandle(request, response,
-                            handlerFor(new SecuredController(true, List.of("admin"), false, List.of()))),
-                    "a controller demanding admin must still be reachable before bootstrap");
-            assertNull(request.getAttribute("authenticatedUser"),
-                    "and nothing may be resolved, because there is nothing to resolve it with");
-        } finally {
-            MockWeblogger.uninstall();
-            weblogger = MockWeblogger.install();
-        }
+        when(provider.isBootstrapped()).thenReturn(false);
+        assertTrue(interceptor.preHandle(request, response,
+                        handlerFor(new SecuredController(true, List.of("admin"), false, List.of()))),
+                "a controller demanding admin must still be reachable before bootstrap");
+        assertNull(request.getAttribute("authenticatedUser"),
+                "and nothing may be resolved, because there is nothing to resolve it with");
+    }
+
+    /**
+     * The interceptor resolves users and weblogs through the facade it was
+     * constructed with. A second, separately-mocked facade is handed in here
+     * while a {@link MockWeblogger} is still installed in the static shim: if
+     * the interceptor ever regressed to the locator it would find alice there
+     * and this assertion would not hold.
+     */
+    @Test
+    void usersAreResolvedThroughTheInjectedFacadeNotTheStaticShim() throws Exception {
+        Weblogger other = mock(Weblogger.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+        when(other.getUserManager().getUserByUserName("alice")).thenReturn(null);
+        RollerHandlerInterceptor injected = new RollerHandlerInterceptor(provider, other);
+        signedInAs("alice");
+
+        assertFalse(injected.preHandle(request, response,
+                        handlerFor(new SecuredController(true, List.of(), false, List.of()))),
+                "the injected facade knows no alice, so the login requirement must deny");
+        verify(other.getUserManager()).getUserByUserName("alice");
+        verifyNoInteractions(weblogger.userManager());
     }
 
     /**

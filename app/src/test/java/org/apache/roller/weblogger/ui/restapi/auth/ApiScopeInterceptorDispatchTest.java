@@ -3,6 +3,8 @@ package org.apache.roller.weblogger.ui.restapi.auth;
 import java.util.List;
 import org.apache.roller.weblogger.boot.WebMvcConfig;
 import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
+import org.apache.roller.weblogger.ui.controllers.RollerHandlerInterceptor;
 import org.apache.roller.weblogger.pojos.ApiToken;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.restapi.ApiExceptionHandler;
@@ -25,6 +27,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
@@ -90,8 +93,16 @@ class ApiScopeInterceptorDispatchTest {
     @EnableWebMvc
     static class TestConfig {
         @Bean
-        WebMvcConfig webMvcConfig() {
-            return new WebMvcConfig();
+        WebMvcConfig webMvcConfig(RollerHandlerInterceptor rollerHandlerInterceptor) {
+            return new WebMvcConfig(rollerHandlerInterceptor);
+        }
+
+        /** Bootstrapped, and backed by the MockWeblogger facade installed in @BeforeAll. */
+        @Bean
+        RollerHandlerInterceptor rollerHandlerInterceptor() {
+            WebloggerProvider provider = mock(WebloggerProvider.class);
+            when(provider.isBootstrapped()).thenReturn(true);
+            return new RollerHandlerInterceptor(provider, weblogger.weblogger());
         }
 
         @Bean

@@ -45,7 +45,10 @@ import static org.mockito.Mockito.when;
  */
 class WebMvcConfigTest {
 
-    private final WebMvcConfig config = new WebMvcConfig();
+    private final RollerHandlerInterceptor interceptor = new RollerHandlerInterceptor(
+            mock(org.apache.roller.weblogger.business.WebloggerProvider.class),
+            mock(org.apache.roller.weblogger.business.Weblogger.class));
+    private final WebMvcConfig config = new WebMvcConfig(interceptor);
 
     @Test
     void addsTheRollerHandlerInterceptor() {
@@ -56,7 +59,7 @@ class WebMvcConfigTest {
 
         config.addInterceptors(registry);
 
-        verify(registry).addInterceptor(org.mockito.ArgumentMatchers.isA(RollerHandlerInterceptor.class));
+        verify(registry).addInterceptor(interceptor);
     }
 
     /**

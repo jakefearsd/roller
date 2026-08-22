@@ -371,7 +371,7 @@ class SecurityConfigTest {
 
             SecurityConfig config = new SecurityConfig();
             PasswordEncoder encoder = config.passwordEncoder();
-            RollerUserDetailsService userDetailsService = config.rollerUserDetailsService();
+            RollerUserDetailsService userDetailsService = config.rollerUserDetailsService(mock(WebloggerProvider.class));
 
             AuthenticationManager manager = config.authenticationManager(userDetailsService, encoder);
 
@@ -396,7 +396,7 @@ class SecurityConfigTest {
 
             SecurityConfig config = new SecurityConfig();
             PasswordEncoder encoder = config.passwordEncoder();
-            RollerUserDetailsService userDetailsService = config.rollerUserDetailsService();
+            RollerUserDetailsService userDetailsService = config.rollerUserDetailsService(mock(WebloggerProvider.class));
 
             AuthenticationManager manager = config.authenticationManager(userDetailsService, encoder);
 

@@ -3,6 +3,7 @@ package org.apache.roller.weblogger.ui.restapi;
 import java.util.List;
 
 import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 /**
  * What a refused REST caller gets, as opposed to a refused browser.
@@ -55,11 +57,13 @@ class ApiSecurityRefusalTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        interceptor = new RollerHandlerInterceptor();
         request = new MockHttpServletRequest();
         request.setContextPath(CONTEXT);
         response = new MockHttpServletResponse();
         weblogger = MockWeblogger.install();
+        WebloggerProvider provider = mock(WebloggerProvider.class);
+        when(provider.isBootstrapped()).thenReturn(true);
+        interceptor = new RollerHandlerInterceptor(provider, weblogger.weblogger());
 
         alice = new User();
         alice.setUserName("alice");
