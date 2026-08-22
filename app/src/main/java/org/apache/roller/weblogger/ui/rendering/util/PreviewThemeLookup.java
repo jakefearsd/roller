@@ -50,14 +50,13 @@ final class PreviewThemeLookup {
      * is a broken installation rather than a broken guess. Both answer null,
      * and every caller treats that as "no theme to preview".
      */
-    static Theme byName(String themeName) {
+    static Theme byName(String themeName, ThemeManager themeMgr) {
 
         if (themeName == null) {
             return null;
         }
 
         try {
-            ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
             return themeMgr.getTheme(themeName);
 
         } catch (ThemeNotFoundException ignored) {
@@ -66,5 +65,16 @@ final class PreviewThemeLookup {
             log.error("Error looking up theme {}", themeName, re);
             return null;
         }
+    }
+
+    /**
+     * Transitional: the same lookup against the statically located
+     * {@code ThemeManager}. Exists only for {@code WeblogPreviewResourceRequest},
+     * which is constructed without a facade until the request objects take one
+     * (plan Task 12); every other caller passes its own manager to
+     * {@link #byName(String, ThemeManager)}. Deleted with that task.
+     */
+    static Theme byName(String themeName) {
+        return byName(themeName, WebloggerFactory.getWeblogger().getThemeManager());
     }
 }

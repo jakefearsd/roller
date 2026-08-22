@@ -230,7 +230,7 @@ class PageServletDecisionTest {
 
     @Test
     void anOrdinaryRequestIsNotRejected() throws Exception {
-        assertNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+        assertNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     /**
@@ -244,7 +244,7 @@ class PageServletDecisionTest {
         when(pageRequest.getWeblogPageName()).thenReturn("_sidebar");
 
         assertEquals("template is hidden",
-                PageServlet.rejectionReason(pageRequest, weblog, hidden, false));
+                PageServlet.rejectionReason(pageRequest, weblog, hidden, false, weblogger.weblogEntryManager()));
     }
 
     /**
@@ -256,7 +256,7 @@ class PageServletDecisionTest {
     void aLocaleViewIsAlwaysRejected() throws Exception {
         when(pageRequest.getLocale()).thenReturn("fr");
 
-        assertNotNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+        assertNotNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     // -- permalinks: the four ways one can fail to be servable ---------------
@@ -267,7 +267,7 @@ class PageServletDecisionTest {
         when(pageRequest.getWeblogEntry()).thenReturn(null);
 
         assertEquals("no entry with that anchor",
-                PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+                PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     /**
@@ -279,7 +279,7 @@ class PageServletDecisionTest {
         givenPermalink(entry(PubStatus.DRAFT, Instant.now().minusSeconds(60), "en_US"));
 
         assertEquals("entry is not published",
-                PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+                PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     /**
@@ -292,7 +292,7 @@ class PageServletDecisionTest {
         givenPermalink(entry(PubStatus.PUBLISHED, Instant.now().plusSeconds(86_400), "en_US"));
 
         assertEquals("entry is scheduled for the future",
-                PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+                PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     /**
@@ -307,14 +307,14 @@ class PageServletDecisionTest {
         givenPermalink(entry(PubStatus.PUBLISHED, Instant.now().minusSeconds(60), "fr_FR"));
         when(pageRequest.getLocale()).thenReturn("en");
 
-        assertNotNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+        assertNotNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     @Test
     void aPermalinkForAPublishedEntryIsServed() throws Exception {
         givenPermalink(entry(PubStatus.PUBLISHED, Instant.now().minusSeconds(60), "en_US"));
 
-        assertNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+        assertNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     // -- categories and tags -------------------------------------------------
@@ -325,7 +325,7 @@ class PageServletDecisionTest {
         when(pageRequest.getWeblogCategory()).thenReturn(null);
 
         assertEquals("no category by that name",
-                PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+                PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     @Test
@@ -334,7 +334,7 @@ class PageServletDecisionTest {
         when(weblogger.weblogEntryManager().getTagComboExists(any(), any())).thenReturn(false);
 
         assertEquals("no entries carry that combination of tags",
-                PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+                PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     @Test
@@ -342,7 +342,7 @@ class PageServletDecisionTest {
         when(pageRequest.getTags()).thenReturn(List.of("spain"));
         when(weblogger.weblogEntryManager().getTagComboExists(any(), any())).thenReturn(true);
 
-        assertNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false));
+        assertNull(PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager()));
     }
 
     /**
@@ -354,7 +354,7 @@ class PageServletDecisionTest {
         when(pageRequest.getTags()).thenReturn(List.of("spain"));
         when(weblogger.weblogEntryManager().getTagComboExists(any(), any())).thenReturn(true);
 
-        PageServlet.rejectionReason(pageRequest, weblog, template(), true);
+        PageServlet.rejectionReason(pageRequest, weblog, template(), true, weblogger.weblogEntryManager());
 
         org.mockito.Mockito.verify(weblogger.weblogEntryManager())
                 .getTagComboExists(List.of("spain"), null);
@@ -366,7 +366,7 @@ class PageServletDecisionTest {
         when(weblogger.weblogEntryManager().getTagComboExists(any(), any()))
                 .thenThrow(new WebloggerException("database is unhappy"));
 
-        assertTrue(PageServlet.rejectionReason(pageRequest, weblog, template(), false)
+        assertTrue(PageServlet.rejectionReason(pageRequest, weblog, template(), false, weblogger.weblogEntryManager())
                         .startsWith("tag lookup failed"),
                 "a failing lookup is a 404, not a 500");
     }

@@ -100,7 +100,8 @@ public class WeblogPreviewRequest extends WeblogPageRequest {
     public Theme getTheme() {
         
         if (theme == null) {
-            theme = PreviewThemeLookup.byName(themeName);
+            theme = PreviewThemeLookup.byName(themeName,
+                    WebloggerFactory.getWeblogger().getThemeManager());
         }
 
         return theme;

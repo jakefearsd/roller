@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
@@ -55,6 +55,18 @@ public class SearchServlet extends HttpServlet {
 
     // Development theme reloading
     Boolean themeReload = false;
+
+    private final transient Weblogger weblogger;
+
+    /**
+     * Constructed by {@code ServletRegistrationConfig} with the (lazily
+     * resolved) business-tier facade; there is no default constructor on
+     * purpose, so the dependency is visible at the one place this servlet is
+     * built.
+     */
+    public SearchServlet(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
 
     /**
      * Init method for this servlet
@@ -108,7 +120,8 @@ public class SearchServlet extends HttpServlet {
 
             RenderingServletUtils.reloadThemeFromDisk(weblog,
                     RenderCaches.forPage(WebloggerRuntimeConfig
-                            .isSiteWideWeblog(searchRequest.getWeblogHandle())));
+                            .isSiteWideWeblog(searchRequest.getWeblogHandle())),
+                    weblogger.getThemeManager());
         }
 
         // Multi-locale weblogs are gone: a weblog's search always covers
@@ -163,10 +176,10 @@ public class SearchServlet extends HttpServlet {
             initData.put("pageContext", pageContext);
             initData.put("parsedRequest", pageRequest);
             initData.put("searchRequest", searchRequest);
-            initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy());
+            initData.put("urlStrategy", weblogger.getUrlStrategy());
 
             RenderingServletUtils.loadModels("rendering.searchModels", model, initData,
-                    WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle()));
+                    WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle()), weblogger);
 
         } catch (WebloggerException ex) {
             log.error("Error building the rendering model for search", ex);

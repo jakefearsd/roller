@@ -19,6 +19,7 @@ import jakarta.servlet.jsp.JspFactory;
 import jakarta.servlet.jsp.PageContext;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.util.cache.CacheManager;
@@ -144,31 +145,31 @@ public final class RenderingTestSupport {
     }
 
     public static PageServlet pageServlet() throws ServletException {
-        return init(new PageServlet());
+        return init(new PageServlet(WebloggerFactory.getWeblogger()));
     }
 
     static PreviewServlet previewServlet() throws ServletException {
-        return init(new PreviewServlet());
+        return init(new PreviewServlet(WebloggerFactory.getWeblogger()));
     }
 
     public static FeedServlet feedServlet() throws ServletException {
-        return init(new FeedServlet());
+        return init(new FeedServlet(WebloggerFactory.getWeblogger()));
     }
 
     public static SearchServlet searchServlet() throws ServletException {
-        return init(new SearchServlet());
+        return init(new SearchServlet(WebloggerFactory.getWeblogger()));
     }
 
     static MediaResourceServlet mediaResourceServlet() throws ServletException {
-        return init(new MediaResourceServlet());
+        return init(new MediaResourceServlet(WebloggerFactory.getWeblogger()));
     }
 
     static ResourceServlet resourceServlet() throws ServletException {
-        return init(new ResourceServlet());
+        return init(new ResourceServlet(WebloggerFactory.getWeblogger()));
     }
 
     static PreviewResourceServlet previewResourceServlet() throws ServletException {
-        return init(new PreviewResourceServlet());
+        return init(new PreviewResourceServlet(WebloggerFactory.getWeblogger()));
     }
 
     private static <T extends HttpServlet> T init(T servlet) throws ServletException {

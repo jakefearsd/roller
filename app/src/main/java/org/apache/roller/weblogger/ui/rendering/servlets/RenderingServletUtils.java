@@ -22,7 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.themes.ThemeManager;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.Template;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCache;
@@ -67,12 +68,22 @@ final class RenderingServletUtils {
      * a status flag the caller has to re-test -- which costs a branch in each
      * servlet to save one, and buys nothing.
      *
+     * <p>The {@code weblogger} handed in is put into {@code initData} under the
+     * key {@code "weblogger"}, next to the {@code urlStrategy} the servlets
+     * already supply, so that models receive the business tier from the servlet
+     * that built them rather than locating it statically.
+     *
      * @param modelsProperty config key naming this servlet's model list
      * @param siteWide       whether to also load the site-wide models
+     * @param weblogger      the servlet's business-tier facade, made available
+     *                       to every model through {@code initData}
      */
     static void loadModels(String modelsProperty, Map<String, Object> model,
-                           Map<String, Object> initData, boolean siteWide)
+                           Map<String, Object> initData, boolean siteWide,
+                           Weblogger weblogger)
             throws WebloggerException {
+
+        initData.put("weblogger", weblogger);
 
         ModelLoader.loadModels(WebloggerConfig.getProperty(modelsProperty),
                 model, initData, true);
@@ -155,10 +166,10 @@ final class RenderingServletUtils {
      * convenience; a theme that will not reload must not turn a reader's page
      * into an error.
      */
-    static void reloadThemeFromDisk(Weblog weblog, RenderCache<?> renderCache) {
+    static void reloadThemeFromDisk(Weblog weblog, RenderCache<?> renderCache,
+                                    ThemeManager themeManager) {
         try {
-            boolean reloaded = WebloggerFactory.getWeblogger().getThemeManager()
-                    .reLoadThemeFromDisk(weblog.getEditorTheme());
+            boolean reloaded = themeManager.reLoadThemeFromDisk(weblog.getEditorTheme());
             if (reloaded) {
                 renderCache.clear();
                 I18nMessages.reloadBundle(weblog.getLocaleInstance());

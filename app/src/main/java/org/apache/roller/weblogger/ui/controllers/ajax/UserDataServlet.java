@@ -29,7 +29,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
@@ -57,6 +56,18 @@ public class UserDataServlet extends HttpServlet {
 
     private static final long serialVersionUID = -7596671919118637768L;
     private static final int MAX_LENGTH = 50;
+
+    private final transient Weblogger weblogger;
+
+    /**
+     * Constructed by {@code ServletRegistrationConfig} with the (lazily
+     * resolved) business-tier facade; there is no default constructor on
+     * purpose, so the dependency is visible at the one place this servlet is
+     * built.
+     */
+    public UserDataServlet(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
 
     @Override
     @SuppressFBWarnings(
@@ -115,9 +126,8 @@ public class UserDataServlet extends HttpServlet {
             // MAX_LENGTH default.
         }
 
-        Weblogger roller = WebloggerFactory.getWeblogger();
         try {
-            UserManager umgr = roller.getUserManager();
+            UserManager umgr = weblogger.getUserManager();
             List<User> users = umgr.getUsersStartingWith(startsWith,
                     enabledOnly, offset, length);
             for (User user : users) {

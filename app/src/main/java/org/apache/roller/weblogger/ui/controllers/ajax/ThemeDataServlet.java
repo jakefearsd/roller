@@ -18,7 +18,7 @@
 package org.apache.roller.weblogger.ui.controllers.ajax;
 
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 
@@ -44,6 +44,18 @@ public class ThemeDataServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
+    private final transient Weblogger weblogger;
+
+    /**
+     * Constructed by {@code ServletRegistrationConfig} with the (lazily
+     * resolved) business-tier facade; there is no default constructor on
+     * purpose, so the dependency is visible at the one place this servlet is
+     * built.
+     */
+    public ThemeDataServlet(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
+
     @Override
     protected void doPost(
             HttpServletRequest request, HttpServletResponse response)
@@ -61,7 +73,7 @@ public class ThemeDataServlet extends HttpServlet {
 
         themeId = request.getParameter("theme");
 
-        ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
+        ThemeManager themeMgr = weblogger.getThemeManager();
         if (themeId == null) {
             themes = themeMgr.getEnabledThemesList();
         } else {

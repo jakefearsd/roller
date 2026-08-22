@@ -64,9 +64,9 @@ class UserDataServletTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        servlet = new UserDataServlet();
-        response = new MockHttpServletResponse();
         weblogger = MockWeblogger.install();
+        servlet = new UserDataServlet(weblogger.weblogger());
+        response = new MockHttpServletResponse();
 
         caller = new User();
         caller.setUserName("caller");

@@ -30,7 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.StaticTemplate;
 import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
@@ -54,6 +55,18 @@ public class FeedServlet extends HttpServlet {
     private transient RenderCache<WeblogFeedRequest> siteWideRenderCache = null;
     private transient RenderCache<WeblogFeedRequest> weblogRenderCache = null;
 
+
+    private final transient Weblogger weblogger;
+
+    /**
+     * Constructed by {@code ServletRegistrationConfig} with the (lazily
+     * resolved) business-tier facade; there is no default constructor on
+     * purpose, so the dependency is visible at the one place this servlet is
+     * built.
+     */
+    public FeedServlet(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
 
     /**
      * Init method for this servlet
@@ -142,7 +155,7 @@ public class FeedServlet extends HttpServlet {
             return;
         }
 
-        if (!isServable(feedRequest, weblog, isSiteWide)) {
+        if (!isServable(feedRequest, weblog, isSiteWide, weblogger.getWeblogEntryManager())) {
             RenderingServletUtils.sendNotFound(response);
             return;
         }
@@ -208,9 +221,10 @@ public class FeedServlet extends HttpServlet {
         Map<String, Object> model = new HashMap<>();
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", feedRequest);
-        initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy());
+        initData.put("urlStrategy", weblogger.getUrlStrategy());
 
-        RenderingServletUtils.loadModels("rendering.feedModels", model, initData, siteWide);
+        RenderingServletUtils.loadModels("rendering.feedModels", model, initData, siteWide,
+                weblogger);
         return model;
 
     }
@@ -287,7 +301,7 @@ public class FeedServlet extends HttpServlet {
      * </ul>
      */
     private static boolean isServable(WeblogFeedRequest feedRequest, Weblog weblog,
-                                      boolean isSiteWide) {
+                                      boolean isSiteWide, WeblogEntryManager wmgr) {
 
         if (feedRequest.getLocale() != null || feedRequest.getTerm() != null) {
             return false;
@@ -299,8 +313,7 @@ public class FeedServlet extends HttpServlet {
 
         if (feedRequest.getTags() != null && !feedRequest.getTags().isEmpty()) {
             try {
-                return WebloggerFactory.getWeblogger().getWeblogEntryManager()
-                        .getTagComboExists(feedRequest.getTags(),
+                return wmgr.getTagComboExists(feedRequest.getTags(),
                                 isSiteWide ? null : weblog);
             } catch (WebloggerException ex) {
                 log.debug("Tag lookup failed for feed request", ex);

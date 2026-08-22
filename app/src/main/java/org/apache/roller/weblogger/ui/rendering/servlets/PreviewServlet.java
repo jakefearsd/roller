@@ -27,7 +27,7 @@ import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPreviewRequest;
@@ -58,6 +58,18 @@ public class PreviewServlet extends HttpServlet {
     private static final Logger log = LoggerFactory.getLogger(PreviewServlet.class);
     
     
+    private final transient Weblogger weblogger;
+
+    /**
+     * Constructed by {@code ServletRegistrationConfig} with the (lazily
+     * resolved) business-tier facade; there is no default constructor on
+     * purpose, so the dependency is visible at the one place this servlet is
+     * built.
+     */
+    public PreviewServlet(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
+
     /**
      * Init method for this servlet
      */
@@ -204,10 +216,10 @@ public class PreviewServlet extends HttpServlet {
         initData.put("pageContext", pageContext);
         
         // define url strategy
-        initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy().getPreviewURLStrategy(previewRequest.getThemeName()));
+        initData.put("urlStrategy", weblogger.getUrlStrategy().getPreviewURLStrategy(previewRequest.getThemeName()));
         
         RenderingServletUtils.loadModels("rendering.previewModels", model, initData,
-                WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle()));
+                WebloggerRuntimeConfig.isSiteWideWeblog(weblog.getHandle()), weblogger);
 
         return model;
     }

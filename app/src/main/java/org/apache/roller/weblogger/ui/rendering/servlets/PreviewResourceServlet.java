@@ -30,8 +30,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Theme;
 import org.apache.roller.weblogger.pojos.ThemeResource;
@@ -53,6 +53,18 @@ public class PreviewResourceServlet extends HttpServlet {
     private static final Logger log = LoggerFactory.getLogger(PreviewResourceServlet.class);
 
     private transient ServletContext context = null;
+
+    private final transient Weblogger weblogger;
+
+    /**
+     * Constructed by {@code ServletRegistrationConfig} with the (lazily
+     * resolved) business-tier facade; there is no default constructor on
+     * purpose, so the dependency is visible at the one place this servlet is
+     * built.
+     */
+    public PreviewResourceServlet(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -139,8 +151,7 @@ public class PreviewResourceServlet extends HttpServlet {
         // if not from theme then see if resource is in weblog's upload dir
         if (resourceStream == null) {
             try {
-                MediaFileManager mmgr = WebloggerFactory.getWeblogger()
-                        .getMediaFileManager();
+                MediaFileManager mmgr = weblogger.getMediaFileManager();
                 MediaFile mf = mmgr.getMediaFileByOriginalPath(weblog,
                         resourceRequest.getResourcePath());
                 resourceLastMod = mf.getLastModified();

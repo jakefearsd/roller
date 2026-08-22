@@ -32,10 +32,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.UserManager;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.FileContentManager;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.RenditionSupport;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.FileContent;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -54,6 +55,18 @@ public class MediaResourceServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
     private static final Logger log = LoggerFactory.getLogger(MediaResourceServlet.class);
+
+    private final transient Weblogger weblogger;
+
+    /**
+     * Constructed by {@code ServletRegistrationConfig} with the (lazily
+     * resolved) business-tier facade; there is no default constructor on
+     * purpose, so the dependency is visible at the one place this servlet is
+     * built.
+     */
+    public MediaResourceServlet(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -74,8 +87,7 @@ public class MediaResourceServlet extends HttpServlet {
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
-                .getMediaFileManager();
+        MediaFileManager mfMgr = weblogger.getMediaFileManager();
 
         Weblog weblog;
 
@@ -135,7 +147,7 @@ public class MediaResourceServlet extends HttpServlet {
         // marked private. Those responses are marked private/no-store so no
         // shared cache can replay an editor's copy to an anonymous reader.
         if (mediaFile.getDirectory().isPrivate()) {
-            if (!requesterMayEditWeblog(weblog)) {
+            if (!requesterMayEditWeblog(weblog, weblogger.getUserManager())) {
                 log.debug("media file {} is in a private directory; not serving it on the base path",
                         resourceRequest.getResourceId());
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -181,7 +193,7 @@ public class MediaResourceServlet extends HttpServlet {
             // (including a syntactically valid width Roller never generates)
             // falls straight through to the original below.
             int width = resourceRequest.getWidth();
-            FileContentManager cmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+            FileContentManager cmgr = weblogger.getFileContentManager();
 
             if (acceptsWebp(request)) {
                 try {
@@ -256,7 +268,7 @@ public class MediaResourceServlet extends HttpServlet {
      * weblog -- i.e. one of the weblog's own editors. Anonymous requests and
      * users of other weblogs are false; any lookup failure fails closed.
      */
-    private static boolean requesterMayEditWeblog(Weblog weblog) {
+    private static boolean requesterMayEditWeblog(Weblog weblog, UserManager umgr) {
         try {
             org.springframework.security.core.Authentication authentication =
                     org.springframework.security.core.context.SecurityContextHolder
@@ -266,9 +278,9 @@ public class MediaResourceServlet extends HttpServlet {
                             org.springframework.security.authentication.AnonymousAuthenticationToken) {
                 return false;
             }
-            org.apache.roller.weblogger.pojos.User user = WebloggerFactory.getWeblogger()
-                    .getUserManager().getUserByUserName(authentication.getName());
-            return user != null && WebloggerFactory.getWeblogger().getUserManager().checkPermission(
+            org.apache.roller.weblogger.pojos.User user =
+                    umgr.getUserByUserName(authentication.getName());
+            return user != null && umgr.checkPermission(
                     new org.apache.roller.weblogger.pojos.WeblogPermission(weblog,
                             java.util.List.of(
                                     org.apache.roller.weblogger.pojos.WeblogPermission.EDIT_DRAFT)),

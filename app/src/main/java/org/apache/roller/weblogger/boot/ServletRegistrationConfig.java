@@ -23,6 +23,7 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.ServletRegistration;
 
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.UserDataServlet;
 import org.apache.roller.weblogger.ui.core.RollerSession;
@@ -47,6 +48,7 @@ import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.servlet.DispatcherServlet;
 
 /**
@@ -75,71 +77,127 @@ public class ServletRegistrationConfig {
     // request) in effect -- the closest equivalent to "element absent" and
     // left alone here rather than guessing a value web.xml never specified.
     // ------------------------------------------------------------------
+    //
+    // Each servlet is a bean of its own, constructed here with the Weblogger
+    // facade and then handed to its ServletRegistrationBean. The @Lazy on the
+    // Weblogger parameter is load-bearing: these beans are built at context
+    // refresh, before WebloggerStartup.prepare() has run, and the lazy proxy
+    // defers building the business tier to first use (the same reason
+    // BaseController's field is @Lazy). ContextRefreshDoesNotBootstrapTest
+    // pins that. Boot's own Servlet-bean adapter does not double-register
+    // them: a servlet already referenced by a ServletRegistrationBean is
+    // skipped by ServletContextInitializerBeans.
+    // ------------------------------------------------------------------
 
     @Bean
-    public ServletRegistrationBean<PageServlet> pageServletRegistration() {
+    public PageServlet pageServlet(@Lazy Weblogger weblogger) {
+        return new PageServlet(weblogger);
+    }
+
+    @Bean
+    public FeedServlet feedServlet(@Lazy Weblogger weblogger) {
+        return new FeedServlet(weblogger);
+    }
+
+    @Bean
+    public ResourceServlet resourceServlet(@Lazy Weblogger weblogger) {
+        return new ResourceServlet(weblogger);
+    }
+
+    @Bean
+    public MediaResourceServlet mediaResourceServlet(@Lazy Weblogger weblogger) {
+        return new MediaResourceServlet(weblogger);
+    }
+
+    @Bean
+    public SearchServlet searchServlet(@Lazy Weblogger weblogger) {
+        return new SearchServlet(weblogger);
+    }
+
+    @Bean
+    public PreviewServlet previewServlet(@Lazy Weblogger weblogger) {
+        return new PreviewServlet(weblogger);
+    }
+
+    @Bean
+    public PreviewResourceServlet previewResourceServlet(@Lazy Weblogger weblogger) {
+        return new PreviewResourceServlet(weblogger);
+    }
+
+    @Bean
+    public UserDataServlet userDataServlet(@Lazy Weblogger weblogger) {
+        return new UserDataServlet(weblogger);
+    }
+
+    @Bean
+    public ThemeDataServlet themeDataServlet(@Lazy Weblogger weblogger) {
+        return new ThemeDataServlet(weblogger);
+    }
+
+    @Bean
+    public ServletRegistrationBean<PageServlet> pageServletRegistration(PageServlet pageServlet) {
         ServletRegistrationBean<PageServlet> registration =
-                new ServletRegistrationBean<>(new PageServlet(), "/roller-ui/rendering/page/*");
+                new ServletRegistrationBean<>(pageServlet, "/roller-ui/rendering/page/*");
         registration.setLoadOnStartup(5);
         return registration;
     }
 
     @Bean
-    public ServletRegistrationBean<FeedServlet> feedServletRegistration() {
+    public ServletRegistrationBean<FeedServlet> feedServletRegistration(FeedServlet feedServlet) {
         ServletRegistrationBean<FeedServlet> registration =
-                new ServletRegistrationBean<>(new FeedServlet(), "/roller-ui/rendering/feed/*");
+                new ServletRegistrationBean<>(feedServlet, "/roller-ui/rendering/feed/*");
         registration.setLoadOnStartup(5);
         return registration;
     }
 
     @Bean
-    public ServletRegistrationBean<ResourceServlet> resourceServletRegistration() {
+    public ServletRegistrationBean<ResourceServlet> resourceServletRegistration(ResourceServlet resourceServlet) {
         ServletRegistrationBean<ResourceServlet> registration =
-                new ServletRegistrationBean<>(new ResourceServlet(), "/roller-ui/rendering/resources/*");
+                new ServletRegistrationBean<>(resourceServlet, "/roller-ui/rendering/resources/*");
         registration.setLoadOnStartup(5);
         return registration;
     }
 
     @Bean
-    public ServletRegistrationBean<MediaResourceServlet> mediaResourceServletRegistration() {
+    public ServletRegistrationBean<MediaResourceServlet> mediaResourceServletRegistration(MediaResourceServlet mediaResourceServlet) {
         ServletRegistrationBean<MediaResourceServlet> registration =
-                new ServletRegistrationBean<>(new MediaResourceServlet(), "/roller-ui/rendering/media-resources/*");
+                new ServletRegistrationBean<>(mediaResourceServlet, "/roller-ui/rendering/media-resources/*");
         registration.setLoadOnStartup(5);
         return registration;
     }
 
     @Bean
-    public ServletRegistrationBean<SearchServlet> searchServletRegistration() {
+    public ServletRegistrationBean<SearchServlet> searchServletRegistration(SearchServlet searchServlet) {
         ServletRegistrationBean<SearchServlet> registration =
-                new ServletRegistrationBean<>(new SearchServlet(), "/roller-ui/rendering/search/*");
+                new ServletRegistrationBean<>(searchServlet, "/roller-ui/rendering/search/*");
         registration.setLoadOnStartup(5);
         return registration;
     }
 
     @Bean
-    public ServletRegistrationBean<PreviewServlet> previewServletRegistration() {
+    public ServletRegistrationBean<PreviewServlet> previewServletRegistration(PreviewServlet previewServlet) {
         ServletRegistrationBean<PreviewServlet> registration =
-                new ServletRegistrationBean<>(new PreviewServlet(), "/roller-ui/authoring/preview/*");
+                new ServletRegistrationBean<>(previewServlet, "/roller-ui/authoring/preview/*");
         registration.setLoadOnStartup(9);
         return registration;
     }
 
     @Bean
-    public ServletRegistrationBean<PreviewResourceServlet> previewResourceServletRegistration() {
+    public ServletRegistrationBean<PreviewResourceServlet> previewResourceServletRegistration(PreviewResourceServlet previewResourceServlet) {
         ServletRegistrationBean<PreviewResourceServlet> registration =
-                new ServletRegistrationBean<>(new PreviewResourceServlet(), "/roller-ui/authoring/previewresource/*");
+                new ServletRegistrationBean<>(previewResourceServlet, "/roller-ui/authoring/previewresource/*");
         registration.setLoadOnStartup(9);
         return registration;
     }
 
     @Bean
-    public ServletRegistrationBean<UserDataServlet> userDataServletRegistration() {
-        return new ServletRegistrationBean<>(new UserDataServlet(), "/roller-ui/authoring/userdata/*");
+    public ServletRegistrationBean<UserDataServlet> userDataServletRegistration(UserDataServlet userDataServlet) {
+        return new ServletRegistrationBean<>(userDataServlet, "/roller-ui/authoring/userdata/*");
     }
 
     @Bean
-    public ServletRegistrationBean<ThemeDataServlet> themeDataServletRegistration() {
-        return new ServletRegistrationBean<>(new ThemeDataServlet(), "/roller-ui/authoring/themedata/*");
+    public ServletRegistrationBean<ThemeDataServlet> themeDataServletRegistration(ThemeDataServlet themeDataServlet) {
+        return new ServletRegistrationBean<>(themeDataServlet, "/roller-ui/authoring/themedata/*");
     }
 
     // ------------------------------------------------------------------

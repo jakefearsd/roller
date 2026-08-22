@@ -55,10 +55,10 @@ class ThemeDataServletTest {
 
     @BeforeEach
     void setUp() {
-        servlet = new ThemeDataServlet();
+        weblogger = MockWeblogger.install();
+        servlet = new ThemeDataServlet(weblogger.weblogger());
         request = new MockHttpServletRequest("GET", "/roller-ui/authoring/themedata");
         response = new MockHttpServletResponse();
-        weblogger = MockWeblogger.install();
     }
 
     @AfterEach

@@ -23,8 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.StaticThemeTemplate;
@@ -68,6 +68,18 @@ public class PageServlet extends HttpServlet {
 
     // Development theme reloading
     Boolean themeReload = false;
+
+    private final transient Weblogger weblogger;
+
+    /**
+     * Constructed by {@code ServletRegistrationConfig} with the (lazily
+     * resolved) business-tier facade; there is no default constructor on
+     * purpose, so the dependency is visible at the one place this servlet is
+     * built.
+     */
+    public PageServlet(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
 
     /**
      * Init method for this servlet
@@ -158,7 +170,8 @@ public class PageServlet extends HttpServlet {
                 && (pageRequest.getPathInfo() == null || pageRequest
                         .getPathInfo() != null
                         && !pageRequest.getPathInfo().endsWith(".css"))) {
-            RenderingServletUtils.reloadThemeFromDisk(weblog, renderCache);
+            RenderingServletUtils.reloadThemeFromDisk(weblog, renderCache,
+                    weblogger.getThemeManager());
         }
 
         if (servedFromCache(request, response, pageRequest, renderCache,
@@ -178,7 +191,8 @@ public class PageServlet extends HttpServlet {
         log.debug("page found, dealing with it");
 
         // validation. make sure that request input makes sense.
-        String rejection = rejectionReason(pageRequest, weblog, page, isSiteWide);
+        String rejection = rejectionReason(pageRequest, weblog, page, isSiteWide,
+                weblogger.getWeblogEntryManager());
         if (rejection != null) {
             log.debug("page failed validation, bailing out: {}", rejection);
             RenderingServletUtils.sendNotFound(response);
@@ -246,9 +260,10 @@ public class PageServlet extends HttpServlet {
         initData.put("requestParameters", request.getParameterMap());
         initData.put("parsedRequest", pageRequest);
         initData.put("pageContext", pageContext);
-        initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy());
+        initData.put("urlStrategy", weblogger.getUrlStrategy());
 
-        RenderingServletUtils.loadModels("rendering.pageModels", model, initData, isSiteWide);
+        RenderingServletUtils.loadModels("rendering.pageModels", model, initData, isSiteWide,
+                weblogger);
         return model;
 
     }
@@ -427,7 +442,7 @@ public class PageServlet extends HttpServlet {
      * same sentence for eight different causes.
      */
     static String rejectionReason(WeblogPageRequest pageRequest, Weblog weblog,
-            ThemeTemplate page, boolean isSiteWide) {
+            ThemeTemplate page, boolean isSiteWide, WeblogEntryManager wmgr) {
 
         if (pageRequest.getWeblogPageName() != null && page.isHidden()) {
             return "template is hidden";
@@ -470,8 +485,6 @@ public class PageServlet extends HttpServlet {
         if (pageRequest.getTags() != null && !pageRequest.getTags().isEmpty()) {
             try {
                 // tags specified. make sure they exist.
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger()
-                        .getWeblogEntryManager();
                 if (!wmgr.getTagComboExists(pageRequest.getTags(),
                         isSiteWide ? null : weblog)) {
                     return "no entries carry that combination of tags";

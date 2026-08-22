@@ -27,6 +27,7 @@ import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletRegistration;
 
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.UserDataServlet;
 import org.apache.roller.weblogger.ui.core.RollerSession;
@@ -77,6 +78,9 @@ class ServletRegistrationConfigTest {
 
     private final ServletRegistrationConfig config = new ServletRegistrationConfig();
 
+    /** The servlet beans are built with a facade; the registrations never touch it. */
+    private final Weblogger weblogger = mock(Weblogger.class);
+
     /**
      * {@link ServletRegistrationBean} exposes no getter for {@code
      * loadOnStartup} (only {@code setLoadOnStartup}), so this reads the
@@ -103,19 +107,19 @@ class ServletRegistrationConfigTest {
 
     @Test
     void renderingServletsCarryTheirWebXmlPatternAndLoadOrder() throws Exception {
-        assertServlet(config.pageServletRegistration(), PageServlet.class,
+        assertServlet(config.pageServletRegistration(config.pageServlet(weblogger)), PageServlet.class,
                 "/roller-ui/rendering/page/*", 5);
-        assertServlet(config.feedServletRegistration(), FeedServlet.class,
+        assertServlet(config.feedServletRegistration(config.feedServlet(weblogger)), FeedServlet.class,
                 "/roller-ui/rendering/feed/*", 5);
-        assertServlet(config.resourceServletRegistration(), ResourceServlet.class,
+        assertServlet(config.resourceServletRegistration(config.resourceServlet(weblogger)), ResourceServlet.class,
                 "/roller-ui/rendering/resources/*", 5);
-        assertServlet(config.mediaResourceServletRegistration(), MediaResourceServlet.class,
+        assertServlet(config.mediaResourceServletRegistration(config.mediaResourceServlet(weblogger)), MediaResourceServlet.class,
                 "/roller-ui/rendering/media-resources/*", 5);
-        assertServlet(config.searchServletRegistration(), SearchServlet.class,
+        assertServlet(config.searchServletRegistration(config.searchServlet(weblogger)), SearchServlet.class,
                 "/roller-ui/rendering/search/*", 5);
-        assertServlet(config.previewServletRegistration(), PreviewServlet.class,
+        assertServlet(config.previewServletRegistration(config.previewServlet(weblogger)), PreviewServlet.class,
                 "/roller-ui/authoring/preview/*", 9);
-        assertServlet(config.previewResourceServletRegistration(), PreviewResourceServlet.class,
+        assertServlet(config.previewResourceServletRegistration(config.previewResourceServlet(weblogger)), PreviewResourceServlet.class,
                 "/roller-ui/authoring/previewresource/*", 9);
     }
 
@@ -125,9 +129,9 @@ class ServletRegistrationConfigTest {
         // ServletRegistrationBean's own constructor default, -1 (verified via
         // javap against spring-boot-4.1.0.jar: the no-arg and (T, String...)
         // constructors both set loadOnStartup = -1).
-        assertServlet(config.userDataServletRegistration(), UserDataServlet.class,
+        assertServlet(config.userDataServletRegistration(config.userDataServlet(weblogger)), UserDataServlet.class,
                 "/roller-ui/authoring/userdata/*", -1);
-        assertServlet(config.themeDataServletRegistration(), ThemeDataServlet.class,
+        assertServlet(config.themeDataServletRegistration(config.themeDataServlet(weblogger)), ThemeDataServlet.class,
                 "/roller-ui/authoring/themedata/*", -1);
     }
 
@@ -140,15 +144,15 @@ class ServletRegistrationConfigTest {
      */
     private List<String> registeredPatterns() throws ReflectiveOperationException {
         List<String> patterns = new ArrayList<>();
-        patterns.addAll(config.pageServletRegistration().getUrlMappings());
-        patterns.addAll(config.feedServletRegistration().getUrlMappings());
-        patterns.addAll(config.resourceServletRegistration().getUrlMappings());
-        patterns.addAll(config.mediaResourceServletRegistration().getUrlMappings());
-        patterns.addAll(config.searchServletRegistration().getUrlMappings());
-        patterns.addAll(config.previewServletRegistration().getUrlMappings());
-        patterns.addAll(config.previewResourceServletRegistration().getUrlMappings());
-        patterns.addAll(config.userDataServletRegistration().getUrlMappings());
-        patterns.addAll(config.themeDataServletRegistration().getUrlMappings());
+        patterns.addAll(config.pageServletRegistration(config.pageServlet(weblogger)).getUrlMappings());
+        patterns.addAll(config.feedServletRegistration(config.feedServlet(weblogger)).getUrlMappings());
+        patterns.addAll(config.resourceServletRegistration(config.resourceServlet(weblogger)).getUrlMappings());
+        patterns.addAll(config.mediaResourceServletRegistration(config.mediaResourceServlet(weblogger)).getUrlMappings());
+        patterns.addAll(config.searchServletRegistration(config.searchServlet(weblogger)).getUrlMappings());
+        patterns.addAll(config.previewServletRegistration(config.previewServlet(weblogger)).getUrlMappings());
+        patterns.addAll(config.previewResourceServletRegistration(config.previewResourceServlet(weblogger)).getUrlMappings());
+        patterns.addAll(config.userDataServletRegistration(config.userDataServlet(weblogger)).getUrlMappings());
+        patterns.addAll(config.themeDataServletRegistration(config.themeDataServlet(weblogger)).getUrlMappings());
         return patterns;
     }
 
