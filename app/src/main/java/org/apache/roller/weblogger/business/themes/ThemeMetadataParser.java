@@ -134,37 +134,7 @@ public class ThemeMetadataParser {
         }
 
 		//parsing template code segment
-		List<Element> renditionList = element.getChildren("rendition");
-
-		for (Element renditionElement : renditionList) {
-			ThemeMetadataTemplateRendition rendition = new ThemeMetadataTemplateRendition();
-            String renditionValue = renditionElement.getAttributeValue("type");
-            if (renditionValue != null) {
-                try {
-                    rendition.setType(RenditionType.valueOf(renditionValue.toUpperCase(Locale.ROOT)));
-                } catch (IllegalArgumentException e) {
-                    throw new ThemeParsingException("Invalid rendition type " + renditionValue + " found.", e);
-                }
-            } else {
-                // default to standard if type not provided, as most templates are single-rendition
-                rendition.setType(RenditionType.STANDARD);
-            }
-            String templateString = renditionElement.getChildText("templateLanguage");
-            if (StringUtils.isEmpty(templateString)) {
-                throw new ThemeParsingException("rendition must contain a 'templateLanguage' element");
-            } else {
-                try {
-                    rendition.setTemplateLang(TemplateLanguage.valueOf(templateString.toUpperCase(Locale.ROOT)));
-                } catch (IllegalArgumentException e) {
-                    throw new ThemeParsingException("Unknown templateLanguage value '" + templateString + "'", e);
-                }
-            }
-			rendition.setContentsFile(renditionElement.getChildText("contentsFile"));
-            if (StringUtils.isEmpty(rendition.getContentsFile())) {
-                throw new ThemeParsingException("Rendition must contain a 'contentsFile' element");
-            }
-			template.addTemplateRendition(rendition);
-		}
+		parseRenditions(element, template, "Rendition");
 
 		String navbar = element.getChildText("navbar");
 		if ("true".equalsIgnoreCase(navbar)) {
@@ -185,6 +155,58 @@ public class ThemeMetadataParser {
 	}
     
     
+
+    /**
+     * Reads every {@code <rendition>} under an element onto its template.
+     *
+     * <p>Templates and the stylesheet declare renditions identically, and this
+     * loop was written out once for each -- 193 tokens of duplication, the
+     * largest block in the tree below CPD's 200-token gate, and so invisible to
+     * it. The two copies differed in exactly one thing: the word each used when
+     * complaining about a missing contentsFile.
+     *
+     * @param label how to name this element in that one error message, so
+     *              "Rendition must contain..." and "stylesheet must contain..."
+     *              both survive verbatim -- ThemeMetadataParserTest asserts on
+     *              them
+     */
+    private void parseRenditions(Element element, ThemeMetadataTemplate template, String label)
+            throws ThemeParsingException {
+
+        for (Element renditionElement : element.getChildren("rendition")) {
+            ThemeMetadataTemplateRendition rendition = new ThemeMetadataTemplateRendition();
+
+            String renditionValue = renditionElement.getAttributeValue("type");
+            if (renditionValue != null) {
+                try {
+                    rendition.setType(RenditionType.valueOf(renditionValue.toUpperCase(Locale.ROOT)));
+                } catch (IllegalArgumentException e) {
+                    throw new ThemeParsingException("Invalid rendition type " + renditionValue + " found.", e);
+                }
+            } else {
+                // default to standard if type not provided, as most templates are single-rendition
+                rendition.setType(RenditionType.STANDARD);
+            }
+
+            String templateString = renditionElement.getChildText("templateLanguage");
+            if (StringUtils.isEmpty(templateString)) {
+                throw new ThemeParsingException("rendition must contain a 'templateLanguage' element");
+            }
+            try {
+                rendition.setTemplateLang(TemplateLanguage.valueOf(templateString.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException e) {
+                throw new ThemeParsingException("Unknown templateLanguage value '" + templateString + "'", e);
+            }
+
+            rendition.setContentsFile(renditionElement.getChildText("contentsFile"));
+            if (StringUtils.isEmpty(rendition.getContentsFile())) {
+                throw new ThemeParsingException(label + " must contain a 'contentsFile' element");
+            }
+
+            template.addTemplateRendition(rendition);
+        }
+    }
+
     private ThemeMetadataTemplate elementToStylesheet(Element element) 
             throws ThemeParsingException {
         
@@ -197,36 +219,7 @@ public class ThemeMetadataParser {
         template.setAction(ComponentType.STYLESHEET);
 
         // parsing rendition segment
-        List<Element> renditionList = element.getChildren("rendition");
-        for (Element renditionElement : renditionList) {
-            ThemeMetadataTemplateRendition rendition = new ThemeMetadataTemplateRendition();
-            String renditionValue = renditionElement.getAttributeValue("type");
-            if (renditionValue != null) {
-                try {
-                    rendition.setType(RenditionType.valueOf(renditionValue.toUpperCase(Locale.ROOT)));
-                } catch (IllegalArgumentException e) {
-                    throw new ThemeParsingException("Invalid rendition type " + renditionValue + " found.", e);
-                }
-            } else {
-                // default to standard if type not provided, as most templates are single-rendition
-                rendition.setType(RenditionType.STANDARD);
-            }
-            String templateString = renditionElement.getChildText("templateLanguage");
-            if (StringUtils.isEmpty(templateString)) {
-                throw new ThemeParsingException("rendition must contain a 'templateLanguage' element");
-            } else {
-                try {
-                    rendition.setTemplateLang(TemplateLanguage.valueOf(templateString.toUpperCase(Locale.ROOT)));
-                } catch (IllegalArgumentException e) {
-                    throw new ThemeParsingException("Unknown templateLanguage value '" + templateString + "'", e);
-                }
-            }
-            rendition.setContentsFile(renditionElement.getChildText("contentsFile"));
-            if (StringUtils.isEmpty(rendition.getContentsFile())) {
-                throw new ThemeParsingException("stylesheet must contain a 'contentsFile' element");
-            }
-            template.addTemplateRendition(rendition);
-        }
+        parseRenditions(element, template, "stylesheet");
 
         // validate template
         if(StringUtils.isEmpty(template.getName())) {
