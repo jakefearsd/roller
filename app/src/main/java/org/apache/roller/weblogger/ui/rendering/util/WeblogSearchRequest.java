@@ -61,41 +61,59 @@ public class WeblogSearchRequest extends WeblogRequest {
         String pathInfo = this.getPathInfo();
         
         // was this request bound for the search servlet?
-        if(servlet == null || !SEARCH_SERVLET.equals(servlet)) {
+        if (!isValidDestination(servlet)) {
             throw new InvalidRequestException("not a weblog search request, "+
                     request.getRequestURL());
         }
-        
-        if(pathInfo != null) {
+
+        parsePathInfo(pathInfo, request);
+        parseQueryParameters(request);
+    }
+
+    /**
+     * Searches are served only from the search servlet. Named to match the same
+     * check on {@link WeblogPageRequest} and {@link WeblogFeedRequest}.
+     */
+    boolean isValidDestination(String servlet) {
+        return SEARCH_SERVLET.equals(servlet);
+    }
+
+    /**
+     * A search carries nothing in its path -- the query travels as a parameter,
+     * so anything after the weblog handle names a request this servlet cannot
+     * serve and is refused rather than ignored.
+     */
+    private void parsePathInfo(String pathInfo, HttpServletRequest request)
+            throws InvalidRequestException {
+
+        if (pathInfo != null) {
             throw new InvalidRequestException("invalid path info, "+
                     request.getRequestURL());
         }
-        
-        
-        /*
-         * parse request parameters
-         *
-         * the only params we currently care about are:
-         *   q - specifies the search query
-         *   pageNum - specifies what pageNum # to display
-         *   cat - limit results to a certain weblogCategoryName
-         */
-        if(request.getParameter("q") != null && !request.getParameter("q").isBlank()) {
+    }
+
+    /**
+     * Reads the query string: the search terms, which page of results, and an
+     * optional category to narrow to.
+     */
+    private void parseQueryParameters(HttpServletRequest request)
+            throws InvalidRequestException {
+
+        if (request.getParameter("q") != null && !request.getParameter("q").isBlank()) {
             this.query = request.getParameter("q");
         }
-        
-        if(request.getParameter("page") != null) {
-            String pageInt = request.getParameter("page");
+
+        if (request.getParameter("page") != null) {
             try {
-                this.pageNum = Integer.parseInt(pageInt);
-            } catch(NumberFormatException ignored) {
+                this.pageNum = Integer.parseInt(request.getParameter("page"));
+            } catch (NumberFormatException ignored) {
                 // A malformed "page" parameter is routine, not a request
                 // error -- crawlers and hand-edited search URLs send these
                 // constantly; parsing simply keeps the default page.
             }
         }
-        
-        if(request.getParameter("cat") != null && !request.getParameter("cat").isBlank()) {
+
+        if (request.getParameter("cat") != null && !request.getParameter("cat").isBlank()) {
             this.weblogCategoryName =
                     decodeOrReject(request.getParameter("cat"), request);
         }

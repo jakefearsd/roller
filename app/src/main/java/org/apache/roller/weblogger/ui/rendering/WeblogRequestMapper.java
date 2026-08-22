@@ -34,6 +34,7 @@ import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.ui.rendering.util.LocaleSegment;
 
 
 /**
@@ -518,7 +519,7 @@ public class WeblogRequestMapper implements RequestMapper {
         // we expect [locale/]<context>/<extra>/<info>
         String[] urlPath = pathInfo.split("/", 3);
 
-        if (isLocale(urlPath[0])) {
+        if (LocaleSegment.isLocale(urlPath[0])) {
             String locale = urlPath[0];
             if (urlPath.length == 2) {
                 return new WeblogPathInfo(locale, urlPath[1], null);
@@ -540,34 +541,5 @@ public class WeblogRequestMapper implements RequestMapper {
     }
 
 
-    /**
-     * Convenience method which determines if the given string is a valid
-     * locale string.
-     */
-    private boolean isLocale(String potentialLocale) {
-        
-        boolean isLocale = false;
-        
-        // we only support 2 or 5 character locale strings, so check that first
-        if(potentialLocale != null && 
-                (potentialLocale.length() == 2 || potentialLocale.length() == 5)) {
-            
-            // now make sure that the format is proper ... e.g. "en_US"
-            // we are not going to be picky about capitalization
-            String[] langCountry = potentialLocale.split("_");
-            if(langCountry.length == 1 && 
-                    langCountry[0] != null && langCountry[0].length() == 2) {
-                isLocale = true;
-                
-            } else if(langCountry.length == 2 && 
-                    langCountry[0] != null && langCountry[0].length() == 2 && 
-                    langCountry[1] != null && langCountry[1].length() == 2) {
-                
-                isLocale = true;
-            }
-        }
-        
-        return isLocale;
-    }
     
 }

@@ -81,88 +81,100 @@ public class WeblogFeedRequest extends WeblogRequest {
         log.debug("parsing path {}", pathInfo);
         
         // was this request bound for the feed servlet?
-        if(servlet == null || !FEED_SERVLET.equals(servlet)) {
+        if (!isValidDestination(servlet)) {
             throw new InvalidRequestException("not a weblog feed request, "+
                     request.getRequestURL());
         }
-        
-        
-        /* 
-         * parse the path info.
-         * 
-         * must look like this ...
-         *
-         * /<type>/<format>
-         */
-        if(pathInfo != null && pathInfo.trim().length() > 1) {
-            
-            String[] pathElements = pathInfo.split("/");
-            if(pathElements.length == 2
-                    && StringUtils.isAlphanumeric(pathElements[0])
-                    && StringUtils.isAlphanumeric(pathElements[1])) {
-                this.type = pathElements[0];
-                this.format = pathElements[1];
-            } else {
-                throw new InvalidRequestException("invalid feed path info, "+
-                        request.getRequestURL());
-            }
-            
-        } else {
-            throw new InvalidRequestException("invalid feed path info, "+
-                    request.getRequestURL());
+
+        parsePathInfo(pathInfo, request);
+        parseQueryParameters(request);
+
+        if (this.tags != null && !this.tags.isEmpty() && this.weblogCategoryName != null) {
+            throw new InvalidRequestException("please specify either category or tags but not both, " + request.getRequestURL());
         }
-        
-        
-        /* 
-         * parse request parameters
-         *
-         * the only params we currently care about are:
-         *   cat - specifies a weblog category
-         *   excerpts - specifies the feed should only include excerpts
-         *
-         */
-        if(request.getParameter("cat") != null) {
-            // replacing plus sign below with its encoded equivalent (http://stackoverflow.com/a/6926987)
-            this.weblogCategoryName =
-                    decodeOrReject(request.getParameter("cat").replace("+", "%2B"), request);
-        }
-        
-        if(request.getParameter("tags") != null) {
-            this.tags = Utilities.splitStringAsTags(request.getParameter("tags"));                  
-            int maxSize = WebloggerConfig.getIntProperty("tags.queries.maxIntersectionSize", 3);
-            if (this.tags.size() > maxSize) {
-                throw new InvalidRequestException("max number of tags allowed is " + maxSize + ", "
-                        + request.getRequestURL());
-            }
-        }        
-        
-        if(request.getParameter("excerpts") != null) {
-            this.excerpts = Boolean.valueOf(request.getParameter("excerpts"));
-        }
-        
-        if(request.getParameter("page") != null) {
-            try {
-                this.page = Integer.parseInt(request.getParameter("page"));
-            } catch(NumberFormatException ignored) {
-                // A malformed "page" parameter is routine, not a request
-                // error -- crawlers and hand-edited feed URLs send these
-                // constantly; parsing simply keeps the default page.
-            }
-        }
-        
-        if(request.getParameter("q") != null && !request.getParameter("q").isBlank()) {
-            this.term = decodeOrReject(request.getParameter("q"), request);
-        }        
-        
-        if(this.tags != null && !this.tags.isEmpty() && this.weblogCategoryName != null) {
-            throw new InvalidRequestException("please specify either category or tags but not both, " + request.getRequestURL());            
-        }
-        
+
         log.debug("type = {}", this.type);
         log.debug("format = {}", this.format);
         log.debug("weblogCategory = {}", this.weblogCategoryName);
         log.debug("tags = {}", this.tags);
         log.debug("excerpts = {}", this.excerpts);
+    }
+
+    /**
+     * Feeds are served only from the feed servlet. Named to match the same
+     * check on {@link WeblogPageRequest}, which the preview request overrides.
+     */
+    boolean isValidDestination(String servlet) {
+        return FEED_SERVLET.equals(servlet);
+    }
+
+    /**
+     * Reads the view out of the path, which for a feed is always exactly
+     * {@code /<type>/<format>} -- there is no optional trailing data the way a
+     * page url has.
+     *
+     * <p>Both segments must be alphanumeric. They are concatenated into a
+     * Velocity template name downstream ("weblog-" + type + "-" + format +
+     * ".vm"), so anything else is refused here rather than allowed to reach a
+     * template lookup built from request text.
+     */
+    private void parsePathInfo(String pathInfo, HttpServletRequest request)
+            throws InvalidRequestException {
+
+        String[] pathElements = pathInfo == null || pathInfo.trim().length() <= 1
+                ? new String[0]
+                : pathInfo.split("/");
+
+        if (pathElements.length != 2
+                || !StringUtils.isAlphanumeric(pathElements[0])
+                || !StringUtils.isAlphanumeric(pathElements[1])) {
+            throw new InvalidRequestException("invalid feed path info, "+
+                    request.getRequestURL());
+        }
+
+        this.type = pathElements[0];
+        this.format = pathElements[1];
+    }
+
+    /**
+     * Reads the query string: which category or tags to narrow to, whether to
+     * send excerpts, which page, and a search term.
+     */
+    private void parseQueryParameters(HttpServletRequest request)
+            throws InvalidRequestException {
+
+        if (request.getParameter("cat") != null) {
+            // replacing plus sign below with its encoded equivalent (http://stackoverflow.com/a/6926987)
+            this.weblogCategoryName =
+                    decodeOrReject(request.getParameter("cat").replace("+", "%2B"), request);
+        }
+
+        if (request.getParameter("tags") != null) {
+            this.tags = Utilities.splitStringAsTags(request.getParameter("tags"));
+            int maxSize = WebloggerConfig.getIntProperty("tags.queries.maxIntersectionSize", 3);
+            if (this.tags.size() > maxSize) {
+                throw new InvalidRequestException("max number of tags allowed is " + maxSize + ", "
+                        + request.getRequestURL());
+            }
+        }
+
+        if (request.getParameter("excerpts") != null) {
+            this.excerpts = Boolean.valueOf(request.getParameter("excerpts"));
+        }
+
+        if (request.getParameter("page") != null) {
+            try {
+                this.page = Integer.parseInt(request.getParameter("page"));
+            } catch (NumberFormatException ignored) {
+                // A malformed "page" parameter is routine, not a request
+                // error -- crawlers and hand-edited feed URLs send these
+                // constantly; parsing simply keeps the default page.
+            }
+        }
+
+        if (request.getParameter("q") != null && !request.getParameter("q").isBlank()) {
+            this.term = decodeOrReject(request.getParameter("q"), request);
+        }
     }
 
     public String getType() {
