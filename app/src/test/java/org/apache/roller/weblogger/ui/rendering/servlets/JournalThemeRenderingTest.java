@@ -23,7 +23,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -104,13 +103,13 @@ class JournalThemeRenderingTest {
     private void switchTheme(String themeName) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(themeName);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 
     private WeblogEntry entryWithSummary(String anchor, String summary) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setSearchDescription(summary);
         mgr.saveWeblogEntry(managed);
@@ -157,7 +156,7 @@ class JournalThemeRenderingTest {
 
     @Test
     void theThemeManagerListsTheJournalTheme() throws Exception {
-        SharedTheme journal = WebloggerFactory.getWeblogger().getThemeManager()
+        SharedTheme journal = TestUtils.weblogger().getThemeManager()
                 .getEnabledThemesList().stream()
                 .filter(theme -> "journal".equals(theme.getId()))
                 .findFirst()
@@ -219,7 +218,7 @@ class JournalThemeRenderingTest {
     void pageTwoLabelsOlderOnTheRelNextLinkAndNewerOnTheRelPrevLink() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEntryDisplayCount(1);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
 
         // Three entries at one-per-page: page 1 (0-indexed) then has both a
@@ -343,8 +342,8 @@ class JournalThemeRenderingTest {
         page.setTitle(title);
         page.setContent(content);
         page.setStatus(status);
-        WebloggerFactory.getWeblogger().getWeblogPageManager().savePage(page);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogPageManager().savePage(page);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 
@@ -390,11 +389,11 @@ class JournalThemeRenderingTest {
     void theWeblogNameAndEntryTitleEscapeExactlyOnce() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setName("Fog & Light Journal");
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
 
         WeblogEntry entry = TestUtils.setupWeblogEntry("tides-and-time", weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managedEntry = mgr.getWeblogEntry(entry.getId());
         // Stored form of "Tides & Time" -- the transformation EntryBean.copyTo
         // applies at save time (see EntryBeanTest:212), not raw author input.

@@ -42,27 +42,23 @@ import static org.mockito.Mockito.when;
 class SpringWebloggerProviderTest {
 
     /**
-     * {@code bootstrap()} still installs the provider into the legacy static
-     * (transitional, until Task 20 deletes {@code WebloggerFactory}), so the
-     * tests below that bootstrap throwaway providers over mock contexts must
-     * put back whatever the JVM had -- otherwise a later {@code
-     * TestUtils.setupWeblogger()} sees "already bootstrapped" and the rest of
-     * the suite runs against a mock. Same discipline as {@code MockWeblogger}.
+     * A throwaway provider's {@code bootstrap()} attaches its manager to
+     * {@code WebloggerRuntimeConfig} (plan Task 19) -- the one residual static
+     * -- so the tests below that bootstrap providers over mock contexts put
+     * back whatever the JVM had, or a later database-backed test reads runtime
+     * config from a mock. (There is no provider static to restore any more:
+     * the locator is gone, and a throwaway provider cannot poison anything
+     * else.)
      */
-    private WebloggerProvider previouslyInstalled;
-    // A throwaway provider's bootstrap() also attaches its manager to
-    // WebloggerRuntimeConfig (plan Task 19); restore that too, for the same reason.
     private RuntimeConfigAttachment previouslyAttached;
 
     @BeforeEach
-    void rememberInstalledProvider() {
-        previouslyInstalled = WebloggerFactory.currentProvider();
+    void rememberAttachedRuntimeConfig() {
         previouslyAttached = RuntimeConfigAttachment.preserve();
     }
 
     @AfterEach
-    void restoreInstalledProvider() {
-        WebloggerFactory.installProvider(previouslyInstalled);
+    void restoreAttachedRuntimeConfig() {
         previouslyAttached.close();
     }
 
@@ -86,8 +82,8 @@ class SpringWebloggerProviderTest {
             startup.when(WebloggerStartup::isPrepared).thenReturn(false);
 
             assertThrows(IllegalStateException.class, provider::bootstrap,
-                    "the prepare-before-construct guard that used to live in WebloggerFactory.bootstrap "
-                            + "must survive in the provider");
+                    "the prepare-before-construct guard that used to live in the static locator's "
+                            + "bootstrap must survive in the provider");
             assertFalse(provider.isBootstrapped());
         }
     }
@@ -179,7 +175,7 @@ class SpringWebloggerProviderTest {
      */
     private static SpringWebloggerProvider suiteProvider() throws Exception {
         org.apache.roller.weblogger.TestUtils.setupWeblogger();
-        return (SpringWebloggerProvider) WebloggerFactory.currentProvider();
+        return org.apache.roller.weblogger.TestUtils.provider();
     }
 
     @Test

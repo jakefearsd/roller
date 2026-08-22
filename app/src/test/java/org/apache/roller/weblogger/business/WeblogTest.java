@@ -89,7 +89,7 @@ public class WeblogTest  {
         
         try {
         
-            WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+            WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
 
             Weblog weblog = null;
 
@@ -158,7 +158,7 @@ public class WeblogTest  {
         Weblog testWeblog1 = null;
         Weblog testWeblog2 = null;
         try {
-            WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+            WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
 
             Weblog weblog = null;
             

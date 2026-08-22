@@ -20,7 +20,6 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -150,13 +149,13 @@ class MapAssetsRenderingTest {
     private void switchTheme(String themeName) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(themeName);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 
     private void entryWithText(String anchor, String text) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setText(text);
         mgr.saveWeblogEntry(managed);

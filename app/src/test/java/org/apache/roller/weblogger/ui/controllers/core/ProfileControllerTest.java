@@ -59,7 +59,8 @@ class ProfileControllerTest {
 
     @BeforeEach
     void setUp() {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(weblogger.weblogger());
         previousPasswordEncoder = ControllerTestFixture.installBcryptPasswordEncoder();
         controller = ControllerTestFixture.withMessages(new ProfileController());
         model = new ExtendedModelMap();
@@ -68,7 +69,8 @@ class ProfileControllerTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
+        ControllerTestFixture.useDefaultWeblogger();
         ControllerTestFixture.restorePasswordEncoder(previousPasswordEncoder);
     }
 

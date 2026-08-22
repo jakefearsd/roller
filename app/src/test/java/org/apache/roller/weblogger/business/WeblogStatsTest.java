@@ -67,7 +67,7 @@ public class WeblogStatsTest  {
 
     @Test
     public void testGetUserNameLetterMap() throws Exception {
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();      
+        UserManager mgr = TestUtils.weblogger().getUserManager();      
         Map<String, Long> map = mgr.getUserNameLetterMap();    
         assertNotNull(map.get("A"));
         assertNotNull(map.get("B"));
@@ -76,7 +76,7 @@ public class WeblogStatsTest  {
 
     @Test
     public void testGetWeblogLetterMap() throws Exception {        
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         Map<String, Long> map = mgr.getWeblogHandleLetterMap();    
         assertNotNull(map.get("A"));
         assertNotNull(map.get("B"));

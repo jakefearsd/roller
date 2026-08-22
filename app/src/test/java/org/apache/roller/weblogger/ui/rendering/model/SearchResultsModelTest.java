@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.search.IndexManagerTest;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.pojos.User;
@@ -83,8 +82,8 @@ class SearchResultsModelTest {
     @Test
     void testBasicOperation() throws Exception {
 
-        IndexManager indexManager = WebloggerFactory.getWeblogger().getIndexManager();
-        WeblogEntryManager entryManager = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        IndexManager indexManager = TestUtils.weblogger().getIndexManager();
+        WeblogEntryManager entryManager = TestUtils.weblogger().getWeblogEntryManager();
 
         List<WeblogEntry> entries = createWeblogEntries(testWeblog, indexManager, entryManager);
 
@@ -122,7 +121,7 @@ class SearchResultsModelTest {
             new StringBuffer(String.format("http://localhost/%s", SEARCH_SERVLET)));
         when(request.getPathInfo()).thenReturn(null);
 
-        WeblogSearchRequest searchRequest = new WeblogSearchRequest(WebloggerFactory.getWeblogger(), request);
+        WeblogSearchRequest searchRequest = new WeblogSearchRequest(TestUtils.weblogger(), request);
         searchRequest.setWeblogHandle(testWeblog.getHandle());
         searchRequest.setQuery(term);
 
@@ -134,8 +133,8 @@ class SearchResultsModelTest {
         initData.put("pageRequest", pageRequest);
         // The servlets supply both; the model no longer falls back to the
         // static for either (plan Task 10).
-        initData.put("weblogger", WebloggerFactory.getWeblogger());
-        initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy());
+        initData.put("weblogger", TestUtils.weblogger());
+        initData.put("urlStrategy", TestUtils.weblogger().getUrlStrategy());
 
         SearchResultsModel model = new SearchResultsModel();
         model.init(initData);

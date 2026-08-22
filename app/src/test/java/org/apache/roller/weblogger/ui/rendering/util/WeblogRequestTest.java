@@ -311,7 +311,7 @@ class WeblogRequestTest {
 
     @Test
     void weblogLookupIsSkippedEntirelyWhenThereIsNoHandle() throws Exception {
-        // getWeblog() reaches WebloggerFactory, which throws if the business
+        // getWeblog() reached the static locator, which threw if the business
         // tier is not bootstrapped. Guarding on the handle keeps a pathless
         // request from ever getting that far.
         WeblogRequest request = parse(null);

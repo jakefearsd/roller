@@ -57,7 +57,7 @@ class FormSubmissionManagerTest {
     }
 
     private static FormSubmissionManager manager() {
-        return WebloggerFactory.getWeblogger().getFormSubmissionManager();
+        return TestUtils.weblogger().getFormSubmissionManager();
     }
 
     private FormSubmission submit(Weblog target, String name, String email, String message)
@@ -69,7 +69,7 @@ class FormSubmissionManagerTest {
         submission.setSubject("a question");
         submission.setMessage(message);
         manager().save(submission);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return submission;
     }
@@ -128,7 +128,7 @@ class FormSubmissionManagerTest {
         submit(weblog, "Bob", "bob@example.com", "second");
 
         manager().remove(manager().get(first.getId()));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         List<FormSubmission> remaining = manager().getSubmissions(TestUtils.getManagedWebsite(weblog), 0, 10);
@@ -142,7 +142,7 @@ class FormSubmissionManagerTest {
         submit(otherWeblog, "Bob", "bob@example.com", "theirs");
 
         manager().removeSubmissions(TestUtils.getManagedWebsite(weblog));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertTrue(manager().getSubmissions(TestUtils.getManagedWebsite(weblog), 0, 10).isEmpty());

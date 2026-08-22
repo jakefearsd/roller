@@ -18,7 +18,6 @@ import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogPageManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
@@ -73,7 +72,7 @@ class SeoHeadRenderingTest {
 
     @AfterEach
     void tearDown() throws Exception {
-        WebloggerFactory.getWeblogger().getWeblogPageManager()
+        TestUtils.weblogger().getWeblogPageManager()
                 .removePages(TestUtils.getManagedWebsite(weblog));
         TestUtils.endSession(true);
         TestUtils.teardownWeblog(weblog.getId());
@@ -95,7 +94,7 @@ class SeoHeadRenderingTest {
 
     private void updateEntry(WeblogEntry entry, Consumer<WeblogEntry> mutation)
             throws Exception {
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         mutation.accept(managed);
         mgr.saveWeblogEntry(managed);
@@ -110,7 +109,7 @@ class SeoHeadRenderingTest {
      */
     private WeblogPage savePage(String slug, String title, Consumer<WeblogPage> mutation)
             throws Exception {
-        WeblogPageManager mgr = WebloggerFactory.getWeblogger().getWeblogPageManager();
+        WeblogPageManager mgr = TestUtils.weblogger().getWeblogPageManager();
         WeblogPage page = new WeblogPage();
         page.setWeblog(TestUtils.getManagedWebsite(weblog));
         page.setSlug(slug);
@@ -155,7 +154,7 @@ class SeoHeadRenderingTest {
     private void switchTheme(String themeName) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(themeName);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 
@@ -263,7 +262,7 @@ class SeoHeadRenderingTest {
     void frontPageEmitsWebsiteSeo() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setAbout("All about rendering tests");
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
         TestUtils.setupWeblogEntry("front-entry", weblog, user);
         TestUtils.endSession(true);
@@ -554,7 +553,7 @@ class SeoHeadRenderingTest {
      * whose copyTo HTML-escapes the title on the way into the database.
      */
     private void saveTitleThroughTheEditorBean(WeblogEntry entry, String title) throws Exception {
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         EntryBean bean = new EntryBean();
         bean.copyFrom(managed, Locale.getDefault());
@@ -604,11 +603,10 @@ class SeoHeadRenderingTest {
      */
     private MediaFile setupGeneratedImage(String name, String contentType,
             String format, int width, int height) throws Exception {
-        java.util.Map<String, RuntimeConfigProperty> config = WebloggerFactory
-                .getWeblogger().getPropertiesManager().getProperties();
+        java.util.Map<String, RuntimeConfigProperty> config = TestUtils.weblogger().getPropertiesManager().getProperties();
         config.get("uploads.enabled").setValue("true");
 
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         MediaFileDirectory root = mgr.getDefaultMediaFileDirectory(managed);
 
@@ -624,7 +622,7 @@ class SeoHeadRenderingTest {
         mediaFile.setContentType(contentType);
         mediaFile.setInputStream(new ByteArrayInputStream(bytes.toByteArray()));
         mgr.createMediaFile(managed, mediaFile, new RollerMessages());
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return mediaFile;
     }

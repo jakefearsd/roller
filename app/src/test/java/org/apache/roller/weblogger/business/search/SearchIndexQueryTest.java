@@ -21,7 +21,6 @@ import java.util.List;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.search.IndexManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -121,7 +120,7 @@ class SearchIndexQueryTest {
         assertFalse(titlesOf(search("quokkaword", blog.getHandle())).isEmpty(),
                 "the entry must be findable before it is removed");
 
-        IndexManager index = WebloggerFactory.getWeblogger().getIndexManager();
+        IndexManager index = TestUtils.weblogger().getIndexManager();
         index.removeEntryIndexOperation(TestUtils.getManagedWeblogEntry(spainPost));
 
         assertFalse(titlesOf(search("quokkaword", blog.getHandle()))
@@ -136,7 +135,7 @@ class SearchIndexQueryTest {
      */
     @Test
     void removingOneWeblogsIndexLeavesTheOthersIntact() throws Exception {
-        IndexManager index = WebloggerFactory.getWeblogger().getIndexManager();
+        IndexManager index = TestUtils.weblogger().getIndexManager();
         index.removeWeblogIndex(TestUtils.getManagedWebsite(blog));
 
         awaitTitles(blog.getHandle(), List::isEmpty,
@@ -152,7 +151,7 @@ class SearchIndexQueryTest {
      */
     @Test
     void rebuildingAWeblogsIndexRestoresIt() throws Exception {
-        IndexManager index = WebloggerFactory.getWeblogger().getIndexManager();
+        IndexManager index = TestUtils.weblogger().getIndexManager();
         index.removeWeblogIndex(TestUtils.getManagedWebsite(blog));
         awaitTitles(blog.getHandle(), List::isEmpty, "the index must empty first");
 
@@ -164,15 +163,15 @@ class SearchIndexQueryTest {
 
     @Test
     void aSearchCanBeNarrowedToACategory() throws Exception {
-        List<String> inTravel = titlesOf(WebloggerFactory.getWeblogger().getIndexManager()
+        List<String> inTravel = titlesOf(TestUtils.weblogger().getIndexManager()
                 .search("quokkaword", blog.getHandle(), "Travel", null, 0, 10,
-                        WebloggerFactory.getWeblogger().getUrlStrategy()));
+                        TestUtils.weblogger().getUrlStrategy()));
 
         assertTrue(inTravel.contains("Hiking in Spain"), "got: " + inTravel);
 
-        List<String> inNothing = titlesOf(WebloggerFactory.getWeblogger().getIndexManager()
+        List<String> inNothing = titlesOf(TestUtils.weblogger().getIndexManager()
                 .search("quokkaword", blog.getHandle(), "NoSuchCategory", null, 0, 10,
-                        WebloggerFactory.getWeblogger().getUrlStrategy()));
+                        TestUtils.weblogger().getUrlStrategy()));
 
         assertTrue(inNothing.isEmpty(),
                 "a category with nothing in it must return nothing: " + inNothing);
@@ -181,9 +180,9 @@ class SearchIndexQueryTest {
     // ---------------------------------------------------------------- helpers
 
     private static SearchResultList search(String term, String handle) throws Exception {
-        return WebloggerFactory.getWeblogger().getIndexManager().search(
+        return TestUtils.weblogger().getIndexManager().search(
                 term, handle, null, null, 0, 10,
-                WebloggerFactory.getWeblogger().getUrlStrategy());
+                TestUtils.weblogger().getUrlStrategy());
     }
 
     /**
@@ -221,10 +220,10 @@ class SearchIndexQueryTest {
                 weblog, user);
         entry.setTitle(title);
         entry.setText(text);
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.weblogger().flush();
 
-        WebloggerFactory.getWeblogger().getIndexManager()
+        TestUtils.weblogger().getIndexManager()
                 .addEntryIndexOperation(TestUtils.getManagedWeblogEntry(entry));
         return entry;
     }

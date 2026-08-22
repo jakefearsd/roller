@@ -24,7 +24,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -74,8 +73,8 @@ class PageServletCachingTest {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setLastModified(new Timestamp(
                 Instant.now().minusSeconds(3600).toEpochMilli()));
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 
@@ -211,8 +210,8 @@ class PageServletCachingTest {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setName("Renamed while cached");
         managed.setLastModified(new Timestamp(Instant.now().toEpochMilli()));
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         String after = get(null).getContentAsString();

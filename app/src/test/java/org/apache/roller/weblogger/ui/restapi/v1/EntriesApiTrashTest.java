@@ -2,7 +2,6 @@ package org.apache.roller.weblogger.ui.restapi.v1;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.*;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,7 +25,7 @@ class EntriesApiTrashTest {
         weblog = TestUtils.setupWeblog("apitrashblog", user);
         entry = TestUtils.setupWeblogEntry("api-trash-entry", weblog, user);
         entry.setStatus(WeblogEntry.PubStatus.PUBLISHED);
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(entry);
         TestUtils.endSession(true);
     }
 
@@ -39,7 +38,7 @@ class EntriesApiTrashTest {
 
     @Test
     void trashingHidesTheEntryFromAnOrdinaryListing() throws Exception {
-        WeblogEntryManager wem = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager wem = TestUtils.weblogger().getWeblogEntryManager();
         wem.trashWeblogEntry(wem.getWeblogEntry(entry.getId()));
         TestUtils.endSession(true);
 
@@ -56,7 +55,7 @@ class EntriesApiTrashTest {
      */
     @Test
     void restoreAlwaysLandsOnDraftEvenForAPreviouslyPublishedEntry() throws Exception {
-        WeblogEntryManager wem = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager wem = TestUtils.weblogger().getWeblogEntryManager();
         wem.trashWeblogEntry(wem.getWeblogEntry(entry.getId()));
         TestUtils.endSession(true);
 

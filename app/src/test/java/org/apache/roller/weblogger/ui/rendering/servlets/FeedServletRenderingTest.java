@@ -1,7 +1,6 @@
 package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -93,11 +92,11 @@ class FeedServletRenderingTest {
      */
     @Test
     void theAtomAuthorNameIsXmlEscaped() throws Exception {
-        User managed = WebloggerFactory.getWeblogger().getUserManager()
+        User managed = TestUtils.weblogger().getUserManager()
                 .getUserByUserName(user.getUserName());
         managed.setScreenName("Ampersand & Sons");
-        WebloggerFactory.getWeblogger().getUserManager().saveUser(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getUserManager().saveUser(managed);
+        TestUtils.weblogger().flush();
         TestUtils.setupWeblogEntry("author-entry", weblog, user);
         TestUtils.endSession(true);
 

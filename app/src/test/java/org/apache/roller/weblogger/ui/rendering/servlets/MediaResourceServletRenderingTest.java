@@ -259,8 +259,7 @@ class MediaResourceServletRenderingTest {
 
     /** Flips the file's directory to private and flushes, as the editor toggle does. */
     private static void markDirectoryPrivate(MediaFile image) throws Exception {
-        MediaFile managed = org.apache.roller.weblogger.business.WebloggerFactory
-                .getWeblogger().getMediaFileManager().getMediaFile(image.getId());
+        MediaFile managed = TestUtils.weblogger().getMediaFileManager().getMediaFile(image.getId());
         managed.getDirectory().setPrivate(true);
         TestUtils.endSession(true);
     }

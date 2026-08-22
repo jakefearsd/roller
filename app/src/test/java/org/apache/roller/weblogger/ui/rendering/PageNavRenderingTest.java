@@ -24,7 +24,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPage;
@@ -73,7 +72,7 @@ class PageNavRenderingTest {
 
     @AfterEach
     void tearDown() throws Exception {
-        WebloggerFactory.getWeblogger().getWeblogPageManager()
+        TestUtils.weblogger().getWeblogPageManager()
                 .removePages(TestUtils.getManagedWebsite(weblog));
         TestUtils.endSession(true);
         TestUtils.teardownWeblog(weblog.getId());
@@ -93,15 +92,15 @@ class PageNavRenderingTest {
         page.setStatus(status);
         page.setShowInNav(showInNav);
         page.setNavOrder(navOrder);
-        WebloggerFactory.getWeblogger().getWeblogPageManager().savePage(page);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogPageManager().savePage(page);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 
     private void switchTheme(String themeName) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(themeName);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 

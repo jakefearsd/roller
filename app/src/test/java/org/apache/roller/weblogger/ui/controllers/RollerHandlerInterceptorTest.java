@@ -24,7 +24,6 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerProvider;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -65,7 +64,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
  *
  * <p>It had one test, covering the guard clause that lets static-resource
  * handlers past. The reason given was that the logic "depends heavily on
- * {@code WebloggerFactory} which is ... impractical to mock in a lightweight
+ * the static locator which is ... impractical to mock in a lightweight
  * unit test" -- true when it was written, and no longer: {@link MockWeblogger}
  * installs a mocked business tier into that same static field. What follows is
  * the decision table the interceptor actually implements.
@@ -95,7 +94,7 @@ class RollerHandlerInterceptorTest {
         request = new MockHttpServletRequest();
         request.setContextPath(CONTEXT);
         response = new MockHttpServletResponse();
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
         provider = mock(WebloggerProvider.class);
         when(provider.isBootstrapped()).thenReturn(true);
         interceptor = new RollerHandlerInterceptor(provider, weblogger.weblogger());
@@ -115,7 +114,7 @@ class RollerHandlerInterceptorTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     // ------------------------------------------------------------ pass-through

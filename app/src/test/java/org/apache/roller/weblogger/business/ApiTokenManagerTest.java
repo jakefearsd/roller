@@ -19,7 +19,7 @@ class ApiTokenManagerTest {
         TestUtils.setupWeblogger();
         user = TestUtils.setupUser("apitokentestuser");
         TestUtils.endSession(true);
-        mgr = WebloggerFactory.getWeblogger().getApiTokenManager();
+        mgr = TestUtils.weblogger().getApiTokenManager();
     }
 
     @AfterEach

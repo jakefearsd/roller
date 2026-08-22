@@ -61,7 +61,8 @@ class CreateWeblogControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(weblogger.weblogger());
         controller = ControllerTestFixture.withMessages(new CreateWeblogController());
         model = new ExtendedModelMap();
         redirectAttributes = new RedirectAttributesModelMap();
@@ -72,7 +73,8 @@ class CreateWeblogControllerTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
+        ControllerTestFixture.useDefaultWeblogger();
         ControllerTestFixture.restoreConfigProperty("groupblogging.enabled", previousGroupBlogging);
         ControllerTestFixture.restoreConfigProperty("username.allowedChars", previousAllowedChars);
     }

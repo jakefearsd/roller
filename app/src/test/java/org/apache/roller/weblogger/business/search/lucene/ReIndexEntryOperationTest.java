@@ -28,7 +28,6 @@ import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.search.SearchResultList;
 import org.apache.roller.weblogger.pojos.User;
@@ -115,8 +114,8 @@ class ReIndexEntryOperationTest {
         WeblogEntry managed = TestUtils.getManagedWeblogEntry(entry);
         managed.setStatus(PubStatus.TRASHED);
         managed.setTrashedAt(new Timestamp(System.currentTimeMillis()));
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(managed);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         indexManager().addEntryReIndexOperation(TestUtils.getManagedWeblogEntry(entry));
@@ -140,9 +139,9 @@ class ReIndexEntryOperationTest {
     void reindexingAnEntryThatNoLongerExistsDoesNotThrowOrStallLaterOperations() throws Exception {
         WeblogEntry entry = savedEntry("reindex-deleted", "Reindex ghost entry");
         String staleId = TestUtils.getManagedWeblogEntry(entry).getId();
-        WebloggerFactory.getWeblogger().getWeblogEntryManager()
+        TestUtils.weblogger().getWeblogEntryManager()
                 .removeWeblogEntry(TestUtils.getManagedWeblogEntry(entry));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         WeblogEntry detachedWithStaleId = new WeblogEntry();
@@ -230,14 +229,14 @@ class ReIndexEntryOperationTest {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, blog, user, PubStatus.PUBLISHED);
         entry.setTitle(title);
         entry.setText(WORD + " lives in this entry's body");
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return entry;
     }
 
     private static IndexManager indexManager() {
-        return WebloggerFactory.getWeblogger().getIndexManager();
+        return TestUtils.weblogger().getIndexManager();
     }
 
     private static List<String> titlesOf(SearchResultList results) {
@@ -257,7 +256,7 @@ class ReIndexEntryOperationTest {
         List<String> titles = List.of();
         while (System.nanoTime() < deadline) {
             titles = titlesOf(indexManager().search(WORD, blog.getHandle(), null, null,
-                    0, 10, WebloggerFactory.getWeblogger().getUrlStrategy()));
+                    0, 10, TestUtils.weblogger().getUrlStrategy()));
             if (condition.test(titles)) {
                 return;
             }

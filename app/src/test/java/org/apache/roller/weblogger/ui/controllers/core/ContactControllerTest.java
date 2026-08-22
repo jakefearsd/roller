@@ -64,7 +64,8 @@ class ContactControllerTest {
 
     @BeforeEach
     void setUp() {
-        mocks = MockWeblogger.install();
+        mocks = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(mocks.weblogger());
         mail = MockMailProvider.install();
         controller = ControllerTestFixture.withMessages(new RecordingContactController());
     }
@@ -72,7 +73,8 @@ class ContactControllerTest {
     @AfterEach
     void tearDown() {
         MockMailProvider.uninstall();
-        MockWeblogger.uninstall();
+        mocks.detach();
+        ControllerTestFixture.useDefaultWeblogger();
     }
 
     // --------------------------------------------------------- happy path

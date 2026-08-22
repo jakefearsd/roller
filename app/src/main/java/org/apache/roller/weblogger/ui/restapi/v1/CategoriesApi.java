@@ -95,11 +95,9 @@ public class CategoriesApi extends BaseApiController implements UISecurityEnforc
             }
             ColumnLimits.requireMaxLength("name", name, ColumnLimits.CATEGORY_NAME);
             if (!name.equals(category.getName())) {
-                // Weblog.getWeblogCategory(name) reaches the static
-                // WebloggerFactory shim rather than this controller's
-                // injected weblogger -- fine in production (same singleton
-                // either way) but untestable and an unnecessary second path
-                // to the same data, so go straight through the manager
+                // The entity has no category-by-name lookup of its own (it
+                // would need the manager, which entities do not hold), so go
+                // straight through this controller's injected manager
                 // instead, same as every other lookup in this controller.
                 WeblogCategory existing =
                         weblogger.getWeblogEntryManager().getWeblogCategoryByName(weblog, name);

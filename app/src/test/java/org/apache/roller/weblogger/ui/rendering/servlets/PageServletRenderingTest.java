@@ -2,7 +2,6 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
@@ -99,7 +98,7 @@ class PageServletRenderingTest {
                 TestUtils.setupImageMediaFile(weblog, "page-hawk.jpg");
         WeblogEntry entry = TestUtils.setupWeblogEntry("shortcode-entry", weblog, user);
         entry.setText("before [image id=" + image.getId() + " caption=\"A hawk\"] after");
-        org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger()
+        org.apache.roller.weblogger.TestUtils.weblogger()
                 .getWeblogEntryManager().saveWeblogEntry(entry);
         TestUtils.endSession(true);
 
@@ -222,7 +221,7 @@ class PageServletRenderingTest {
     void theTagFeedDiscoveryTitleIsAPlainJoinedList() throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry("tagged-entry", weblog, user);
         entry.addTag("travel");
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(entry);
         TestUtils.endSession(true);
         // No bundled theme ships a TAGSINDEX template, so /<handle>/tags/<tag>
         // 404s everywhere; the reachable route to a non-null $model.tags is
@@ -275,7 +274,7 @@ class PageServletRenderingTest {
     /** A CUSTOM template gets {@code link = name} and is served at
      * {@code /<handle>/page/<link>}, on a shared-theme weblog too. */
     private void saveCustomTemplate(String name, String contents) throws Exception {
-        WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager wmgr = TestUtils.weblogger().getWeblogManager();
         WeblogTemplate template = new WeblogTemplate();
         template.setWeblog(TestUtils.getManagedWebsite(weblog));
         template.setAction(ComponentType.CUSTOM);
@@ -291,7 +290,7 @@ class PageServletRenderingTest {
         rendition.setTemplate(contents);
         rendition.setTemplateLanguage(TemplateLanguage.VELOCITY);
         wmgr.saveTemplateRendition(rendition);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         RenderingTestSupport.clearRenderCaches();
     }

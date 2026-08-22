@@ -18,10 +18,16 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
-<% request.setAttribute("rollerVersion",
-      org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger().getVersion()); %>
-<% request.setAttribute("rollerRevision",
-      org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger().getRevision()); %>
+<%-- The business tier is reached through the WebloggerProvider bean, never a
+     static: same behaviour as before (throws before bootstrap, which no page
+     carrying this footer can reach). --%>
+<% org.apache.roller.weblogger.business.Weblogger rollerTier =
+      org.springframework.web.context.support.WebApplicationContextUtils
+          .getRequiredWebApplicationContext(application)
+          .getBean(org.apache.roller.weblogger.business.WebloggerProvider.class)
+          .getWeblogger();
+   request.setAttribute("rollerVersion", rollerTier.getVersion());
+   request.setAttribute("rollerRevision", rollerTier.getRevision()); %>
 
 <span class="roller-footer">
 <%-- "${request.rollerVersion}" would be wrong here: inside JSP EL, the bare

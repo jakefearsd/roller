@@ -27,7 +27,6 @@ import javax.imageio.ImageIO;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
@@ -119,7 +118,7 @@ class GalleryRenderingTest {
 
     private WeblogEntry entryWithText(String anchor, String text) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setText(text);
         mgr.saveWeblogEntry(managed);
@@ -130,11 +129,10 @@ class GalleryRenderingTest {
     /** Persists a content-backed jpeg into the given directory (null = default). */
     private MediaFile setupImageInDirectory(String name, MediaFileDirectory directory,
             int width, int height) throws Exception {
-        Map<String, RuntimeConfigProperty> config = WebloggerFactory
-                .getWeblogger().getPropertiesManager().getProperties();
+        Map<String, RuntimeConfigProperty> config = TestUtils.weblogger().getPropertiesManager().getProperties();
         config.get("uploads.enabled").setValue("true");
 
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         MediaFileDirectory target = directory != null
                 ? directory : mgr.getDefaultMediaFileDirectory(managed);
@@ -150,7 +148,7 @@ class GalleryRenderingTest {
         mediaFile.setContentType("image/jpeg");
         mediaFile.setInputStream(new ByteArrayInputStream(bytes.toByteArray()));
         mgr.createMediaFile(managed, mediaFile, new RollerMessages());
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return mediaFile;
     }
@@ -226,11 +224,11 @@ class GalleryRenderingTest {
 
     @Test
     void aPrivateDirectoryRendersNothingButTheShortcodeText() throws Exception {
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         MediaFileDirectory secret = mgr.createMediaFileDirectory(managed, "secret");
         secret.setPrivate(true);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         MediaFileDirectory managedSecret = mgr.getMediaFileDirectoryByName(

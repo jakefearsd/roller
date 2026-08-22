@@ -167,7 +167,7 @@ class URLModelTest {
 
     @Test
     void initWithoutAUrlStrategyIsRefused() {
-        // Used to fall back to WebloggerFactory's strategy; the only caller
+        // Used to fall back to the static locator's strategy; the only caller
         // that relied on that (WeblogCacheWarmupJob) now passes one. Failing
         // at init beats a null link mid-render.
         WebloggerException thrown = assertThrows(WebloggerException.class,

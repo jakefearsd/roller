@@ -82,28 +82,20 @@ class MailUtilTest {
     // ------------------------------------------------------ pending entry notice
 
     /**
-     * The notice reaches the weblog's reviewers through the {@code Weblogger} it
-     * is handed, not through the static factory. The two tiers in this test
-     * answer differently -- the explicit one knows a reviewer, the globally
-     * installed mock knows nobody -- so the recipient list proves which one was
-     * consulted. (The global mock is installed only as a decoy: since plan
-     * Task 16 the notice resolves the author and the reviewers' permission
-     * through the tier it is given too, so if it regressed to the static one
-     * the recipients would come from the decoy's -- empty -- answers.)
+     * The notice reaches the weblog's reviewers, the author and the edit link
+     * through the {@code Weblogger} it is handed -- there is no other tier it
+     * could consult (the static locator is gone), so the recipient list and
+     * the link prove the explicit tier was used for every lookup.
      */
     @Test
     void pendingEntryNoticeGoesToTheReviewersOfTheTierItIsGiven() throws Exception {
-        MockWeblogger global = MockWeblogger.install();
-        try {
+        {
             User author = new User();
             author.setUserName("author");
             author.setEmailAddress("author@example.invalid");
             User reviewer = new User();
             reviewer.setUserName("reviewer");
             reviewer.setEmailAddress("reviewer@example.invalid");
-            when(global.userManager().getUserByUserName("author")).thenReturn(author);
-            when(global.userManager().checkPermission(any(), eq(reviewer))).thenReturn(true);
-            when(global.weblogManager().getWeblogUsers(weblog, true)).thenReturn(List.of());
 
             WeblogManager explicitWeblogs = mock(WeblogManager.class);
             when(explicitWeblogs.getWeblogUsers(weblog, true)).thenReturn(List.of(reviewer));
@@ -133,8 +125,6 @@ class MailUtilTest {
             assertEquals("author@example.invalid", message.getFrom()[0].toString());
             assertTrue(message.getContent().toString().contains("https://site.invalid/edit/entry-1"),
                     "the edit link must come from the tier's url strategy");
-        } finally {
-            MockWeblogger.uninstall();
         }
     }
 

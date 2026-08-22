@@ -28,7 +28,6 @@ import java.util.Properties;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.PropertiesManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.runtime.ConfigDef;
 import org.apache.roller.weblogger.config.runtime.DisplayGroup;
 import org.apache.roller.weblogger.config.runtime.PropertyDef;
@@ -191,7 +190,7 @@ class PromotedRuntimePropertyTest {
     @SuppressWarnings("unchecked")
     private static Map<String, RuntimeConfigProperty> seedInto(
             Map<String, RuntimeConfigProperty> props) throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Method seed = pmgr.getClass()
                 .getDeclaredMethod("initializeMissingProps", Map.class);
         seed.setAccessible(true);
@@ -218,11 +217,11 @@ class PromotedRuntimePropertyTest {
     }
 
     private static void setRuntimeProperty(String name, String value) throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         config.get(name).setValue(value);
         pmgr.saveProperties(config);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     private static PropertyDef propertyDef(String name) {

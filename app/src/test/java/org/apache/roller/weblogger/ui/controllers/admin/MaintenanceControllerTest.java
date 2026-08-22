@@ -68,7 +68,8 @@ class MaintenanceControllerTest {
 
     @BeforeEach
     void setUp() {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(weblogger.weblogger());
         controller = ControllerTestFixture.withMessages(new MaintenanceController());
         model = new ExtendedModelMap();
 
@@ -80,7 +81,8 @@ class MaintenanceControllerTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
+        ControllerTestFixture.useDefaultWeblogger();
     }
 
     // --- metadata ---

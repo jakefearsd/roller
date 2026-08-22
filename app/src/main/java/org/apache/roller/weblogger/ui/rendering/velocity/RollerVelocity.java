@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
  * {@code /WEB-INF/velocity.properties} through {@code RollerContext}'s static
  * {@code ServletContext}; the two Roller resource loaders it instantiates
  * ({@link RollerResourceLoader}, {@link ThemeResourceLoader}) then reached the
- * business tier through the static {@code WebloggerFactory}. Both are gone:
+ * business tier through a static service locator. Both are gone:
  * {@link #initialize(ServletContext, Weblogger)} is called once, by
  * {@code RollerLifecycle.start()} after the business tier has bootstrapped
  * (and by the rendering test support), and it hands the {@link Weblogger}

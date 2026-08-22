@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.rendering.servlets.RenderingTestSupport;
@@ -73,14 +72,14 @@ class SubscribeFormRenderingTest {
     private void switchTheme(String themeName) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(themeName);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 
     private void setListUuid(String uuid) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setNewsletterListUuid(uuid);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 

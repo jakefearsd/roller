@@ -44,7 +44,7 @@ public class ThemeManagerTest  {
     @Test
     public void testThemeAssumptions() throws Exception {
 
-        ThemeManager themeManager = WebloggerFactory.getWeblogger().getThemeManager();
+        ThemeManager themeManager = TestUtils.weblogger().getThemeManager();
         themeManager.initialize();
 
         assertNotNull( themeManager.getTheme("journal") );

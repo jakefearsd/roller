@@ -118,7 +118,7 @@ class ApiScopeInterceptorDispatchTest {
 
     @BeforeAll
     static void setUpContext() {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
         Weblog weblogA = new Weblog();
         weblogA.setId("weblog-a");
         weblogA.setHandle("A");
@@ -144,7 +144,7 @@ class ApiScopeInterceptorDispatchTest {
         if (context != null) {
             context.close();
         }
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     @AfterEach

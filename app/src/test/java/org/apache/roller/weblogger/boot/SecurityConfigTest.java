@@ -110,7 +110,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * controllers ({@code SetupController} among them) call a method on it
  * directly in {@code execute()} -- a path {@code RollerHandlerInterceptor}'s
  * "app not bootstrapped yet" early-return does not gate at all, since that
- * check only guards {@code WebloggerFactory.getWeblogger()}, a separate
+ * check only guards {@code TestUtils.weblogger()}, a separate
  * static accessor from the injected field. Touching the proxy forces
  * {@code WebloggerBeanConfig} to build the real bean graph, which requires
  * {@code WebloggerStartup.prepare()} to have run against a real database --

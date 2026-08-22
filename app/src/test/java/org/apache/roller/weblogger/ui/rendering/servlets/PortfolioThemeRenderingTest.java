@@ -21,7 +21,6 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.User;
@@ -109,14 +108,14 @@ class PortfolioThemeRenderingTest {
     private void switchTheme(String themeName) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(themeName);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 
     private WeblogEntry entryWithFeaturedImage(String anchor, String imageId)
             throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setFeaturedImageId(imageId);
         mgr.saveWeblogEntry(managed);
@@ -131,8 +130,8 @@ class PortfolioThemeRenderingTest {
         page.setTitle(title);
         page.setContent(content);
         page.setStatus(WeblogPage.PubStatus.PUBLISHED);
-        WebloggerFactory.getWeblogger().getWeblogPageManager().savePage(page);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogPageManager().savePage(page);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 
@@ -166,7 +165,7 @@ class PortfolioThemeRenderingTest {
 
     @Test
     void theThemeManagerListsThePortfolioTheme() throws Exception {
-        SharedTheme portfolio = WebloggerFactory.getWeblogger().getThemeManager()
+        SharedTheme portfolio = TestUtils.weblogger().getThemeManager()
                 .getEnabledThemesList().stream()
                 .filter(theme -> "portfolio".equals(theme.getId()))
                 .findFirst()
@@ -286,7 +285,7 @@ class PortfolioThemeRenderingTest {
     @Test
     void theEntryTitleEscapesExactlyOnce() throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry("salt-and-light", weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         // Stored form of "Salt & Light" -- the transformation EntryBean.copyTo
         // applies at save time (see EntryBeanTest:212), not raw author input.
@@ -325,7 +324,7 @@ class PortfolioThemeRenderingTest {
         setAltText(imageId, "A hawk over the marsh & mudflats");
         TestUtils.endSession(true);
         WeblogEntry entry = entryWithFeaturedImage("alt-entry", imageId);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setTitle(StringEscapeUtils.escapeHtml4("Salt & Light"));
         mgr.saveWeblogEntry(managed);
@@ -345,7 +344,7 @@ class PortfolioThemeRenderingTest {
         String imageId = image.getId();
         TestUtils.endSession(true);
         WeblogEntry entry = entryWithFeaturedImage("noalt-entry", imageId);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setTitle(StringEscapeUtils.escapeHtml4("Salt & Light"));
         mgr.saveWeblogEntry(managed);
@@ -362,11 +361,11 @@ class PortfolioThemeRenderingTest {
     }
 
     private void setAltText(String mediaFileId, String altText) throws Exception {
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFile managed = mfMgr.getMediaFile(mediaFileId);
         managed.setAltText(altText);
         mfMgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     /**
@@ -381,7 +380,7 @@ class PortfolioThemeRenderingTest {
     void theWeblogNameEscapesExactlyOnce() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setName("Light & Shadow Studio");
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
         TestUtils.setupWeblogEntry("frame-and-focus", weblog, user);
         TestUtils.endSession(true);

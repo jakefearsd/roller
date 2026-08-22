@@ -2,7 +2,6 @@ package org.apache.roller.weblogger.ui.controllers;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -30,7 +29,7 @@ class WeblogOwnershipTest {
     @BeforeEach
     void setUp() throws Exception {
         TestUtils.setupWeblogger();
-        weblogger = WebloggerFactory.getWeblogger();
+        weblogger = TestUtils.weblogger();
         user = TestUtils.setupUser("ownershiptestuser");
         mine = TestUtils.setupWeblog("ownershipmine", user);
         theirs = TestUtils.setupWeblog("ownershiptheirs", user);

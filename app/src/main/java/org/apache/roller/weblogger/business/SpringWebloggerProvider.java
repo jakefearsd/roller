@@ -30,8 +30,10 @@ import org.springframework.stereotype.Component;
 
 /**
  * A Spring specific implementation of a WebloggerProvider, and the bean
- * that answers "is the business tier up?" for everything that used to ask
- * {@code WebloggerFactory}.
+ * that answers "is the business tier up?" for everything that needs to know
+ * (the bootstrap sites, the filters ahead of the security chain, the
+ * interceptor). There is no static equivalent: a class that needs the tier
+ * injects {@link Weblogger} or this provider.
  *
  * <p>Bootstrapping builds (or, for the {@link ApplicationContext} constructor,
  * reuses) a Spring context and hands back its {@link Weblogger} bean. It owns
@@ -138,11 +140,6 @@ public class SpringWebloggerProvider implements WebloggerProvider, DisposableBea
         // here on (spec Decision 8 of the 2026-08-22 plan): attached before
         // initialize() so nothing inside it can regress to a null read.
         WebloggerRuntimeConfig.attach(built.getPropertiesManager());
-
-        // TRANSITIONAL -- deleted by Task 20 of the 2026-08-22 plan along with
-        // WebloggerFactory itself: the not-yet-migrated static callers must
-        // keep seeing the tier this bean bootstrapped.
-        WebloggerFactory.installProvider(this);
 
         log.info("Roller Weblogger business tier successfully bootstrapped");
         log.info("   Version: {}", built.getVersion());

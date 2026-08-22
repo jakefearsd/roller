@@ -33,7 +33,7 @@ import org.apache.roller.weblogger.business.SpringWebloggerProvider;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.testing.RollerDatabaseExtension;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -74,9 +74,19 @@ public final class TestUtils {
             "{bcrypt}$2a$10$Vav4tnxZRN4O9Uh/gMr0Se5fn4grMKMdIaFYgd68hgGaRXs9UPfni";
 
 
-    public static void setupWeblogger() throws Exception {
+    /**
+     * The one real business tier the unit suite shares for the whole JVM,
+     * built by {@link #setupWeblogger()} over a standalone Spring context
+     * ({@link SpringWebloggerProvider#standalone()}). There is no static
+     * locator any more: a test that needs the tier calls {@link #weblogger()},
+     * and a class under test receives it by constructor, {@code init} or field
+     * -- never by looking it up.
+     */
+    private static volatile SpringWebloggerProvider provider;
 
-        if (!WebloggerFactory.isBootstrapped()) {
+    public static synchronized void setupWeblogger() throws Exception {
+
+        if (provider == null) {
             // Starts the PostgreSQL container, points Roller's config at it and
             // applies bin/db/migrations. Safe to call repeatedly.
             RollerDatabaseExtension.ensureSchema();
@@ -87,12 +97,38 @@ public final class TestUtils {
             // do application bootstrapping -- the provider's bootstrap() also
             // runs initialize(), so there is no separate call here (a second
             // initialize() would start the task-scheduler thread twice)
-            WebloggerFactory.bootstrap(SpringWebloggerProvider.standalone());
+            SpringWebloggerProvider standalone = SpringWebloggerProvider.standalone();
+            standalone.bootstrap();
+            provider = standalone;
         }
     }
 
+    /**
+     * The suite's bootstrapped business tier. Fails loudly if nothing has
+     * called {@link #setupWeblogger()} yet -- the old static used to throw the
+     * same way, and a null here would surface as an NPE three frames away.
+     */
+    public static Weblogger weblogger() {
+        SpringWebloggerProvider p = provider;
+        if (p == null) {
+            throw new IllegalStateException(
+                    "The test business tier is not up: call TestUtils.setupWeblogger() first");
+        }
+        return p.getWeblogger();
+    }
+
+    /** The provider behind {@link #weblogger()}, for the tests that exercise the provider itself. */
+    public static SpringWebloggerProvider provider() {
+        SpringWebloggerProvider p = provider;
+        if (p == null) {
+            throw new IllegalStateException(
+                    "The test business tier is not up: call TestUtils.setupWeblogger() first");
+        }
+        return p;
+    }
+
     public static void shutdownWeblogger() throws Exception {
-        WebloggerFactory.getWeblogger().shutdown();
+        weblogger().shutdown();
     }
 
     /**
@@ -106,9 +142,9 @@ public final class TestUtils {
      */
     public static void endSession(boolean flush) throws Exception {
         if (flush) {
-            WebloggerFactory.getWeblogger().flush();
+            TestUtils.weblogger().flush();
         }
-        WebloggerFactory.getWeblogger().release();
+        TestUtils.weblogger().release();
     }
 
     /**
@@ -131,11 +167,11 @@ public final class TestUtils {
         testUser.setEnabled(Boolean.TRUE);
 
         // store the user
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager mgr = TestUtils.weblogger().getUserManager();
         mgr.addUser(testUser);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
 
         // query for the user to make sure we return the persisted object
         User user = mgr.getUserByUserName(userName);
@@ -153,14 +189,14 @@ public final class TestUtils {
     public static void teardownUser(String userName) throws Exception {
 
         // lookup the user
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager mgr = TestUtils.weblogger().getUserManager();
         User user = mgr.getUserByUserName(userName, null);
 
         // remove the user
         mgr.removeUser(user);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     /**
@@ -181,11 +217,11 @@ public final class TestUtils {
         testWeblog.setCreatorUserName(creator.getUserName());
 
         // add weblog
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         mgr.addWeblog(testWeblog);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
 
         // query for the new weblog and return it
         Weblog weblog = mgr.getWeblogByHandle(handle);
@@ -203,14 +239,14 @@ public final class TestUtils {
     public static void teardownWeblog(String id) throws Exception {
 
         // lookup the weblog
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         Weblog weblog = mgr.getWeblog(id);
 
         // remove the weblog
         mgr.removeWeblog(weblog);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     /**
@@ -220,14 +256,14 @@ public final class TestUtils {
             throws Exception {
 
         // remove all permissions
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
-        Weblog weblog = WebloggerFactory.getWeblogger().getWeblogManager()
+        UserManager mgr = TestUtils.weblogger().getUserManager();
+        Weblog weblog = TestUtils.weblogger().getWeblogManager()
                 .getWeblogByHandle(perm.getObjectId(), null);
         mgr.revokeWeblogPermission(weblog, mgr.getUserByUserName(perm.getUserName()),
                 WeblogPermission.ALL_ACTIONS);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     /**
@@ -236,14 +272,14 @@ public final class TestUtils {
     public static WeblogCategory setupWeblogCategory(Weblog weblog, String name)
             throws Exception {
 
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger()
+        WeblogEntryManager mgr = TestUtils.weblogger()
                 .getWeblogEntryManager();
 
         WeblogCategory testCat = new WeblogCategory(weblog, name, null, null);
         mgr.saveWeblogCategory(testCat);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
 
         // query for object
         WeblogCategory cat = mgr.getWeblogCategory(testCat.getId());
@@ -261,7 +297,7 @@ public final class TestUtils {
     public static void teardownWeblogCategory(String id) throws Exception {
 
         // lookup the cat
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger()
+        WeblogEntryManager mgr = TestUtils.weblogger()
                 .getWeblogEntryManager();
         WeblogCategory cat = mgr.getWeblogCategory(id);
 
@@ -269,7 +305,7 @@ public final class TestUtils {
         mgr.removeWeblogCategory(cat);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     /**
@@ -326,12 +362,12 @@ public final class TestUtils {
         testEntry.setCategory(cat);
 
         // store entry
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger()
+        WeblogEntryManager mgr = TestUtils.weblogger()
                 .getWeblogEntryManager();
         mgr.saveWeblogEntry(testEntry);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
 
         // query for object
         WeblogEntry entry = mgr.getWeblogEntry(testEntry.getId());
@@ -349,14 +385,14 @@ public final class TestUtils {
     public static void teardownWeblogEntry(String id) throws Exception {
 
         // lookup the entry
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry entry = mgr.getWeblogEntry(id);
 
         // remove the entry
         mgr.removeWeblogEntry(entry);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     /**
@@ -391,13 +427,13 @@ public final class TestUtils {
         // made the fixture order-dependent: it worked when an earlier test
         // happened to have saved the property, and failed with "error setting
         // up media file" when this test ran first.
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         config.get("uploads.enabled").setValue("true");
         pmgr.saveProperties(config);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         Weblog managedWeblog = getManagedWebsite(weblog);
@@ -408,7 +444,7 @@ public final class TestUtils {
             rootDirectory = mfMgr.getMediaFileDirectoryByName(managedWeblog, directoryName);
             if (rootDirectory == null) {
                 rootDirectory = mfMgr.createMediaFileDirectory(managedWeblog, directoryName);
-                WebloggerFactory.getWeblogger().flush();
+                TestUtils.weblogger().flush();
             }
         }
 
@@ -423,7 +459,7 @@ public final class TestUtils {
         mfMgr.createMediaFile(managedWeblog, mediaFile, messages);
 
         // flush to db
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
 
         // query for the new media file and return it
         MediaFile persisted = mfMgr.getMediaFile(mediaFile.getId());
@@ -444,7 +480,7 @@ public final class TestUtils {
      * Convenience method that returns managed copy of given user.
      */
     public static User getManagedUser(User user) throws WebloggerException {
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager mgr = TestUtils.weblogger().getUserManager();
         return mgr.getUserByUserName(user.getUserName());
     }
 
@@ -453,7 +489,7 @@ public final class TestUtils {
      */
     public static Weblog getManagedWebsite(Weblog website)
             throws WebloggerException {
-        return WebloggerFactory.getWeblogger().getWeblogManager()
+        return TestUtils.weblogger().getWeblogManager()
                 .getWeblog(website.getId());
     }
 
@@ -462,7 +498,7 @@ public final class TestUtils {
      */
     public static WeblogEntry getManagedWeblogEntry(WeblogEntry weblogEntry)
             throws WebloggerException {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+        return TestUtils.weblogger().getWeblogEntryManager()
                 .getWeblogEntry(weblogEntry.getId());
     }
 
@@ -471,7 +507,7 @@ public final class TestUtils {
      */
     public static WeblogCategory getManagedWeblogCategory(WeblogCategory cat)
             throws WebloggerException {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+        return TestUtils.weblogger().getWeblogEntryManager()
                 .getWeblogCategory(cat.getId());
     }
 
@@ -485,7 +521,7 @@ public final class TestUtils {
      * entity (plan Task 16 moved it); fixtures ask the manager.
      */
     public static WeblogCategory categoryNamed(Weblog weblog, String name) throws WebloggerException {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+        return TestUtils.weblogger().getWeblogEntryManager()
                 .getWeblogCategoryByName(weblog, name);
     }
 
@@ -495,7 +531,7 @@ public final class TestUtils {
      * inside the entity (plan Task 16 moved the write to the manager).
      */
     public static void setMediaTags(MediaFile file, String tags) throws WebloggerException {
-        WebloggerFactory.getWeblogger().getMediaFileManager()
+        TestUtils.weblogger().getMediaFileManager()
                 .updateTags(file, Utilities.splitStringAsTags(tags));
     }
 }

@@ -26,7 +26,7 @@ class MaintenanceServiceTest {
         user = TestUtils.setupUser("maintuser");
         weblog = TestUtils.setupWeblog("maintblog", user);
         TestUtils.endSession(true);
-        service = new MaintenanceService(WebloggerFactory.getWeblogger());
+        service = new MaintenanceService(TestUtils.weblogger());
     }
 
     @AfterEach
@@ -45,7 +45,7 @@ class MaintenanceServiceTest {
         // for the `weblog` field here, which crossed a TestUtils.endSession
         // in @BeforeEach and is now detached. Re-fetching mirrors what a
         // real request does: resolve the weblog fresh, then act on it.
-        Weblog attached = WebloggerFactory.getWeblogger().getWeblogManager().getWeblog(weblog.getId());
+        Weblog attached = TestUtils.weblogger().getWeblogManager().getWeblog(weblog.getId());
         assertDoesNotThrow(() -> service.flushCache(attached));
     }
 

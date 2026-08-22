@@ -66,9 +66,9 @@ class InstallControllerTest {
     /**
      * A Mockito mock: {@code isBootstrapped()} is false by default, which is
      * the "still installing" state every test but one wants; the one that
-     * wants "already running" stubs it true. Replaces the JVM-wide
-     * {@code MockWeblogger.installNotBootstrapped()} the controller used to
-     * depend on through the static factory.
+     * wants "already running" stubs it true. The controller takes the
+     * provider by constructor; there is no JVM-wide static to install a
+     * "not bootstrapped" state into any more.
      */
     private WebloggerProvider webloggerProvider;
     private InstallController controller;

@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MultiWeblogURLStrategy;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
@@ -70,7 +69,7 @@ class WeblogEntriesPagerCharacterisationTest {
     @Test
     void dayPagerReportsItsOwnNavigationUrlsAndTitle() {
         WeblogEntriesDayPager pager = new WeblogEntriesDayPager(
-                urlStrategy, WebloggerFactory.getWeblogger(), testWeblog, null, null, null, "20260818", null, null, 0);
+                urlStrategy, TestUtils.weblogger(), testWeblog, null, null, null, "20260818", null, null, 0);
 
         assertNotNull(pager.getHomeLink(), "home link");
         assertNotNull(pager.getEntries(), "entries map");
@@ -80,7 +79,7 @@ class WeblogEntriesPagerCharacterisationTest {
     @Test
     void monthPagerReportsItsOwnNavigationUrlsAndTitle() {
         WeblogEntriesMonthPager pager = new WeblogEntriesMonthPager(
-                urlStrategy, WebloggerFactory.getWeblogger(), testWeblog, null, null, null, "202608", null, null, 0);
+                urlStrategy, TestUtils.weblogger(), testWeblog, null, null, null, "202608", null, null, 0);
 
         assertNotNull(pager.getHomeLink(), "home link");
         assertEquals(0, pager.getEntries().size(), "empty weblog has no entries");
@@ -89,7 +88,7 @@ class WeblogEntriesPagerCharacterisationTest {
     @Test
     void latestPagerReportsItsOwnNavigationUrlsAndTitle() {
         WeblogEntriesLatestPager pager = new WeblogEntriesLatestPager(
-                urlStrategy, WebloggerFactory.getWeblogger(), testWeblog, null, null, null, null, null, null, 0);
+                urlStrategy, TestUtils.weblogger(), testWeblog, null, null, null, null, null, null, 0);
 
         assertNotNull(pager.getHomeLink(), "home link");
         assertEquals(0, pager.getEntries().size(), "empty weblog has no entries");

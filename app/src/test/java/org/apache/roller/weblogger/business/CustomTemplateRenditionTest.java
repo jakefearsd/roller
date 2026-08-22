@@ -91,7 +91,7 @@ public class CustomTemplateRenditionTest  {
         */
        @Test
        public void testTemplateCRUD() throws Exception {
-           WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+           WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
 
            // create template
            mgr.saveTemplate(testPage);

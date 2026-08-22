@@ -60,7 +60,7 @@ class ApiSecurityRefusalTest {
         request = new MockHttpServletRequest();
         request.setContextPath(CONTEXT);
         response = new MockHttpServletResponse();
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
         WebloggerProvider provider = mock(WebloggerProvider.class);
         when(provider.isBootstrapped()).thenReturn(true);
         interceptor = new RollerHandlerInterceptor(provider, weblogger.weblogger());
@@ -80,7 +80,7 @@ class ApiSecurityRefusalTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     private void signInAsAlice() {

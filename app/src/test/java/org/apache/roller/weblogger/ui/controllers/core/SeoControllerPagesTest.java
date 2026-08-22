@@ -23,7 +23,6 @@ import java.time.Instant;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogPageManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -64,7 +63,7 @@ class SeoControllerPagesTest {
         TestUtils.endSession(true);
 
         controller = new SeoController();
-        inject(controller, "weblogger", WebloggerFactory.getWeblogger());
+        inject(controller, "weblogger", TestUtils.weblogger());
     }
 
     @AfterEach
@@ -75,7 +74,7 @@ class SeoControllerPagesTest {
     }
 
     private static WeblogPageManager pageManager() {
-        return WebloggerFactory.getWeblogger().getWeblogPageManager();
+        return TestUtils.weblogger().getWeblogPageManager();
     }
 
     private WeblogPage savePage(String slug, WeblogPage.PubStatus status, boolean noindex)
@@ -88,7 +87,7 @@ class SeoControllerPagesTest {
         page.setStatus(status);
         page.setNoindex(noindex);
         pageManager().savePage(page);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return pageManager().getPageBySlug(TestUtils.getManagedWebsite(weblog), slug);
     }

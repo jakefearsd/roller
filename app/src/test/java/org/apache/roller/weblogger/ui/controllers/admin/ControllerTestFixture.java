@@ -24,13 +24,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.function.Supplier;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.lang.reflect.Proxy;
 
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
@@ -68,27 +69,44 @@ final class ControllerTestFixture {
 
     /**
      * Stands in for the {@code @Lazy} Spring proxy that production controllers
-     * get injected: every call is forwarded to whatever {@code WebloggerFactory}
-     * currently reports, resolved at call time rather than at field-set time.
+     * get injected: every call is forwarded to whatever {@link #useWeblogger}
+     * last chose -- by default the suite's real tier ({@code TestUtils.weblogger()}),
+     * or the {@code MockWeblogger} facade a test hands in -- resolved at call
+     * time rather than at field-set time.
      *
-     * <p>That laziness matters here because some tests (e.g. install/setup flows)
-     * build their controller before installing a {@code MockWeblogger}, exactly
-     * as {@code @Lazy} defers real injection until first use in production.
+     * <p>That laziness matters here because some tests build their controller
+     * in a field initialiser, before {@code @BeforeEach} has built the mock,
+     * exactly as {@code @Lazy} defers real injection until first use in
+     * production. There is no static locator behind this any more: the
+     * supplier is the fixture's own, and {@link #useDefaultWeblogger()} in
+     * {@code @AfterEach} puts it back.
      */
+    private static volatile Supplier<Weblogger> webloggerSupplier = TestUtils::weblogger;
+
     private static final Weblogger LAZY_WEBLOGGER = (Weblogger) Proxy.newProxyInstance(
             ControllerTestFixture.class.getClassLoader(),
             new Class<?>[]{Weblogger.class},
-            (proxy, method, args) -> method.invoke(WebloggerFactory.getWeblogger(), args));
+            (proxy, method, args) -> method.invoke(webloggerSupplier.get(), args));
 
     private ControllerTestFixture() {
+    }
+
+    /** Point every controller wired by {@link #withMessages} at this facade (a mock, usually). */
+    static void useWeblogger(Weblogger weblogger) {
+        webloggerSupplier = () -> weblogger;
+    }
+
+    /** Back to the suite's real tier; call from {@code @AfterEach} after {@link #useWeblogger}. */
+    static void useDefaultWeblogger() {
+        webloggerSupplier = TestUtils::weblogger;
     }
 
     /**
      * Gives the controller a message source that returns the code itself, with
      * any arguments appended, so a test can assert exactly which message a
      * controller chose and what it passed in. Also gives it a {@code weblogger}
-     * field that resolves lazily against {@code WebloggerFactory}, mirroring the
-     * {@code @Lazy} proxy the controller gets in production.
+     * field that resolves lazily against {@link #useWeblogger}'s choice,
+     * mirroring the {@code @Lazy} proxy the controller gets in production.
      */
     static <T extends BaseController> T withMessages(T controller) {
         setField(controller, "messageSource", new KeyEchoMessageSource());

@@ -96,7 +96,7 @@ public class WeblogPageTest  {
     @Test
     public void testTemplateCRUD() throws Exception {
         
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         WeblogTemplate template;
         
         // create template
@@ -135,7 +135,7 @@ public class WeblogPageTest  {
     @Test
     public void testPermissionsLookups() throws Exception {
         
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         WeblogTemplate page;
         
         // create page

@@ -73,14 +73,14 @@ public class MediaFileCropTest {
         // deleted alongside the raster ones either way.
         CwebpEncoder.setAvailableForTesting(false);
 
-        Map<String, RuntimeConfigProperty> config = WebloggerFactory.getWeblogger()
+        Map<String, RuntimeConfigProperty> config = TestUtils.weblogger()
                 .getPropertiesManager().getProperties();
         config.get("uploads.enabled").setValue("true");
 
         user = TestUtils.setupUser("cropTestUser");
         weblog = TestUtils.setupWeblog("cropTestWeblog", user);
-        mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
-        fcMgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        mfMgr = TestUtils.weblogger().getMediaFileManager();
+        fcMgr = TestUtils.weblogger().getFileContentManager();
         rootDirectory = mfMgr.getDefaultMediaFileDirectory(weblog);
         TestUtils.endSession(true);
 
@@ -467,7 +467,7 @@ public class MediaFileCropTest {
      */
     private void withFailingSaveFor(String failingFileId,
             org.junit.jupiter.api.function.ThrowingConsumer<MediaFileManager> action) throws Throwable {
-        Weblogger real = WebloggerFactory.getWeblogger();
+        Weblogger real = TestUtils.weblogger();
         FileContentManager failingCmgr = mock(FileContentManager.class,
                 org.mockito.AdditionalAnswers.delegatesTo(fcMgr));
         doThrow(new FileIOException("simulated disk full"))

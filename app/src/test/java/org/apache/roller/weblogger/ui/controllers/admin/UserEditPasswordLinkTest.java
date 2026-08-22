@@ -62,7 +62,8 @@ class UserEditPasswordLinkTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(weblogger.weblogger());
         mail = MockMailProvider.install();
         previousPasswordEncoder = ControllerTestFixture.installBcryptPasswordEncoder();
         previousAllowedChars = ControllerTestFixture.setConfigProperty(ALLOWED_CHARS, "A-Za-z0-9");
@@ -79,7 +80,8 @@ class UserEditPasswordLinkTest {
     @AfterEach
     void tearDown() {
         MockMailProvider.uninstall();
-        MockWeblogger.uninstall();
+        weblogger.detach();
+        ControllerTestFixture.useDefaultWeblogger();
         ControllerTestFixture.restorePasswordEncoder(previousPasswordEncoder);
         ControllerTestFixture.restoreConfigProperty(ALLOWED_CHARS, previousAllowedChars);
     }

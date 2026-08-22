@@ -61,7 +61,7 @@ public class FileContentManagerTest  {
 
     @AfterEach
     public void tearDown() throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         config.get("uploads.dir.maxsize").setValue("30000");
         config.get("uploads.types.forbid").setValue("");
@@ -111,7 +111,7 @@ public class FileContentManagerTest  {
             Path outside = Files.createTempFile("fcm-outside-", ".txt");
             Files.writeString(outside, "secret from outside the uploads dir");
             try {
-                FileContentManager fcm = WebloggerFactory.getWeblogger().getFileContentManager();
+                FileContentManager fcm = TestUtils.weblogger().getFileContentManager();
                 assertThrows(FilePathException.class,
                         () -> fcm.getFileContent(weblog(), outside.toAbsolutePath().toString()),
                         "an absolute fileId must be refused, not resolved outside the uploads dir");
@@ -125,7 +125,7 @@ public class FileContentManagerTest  {
             Path outside = Files.createTempFile("fcm-outside-del-", ".txt");
             Files.writeString(outside, "must survive");
             try {
-                FileContentManager fcm = WebloggerFactory.getWeblogger().getFileContentManager();
+                FileContentManager fcm = TestUtils.weblogger().getFileContentManager();
                 assertThrows(FilePathException.class,
                         () -> fcm.deleteFile(weblog(), outside.toAbsolutePath().toString()),
                         "an absolute fileId must be refused, not deleted outside the uploads dir");
@@ -137,7 +137,7 @@ public class FileContentManagerTest  {
 
         @Test
         void anIdThatIsNotAValidPathIsRefused() {
-            FileContentManager fcm = WebloggerFactory.getWeblogger().getFileContentManager();
+            FileContentManager fcm = TestUtils.weblogger().getFileContentManager();
             // Path.of rejects an embedded NUL outright, which reaches
             // checkFileName's InvalidPathException branch rather than its
             // isAbsolute() one.
@@ -175,7 +175,7 @@ public class FileContentManagerTest  {
 
         @Test
         void aRelativeTraversalIsStillRefused() {
-            FileContentManager fcm = WebloggerFactory.getWeblogger().getFileContentManager();
+            FileContentManager fcm = TestUtils.weblogger().getFileContentManager();
             assertThrows(FilePathException.class,
                     () -> fcm.getFileContent(weblog(), "../../etc/hostname"),
                     "the pre-existing \"..\" guard must keep working");
@@ -197,7 +197,7 @@ public class FileContentManagerTest  {
         }
 
         // update roller properties to prepare for test
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         config.get("uploads.enabled").setValue("true");
         config.get("uploads.types.allowed").setValue("opml");
@@ -207,7 +207,7 @@ public class FileContentManagerTest  {
 
         /* NOTE: upload dir for unit tests is set in
         roller/testdata/roller-custom.properties */
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
 
         // File should not exist initially
         try {
@@ -256,7 +256,7 @@ public class FileContentManagerTest  {
         testWeblog = TestUtils.setupWeblog("FCMTest_handle3", testUser);
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
 
         byte[] original = "the original, known-good content".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         fmgr.saveFileContent(testWeblog, "atomic-file-id", new ByteArrayInputStream(original));
@@ -533,14 +533,14 @@ public class FileContentManagerTest  {
 
         private boolean canSave(String fileName, String contentType, long size,
                 RollerMessages messages) throws Exception {
-            return WebloggerFactory.getWeblogger().getFileContentManager()
+            return TestUtils.weblogger().getFileContentManager()
                     .canSave(TestUtils.getManagedWebsite(testWeblog), fileName, contentType,
                             size, messages);
         }
 
         private void configure(String enabled, String maxFileMB, String maxDirMB,
                 String allowed, String forbid) throws Exception {
-            PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+            PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
             Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
             config.get("uploads.enabled").setValue(enabled);
             config.get("uploads.file.maxsize").setValue(maxFileMB);
@@ -581,7 +581,7 @@ public class FileContentManagerTest  {
         testWeblog = TestUtils.setupWeblog(handle, testUser);
         TestUtils.endSession(true);
 
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         config.get("uploads.enabled").setValue("true");
         config.get("uploads.types.allowed").setValue("");
@@ -592,7 +592,7 @@ public class FileContentManagerTest  {
         pmgr.saveProperties(config);
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
 
         String id = UUIDGenerator.generateUUID();
         String underscoredUserFile = "user_photo_with_underscores.jpg";

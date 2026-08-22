@@ -2,7 +2,6 @@ package org.apache.roller.weblogger.ui.rendering;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -36,7 +35,7 @@ class WeblogRequestMapperTest {
      * until plan Task 20.)
      */
     private static WebloggerProvider bootstrappedProvider() {
-        Weblogger tier = WebloggerFactory.getWeblogger();
+        Weblogger tier = TestUtils.weblogger();
         WebloggerProvider provider = mock(WebloggerProvider.class);
         when(provider.isBootstrapped()).thenReturn(true);
         when(provider.getWeblogger()).thenReturn(tier);
@@ -49,7 +48,7 @@ class WeblogRequestMapperTest {
         user = TestUtils.setupUser("mapperuser");
         weblog = TestUtils.setupWeblog("mapperblog", user);
         TestUtils.endSession(true);
-        mapper = new WeblogRequestMapper(bootstrappedProvider(), WebloggerFactory.getWeblogger());
+        mapper = new WeblogRequestMapper(bootstrappedProvider(), TestUtils.weblogger());
     }
 
     @AfterEach
@@ -59,7 +58,7 @@ class WeblogRequestMapperTest {
         TestUtils.endSession(true);
         // The tier's VirtualHostRegistry is a JVM-wide cache -- a custom domain
         // set by one test must not leak into the next.
-        WebloggerFactory.getWeblogger().getVirtualHostRegistry().invalidate();
+        TestUtils.weblogger().getVirtualHostRegistry().invalidate();
     }
 
     private MockHttpServletRequest publicUrl(String method, String uriAfterContext) {
@@ -713,11 +712,11 @@ class WeblogRequestMapperTest {
     }
 
     private void givenCustomDomain(String host) throws Exception {
-        Weblog stored = WebloggerFactory.getWeblogger().getWeblogManager()
+        Weblog stored = TestUtils.weblogger().getWeblogManager()
                 .getWeblogByHandle("mapperblog");
         stored.setCustomDomain(host);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(stored);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(stored);
         TestUtils.endSession(true);
-        WebloggerFactory.getWeblogger().getVirtualHostRegistry().invalidate();
+        TestUtils.weblogger().getVirtualHostRegistry().invalidate();
     }
 }

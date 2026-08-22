@@ -19,7 +19,6 @@ import jakarta.servlet.jsp.JspFactory;
 import jakarta.servlet.jsp.PageContext;
 
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.roller.weblogger.ui.rendering.velocity.RollerVelocity;
@@ -81,7 +80,7 @@ public final class RenderingTestSupport {
         // What RollerLifecycle.start() does after bootstrap: the engine carries
         // the facade for the two Roller resource loaders. Idempotent, and the
         // engine is never torn down (see the class javadoc).
-        RollerVelocity.initialize(context, WebloggerFactory.getWeblogger());
+        RollerVelocity.initialize(context, TestUtils.weblogger());
     }
 
     /**
@@ -150,31 +149,31 @@ public final class RenderingTestSupport {
     }
 
     public static PageServlet pageServlet() throws ServletException {
-        return init(new PageServlet(WebloggerFactory.getWeblogger()));
+        return init(new PageServlet(TestUtils.weblogger()));
     }
 
     static PreviewServlet previewServlet() throws ServletException {
-        return init(new PreviewServlet(WebloggerFactory.getWeblogger()));
+        return init(new PreviewServlet(TestUtils.weblogger()));
     }
 
     public static FeedServlet feedServlet() throws ServletException {
-        return init(new FeedServlet(WebloggerFactory.getWeblogger()));
+        return init(new FeedServlet(TestUtils.weblogger()));
     }
 
     public static SearchServlet searchServlet() throws ServletException {
-        return init(new SearchServlet(WebloggerFactory.getWeblogger()));
+        return init(new SearchServlet(TestUtils.weblogger()));
     }
 
     static MediaResourceServlet mediaResourceServlet() throws ServletException {
-        return init(new MediaResourceServlet(WebloggerFactory.getWeblogger()));
+        return init(new MediaResourceServlet(TestUtils.weblogger()));
     }
 
     static ResourceServlet resourceServlet() throws ServletException {
-        return init(new ResourceServlet(WebloggerFactory.getWeblogger()));
+        return init(new ResourceServlet(TestUtils.weblogger()));
     }
 
     static PreviewResourceServlet previewResourceServlet() throws ServletException {
-        return init(new PreviewResourceServlet(WebloggerFactory.getWeblogger()));
+        return init(new PreviewResourceServlet(TestUtils.weblogger()));
     }
 
     private static <T extends HttpServlet> T init(T servlet) throws ServletException {

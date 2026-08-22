@@ -727,7 +727,7 @@ class MenuHelperTest {
     /**
      * The user manager is a parameter, not a lookup: {@code getMenu} must
      * consult the one it is handed and nothing else. Before the DI wave it
-     * reached the static {@code WebloggerFactory} for it, which is why this
+     * reached the static locator for it, which is why this
      * test hands in a manager the fixture's static mock has never heard of,
      * and asserts the static mock's manager was left alone.
      */

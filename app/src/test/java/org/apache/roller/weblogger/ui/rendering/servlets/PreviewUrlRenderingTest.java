@@ -25,7 +25,6 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
@@ -91,7 +90,7 @@ class PreviewUrlRenderingTest {
         image = TestUtils.setupImageMediaFile(weblog, "prevurl-hawk.jpg");
         entry = TestUtils.setupWeblogEntry("prevurl-entry", weblog, user);
         entry.setFeaturedImageId(image.getId());
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(entry);
         TestUtils.endSession(true);
     }
 
@@ -99,11 +98,11 @@ class PreviewUrlRenderingTest {
     void tearDown() throws Exception {
         try {
             if (!originalProperties.isEmpty()) {
-                PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+                PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
                 Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
                 originalProperties.forEach((name, value) -> config.get(name).setValue(value));
                 pmgr.saveProperties(config);
-                WebloggerFactory.getWeblogger().flush();
+                TestUtils.weblogger().flush();
                 TestUtils.endSession(true);
             }
         } finally {
@@ -122,7 +121,7 @@ class PreviewUrlRenderingTest {
     @Test
     void aPermalinkPreviewsOgImageIsThePreviewStrategysMediaUrl() throws Exception {
         URLStrategy preview = previewStrategy("journal");
-        URLStrategy production = WebloggerFactory.getWeblogger().getUrlStrategy();
+        URLStrategy production = TestUtils.weblogger().getUrlStrategy();
         // hawk.jpg is 500px wide, below the 1600px og:image rendition cut-off,
         // so #showSeoHead takes the $seoImage.permalink branch
         String expected = preview.getMediaFileURL(weblog, image.getId(), true);
@@ -147,7 +146,7 @@ class PreviewUrlRenderingTest {
         frontpageWeblog = TestUtils.setupWeblog("prevfront" + suffix, frontpageUser);
         Weblog managed = TestUtils.getManagedWebsite(frontpageWeblog);
         managed.setEditorTheme("frontpage");
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
         setProperty(FRONTPAGE_HANDLE_PROP, frontpageWeblog.getHandle());
         setProperty(FRONTPAGE_AGGREGATED_PROP, "true");
@@ -158,7 +157,7 @@ class PreviewUrlRenderingTest {
                 managedEntryWeblog, null, entry.getAnchor(), true);
         String expectedRelativeWeblogUrl = preview.getWeblogURL(managedEntryWeblog, null, false);
         String expectedAbsoluteWeblogUrl = preview.getWeblogURL(managedEntryWeblog, null, true);
-        String productionPermalink = WebloggerFactory.getWeblogger().getUrlStrategy()
+        String productionPermalink = TestUtils.weblogger().getUrlStrategy()
                 .getWeblogEntryURL(managedEntryWeblog, null, entry.getAnchor(), true);
         assertFalse(expectedPermalink.equals(productionPermalink),
                 "precondition: the preview strategy must shape entry urls differently");
@@ -182,7 +181,7 @@ class PreviewUrlRenderingTest {
     // ---------------------------------------------------------------- helpers
 
     private static URLStrategy previewStrategy(String theme) {
-        return WebloggerFactory.getWeblogger().getUrlStrategy().getPreviewURLStrategy(theme);
+        return TestUtils.weblogger().getUrlStrategy().getPreviewURLStrategy(theme);
     }
 
     private static String preview(String pathInfo, String theme) throws Exception {
@@ -205,12 +204,12 @@ class PreviewUrlRenderingTest {
     }
 
     private void setProperty(String name, String value) throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         originalProperties.computeIfAbsent(name, key -> config.get(key).getValue());
         config.get(name).setValue(value);
         pmgr.saveProperties(config);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 }

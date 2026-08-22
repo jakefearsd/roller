@@ -510,7 +510,7 @@ class WeblogEntryCriteriaTest {
     }
 
     private static List<String> anchorsOf(WeblogEntrySearchCriteria criteria) throws Exception {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+        return TestUtils.weblogger().getWeblogEntryManager()
                 .getWeblogEntries(criteria).stream()
                 .map(WeblogEntry::getAnchor)
                 .toList();
@@ -542,38 +542,38 @@ class WeblogEntryCriteriaTest {
                 : TestUtils.setupWeblogCategory(TestUtils.getManagedWebsite(weblog), "General-" + anchor);
         WeblogEntry created = TestUtils.setupWeblogEntry(anchor, cat, status, weblog, user);
 
-        WeblogEntryManager manager = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager manager = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = manager.getWeblogEntry(created.getId());
         managed.setPubTime(new Timestamp(pubTime.getTime()));
         managed.setUpdateTime(new Timestamp(pubTime.getTime()));
         managed.setTitle(title);
         managed.setText(text);
         manager.saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         return managed;
     }
 
     private static void setLocale(WeblogEntry entry, String locale) throws Exception {
-        WeblogEntryManager manager = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager manager = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = manager.getWeblogEntry(entry.getId());
         managed.setLocale(locale);
         manager.saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     private static void tag(WeblogEntry entry, String tagName) throws Exception {
-        WeblogEntryManager manager = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager manager = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = manager.getWeblogEntry(entry.getId());
         managed.addTag(tagName);
         manager.saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     private static void touchUpdateTime(WeblogEntry entry, Instant when) throws Exception {
-        WeblogEntryManager manager = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager manager = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = manager.getWeblogEntry(entry.getId());
         managed.setUpdateTime(new Timestamp(when.toEpochMilli()));
         manager.saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 }

@@ -109,7 +109,7 @@ class PreviewServletRenderingTest {
         org.apache.roller.weblogger.pojos.WeblogEntry entry =
                 TestUtils.setupWeblogEntry("shortcode-preview", weblog, user);
         entry.setText("before [image id=" + image.getId() + " caption=\"A hawk\"] after");
-        org.apache.roller.weblogger.business.WebloggerFactory.getWeblogger()
+        org.apache.roller.weblogger.TestUtils.weblogger()
                 .getWeblogEntryManager().saveWeblogEntry(entry);
         TestUtils.endSession(true);
 

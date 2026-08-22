@@ -74,7 +74,7 @@ class ThemeManagerImplTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
         themeManager = new ThemeManagerImpl(weblogger.weblogger());
         themeManager.initialize();
 
@@ -89,7 +89,7 @@ class ThemeManagerImplTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     // ---------------------------------------------------------------- lookup

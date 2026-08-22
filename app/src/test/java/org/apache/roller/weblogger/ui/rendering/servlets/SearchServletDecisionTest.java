@@ -3,7 +3,6 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 import java.time.Duration;
 
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.apache.roller.weblogger.pojos.User;
@@ -98,9 +97,9 @@ class SearchServletDecisionTest {
                 weblog, user);
         entry.setTitle(title);
         entry.setText(text);
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
-        WebloggerFactory.getWeblogger().flush();
-        WebloggerFactory.getWeblogger().getIndexManager()
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.weblogger().flush();
+        TestUtils.weblogger().getIndexManager()
                 .addEntryIndexOperation(TestUtils.getManagedWeblogEntry(entry));
         return entry;
     }
@@ -162,8 +161,8 @@ class SearchServletDecisionTest {
     void aWeblogWithNoUsableTemplateIsNotFoundRatherThanRenderingNothing() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(WeblogTheme.CUSTOM);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         MockHttpServletResponse response = search(TERM, null);

@@ -55,7 +55,7 @@ class ThemeDataServletTest {
 
     @BeforeEach
     void setUp() {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
         servlet = new ThemeDataServlet(weblogger.weblogger());
         request = new MockHttpServletRequest("GET", "/roller-ui/authoring/themedata");
         response = new MockHttpServletResponse();
@@ -63,7 +63,7 @@ class ThemeDataServletTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     @Test

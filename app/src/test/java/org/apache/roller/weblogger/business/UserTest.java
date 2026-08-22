@@ -56,7 +56,7 @@ public class UserTest  {
     @Test
     public void testUserCRUD() throws Exception {
         
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager mgr = TestUtils.weblogger().getUserManager();
         User user = null;
         
         User testUser = new User();
@@ -115,7 +115,7 @@ public class UserTest  {
     @Test
     public void testUserLookups() throws Exception {
         
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager mgr = TestUtils.weblogger().getUserManager();
         User user = null;
         
         // add test user
@@ -170,7 +170,7 @@ public class UserTest  {
     @Test
     public void testRoleCRUD() throws Exception {
         
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager mgr = TestUtils.weblogger().getUserManager();
         User user = null;
         
         // add test user

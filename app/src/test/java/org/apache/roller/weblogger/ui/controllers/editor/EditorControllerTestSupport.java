@@ -75,7 +75,7 @@ abstract class EditorControllerTestSupport {
 
     @BeforeEach
     void installMockBusinessTier() {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
         messageSource = new StaticMessageSource();
         // Without this, a key that has no registered message and *does* carry
         // arguments comes back unformatted, and assertions on the argument
@@ -107,7 +107,7 @@ abstract class EditorControllerTestSupport {
         // The factory is static and shared with every other test class in the
         // JVM. Leaving a mock behind would replace the real business tier for
         // whatever runs next.
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     /**

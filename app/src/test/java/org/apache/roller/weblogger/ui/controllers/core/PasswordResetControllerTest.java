@@ -67,7 +67,8 @@ class PasswordResetControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        mocks = MockWeblogger.install();
+        mocks = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(mocks.weblogger());
         mail = MockMailProvider.install();
         previousPasswordEncoder = ControllerTestFixture.installBcryptPasswordEncoder();
         controller = ControllerTestFixture.withMessages(new PasswordResetController());
@@ -93,7 +94,8 @@ class PasswordResetControllerTest {
     void tearDown() {
         ControllerTestFixture.restorePasswordEncoder(previousPasswordEncoder);
         MockMailProvider.uninstall();
-        MockWeblogger.uninstall();
+        mocks.detach();
+        ControllerTestFixture.useDefaultWeblogger();
     }
 
     // ------------------------------------------------------------- forgot

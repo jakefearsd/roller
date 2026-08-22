@@ -7,7 +7,6 @@ import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.UserTokenManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.startup.MockMailProvider;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -228,7 +227,7 @@ class AdminApiTest {
         // Asserted on the message, not just the status code: this class
         // bootstraps a real Weblogger in @BeforeAll, and
         // PasswordLinkMailer.isReady() reads live ambient site.adminemail
-        // state through that same static WebloggerFactory shim regardless
+        // state through that same static locator shim regardless
         // of controller.weblogger being a mock -- an unrelated "mail is not
         // configured" 400 would make this test pass for the wrong reason if
         // it only checked the status.
@@ -660,8 +659,8 @@ class AdminApiTest {
     @AfterEach
     void tearDownIntegration() throws Exception {
         if (createdUserName != null) {
-            WebloggerFactory.getWeblogger().getUserTokenManager()
-                    .removeTokens(WebloggerFactory.getWeblogger().getUserManager()
+            TestUtils.weblogger().getUserTokenManager()
+                    .removeTokens(TestUtils.weblogger().getUserManager()
                             .getUserByUserName(createdUserName, null));
             TestUtils.teardownUser(createdUserName);
             createdUserName = null;
@@ -704,7 +703,7 @@ class AdminApiTest {
     }
 
     private void setAdminEmail(String value) throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         RuntimeConfigProperty existing = pmgr.getProperty("site.adminemail");
         previousAdminEmail = existing == null ? "" : existing.getValue();
         setAdminEmailNow(value);
@@ -719,7 +718,7 @@ class AdminApiTest {
      * throws a raw duplicate-key exception.
      */
     private void setAdminEmailNow(String value) throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         RuntimeConfigProperty property = pmgr.getProperty("site.adminemail");
         if (property != null) {
             property.setValue(value);
@@ -727,7 +726,7 @@ class AdminApiTest {
             property = new RuntimeConfigProperty("site.adminemail", value);
         }
         pmgr.saveProperty(property);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     /**
@@ -748,7 +747,7 @@ class AdminApiTest {
         String userName = "adminapiitnomail";
 
         AdminApi controller = new AdminApi();
-        controller.weblogger = WebloggerFactory.getWeblogger();
+        controller.weblogger = TestUtils.weblogger();
 
         mockMvc(controller)
                 .perform(post("/v1/admin/users")
@@ -758,7 +757,7 @@ class AdminApiTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
 
-        assertNull(WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(userName, null),
+        assertNull(TestUtils.weblogger().getUserManager().getUserByUserName(userName, null),
                 "a refused create must leave no account behind");
     }
 
@@ -785,7 +784,7 @@ class AdminApiTest {
         String userName = "adminapiitcreate";
 
         AdminApi controller = new AdminApi();
-        controller.weblogger = WebloggerFactory.getWeblogger();
+        controller.weblogger = TestUtils.weblogger();
 
         String body = mockMvc(controller)
                 .perform(post("/v1/admin/users")
@@ -802,7 +801,7 @@ class AdminApiTest {
         assertFalse(body.toLowerCase().contains("password"),
                 "no field of the response may even be named 'password'");
 
-        User stored = WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(userName, null);
+        User stored = TestUtils.weblogger().getUserManager().getUserByUserName(userName, null);
         assertNotNull(stored);
         assertFalse(stored.getEnabled());
 
@@ -832,7 +831,7 @@ class AdminApiTest {
         String userName = "adminapiitsendfailuser";
 
         AdminApi controller = new AdminApi();
-        controller.weblogger = WebloggerFactory.getWeblogger();
+        controller.weblogger = TestUtils.weblogger();
 
         var response = mockMvc(controller)
                 .perform(post("/v1/admin/users")
@@ -850,7 +849,7 @@ class AdminApiTest {
         assertTrue(json.get("detail").asString().toLowerCase().contains("created"),
                 "the error must tell the caller the account survived, not just that something failed");
 
-        User stored = WebloggerFactory.getWeblogger().getUserManager().getUserByUserName(userName, null);
+        User stored = TestUtils.weblogger().getUserManager().getUserByUserName(userName, null);
         assertNotNull(stored, "the account must exist even though the email could not be sent");
         assertFalse(stored.getEnabled());
     }

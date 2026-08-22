@@ -64,7 +64,7 @@ class UserDataServletTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
         servlet = new UserDataServlet(weblogger.weblogger());
         response = new MockHttpServletResponse();
 
@@ -97,7 +97,7 @@ class UserDataServletTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     /**

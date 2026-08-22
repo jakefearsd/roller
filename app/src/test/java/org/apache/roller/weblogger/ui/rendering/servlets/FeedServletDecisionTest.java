@@ -2,7 +2,6 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -58,11 +57,11 @@ class FeedServletDecisionTest {
     }
 
     private static void tag(WeblogEntry entry, String tagName) throws Exception {
-        WeblogEntryManager manager = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager manager = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = manager.getWeblogEntry(entry.getId());
         managed.addTag(tagName);
         manager.saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 
     // --- narrowing by category --------------------------------------------

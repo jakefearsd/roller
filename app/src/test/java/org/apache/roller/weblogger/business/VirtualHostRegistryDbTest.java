@@ -44,7 +44,7 @@ class VirtualHostRegistryDbTest {
 
     /** The bootstrapped tier's registry -- the instance the managers invalidate. */
     private static VirtualHostRegistry registry() {
-        return WebloggerFactory.getWeblogger().getVirtualHostRegistry();
+        return TestUtils.weblogger().getVirtualHostRegistry();
     }
 
     /**
@@ -56,7 +56,7 @@ class VirtualHostRegistryDbTest {
      */
     @Test
     void savingACustomDomainMakesItResolveWithNoManualInvalidate() throws Exception {
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         Weblog stored = mgr.getWeblogByHandle("vhostdbblog");
         stored.setCustomDomain("dbtest.example.com");
         mgr.saveWeblog(stored);
@@ -67,7 +67,7 @@ class VirtualHostRegistryDbTest {
 
     @Test
     void hostForAgreesWithHandleFor() throws Exception {
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         Weblog stored = mgr.getWeblogByHandle("vhostdbblog");
         stored.setCustomDomain("dbtest2.example.com");
         mgr.saveWeblog(stored);
@@ -87,7 +87,7 @@ class VirtualHostRegistryDbTest {
      */
     @Test
     void changingTheDomainMovesTheMappingWithoutManualInvalidate() throws Exception {
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
 
         Weblog stored = mgr.getWeblogByHandle("vhostdbblog");
         stored.setCustomDomain("old.example.com");
@@ -133,7 +133,7 @@ class VirtualHostRegistryDbTest {
      */
     @Test
     void aReaderOnAnotherThreadThatCachesTheMapBeforeCommitSeesItInvalidatedAfterCommit() throws Exception {
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         Weblog stored = mgr.getWeblogByHandle("vhostdbblog");
         stored.setCustomDomain("race.example.com");
         mgr.saveWeblog(stored); // pre-commit invalidate() runs here; not yet committed on THIS thread
@@ -149,7 +149,7 @@ class VirtualHostRegistryDbTest {
             } finally {
                 // Closes this thread's own EntityManager/connection so the
                 // test does not leak one from the pool per run.
-                WebloggerFactory.getWeblogger().release();
+                TestUtils.weblogger().release();
             }
         });
         reader.start();
@@ -179,7 +179,7 @@ class VirtualHostRegistryDbTest {
         Weblog removalWeblog = TestUtils.setupWeblog("vhostdbremoveblog", removalUser);
         TestUtils.endSession(true);
 
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         Weblog stored = mgr.getWeblogByHandle("vhostdbremoveblog");
         stored.setCustomDomain("removeme.example.com");
         mgr.saveWeblog(stored);

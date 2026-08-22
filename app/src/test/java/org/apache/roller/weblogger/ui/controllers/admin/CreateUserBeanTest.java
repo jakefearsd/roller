@@ -49,12 +49,12 @@ class CreateUserBeanTest {
 
     @BeforeEach
     void setUp() {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
     }
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     @Test
@@ -129,7 +129,7 @@ class CreateUserBeanTest {
      * to be handed a collaborator, and it must therefore not go looking for one.
      * The admin checkbox is the controller's to set (see
      * {@code UserEditControllerTest}); before the DI wave {@code copyFrom}
-     * reached the static {@code WebloggerFactory} for a user manager to ask,
+     * reached the static locator for a user manager to ask,
      * which is why this test stands one up and asserts it was never consulted.
      */
     @Test

@@ -34,7 +34,6 @@ import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -85,7 +84,7 @@ class SeoControllerTest {
      * until plan Task 20.)
      */
     private static InitFilter initFilterOverTheRealTier() {
-        Weblogger tier = WebloggerFactory.getWeblogger();
+        Weblogger tier = TestUtils.weblogger();
         WebloggerProvider provider = mock(WebloggerProvider.class);
         when(provider.isBootstrapped()).thenReturn(true);
         when(provider.getWeblogger()).thenReturn(tier);
@@ -108,7 +107,7 @@ class SeoControllerTest {
         TestUtils.endSession(true);
 
         controller = new SeoController();
-        inject(controller, "weblogger", WebloggerFactory.getWeblogger());
+        inject(controller, "weblogger", TestUtils.weblogger());
     }
 
     @AfterEach
@@ -192,7 +191,7 @@ class SeoControllerTest {
         try {
             hidden = TestUtils.getManagedWebsite(hidden);
             hidden.setVisible(Boolean.FALSE);
-            WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(hidden);
+            TestUtils.weblogger().getWeblogManager().saveWeblog(hidden);
             TestUtils.endSession(true);
 
             String body = controller.sitemapIndex(new MockHttpServletRequest()).getBody();
@@ -216,7 +215,7 @@ class SeoControllerTest {
         WeblogEntry noindexed = TestUtils.setupWeblogEntry("seoNoindexEntry", weblog, user);
         noindexed = TestUtils.getManagedWeblogEntry(noindexed);
         noindexed.setNoindex(Boolean.TRUE);
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(noindexed);
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(noindexed);
         // A trashed entry must be as invisible to crawlers as a draft -- same
         // reasoning as the draft/noindex cases above: a query default that got
         // "simplified" to drop the TRASHED exclusion would advertise a URL that
@@ -252,7 +251,7 @@ class SeoControllerTest {
         WeblogEntry entry = TestUtils.setupWeblogEntry("seoFeaturedEntry", weblog, user);
         entry = TestUtils.getManagedWeblogEntry(entry);
         entry.setFeaturedImageId(image.getId());
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(entry);
         TestUtils.endSession(true);
 
         String body = controller.weblogSitemap(weblog.getHandle()).getBody();
@@ -271,13 +270,13 @@ class SeoControllerTest {
     @Test
     void weblogSitemapExcludesAFeaturedImageInAPrivateDirectory() throws Exception {
         MediaFile hidden = TestUtils.setupImageMediaFile(weblog, "seo-private.jpg", "seoprivdir");
-        MediaFile managed = WebloggerFactory.getWeblogger().getMediaFileManager()
+        MediaFile managed = TestUtils.weblogger().getMediaFileManager()
                 .getMediaFile(hidden.getId());
         managed.getDirectory().setPrivate(true);
         WeblogEntry entry = TestUtils.setupWeblogEntry("seoPrivateImageEntry", weblog, user);
         entry = TestUtils.getManagedWeblogEntry(entry);
         entry.setFeaturedImageId(hidden.getId());
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(entry);
         TestUtils.endSession(true);
 
         String body = controller.weblogSitemap(weblog.getHandle()).getBody();
@@ -296,7 +295,7 @@ class SeoControllerTest {
         WeblogEntry entry = TestUtils.setupWeblogEntry("seoGoneImageEntry", weblog, user);
         entry = TestUtils.getManagedWeblogEntry(entry);
         entry.setFeaturedImageId("no-such-media-file-id");
-        WebloggerFactory.getWeblogger().getWeblogEntryManager().saveWeblogEntry(entry);
+        TestUtils.weblogger().getWeblogEntryManager().saveWeblogEntry(entry);
         TestUtils.endSession(true);
 
         String body = controller.weblogSitemap(weblog.getHandle()).getBody();

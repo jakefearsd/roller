@@ -30,7 +30,6 @@ import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
@@ -169,11 +168,11 @@ class ThemeReferenceLeakTest {
     @AfterAll
     void tearDownFixtures() throws Exception {
         try {
-            PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+            PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
             Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
             originalProperties.forEach((name, value) -> config.get(name).setValue(value));
             pmgr.saveProperties(config);
-            WebloggerFactory.getWeblogger().flush();
+            TestUtils.weblogger().flush();
             TestUtils.endSession(true);
         } finally {
             for (ThemeFixture fixture : fixtures.values()) {
@@ -306,7 +305,7 @@ class ThemeReferenceLeakTest {
 
         WeblogEntry entry = TestUtils.setupWeblogEntry(ENTRY_ANCHOR,
                 TestUtils.getManagedWeblogCategory(category), weblog, user);
-        WeblogEntryManager emgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager emgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = emgr.getWeblogEntry(entry.getId());
         managed.setText("Opening prose with **markdown** and a [link](https://example.test/).\n\n"
                 + "[image id=\"" + image.getId() + "\" caption=\"A hawk\" alt=\"A hawk in flight\"]\n\n"
@@ -347,7 +346,7 @@ class ThemeReferenceLeakTest {
     private static void switchTheme(Weblog weblog, String themeName) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(themeName);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 
@@ -359,14 +358,14 @@ class ThemeReferenceLeakTest {
         page.setTitle(title);
         page.setContent(content);
         page.setStatus(WeblogPage.PubStatus.PUBLISHED);
-        WebloggerFactory.getWeblogger().getWeblogPageManager().savePage(page);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogPageManager().savePage(page);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 
     /** A custom template that cannot parse, so the error page renders. */
     private static void saveBrokenCustomTemplate(Weblog weblog) throws Exception {
-        WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager wmgr = TestUtils.weblogger().getWeblogManager();
         WeblogTemplate template = new WeblogTemplate();
         template.setWeblog(TestUtils.getManagedWebsite(weblog));
         template.setAction(ComponentType.CUSTOM);
@@ -382,7 +381,7 @@ class ThemeReferenceLeakTest {
         rendition.setTemplate("<p>before</p>\n#if($model.weblog.name\n<p>never closed</p>");
         rendition.setTemplateLanguage(TemplateLanguage.VELOCITY);
         wmgr.saveTemplateRendition(rendition);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 
@@ -393,12 +392,12 @@ class ThemeReferenceLeakTest {
      * so tearDown can restore it.
      */
     private void setProperty(String name, String value) throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         originalProperties.computeIfAbsent(name, key -> config.get(key).getValue());
         config.get(name).setValue(value);
         pmgr.saveProperties(config);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 }

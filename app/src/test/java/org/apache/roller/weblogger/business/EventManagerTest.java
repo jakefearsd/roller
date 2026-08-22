@@ -39,7 +39,7 @@ class EventManagerTest {
     }
 
     private static EventManager manager() {
-        return WebloggerFactory.getWeblogger().getEventManager();
+        return TestUtils.weblogger().getEventManager();
     }
 
     private RollerEvent record(Weblog target, RollerEvent.EventType type, String anchor)
@@ -50,7 +50,7 @@ class EventManagerTest {
         event.setEntryAnchor(anchor);
         event.setOccurredAt(new Timestamp(System.currentTimeMillis()));
         manager().record(event);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return event;
     }
@@ -92,7 +92,7 @@ class EventManagerTest {
         record(otherWeblog, RollerEvent.EventType.FORM_SUBMITTED, null);
 
         manager().removeEvents(TestUtils.getManagedWebsite(weblog));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertTrue(manager().getEvents(TestUtils.getManagedWebsite(weblog), 10).isEmpty());

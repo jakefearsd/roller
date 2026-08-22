@@ -54,11 +54,11 @@ public class TaskLockTest  {
     @Test
     public void testTaskLockCRUD() throws Exception {
         
-        ThreadManager mgr = WebloggerFactory.getWeblogger().getThreadManager();
+        ThreadManager mgr = TestUtils.weblogger().getThreadManager();
         
         // need a test task to play with
         TestTask task = new TestTask();
-        task.init(WebloggerFactory.getWeblogger());
+        task.init(TestUtils.weblogger());
         
         // try to acquire a lock
         assertTrue(mgr.registerLease(task), "Failed to acquire lease.");

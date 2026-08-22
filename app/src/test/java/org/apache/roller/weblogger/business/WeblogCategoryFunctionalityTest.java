@@ -34,7 +34,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 
 /**
@@ -122,7 +121,7 @@ public class WeblogCategoryFunctionalityTest  {
         
         log.info("BEGIN");
         
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         
         WeblogCategory cat = mgr.getWeblogCategory(testCat.getId());
         assertNotNull(cat);
@@ -140,7 +139,7 @@ public class WeblogCategoryFunctionalityTest  {
         
         log.info("BEGIN");
         
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
         WeblogCategory cat = mgr.getWeblogCategoryByName(testWeblog, "catTest-cat1");
@@ -168,7 +167,7 @@ public class WeblogCategoryFunctionalityTest  {
         
         log.info("BEGIN");
         
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
         List<WeblogCategory> cats = mgr.getWeblogCategories(testWeblog);
@@ -184,7 +183,7 @@ public class WeblogCategoryFunctionalityTest  {
     @Test
     public void testMoveWeblogCategoryContents() throws Exception {
         log.info("BEGIN");
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry e1 = null;
         WeblogEntry e2 = null; 
         try {
@@ -249,7 +248,7 @@ public class WeblogCategoryFunctionalityTest  {
     /** All (or only published) entries in a category, through the entry manager. */
     private static List<WeblogEntry> entriesIn(WeblogCategory category, boolean publishedOnly)
             throws WebloggerException {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+        return TestUtils.weblogger().getWeblogEntryManager()
                 .getWeblogEntries(WeblogEntrySearchCriteria.forCategory(category, publishedOnly));
     }
 }

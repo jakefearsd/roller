@@ -34,7 +34,7 @@ class WeblogCustomDomainTest {
 
     @Test
     void aWeblogIsFoundByItsCustomDomain() throws Exception {
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         Weblog stored = mgr.getWeblogByHandle("vhostblog");
         stored.setCustomDomain("vhost.example.com");
         mgr.saveWeblog(stored);
@@ -46,7 +46,7 @@ class WeblogCustomDomainTest {
 
     @Test
     void anUnclaimedHostFindsNothing() throws Exception {
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         assertNull(mgr.getWeblogByCustomDomain("nobody.example.com"));
     }
 
@@ -57,7 +57,7 @@ class WeblogCustomDomainTest {
      */
     @Test
     void aNullHostFindsNothing() throws Exception {
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         assertNull(mgr.getWeblogByCustomDomain(null));
     }
 
@@ -79,7 +79,7 @@ class WeblogCustomDomainTest {
      */
     @Test
     void getWeblogsWithNoFiltersDoesNotThrow() throws Exception {
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         assertTrue(mgr.getWeblogs(null, null, null, null, 0, -1).stream()
                 .anyMatch(w -> "vhostblog".equals(w.getHandle())));
     }
@@ -116,7 +116,7 @@ class WeblogCustomDomainTest {
      */
     @Test
     void settingACustomDomainBumpsLastModified() throws Exception {
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         Weblog stored = mgr.getWeblogByHandle("vhostblog");
         java.util.Date before = stored.getLastModified();
 

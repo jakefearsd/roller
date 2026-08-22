@@ -74,7 +74,8 @@ class MaintenanceControllerRequestBindingTest {
 
     @BeforeEach
     void setUp() {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(weblogger.weblogger());
 
         MaintenanceController controller = ControllerTestFixture.withMessages(new MaintenanceController());
 
@@ -93,7 +94,8 @@ class MaintenanceControllerRequestBindingTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
+        ControllerTestFixture.useDefaultWeblogger();
     }
 
     @Test

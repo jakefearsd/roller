@@ -387,7 +387,7 @@ public final class Routes {
             // --- only meaningful before bootstrap ---
 
             new SkippedRoute("/roller-ui/install/install.rol", Role.ANONYMOUS,
-                    "Returns redirect:/ once WebloggerFactory.isBootstrapped(); the install "
+                    "Returns redirect:/ once the WebloggerProvider is bootstrapped; the install "
                             + "wizard views are unreachable on a running instance. Covering it "
                             + "means a deliberately un-migrated database."),
             new SkippedRoute("/roller-ui/install/install!bootstrap.rol", Role.ANONYMOUS,

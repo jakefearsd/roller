@@ -71,7 +71,8 @@ class UserEditControllerTest {
 
     @BeforeEach
     void setUp() {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(weblogger.weblogger());
         previousPasswordEncoder = ControllerTestFixture.installBcryptPasswordEncoder();
         previousAllowedChars = ControllerTestFixture.setConfigProperty(ALLOWED_CHARS, "A-Za-z0-9");
         controller = ControllerTestFixture.withMessages(new UserEditController());
@@ -82,7 +83,8 @@ class UserEditControllerTest {
     void tearDown() {
         // The factory holds its provider statically; leaving the mock in place
         // would hand it to every test that runs after this one.
-        MockWeblogger.uninstall();
+        weblogger.detach();
+        ControllerTestFixture.useDefaultWeblogger();
         ControllerTestFixture.restorePasswordEncoder(previousPasswordEncoder);
         ControllerTestFixture.restoreConfigProperty(ALLOWED_CHARS, previousAllowedChars);
     }

@@ -317,7 +317,7 @@ public class InitFilterTest  {
         WebloggerRuntimeConfig.setAbsoluteContextURL(null);
         WebloggerRuntimeConfig.setRelativeContextURL(null);
 
-        MockWeblogger mocks = MockWeblogger.install();
+        MockWeblogger mocks = MockWeblogger.attached();
         try {
             Weblog vhostblog = new Weblog();
             vhostblog.setHandle("vhostblog");
@@ -340,7 +340,7 @@ public class InitFilterTest  {
                     "a request on a weblog's own custom domain must not latch the site's "
                             + "absolute context url from it");
         } finally {
-            MockWeblogger.uninstall();
+            mocks.detach();
             WebloggerRuntimeConfig.setAbsoluteContextURL(priorAbsolute);
             WebloggerRuntimeConfig.setRelativeContextURL(priorRelative);
         }
@@ -360,7 +360,7 @@ public class InitFilterTest  {
         WebloggerRuntimeConfig.setAbsoluteContextURL(null);
         WebloggerRuntimeConfig.setRelativeContextURL(null);
 
-        MockWeblogger mocks = MockWeblogger.install();
+        MockWeblogger mocks = MockWeblogger.attached();
         try {
             Weblog vhostblog = new Weblog();
             vhostblog.setHandle("vhostblog");
@@ -382,7 +382,7 @@ public class InitFilterTest  {
             assertEquals("http://roller.example.com", WebloggerRuntimeConfig.getAbsoluteContextURL(),
                     "an unclaimed host must still latch, unaffected by the custom-domain refusal");
         } finally {
-            MockWeblogger.uninstall();
+            mocks.detach();
             WebloggerRuntimeConfig.setAbsoluteContextURL(priorAbsolute);
             WebloggerRuntimeConfig.setRelativeContextURL(priorRelative);
         }

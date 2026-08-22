@@ -2,7 +2,6 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -67,7 +66,7 @@ class PreviewResourceServletTest {
     private MediaFile uploadedImage(String name) throws Exception {
         MediaFile image = TestUtils.setupImageMediaFile(weblog, name);
         image.setOriginalPath("/" + name);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         mfMgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), image);
         TestUtils.endSession(true);
         return image;

@@ -21,7 +21,6 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.User;
@@ -101,14 +100,14 @@ class TravelThemeRenderingTest {
     private void switchTheme(String themeName) throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme(themeName);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 
     private WeblogEntry entryWithFeaturedImage(String anchor, String imageId)
             throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setFeaturedImageId(imageId);
         managed.setSearchDescription("Two days of hot springs and black sand.");
@@ -146,7 +145,7 @@ class TravelThemeRenderingTest {
 
     @Test
     void theThemeManagerListsTheTravelTheme() throws Exception {
-        SharedTheme travel = WebloggerFactory.getWeblogger().getThemeManager()
+        SharedTheme travel = TestUtils.weblogger().getThemeManager()
                 .getEnabledThemesList().stream()
                 .filter(theme -> "travel".equals(theme.getId()))
                 .findFirst()
@@ -270,7 +269,7 @@ class TravelThemeRenderingTest {
     @Test
     void theEntryTitleEscapesExactlyOnce() throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry("sea-and-stone", weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         // Stored form of "Sea & Stone" -- the transformation EntryBean.copyTo
         // applies at save time (see EntryBeanTest:212), not raw author input.
@@ -303,7 +302,7 @@ class TravelThemeRenderingTest {
     void theWeblogNameEscapesExactlyOnce() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setName("Fjord & Field Guides");
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
         TestUtils.setupWeblogEntry("sound-and-stone", weblog, user);
         TestUtils.endSession(true);
@@ -336,11 +335,11 @@ class TravelThemeRenderingTest {
     void theCardAltTextPrefersTheImagesOwnDescription() throws Exception {
         MediaFile image = TestUtils.setupImageMediaFile(weblog, "alt-image");
         String imageId = image.getId();
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFile managedImage = mfMgr.getMediaFile(imageId);
         managedImage.setAltText("The ring road at dusk, rain & low cloud");
         mfMgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), managedImage);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         entryWithFeaturedImage("ring-road", imageId);
 
@@ -357,7 +356,7 @@ class TravelThemeRenderingTest {
         String imageId = image.getId();
         TestUtils.endSession(true);
         WeblogEntry entry = entryWithFeaturedImage("noalt-entry", imageId);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setTitle(StringEscapeUtils.escapeHtml4("Rock & Road"));
         mgr.saveWeblogEntry(managed);
@@ -380,8 +379,8 @@ class TravelThemeRenderingTest {
         page.setTitle(title);
         page.setContent(content);
         page.setStatus(WeblogPage.PubStatus.PUBLISHED);
-        WebloggerFactory.getWeblogger().getWeblogPageManager().savePage(page);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogPageManager().savePage(page);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 

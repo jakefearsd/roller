@@ -80,7 +80,7 @@ class UserQueryAndRoleTest {
         User managed = users().getUserByUserName(disabled.getUserName());
         managed.setEnabled(Boolean.FALSE);
         users().saveUser(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         // Normalise the role state rather than assume it. addUser grants admin
@@ -95,7 +95,7 @@ class UserQueryAndRoleTest {
                 users().revokeRole("admin", account);
             }
         }
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 
@@ -157,7 +157,7 @@ class UserQueryAndRoleTest {
         User managed = users().getUserByUserName(aliceName);
         managed.setEmailAddress(email);
         users().saveUser(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         User found = users().getUserByEmail(email);
@@ -172,7 +172,7 @@ class UserQueryAndRoleTest {
         User managed = users().getUserByUserName(disabledName, Boolean.FALSE);
         managed.setEmailAddress(email);
         users().saveUser(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertNull(users().getUserByEmail(email),
@@ -200,7 +200,7 @@ class UserQueryAndRoleTest {
         User managedBob = users().getUserByUserName(bobName);
         managedBob.setEmailAddress(sharedEmail);
         users().saveUser(managedBob);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         User found = users().getUserByEmail(sharedEmail);
@@ -433,7 +433,7 @@ class UserQueryAndRoleTest {
         User managed = users().getUserByUserName(disabledName, Boolean.FALSE);
         managed.setEnabled(Boolean.TRUE);
         users().saveUser(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertEquals(before + 1, users().getUserCount(),
@@ -446,7 +446,7 @@ class UserQueryAndRoleTest {
     void aGrantedRoleIsReadBack() throws Exception {
         User managed = users().getUserByUserName(aliceName);
         users().grantRole("admin", managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         managed = users().getUserByUserName(aliceName);
@@ -458,12 +458,12 @@ class UserQueryAndRoleTest {
     void aRevokedRoleIsGone() throws Exception {
         User managed = users().getUserByUserName(aliceName);
         users().grantRole("editor", managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         managed = users().getUserByUserName(aliceName);
         users().revokeRole("editor", managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         managed = users().getUserByUserName(aliceName);
@@ -480,7 +480,7 @@ class UserQueryAndRoleTest {
     void aRoleGrantedToOneUserIsNotHeldByAnother() throws Exception {
         User managedAlice = users().getUserByUserName(aliceName);
         users().grantRole("admin", managedAlice);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         User managedBob = users().getUserByUserName(bobName);
@@ -496,7 +496,7 @@ class UserQueryAndRoleTest {
     // --------------------------------------------------------------- helpers
 
     private static UserManager users() {
-        return WebloggerFactory.getWeblogger().getUserManager();
+        return TestUtils.weblogger().getUserManager();
     }
 
     /** The shared prefix of this test's fixture accounts. */

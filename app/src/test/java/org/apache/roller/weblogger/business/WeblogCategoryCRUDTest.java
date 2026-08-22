@@ -89,7 +89,7 @@ public class WeblogCategoryCRUDTest  {
         
         log.info("BEGIN");
         
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
 
@@ -111,7 +111,7 @@ public class WeblogCategoryCRUDTest  {
         
         log.info("BEGIN");
         
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogCategory cat = null;
 
         // root category is always available
@@ -172,7 +172,7 @@ public class WeblogCategoryCRUDTest  {
         
         log.info("BEGIN");
         
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         
         // root category is always available
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
@@ -215,7 +215,7 @@ public class WeblogCategoryCRUDTest  {
 
         log.info("BEGIN");
 
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
 
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
         assertEquals(1, testWeblog.getWeblogCategories().size());

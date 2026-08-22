@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -81,20 +80,20 @@ public class IndexManagerTest {
     @Test
     public void testBasicOperation() throws Exception {
 
-        IndexManager indexManager = WebloggerFactory.getWeblogger().getIndexManager();
-        WeblogEntryManager entryManager = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        IndexManager indexManager = TestUtils.weblogger().getIndexManager();
+        WeblogEntryManager entryManager = TestUtils.weblogger().getWeblogEntryManager();
 
         List<WeblogEntry> entries = createWeblogEntries(testWeblog, indexManager, entryManager);
 
         try {
             SearchResultList result = indexManager.search("Enterprise",
                 testWeblog.getHandle(), null, testWeblog.getLocale(), 0, RESULTS_PER_PAGE,
-                WebloggerFactory.getWeblogger().getUrlStrategy());
+                TestUtils.weblogger().getUrlStrategy());
             assertEquals(2, result.getResults().size());
 
             result = indexManager.search("Tholian",
                 testWeblog.getHandle(), null, testWeblog.getLocale(), 0, RESULTS_PER_PAGE,
-                WebloggerFactory.getWeblogger().getUrlStrategy());
+                TestUtils.weblogger().getUrlStrategy());
             assertEquals(1, result.getResults().size());
 
         } finally {

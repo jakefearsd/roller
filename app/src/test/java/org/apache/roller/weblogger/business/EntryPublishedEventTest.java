@@ -42,7 +42,7 @@ class EntryPublishedEventTest {
     }
 
     private List<RollerEvent> events() throws Exception {
-        return WebloggerFactory.getWeblogger().getEventManager()
+        return TestUtils.weblogger().getEventManager()
                 .getEvents(TestUtils.getManagedWebsite(weblog), 10);
     }
 
@@ -67,11 +67,11 @@ class EntryPublishedEventTest {
                 TestUtils.getManagedWebsite(weblog), user);
         TestUtils.endSession(true);
 
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setTitle("edited title");
         mgr.saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertEquals(1, events().size(),

@@ -62,7 +62,8 @@ class NewsletterControllerTest {
 
     @BeforeEach
     void setUp() {
-        mocks = MockWeblogger.install();
+        mocks = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(mocks.weblogger());
         controller = ControllerTestFixture.withMessages(new NewsletterController());
         listmonk = mock(ListmonkClient.class);
         controller.setListmonkClient(listmonk);
@@ -70,7 +71,8 @@ class NewsletterControllerTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        mocks.detach();
+        ControllerTestFixture.useDefaultWeblogger();
     }
 
     // --------------------------------------------------------- happy path

@@ -35,7 +35,7 @@ import org.mockito.Mockito;
  *
  * <p>Lives in this package because {@link WebloggerStartup#installMailProvider}
  * is package-private, in the same way {@code MockWeblogger} sits beside
- * {@code WebloggerFactory}. Tests elsewhere reach it through the public
+ * the static locator. Tests elsewhere reach it through the public
  * {@link #install()}.
  *
  * <p>The session is a real JavaMail one -- {@code MimeMessage} needs it and

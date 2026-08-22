@@ -64,13 +64,13 @@ class WeblogEntryMarkdownRenderingTest {
 
     /** The tier's renderer -- the entity no longer renders itself. */
     private static EntryRenderer renderer() {
-        return WebloggerFactory.getWeblogger().getEntryRenderer();
+        return TestUtils.weblogger().getEntryRenderer();
     }
 
     private WeblogEntry entry(String text) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(
                 "md-" + Long.toString(System.nanoTime(), 36), weblog, user);
-        WeblogEntry managed = WebloggerFactory.getWeblogger()
+        WeblogEntry managed = TestUtils.weblogger()
                 .getWeblogEntryManager().getWeblogEntry(entry.getId());
         managed.setText(text);
         return managed;

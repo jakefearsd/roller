@@ -74,7 +74,7 @@ public class GalleryMetadataTest {
     @Test
     public void testMediaFileGalleryFieldsRoundTrip() throws Exception {
 
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
 
         MediaFile mediaFile = TestUtils.setupImageMediaFile(testWeblog, "gallery-meta.jpg");
         TestUtils.endSession(true);
@@ -112,7 +112,7 @@ public class GalleryMetadataTest {
     @Test
     public void testDirectoryCoverAndPrivacyRoundTrip() throws Exception {
 
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
 
         MediaFile cover = TestUtils.setupImageMediaFile(testWeblog, "cover.jpg");
         TestUtils.endSession(true);

@@ -22,7 +22,6 @@ import java.lang.reflect.Field;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WeblogManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -65,15 +64,15 @@ class SeoControllerVirtualHostTest {
         plainBlog = TestUtils.setupWeblog("plainblog", user);
         TestUtils.endSession(true);
 
-        WeblogManager mgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager mgr = TestUtils.weblogger().getWeblogManager();
         Weblog managed = TestUtils.getManagedWebsite(vhostBlog);
         managed.setCustomDomain("vhost.example.com");
         mgr.saveWeblog(managed);
         TestUtils.endSession(true);
-        WebloggerFactory.getWeblogger().getVirtualHostRegistry().invalidate();
+        TestUtils.weblogger().getVirtualHostRegistry().invalidate();
 
         controller = new SeoController();
-        inject(controller, "weblogger", WebloggerFactory.getWeblogger());
+        inject(controller, "weblogger", TestUtils.weblogger());
     }
 
     @AfterEach
@@ -84,7 +83,7 @@ class SeoControllerVirtualHostTest {
         TestUtils.endSession(true);
         // VirtualHostRegistry is a JVM-wide static cache -- the domain set
         // here must not leak into another test class.
-        WebloggerFactory.getWeblogger().getVirtualHostRegistry().invalidate();
+        TestUtils.weblogger().getVirtualHostRegistry().invalidate();
     }
 
     private MockHttpServletRequest onHost(String host) {

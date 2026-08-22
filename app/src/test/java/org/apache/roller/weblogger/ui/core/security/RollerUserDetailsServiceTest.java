@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * Tests for {@link RollerUserDetailsService}.
  *
  * <p>Before the business tier is bootstrapped, {@code
- * WebloggerFactory.getWeblogger()} throws {@code IllegalStateException} --
+ * TestUtils.weblogger()} throws {@code IllegalStateException} --
  * Spring Security still calls into this service that early (first-time
  * setup), so the failure is converted to a "soft" {@code
  * UsernameNotFoundException} that lets the setup flow proceed, rather than
@@ -65,9 +65,8 @@ class RollerUserDetailsServiceTest {
      */
     @Test
     void aBootstrappedProviderIsAskedForTheUserManager() throws Exception {
-        MockWeblogger weblogger = MockWeblogger.install();
+        MockWeblogger weblogger = MockWeblogger.create();
         try {
-            MockWeblogger.uninstall(); // the facade must reach the service only through the provider
             Weblogger facade = weblogger.weblogger();
             when(provider.getWeblogger()).thenReturn(facade);
             org.apache.roller.weblogger.pojos.User alice = new org.apache.roller.weblogger.pojos.User();
@@ -82,7 +81,7 @@ class RollerUserDetailsServiceTest {
             assertEquals("alice", details.getUsername());
             verify(weblogger.userManager()).getUserByUserName("alice");
         } finally {
-            MockWeblogger.uninstall();
+            weblogger.detach();
         }
     }
 }

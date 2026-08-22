@@ -17,7 +17,7 @@
 */
 package org.apache.roller.weblogger.business;
 
-import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
@@ -30,27 +30,29 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Installs a fully-mocked {@link Weblogger} so code that reaches the business tier
- * through {@code WebloggerFactory.getWeblogger()} can be unit tested.
+ * A fully-mocked {@link Weblogger} facade, built by {@link #create()} or
+ * {@link #attached()}, for the unit tests of classes that receive the business
+ * tier by constructor, {@code init} or field.
  *
- * <p>Roller's controllers call {@code WebloggerFactory.getWeblogger().getXManager()}
- * from 179 places. That static lookup is why the controller packages sat at roughly
- * one percent coverage: exercising a single handler otherwise meant standing up a
- * database, bootstrapping the whole application, and accepting a multi-second test.
- *
- * <p>This class lives in {@code org.apache.roller.weblogger.business} so it can reach
- * the package-private {@link WebloggerFactory#installProvider} seam. Nothing in
- * production can.
+ * <p>There is no global to install it into: the static service locator that
+ * once made "install the mock tier" a thing is gone (plan of 2026-08-22,
+ * Decision 9), so a test hands {@link #weblogger()} to the class under test
+ * explicitly. The one residual static is {@code WebloggerRuntimeConfig}'s
+ * attached {@code PropertiesManager} (spec Decision 8, retired by Stage 2):
+ * {@link #attached()} points it at this mock's manager for tests whose code
+ * under test still reads runtime config through that facade, and
+ * {@link #detach()} restores whatever was attached before.
  *
  * <p>Typical use:
  *
  * <pre>{@code
  * private MockWeblogger weblogger;
  *
- * @BeforeEach void setUp() { weblogger = MockWeblogger.install(); }
- * @AfterEach  void tearDown() { MockWeblogger.uninstall(); }
+ * @BeforeEach void setUp() { weblogger = MockWeblogger.attached(); }
+ * @AfterEach  void tearDown() { weblogger.detach(); }
  *
  * @Test void findsTheWeblog() throws Exception {
+ *     SomeController controller = new SomeController(weblogger.weblogger());
  *     when(weblogger.weblogManager().getWeblogByHandle("blog")).thenReturn(aWeblog);
  *     ...
  * }
@@ -139,100 +141,55 @@ public final class MockWeblogger {
         return flushCount;
     }
 
-    /**
-     * Installs a mocked business tier and returns the handle for stubbing it.
-     *
-     * <p>Call {@link #uninstall()} from {@code @AfterEach}. The factory holds static
-     * state, so a test that installs without uninstalling leaks its mocks into
-     * whatever runs next in the same JVM.
-     */
-    private static WebloggerProvider previousProvider;
-    private static PropertiesManager previousRuntimeConfig;
-
-    public static MockWeblogger install() {
-        MockWeblogger mocks;
+    /** A mocked facade and nothing else: no global state is touched. */
+    public static MockWeblogger create() {
         try {
-            mocks = new MockWeblogger();
+            return new MockWeblogger();
         } catch (org.apache.roller.weblogger.WebloggerException e) {
             // Only the Mockito stubbing above declares it; it cannot actually throw.
             throw new IllegalStateException("Could not build the mock business tier", e);
         }
-        previousProvider = WebloggerFactory.currentProvider();
-        // WebloggerRuntimeConfig reads through an attached PropertiesManager
-        // (spec Decision 8 of the 2026-08-22 plan), not through the provider:
-        // installing a mock tier therefore also attaches the mock's manager,
-        // with the same save/restore discipline as the provider itself.
-        previousRuntimeConfig = WebloggerRuntimeConfig.attach(mocks.propertiesManager);
-        WebloggerFactory.installProvider(new WebloggerProvider() {
-            @Override
-            public boolean isBootstrapped() {
-                return true;
-            }
-
-            @Override
-            public void bootstrap() {
-                // already built
-            }
-
-            @Override
-            public Weblogger getWeblogger() {
-                return mocks.weblogger;
-            }
-        });
-        return mocks;
     }
 
     /**
-     * Restores whatever provider was installed before, rather than clearing it.
-     *
-     * <p>The database-backed tests bootstrap a real Weblogger into this same static
-     * field and reuse it for the whole JVM. Nulling it here would force them to
-     * bootstrap again mid-run, or fail outright, depending on test order.
+     * A mocked facade whose {@link PropertiesManager} is also attached to
+     * {@code WebloggerRuntimeConfig} (spec Decision 8 of the 2026-08-22 plan:
+     * runtime-config reads still go through that one static until Stage 2).
+     * Call {@link #detach()} from {@code @AfterEach}; the attachment is
+     * process-global, so a test that attaches without detaching leaks its
+     * answers into whatever runs next in the same JVM.
      */
-    public static void uninstall() {
-        WebloggerFactory.installProvider(previousProvider);
-        previousProvider = null;
-        WebloggerRuntimeConfig.attach(previousRuntimeConfig);
-        previousRuntimeConfig = null;
+    public static MockWeblogger attached() {
+        MockWeblogger mocks = create();
+        mocks.attachment = mocks.attachRuntimeConfig();
+        return mocks;
+    }
+
+    private RuntimeConfigAttachment attachment;
+
+    /**
+     * Restores whatever {@code WebloggerRuntimeConfig} had attached before
+     * {@link #attached()} -- rather than clearing it, because the
+     * database-backed tests attach the real tier's manager for the whole JVM
+     * and must find it still there. A no-op for a mock built by
+     * {@link #create()}.
+     */
+    public void detach() {
+        if (attachment != null) {
+            attachment.close();
+            attachment = null;
+        }
     }
 
     /**
      * Points {@code WebloggerRuntimeConfig} at this mock tier's properties
-     * manager without installing the tier into the static factory -- for a
-     * test whose class under test is injected but whose runtime-config reads
-     * still go through the static facade. Returns an {@link AutoCloseable}
-     * that restores whatever was attached before; use it in try-with-resources.
+     * manager -- for a test whose class under test is injected but whose
+     * runtime-config reads still go through the static facade. Returns an
+     * {@link AutoCloseable} that restores whatever was attached before; use it
+     * in try-with-resources.
      */
     public RuntimeConfigAttachment attachRuntimeConfig() {
-        return new RuntimeConfigAttachment(WebloggerRuntimeConfig.attach(propertiesManager));
-    }
-
-    /** Restores the previous attachment; see {@link #attachRuntimeConfig()}. */
-    public static final class RuntimeConfigAttachment implements AutoCloseable {
-        private final PropertiesManager previous;
-
-        private RuntimeConfigAttachment(PropertiesManager previous) {
-            this.previous = previous;
-        }
-
-        @Override
-        public void close() {
-            WebloggerRuntimeConfig.attach(previous);
-        }
-    }
-
-    /**
-     * Leaves the factory reporting itself NOT bootstrapped.
-     *
-     * <p>InstallController and SetupController branch on
-     * {@code WebloggerFactory.isBootstrapped()}, so the pre-bootstrap path is
-     * only reachable with no provider installed at all.
-     */
-    public static void installNotBootstrapped() {
-        previousProvider = WebloggerFactory.currentProvider();
-        WebloggerFactory.installProvider(null);
-        // Pre-bootstrap, nothing is attached either: runtime reads answer null.
-        previousRuntimeConfig = WebloggerRuntimeConfig.attach(null);
+        return RuntimeConfigAttachment.of(propertiesManager);
     }
 
     public Weblogger weblogger() {

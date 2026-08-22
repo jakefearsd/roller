@@ -195,7 +195,7 @@ public class WeblogEntryDuplicateTest {
     }
 
     private WeblogEntryManager entryManager() {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        return TestUtils.weblogger().getWeblogEntryManager();
     }
 
     private WeblogEntry saveEntry(String title, String anchor) throws Exception {

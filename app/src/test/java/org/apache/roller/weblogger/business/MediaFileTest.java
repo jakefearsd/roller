@@ -60,7 +60,7 @@ public class MediaFileTest  {
     public void setUp() throws Exception {
         TestUtils.setupWeblogger();
         // allow media uploads for this test
-        Map<String, RuntimeConfigProperty> config = WebloggerFactory.getWeblogger().getPropertiesManager().getProperties();
+        Map<String, RuntimeConfigProperty> config = TestUtils.weblogger().getPropertiesManager().getProperties();
         config.get("uploads.enabled").setValue("true");
     }
 
@@ -88,7 +88,7 @@ public class MediaFileTest  {
         /*
          * Real test starts here.
          */
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
@@ -167,7 +167,7 @@ public class MediaFileTest  {
         /**
          * Real test starts here.
          */
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
@@ -204,7 +204,7 @@ public class MediaFileTest  {
         testUser = TestUtils.setupUser("mediaFileTestUser2");
         testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog2", testUser);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         // no need to create root directory, that is done automatically now
@@ -278,7 +278,7 @@ public class MediaFileTest  {
         testUser = TestUtils.setupUser("mediaFileTestUser4");
         testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog4", testUser);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         // no need to create root directory, that is done automatically now
@@ -344,7 +344,7 @@ public class MediaFileTest  {
         testUser = TestUtils.setupUser("mediaFileTestUser3");
         testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog3", testUser);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         // no need to create root directory, that is done automatically now
@@ -397,7 +397,7 @@ public class MediaFileTest  {
         testUser = TestUtils.setupUser("mediaFileTestUser7");
         testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog7", testUser);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
@@ -615,7 +615,7 @@ public class MediaFileTest  {
         testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog9", testUser);
 
         try {
-            MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+            MediaFileManager mfMgr = TestUtils.weblogger()
                     .getMediaFileManager();
 
             // no need to create root directory, that is done automatically now
@@ -708,7 +708,7 @@ public class MediaFileTest  {
         testUser = TestUtils.setupUser("mediaFileTestUser10");
         testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog10", testUser);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         // no need to create root directory, that is done automatically now
@@ -797,7 +797,7 @@ public class MediaFileTest  {
         testUser = TestUtils.setupUser("mediaFileTestUser5");
         testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog5", testUser);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         // no need to create root directory, that is done automatically now
@@ -862,7 +862,7 @@ public class MediaFileTest  {
         testUser = TestUtils.setupUser("mediaFileTestUser6");
         testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog6", testUser);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         // no need to create root directory, that is done automatically now
@@ -949,7 +949,7 @@ public class MediaFileTest  {
         testUser = TestUtils.setupUser("mediaFileTestUser11");
         testWeblog = TestUtils.setupWeblog("mediaFileTestUser11", testUser);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         // no need to create root directory, that is done automatically now
@@ -1048,7 +1048,7 @@ public class MediaFileTest  {
         testUser = TestUtils.setupUser("mediaFileTestUser12");
         testWeblog = TestUtils.setupWeblog("mediaFileTestWeblog12", testUser);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger()
+        MediaFileManager mfMgr = TestUtils.weblogger()
                 .getMediaFileManager();
 
         // no need to create root directory, that is done automatically now
@@ -1127,7 +1127,7 @@ public class MediaFileTest  {
 
         User testUser = TestUtils.setupUser("renditionTestUser1");
         Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog1", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1147,7 +1147,7 @@ public class MediaFileTest  {
         String id = mediaFile.getId();
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
 
         // Rungs narrower than the 1000px original must exist...
         FileContent rendition480 = fmgr.getFileContent(testWeblog, id + "_480");
@@ -1183,7 +1183,7 @@ public class MediaFileTest  {
 
         User testUser = TestUtils.setupUser("renditionTestUser2");
         Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog2", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1202,7 +1202,7 @@ public class MediaFileTest  {
         String id = mediaFile.getId();
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         FileContent rendition480 = fmgr.getFileContent(testWeblog, id + "_480");
         byte[] renditionBytes = rendition480.getInputStream().readAllBytes();
         // PNG signature -- proves the png original produced a png rendition, not jpeg.
@@ -1230,7 +1230,7 @@ public class MediaFileTest  {
 
         User testUser = TestUtils.setupUser("renditionTestUser3");
         Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog3", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1249,7 +1249,7 @@ public class MediaFileTest  {
         String id = mediaFile.getId();
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         FileContent webp480 = fmgr.getFileContent(testWeblog, id + "_480.webp");
         assertTrue(webp480.getLength() > 0);
 
@@ -1264,7 +1264,7 @@ public class MediaFileTest  {
 
         User testUser = TestUtils.setupUser("renditionTestUser4");
         Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog4", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1282,7 +1282,7 @@ public class MediaFileTest  {
         String id = mediaFile.getId();
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         final Weblog assertWeblog2 = testWeblog;
         assertThrows(FileNotFoundException.class,
                 () -> fmgr.getFileContent(assertWeblog2, id + "_960"),
@@ -1312,7 +1312,7 @@ public class MediaFileTest  {
 
         User testUser = TestUtils.setupUser("renditionTestUser5");
         Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog5", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1331,7 +1331,7 @@ public class MediaFileTest  {
         String id = mediaFile.getId();
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         // sanity: the rendition exists before delete
         assertTrue(fmgr.getFileContent(testWeblog, id + "_480").getLength() > 0);
 
@@ -1365,7 +1365,7 @@ public class MediaFileTest  {
 
         User testUser = TestUtils.setupUser("renditionTestUser6");
         Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog6", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1384,7 +1384,7 @@ public class MediaFileTest  {
         String id = mediaFile.getId();
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         assertTrue(fmgr.getFileContent(testWeblog, id + "_480").getLength() > 0);
 
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
@@ -1408,7 +1408,7 @@ public class MediaFileTest  {
 
         User testUser = TestUtils.setupUser("renditionTestUser7");
         Weblog testWeblog = TestUtils.setupWeblog("renditionTestWeblog7", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1429,7 +1429,7 @@ public class MediaFileTest  {
 
         // Simulate "legacy" data uploaded before the pipeline existed: strip
         // the renditions that were just generated, leaving only the original.
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         fmgr.deleteFile(testWeblog, id + "_480");
         fmgr.deleteFile(testWeblog, id + "_960");
         final Weblog assertWeblog5 = testWeblog;
@@ -1489,14 +1489,14 @@ public class MediaFileTest  {
     private static final String SMALL_NO_EXIF_IMAGE = "/small-photo.jpg";
 
     private void setStripGps(boolean strip) throws Exception {
-        Map<String, RuntimeConfigProperty> config = WebloggerFactory.getWeblogger()
+        Map<String, RuntimeConfigProperty> config = TestUtils.weblogger()
                 .getPropertiesManager().getProperties();
         config.get("uploads.exif.stripGps").setValue(Boolean.toString(strip));
     }
 
     private MediaFile uploadImage(Weblog weblog, MediaFileDirectory dir, String name, String resource)
             throws Exception {
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFile mediaFile = new MediaFile();
         mediaFile.setName(name);
         mediaFile.setDirectory(dir);
@@ -1511,7 +1511,7 @@ public class MediaFileTest  {
     public void testCreateMediaFileExtractsExifMetadataWithGpsStrippedByDefault() throws Exception {
         User testUser = TestUtils.setupUser("exifTestUser1");
         Weblog testWeblog = TestUtils.setupWeblog("exifTestWeblog1", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1549,7 +1549,7 @@ public class MediaFileTest  {
     public void testCreateMediaFileKeepsGpsWhenStrippingIsDisabled() throws Exception {
         User testUser = TestUtils.setupUser("exifTestUser2");
         Weblog testWeblog = TestUtils.setupWeblog("exifTestWeblog2", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         setStripGps(false);
         TestUtils.endSession(true);
@@ -1579,7 +1579,7 @@ public class MediaFileTest  {
     public void testCreateMediaFileWithNoExifYieldsNullExifFieldsButStillBlurhashes() throws Exception {
         User testUser = TestUtils.setupUser("exifTestUser3");
         Weblog testWeblog = TestUtils.setupWeblog("exifTestWeblog3", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1614,7 +1614,7 @@ public class MediaFileTest  {
     public void testBlurhashIsEncodedFromThe480RenditionWhenAvailable() throws Exception {
         User testUser = TestUtils.setupUser("blurhashTestUser1");
         Weblog testWeblog = TestUtils.setupWeblog("blurhashTestWeblog1", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1626,7 +1626,7 @@ public class MediaFileTest  {
         String id = mediaFile.getId();
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         assertTrue(fmgr.getFileContent(testWeblog, id + "_480").getLength() > 0,
                 "sanity: the 480 rung must exist for this fixture");
 
@@ -1642,7 +1642,7 @@ public class MediaFileTest  {
     public void testBlurhashFallsBackToTheAdminThumbnailWhenNarrowerThanTheLadder() throws Exception {
         User testUser = TestUtils.setupUser("blurhashTestUser2");
         Weblog testWeblog = TestUtils.setupWeblog("blurhashTestWeblog2", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1654,7 +1654,7 @@ public class MediaFileTest  {
         String id = mediaFile.getId();
         TestUtils.endSession(true);
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         final Weblog assertWeblog = testWeblog;
         assertThrows(FileNotFoundException.class,
                 () -> fmgr.getFileContent(assertWeblog, id + "_480"),
@@ -1673,7 +1673,7 @@ public class MediaFileTest  {
     public void testRenditionsCarryNoExifOrGpsMetadataEvenWhenTheOriginalDid() throws Exception {
         User testUser = TestUtils.setupUser("exifStripTestUser1");
         Weblog testWeblog = TestUtils.setupWeblog("exifStripTestWeblog1", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         // Even with site-wide GPS stripping off, the rendition re-encode itself
         // (thumbnailator -> ImageIO) must never carry EXIF/GPS through --
@@ -1690,7 +1690,7 @@ public class MediaFileTest  {
         TestUtils.endSession(true);
 
         try {
-            FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+            FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
 
             // The original file on disk is untouched -- it must still carry its EXIF/GPS.
             byte[] originalBytes = fmgr.getFileContent(testWeblog, id).getInputStream().readAllBytes();
@@ -1726,7 +1726,7 @@ public class MediaFileTest  {
     public void testCreateMediaFileClampsOverlongExifStringsInsteadOfFailingTheUpload() throws Exception {
         User testUser = TestUtils.setupUser("exifClampTestUser1");
         Weblog testWeblog = TestUtils.setupWeblog("exifClampTestWeblog1", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1773,7 +1773,7 @@ public class MediaFileTest  {
 
         User testUser = TestUtils.setupUser("orientationTestUser1");
         Weblog testWeblog = TestUtils.setupWeblog("orientationTestWeblog1", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1789,7 +1789,7 @@ public class MediaFileTest  {
                 "stored dimensions must describe the upright photo, not the landscape raster");
         assertEquals(1000, stored.getHeight());
 
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         BufferedImage rendition = ImageIO.read(
                 fmgr.getFileContent(testWeblog, id + "_480").getInputStream());
         assertEquals(480, rendition.getWidth());
@@ -1817,7 +1817,7 @@ public class MediaFileTest  {
 
         User testUser = TestUtils.setupUser("orientationTestUser2");
         Weblog testWeblog = TestUtils.setupWeblog("orientationTestWeblog2", testUser);
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);
 
@@ -1831,7 +1831,7 @@ public class MediaFileTest  {
 
         // Rewrite the record into the pre-fix state: sideways renditions and
         // raster (landscape) dimensions.
-        FileContentManager fmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager fmgr = TestUtils.weblogger().getFileContentManager();
         byte[] sideways = generateImageBytes(480, 288, "jpg");
         fmgr.saveFileContent(testWeblog, id + "_480", new ByteArrayInputStream(sideways));
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
@@ -1876,7 +1876,7 @@ public class MediaFileTest  {
         TestUtils.setupImageMediaFile(weblog, "in-album.jpg", "an-album");
         TestUtils.endSession(true);
 
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         assertEquals(2, mfMgr.getMediaFileDirectories(managed).size(),
                 "fixture must have made both directories");

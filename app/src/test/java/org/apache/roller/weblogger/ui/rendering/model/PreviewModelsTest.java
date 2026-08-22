@@ -152,7 +152,7 @@ class PreviewModelsTest {
 
     @Test
     void previewUrlModelRefusesInitDataWithoutAUrlStrategy() throws Exception {
-        // Used to fall back to WebloggerFactory's strategy; the preview servlet
+        // Used to fall back to the static locator's strategy; the preview servlet
         // always supplies its own, and a missing one is a caller bug.
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", previewRequest());
@@ -294,7 +294,7 @@ class PreviewModelsTest {
 
     @Test
     void previewPageModelRefusesInitDataWithoutAUrlStrategy() throws Exception {
-        // Used to fall back to WebloggerFactory's strategy; the preview servlet
+        // Used to fall back to the static locator's strategy; the preview servlet
         // always supplies its own (a PreviewURLStrategy), and a missing one is
         // a caller bug rather than something to paper over.
         Map<String, Object> initData = new HashMap<>();

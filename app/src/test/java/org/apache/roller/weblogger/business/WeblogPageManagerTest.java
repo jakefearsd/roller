@@ -42,7 +42,7 @@ class WeblogPageManagerTest {
     }
 
     private static WeblogPageManager manager() {
-        return WebloggerFactory.getWeblogger().getWeblogPageManager();
+        return TestUtils.weblogger().getWeblogPageManager();
     }
 
     private WeblogPage save(Weblog target, String slug, WeblogPage.PubStatus status)
@@ -54,7 +54,7 @@ class WeblogPageManagerTest {
         page.setContent("Body of " + slug);
         page.setStatus(status);
         manager().savePage(page);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return page;
     }
@@ -113,7 +113,7 @@ class WeblogPageManagerTest {
         WeblogPage managedSecond = manager().getPage(second.getId());
         managedSecond.setNavOrder(2);
         manager().savePage(managedSecond);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         List<WeblogPage> pages = manager().getPages(TestUtils.getManagedWebsite(weblog));
@@ -127,7 +127,7 @@ class WeblogPageManagerTest {
         WeblogPage page = save(weblog, "about", WeblogPage.PubStatus.PUBLISHED);
 
         manager().removePage(manager().getPage(page.getId()));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertNull(manager().getPageBySlug(TestUtils.getManagedWebsite(weblog), "about"));
@@ -167,7 +167,7 @@ class WeblogPageManagerTest {
         Thread.sleep(5);
 
         manager().removePage(manager().getPage(page.getId()));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         Date after = TestUtils.getManagedWebsite(weblog).getLastModified();
@@ -186,8 +186,8 @@ class WeblogPageManagerTest {
      */
     private Date freshLastModifiedBaseline() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return TestUtils.getManagedWebsite(weblog).getLastModified();
     }
@@ -231,7 +231,7 @@ class WeblogPageManagerTest {
         save(otherWeblog, "about", WeblogPage.PubStatus.PUBLISHED);
 
         manager().removePages(TestUtils.getManagedWebsite(weblog));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertTrue(manager().getPages(TestUtils.getManagedWebsite(weblog)).isEmpty());

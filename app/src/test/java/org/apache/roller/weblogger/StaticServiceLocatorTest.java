@@ -16,7 +16,6 @@
  */
 package org.apache.roller.weblogger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -31,27 +30,30 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
  * Pins the end state of the 2026-08-22 "retire the static service locator"
- * wave, and is its migration ledger while the wave is in flight.
+ * wave (spec acceptance criteria 1, 2 and 12). While the wave was in flight
+ * this test was also its migration ledger -- an explicit allowlist of the
+ * main-source files still reaching the tier through the static, shrunk by
+ * every task; the ledger emptied at Task 19 and the shim was deleted at Task
+ * 20, so the rules below are now unconditional.
  *
  * <p>Source scan, same family as {@code QualityGatePomTest} and
- * {@code ControllerMetadataTest}: nothing here needs a container. Three
- * rules, each over every {@code .java} under {@code app/src/main/java} with
- * comments and javadoc stripped first (a mention in prose is not a call
- * site):
+ * {@code ControllerMetadataTest}: nothing here needs a container. Java
+ * sources are scanned with comments and javadoc stripped first (a mention in
+ * prose is not a call site); JSPs and other webapp files are scanned as plain
+ * text.
  *
  * <ol>
- *   <li>The set of files referencing {@code WebloggerFactory} equals
- *       {@link #ALLOWED}, in both directions. A new call site in a file not
- *       on the list fails immediately -- even mid-wave -- which is why this
- *       is an explicit file list and not a count. A file still on the list
- *       after its references are gone fails too: the list is the ledger, and
- *       a ledger that is not kept is not one.</li>
+ *   <li>Nothing under {@code app/src/main/java}, {@code app/src/test/java}
+ *       or {@code app/src/main/webapp} names the deleted locator class
+ *       ({@link #LOCATOR}). There is no static to reach the business tier
+ *       through; a class that needs it injects {@code Weblogger} or
+ *       {@code WebloggerProvider}, and a test hands it a {@code MockWeblogger}
+ *       facade or {@code TestUtils.weblogger()}.</li>
  *   <li>No main-source {@code static} field has a business-tier type
  *       ({@link #BUSINESS_TIER_TYPES}), except the two named residuals in
  *       {@link #STATIC_RESIDUALS}. This is the rule that stops the locator
@@ -60,53 +62,41 @@ import org.junit.jupiter.api.Test;
  *       business-tier type. Entities are data plus invariants; behaviour
  *       that needs a collaborator belongs in a service (spec Decision 5).
  *       {@code pojos/wrapper/} is deliberately <em>outside</em> this rule:
- *       the wrappers are the Velocity presentation adapter and hold a
- *       {@code URLStrategy} today, and the facade after Task 13, by
- *       design.</li>
+ *       the wrappers are the Velocity presentation adapter and hold the
+ *       {@code URLStrategy} and the facade by design.</li>
  * </ol>
  *
  * <p>Spec: {@code docs/superpowers/specs/2026-08-22-retire-static-service-locator-design.md},
- * Decisions 2, 5, 7 and 8.
+ * Decisions 2, 5, 7, 8 and 9.
  */
 class StaticServiceLocatorTest {
 
     private static final Path REPO = Path.of(System.getProperty("user.dir")).getParent();
     private static final Path MAIN = REPO.resolve("app/src/main/java");
+    private static final Path TEST = REPO.resolve("app/src/test/java");
+    private static final Path WEBAPP = REPO.resolve("app/src/main/webapp");
     private static final String PKG = "app/src/main/java/org/apache/roller/weblogger/";
 
-    /** The static shim itself; deleted by the plan's Task 20, excluded from every rule until then. */
-    private static final String SHIM = PKG + "business/WebloggerFactory.java";
-
-    // ---------------------------------------------------------------------
-    // The wave's migration ledger. ALLOWED ONLY EVER SHRINKS. Each task in
-    // docs/superpowers/plans/2026-08-22-retire-static-service-locator.md ends
-    // by removing its files here; the wave is done when ALLOWED is empty and
-    // the shim no longer exists. (The entity allowlist, POJO_ALLOWED, was
-    // emptied by Stage D -- plan Task 17 -- and the entity rule is now
-    // unconditional.)
-    // ---------------------------------------------------------------------
-
     /**
-     * Main-source files that still reach the business tier through
-     * {@code WebloggerFactory}. Seeded from the tree at {@code 23d0e8042}:
-     * 73 files, 164 call sites.
+     * The deleted static shim's simple name. This test is the one file that
+     * may spell it -- in its rule and its failure messages -- so it excludes
+     * itself from rule 1 by path rather than by obfuscating the token.
      */
-    static final Set<String> ALLOWED = Set.of(
-            // TRANSITIONAL (Task 3): bootstrap() self-installs into the shim so unmigrated
-            // callers keep working; Task 20 deletes that line with the shim.
-            PKG + "business/SpringWebloggerProvider.java");
+    static final String LOCATOR = "WebloggerFactory";
+    private static final String SELF =
+            "app/src/test/java/org/apache/roller/weblogger/StaticServiceLocatorTest.java";
 
     /**
      * The two statics the spec permits to hold a business-tier reference
-     * after the wave. Neither holds one today; the allowance is for what the
-     * wave adds:
+     * after the wave:
      * <ul>
      *   <li>{@code WebloggerRuntimeConfig} -- the one {@code PropertiesManager}
      *       behind the runtime-config facade, attached at bootstrap. Spec
      *       Decision 8; retired by Stage 2 (configuration as beans).</li>
      *   <li>{@code RollerVelocity} -- the Velocity engine, which carries the
      *       facade as an application attribute for the two resource loaders
-     *       Velocity instantiates itself. Spec Decision 4.</li>
+     *       Velocity instantiates itself. Spec Decision 4. (Holds no such
+     *       field today; the allowance is named by the spec.)</li>
      * </ul>
      */
     static final Set<String> STATIC_RESIDUALS = Set.of(
@@ -125,14 +115,13 @@ class StaticServiceLocatorTest {
             "UserManager", "WeblogManager", "WeblogEntryManager", "PropertiesManager",
             "ThreadManager", "IndexManager", "ThemeManager", "PluginManager",
             "MediaFileManager", "FileContentManager", "WeblogPageManager", "EventManager",
-            "FormSubmissionManager", "UserTokenManager", "ApiTokenManager");
+            "FormSubmissionManager", "UserTokenManager", "ApiTokenManager", "EntryRenderer");
 
-    /** What an entity may not name: the types above, plus the locator itself and the render seam. */
+    /** What an entity may not name: the types above plus the render seam. */
     private static final Pattern POJO_BANNED = Pattern.compile(
-            "\\b(" + String.join("|", BUSINESS_TIER_TYPES)
-                    + "|WebloggerFactory|ShortcodeExpander)\\b");
+            "\\b(" + String.join("|", BUSINESS_TIER_TYPES) + "|ShortcodeExpander)\\b");
 
-    private static final Pattern SHIM_REFERENCE = Pattern.compile("\\bWebloggerFactory\\b");
+    private static final Pattern LOCATOR_REFERENCE = Pattern.compile("\\b" + LOCATOR + "\\b");
 
     /**
      * A field declaration: {@code static} (any modifiers around it), then the
@@ -148,30 +137,31 @@ class StaticServiceLocatorTest {
     private static final Pattern LINE_COMMENT = Pattern.compile("//[^\\n]*");
 
     @Test
-    void everyWebloggerFactoryReferenceIsOnTheLedgerAndTheLedgerIsCurrent() throws IOException {
-        Set<String> referencing = new TreeSet<>();
-        for (Map.Entry<String, String> e : mainSources().entrySet()) {
-            if (e.getKey().equals(SHIM)) {
+    void nothingNamesTheDeletedLocator() throws IOException {
+        List<String> problems = new ArrayList<>();
+        for (Map.Entry<String, String> e : javaSources(MAIN).entrySet()) {
+            if (LOCATOR_REFERENCE.matcher(e.getValue()).find()) {
+                problems.add(e.getKey() + " reaches the business tier through " + LOCATOR
+                        + ", which no longer exists. Inject the dependency instead "
+                        + "(constructor, @Lazy Weblogger, WebloggerProvider, or the init hook "
+                        + "for models/tasks).");
+            }
+        }
+        for (Map.Entry<String, String> e : javaSources(TEST).entrySet()) {
+            if (e.getKey().equals(SELF)) {
                 continue;
             }
-            if (SHIM_REFERENCE.matcher(e.getValue()).find()) {
-                referencing.add(e.getKey());
+            if (LOCATOR_REFERENCE.matcher(e.getValue()).find()) {
+                problems.add(e.getKey() + " names " + LOCATOR + ", which no longer exists. "
+                        + "Hand the class under test a MockWeblogger facade, or use "
+                        + "TestUtils.weblogger() for the suite's real tier.");
             }
         }
-
-        List<String> problems = new ArrayList<>();
-        for (String file : referencing) {
-            if (!ALLOWED.contains(file)) {
-                problems.add(file + " reaches the business tier through WebloggerFactory but is not "
-                        + "on StaticServiceLocatorTest.ALLOWED. Inject the dependency instead "
-                        + "(constructor, @Lazy Weblogger, or the init hook for models/tasks); "
-                        + "this list only ever shrinks.");
-            }
-        }
-        for (String file : new TreeSet<>(ALLOWED)) {
-            if (!referencing.contains(file)) {
-                problems.add(file + " no longer references WebloggerFactory: remove it from "
-                        + "StaticServiceLocatorTest.ALLOWED (the ledger must stay current).");
+        for (Map.Entry<String, String> e : webappFiles().entrySet()) {
+            if (LOCATOR_REFERENCE.matcher(e.getValue()).find()) {
+                problems.add(e.getKey() + " names " + LOCATOR + " in a scriptlet or EL; "
+                        + "JSPs reach the tier through the WebloggerProvider bean "
+                        + "(WebApplicationContextUtils), as footer.jsp and login-redirect.jsp do.");
             }
         }
         assertTrue(problems.isEmpty(), () -> String.join("\n", problems));
@@ -180,9 +170,9 @@ class StaticServiceLocatorTest {
     @Test
     void noMainSourceHoldsABusinessTierReferenceInAStaticField() throws IOException {
         List<String> problems = new ArrayList<>();
-        for (Map.Entry<String, String> e : mainSources().entrySet()) {
+        for (Map.Entry<String, String> e : javaSources(MAIN).entrySet()) {
             String file = e.getKey();
-            if (file.equals(SHIM) || STATIC_RESIDUALS.contains(file)) {
+            if (STATIC_RESIDUALS.contains(file)) {
                 continue;
             }
             Matcher m = STATIC_BUSINESS_FIELD.matcher(e.getValue());
@@ -201,7 +191,7 @@ class StaticServiceLocatorTest {
         String pojos = PKG + "pojos/";
         String wrappers = PKG + "pojos/wrapper/";
         Set<String> referencing = new TreeSet<>();
-        for (Map.Entry<String, String> e : mainSources().entrySet()) {
+        for (Map.Entry<String, String> e : javaSources(MAIN).entrySet()) {
             String file = e.getKey();
             if (!file.startsWith(pojos) || file.startsWith(wrappers)) {
                 continue;
@@ -225,27 +215,56 @@ class StaticServiceLocatorTest {
     void theScanActuallySeesTheTree() throws IOException {
         // Guards the other three against a silently-empty walk (a moved source
         // root would make every rule pass vacuously).
-        Map<String, String> sources = mainSources();
-        assertTrue(sources.size() > 400, "expected the full main source tree, saw " + sources.size());
-        assertTrue(sources.containsKey(SHIM), "expected to see the shim itself at " + SHIM);
-        assertTrue(ALLOWED.size() <= 73, "the ledger was seeded at 73 files and only ever shrinks; saw " + ALLOWED.size());
+        Map<String, String> main = javaSources(MAIN);
+        assertTrue(main.size() > 400, "expected the full main source tree, saw " + main.size());
+        assertTrue(main.containsKey(PKG + "business/SpringWebloggerProvider.java"),
+                "expected to see the provider bean that replaced the locator");
+        Map<String, String> test = javaSources(TEST);
+        assertTrue(test.size() > 300, "expected the full test source tree, saw " + test.size());
+        assertTrue(test.containsKey(SELF), "expected to see this test itself at " + SELF);
+        Map<String, String> webapp = webappFiles();
+        assertTrue(webapp.keySet().stream().anyMatch(f -> f.endsWith("/footer.jsp")),
+                "expected the webapp scan to reach the JSP tiles, saw " + webapp.size() + " files");
     }
 
     // ---------------------------------------------------------------------
 
     /** Repo-relative path -> source with block and line comments stripped. */
-    private static Map<String, String> mainSources() throws IOException {
+    private static Map<String, String> javaSources(Path root) throws IOException {
         Map<String, String> out = new TreeMap<>();
-        try (Stream<Path> paths = Files.walk(MAIN)) {
+        try (Stream<Path> paths = Files.walk(root)) {
             for (Path p : (Iterable<Path>) paths.filter(x -> x.toString().endsWith(".java"))::iterator) {
-                String rel = REPO.relativize(p).toString().replace('\\', '/');
-                out.put(rel, stripComments(Files.readString(p)));
+                out.put(relative(p), stripComments(Files.readString(p)));
             }
         }
         if (out.isEmpty()) {
-            fail("no main sources found under " + MAIN);
+            fail("no sources found under " + root);
         }
         return out;
+    }
+
+    /** Repo-relative path -> raw text of every JSP, tag file, Velocity template and JS under the webapp. */
+    private static Map<String, String> webappFiles() throws IOException {
+        Map<String, String> out = new TreeMap<>();
+        try (Stream<Path> paths = Files.walk(WEBAPP)) {
+            for (Path p : (Iterable<Path>) paths.filter(StaticServiceLocatorTest::isTextual)::iterator) {
+                out.put(relative(p), Files.readString(p));
+            }
+        }
+        if (out.isEmpty()) {
+            fail("no webapp files found under " + WEBAPP);
+        }
+        return out;
+    }
+
+    private static boolean isTextual(Path p) {
+        String s = p.toString();
+        return s.endsWith(".jsp") || s.endsWith(".jspf") || s.endsWith(".tag")
+                || s.endsWith(".vm") || s.endsWith(".js") || s.endsWith(".xml");
+    }
+
+    private static String relative(Path p) {
+        return REPO.relativize(p).toString().replace('\\', '/');
     }
 
     private static String stripComments(String source) {

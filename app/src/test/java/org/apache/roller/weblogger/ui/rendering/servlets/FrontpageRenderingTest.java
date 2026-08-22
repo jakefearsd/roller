@@ -23,7 +23,6 @@ import java.util.Map;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -129,7 +128,7 @@ class FrontpageRenderingTest {
         siteWeblog = TestUtils.setupWeblog(SITE_HANDLE, siteUser);
         Weblog managedSite = TestUtils.getManagedWebsite(siteWeblog);
         managedSite.setEditorTheme("frontpage");
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managedSite);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managedSite);
         TestUtils.endSession(true);
 
         contributorUser = TestUtils.setupUser("frontpagecontribuser");
@@ -143,7 +142,7 @@ class FrontpageRenderingTest {
         // fd-blog directory card.
         managedContributor.setName("Harbor & Cove Notes");
         managedContributor.setTagline("Guides & notes for the coast");
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managedContributor);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managedContributor);
         TestUtils.endSession(true);
 
         setProperty(FRONTPAGE_HANDLE_PROP, SITE_HANDLE);
@@ -152,11 +151,11 @@ class FrontpageRenderingTest {
 
     @AfterEach
     void tearDown() throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         originalProperties.forEach((name, value) -> config.get(name).setValue(value));
         pmgr.saveProperties(config);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         TestUtils.teardownWeblog(contributorWeblog.getId());
@@ -193,7 +192,7 @@ class FrontpageRenderingTest {
      */
     private WeblogEntry pinnedContributorEntry(String anchor) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, contributorWeblog, contributorUser);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setPinnedToMain(true);
         managed.setPubTime(new java.sql.Timestamp(
@@ -212,12 +211,12 @@ class FrontpageRenderingTest {
      * every property this test changed back exactly as it found it.
      */
     private void setProperty(String name, String value) throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         Map<String, RuntimeConfigProperty> config = pmgr.getProperties();
         originalProperties.computeIfAbsent(name, key -> config.get(key).getValue());
         config.get(name).setValue(value);
         pmgr.saveProperties(config);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 
@@ -433,7 +432,7 @@ class FrontpageRenderingTest {
     void theFrontDoorInjectsTheUmamiScriptTagWhenASiteIdIsSet() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(siteWeblog);
         managed.setAnalyticsSiteId(ANALYTICS_SITE_ID);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
 
         String body = render("/" + SITE_HANDLE + "/");

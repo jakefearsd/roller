@@ -33,19 +33,22 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class LoginControllerTest {
 
+    private MockWeblogger weblogger;
     private LoginController controller;
     private ExtendedModelMap model;
 
     @BeforeEach
     void setUp() {
-        MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(weblogger.weblogger());
         controller = ControllerTestFixture.withMessages(new LoginController());
         model = new ExtendedModelMap();
     }
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
+        ControllerTestFixture.useDefaultWeblogger();
     }
 
     @Test

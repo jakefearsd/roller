@@ -41,13 +41,13 @@ class WeblogsApiCustomDomainTest {
 
     @BeforeEach
     void setUp() throws WebloggerException {
-        // Installed into the static WebloggerFactory (not just this
+        // Installed into the static locator (not just this
         // controller's own field) because CustomDomainRules.isSiteHost (I4b)
         // is checked against WebloggerRuntimeConfig.getPropertyWithConfigFallback,
-        // which reaches the business tier through WebloggerFactory.getWeblogger()
+        // which reaches the business tier through TestUtils.weblogger()
         // rather than through weblogsApi.weblogger -- the same seam
         // EditorControllerTestSupport's givenRuntimeProperty relies on.
-        mocks = MockWeblogger.install();
+        mocks = MockWeblogger.attached();
         weblogManager = mocks.getWeblogManager();
 
         weblogsApi = new WeblogsApi();
@@ -65,7 +65,7 @@ class WeblogsApiCustomDomainTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        mocks.detach();
     }
 
     /** Stubs the site.absoluteurl runtime property, same helper shape as EditorControllerTestSupport. */

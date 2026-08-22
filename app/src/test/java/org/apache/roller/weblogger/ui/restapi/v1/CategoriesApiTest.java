@@ -4,7 +4,6 @@ import java.util.List;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -71,14 +70,14 @@ class CategoriesApiTest {
      */
     @Test
     void aForeignMoveTargetIsRefused() throws Exception {
-        var wem = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        var wem = TestUtils.weblogger().getWeblogEntryManager();
         WeblogCategory foreign = wem.getWeblogCategories(
-                WebloggerFactory.getWeblogger().getWeblogManager()
+                TestUtils.weblogger().getWeblogManager()
                         .getWeblogByHandle(theirs.getHandle())).get(0);
 
-        assertNull(WeblogOwnership.category(WebloggerFactory.getWeblogger(),
+        assertNull(WeblogOwnership.category(TestUtils.weblogger(),
                         foreign.getId(),
-                        WebloggerFactory.getWeblogger().getWeblogManager()
+                        TestUtils.weblogger().getWeblogManager()
                                 .getWeblogByHandle(mine.getHandle())),
                 "a category from another weblog must read as absent");
     }

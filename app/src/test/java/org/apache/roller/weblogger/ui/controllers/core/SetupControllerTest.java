@@ -56,7 +56,8 @@ class SetupControllerTest {
 
     @BeforeEach
     void setUp() {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
+        ControllerTestFixture.useWeblogger(weblogger.weblogger());
         controller = ControllerTestFixture.withMessages(new SetupController());
         model = new ExtendedModelMap();
         redirectAttributes = new RedirectAttributesModelMap();
@@ -64,7 +65,8 @@ class SetupControllerTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
+        ControllerTestFixture.useDefaultWeblogger();
     }
 
     @Test

@@ -98,10 +98,9 @@ public final class WebloggerStartup {
      * notification says -- cannot be exercised at all: every method returns
      * early when the provider is null.
      *
-     * <p>Package-private on purpose, mirroring
-     * {@code WebloggerFactory.installProvider}: only test support in this
-     * package can reach it, so it cannot become a production back door. Pass
-     * {@code null} to reset.
+     * <p>Package-private on purpose: only test support in this package can
+     * reach it, so it cannot become a production back door. Pass {@code null}
+     * to reset.
      */
     static void installMailProvider(MailProvider provider) {
         mailProvider = provider;

@@ -121,7 +121,7 @@ class EntriesApiDispatchTest {
 
     @BeforeAll
     static void setUpContext() throws Exception {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
 
         Weblog blog = new Weblog();
         blog.setId("weblog-1");
@@ -147,7 +147,7 @@ class EntriesApiDispatchTest {
         if (context != null) {
             context.close();
         }
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     @AfterEach

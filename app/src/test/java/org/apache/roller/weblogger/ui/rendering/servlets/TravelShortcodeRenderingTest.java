@@ -27,7 +27,6 @@ import javax.imageio.ImageIO;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
@@ -117,7 +116,7 @@ class TravelShortcodeRenderingTest {
 
     private WeblogEntry entryWithText(String anchor, String text) throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setText(text);
         mgr.saveWeblogEntry(managed);
@@ -128,11 +127,10 @@ class TravelShortcodeRenderingTest {
     /** Persists a content-backed jpeg with GPS coordinates into the directory. */
     private MediaFile setupGpsImage(String name, MediaFileDirectory directory,
             double lat, double lng) throws Exception {
-        Map<String, RuntimeConfigProperty> config = WebloggerFactory
-                .getWeblogger().getPropertiesManager().getProperties();
+        Map<String, RuntimeConfigProperty> config = TestUtils.weblogger().getPropertiesManager().getProperties();
         config.get("uploads.enabled").setValue("true");
 
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
         Weblog managed = TestUtils.getManagedWebsite(weblog);
 
         BufferedImage image = new BufferedImage(320, 240, BufferedImage.TYPE_INT_RGB);
@@ -146,7 +144,7 @@ class TravelShortcodeRenderingTest {
         mediaFile.setContentType("image/jpeg");
         mediaFile.setInputStream(new ByteArrayInputStream(bytes.toByteArray()));
         mgr.createMediaFile(managed, mediaFile, new RollerMessages());
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
 
         // create-time EXIF extraction honours uploads.exif.stripGps (default
         // true) and this synthetic jpeg has no EXIF anyway, so the GPS
@@ -155,7 +153,7 @@ class TravelShortcodeRenderingTest {
         stored.setGpsLatitude(lat);
         stored.setGpsLongitude(lng);
         mgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), stored);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return mediaFile;
     }
@@ -214,10 +212,10 @@ class TravelShortcodeRenderingTest {
 
     @Test
     void anAutoMapPinsTheDirectorysGpsPhotos() throws Exception {
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory album = mgr.createMediaFileDirectory(
                 TestUtils.getManagedWebsite(weblog), "iceland");
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         setupGpsImage("glacier.jpg",
@@ -255,11 +253,11 @@ class TravelShortcodeRenderingTest {
 
     @Test
     void aPrivateDirectoryAutoMapLeaksNoCoordinates() throws Exception {
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
         MediaFileDirectory secret = mgr.createMediaFileDirectory(
                 TestUtils.getManagedWebsite(weblog), "secret");
         secret.setPrivate(true);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         MediaFileDirectory managedSecret = mgr.getMediaFileDirectoryByName(

@@ -204,14 +204,14 @@ public class WeblogEntryRevisionTest {
         TestUtils.endSession(true);
         testWeblog = null;   // tearDown must not try again
 
-        assertTrue(WebloggerFactory.getWeblogger().getWeblogManager()
+        assertTrue(TestUtils.weblogger().getWeblogManager()
                 .getWeblog(weblogId) == null);
     }
 
     // ------------------------------------------------------------- fixtures
 
     private WeblogEntryManager entryManager() {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        return TestUtils.weblogger().getWeblogEntryManager();
     }
 
     /** Loads the entry, changes its text, saves, and closes the session. */
@@ -223,7 +223,7 @@ public class WeblogEntryRevisionTest {
     }
 
     private void setRetention(String value) throws Exception {
-        PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
+        PropertiesManager pmgr = TestUtils.weblogger().getPropertiesManager();
         RuntimeConfigProperty property = pmgr.getProperties().get(RETENTION);
         assertNotNull(property, RETENTION + " is not a declared runtime property");
         property.setValue(value);

@@ -52,10 +52,9 @@ public final class EntryDtos {
      * Titles are stored HTML-escaped (see CLAUDE.md's entry/page title
      * asymmetry), so the view carries the stored value through unchanged --
      * escaping it again here would send "&amp;amp;" to every client.
-     * {@code permalink} is passed in rather than read off {@code entry}
-     * because {@link WeblogEntry#getPermalink()} reaches the static
-     * {@code WebloggerFactory}, which this pure mapper has no business
-     * depending on.
+     * {@code permalink} is passed in rather than computed here because the
+     * entity does not know its own url (that is the {@code URLStrategy}'s
+     * job), and this pure mapper has no business depending on the tier.
      */
     public static EntryView toView(WeblogEntry entry, String permalink) {
         return new EntryView(

@@ -19,7 +19,6 @@ package org.apache.roller.weblogger.pojos;
 
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;

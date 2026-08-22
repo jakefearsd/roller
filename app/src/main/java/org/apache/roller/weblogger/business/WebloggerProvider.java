@@ -23,8 +23,9 @@ package org.apache.roller.weblogger.business;
  * Provides access to a Weblogger instance, and owns the answer to "is the
  * business tier up?".
  *
- * <p>This is the bean that replaces the {@code WebloggerFactory} static
- * (see {@code docs/superpowers/specs/2026-08-22-retire-static-service-locator-design.md},
+ * <p>This is the bean that replaced the static service locator the codebase
+ * used to reach the tier through (see
+ * {@code docs/superpowers/specs/2026-08-22-retire-static-service-locator-design.md},
  * Decision 2). Inject it where that question is genuinely a runtime one --
  * the bootstrap filter, the persistence-session filter, the install wizard,
  * the lifecycle bean; everywhere else take a {@code @Lazy Weblogger}.

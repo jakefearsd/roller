@@ -27,7 +27,6 @@ import javax.imageio.ImageIO;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
@@ -74,7 +73,7 @@ class ResponsiveImageRenderingTest {
         weblog = TestUtils.setupWeblog(HANDLE, user);
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme("travel");
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
     }
 
@@ -100,7 +99,7 @@ class ResponsiveImageRenderingTest {
     private WeblogEntry entryWithFeaturedImage(String anchor, String imageId)
             throws Exception {
         WeblogEntry entry = TestUtils.setupWeblogEntry(anchor, weblog, user);
-        WeblogEntryManager mgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
         WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
         managed.setFeaturedImageId(imageId);
         mgr.saveWeblogEntry(managed);
@@ -115,11 +114,10 @@ class ResponsiveImageRenderingTest {
      */
     private MediaFile setupGeneratedImage(String name, String contentType,
             String format, int width, int height) throws Exception {
-        Map<String, RuntimeConfigProperty> config = WebloggerFactory
-                .getWeblogger().getPropertiesManager().getProperties();
+        Map<String, RuntimeConfigProperty> config = TestUtils.weblogger().getPropertiesManager().getProperties();
         config.get("uploads.enabled").setValue("true");
 
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         MediaFileDirectory root = mgr.getDefaultMediaFileDirectory(managed);
 
@@ -135,7 +133,7 @@ class ResponsiveImageRenderingTest {
         mediaFile.setContentType(contentType);
         mediaFile.setInputStream(new ByteArrayInputStream(bytes.toByteArray()));
         mgr.createMediaFile(managed, mediaFile, new RollerMessages());
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return mediaFile;
     }
@@ -232,7 +230,7 @@ class ResponsiveImageRenderingTest {
         String imageId = image.getId();
         TestUtils.endSession(true);
 
-        MediaFileManager mgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mgr = TestUtils.weblogger().getMediaFileManager();
         MediaFile managed = mgr.getMediaFile(imageId);
         managed.setFocalX(0.3);
         managed.setFocalY(0.7);
@@ -272,7 +270,7 @@ class ResponsiveImageRenderingTest {
     void theFrontpageThemeStillRendersWithTheNewCardMarkup() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(weblog);
         managed.setEditorTheme("frontpage");
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
         TestUtils.endSession(true);
 
         String body = render("/" + HANDLE);

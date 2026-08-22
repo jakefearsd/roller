@@ -55,7 +55,7 @@ class UserTokenManagerTest {
     }
 
     private static UserTokenManager manager() {
-        return WebloggerFactory.getWeblogger().getUserTokenManager();
+        return TestUtils.weblogger().getUserTokenManager();
     }
 
     @Test
@@ -63,7 +63,7 @@ class UserTokenManagerTest {
         User managedUser = TestUtils.getManagedUser(user);
 
         String raw = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         // Read the row back directly and check the stolen-database property:
@@ -80,7 +80,7 @@ class UserTokenManagerTest {
     void aFreshTokenValidatesToItsUser() throws Exception {
         User managedUser = TestUtils.getManagedUser(user);
         String raw = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         UserToken validated = manager().validate(raw);
@@ -94,7 +94,7 @@ class UserTokenManagerTest {
     void consumingATokenReturnsItsUserAndStampsUsedAt() throws Exception {
         User managedUser = TestUtils.getManagedUser(user);
         String raw = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         User consumedBy = manager().consume(raw);
@@ -107,11 +107,11 @@ class UserTokenManagerTest {
     void aSecondConsumeOfTheSameTokenFailsSingleUseIsEnforced() throws Exception {
         User managedUser = TestUtils.getManagedUser(user);
         String raw = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         User first = manager().consume(raw);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertNotNull(first, "the first consume must succeed");
@@ -133,7 +133,7 @@ class UserTokenManagerTest {
     void aTokenAlreadyStampedUsedByAnotherPathIsNotConsumable() throws Exception {
         User managedUser = TestUtils.getManagedUser(user);
         String raw = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         // Stamp usedAt directly on the managed row, bypassing consume()
@@ -141,7 +141,7 @@ class UserTokenManagerTest {
         UserToken token = manager().validate(raw);
         assertNotNull(token, "precondition: the token exists and reads as usable");
         token.setUsedAt(new Timestamp(System.currentTimeMillis()));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertNull(manager().consume(raw),
@@ -153,14 +153,14 @@ class UserTokenManagerTest {
     void anExpiredTokenDoesNotValidate() throws Exception {
         User managedUser = TestUtils.getManagedUser(user);
         String raw = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         // Push the token's expiry into the past on the managed row.
         UserToken token = manager().validate(raw);
         assertNotNull(token, "must exist before we can expire it");
         token.setExpires(new Timestamp(System.currentTimeMillis() - 1000L));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertNull(manager().validate(raw), "an expired token must not validate");
@@ -190,11 +190,11 @@ class UserTokenManagerTest {
     void validateReportsAnAlreadyConsumedTokenAsUnusable() throws Exception {
         User managedUser = TestUtils.getManagedUser(user);
         String raw = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertNotNull(manager().consume(raw), "precondition: the token starts out consumable");
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertNull(manager().validate(raw),
@@ -207,11 +207,11 @@ class UserTokenManagerTest {
         User managedUser = TestUtils.getManagedUser(user);
         String raw1 = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
         String raw2 = manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_SET);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         manager().removeTokens(TestUtils.getManagedUser(user));
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertNull(manager().validate(raw1), "removeTokens must clear the first token");
@@ -226,7 +226,7 @@ class UserTokenManagerTest {
         // fail with a foreign-key violation.
         User managedUser = TestUtils.getManagedUser(user);
         manager().issueToken(managedUser, UserToken.Purpose.PASSWORD_RESET);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         // tearDown() below calls TestUtils.teardownUser(...); reaching it

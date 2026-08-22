@@ -222,7 +222,7 @@ class WeblogEntryManagerQueryTest {
         WeblogEntry managed = TestUtils.getManagedWeblogEntry(popular);
         managed.putEntryAttribute("pinned", "yes");
         entries().saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         managed = TestUtils.getManagedWeblogEntry(popular);
@@ -230,7 +230,7 @@ class WeblogEntryManagerQueryTest {
 
         entries().removeWeblogEntryAttribute("pinned", managed);
         entries().saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertNull(TestUtils.getManagedWeblogEntry(popular).findEntryAttribute("pinned"),
@@ -292,7 +292,7 @@ class WeblogEntryManagerQueryTest {
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         managed.setStatus(PubStatus.TRASHED);
         entries().saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         WeblogCategory managedCat = TestUtils.getManagedWeblogCategory(onlyTrash);
@@ -323,13 +323,13 @@ class WeblogEntryManagerQueryTest {
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         managed.setStatus(PubStatus.TRASHED);
         entries().saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         WeblogCategory src = TestUtils.getManagedWeblogCategory(onlyTrash);
         WeblogCategory destManaged = TestUtils.getManagedWeblogCategory(dest);
         entries().moveWeblogCategoryContents(src, destManaged);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         WeblogEntry moved = entries().getWeblogEntry(created.getId());
@@ -351,7 +351,7 @@ class WeblogEntryManagerQueryTest {
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         managed.setStatus(PubStatus.TRASHED);
         entries().saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         // setupWeblogEntry gives the entry the same title as its anchor, so
@@ -368,7 +368,7 @@ class WeblogEntryManagerQueryTest {
     // ---------------------------------------------------------------- helpers
 
     private static WeblogEntryManager entries() {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        return TestUtils.weblogger().getWeblogEntryManager();
     }
 
     private WeblogEntry entry(String anchor, String title, Instant pubTime) throws Exception {
@@ -379,7 +379,7 @@ class WeblogEntryManagerQueryTest {
         managed.setPubTime(new Timestamp(pubTime.toEpochMilli()));
         managed.setUpdateTime(new Timestamp(pubTime.toEpochMilli()));
         entries().saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         return managed;
     }
 
@@ -387,6 +387,6 @@ class WeblogEntryManagerQueryTest {
         WeblogEntry managed = entries().getWeblogEntry(entry.getId());
         managed.addTag(tagName);
         entries().saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
     }
 }

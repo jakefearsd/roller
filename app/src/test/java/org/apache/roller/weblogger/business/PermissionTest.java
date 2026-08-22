@@ -92,7 +92,7 @@ public class PermissionTest  {
         
         log.info("BEGIN");
         
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager mgr = TestUtils.weblogger().getUserManager();
         
         WeblogPermission p1 = new WeblogPermission(testWeblog, testUser, 
             WeblogPermission.ADMIN + "," + WeblogPermission.POST);
@@ -175,7 +175,7 @@ public class PermissionTest  {
         User user = TestUtils.setupUser("testPermissionsLookups");
         TestUtils.endSession(true);
 
-        UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager mgr = TestUtils.weblogger().getUserManager();
         WeblogPermission perm = null;
         List<WeblogPermission> perms = null;
 
@@ -226,8 +226,8 @@ public class PermissionTest  {
         User user = TestUtils.setupUser("testGrantAndRevoke");
         TestUtils.endSession(true);
 
-        WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
-        UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+        WeblogManager wmgr = TestUtils.weblogger().getWeblogManager();
+        UserManager umgr = TestUtils.weblogger().getUserManager();
 
         // grant user access to weblog
         List<String> actions = new ArrayList<>();
@@ -277,7 +277,7 @@ public class PermissionTest  {
        
         WeblogPermission perm = 
             new WeblogPermission(testWeblog, testUser, WeblogPermission.POST);
-        UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager umgr = TestUtils.weblogger().getUserManager();
         assertTrue(umgr.checkPermission(perm, testUser));
         
         // we need a second user for this test

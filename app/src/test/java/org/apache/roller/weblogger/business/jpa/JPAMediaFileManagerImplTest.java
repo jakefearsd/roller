@@ -31,7 +31,6 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
@@ -75,7 +74,7 @@ class JPAMediaFileManagerImplTest {
 
         // allow media uploads for this test (default is off)
         Map<String, RuntimeConfigProperty> config =
-                WebloggerFactory.getWeblogger().getPropertiesManager().getProperties();
+                TestUtils.weblogger().getPropertiesManager().getProperties();
         config.get("uploads.enabled").setValue("true");
     }
 
@@ -88,7 +87,7 @@ class JPAMediaFileManagerImplTest {
 
     @Test
     void removingAMediaFileWithNoThumbnailLogsTheMissingFileExceptionAtDebug() throws Exception {
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         testWeblog = TestUtils.getManagedWebsite(testWeblog);
         MediaFileDirectory rootDirectory = mfMgr.getDefaultMediaFileDirectory(testWeblog);
         TestUtils.endSession(true);

@@ -337,7 +337,7 @@ class TemplateEditControllerTest extends EditorControllerTestSupport {
      * The form bean is pure: it writes the edited markup onto the template's
      * rendition and persists nothing -- the controller's save path owns the
      * {@code saveTemplateRendition} call. Before the DI wave {@code copyTo}
-     * reached the static {@code WebloggerFactory} for a manager and saved the
+     * reached the static locator for a manager and saved the
      * rendition itself.
      */
     @Test

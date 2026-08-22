@@ -228,7 +228,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
     /**
      * The form bean is pure: the category it files the entry under is handed
      * to it by the controller, which owns the lookup. Before the DI wave
-     * {@code copyTo} reached the static {@code WebloggerFactory} for a
+     * {@code copyTo} reached the static locator for a
      * {@code WeblogEntryManager} to resolve the id itself.
      */
     @Test

@@ -2,7 +2,6 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.MediaFileManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -49,7 +48,7 @@ class ResourceServletRenderingTest {
     void resourceWithOriginalPathStreams() throws Exception {
         MediaFile image = TestUtils.setupImageMediaFile(weblog, "photo.jpg");
         image.setOriginalPath("/photo.jpg");
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         mfMgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), image);
         TestUtils.endSession(true);
 
@@ -83,7 +82,7 @@ class ResourceServletRenderingTest {
     void aConditionalRequestForAnUnchangedResourceIsNotModified() throws Exception {
         MediaFile image = TestUtils.setupImageMediaFile(weblog, "cond.jpg");
         image.setOriginalPath("/cond.jpg");
-        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfMgr = TestUtils.weblogger().getMediaFileManager();
         mfMgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), image);
         TestUtils.endSession(true);
 

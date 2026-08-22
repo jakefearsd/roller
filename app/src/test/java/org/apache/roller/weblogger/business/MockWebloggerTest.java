@@ -17,94 +17,91 @@
 */
 package org.apache.roller.weblogger.business;
 
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
+import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.Weblog;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 /**
- * Verifies the {@link MockWeblogger} test seam, because every controller test that
- * follows depends on it. If this harness quietly stopped installing its mocks, those
- * tests would fall back to a real (unbootstrapped) factory and fail in a way that
- * pointed at the controller rather than at here.
+ * Verifies the {@link MockWeblogger} test seam, because every controller and
+ * rendering test that takes a mocked facade depends on it.
+ *
+ * <p>Since the 2026-08-22 plan deleted the static service locator there is no
+ * global to install the mock into: a test hands {@link MockWeblogger#weblogger()}
+ * to the class under test. The one residual global is the runtime-config
+ * attachment (spec Decision 8), and that is what {@link MockWeblogger#attached()}
+ * / {@link MockWeblogger#detach()} manage -- with save/restore semantics, since
+ * the database-backed tests leave the real tier's manager attached for the whole
+ * JVM and must find it still there afterwards.
  */
 class MockWebloggerTest {
 
-    @AfterEach
-    void tearDown() {
-        MockWeblogger.uninstall();
-    }
-
     @Test
-    void installMakesTheStaticFactoryReturnTheMock() {
-        MockWeblogger mocks = MockWeblogger.install();
-
-        assertTrue(WebloggerFactory.isBootstrapped(),
-                "install() must make WebloggerFactory report itself bootstrapped, since "
-                        + "controllers and RollerSession both gate on isBootstrapped()");
-        assertSame(mocks.weblogger(), WebloggerFactory.getWeblogger(),
-                "WebloggerFactory must hand back the mocked Weblogger");
-    }
-
-    @Test
-    void managersReachedThroughTheFactoryAreTheStubbableOnes() throws Exception {
-        MockWeblogger mocks = MockWeblogger.install();
+    void theFacadeHandsBackTheStubbableManagers() throws Exception {
+        MockWeblogger mocks = MockWeblogger.create();
 
         Weblog expected = new Weblog();
         when(mocks.weblogManager().getWeblogByHandle("it_weblog")).thenReturn(expected);
 
-        // The path a controller actually takes.
-        Weblog actual = WebloggerFactory.getWeblogger()
-                .getWeblogManager()
-                .getWeblogByHandle("it_weblog");
+        // The path a controller actually takes, through the facade it was given.
+        Weblog actual = mocks.weblogger().getWeblogManager().getWeblogByHandle("it_weblog");
 
         assertSame(expected, actual,
                 "Stubbing the manager returned by MockWeblogger must affect the manager "
-                        + "reached via WebloggerFactory, or controller tests cannot stub anything");
+                        + "reached via the facade, or controller tests cannot stub anything");
+        assertSame(mocks.userManager(), mocks.weblogger().getUserManager());
+        assertSame(mocks.propertiesManager(), mocks.weblogger().getPropertiesManager());
     }
 
     @Test
-    void uninstallRestoresWhateverWasInstalledBefore() {
-        // The database-backed tests bootstrap a real Weblogger into this same
-        // static field and reuse it for the whole JVM, so uninstall() restores
-        // the previous provider rather than clearing it. Nesting proves the
-        // restore actually happens rather than the field merely being non-null.
-        MockWeblogger outer = MockWeblogger.install();
-        assertSame(outer.weblogger(), WebloggerFactory.getWeblogger());
+    void createTouchesNoGlobalState() throws Exception {
+        try (RuntimeConfigAttachment previous = RuntimeConfigAttachment.preserve()) {
+            WebloggerRuntimeConfig.attach(null);
 
-        MockWeblogger inner = MockWeblogger.install();
-        assertSame(inner.weblogger(), WebloggerFactory.getWeblogger(),
-                "the second install must take over");
+            MockWeblogger mocks = MockWeblogger.create();
+            when(mocks.propertiesManager().getProperty("site.name"))
+                    .thenReturn(property("site.name", "mocked"));
 
-        MockWeblogger.uninstall();
-        assertSame(outer.weblogger(), WebloggerFactory.getWeblogger(),
-                "uninstall must hand the factory back to the provider that was "
-                        + "installed before, not null and not the inner mock");
-
-        MockWeblogger.uninstall();
+            assertNull(WebloggerRuntimeConfig.getProperty("site.name"),
+                    "create() must not attach the mock's manager; nothing was attached, so reads answer null");
+            mocks.detach(); // a no-op for a mock that never attached
+            assertNull(WebloggerRuntimeConfig.getProperty("site.name"));
+        }
     }
 
     @Test
-    void uninstallingWithNothingPreviouslyInstalledLeavesTheFactoryUnbootstrapped() {
-        // Guard the other direction: in a JVM where no real Weblogger was ever
-        // bootstrapped, uninstall must leave the factory refusing service rather
-        // than holding a stale mock.
-        WebloggerProvider before = WebloggerFactory.currentProvider();
-        WebloggerFactory.installProvider(null);
+    void attachedRoutesRuntimeConfigReadsToTheMockUntilDetached() throws Exception {
+        try (RuntimeConfigAttachment previous = RuntimeConfigAttachment.preserve()) {
+            MockWeblogger outer = MockWeblogger.attached();
+            when(outer.propertiesManager().getProperty("site.name"))
+                    .thenReturn(property("site.name", "outer"));
+            assertEquals("outer", WebloggerRuntimeConfig.getProperty("site.name"));
 
-        MockWeblogger.install();
-        MockWeblogger.uninstall();
+            MockWeblogger inner = MockWeblogger.attached();
+            when(inner.propertiesManager().getProperty("site.name"))
+                    .thenReturn(property("site.name", "inner"));
+            assertEquals("inner", WebloggerRuntimeConfig.getProperty("site.name"),
+                    "the second attach must take over");
 
-        assertFalse(WebloggerFactory.isBootstrapped(),
-                "with no prior provider, uninstall must leave the factory unbootstrapped");
-        assertThrows(IllegalStateException.class, WebloggerFactory::getWeblogger,
-                "an unbootstrapped factory must still refuse to hand out a Weblogger");
+            inner.detach();
+            assertEquals("outer", WebloggerRuntimeConfig.getProperty("site.name"),
+                    "detach must hand the attachment back to what was attached before, "
+                            + "not null and not the inner mock");
 
-        WebloggerFactory.installProvider(before);
+            outer.detach();
+        }
+    }
+
+    private static RuntimeConfigProperty property(String name, String value) {
+        RuntimeConfigProperty p = new RuntimeConfigProperty();
+        p.setName(name);
+        p.setValue(value);
+        return p;
     }
 }

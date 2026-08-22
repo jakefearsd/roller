@@ -82,7 +82,7 @@ class WeblogEntryTrashOperationsTest {
 
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         entries().trashWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         WeblogEntry reloaded = entries().getWeblogEntry(created.getId());
@@ -112,7 +112,7 @@ class WeblogEntryTrashOperationsTest {
 
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         entries().trashWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         Date after = TestUtils.getManagedWebsite(blog).getLastModified();
@@ -136,7 +136,7 @@ class WeblogEntryTrashOperationsTest {
 
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         entries().trashWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         Date after = TestUtils.getManagedWebsite(blog).getLastModified();
@@ -159,7 +159,7 @@ class WeblogEntryTrashOperationsTest {
         WeblogEntry withTag = entries().getWeblogEntry(created.getId());
         withTag.addTag("cycling");
         entries().saveWeblogEntry(withTag);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         List<String> beforeTrash = entries()
@@ -169,7 +169,7 @@ class WeblogEntryTrashOperationsTest {
 
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         entries().trashWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         List<String> afterTrash = entries()
@@ -189,12 +189,12 @@ class WeblogEntryTrashOperationsTest {
 
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         entries().trashWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         WeblogEntry trashed = entries().getWeblogEntry(created.getId());
         entries().restoreWeblogEntry(trashed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         WeblogEntry restored = entries().getWeblogEntry(created.getId());
@@ -218,12 +218,12 @@ class WeblogEntryTrashOperationsTest {
 
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         entries().trashWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         WeblogEntry trashed = entries().getWeblogEntry(created.getId());
         entries().restoreWeblogEntry(trashed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertEquals(PubStatus.DRAFT, entries().getWeblogEntry(created.getId()).getStatus(),
@@ -274,7 +274,7 @@ class WeblogEntryTrashOperationsTest {
         trashWithStamp(fresh, Instant.now().minus(1, ChronoUnit.DAYS));
 
         int purged = entries().purgeTrash(TestUtils.getManagedWebsite(blog), 5);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertEquals(1, purged, "only the entry trashed past the 5-day retention should purge");
@@ -307,7 +307,7 @@ class WeblogEntryTrashOperationsTest {
         trashWithStamp(justOutside, boundary.minusSeconds(5));
 
         int purged = entries().purgeTrash(TestUtils.getManagedWebsite(blog), 1);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertEquals(1, purged, "only the entry trashed more than a day ago should purge");
@@ -325,7 +325,7 @@ class WeblogEntryTrashOperationsTest {
         trashWithStamp(ancient, Instant.now().minus(365, ChronoUnit.DAYS));
 
         int purged = entries().purgeTrash(TestUtils.getManagedWebsite(blog), -1);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertEquals(0, purged, "-1 means keep trash forever");
@@ -349,7 +349,7 @@ class WeblogEntryTrashOperationsTest {
 
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         entries().trashWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertTrue(entries().getRevisions(entries().getWeblogEntry(created.getId())).isEmpty(),
@@ -376,7 +376,7 @@ class WeblogEntryTrashOperationsTest {
 
         WeblogEntry managed = entries().getWeblogEntry(created.getId());
         entries().trashWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertEquals(1, events().size(),
@@ -384,7 +384,7 @@ class WeblogEntryTrashOperationsTest {
 
         WeblogEntry trashed = entries().getWeblogEntry(created.getId());
         entries().restoreWeblogEntry(trashed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
 
         assertEquals(1, events().size(),
@@ -394,7 +394,7 @@ class WeblogEntryTrashOperationsTest {
     // ---------------------------------------------------------------- helpers
 
     private static WeblogEntryManager entries() {
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager();
+        return TestUtils.weblogger().getWeblogEntryManager();
     }
 
     /**
@@ -405,14 +405,14 @@ class WeblogEntryTrashOperationsTest {
      */
     private Date freshLastModifiedBaseline() throws Exception {
         Weblog managed = TestUtils.getManagedWebsite(blog);
-        WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
         return TestUtils.getManagedWebsite(blog).getLastModified();
     }
 
     private List<RollerEvent> events() throws Exception {
-        return WebloggerFactory.getWeblogger().getEventManager()
+        return TestUtils.weblogger().getEventManager()
                 .getEvents(TestUtils.getManagedWebsite(blog), 10);
     }
 
@@ -426,7 +426,7 @@ class WeblogEntryTrashOperationsTest {
         managed.setStatus(PubStatus.TRASHED);
         managed.setTrashedAt(Timestamp.from(trashedAt));
         entries().saveWeblogEntry(managed);
-        WebloggerFactory.getWeblogger().flush();
+        TestUtils.weblogger().flush();
         TestUtils.endSession(true);
     }
 }

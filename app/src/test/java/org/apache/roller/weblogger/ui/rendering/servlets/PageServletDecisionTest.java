@@ -68,7 +68,7 @@ class PageServletDecisionTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        weblogger = MockWeblogger.install();
+        weblogger = MockWeblogger.attached();
 
         weblog = new Weblog();
         weblog.setHandle("decisionblog");
@@ -82,7 +82,7 @@ class PageServletDecisionTest {
 
     @AfterEach
     void tearDown() {
-        MockWeblogger.uninstall();
+        weblogger.detach();
     }
 
     // ------------------------------------------------------ template selection
