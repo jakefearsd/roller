@@ -133,8 +133,10 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
         String html = htmlCaptor.getValue();
         assertTrue(html.contains(weblogger.entryRenderer().transformedText(entry)),
                 "the sent html must carry the rendered entry body: " + html);
-        assertTrue(html.contains(entry.getPermalink()),
-                "the sent html must link back to the permalink: " + html);
+        String permalink = weblogger.urlStrategy()
+                .getWeblogEntryURL(entry.getWebsite(), null, entry.getAnchor(), true);
+        assertTrue(html.contains(permalink),
+                "the sent html must link back to the permalink built from the injected strategy: " + html);
     }
 
     // ---------------------------------------------------- cannot-double-send

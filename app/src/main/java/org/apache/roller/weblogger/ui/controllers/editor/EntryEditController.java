@@ -498,7 +498,7 @@ public class EntryEditController extends BaseController {
                                         Model model, HttpServletRequest request) {
         String html = "<h1>" + StringEscapeUtils.escapeHtml4(entry.getTitle()) + "</h1>\n"
                 + weblogger.getEntryRenderer().transformedText(entry)
-                + "\n<p><a href=\"" + entry.getPermalink() + "\">Read on the site</a></p>";
+                + "\n<p><a href=\"" + permalinkOf(entry) + "\">Read on the site</a></p>";
         try {
             client.sendCampaign(listUuid, entry.getTitle(), html);
         } catch (IOException ex) {
@@ -714,7 +714,7 @@ public class EntryEditController extends BaseController {
             case PUBLISHED:
                 // The href is built here, from the entry, and never from anything a
                 // reader supplied: messages.jsp renders a message unescaped.
-                addMessage(model, "weblogEdit.publishedEntry", entry.getPermalink(), request);
+                addMessage(model, "weblogEdit.publishedEntry", permalinkOf(entry), request);
                 break;
             case SCHEDULED:
                 addMessage(model, "weblogEdit.scheduledEntry",
@@ -838,5 +838,15 @@ public class EntryEditController extends BaseController {
     @ModelAttribute("bean")
     public EntryBean getBean() {
         return new EntryBean();
+    }
+
+    /**
+     * The entry's absolute permalink, built here from the injected strategy --
+     * what {@code WeblogEntry.getPermalink()} used to build through the static
+     * service locator. Same arguments as {@code AdminUrls.entry}, which is the
+     * JSP-side twin.
+     */
+    private String permalinkOf(WeblogEntry entry) {
+        return weblogger.getUrlStrategy().getWeblogEntryURL(entry.getWebsite(), null, entry.getAnchor(), true);
     }
 }

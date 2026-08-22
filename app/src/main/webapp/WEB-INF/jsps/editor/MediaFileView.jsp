@@ -181,7 +181,7 @@
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
-                                        <img src='${mediaFile.thumbnailURL}'
+                                        <img src='${urls.mediaThumbnail(mediaFile)}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
                                              title='${fn:escapeXml(mediaFile.name)}'
@@ -237,7 +237,7 @@
 
                                     <c:choose>
 <c:when test="${mediaFile.imageFile}">
-                                        <img src='${mediaFile.thumbnailURL}'
+                                        <img src='${urls.mediaThumbnail(mediaFile)}'
                                              width='${mediaFile.thumbnailWidth}'
                                              height='${mediaFile.thumbnailHeight}'
                                              title='${fn:escapeXml(mediaFile.name)}'

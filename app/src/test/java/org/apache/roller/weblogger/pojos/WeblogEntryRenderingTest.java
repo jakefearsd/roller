@@ -99,38 +99,9 @@ class WeblogEntryRenderingTest {
         assertNull(withWeblogger(weblog::getCreator));
     }
 
-    // ---------------------------------------------------------------- urls
-
-    @Test
-    void thePermalinkComesFromTheUrlStrategy() {
-        URLStrategy urls = mock(URLStrategy.class);
-        when(weblogger.getUrlStrategy()).thenReturn(urls);
-        when(urls.getWeblogEntryURL(weblog, null, "hello-world", true))
-                .thenReturn("http://example.com/roller/testblog/entry/hello-world");
-
-        assertEquals("http://example.com/roller/testblog/entry/hello-world",
-                withWeblogger(entry::getPermalink),
-                "Permalinks are built centrally so that changing the URL scheme changes "
-                        + "them everywhere at once; the entry must not build its own");
-    }
-
-    @Test
-    void mediaFileUrlsComeFromTheUrlStrategyToo() {
-        URLStrategy urls = mock(URLStrategy.class);
-        when(weblogger.getUrlStrategy()).thenReturn(urls);
-
-        MediaFile file = new MediaFile();
-        file.setId("file-1");
-        file.setWeblog(weblog);
-        when(urls.getMediaFileURL(weblog, "file-1", true)).thenReturn("http://example.com/f");
-        when(urls.getMediaFileThumbnailURL(weblog, "file-1", true))
-                .thenReturn("http://example.com/f/thumb");
-
-        assertEquals("http://example.com/f", withWeblogger(file::getPermalink));
-        assertEquals("http://example.com/f/thumb", withWeblogger(file::getThumbnailURL),
-                "The thumbnail URL must be distinct from the full-size one, or the "
-                        + "gallery serves full-resolution images as thumbnails");
-    }
+    // urls: the entity no longer builds permalinks/media urls (the getters
+    // reached the URLStrategy through the static locator); AdminUrlsTest and
+    // the wrapper tests pin the same "built centrally, exact arguments" claims.
 
     @Test
     void aMediaFileResolvesItsCreatorAndFailsSoftly() throws Exception {

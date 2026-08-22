@@ -62,7 +62,7 @@
                             <%-- Only published pages are served; a draft's URL
                                  404s, so linking it would hand someone a
                                  broken link from their own admin screen. --%>
-                            <a href="${actionWeblog.absoluteURL}page/${p.slug}"
+                            <a href="${urls.weblogAbsolute(actionWeblog)}page/${p.slug}"
                                target="_blank" rel="noopener">/<c:out value="${p.slug}"/></a>
                         </c:when>
                         <c:otherwise>/<c:out value="${p.slug}"/></c:otherwise>

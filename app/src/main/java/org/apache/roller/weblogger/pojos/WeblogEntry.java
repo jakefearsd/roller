@@ -864,18 +864,31 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
     }
     
     //------------------------------------------------------------------------
-        
+
+    // The absolute permalink used to be a getter here, reaching the URLStrategy
+    // through the static service locator. It is built by whoever holds the
+    // strategy now: WeblogEntryWrapper.getPermalink() for templates and
+    // AdminUrls.entry(entry) for the admin JSPs.
+
     /**
-     * Returns absolute entry permalink.
+     * Returns entry permalink, relative to Roller context. Pure string work --
+     * no collaborator -- which is why it stays on the entity.
+     * @deprecated Use the wrapper's getPermalink() instead.
      */
-    public String getPermalink() {
-        return WebloggerFactory.getWeblogger().getUrlStrategy().getWeblogEntryURL(getWebsite(), null, getAnchor(), true);
-    }
-    
-    /**
-     * Returns entry permalink, relative to Roller context.
-     * @deprecated Use getPermalink() instead.
-     */
+    // NM_CONFUSING pairs this with MediaFileWrapper.getPermalink() purely on
+    // case -- the two classes share no hierarchy. getPermalink() is the
+    // canonical template spelling ($image.permalink in WEB-INF/velocity/
+    // weblog.vm and the themes) and renaming it would silently break every
+    // one of those, per CLAUDE.md's Velocity-leniency warning; this method is
+    // deprecated legacy API kept for the wrapper's $entry.permaLink. The
+    // suppression used to sit on MediaFile.getPermalink(), the other half of
+    // the pair, until the entity stopped building urls; SpotBugs anchors the
+    // finding on whichever method it names first, which is now this one.
+    @SuppressFBWarnings(
+            value = "NM_CONFUSING",
+            justification = "MediaFileWrapper.getPermalink() is the canonical template spelling "
+                    + "($image.permalink) and cannot be renamed without silently breaking every "
+                    + "theme reference; this deprecated method collides with it on case alone.")
     @Deprecated
     public String getPermaLink() {
         String lAnchor = URLEncoder.encode(getAnchor(), StandardCharsets.UTF_8);

@@ -181,7 +181,9 @@ public class MediaFileAddController extends MediaFileBase {
             if (!uploaded.isEmpty()) {
                 addMessage(model, "uploadFiles.uploadedFiles", request);
                 for (MediaFile upload : uploaded) {
-                    addMessage(model, "uploadFiles.uploadedFile", upload.getPermalink(), request);
+                    addMessage(model, "uploadFiles.uploadedFile",
+                            weblogger.getUrlStrategy().getMediaFileURL(upload.getWeblog(), upload.getId(), true),
+                            request);
                 }
 
                 model.addAttribute("newImages", newImages);

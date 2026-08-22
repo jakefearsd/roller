@@ -69,8 +69,8 @@
          unsaved page has no slug and a draft's URL 404s. --%>
     <c:if test="${not empty bean.id and bean.status == 'PUBLISHED'}">
         <p class="editor-permalink" role="status" aria-live="polite">
-            <a id="page_permalink" href="${actionWeblog.absoluteURL}page/${fn:escapeXml(bean.slug)}"
-               target="_blank" rel="noopener">${actionWeblog.absoluteURL}page/${fn:escapeXml(bean.slug)}</a>
+            <a id="page_permalink" href="${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(bean.slug)}"
+               target="_blank" rel="noopener">${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(bean.slug)}</a>
             &#183;
             <button class="clipbutton editor-permalink-copy" type="button"
                     data-clipboard-target="#page_permalink"

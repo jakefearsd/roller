@@ -71,8 +71,8 @@
 
                         <c:forEach items="${childFiles}" var="mediaFile">
 
-                            <c:set var="mediaFileURL" value="${mediaFile.permalink}"/>
-                            <c:url var="mediaFileThumbnailURL" value="${mediaFile.thumbnailURL}"/>
+                            <c:set var="mediaFileURL" value="${urls.media(mediaFile)}"/>
+                            <c:url var="mediaFileThumbnailURL" value="${urls.mediaThumbnail(mediaFile)}"/>
 
                             <li class="align-images"
                                 onmouseover="highlight(this, true)" onmouseout="highlight(this, false)">

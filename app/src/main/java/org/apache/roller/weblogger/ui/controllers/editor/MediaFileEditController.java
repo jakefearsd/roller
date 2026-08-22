@@ -78,7 +78,7 @@ public class MediaFileEditController extends MediaFileBase {
                 addError(model, "MediaFile.error.view", request);
                 return ".MediaFileEdit";
             }
-            bean.copyFrom(mediaFile);
+            bean.copyFrom(mediaFile, weblogger.getUrlStrategy());
             model.addAttribute("mediaFileId", mediaFileId);
         } catch (FileIOException ex) {
             addError(model, "uploadFiles.error.upload", bean.getName(), request);
@@ -196,14 +196,14 @@ public class MediaFileEditController extends MediaFileBase {
             }
             // populate the bean up front so the re-rendered form is complete
             // even when the crop itself fails
-            bean.copyFrom(mediaFile);
+            bean.copyFrom(mediaFile, weblogger.getUrlStrategy());
 
             manager.cropMediaFile(getActionWeblog(request), mediaFile,
                     cropX, cropY, cropWidth, cropHeight);
             weblogger.flush();
 
             // re-read so the page shows the new dimensions and size
-            bean.copyFrom(mediaFile);
+            bean.copyFrom(mediaFile, weblogger.getUrlStrategy());
             addMessage(model, "mediaFileEdit.crop.success", request);
         } catch (Exception e) {
             log.error("Error cropping media file {}", mediaFileId, e);

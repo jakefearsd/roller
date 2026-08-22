@@ -107,8 +107,6 @@
             </one-to-many>
 			<transient name="theme"/>
 			<transient name="creator"/>
-			<transient name="absoluteURL"/>
-			<transient name="URL"/>
 			<transient name="entryCount"/>
             <transient name="localeInstance"/>
             <transient name="timeZoneInstance" />

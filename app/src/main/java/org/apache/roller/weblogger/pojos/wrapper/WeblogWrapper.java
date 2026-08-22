@@ -24,6 +24,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.WebloggerException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.TagStat;
@@ -259,6 +260,20 @@ public final class WeblogWrapper {
      * Relative weblog url, from the strategy this wrapper was given -- a
      * theme preview stays inside the preview, the live site links to itself.
      */
+    // NM_CONFUSING pairs this with AbstractPager.getUrl() (inherited into
+    // FeedModel$FeedEntriesPager, which is what the finding names) purely on
+    // case -- the two classes share no relationship. getURL() is the template
+    // API's spelling ($model.weblog.URL, $entry.website.URL), and getUrl() on
+    // AbstractPager is inherited by every pager in the rendering model.
+    // Renaming either would break its own unrelated call chain to fix a purely
+    // cosmetic collision. The suppression used to sit on Weblog.getURL(),
+    // which this wrapper method replaced when the entity stopped building urls.
+    @SuppressFBWarnings(
+            value = "NM_CONFUSING",
+            justification = "getURL() is the template API's spelling; the method it collides with "
+                    + "on case alone, AbstractPager.getUrl(), is inherited by every pager in the "
+                    + "rendering model. Neither side can be renamed without breaking its own, "
+                    + "entirely unrelated call chain.")
     public String getURL() {
         return urlStrategy.getWeblogURL(this.pojo, null, false);
     }

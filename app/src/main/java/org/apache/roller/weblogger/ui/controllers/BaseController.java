@@ -43,6 +43,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -83,6 +84,21 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     @InitBinder("bean")
     public void initBeanBinder(WebDataBinder binder) {
         binder.setFieldDefaultPrefix("bean.");
+    }
+
+    /**
+     * The one place the admin JSPs build weblog-content urls:
+     * {@code ${urls.weblogAbsolute(actionWeblog)}}, {@code ${urls.entry(post)}},
+     * {@code ${urls.media(f)}} and so on -- the replacement for the url getters
+     * the JPA entities used to reach the {@code URLStrategy} through. It is a
+     * {@code @ModelAttribute} rather than a line in {@link #populateCommonModel}
+     * so that every handler on every subclass gets it, and it resolves the
+     * strategy lazily because this runs for the install wizard too, before the
+     * business tier behind the {@code @Lazy weblogger} proxy exists.
+     */
+    @ModelAttribute("urls")
+    public AdminUrls urls() {
+        return new AdminUrls(weblogger::getUrlStrategy);
     }
 
     // --- UIActionPreparable default ---

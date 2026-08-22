@@ -184,10 +184,10 @@
                role="status" aria-live="polite">
                 <c:choose>
 <c:when test="${bean.published}">
-                    <a id="entry_bean_permalink" href='${entry.permalink}'><span id="entry_bean_permalink_text">${entry.permalink}</span></a>
+                    <a id="entry_bean_permalink" href='${urls.entry(entry)}'><span id="entry_bean_permalink_text">${urls.entry(entry)}</span></a>
                 </c:when>
 <c:otherwise>
-                    <span id="entry_bean_permalink_text">${entry.permalink}</span>
+                    <span id="entry_bean_permalink_text">${urls.entry(entry)}</span>
                 </c:otherwise>
 </c:choose>
                 <%-- Only offered on a published entry: a draft's permalink
@@ -195,7 +195,7 @@
                 <c:if test="${bean.published}">
                 &#183;
                 <button type="button" class="editor-permalink-copy"
-                        data-permalink="${entry.permalink}"
+                        data-permalink="${urls.entry(entry)}"
                         data-label="<spring:message code='weblogEdit.copyPermalink'/>"
                         data-copied="<spring:message code='weblogEdit.copiedPermalink'/>"
                         onclick="copyPermalink(this)"><spring:message code="weblogEdit.copyPermalink"/></button>
@@ -341,7 +341,7 @@
                         <div class="col-sm-9">
                             <div id="seo_snippet_preview" class="border rounded p-2 bg-body">
                                 <div id="seo_snippet_title" class="seo-snippet-title"></div>
-                                <div id="seo_snippet_url" class="seo-snippet-url"><c:choose><c:when test="${actionName == 'entryEdit'}">${entry.permalink}</c:when><c:otherwise>${actionWeblog.absoluteURL}<spring:message code="weblogEdit.snippetPreview.placeholderSlug"/></c:otherwise></c:choose></div>
+                                <div id="seo_snippet_url" class="seo-snippet-url"><c:choose><c:when test="${actionName == 'entryEdit'}">${urls.entry(entry)}</c:when><c:otherwise>${urls.weblogAbsolute(actionWeblog)}<spring:message code="weblogEdit.snippetPreview.placeholderSlug"/></c:otherwise></c:choose></div>
                                 <div id="seo_snippet_description" class="seo-snippet-description"></div>
                             </div>
                         </div>

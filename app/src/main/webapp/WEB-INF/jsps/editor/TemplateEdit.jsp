@@ -78,7 +78,7 @@
             <div id="good_link" class="alert alert-success"
                  style="display: none; margin-top:3em; margin-bottom:2em; padding: 1em">
                 <spring:message code="pageForm.resultingUrlWillBe"/>
-                ${actionWeblog.absoluteURL}page/
+                ${urls.weblogAbsolute(actionWeblog)}page/
                 <span id="linkPreview" style="color:var(--bad)">${fn:escapeXml(bean.link)}</span>
                 <c:if test="${template.link != null}">
                     [<button type="button" class="btn btn-link" id="launchLink" onclick="launchPage()"><spring:message code="pageForm.launch"/></button>]
@@ -193,7 +193,7 @@
 
 <script type="text/javascript">
 
-    var weblogURL = '${actionWeblog.absoluteURL}';
+    var weblogURL = '${urls.weblogAbsolute(actionWeblog)}';
     var originalLink = '${fn:escapeXml(bean.link)}';
     var type = '${bean.type}';
 

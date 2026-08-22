@@ -158,7 +158,6 @@
             <transient name="draft"/>
             <transient name="pending"/>
             <transient name="permaLink"/>
-            <transient name="permalink"/>
             <transient name="published"/>
             <transient name="rss09xDescription"/>
             <transient name="tagsAsString"/>

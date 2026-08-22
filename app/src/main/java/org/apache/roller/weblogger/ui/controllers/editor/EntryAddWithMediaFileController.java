@@ -92,7 +92,8 @@ public class EntryAddWithMediaFileController extends MediaFileBase {
                         link = "[image id=\"" + mediaFile.getId() + "\"]";
                     } else {
                         link = "<a href='<url>'><name></a> (<size> bytes, <type>)";
-                        link = link.replace("<url>", mediaFile.getPermalink())
+                        link = link.replace("<url>", weblogger.getUrlStrategy()
+                                           .getMediaFileURL(mediaFile.getWeblog(), mediaFile.getId(), true))
                                    .replace("<name>", mediaFile.getName())
                                    .replace("<size>", "" + mediaFile.getLength())
                                    .replace("<type>", mediaFile.getContentType());

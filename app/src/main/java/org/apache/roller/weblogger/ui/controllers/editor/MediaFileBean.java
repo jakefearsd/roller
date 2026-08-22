@@ -19,6 +19,7 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.RenditionSupport;
+import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.pojos.MediaFile;
 
 /**
@@ -130,10 +131,13 @@ public class MediaFileBean {
     }
 
     /**
-     * Populates this bean from a media file object.
-     * 
+     * Populates this bean from a media file object. The permalink and
+     * thumbnail url are built from the {@link URLStrategy} the caller hands in
+     * -- the entity no longer builds them itself (it used to reach the strategy
+     * through the static service locator), and a form bean must not locate
+     * anything either.
      */
-    public void copyFrom(MediaFile dataHolder) {
+    public void copyFrom(MediaFile dataHolder, URLStrategy urls) {
         this.setId(dataHolder.getId());
         this.setName(dataHolder.getName());
         this.setDescription(dataHolder.getDescription());
@@ -141,8 +145,8 @@ public class MediaFileBean {
         this.setCopyrightText(dataHolder.getCopyrightText());
         this.setTagsAsString(dataHolder.getTagsAsString());
         this.setDirectoryId(dataHolder.getDirectory().getId());
-        this.setPermalink(dataHolder.getPermalink());
-        this.setThumbnailURL(dataHolder.getThumbnailURL());
+        this.setPermalink(urls.getMediaFileURL(dataHolder.getWeblog(), dataHolder.getId(), true));
+        this.setThumbnailURL(urls.getMediaFileThumbnailURL(dataHolder.getWeblog(), dataHolder.getId(), true));
         this.setIsImage(dataHolder.isImageFile());
         this.setWidth(dataHolder.getWidth());
         this.setHeight(dataHolder.getHeight());

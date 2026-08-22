@@ -700,12 +700,16 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         registerMessage("weblogEdit.publishedEntry", "published <a href=\"{0}\">View it</a>");
         existingEntry(PubStatus.DRAFT);
         userMayPost = true;
+        // The permalink is built from the injected strategy (the entity no
+        // longer builds one), so stub the strategy and expect exactly its answer.
+        when(weblogger.urlStrategy().getWeblogEntryURL(any(), org.mockito.ArgumentMatchers.isNull(),
+                any(), org.mockito.ArgumentMatchers.eq(true)))
+                .thenReturn("http://example.com/testblog/entry/the-post");
 
         controller.entryEditPublish(request, model, bean);
 
-        WeblogEntry saved = captureSavedEntry();
         assertTrue(messages(model).contains(
-                        "published <a href=\"" + saved.getPermalink() + "\">View it</a>"),
+                        "published <a href=\"http://example.com/testblog/entry/the-post\">View it</a>"),
                 "Expected the publish message to carry the entry's permalink, got: "
                         + messages(model));
     }

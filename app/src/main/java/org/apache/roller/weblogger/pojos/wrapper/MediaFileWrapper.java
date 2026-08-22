@@ -140,6 +140,10 @@ public final class MediaFileWrapper {
      * Permalink to the original, full-size file, from the strategy this
      * wrapper was given -- a theme preview stays inside the preview.
      */
+    // SpotBugs pairs this with the unrelated, @Deprecated WeblogEntry.getPermaLink()
+    // on case alone (NM_CONFUSING); the suppression sits on that method, which is
+    // where SpotBugs anchors the finding. getPermalink() is the canonical template
+    // spelling ($image.permalink) and cannot be renamed.
     public String getPermalink() {
         return urlStrategy.getMediaFileURL(this.pojo.getWeblog(), this.pojo.getId(), true);
     }

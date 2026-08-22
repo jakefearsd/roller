@@ -50,10 +50,10 @@
     <div class="row mb-3">
         <span class="col-sm-3 col-form-label"><spring:message code="websiteSettings.weblogUrl"/></span>
         <div class="col-sm-9">
-            <a id="weblogAbsoluteUrl" href="${actionWeblog.absoluteURL}"
-               target="_blank" rel="noopener">${actionWeblog.absoluteURL}</a>
+            <a id="weblogAbsoluteUrl" href="${urls.weblogAbsolute(actionWeblog)}"
+               target="_blank" rel="noopener">${urls.weblogAbsolute(actionWeblog)}</a>
             <button class="clipbutton" type="button"
-                    data-clipboard-text="${actionWeblog.absoluteURL}"
+                    data-clipboard-text="${urls.weblogAbsolute(actionWeblog)}"
                     aria-label="<spring:message code='generic.copyToClipboard'/>">
                 <img src='<c:url value="/roller-ui/images/clippy.svg"/>' alt=""
                      style="width:0.9em; height:0.9em">

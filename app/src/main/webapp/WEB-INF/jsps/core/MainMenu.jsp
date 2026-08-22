@@ -58,8 +58,8 @@
                 ${fn:escapeXml(perms.weblog.name)}
             </h3>
 
-            <p> <a href='${fn:escapeXml(perms.weblog.absoluteURL)}'>
-            ${fn:escapeXml(perms.weblog.absoluteURL)}</a></p>
+            <p> <a href='${fn:escapeXml(urls.weblogAbsolute(perms.weblog))}'>
+            ${fn:escapeXml(urls.weblogAbsolute(perms.weblog))}</a></p>
 
             <p><c:out value="${perms.weblog.about}" escapeXml="false"/></p>
 

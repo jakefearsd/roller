@@ -28,7 +28,7 @@
     <c:when test="${actionWeblog != null}">
         <span class="visually-hidden"><spring:message code="mainPage.currentWebsite"/>:</span>
         <div class="rail-context-name">
-            <a href="${fn:escapeXml(actionWeblog.absoluteURL)}">${fn:escapeXml(actionWeblog.name)}</a>
+            <a href="${fn:escapeXml(urls.weblogAbsolute(actionWeblog))}">${fn:escapeXml(actionWeblog.name)}</a>
         </div>
         <div class="rail-context-handle">
             <c:if test="${actionWeblog.visible}">

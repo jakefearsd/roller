@@ -189,7 +189,7 @@
                 <c:forEach var="perms" items="${permissions}">
                     <tr>
                         <td width="%30">
-                            <a href='${perms.weblog.absoluteURL}'>
+                            <a href='${urls.weblogAbsolute(perms.weblog)}'>
                                 ${fn:escapeXml(perms.weblog.name)} [${fn:escapeXml(perms.weblog.handle)}]
                             </a>
                         </td>

@@ -265,7 +265,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         mediaFile.setAltText("A red kite riding the thermal");
 
         MediaFileBean copy = new MediaFileBean();
-        copy.copyFrom(mediaFile);
+        copy.copyFrom(mediaFile, weblogger.urlStrategy());
 
         assertEquals("file-1", copy.getId());
         assertEquals("photo.jpg", copy.getName());
@@ -295,7 +295,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         // wave itself never closed (the only thing pinning it was a browser
         // test, which does not run on a push).
         MediaFileBean copy = new MediaFileBean();
-        copy.copyFrom(mediaFile);
+        copy.copyFrom(mediaFile, weblogger.urlStrategy());
         copy.setAltText("");
 
         MediaFile target = new MediaFile();
@@ -311,7 +311,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         // side effects; a plain field copy would leave the file's row pointing
         // at a folder its bytes are not in.
         MediaFileBean copy = new MediaFileBean();
-        copy.copyFrom(mediaFile);
+        copy.copyFrom(mediaFile, weblogger.urlStrategy());
         copy.setDirectoryId("dir-2");
 
         MediaFile target = new MediaFile();
@@ -417,7 +417,7 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
         mediaFile.setFocalY(0.75);
 
         MediaFileBean copy = new MediaFileBean();
-        copy.copyFrom(mediaFile);
+        copy.copyFrom(mediaFile, weblogger.urlStrategy());
         assertEquals(0.25, copy.getFocalX());
         assertEquals(0.75, copy.getFocalY());
 

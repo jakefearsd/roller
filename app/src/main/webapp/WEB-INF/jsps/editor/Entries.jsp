@@ -203,7 +203,7 @@
     <td>
         <c:choose>
         <c:when test="${post.status.name() == 'PUBLISHED'}">
-            <a href='${post.permalink}'>
+            <a href='${urls.entry(post)}'>
                 <str:truncateNicely upper="80">${post.displayTitle}</str:truncateNicely>
             </a>
         </c:when>

@@ -261,26 +261,9 @@ class WeblogLogicTest {
                         + "create it, rather than returning an arbitrary other directory");
     }
 
-    // ------------------------------------------------------------- urls
-
-    @Test
-    void urlAccessorsAskTheUrlStrategyForTheRightFlavour() {
-        URLStrategy urls = mock(URLStrategy.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getUrlStrategy()).thenReturn(urls);
-        when(urls.getWeblogURL(weblog, null, false)).thenReturn("/roller/testblog/");
-        when(urls.getWeblogURL(weblog, null, true)).thenReturn("http://example.com/roller/testblog/");
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertEquals("/roller/testblog/", weblog.getURL(),
-                    "getURL() must ask for the context-relative form");
-            assertEquals("http://example.com/roller/testblog/", weblog.getAbsoluteURL(),
-                    "getAbsoluteURL() must ask for the absolute form -- feeds and "
-                            + "notification e-mails are read outside the site and need it");
-        }
-    }
+    // urls: Weblog.getURL()/getAbsoluteURL() moved off the entity (the wrapper
+    // and AdminUrls build them from an injected URLStrategy); see AdminUrlsTest
+    // and WeblogWrapperDelegationTest for the relative/absolute-flavour checks.
 
     // -------------------------------------------------- recent entry finders
 

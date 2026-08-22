@@ -100,8 +100,6 @@
                     <cascade-remove />
                 </cascade>
             </one-to-many>
-            <transient name="thumbnailURL"/>
-            <transient name="permalink"/>
             <transient name="lastModified"/>
             <transient name="path"/>
             <transient name="creator"/>

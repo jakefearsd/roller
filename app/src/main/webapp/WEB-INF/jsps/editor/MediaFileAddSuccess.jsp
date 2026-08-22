@@ -49,7 +49,7 @@
 
                         <div class="col-md-2">
                             <img class="mediaFileImage"
-                                 src='${newImage.thumbnailURL}' alt=""/>
+                                 src='${urls.mediaThumbnail(newImage)}' alt=""/>
                         </div>
 
                         <div class="col-md-9">
@@ -80,7 +80,7 @@
                             <p>
                                 <input type="text" class="form-control-plaintext d-inline-block w-auto"
                                        id="clip_image_${newImage.id}" size="57"
-                                       value='${newImage.permalink}' readonly
+                                       value='${urls.media(newImage)}' readonly
                                        aria-label="<spring:message code='mediaFileSuccess.link'/>"/>
                                 <button class="clipbutton" type="button"
                                         data-clipboard-target="#clip_image_${newImage.id}"
@@ -116,7 +116,7 @@
                         <div class="col-md-1">
                             <input type="radio" name="enclosure"
                                    aria-label="${fn:escapeXml(newFile.name)}"
-                                   onchange="setEnclosure('${newFile.permalink}')"/>
+                                   onchange="setEnclosure('${urls.media(newFile)}')"/>
                         </div>
 
                         <div class="col-md-11">
@@ -144,7 +144,7 @@
                             <p>
                                 <input type="text" class="form-control-plaintext d-inline-block w-auto"
                                        id="clip_file_${newFile.id}" size="57"
-                                       value='${newFile.permalink}' readonly
+                                       value='${urls.media(newFile)}' readonly
                                        aria-label="<spring:message code='mediaFileSuccess.link'/>"/>
                                 <button class="clipbutton" type="button"
                                         data-clipboard-target="#clip_file_${newFile.id}"
