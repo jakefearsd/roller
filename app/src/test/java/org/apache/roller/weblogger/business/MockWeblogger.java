@@ -17,6 +17,8 @@
 */
 package org.apache.roller.weblogger.business;
 
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
+
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.shortcodes.ShortcodeExpander;
 import org.mockito.Mockito;
@@ -145,6 +147,7 @@ public final class MockWeblogger {
      * whatever runs next in the same JVM.
      */
     private static WebloggerProvider previousProvider;
+    private static PropertiesManager previousRuntimeConfig;
 
     public static MockWeblogger install() {
         MockWeblogger mocks;
@@ -155,6 +158,11 @@ public final class MockWeblogger {
             throw new IllegalStateException("Could not build the mock business tier", e);
         }
         previousProvider = WebloggerFactory.currentProvider();
+        // WebloggerRuntimeConfig reads through an attached PropertiesManager
+        // (spec Decision 8 of the 2026-08-22 plan), not through the provider:
+        // installing a mock tier therefore also attaches the mock's manager,
+        // with the same save/restore discipline as the provider itself.
+        previousRuntimeConfig = WebloggerRuntimeConfig.attach(mocks.propertiesManager);
         WebloggerFactory.installProvider(new WebloggerProvider() {
             @Override
             public boolean isBootstrapped() {
@@ -184,6 +192,33 @@ public final class MockWeblogger {
     public static void uninstall() {
         WebloggerFactory.installProvider(previousProvider);
         previousProvider = null;
+        WebloggerRuntimeConfig.attach(previousRuntimeConfig);
+        previousRuntimeConfig = null;
+    }
+
+    /**
+     * Points {@code WebloggerRuntimeConfig} at this mock tier's properties
+     * manager without installing the tier into the static factory -- for a
+     * test whose class under test is injected but whose runtime-config reads
+     * still go through the static facade. Returns an {@link AutoCloseable}
+     * that restores whatever was attached before; use it in try-with-resources.
+     */
+    public RuntimeConfigAttachment attachRuntimeConfig() {
+        return new RuntimeConfigAttachment(WebloggerRuntimeConfig.attach(propertiesManager));
+    }
+
+    /** Restores the previous attachment; see {@link #attachRuntimeConfig()}. */
+    public static final class RuntimeConfigAttachment implements AutoCloseable {
+        private final PropertiesManager previous;
+
+        private RuntimeConfigAttachment(PropertiesManager previous) {
+            this.previous = previous;
+        }
+
+        @Override
+        public void close() {
+            WebloggerRuntimeConfig.attach(previous);
+        }
     }
 
     /**
@@ -196,6 +231,8 @@ public final class MockWeblogger {
     public static void installNotBootstrapped() {
         previousProvider = WebloggerFactory.currentProvider();
         WebloggerFactory.installProvider(null);
+        // Pre-bootstrap, nothing is attached either: runtime reads answer null.
+        previousRuntimeConfig = WebloggerRuntimeConfig.attach(null);
     }
 
     public Weblogger weblogger() {

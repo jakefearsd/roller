@@ -24,7 +24,7 @@ import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -61,7 +61,7 @@ import static org.mockito.Mockito.when;
  * the fact that a delegation happened. A URL that changes shape breaks
  * permalinks and feed identity for every existing post.
  *
- * <p>{@link WebloggerFactory} is stubbed out so nothing reaches the database:
+ * <p>A mock properties manager is attached to {@code WebloggerRuntimeConfig} so nothing reaches the database:
  * the strategy only needs the two context URLs, which are plain static fields.
  */
 class URLModelTest {
@@ -69,7 +69,7 @@ class URLModelTest {
     private static final String SITE = "/roller";
     private static final String ABSOLUTE_SITE = "http://blogs.example.com/roller";
 
-    private MockedStatic<WebloggerFactory> factory;
+    private RuntimeConfigAttachment runtimeConfig;
     private Weblogger weblogger;
     private Weblog weblog;
     private URLModel model;
@@ -79,19 +79,12 @@ class URLModelTest {
     @BeforeEach
     void setUp() throws Exception {
         // WebloggerRuntimeConfig reads site.absoluteurl through the properties
-        // manager before falling back to the value the InitFilter published.
-        // Stubbing the factory keeps that lookup from throwing (and from
-        // logging a stack trace) on every single URL we build.
+        // manager attached to it before falling back to the value the
+        // InitFilter published (spec Decision 8 / plan Task 19); a mock manager
+        // is attached so that lookup answers null quietly on every URL built.
         // The facade the model is GIVEN through initData.
         weblogger = mock(Weblogger.class);
-        // The static shim stays mocked only for WebloggerRuntimeConfig (spec
-        // Decision 8 / plan Task 19), answering with a SEPARATE facade that
-        // knows nothing but the properties manager.
-        PropertiesManager properties = mock(PropertiesManager.class);
-        Weblogger runtimeConfigOnly = mock(Weblogger.class);
-        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(properties);
-        factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
+        runtimeConfig = RuntimeConfigAttachment.of(mock(PropertiesManager.class));
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL(SITE);
@@ -107,7 +100,7 @@ class URLModelTest {
     void tearDown() {
         WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
         WebloggerRuntimeConfig.setAbsoluteContextURL(null);
-        factory.close();
+        runtimeConfig.close();
     }
 
     private URLModel modelFor(Weblog weblog, String locale, URLStrategy strategy)

@@ -92,7 +92,6 @@ class StaticServiceLocatorTest {
      * 73 files, 164 call sites.
      */
     static final Set<String> ALLOWED = Set.of(
-            PKG + "config/WebloggerRuntimeConfig.java",
             // TRANSITIONAL (Task 3): bootstrap() self-installs into the shim so unmigrated
             // callers keep working; Task 20 deletes that line with the shim.
             PKG + "business/SpringWebloggerProvider.java");

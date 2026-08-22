@@ -24,7 +24,7 @@ import org.apache.roller.weblogger.business.MultiWeblogURLStrategy;
 import org.apache.roller.weblogger.business.PreviewURLStrategy;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -35,7 +35,6 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogPreviewRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,7 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -63,7 +61,7 @@ class PreviewModelsTest {
     private static final String SITE = "/roller";
     private static final String ABSOLUTE_SITE = "http://blogs.example.com/roller";
 
-    private MockedStatic<WebloggerFactory> factory;
+    private RuntimeConfigAttachment runtimeConfig;
     private Weblogger weblogger;
     private Weblog weblog;
     private String previousRelativeContextURL;
@@ -72,13 +70,9 @@ class PreviewModelsTest {
     void setUp() {
         // The facade the models are GIVEN through initData.
         weblogger = mock(Weblogger.class);
-        // The static shim stays mocked only for WebloggerRuntimeConfig (spec
-        // Decision 8 / plan Task 19), answering with a SEPARATE facade that
-        // knows nothing but the properties manager.
-        Weblogger runtimeConfigOnly = mock(Weblogger.class);
-        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
-        factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
+        // WebloggerRuntimeConfig reads the properties manager attached to it
+        // (spec Decision 8 / plan Task 19); a mock is attached, nothing else.
+        runtimeConfig = RuntimeConfigAttachment.of(mock(PropertiesManager.class));
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL(SITE);
@@ -92,7 +86,7 @@ class PreviewModelsTest {
     void tearDown() {
         WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
         WebloggerRuntimeConfig.setAbsoluteContextURL(null);
-        factory.close();
+        runtimeConfig.close();
     }
 
     /**

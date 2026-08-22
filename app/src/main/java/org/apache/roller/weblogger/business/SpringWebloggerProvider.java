@@ -19,8 +19,10 @@ package org.apache.roller.weblogger.business;
 
 import org.apache.roller.weblogger.business.jpa.WebloggerBeanConfig;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -44,7 +46,7 @@ import org.springframework.stereotype.Component;
  * private context from {@link WebloggerBeanConfig} on first bootstrap.
  */
 @Component
-public class SpringWebloggerProvider implements WebloggerProvider {
+public class SpringWebloggerProvider implements WebloggerProvider, DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(SpringWebloggerProvider.class);
 
@@ -132,6 +134,11 @@ public class SpringWebloggerProvider implements WebloggerProvider {
         }
         this.weblogger = built;
 
+        // The runtime-config facade reads through the attached manager from
+        // here on (spec Decision 8 of the 2026-08-22 plan): attached before
+        // initialize() so nothing inside it can regress to a null read.
+        WebloggerRuntimeConfig.attach(built.getPropertiesManager());
+
         // TRANSITIONAL -- deleted by Task 20 of the 2026-08-22 plan along with
         // WebloggerFactory itself: the not-yet-migrated static callers must
         // keep seeing the tier this bean bootstrapped.
@@ -147,6 +154,22 @@ public class SpringWebloggerProvider implements WebloggerProvider {
             throw new BootstrapException("Roller Weblogger initialization failed", ex);
         } finally {
             built.release();
+        }
+    }
+
+    /**
+     * Context close: the runtime-config facade must not keep answering from a
+     * tier that is being torn down -- but only the manager THIS provider
+     * attached is cleared, so a context that never bootstrapped (or a second
+     * tier in the same JVM, as the test suite has) cannot detach someone
+     * else's. Only the Boot-managed instance is a bean; the standalone test
+     * provider lives as long as its JVM.
+     */
+    @Override
+    public void destroy() {
+        Weblogger built = weblogger;
+        if (built != null) {
+            WebloggerRuntimeConfig.detach(built.getPropertiesManager());
         }
     }
 

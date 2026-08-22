@@ -25,7 +25,7 @@ import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.User;
@@ -41,7 +41,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -58,7 +57,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -75,7 +73,7 @@ import static org.mockito.Mockito.when;
  */
 class SiteModelTest {
 
-    private MockedStatic<WebloggerFactory> factory;
+    private RuntimeConfigAttachment runtimeConfig;
     private Weblogger weblogger;
     private UserManager userManager;
     private WeblogManager weblogManager;
@@ -95,20 +93,12 @@ class SiteModelTest {
         when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
         when(weblogger.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
 
-        // The static shim is still mocked, but with a SEPARATE facade that
-        // deliberately has NO entry manager: the pagers the model builds now
-        // take the facade from the model (plan Task 11), so a pager that
-        // regressed to static location would find nothing and fail. What the
-        // static facade still answers for is the pojo getters the wrappers
-        // delegate to -- WeblogPermission.getWeblog()/getUser() resolve by
-        // name through the weblog/user managers (Stage D) -- and
-        // WebloggerRuntimeConfig's property reads (Task 19).
-        Weblogger staticallyReachable = mock(Weblogger.class);
-        when(staticallyReachable.getUserManager()).thenReturn(userManager);
-        when(staticallyReachable.getWeblogManager()).thenReturn(weblogManager);
-        when(staticallyReachable.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
-        factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(staticallyReachable);
+        // Nothing is reachable statically any more: the pagers and wrappers
+        // the model builds take the facade from the model (plan Tasks 11, 13,
+        // 16), and WebloggerRuntimeConfig's property reads go through the
+        // properties manager attached to it (plan Task 19) -- a mock one here,
+        // so a regression to static location of any manager fails loudly.
+        runtimeConfig = RuntimeConfigAttachment.of(mock(PropertiesManager.class));
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL("/roller");
@@ -122,7 +112,7 @@ class SiteModelTest {
     void tearDown() {
         WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
         WebloggerRuntimeConfig.setAbsoluteContextURL(null);
-        factory.close();
+        runtimeConfig.close();
     }
 
     private SiteModel modelFor(WeblogRequest request) throws WebloggerException {

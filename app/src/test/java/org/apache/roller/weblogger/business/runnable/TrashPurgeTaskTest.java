@@ -27,14 +27,13 @@ import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,7 +44,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,7 +67,7 @@ class TrashPurgeTaskTest {
     private WeblogManager weblogManager;
     private WeblogEntryManager entryManager;
     private PropertiesManager propertiesManager;
-    private MockedStatic<WebloggerFactory> locator;
+    private RuntimeConfigAttachment runtimeConfig;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -81,25 +79,18 @@ class TrashPurgeTaskTest {
         when(weblogger.getWeblogManager()).thenReturn(weblogManager);
         when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
 
-        // The task itself no longer touches the static locator -- it works
-        // against the Weblogger handed to init(weblogger, name) above. But
-        // runTask() reads entry.trash.retention.days through
-        // WebloggerRuntimeConfig.getIntProperty, which still reaches
-        // WebloggerFactory (the one residual the DI wave leaves for its Task
-        // 19 / spec Decision 8). So the locator is mocked here for THAT read
-        // only, and deliberately answers with a DIFFERENT facade that knows
-        // nothing but the properties manager: if the task regressed to
-        // fetching its managers through the static, it would get null and
-        // these tests would fail rather than pass by accident.
-        Weblogger locatorOnly = mock(Weblogger.class);
-        when(locatorOnly.getPropertiesManager()).thenReturn(propertiesManager);
-        locator = mockStatic(WebloggerFactory.class);
-        locator.when(WebloggerFactory::getWeblogger).thenReturn(locatorOnly);
+        // The task works against the Weblogger handed to init(weblogger, name)
+        // above. runTask() reads entry.trash.retention.days through
+        // WebloggerRuntimeConfig.getIntProperty, which reads the properties
+        // manager attached to it (spec Decision 8 / plan Task 19) -- so that is
+        // attached here, and nothing else: a task that regressed to locating
+        // its managers statically would find nothing and fail.
+        runtimeConfig = RuntimeConfigAttachment.of(propertiesManager);
     }
 
     @AfterEach
     void tearDown() {
-        locator.close();
+        runtimeConfig.close();
     }
 
     /**

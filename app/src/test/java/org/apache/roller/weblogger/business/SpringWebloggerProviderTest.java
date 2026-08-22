@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.business;
 
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,15 +50,20 @@ class SpringWebloggerProviderTest {
      * the suite runs against a mock. Same discipline as {@code MockWeblogger}.
      */
     private WebloggerProvider previouslyInstalled;
+    // A throwaway provider's bootstrap() also attaches its manager to
+    // WebloggerRuntimeConfig (plan Task 19); restore that too, for the same reason.
+    private RuntimeConfigAttachment previouslyAttached;
 
     @BeforeEach
     void rememberInstalledProvider() {
         previouslyInstalled = WebloggerFactory.currentProvider();
+        previouslyAttached = RuntimeConfigAttachment.preserve();
     }
 
     @AfterEach
     void restoreInstalledProvider() {
         WebloggerFactory.installProvider(previouslyInstalled);
+        previouslyAttached.close();
     }
 
     // ------------------------------------------------ the bean contract (D2)

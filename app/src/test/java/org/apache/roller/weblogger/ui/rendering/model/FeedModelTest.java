@@ -24,7 +24,7 @@ import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -36,7 +36,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -52,7 +51,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -69,7 +67,7 @@ class FeedModelTest {
 
     private static final String ABSOLUTE_SITE = "http://blogs.example.com/roller";
 
-    private MockedStatic<WebloggerFactory> factory;
+    private RuntimeConfigAttachment runtimeConfig;
     private Weblogger weblogger;
     private PropertiesManager properties;
     private Weblog weblog;
@@ -81,15 +79,11 @@ class FeedModelTest {
         weblogger = mock(Weblogger.class);
         properties = mock(PropertiesManager.class);
         when(weblogger.getPropertiesManager()).thenReturn(properties);
-        // The static shim is still mocked, but with a SEPARATE, properties-only
-        // facade: the FeedEntriesPager the model builds now takes the facade
-        // from the model (plan Task 11), so only WebloggerRuntimeConfig's
-        // feed-size read still goes through the static (Task 19). A pager that
-        // regressed to static location would find no entry manager and fail.
-        Weblogger runtimeConfigOnly = mock(Weblogger.class);
-        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(properties);
-        factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
+        // WebloggerRuntimeConfig's feed-size read goes through the manager
+        // attached to it (plan Task 19); the FeedEntriesPager the model builds
+        // takes the facade from the model (plan Task 11), and nothing else is
+        // reachable statically any more.
+        runtimeConfig = RuntimeConfigAttachment.of(properties);
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL("/roller");
@@ -103,7 +97,7 @@ class FeedModelTest {
     void tearDown() {
         WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
         WebloggerRuntimeConfig.setAbsoluteContextURL(null);
-        factory.close();
+        runtimeConfig.close();
     }
 
     private WeblogFeedRequest feedRequest(String type, String format) {

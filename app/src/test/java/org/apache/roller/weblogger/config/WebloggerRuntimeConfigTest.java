@@ -17,15 +17,48 @@
  */
 package org.apache.roller.weblogger.config;
 
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
- * Tests for {@link WebloggerRuntimeConfig#getRuntimeConfigDefsAsString()},
- * previously uncovered.
+ * {@link WebloggerRuntimeConfig} reads through the {@link PropertiesManager}
+ * the provider attached at bootstrap (spec Decision 8 of the 2026-08-22
+ * static-service-locator plan) -- no longer through the static locator. The
+ * pre-bootstrap contract is unchanged: with nothing attached every read
+ * answers {@code null}, and the boolean/fallback readers fall through to the
+ * static {@code WebloggerConfig} exactly as before.
+ *
+ * <p>The attachment is process-global (the one static this class deliberately
+ * keeps until the configuration wave retires it), so each test saves what was
+ * attached on entry and restores it on exit -- a DB-backed class that
+ * bootstrapped the real tier earlier in the JVM must find its manager still
+ * attached afterwards.
  */
 class WebloggerRuntimeConfigTest {
+
+    private PropertiesManager previouslyAttached;
+
+    @BeforeEach
+    void saveAttachment() {
+        previouslyAttached = WebloggerRuntimeConfig.attach(null);
+    }
+
+    @AfterEach
+    void restoreAttachment() {
+        WebloggerRuntimeConfig.attach(previouslyAttached);
+    }
 
     @Test
     void getRuntimeConfigDefsAsStringReturnsTheActualXmlFileContent() {
@@ -35,5 +68,88 @@ class WebloggerRuntimeConfigTest {
                 "must be the real runtimeConfigDefs.xml, not the empty-string error fallback");
         assertTrue(defs.contains("site.name"),
                 "must contain a known runtime property definition");
+    }
+
+    @Test
+    void nothingAttachedMeansEveryReadAnswersNullAsBeforeBootstrap() {
+        assertNull(WebloggerRuntimeConfig.getProperty("site.name"));
+        assertEquals(-1, WebloggerRuntimeConfig.getIntProperty("site.pages.maxEntries"));
+        assertFalse(WebloggerRuntimeConfig.getBooleanProperty("some.flag.nobody.defines"));
+    }
+
+    @Test
+    void anAttachedManagerAnswersTheReads() throws WebloggerException {
+        PropertiesManager manager = mock(PropertiesManager.class);
+        when(manager.getProperty("site.name"))
+                .thenReturn(new RuntimeConfigProperty("site.name", "Attached Site"));
+        when(manager.getProperty("site.pages.maxEntries"))
+                .thenReturn(new RuntimeConfigProperty("site.pages.maxEntries", "42"));
+        when(manager.getProperty("some.flag"))
+                .thenReturn(new RuntimeConfigProperty("some.flag", "true"));
+
+        WebloggerRuntimeConfig.attach(manager);
+
+        assertEquals("Attached Site", WebloggerRuntimeConfig.getProperty("site.name"));
+        assertEquals(42, WebloggerRuntimeConfig.getIntProperty("site.pages.maxEntries"));
+        assertTrue(WebloggerRuntimeConfig.getBooleanProperty("some.flag"));
+    }
+
+    @Test
+    void aFailingManagerIsLoggedAndReadAsNull() throws WebloggerException {
+        PropertiesManager manager = mock(PropertiesManager.class);
+        when(manager.getProperty("site.name")).thenThrow(new WebloggerException("store down"));
+        WebloggerRuntimeConfig.attach(manager);
+
+        assertNull(WebloggerRuntimeConfig.getProperty("site.name"),
+                "the broad catch that answered null before the attachment still answers null");
+    }
+
+    @Test
+    void theBooleanReaderFallsBackToTheStaticConfigWhenTheRuntimeRowIsAbsent()
+            throws WebloggerException {
+        // groupblogging.enabled is true in roller.properties; an attached
+        // manager that has no row for it must not mask that fallback.
+        PropertiesManager manager = mock(PropertiesManager.class);
+        when(manager.getProperty("groupblogging.enabled")).thenReturn(null);
+        WebloggerRuntimeConfig.attach(manager);
+
+        assertEquals(Boolean.parseBoolean(WebloggerConfig.getProperty("groupblogging.enabled")),
+                WebloggerRuntimeConfig.getBooleanProperty("groupblogging.enabled"));
+        assertEquals(WebloggerConfig.getProperty("groupblogging.enabled"),
+                WebloggerRuntimeConfig.getPropertyWithConfigFallback("groupblogging.enabled"));
+    }
+
+    @Test
+    void detachOfASpecificManagerClearsOnlyThatOne() throws WebloggerException {
+        PropertiesManager mine = mock(PropertiesManager.class);
+        PropertiesManager someoneElses = mock(PropertiesManager.class);
+        when(someoneElses.getProperty("k")).thenReturn(new RuntimeConfigProperty("k", "theirs"));
+
+        WebloggerRuntimeConfig.attach(someoneElses);
+        assertFalse(WebloggerRuntimeConfig.detach(mine),
+                "a tier that never attached must not clear another tier's attachment");
+        assertEquals("theirs", WebloggerRuntimeConfig.getProperty("k"));
+        assertFalse(WebloggerRuntimeConfig.detach(null));
+
+        assertTrue(WebloggerRuntimeConfig.detach(someoneElses));
+        assertNull(WebloggerRuntimeConfig.getProperty("k"));
+    }
+
+    @Test
+    void attachReplacesAndReturnsThePreviousManagerAndDetachClears() throws WebloggerException {
+        PropertiesManager first = mock(PropertiesManager.class);
+        PropertiesManager second = mock(PropertiesManager.class);
+        when(first.getProperty("k")).thenReturn(new RuntimeConfigProperty("k", "one"));
+        when(second.getProperty("k")).thenReturn(new RuntimeConfigProperty("k", "two"));
+
+        assertNull(WebloggerRuntimeConfig.attach(first), "nothing was attached on entry");
+        assertEquals("one", WebloggerRuntimeConfig.getProperty("k"));
+
+        assertSame(first, WebloggerRuntimeConfig.attach(second),
+                "attach hands back what it replaced, so a fixture can restore it");
+        assertEquals("two", WebloggerRuntimeConfig.getProperty("k"));
+
+        WebloggerRuntimeConfig.detach();
+        assertNull(WebloggerRuntimeConfig.getProperty("k"));
     }
 }

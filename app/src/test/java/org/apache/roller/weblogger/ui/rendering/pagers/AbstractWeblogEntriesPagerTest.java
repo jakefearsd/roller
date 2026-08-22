@@ -26,14 +26,13 @@ import java.util.TimeZone;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -45,7 +44,6 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -133,23 +131,13 @@ class AbstractWeblogEntriesPagerTest {
 
     /**
      * Runs the body with the runtime config answering site.pages.maxEntries.
-     * The pager reads it through WebloggerRuntimeConfig, which goes to the
-     * PropertiesManager, so the whole chain has to be stood up.
+     * The pager reads it through WebloggerRuntimeConfig, which reads the
+     * properties manager attached to it (plan Task 19), so that is what is
+     * attached here -- and nothing else.
      */
     private static void withSiteMaxEntries(int maxEntries, Runnable body) {
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger weblogger = mock(Weblogger.class);
-            PropertiesManager propertiesManager = mock(PropertiesManager.class);
-            try {
-                when(propertiesManager.getProperty("site.pages.maxEntries"))
-                        .thenReturn(new RuntimeConfigProperty("site.pages.maxEntries",
-                                String.valueOf(maxEntries)));
-            } catch (WebloggerException impossible) {
-                // getProperty declares this; stubbing a mock never actually throws.
-                throw new AssertionError("stubbing a mock must not throw", impossible);
-            }
-            when(weblogger.getPropertiesManager()).thenReturn(propertiesManager);
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        try (RuntimeConfigAttachment ignored = RuntimeConfigAttachment.answering(
+                "site.pages.maxEntries", String.valueOf(maxEntries))) {
             body.run();
         }
     }

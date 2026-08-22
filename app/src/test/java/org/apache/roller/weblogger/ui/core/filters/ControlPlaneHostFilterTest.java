@@ -2,19 +2,18 @@ package org.apache.roller.weblogger.ui.core.filters;
 
 import java.util.List;
 
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -25,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -81,15 +79,15 @@ class ControlPlaneHostFilterTest {
     // the redirect-loop guard are exercised by something other than a manual
     // trace: this class was otherwise going to ship with its two largest
     // methods (doFilter, siteHostUrl) completely uncovered by the diff-coverage
-    // gate. WebloggerFactory is mocked exactly as URLModelTest mocks it, so
-    // VirtualHostRegistry.handleFor resolves against an in-memory weblog rather
-    // than the database, and site.absoluteurl is controlled directly through a
-    // mocked PropertiesManager rather than a real save/restore round trip.
+    // gate. The registry resolves against an in-memory weblog rather than the
+    // database, and site.absoluteurl is controlled directly through a mocked
+    // PropertiesManager attached to WebloggerRuntimeConfig rather than a real
+    // save/restore round trip.
 
     private static final String VHOST = "vhost.example.com";
     private static final String SITE_URL = "https://control.example.com";
 
-    private MockedStatic<WebloggerFactory> factory;
+    private RuntimeConfigAttachment runtimeConfig;
     private PropertiesManager properties;
     private WebloggerProvider provider;
     private ControlPlaneHostFilter filter;
@@ -111,23 +109,18 @@ class ControlPlaneHostFilterTest {
         when(provider.isBootstrapped()).thenReturn(true);
         filter = new ControlPlaneHostFilter(provider, injected);
 
-        // The ONE thing still reached statically: siteHostUrl() reads
-        // site.absoluteurl through WebloggerRuntimeConfig, whose single static
-        // hop is plan Task 19's. The static facade deliberately carries NO
-        // registry and NO weblog manager, so a filter that regressed to
-        // locating the registry statically would see no custom domain and
-        // every redirect test below would fail.
-        Weblogger staticFacade = mock(Weblogger.class);
+        // siteHostUrl() reads site.absoluteurl through WebloggerRuntimeConfig,
+        // which reads the properties manager attached to it (plan Task 19).
+        // Only the manager is attached -- no registry, no weblog manager -- so
+        // a filter that regressed to locating the registry statically would
+        // see no custom domain and every redirect test below would fail.
         properties = mock(PropertiesManager.class);
-        when(staticFacade.getPropertiesManager()).thenReturn(properties);
-        factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(staticFacade);
-        factory.when(WebloggerFactory::isBootstrapped).thenReturn(true);
+        runtimeConfig = RuntimeConfigAttachment.of(properties);
     }
 
     @AfterEach
-    void tearDownWebloggerFactory() {
-        factory.close();
+    void tearDownRuntimeConfig() {
+        runtimeConfig.close();
     }
 
     private void givenSiteAbsoluteUrl(String value) throws WebloggerException {

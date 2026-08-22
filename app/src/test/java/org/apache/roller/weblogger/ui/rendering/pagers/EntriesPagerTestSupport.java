@@ -24,17 +24,15 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.Weblog;
-import org.mockito.MockedStatic;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -44,11 +42,11 @@ import static org.mockito.Mockito.when;
  * {@code WebloggerRuntimeConfig} for the site page-size ceiling, and once
  * through the {@link WeblogEntryManager} for the entries themselves. The
  * entries come from the {@link Weblogger} the pager is constructed with
- * ({@link #weblogger}, plan Task 11); only the runtime-config read still goes
- * through the {@code WebloggerFactory} static (plan Task 19), which is why
- * {@link #withRuntimeConfig} installs a SEPARATE, properties-only facade there:
- * a pager that regressed to locating its entry manager statically would find
- * none and fail, rather than silently passing.
+ * ({@link #weblogger}, plan Task 11); the runtime-config read goes through
+ * the manager {@link #withRuntimeConfig} attaches to {@code WebloggerRuntimeConfig}
+ * (plan Task 19), which knows nothing but the ceiling: a pager that regressed
+ * to locating its entry manager statically would find none and fail, rather
+ * than silently passing.
  */
 abstract class EntriesPagerTestSupport {
 
@@ -94,24 +92,15 @@ abstract class EntriesPagerTestSupport {
     }
 
     /**
-     * Runs the body with WebloggerFactory answering with a properties-only
-     * facade that supplies site.pages.maxEntries (the one read that is still
-     * static, plan Task 19). The entry manager is NOT reachable through it.
+     * Runs the body with {@code WebloggerRuntimeConfig} answering
+     * site.pages.maxEntries from an attached, properties-only manager (the
+     * DI wave's Decision 8 attachment; nothing else is reachable through it).
+     * The entry manager comes only from the facade the pager is constructed
+     * with, so a pager that regressed to locating it statically would fail.
      */
     void withRuntimeConfig(Runnable body) {
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger runtimeConfigOnly = mock(Weblogger.class);
-            PropertiesManager propertiesManager = mock(PropertiesManager.class);
-            try {
-                when(propertiesManager.getProperty("site.pages.maxEntries"))
-                        .thenReturn(new RuntimeConfigProperty("site.pages.maxEntries",
-                                String.valueOf(SITE_MAX_ENTRIES)));
-            } catch (WebloggerException impossible) {
-                // getProperty declares this; stubbing a mock never actually throws.
-                throw new AssertionError("stubbing a mock must not throw", impossible);
-            }
-            when(runtimeConfigOnly.getPropertiesManager()).thenReturn(propertiesManager);
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
+        try (RuntimeConfigAttachment ignored = RuntimeConfigAttachment.answering(
+                "site.pages.maxEntries", String.valueOf(SITE_MAX_ENTRIES))) {
             body.run();
         }
     }

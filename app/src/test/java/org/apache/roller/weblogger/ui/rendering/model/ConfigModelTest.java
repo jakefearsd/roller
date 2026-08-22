@@ -18,15 +18,14 @@
 
 package org.apache.roller.weblogger.ui.rendering.model;
 
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,7 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -52,7 +50,7 @@ import static org.mockito.Mockito.when;
  */
 class ConfigModelTest {
 
-    private MockedStatic<WebloggerFactory> factory;
+    private RuntimeConfigAttachment runtimeConfig;
     private PropertiesManager properties;
     private Weblogger weblogger;
     private ConfigModel model;
@@ -61,23 +59,19 @@ class ConfigModelTest {
     void setUp() throws WebloggerException {
         // The facade the model is GIVEN through initData (build info).
         weblogger = mock(Weblogger.class);
-        // The static shim stays mocked only for WebloggerRuntimeConfig, which
-        // every site.* accessor still reads through (spec Decision 8 / plan
-        // Task 19). It answers with a SEPARATE facade that knows nothing but
-        // the properties manager, so the build-info accessors can only pass by
-        // using the facade they were given.
+        // Every site.* accessor reads through WebloggerRuntimeConfig, which
+        // reads the properties manager attached to it (spec Decision 8 / plan
+        // Task 19). Only the manager is attached -- the build-info accessors
+        // can only pass by using the facade they were given.
         properties = mock(PropertiesManager.class);
-        Weblogger runtimeConfigOnly = mock(Weblogger.class);
-        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(properties);
-        factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
+        runtimeConfig = RuntimeConfigAttachment.of(properties);
         model = new ConfigModel();
         model.init(Map.of("weblogger", weblogger));
     }
 
     @AfterEach
     void tearDown() {
-        factory.close();
+        runtimeConfig.close();
     }
 
     /** Make the runtime properties table answer with the given value for a key. */

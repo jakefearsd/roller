@@ -25,7 +25,7 @@ import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -43,7 +43,6 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import java.util.HashMap;
 import java.util.List;
@@ -59,7 +58,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -75,7 +73,7 @@ import static org.mockito.Mockito.when;
  */
 class PageModelTest {
 
-    private MockedStatic<WebloggerFactory> factory;
+    private RuntimeConfigAttachment runtimeConfig;
     private Weblogger weblogger;
     private Weblog weblog;
     private String previousRelativeContextURL;
@@ -86,15 +84,11 @@ class PageModelTest {
         // The facade the model is GIVEN through initData: its managers are
         // stubbed per test. Deliberately not what the static returns, below.
         weblogger = mock(Weblogger.class);
-        // The static shim stays mocked only for WebloggerRuntimeConfig, which
-        // still reaches it for site.* reads (spec Decision 8 / plan Task 19).
-        // It answers with a SEPARATE facade that knows nothing but the
-        // properties manager, so a model that regressed to locating its
-        // managers statically would NPE here rather than pass.
-        Weblogger runtimeConfigOnly = mock(Weblogger.class);
-        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
-        factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
+        // WebloggerRuntimeConfig's site.* reads go through the properties
+        // manager attached to it (spec Decision 8 / plan Task 19); nothing else
+        // is reachable statically, so a model that regressed to locating its
+        // managers statically would fail here rather than pass.
+        runtimeConfig = RuntimeConfigAttachment.of(mock(PropertiesManager.class));
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL("/roller");
@@ -109,7 +103,7 @@ class PageModelTest {
     void tearDown() {
         WebloggerRuntimeConfig.setRelativeContextURL(previousRelativeContextURL);
         WebloggerRuntimeConfig.setAbsoluteContextURL(previousAbsoluteContextURL);
-        factory.close();
+        runtimeConfig.close();
     }
 
     private WeblogPageRequest pageRequest() {

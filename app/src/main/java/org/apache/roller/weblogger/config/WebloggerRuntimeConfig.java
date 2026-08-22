@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.runtime.RuntimeConfigDefs;
 import org.apache.roller.weblogger.config.runtime.RuntimeConfigDefsParser;
 import org.apache.roller.weblogger.business.PropertiesManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 
 
@@ -57,28 +56,86 @@ public final class WebloggerRuntimeConfig {
     // special case for our context urls
     private static String relativeContextURL = null;
     private static String absoluteContextURL = null;
-    
-    
+
+    /**
+     * The one business-tier reference this static facade still holds, and the
+     * deliberate residual of the 2026-08-22 static-service-locator wave (spec
+     * Decision 8): the runtime-config subsystem used to reach the whole tier
+     * through the static locator ({@code getWeblogger().getPropertiesManager()})
+     * from this one line; now it holds exactly the properties manager the
+     * provider attached at bootstrap, and nothing else. {@code null} until
+     * {@link #attach} -- every read then answers {@code null}, which is the
+     * pre-bootstrap behaviour this class always had. Stage 2 of the same
+     * program (configuration as beans) retires this field along with the
+     * static readers; {@code StaticServiceLocatorTest.STATIC_RESIDUALS} names
+     * it until then.
+     */
+    private static volatile PropertiesManager propertiesManager;
+
+
     // prevent instantiations
     private WebloggerRuntimeConfig() {}
-    
-    
+
+
+    /**
+     * Points the static readers at the bootstrapped tier's properties manager.
+     * Called by {@code SpringWebloggerProvider.bootstrap()} and by the test
+     * fixtures ({@code MockWeblogger}, {@code RuntimeConfigAttachment}) only --
+     * it is public because those callers live in other packages, not because
+     * anything else should call it.
+     *
+     * @return whatever was attached before, so a fixture can restore it
+     */
+    public static PropertiesManager attach(PropertiesManager manager) {
+        PropertiesManager previous = propertiesManager;
+        propertiesManager = manager;
+        return previous;
+    }
+
+    /**
+     * Forgets the attached properties manager; reads answer {@code null} again.
+     * Called by the test fixtures.
+     */
+    public static void detach() {
+        propertiesManager = null;
+    }
+
+    /**
+     * Forgets the attached properties manager only if it is {@code expected} --
+     * what a tier being torn down calls, so a context that never bootstrapped
+     * (or a second tier in the same JVM) cannot clear an attachment it did not
+     * make. Returns whether anything was cleared.
+     */
+    @SuppressWarnings("PMD.CompareObjectsWithEquals") // identity IS the contract: only the very
+    // instance that was attached may clear it; equals() on a manager (or a mock of one) says less
+    public static synchronized boolean detach(PropertiesManager expected) {
+        if (expected != null && propertiesManager == expected) {
+            propertiesManager = null;
+            return true;
+        }
+        return false;
+    }
+
+
     /**
      * Retrieve a single property from the PropertiesManager ... returns null
-     * if there is an error
+     * if there is an error, or if no properties manager has been attached yet
+     * (the tier is not bootstrapped).
      **/
     public static String getProperty(String name) {
-        
+
         String value = null;
-        
-        try {
-            PropertiesManager pmgr = WebloggerFactory.getWeblogger().getPropertiesManager();
-            RuntimeConfigProperty prop = pmgr.getProperty(name);
-            if(prop != null) {
-                value = prop.getValue();
+
+        PropertiesManager pmgr = propertiesManager;
+        if (pmgr != null) {
+            try {
+                RuntimeConfigProperty prop = pmgr.getProperty(name);
+                if(prop != null) {
+                    value = prop.getValue();
+                }
+            } catch(Exception e) {
+                log.warn("Trouble accessing property: {}", name, e);
             }
-        } catch(Exception e) {
-            log.warn("Trouble accessing property: {}", name, e);
         }
 
         log.debug("fetched property [{}={}]", name, value);

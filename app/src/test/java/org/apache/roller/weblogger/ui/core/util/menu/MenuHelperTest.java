@@ -17,11 +17,11 @@
  */
 package org.apache.roller.weblogger.ui.core.util.menu;
 
+import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.RollerPermission;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
@@ -32,7 +32,6 @@ import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -49,7 +48,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -646,7 +644,7 @@ class MenuHelperTest {
         // ...and this one is not, so the static roller.properties value applies.
         when(properties.getProperty("groupblogging.enabled")).thenReturn(null);
 
-        try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
+        try (RuntimeConfigAttachment runtimeConfig = businessTier(properties)) {
             Menu menu = MenuHelper.getMenu("editor", "categories", user, weblog, userManager);
 
             assertEquals(List.of("tabbedmenu.weblog", "tabbedmenu.design", "tabbedmenu.website"),
@@ -678,7 +676,7 @@ class MenuHelperTest {
         // nor roller.properties.
         when(properties.getProperty("themes.customtheme.allowed")).thenReturn(null);
 
-        try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
+        try (RuntimeConfigAttachment runtimeConfig = businessTier(properties)) {
             Menu menu = MenuHelper.getMenu("editor", null, user, weblog, userManager);
 
             assertTrue(tabKeys(menu).contains("tabbedmenu.design"),
@@ -699,7 +697,7 @@ class MenuHelperTest {
         when(properties.getProperty("themes.customtheme.allowed"))
                 .thenReturn(new RuntimeConfigProperty("themes.customtheme.allowed", "false"));
 
-        try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
+        try (RuntimeConfigAttachment runtimeConfig = businessTier(properties)) {
             Menu menu = MenuHelper.getMenu("editor", null, user, weblog, userManager);
 
             assertTrue(tabKeys(menu).contains("tabbedmenu.design"),
@@ -739,7 +737,7 @@ class MenuHelperTest {
         when(explicit.checkPermission(any(), eq(user))).thenReturn(true);
         PropertiesManager properties = mock(PropertiesManager.class);
 
-        try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
+        try (RuntimeConfigAttachment runtimeConfig = businessTier(properties)) {
             MenuHelper.getMenu("editor", null, user, weblog, explicit);
         }
 
@@ -811,20 +809,15 @@ class MenuHelperTest {
     }
 
     /**
-     * Stands a mock Weblogger up behind the static factory. Since the DI wave
-     * {@code getMenu} takes its user manager as a parameter; what still reaches
-     * the static is the property reads -- {@code WebloggerRuntimeConfig} looks
-     * the properties manager up through {@code WebloggerFactory}, and that is
-     * the configuration wave's job to retire, not this test's.
+     * Attaches the given properties manager to {@code WebloggerRuntimeConfig}
+     * for the body of a try-with-resources block. Since the DI wave
+     * {@code getMenu} takes its user manager as a parameter; its property reads
+     * go through {@code WebloggerRuntimeConfig}, which reads the manager
+     * attached to it (plan Task 19) -- retiring that static read altogether is
+     * the configuration wave's job, not this test's.
      */
-    private MockedStatic<WebloggerFactory> businessTier(PropertiesManager properties) {
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getUserManager()).thenReturn(userManager);
-        when(weblogger.getPropertiesManager()).thenReturn(properties);
-
-        MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-        return factory;
+    private static RuntimeConfigAttachment businessTier(PropertiesManager properties) {
+        return RuntimeConfigAttachment.of(properties);
     }
 
     private Menu build(String menuId, ParsedMenu config, String currentAction)
