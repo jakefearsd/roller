@@ -68,6 +68,9 @@ public final class BrowserHealth {
      * Roller now ships a real {@code /favicon.ico} (rasterized from favicon.svg), so the
      * request 200s and the exemption - which excused that 404 on every page in the
      * suite - is gone. Do not reintroduce it to silence a 404; ship the file instead.
+     * (The one case where no file <em>can</em> be shipped -- Chrome's origin-root probe
+     * under a servlet context prefix -- is handled by
+     * {@link #isOriginRootFaviconProbeOutsideTheContext(String)}, not by an entry here.)
      */
     private static final Set<String> IGNORED_PATH_SUFFIXES = Set.of();
 
@@ -439,7 +442,34 @@ public final class BrowserHealth {
 
     private static boolean isIgnored(String url) {
         String path = pathOf(url);
-        return IGNORED_PATH_SUFFIXES.stream().anyMatch(path::endsWith);
+        return isOriginRootFaviconProbeOutsideTheContext(path)
+                || IGNORED_PATH_SUFFIXES.stream().anyMatch(path::endsWith);
+    }
+
+    /**
+     * The one structural exception, and it is inert at the root context path.
+     *
+     * <p>For a document that declares no icon -- {@code sitemap.xml}, {@code robots.txt},
+     * a feed -- Chrome probes {@code /favicon.ico} at the <em>origin root</em>, not under
+     * the document's path. When Roller is deployed under a servlet context prefix
+     * ({@code -Dit.context.path=roller}) that location is outside the application: Tomcat
+     * answers 404 and nothing Roller ships can change that, because no file of the
+     * application's can live above its context. HTML pages are unaffected -- their heads
+     * declare the icon inside the context, so the probe never fires for them. At the root
+     * context the probe hits the real {@code /favicon.ico} and 200s, so this rule excuses
+     * nothing there. It is deliberately narrower than a path-suffix rule: only the exact
+     * origin-root path, and only when a context prefix is in force.
+     */
+    private static boolean isOriginRootFaviconProbeOutsideTheContext(String path) {
+        if (!"/favicon.ico".equals(path)) {
+            return false;
+        }
+        String base = com.codeborne.selenide.Configuration.baseUrl;
+        if (base == null) {
+            return false;
+        }
+        String contextPath = pathOf(base);
+        return contextPath != null && !contextPath.isEmpty() && !"/".equals(contextPath);
     }
 
     /** Ignore rules match on the path, so a cache-busting query string cannot defeat them. */
