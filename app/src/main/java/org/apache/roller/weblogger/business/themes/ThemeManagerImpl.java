@@ -209,6 +209,33 @@ public class ThemeManagerImpl implements ThemeManager {
 
 		log.debug("Importing theme [{}] to weblog [{}]", theme.getName(), weblog.getName());
 
+		Set<ComponentType> importedActionTemplates =
+				importTemplates(weblog, theme, skipStylesheet);
+
+		removeStaleActionTemplates(weblog, importedActionTemplates);
+
+		// The weblog now owns copies of the templates, so it is on its own
+		// custom theme rather than the shared one it imported from.
+		weblog.setEditorTheme(WeblogTheme.CUSTOM);
+		roller.getWeblogManager().saveWeblog(weblog);
+
+		importResources(weblog, theme);
+	}
+
+	/**
+	 * Copies the theme's templates onto the weblog, updating any the weblog
+	 * already has rather than duplicating them.
+	 *
+	 * @return the actions that were imported, which tells
+	 *         {@link #removeStaleActionTemplates} what the weblog is allowed to
+	 *         keep
+	 */
+	private Set<ComponentType> importTemplates(Weblog weblog, SharedTheme theme,
+			boolean skipStylesheet) throws WebloggerException {
+
+
+		log.debug("Importing theme [{}] to weblog [{}]", theme.getName(), weblog.getName());
+
 		WeblogManager wmgr = roller.getWeblogManager();
 		MediaFileManager fileMgr = roller.getMediaFileManager();
 
@@ -281,6 +308,18 @@ public class ThemeManagerImpl implements ThemeManager {
             }
 		}
 
+		return importedActionTemplates;
+	}
+
+	/**
+	 * Deletes action templates the weblog carried from its previous theme and
+	 * the new one does not define. Custom templates are the author's own work
+	 * and are never touched.
+	 */
+	private void removeStaleActionTemplates(Weblog weblog,
+			Set<ComponentType> importedActionTemplates) throws WebloggerException {
+
+		WeblogManager wmgr = roller.getWeblogManager();
 		// now, see if the weblog has left over non-custom action templates that
 		// need to be deleted because they aren't in their new theme
         for (ComponentType action : ComponentType.values()) {
@@ -296,11 +335,17 @@ public class ThemeManagerImpl implements ThemeManager {
 				}
 			}
 		}
+	}
 
-		// set weblog's theme to custom, then save
-		weblog.setEditorTheme(WeblogTheme.CUSTOM);
-		wmgr.saveWeblog(weblog);
+	/**
+	 * Copies the theme's static files into the weblog's media library.
+	 *
+	 * <p>Untouched by an import of any bundled theme -- none of them declares a
+	 * &lt;resource&gt; element -- so this ran for custom themes only.
+	 */
+	private void importResources(Weblog weblog, SharedTheme theme) throws WebloggerException {
 
+		MediaFileManager fileMgr = roller.getMediaFileManager();
 		// now lets import all the theme resources
         for (ThemeResource resource : theme.getResources()) {
 

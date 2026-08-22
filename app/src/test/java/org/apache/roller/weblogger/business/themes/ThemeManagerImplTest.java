@@ -28,6 +28,11 @@ import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.apache.roller.weblogger.pojos.MediaFile;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -337,5 +342,90 @@ class ThemeManagerImplTest {
 
         org.junit.jupiter.api.Assertions.assertDoesNotThrow(
                 () -> ThemeManagerImpl.registerPngMimeType(throwing));
+    }
+
+    // --- importing a theme's static resources -----------------------------
+
+    /**
+     * The half of importTheme that no bundled theme could reach: none of
+     * journal, portfolio, travel or frontpage declares a &lt;resource&gt;
+     * element, so importing any of them skipped this loop entirely. These build
+     * a theme directory that does declare them.
+     */
+    @Test
+    void aThemeResourceIsCopiedIntoTheWeblogsMedia(@TempDir Path dir) throws Exception {
+        SharedTheme theme = themeWithResources(dir, "logo.png");
+
+        themeManager.importTheme(weblog, theme, false);
+
+        ArgumentCaptor<MediaFile> saved = ArgumentCaptor.forClass(MediaFile.class);
+        verify(weblogger.mediaFileManager())
+                .createThemeMediaFile(eq(weblog), saved.capture(), any());
+
+        assertEquals("logo.png", saved.getValue().getName(),
+                "a theme's own image has to become a media file, or the imported theme "
+                        + "renders without it");
+        assertEquals("/logo.png", saved.getValue().getOriginalPath(),
+                "a resource at the theme root gets an empty directory part");
+    }
+
+    @Test
+    void aResourceInASubdirectoryGetsThatDirectoryCreated(@TempDir Path dir) throws Exception {
+        SharedTheme theme = themeWithResources(dir, "img/logo.png");
+        when(weblogger.mediaFileManager().getMediaFileDirectoryByName(weblog, "/img"))
+                .thenReturn(null);
+        when(weblogger.mediaFileManager().createMediaFileDirectory(weblog, "/img"))
+                .thenReturn(new MediaFileDirectory());
+
+        themeManager.importTheme(weblog, theme, false);
+
+        verify(weblogger.mediaFileManager()).createMediaFileDirectory(weblog, "/img");
+
+        ArgumentCaptor<MediaFile> saved = ArgumentCaptor.forClass(MediaFile.class);
+        verify(weblogger.mediaFileManager())
+                .createThemeMediaFile(eq(weblog), saved.capture(), any());
+        assertEquals("/img/logo.png", saved.getValue().getOriginalPath(),
+                "the directory part is kept so the resource resolves where the theme "
+                        + "expects it");
+    }
+
+    @Test
+    void anExistingMediaFileIsReplacedRatherThanDuplicated(@TempDir Path dir) throws Exception {
+        SharedTheme theme = themeWithResources(dir, "logo.png");
+        MediaFile existing = new MediaFile();
+        when(weblogger.mediaFileManager().getMediaFileByOriginalPath(weblog, "/logo.png"))
+                .thenReturn(existing);
+
+        themeManager.importTheme(weblog, theme, false);
+
+        verify(weblogger.mediaFileManager()).removeMediaFile(weblog, existing);
+        verify(weblogger.mediaFileManager())
+                .createThemeMediaFile(eq(weblog), any(), any());
+    }
+
+    /** Builds a theme directory that declares the given resource paths. */
+    private static SharedTheme themeWithResources(Path dir, String... resourcePaths)
+            throws Exception {
+        StringBuilder xml = new StringBuilder("<weblogtheme><id>restheme</id>"
+                + "<name>Resource Theme</name><preview-image path=\"preview.png\" />");
+        for (String path : resourcePaths) {
+            xml.append("<resource path=\"").append(path).append("\" />");
+        }
+        xml.append("<template action=\"weblog\"><name>Weblog</name><description>d</description>")
+           .append("<navbar>false</navbar><hidden>false</hidden>")
+           .append("<contentType>text/html</contentType>")
+           .append("<rendition><contentsFile>weblog.vm</contentsFile>")
+           .append("<templateLanguage>velocity</templateLanguage></rendition></template>")
+           .append("</weblogtheme>");
+
+        Files.writeString(dir.resolve("theme.xml"), xml.toString(), StandardCharsets.UTF_8);
+        Files.writeString(dir.resolve("weblog.vm"), "$entry.title", StandardCharsets.UTF_8);
+        Files.writeString(dir.resolve("preview.png"), "png", StandardCharsets.UTF_8);
+        for (String path : resourcePaths) {
+            Path file = dir.resolve(path);
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, "resource bytes", StandardCharsets.UTF_8);
+        }
+        return new SharedThemeFromDir(dir.toString());
     }
 }
