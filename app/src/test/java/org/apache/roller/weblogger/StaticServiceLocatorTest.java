@@ -90,8 +90,6 @@ class StaticServiceLocatorTest {
      * 73 files, 164 call sites.
      */
     static final Set<String> ALLOWED = Set.of(
-            PKG + "boot/RollerLifecycle.java",
-            PKG + "boot/SecurityConfig.java",
             PKG + "business/VirtualHostRegistry.java",
             PKG + "business/jpa/JPAMediaFileManagerImpl.java",
             PKG + "business/jpa/JPAWeblogManagerImpl.java",
@@ -115,7 +113,6 @@ class StaticServiceLocatorTest {
             PKG + "ui/controllers/RollerHandlerInterceptor.java",
             PKG + "ui/controllers/ajax/ThemeDataServlet.java",
             PKG + "ui/controllers/ajax/UserDataServlet.java",
-            PKG + "ui/controllers/core/InstallController.java",
             PKG + "ui/core/RollerSession.java",
             PKG + "ui/core/filters/BootstrapFilter.java",
             PKG + "ui/core/filters/PersistenceSessionFilter.java",
@@ -153,7 +150,9 @@ class StaticServiceLocatorTest {
             PKG + "ui/rendering/util/WeblogSearchRequest.java",
             PKG + "ui/rendering/velocity/RollerResourceLoader.java",
             PKG + "ui/rendering/velocity/ThemeResourceLoader.java",
-            PKG + "ui/restapi/auth/ApiTokenAuthFilter.java");
+            // TRANSITIONAL (Task 3): bootstrap() self-installs into the shim so unmigrated
+            // callers keep working; Task 20 deletes that line with the shim.
+            PKG + "business/SpringWebloggerProvider.java");
 
     /**
      * The two statics the spec permits to hold a business-tier reference
