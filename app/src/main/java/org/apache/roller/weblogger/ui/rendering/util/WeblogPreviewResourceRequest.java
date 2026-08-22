@@ -19,6 +19,7 @@
 package org.apache.roller.weblogger.ui.rendering.util;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.pojos.Theme;
@@ -41,11 +42,11 @@ public class WeblogPreviewResourceRequest extends WeblogResourceRequest {
     public WeblogPreviewResourceRequest() {}
     
     
-    public WeblogPreviewResourceRequest(HttpServletRequest request) 
+    public WeblogPreviewResourceRequest(Weblogger weblogger, HttpServletRequest request) 
             throws InvalidRequestException {
         
         // let parent go first
-        super(request);
+        super(weblogger, request);
         
         // all we need to worry about is the query params
         // the only param we expect is "theme"
@@ -78,8 +79,9 @@ public class WeblogPreviewResourceRequest extends WeblogResourceRequest {
 
     public Theme getTheme() {
         
-        if (theme == null) {
-            theme = PreviewThemeLookup.byName(themeName);
+        // no theme named means nothing to look up -- and no facade needed
+        if (theme == null && themeName != null) {
+            theme = PreviewThemeLookup.byName(themeName, weblogger().getThemeManager());
         }
 
         return theme;

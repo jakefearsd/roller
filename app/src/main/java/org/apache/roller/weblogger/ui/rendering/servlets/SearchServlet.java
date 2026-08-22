@@ -100,7 +100,7 @@ public class SearchServlet extends HttpServlet {
 
         // first off lets parse the incoming request and validate it
         try {
-            searchRequest = new WeblogSearchRequest(request);
+            searchRequest = new WeblogSearchRequest(weblogger, request);
 
             // now make sure the specified weblog really exists
             weblog = searchRequest.getWeblog();
@@ -164,7 +164,7 @@ public class SearchServlet extends HttpServlet {
             // weblogRequest.
             // possible better approach is make searchRequest extend
             // pageRequest.
-            WeblogPageRequest pageRequest = new WeblogPageRequest();
+            WeblogPageRequest pageRequest = new WeblogPageRequest(weblogger);
             pageRequest.setWeblogHandle(searchRequest.getWeblogHandle());
             pageRequest.setWeblogCategoryName(searchRequest.getWeblogCategoryName());
             pageRequest.setLocale(searchRequest.getLocale());

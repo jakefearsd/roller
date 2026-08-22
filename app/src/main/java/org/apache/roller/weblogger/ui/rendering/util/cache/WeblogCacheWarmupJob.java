@@ -121,7 +121,7 @@ public class WeblogCacheWarmupJob implements Job {
             
             try {
                 // we need a feed request to represent the data
-                WeblogFeedRequest feedRequest = new WeblogFeedRequest();
+                WeblogFeedRequest feedRequest = new WeblogFeedRequest(weblogger);
                 feedRequest.setWeblogHandle(weblogHandle);
                 feedRequest.setType(type);
                 feedRequest.setFormat(format);

@@ -18,6 +18,8 @@
 
 package org.apache.roller.weblogger.ui.rendering.util;
 
+import static org.mockito.Mockito.mock;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.roller.weblogger.ui.rendering.util.WeblogSearchRequest.SEARCH_SERVLET;
@@ -37,13 +39,13 @@ class WeblogSearchRequestTest {
 
     private static WeblogSearchRequest parse(String pathInfo, String... params)
             throws InvalidRequestException {
-        return new WeblogSearchRequest(MockRequest.with(SEARCH_SERVLET, pathInfo, params));
+        return new WeblogSearchRequest(mock(Weblogger.class), MockRequest.with(SEARCH_SERVLET, pathInfo, params));
     }
 
     @Test
     void requestAimedAtAnotherServletIsRejected() {
         assertThrows(InvalidRequestException.class,
-                () -> new WeblogSearchRequest(
+                () -> new WeblogSearchRequest(mock(Weblogger.class), 
                         MockRequest.with("/roller-ui/rendering/page", "/myblog")),
                 "A page URL must not parse as a search request");
     }
@@ -51,7 +53,7 @@ class WeblogSearchRequestTest {
     @Test
     void requestWithNoServletPathIsRejected() {
         assertThrows(InvalidRequestException.class,
-                () -> new WeblogSearchRequest(MockRequest.with(null, "/myblog")),
+                () -> new WeblogSearchRequest(mock(Weblogger.class), MockRequest.with(null, "/myblog")),
                 "A null servlet path cannot match the search servlet");
     }
 

@@ -94,7 +94,7 @@ public class PreviewResourceServlet extends HttpServlet {
         WeblogPreviewResourceRequest resourceRequest;
         try {
             // parse the incoming request and extract the relevant data
-            resourceRequest = new WeblogPreviewResourceRequest(request);
+            resourceRequest = new WeblogPreviewResourceRequest(weblogger, request);
 
             weblog = resourceRequest.getWeblog();
             if (weblog == null) {

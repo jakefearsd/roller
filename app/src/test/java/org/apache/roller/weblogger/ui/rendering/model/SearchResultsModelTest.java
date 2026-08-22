@@ -122,7 +122,7 @@ class SearchResultsModelTest {
             new StringBuffer(String.format("http://localhost/%s", SEARCH_SERVLET)));
         when(request.getPathInfo()).thenReturn(null);
 
-        WeblogSearchRequest searchRequest = new WeblogSearchRequest(request);
+        WeblogSearchRequest searchRequest = new WeblogSearchRequest(WebloggerFactory.getWeblogger(), request);
         searchRequest.setWeblogHandle(testWeblog.getHandle());
         searchRequest.setQuery(term);
 

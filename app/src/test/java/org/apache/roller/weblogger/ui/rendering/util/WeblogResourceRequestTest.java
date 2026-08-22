@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.ui.rendering.util;
 
+import org.apache.roller.weblogger.business.Weblogger;
 import java.security.Principal;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,12 +48,12 @@ class WeblogResourceRequestTest {
     private static final String RESOURCE_SERVLET = "/roller-ui/rendering/resources";
 
     private static WeblogResourceRequest parse(String pathInfo) throws InvalidRequestException {
-        return new WeblogResourceRequest(MockRequest.with(RESOURCE_SERVLET, pathInfo));
+        return new WeblogResourceRequest(mock(Weblogger.class), MockRequest.with(RESOURCE_SERVLET, pathInfo));
     }
 
     private static WeblogMediaResourceRequest parseMedia(String pathInfo, String... params)
             throws InvalidRequestException {
-        return new WeblogMediaResourceRequest(
+        return new WeblogMediaResourceRequest(mock(Weblogger.class), 
                 MockRequest.with(RESOURCE_SERVLET, pathInfo, params));
     }
 
@@ -224,7 +225,7 @@ class WeblogResourceRequestTest {
                 MockRequest.with(RESOURCE_SERVLET, "/myblog/images/header.png",
                         "theme", "journal");
 
-        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(servletRequest);
+        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(mock(Weblogger.class), servletRequest);
 
         assertEquals("journal", request.getThemeName());
         assertEquals("images/header.png", request.getResourcePath(),
@@ -241,7 +242,7 @@ class WeblogResourceRequestTest {
         when(principal.getName()).thenReturn("author");
         when(servletRequest.getUserPrincipal()).thenReturn(principal);
 
-        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(servletRequest);
+        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(mock(Weblogger.class), servletRequest);
 
         assertNull(request.getAuthenticUser(),
                 "A preview must never expose the authenticated user");

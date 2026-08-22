@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.util.Utilities;
@@ -60,17 +60,23 @@ public class WeblogFeedRequest extends WeblogRequest {
     private WeblogCategory weblogCategory = null;
 
     public WeblogFeedRequest() {}
-    
-    
+
+
+    /** A request object that can look things up but parsed nothing. */
+    public WeblogFeedRequest(Weblogger weblogger) {
+        super(weblogger);
+    }
+
+
     /**
      * Construct the WeblogFeedRequest by parsing the incoming url
      */
-    public WeblogFeedRequest(HttpServletRequest request) 
+    public WeblogFeedRequest(Weblogger weblogger, HttpServletRequest request)
             throws InvalidRequestException {
-        
+
         // let our parent take care of their business first
         // parent determines weblog handle and locale if specified
-        super(request);
+        super(weblogger, request);
         
         String servlet = request.getServletPath();
         
@@ -221,7 +227,7 @@ public class WeblogFeedRequest extends WeblogRequest {
         
         if(weblogCategory == null && weblogCategoryName != null) {
             try {
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger().getWeblogEntryManager();
                 weblogCategory = wmgr.getWeblogCategoryByName(getWeblog(), weblogCategoryName);
             } catch (WebloggerException ex) {
                 log.error("Error getting weblog category {}", weblogCategoryName, ex);

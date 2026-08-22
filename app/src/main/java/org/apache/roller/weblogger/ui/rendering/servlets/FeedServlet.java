@@ -107,7 +107,7 @@ public class FeedServlet extends HttpServlet {
         WeblogFeedRequest feedRequest;
         try {
             // parse the incoming request and extract the relevant data
-            feedRequest = new WeblogFeedRequest(request);
+            feedRequest = new WeblogFeedRequest(weblogger, request);
 
             weblog = feedRequest.getWeblog();
             if (weblog == null) {

@@ -18,6 +18,8 @@
 
 package org.apache.roller.weblogger.ui.rendering.util;
 
+import static org.mockito.Mockito.mock;
+import org.apache.roller.weblogger.business.Weblogger;
 import java.util.Locale;
 
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -48,7 +50,7 @@ class WeblogRequestTest {
     private static final String PAGE_SERVLET = "/roller-ui/rendering/page";
 
     private static WeblogRequest parse(String pathInfo) throws InvalidRequestException {
-        return new WeblogRequest(MockRequest.with(PAGE_SERVLET, pathInfo));
+        return new WeblogRequest(mock(Weblogger.class), MockRequest.with(PAGE_SERVLET, pathInfo));
     }
 
     // ---------------------------------------------------------------- handle

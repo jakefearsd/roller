@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.ReservedSlugs;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
@@ -83,15 +83,20 @@ public class WeblogPageRequest extends WeblogRequest {
     public WeblogPageRequest() {
     }
 
+    /** A request object that can look things up but parsed nothing. */
+    public WeblogPageRequest(Weblogger weblogger) {
+        super(weblogger);
+    }
+
     /**
      * Construct the WeblogPageRequest by parsing the incoming url
      */
-    public WeblogPageRequest(HttpServletRequest request)
+    public WeblogPageRequest(Weblogger weblogger, HttpServletRequest request)
             throws InvalidRequestException {
 
         // let our parent take care of their business first
         // parent determines weblog handle and locale if specified
-        super(request);
+        super(weblogger, request);
 
         String servlet = request.getServletPath();
 
@@ -320,7 +325,7 @@ public class WeblogPageRequest extends WeblogRequest {
             if (weblog == null) {
                 return null;
             }
-            WeblogPage page = WebloggerFactory.getWeblogger()
+            WeblogPage page = weblogger()
                     .getWeblogPageManager().getPageBySlug(weblog, slug);
             return page != null && page.getStatus() == WeblogPage.PubStatus.PUBLISHED
                     ? page : null;
@@ -427,7 +432,7 @@ public class WeblogPageRequest extends WeblogRequest {
 
         if (weblogEntry == null && weblogAnchor != null) {
             try {
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger()
+                WeblogEntryManager wmgr = weblogger()
                         .getWeblogEntryManager();
                 weblogEntry = wmgr.getWeblogEntryByAnchor(getWeblog(),
                         weblogAnchor);
@@ -503,7 +508,7 @@ public class WeblogPageRequest extends WeblogRequest {
 
         if (weblogCategory == null && weblogCategoryName != null) {
             try {
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger()
+                WeblogEntryManager wmgr = weblogger()
                         .getWeblogEntryManager();
                 weblogCategory = wmgr.getWeblogCategoryByName(getWeblog(),
                         weblogCategoryName);

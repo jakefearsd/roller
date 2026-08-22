@@ -25,17 +25,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,18 +41,19 @@ import static org.mockito.Mockito.when;
 /**
  * Unit tests for {@link ParsedRequest}, the root of the request-parsing
  * hierarchy. It carries the login identity and resolves it to a
- * {@link User} lazily.
- *
- * <p>The laziness is the point: the class documents itself as lightweight and
- * is constructed on every request, so the database round trip must happen only
- * when something actually asks for the user.
+ * {@link User} lazily, through the {@link Weblogger} it was constructed
+ * with -- never through a static locator (plan Task 12).
  */
 class ParsedRequestTest {
 
-    /** ParsedRequest is abstract; the concrete behaviour under test lives entirely in it. */
     private static final class TestRequest extends ParsedRequest {
-        TestRequest(HttpServletRequest request) throws InvalidRequestException {
-            super(request);
+        TestRequest(Weblogger weblogger, HttpServletRequest request)
+                throws InvalidRequestException {
+            super(weblogger, request);
+        }
+
+        TestRequest() {
+            super();
         }
     }
 
@@ -68,9 +67,18 @@ class ParsedRequestTest {
         return request;
     }
 
+    private static Weblogger webloggerKnowing(String username, User user)
+            throws WebloggerException {
+        Weblogger weblogger = mock(Weblogger.class);
+        UserManager userManager = mock(UserManager.class);
+        when(weblogger.getUserManager()).thenReturn(userManager);
+        when(userManager.getUserByUserName(username)).thenReturn(user);
+        return weblogger;
+    }
+
     @Test
     void anonymousRequestHasNoAuthenticUserAndIsNotLoggedIn() throws Exception {
-        TestRequest request = new TestRequest(requestFor(null));
+        TestRequest request = new TestRequest(mock(Weblogger.class), requestFor(null));
 
         assertNull(request.getAuthenticUser());
         assertFalse(request.isLoggedIn(),
@@ -80,7 +88,7 @@ class ParsedRequestTest {
 
     @Test
     void authenticatedRequestTakesItsUsernameFromThePrincipal() throws Exception {
-        TestRequest request = new TestRequest(requestFor("ada"));
+        TestRequest request = new TestRequest(mock(Weblogger.class), requestFor("ada"));
 
         assertEquals("ada", request.getAuthenticUser());
         assertTrue(request.isLoggedIn());
@@ -91,79 +99,73 @@ class ParsedRequestTest {
         // Constructing a parsed request happens on every single page view,
         // including every crawler hit. Looking a user up for an anonymous
         // request would be one wasted query per hit.
-        TestRequest request = new TestRequest(requestFor(null));
+        Weblogger weblogger = mock(Weblogger.class);
+        TestRequest request = new TestRequest(weblogger, requestFor(null));
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger weblogger = mock(Weblogger.class);
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertNull(request.getUser(), "There is no user to resolve");
-            verify(weblogger, never()).getUserManager();
-        }
+        assertNull(request.getUser(), "There is no user to resolve");
+        verify(weblogger, never()).getUserManager();
     }
 
     @Test
-    void authenticatedRequestResolvesTheUserOnceAndCachesIt() throws Exception {
-        TestRequest request = new TestRequest(requestFor("ada"));
+    void authenticatedRequestResolvesTheUserThroughTheInjectedFacadeOnceAndCachesIt()
+            throws Exception {
+        User user = new User();
+        Weblogger weblogger = webloggerKnowing("ada", user);
+        TestRequest request = new TestRequest(weblogger, requestFor("ada"));
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger weblogger = mock(Weblogger.class);
-            UserManager userManager = mock(UserManager.class);
-            User user = new User();
-            when(weblogger.getUserManager()).thenReturn(userManager);
-            when(userManager.getUserByUserName("ada")).thenReturn(user);
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        assertEquals(user, request.getUser());
+        assertEquals(user, request.getUser());
 
-            assertEquals(user, request.getUser());
-            assertEquals(user, request.getUser());
-
-            verify(userManager).getUserByUserName("ada");
-        }
+        verify(weblogger.getUserManager()).getUserByUserName("ada");
     }
 
     @Test
     void aFailedLookupIsSwallowedSoTheRequestCanStillRender() throws Exception {
         // A user row that cannot be read is not a reason to fail the page --
         // the reader simply gets the anonymous view.
-        TestRequest request = new TestRequest(requestFor("ada"));
+        Weblogger weblogger = mock(Weblogger.class);
+        UserManager userManager = mock(UserManager.class);
+        when(weblogger.getUserManager()).thenReturn(userManager);
+        when(userManager.getUserByUserName("ada"))
+                .thenThrow(new WebloggerException("database is down"));
+        TestRequest request = new TestRequest(weblogger, requestFor("ada"));
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger weblogger = mock(Weblogger.class);
-            UserManager userManager = mock(UserManager.class);
-            when(weblogger.getUserManager()).thenReturn(userManager);
-            when(userManager.getUserByUserName("ada"))
-                    .thenThrow(new WebloggerException("database is down"));
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertNull(request.getUser(),
-                    "A lookup failure must degrade to no user, not propagate out of "
-                            + "the getter and abort the render");
-        }
+        assertNull(request.getUser(),
+                "A lookup failure must degrade to no user, not propagate out of "
+                        + "the getter and abort the render");
     }
 
     @Test
     void injectedUserIsUsedWithoutAnyLookup() throws Exception {
         // The servlets pre-populate this from the session to avoid a query.
-        TestRequest request = new TestRequest(requestFor("ada"));
+        Weblogger weblogger = mock(Weblogger.class);
+        TestRequest request = new TestRequest(weblogger, requestFor("ada"));
         User user = new User();
         request.setUser(user);
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger weblogger = mock(Weblogger.class);
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertEquals(user, request.getUser());
-            verify(weblogger, never()).getUserManager();
-        }
+        assertEquals(user, request.getUser());
+        verify(weblogger, never()).getUserManager();
     }
 
     @Test
     void authenticUserCanBeOverriddenAfterParsing() throws Exception {
-        TestRequest request = new TestRequest(requestFor(null));
+        TestRequest request = new TestRequest(mock(Weblogger.class), requestFor(null));
         request.setAuthenticUser("ada");
 
         assertTrue(request.isLoggedIn(),
                 "isLoggedIn() must follow the current authentic user, not the "
                         + "principal that was present at construction time");
+    }
+
+    @Test
+    void aCarrierBuiltWithoutAFacadeRefusesToLookAnythingUp() {
+        // The no-arg constructors exist for hand-built carriers whose heavy
+        // values arrive through the setters. A lazy lookup on one of those is
+        // a programming error and must say so, not reach for a locator.
+        TestRequest request = new TestRequest();
+        request.setAuthenticUser("ada");
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, request::getUser);
+        assertTrue(ex.getMessage().contains("Weblogger"), ex.getMessage());
     }
 }

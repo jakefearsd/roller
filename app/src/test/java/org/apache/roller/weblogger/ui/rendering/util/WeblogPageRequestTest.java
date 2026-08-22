@@ -18,6 +18,8 @@
 
 package org.apache.roller.weblogger.ui.rendering.util;
 
+import static org.mockito.Mockito.mock;
+import org.apache.roller.weblogger.business.Weblogger;
 import java.util.List;
 
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -50,7 +52,7 @@ class WeblogPageRequestTest {
 
     private static WeblogPageRequest parse(String pathInfo, String... params)
             throws InvalidRequestException {
-        return new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, pathInfo, params));
+        return new WeblogPageRequest(mock(Weblogger.class), MockRequest.with(PAGE_SERVLET, pathInfo, params));
     }
 
     // ----------------------------------------------------------- destination
@@ -61,7 +63,7 @@ class WeblogPageRequestTest {
         // the destination check is what keeps a preview URL from being rendered
         // as a live page (and vice versa).
         assertThrows(InvalidRequestException.class,
-                () -> new WeblogPageRequest(
+                () -> new WeblogPageRequest(mock(Weblogger.class), 
                         MockRequest.with("/roller-ui/rendering/feed", "/myblog")),
                 "A feed URL must not parse as a page request");
     }
@@ -69,7 +71,7 @@ class WeblogPageRequestTest {
     @Test
     void requestWithNoServletPathIsRejected() {
         assertThrows(InvalidRequestException.class,
-                () -> new WeblogPageRequest(MockRequest.with(null, "/myblog")),
+                () -> new WeblogPageRequest(mock(Weblogger.class), MockRequest.with(null, "/myblog")),
                 "A null servlet path cannot match the page servlet and must be rejected");
     }
 

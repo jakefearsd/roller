@@ -105,7 +105,7 @@ class PreviewModelsTest {
         when(servletRequest.getPathInfo()).thenReturn("/testblog");
         when(servletRequest.getParameterMap()).thenReturn(Map.of());
 
-        WeblogPreviewRequest request = new WeblogPreviewRequest(servletRequest);
+        WeblogPreviewRequest request = new WeblogPreviewRequest(weblogger, servletRequest);
         request.setWeblog(weblog);
         return request;
     }

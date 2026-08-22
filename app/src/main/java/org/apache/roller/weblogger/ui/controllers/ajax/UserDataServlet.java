@@ -83,7 +83,7 @@ public class UserDataServlet extends HttpServlet {
         // This user check can be removed as we protected by spring (see above).
         WeblogRequest weblogRequest = null;
         try {
-            weblogRequest = new WeblogRequest(request);
+            weblogRequest = new WeblogRequest(weblogger, request);
 
             // Make sure we have the correct authority
             User user = weblogRequest.getUser();

@@ -19,6 +19,7 @@
 package org.apache.roller.weblogger.ui.rendering.util;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,12 +43,12 @@ public class WeblogResourceRequest extends WeblogRequest {
     /**
      * Construct the WeblogResourceRequest by parsing the incoming url
      */
-    public WeblogResourceRequest(HttpServletRequest request) 
+    public WeblogResourceRequest(Weblogger weblogger, HttpServletRequest request) 
             throws InvalidRequestException {
         
         // let our parent take care of their business first
         // parent determines weblog handle and locale if specified
-        super(request);
+        super(weblogger, request);
         
         // we only want the path info left over from after our parents parsing
         String pathInfo = this.getPathInfo();

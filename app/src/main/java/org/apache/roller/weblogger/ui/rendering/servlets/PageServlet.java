@@ -122,7 +122,7 @@ public class PageServlet extends HttpServlet {
 
         WeblogPageRequest pageRequest;
         try {
-            pageRequest = new WeblogPageRequest(request);
+            pageRequest = new WeblogPageRequest(weblogger, request);
 
             weblog = pageRequest.getWeblog();
             if (weblog == null) {

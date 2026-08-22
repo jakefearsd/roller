@@ -18,6 +18,8 @@
 
 package org.apache.roller.weblogger.ui.rendering.util;
 
+import static org.mockito.Mockito.mock;
+import org.apache.roller.weblogger.business.Weblogger;
 import java.util.List;
 
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -46,7 +48,7 @@ class WeblogFeedRequestTest {
 
     private static WeblogFeedRequest parse(String pathInfo, String... params)
             throws InvalidRequestException {
-        return new WeblogFeedRequest(MockRequest.with(FEED_SERVLET, pathInfo, params));
+        return new WeblogFeedRequest(mock(Weblogger.class), MockRequest.with(FEED_SERVLET, pathInfo, params));
     }
 
     // ----------------------------------------------------------- destination
@@ -54,7 +56,7 @@ class WeblogFeedRequestTest {
     @Test
     void requestAimedAtAnotherServletIsRejected() {
         assertThrows(InvalidRequestException.class,
-                () -> new WeblogFeedRequest(
+                () -> new WeblogFeedRequest(mock(Weblogger.class), 
                         MockRequest.with("/roller-ui/rendering/page", "/myblog/entries/rss")),
                 "A page URL must not parse as a feed request");
     }
@@ -62,7 +64,7 @@ class WeblogFeedRequestTest {
     @Test
     void requestWithNoServletPathIsRejected() {
         assertThrows(InvalidRequestException.class,
-                () -> new WeblogFeedRequest(MockRequest.with(null, "/myblog/entries/rss")),
+                () -> new WeblogFeedRequest(mock(Weblogger.class), MockRequest.with(null, "/myblog/entries/rss")),
                 "A null servlet path cannot match the feed servlet");
     }
 

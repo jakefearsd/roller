@@ -95,7 +95,7 @@ public class ResourceServlet extends HttpServlet {
         WeblogResourceRequest resourceRequest;
         try {
             // parse the incoming request and extract the relevant data
-            resourceRequest = new WeblogResourceRequest(request);
+            resourceRequest = new WeblogResourceRequest(weblogger, request);
 
             weblog = resourceRequest.getWeblog();
             if (weblog == null) {

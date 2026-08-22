@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.ui.rendering.util;
 
+import org.apache.roller.weblogger.business.Weblogger;
 import java.security.Principal;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,7 +50,7 @@ class WeblogPreviewRequestTest {
 
     private static WeblogPreviewRequest parse(String pathInfo, String... params)
             throws InvalidRequestException {
-        return new WeblogPreviewRequest(MockRequest.with(PREVIEW_SERVLET, pathInfo, params));
+        return new WeblogPreviewRequest(mock(Weblogger.class), MockRequest.with(PREVIEW_SERVLET, pathInfo, params));
     }
 
     @Test
@@ -66,7 +67,7 @@ class WeblogPreviewRequestTest {
     @Test
     void requestOnThePageServletIsRejected() {
         assertThrows(InvalidRequestException.class,
-                () -> new WeblogPreviewRequest(MockRequest.with(PAGE_SERVLET, "/myblog")),
+                () -> new WeblogPreviewRequest(mock(Weblogger.class), MockRequest.with(PAGE_SERVLET, "/myblog")),
                 "A preview request aimed at the live page servlet must be rejected");
     }
 
@@ -115,7 +116,7 @@ class WeblogPreviewRequestTest {
         when(principal.getName()).thenReturn("author");
         when(servletRequest.getUserPrincipal()).thenReturn(principal);
 
-        WeblogPreviewRequest request = new WeblogPreviewRequest(servletRequest);
+        WeblogPreviewRequest request = new WeblogPreviewRequest(mock(Weblogger.class), servletRequest);
 
         assertNull(request.getAuthenticUser(),
                 "A preview must render as a visitor sees it, with no author identity");

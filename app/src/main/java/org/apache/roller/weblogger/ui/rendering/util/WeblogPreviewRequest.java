@@ -22,7 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.Theme;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -46,11 +46,11 @@ public class WeblogPreviewRequest extends WeblogPageRequest {
     private Theme theme = null;
     private WeblogEntry weblogEntry = null;
     
-    public WeblogPreviewRequest(HttpServletRequest request) 
+    public WeblogPreviewRequest(Weblogger weblogger, HttpServletRequest request)
             throws InvalidRequestException {
-        
+
         // let parent go first
-        super(request);
+        super(weblogger, request);
         
         // we may have a specific theme to preview
         if(request.getParameter("theme") != null) {
@@ -99,9 +99,9 @@ public class WeblogPreviewRequest extends WeblogPageRequest {
 
     public Theme getTheme() {
         
-        if (theme == null) {
-            theme = PreviewThemeLookup.byName(themeName,
-                    WebloggerFactory.getWeblogger().getThemeManager());
+        // no theme named means nothing to look up -- and no facade needed
+        if (theme == null && themeName != null) {
+            theme = PreviewThemeLookup.byName(themeName, weblogger().getThemeManager());
         }
 
         return theme;
@@ -132,7 +132,7 @@ public class WeblogPreviewRequest extends WeblogPageRequest {
             }
             
             try {
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger().getWeblogEntryManager();
                 weblogEntry = wmgr.getWeblogEntryByAnchor(getWeblog(), anchor);
             } catch (WebloggerException ex) {
                 log.error("Error getting weblog entry {}", anchor, ex);

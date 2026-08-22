@@ -22,7 +22,6 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.business.themes.ThemeNotFoundException;
@@ -31,7 +30,6 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -40,7 +38,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,14 +62,6 @@ class LazyLookupTest {
     private static final String FEED_SERVLET = "/roller-ui/rendering/feed";
     private static final String PREVIEW_SERVLET = "/roller-ui/authoring/preview";
 
-    /** Hands the body a Weblogger whose managers are the supplied mocks. */
-    private static void withWeblogger(Weblogger weblogger, Runnable body) {
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            body.run();
-        }
-    }
-
     private static Weblog weblog() {
         Weblog weblog = new Weblog();
         weblog.setHandle("myblog");
@@ -90,12 +79,10 @@ class LazyLookupTest {
         when(weblogger.getWeblogManager()).thenReturn(weblogManager);
         when(weblogManager.getWeblogByHandle("myblog", Boolean.TRUE)).thenReturn(weblog);
 
-        WeblogRequest request = new WeblogRequest(MockRequest.with(PAGE_SERVLET, "/myblog"));
+        WeblogRequest request = new WeblogRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog"));
 
-        withWeblogger(weblogger, () -> {
-            assertSame(weblog, request.getWeblog());
-            assertSame(weblog, request.getWeblog());
-        });
+        assertSame(weblog, request.getWeblog());
+        assertSame(weblog, request.getWeblog());
 
         verify(weblogManager, times(1)).getWeblogByHandle("myblog", Boolean.TRUE);
     }
@@ -109,9 +96,9 @@ class LazyLookupTest {
         when(weblogger.getWeblogManager()).thenReturn(weblogManager);
         when(weblogManager.getWeblogByHandle(anyString(), any())).thenReturn(null);
 
-        WeblogRequest request = new WeblogRequest(MockRequest.with(PAGE_SERVLET, "/myblog"));
+        WeblogRequest request = new WeblogRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog"));
 
-        withWeblogger(weblogger, request::getWeblog);
+        request.getWeblog();
 
         verify(weblogManager).getWeblogByHandle("myblog", Boolean.TRUE);
     }
@@ -124,12 +111,11 @@ class LazyLookupTest {
         when(weblogManager.getWeblogByHandle(anyString(), any()))
                 .thenThrow(new WebloggerException("database is down"));
 
-        WeblogRequest request = new WeblogRequest(MockRequest.with(PAGE_SERVLET, "/myblog"));
+        WeblogRequest request = new WeblogRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog"));
 
-        withWeblogger(weblogger, () ->
-                assertNull(request.getWeblog(),
-                        "A failed weblog lookup must degrade to null, not propagate "
-                                + "out of a getter a template is calling"));
+        assertNull(request.getWeblog(),
+                "A failed weblog lookup must degrade to null, not propagate "
+                        + "out of a getter a template is calling");
     }
 
     // ------------------------------------------------------- page request bits
@@ -144,12 +130,10 @@ class LazyLookupTest {
         when(entryManager.getWeblogEntryByAnchor(any(), eq("hello"))).thenReturn(entry);
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/entry/hello"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/entry/hello"));
 
-        withWeblogger(weblogger, () -> {
-            assertSame(entry, request.getWeblogEntry());
-            assertSame(entry, request.getWeblogEntry());
-        });
+        assertSame(entry, request.getWeblogEntry());
+        assertSame(entry, request.getWeblogEntry());
 
         verify(entryManager, times(1)).getWeblogEntryByAnchor(any(), eq("hello"));
     }
@@ -164,9 +148,9 @@ class LazyLookupTest {
                 .thenThrow(new WebloggerException("database is down"));
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/entry/hello"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/entry/hello"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getWeblogEntry()));
+        assertNull(request.getWeblogEntry());
     }
 
     @Test
@@ -179,12 +163,10 @@ class LazyLookupTest {
         when(entryManager.getWeblogCategoryByName(any(), eq("Java"))).thenReturn(category);
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/category/Java"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/category/Java"));
 
-        withWeblogger(weblogger, () -> {
-            assertSame(category, request.getWeblogCategory());
-            assertSame(category, request.getWeblogCategory());
-        });
+        assertSame(category, request.getWeblogCategory());
+        assertSame(category, request.getWeblogCategory());
 
         verify(entryManager, times(1)).getWeblogCategoryByName(any(), eq("Java"));
     }
@@ -199,9 +181,9 @@ class LazyLookupTest {
                 .thenThrow(new WebloggerException("database is down"));
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/category/Java"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/category/Java"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getWeblogCategory()));
+        assertNull(request.getWeblogCategory());
     }
 
     @Test
@@ -212,13 +194,11 @@ class LazyLookupTest {
         when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog"));
 
-        withWeblogger(weblogger, () -> {
-            assertNull(request.getWeblogEntry());
-            assertNull(request.getWeblogCategory());
-            assertNull(request.getWeblogPage());
-        });
+        assertNull(request.getWeblogEntry());
+        assertNull(request.getWeblogCategory());
+        assertNull(request.getWeblogPage());
 
         verify(weblogger, org.mockito.Mockito.never()).getWeblogEntryManager();
     }
@@ -227,16 +207,14 @@ class LazyLookupTest {
     void pageRequestInjectedValuesShortCircuitEveryLookup() throws Exception {
         Weblogger weblogger = mock(Weblogger.class);
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/entry/hello"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/entry/hello"));
         WeblogEntry entry = new WeblogEntry();
         WeblogCategory category = new WeblogCategory();
         request.setWeblogEntry(entry);
         request.setWeblogCategory(category);
 
-        withWeblogger(weblogger, () -> {
-            assertSame(entry, request.getWeblogEntry());
-            assertSame(category, request.getWeblogCategory());
-        });
+        assertSame(entry, request.getWeblogEntry());
+        assertSame(category, request.getWeblogCategory());
 
         verify(weblogger, org.mockito.Mockito.never()).getWeblogEntryManager();
     }
@@ -261,12 +239,10 @@ class LazyLookupTest {
         when(weblogTheme.getTemplateByLink("about")).thenReturn(template);
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/page/about"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/page/about"));
 
-        withWeblogger(weblogger, () -> {
-            assertSame(template, request.getWeblogPage());
-            assertSame(template, request.getWeblogPage());
-        });
+        assertSame(template, request.getWeblogPage());
+        assertSame(template, request.getWeblogPage());
 
         verify(weblogTheme, times(1)).getTemplateByLink("about");
     }
@@ -286,23 +262,22 @@ class LazyLookupTest {
                 .thenThrow(new WebloggerException("theme store unreadable"));
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/page/about"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/page/about"));
 
-        withWeblogger(weblogger, () ->
-                assertNull(request.getWeblogPage(),
-                        "A failed template lookup must degrade to null, not propagate"));
+        assertNull(request.getWeblogPage(),
+                "A failed template lookup must degrade to null, not propagate");
     }
 
     @Test
     void pageRequestInjectedCustomPageShortCircuitsTheThemeLookup() throws Exception {
         Weblogger weblogger = mock(Weblogger.class);
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/page/about"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/page/about"));
         org.apache.roller.weblogger.pojos.WeblogTemplate template =
                 new org.apache.roller.weblogger.pojos.WeblogTemplate();
         request.setWeblogPage(template);
 
-        withWeblogger(weblogger, () -> assertSame(template, request.getWeblogPage()));
+        assertSame(template, request.getWeblogPage());
 
         verify(weblogger, org.mockito.Mockito.never()).getWeblogManager();
     }
@@ -325,12 +300,10 @@ class LazyLookupTest {
         when(pageManager.getPageBySlug(weblog, "about")).thenReturn(page);
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/about"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/about"));
 
-        withWeblogger(weblogger, () -> {
-            assertSame(page, request.getWeblogPageContent());
-            assertSame(page, request.getWeblogPageContent());
-        });
+        assertSame(page, request.getWeblogPageContent());
+        assertSame(page, request.getWeblogPageContent());
 
         verify(pageManager, times(1)).getPageBySlug(weblog, "about");
     }
@@ -342,9 +315,9 @@ class LazyLookupTest {
         Weblogger weblogger = mock(Weblogger.class);
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getWeblogPageContent()));
+        assertNull(request.getWeblogPageContent());
 
         verify(weblogger, org.mockito.Mockito.never()).getWeblogManager();
     }
@@ -357,11 +330,10 @@ class LazyLookupTest {
         when(weblogManager.getWeblogByHandle(anyString(), any())).thenReturn(null);
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/about"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/about"));
 
-        withWeblogger(weblogger, () ->
-                assertNull(request.getWeblogPageContent(),
-                        "a candidate slug on a weblog that does not itself resolve must not throw"));
+        assertNull(request.getWeblogPageContent(),
+                "a candidate slug on a weblog that does not itself resolve must not throw");
     }
 
     @Test
@@ -378,24 +350,23 @@ class LazyLookupTest {
                 .thenThrow(new WebloggerException("database is down"));
 
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/about"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/about"));
 
-        withWeblogger(weblogger, () ->
-                assertNull(request.getWeblogPageContent(),
-                        "A failed page lookup must degrade to null, not propagate out of a "
-                                + "getter a template is calling"));
+        assertNull(request.getWeblogPageContent(),
+                "A failed page lookup must degrade to null, not propagate out of a "
+                        + "getter a template is calling");
     }
 
     @Test
     void pageRequestInjectedPageContentShortCircuitsTheLookup() throws Exception {
         Weblogger weblogger = mock(Weblogger.class);
         WeblogPageRequest request =
-                new WeblogPageRequest(MockRequest.with(PAGE_SERVLET, "/myblog/about"));
+                new WeblogPageRequest(weblogger, MockRequest.with(PAGE_SERVLET, "/myblog/about"));
         org.apache.roller.weblogger.pojos.WeblogPage page =
                 new org.apache.roller.weblogger.pojos.WeblogPage();
         request.setWeblogPageContent(page);
 
-        withWeblogger(weblogger, () -> assertSame(page, request.getWeblogPageContent()));
+        assertSame(page, request.getWeblogPageContent());
 
         verify(weblogger, org.mockito.Mockito.never()).getWeblogManager();
     }
@@ -411,13 +382,10 @@ class LazyLookupTest {
         when(weblogger.getWeblogManager()).thenReturn(mock(WeblogManager.class));
         when(entryManager.getWeblogCategoryByName(any(), eq("Java"))).thenReturn(category);
 
-        WeblogFeedRequest request = new WeblogFeedRequest(
-                MockRequest.with(FEED_SERVLET, "/myblog/entries/rss", "cat", "Java"));
+        WeblogFeedRequest request = new WeblogFeedRequest(weblogger, MockRequest.with(FEED_SERVLET, "/myblog/entries/rss", "cat", "Java"));
 
-        withWeblogger(weblogger, () -> {
-            assertSame(category, request.getWeblogCategory());
-            assertSame(category, request.getWeblogCategory());
-        });
+        assertSame(category, request.getWeblogCategory());
+        assertSame(category, request.getWeblogCategory());
 
         verify(entryManager, times(1)).getWeblogCategoryByName(any(), eq("Java"));
     }
@@ -431,10 +399,9 @@ class LazyLookupTest {
         when(entryManager.getWeblogCategoryByName(any(), anyString()))
                 .thenThrow(new WebloggerException("database is down"));
 
-        WeblogFeedRequest request = new WeblogFeedRequest(
-                MockRequest.with(FEED_SERVLET, "/myblog/entries/rss", "cat", "Java"));
+        WeblogFeedRequest request = new WeblogFeedRequest(weblogger, MockRequest.with(FEED_SERVLET, "/myblog/entries/rss", "cat", "Java"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getWeblogCategory()));
+        assertNull(request.getWeblogCategory());
     }
 
     @Test
@@ -442,9 +409,9 @@ class LazyLookupTest {
         Weblogger weblogger = mock(Weblogger.class);
 
         WeblogFeedRequest request =
-                new WeblogFeedRequest(MockRequest.with(FEED_SERVLET, "/myblog/entries/rss"));
+                new WeblogFeedRequest(weblogger, MockRequest.with(FEED_SERVLET, "/myblog/entries/rss"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getWeblogCategory()));
+        assertNull(request.getWeblogCategory());
 
         verify(weblogger, org.mockito.Mockito.never()).getWeblogEntryManager();
     }
@@ -458,14 +425,11 @@ class LazyLookupTest {
         when(weblogger.getWeblogManager()).thenReturn(mock(WeblogManager.class));
         when(entryManager.getWeblogCategoryByName(any(), eq("Java"))).thenReturn(category);
 
-        WeblogSearchRequest request = new WeblogSearchRequest(
-                MockRequest.with(WeblogSearchRequest.SEARCH_SERVLET, "/myblog",
+        WeblogSearchRequest request = new WeblogSearchRequest(weblogger, MockRequest.with(WeblogSearchRequest.SEARCH_SERVLET, "/myblog",
                         "q", "roller", "cat", "Java"));
 
-        withWeblogger(weblogger, () -> {
-            assertSame(category, request.getWeblogCategory());
-            assertSame(category, request.getWeblogCategory());
-        });
+        assertSame(category, request.getWeblogCategory());
+        assertSame(category, request.getWeblogCategory());
 
         verify(entryManager, times(1)).getWeblogCategoryByName(any(), eq("Java"));
     }
@@ -479,11 +443,10 @@ class LazyLookupTest {
         when(entryManager.getWeblogCategoryByName(any(), anyString()))
                 .thenThrow(new WebloggerException("database is down"));
 
-        WeblogSearchRequest request = new WeblogSearchRequest(
-                MockRequest.with(WeblogSearchRequest.SEARCH_SERVLET, "/myblog",
+        WeblogSearchRequest request = new WeblogSearchRequest(weblogger, MockRequest.with(WeblogSearchRequest.SEARCH_SERVLET, "/myblog",
                         "q", "roller", "cat", "Java"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getWeblogCategory()));
+        assertNull(request.getWeblogCategory());
     }
 
     // --------------------------------------------------------------- preview
@@ -496,13 +459,10 @@ class LazyLookupTest {
         when(weblogger.getThemeManager()).thenReturn(themeManager);
         when(themeManager.getTheme("journal")).thenReturn(theme);
 
-        WeblogPreviewRequest request = new WeblogPreviewRequest(
-                MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "journal"));
+        WeblogPreviewRequest request = new WeblogPreviewRequest(weblogger, MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "journal"));
 
-        withWeblogger(weblogger, () -> {
-            assertSame(theme, request.getTheme());
-            assertSame(theme, request.getTheme());
-        });
+        assertSame(theme, request.getTheme());
+        assertSame(theme, request.getTheme());
 
         verify(themeManager, times(1)).getTheme("journal");
     }
@@ -517,12 +477,10 @@ class LazyLookupTest {
         when(themeManager.getTheme(anyString()))
                 .thenThrow(new ThemeNotFoundException("no such theme"));
 
-        WeblogPreviewRequest request = new WeblogPreviewRequest(
-                MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "deleted"));
+        WeblogPreviewRequest request = new WeblogPreviewRequest(weblogger, MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "deleted"));
 
-        withWeblogger(weblogger, () ->
-                assertNull(request.getTheme(),
-                        "An unknown theme name must yield no theme rather than an error"));
+        assertNull(request.getTheme(),
+                "An unknown theme name must yield no theme rather than an error");
     }
 
     @Test
@@ -533,10 +491,9 @@ class LazyLookupTest {
         when(themeManager.getTheme(anyString()))
                 .thenThrow(new WebloggerException("theme store unreadable"));
 
-        WeblogPreviewRequest request = new WeblogPreviewRequest(
-                MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "journal"));
+        WeblogPreviewRequest request = new WeblogPreviewRequest(weblogger, MockRequest.with(PREVIEW_SERVLET, "/myblog", "theme", "journal"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getTheme()));
+        assertNull(request.getTheme());
     }
 
     @Test
@@ -550,11 +507,10 @@ class LazyLookupTest {
         when(weblogger.getWeblogManager()).thenReturn(mock(WeblogManager.class));
         when(entryManager.getWeblogEntryByAnchor(any(), anyString())).thenReturn(entry);
 
-        WeblogPreviewRequest request = new WeblogPreviewRequest(
-                MockRequest.with(PREVIEW_SERVLET, "/myblog/entry/from-path",
+        WeblogPreviewRequest request = new WeblogPreviewRequest(weblogger, MockRequest.with(PREVIEW_SERVLET, "/myblog/entry/from-path",
                         "previewEntry", "being-edited"));
 
-        withWeblogger(weblogger, request::getWeblogEntry);
+        request.getWeblogEntry();
 
         verify(entryManager).getWeblogEntryByAnchor(any(), eq("being-edited"));
     }
@@ -568,10 +524,9 @@ class LazyLookupTest {
         when(entryManager.getWeblogEntryByAnchor(any(), anyString()))
                 .thenReturn(new WeblogEntry());
 
-        WeblogPreviewRequest request = new WeblogPreviewRequest(
-                MockRequest.with(PREVIEW_SERVLET, "/myblog/entry/from-path"));
+        WeblogPreviewRequest request = new WeblogPreviewRequest(weblogger, MockRequest.with(PREVIEW_SERVLET, "/myblog/entry/from-path"));
 
-        withWeblogger(weblogger, request::getWeblogEntry);
+        request.getWeblogEntry();
 
         verify(entryManager).getWeblogEntryByAnchor(any(), eq("from-path"));
     }
@@ -585,10 +540,9 @@ class LazyLookupTest {
         when(entryManager.getWeblogEntryByAnchor(any(), anyString()))
                 .thenThrow(new WebloggerException("database is down"));
 
-        WeblogPreviewRequest request = new WeblogPreviewRequest(
-                MockRequest.with(PREVIEW_SERVLET, "/myblog", "previewEntry", "being-edited"));
+        WeblogPreviewRequest request = new WeblogPreviewRequest(weblogger, MockRequest.with(PREVIEW_SERVLET, "/myblog", "previewEntry", "being-edited"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getWeblogEntry()));
+        assertNull(request.getWeblogEntry());
     }
 
     @Test
@@ -599,14 +553,11 @@ class LazyLookupTest {
         when(weblogger.getThemeManager()).thenReturn(themeManager);
         when(themeManager.getTheme("journal")).thenReturn(theme);
 
-        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(
-                MockRequest.with("/roller-ui/rendering/resources", "/myblog/logo.png",
+        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(weblogger, MockRequest.with("/roller-ui/rendering/resources", "/myblog/logo.png",
                         "theme", "journal"));
 
-        withWeblogger(weblogger, () -> {
-            assertSame(theme, request.getTheme());
-            assertSame(theme, request.getTheme());
-        });
+        assertSame(theme, request.getTheme());
+        assertSame(theme, request.getTheme());
 
         verify(themeManager, times(1)).getTheme("journal");
     }
@@ -619,11 +570,10 @@ class LazyLookupTest {
         when(themeManager.getTheme(anyString()))
                 .thenThrow(new ThemeNotFoundException("no such theme"));
 
-        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(
-                MockRequest.with("/roller-ui/rendering/resources", "/myblog/logo.png",
+        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(weblogger, MockRequest.with("/roller-ui/rendering/resources", "/myblog/logo.png",
                         "theme", "deleted"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getTheme()));
+        assertNull(request.getTheme());
     }
 
     @Test
@@ -634,11 +584,10 @@ class LazyLookupTest {
         when(themeManager.getTheme(anyString()))
                 .thenThrow(new WebloggerException("theme store unreadable"));
 
-        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(
-                MockRequest.with("/roller-ui/rendering/resources", "/myblog/logo.png",
+        WeblogPreviewResourceRequest request = new WeblogPreviewResourceRequest(weblogger, MockRequest.with("/roller-ui/rendering/resources", "/myblog/logo.png",
                         "theme", "journal"));
 
-        withWeblogger(weblogger, () -> assertNull(request.getTheme()));
+        assertNull(request.getTheme());
     }
 
     // --------------------------------------------------------------- setters
@@ -695,8 +644,7 @@ class LazyLookupTest {
 
     @Test
     void previewSettersOverrideTheParsedValues() throws Exception {
-        WeblogPreviewRequest preview = new WeblogPreviewRequest(
-                MockRequest.with(PREVIEW_SERVLET, "/myblog"));
+        WeblogPreviewRequest preview = new WeblogPreviewRequest(mock(Weblogger.class), MockRequest.with(PREVIEW_SERVLET, "/myblog"));
         preview.setThemeName("other");
         preview.setPreviewEntry("being-edited");
         preview.setType("landing");

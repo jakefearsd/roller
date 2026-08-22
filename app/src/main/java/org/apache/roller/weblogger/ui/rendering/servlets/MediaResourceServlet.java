@@ -94,7 +94,7 @@ public class MediaResourceServlet extends HttpServlet {
         WeblogMediaResourceRequest resourceRequest;
         try {
             // parse the incoming request and extract the relevant data
-            resourceRequest = new WeblogMediaResourceRequest(request);
+            resourceRequest = new WeblogMediaResourceRequest(weblogger, request);
 
             weblog = resourceRequest.getWeblog();
             if (weblog == null) {

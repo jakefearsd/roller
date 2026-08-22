@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.ui.rendering.model;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
@@ -139,7 +140,7 @@ class UtilitiesModelTest {
         // WeblogRequest, and the parts of the model that need no weblog must
         // still work when it is absent.
         HttpServletRequest servletRequest = mock(HttpServletRequest.class);
-        ParsedRequest plain = new ParsedRequest(servletRequest) {
+        ParsedRequest plain = new ParsedRequest(mock(Weblogger.class), servletRequest) {
         };
 
         UtilitiesModel model = modelFor(plain);

@@ -22,7 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 
@@ -48,12 +48,12 @@ public class WeblogSearchRequest extends WeblogRequest {
     public WeblogSearchRequest() {}
     
     
-    public WeblogSearchRequest(HttpServletRequest request) 
+    public WeblogSearchRequest(Weblogger weblogger, HttpServletRequest request)
             throws InvalidRequestException {
-        
+
         // let our parent take care of their business first
         // parent determines weblog handle and locale if specified
-        super(request);
+        super(weblogger, request);
         
         String servlet = request.getServletPath();
         
@@ -147,7 +147,7 @@ public class WeblogSearchRequest extends WeblogRequest {
         
         if(weblogCategory == null && weblogCategoryName != null) {
             try {
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger().getWeblogEntryManager();
                 weblogCategory = wmgr.getWeblogCategoryByName(getWeblog(), weblogCategoryName);
             } catch (WebloggerException ex) {
                 log.error("Error getting weblog category {}", weblogCategoryName, ex);

@@ -21,7 +21,6 @@ package org.apache.roller.weblogger.ui.rendering.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.themes.ThemeNotFoundException;
 import org.apache.roller.weblogger.pojos.Theme;
@@ -67,14 +66,4 @@ final class PreviewThemeLookup {
         }
     }
 
-    /**
-     * Transitional: the same lookup against the statically located
-     * {@code ThemeManager}. Exists only for {@code WeblogPreviewResourceRequest},
-     * which is constructed without a facade until the request objects take one
-     * (plan Task 12); every other caller passes its own manager to
-     * {@link #byName(String, ThemeManager)}. Deleted with that task.
-     */
-    static Theme byName(String themeName) {
-        return byName(themeName, WebloggerFactory.getWeblogger().getThemeManager());
-    }
 }

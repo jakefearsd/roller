@@ -100,7 +100,7 @@ public class PreviewServlet extends HttpServlet {
         WeblogPreviewRequest previewRequest;
 
         try {
-            previewRequest = new WeblogPreviewRequest(request);
+            previewRequest = new WeblogPreviewRequest(weblogger, request);
 
             // lookup weblog specified by preview request
             weblog = previewRequest.getWeblog();

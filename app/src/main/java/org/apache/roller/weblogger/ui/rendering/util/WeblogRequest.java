@@ -26,7 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.Weblog;
 
 
@@ -64,13 +64,19 @@ public class WeblogRequest extends ParsedRequest {
     
     
     public WeblogRequest() {}
-    
-    
-    public WeblogRequest(HttpServletRequest request) 
+
+
+    /** A request object that can look things up but parsed nothing. */
+    public WeblogRequest(Weblogger weblogger) {
+        super(weblogger);
+    }
+
+
+    public WeblogRequest(Weblogger weblogger, HttpServletRequest request)
             throws InvalidRequestException {
-        
+
         // let our parent take care of their business first
-        super(request);
+        super(weblogger, request);
         
         String path = request.getPathInfo();
         
@@ -215,7 +221,7 @@ public class WeblogRequest extends ParsedRequest {
         
         if(weblog == null && weblogHandle != null) {
             try {
-                weblog = WebloggerFactory.getWeblogger().getWeblogManager()
+                weblog = weblogger().getWeblogManager()
                         .getWeblogByHandle(weblogHandle, Boolean.TRUE);
             } catch (WebloggerException ex) {
                 log.error("Error looking up weblog {}", weblogHandle, ex);
