@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.InitializationException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.TaskLock;
 import org.apache.roller.weblogger.util.Reflection;
@@ -51,12 +52,17 @@ public abstract class ThreadManagerImpl implements ThreadManager {
     
     // a simple thread executor
     private final ExecutorService serviceScheduler;
+
+    // the business tier handed to every task at init() and to the scheduler;
+    // a @Lazy proxy in production (see WebloggerBeanConfig), resolved on first use
+    private final Weblogger weblogger;
     
     
-    public ThreadManagerImpl() {
+    public ThreadManagerImpl(Weblogger weblogger) {
         
         log.info("Instantiating Thread Manager");
         
+        this.weblogger = weblogger;
         serviceScheduler = Executors.newCachedThreadPool();
     }
     
@@ -76,7 +82,7 @@ public abstract class ThreadManagerImpl implements ThreadManager {
                 
                 try {
                     RollerTask task = (RollerTask) Reflection.newInstance(taskClassName);
-                    task.init(taskName);
+                    task.init(weblogger, taskName);
                     
                     // make sure there is a tasklock record in the db
                     TaskLock taskLock = getTaskLockByName(task.getName());
@@ -108,7 +114,7 @@ public abstract class ThreadManagerImpl implements ThreadManager {
         }
         
         // create scheduler
-        TaskScheduler scheduler = new TaskScheduler(webloggerTasks);
+        TaskScheduler scheduler = new TaskScheduler(weblogger, webloggerTasks);
         
         // start scheduler thread, but only if it's not already running
         if (schedulerThread == null) {

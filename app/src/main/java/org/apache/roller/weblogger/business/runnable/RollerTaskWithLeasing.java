@@ -21,7 +21,6 @@ package org.apache.roller.weblogger.business.runnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 
 
 /**
@@ -51,7 +50,7 @@ public abstract class RollerTaskWithLeasing extends RollerTask {
     @Override
     public final void run() {
         
-        ThreadManager mgr = WebloggerFactory.getWeblogger().getThreadManager();
+        ThreadManager mgr = weblogger().getThreadManager();
         
         boolean lockAcquired = false;
         try {
@@ -85,7 +84,7 @@ public abstract class RollerTaskWithLeasing extends RollerTask {
             }
             
             // always release Roller session
-            WebloggerFactory.getWeblogger().release();
+            weblogger().release();
         }
         
     }

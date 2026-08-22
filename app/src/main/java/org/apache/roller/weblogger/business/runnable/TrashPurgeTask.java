@@ -24,7 +24,7 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -117,18 +117,18 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
     // RollerTaskWithLeasing, which removes the duplication these two classes
     // carry at its source and deletes this suppression along with it.
     @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
-    public void init() throws WebloggerException {
+    public void init(Weblogger weblogger) throws WebloggerException {
     // CPD-OFF -- The two scheduled tasks share their configuration-reading
     // shape: same properties, same defaults, same parse-and-validate order.
     // Collapsing it means a shared base for tasks that otherwise have nothing
     // in common, and the shape is what a third task would be copied from
     // anyway. Left as a known duplicate rather than an unexamined one.
-        this.init(TrashPurgeTask.NAME);
+        this.init(weblogger, TrashPurgeTask.NAME);
     }
 
     @Override
-    public void init(String name) throws WebloggerException {
-        super.init(name);
+    public void init(Weblogger weblogger, String name) throws WebloggerException {
+        super.init(weblogger, name);
 
         // get relevant props
         Properties props = this.getTaskProperties();
@@ -189,8 +189,8 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
 
         try {
     // CPD-ON
-            WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
-            WeblogEntryManager wemgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogManager wmgr = weblogger().getWeblogManager();
+            WeblogEntryManager wemgr = weblogger().getWeblogEntryManager();
 
             int retentionDays = WebloggerRuntimeConfig.getIntProperty(RETENTION_PROPERTY);
 
@@ -214,7 +214,7 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
             }
 
             // commit the changes
-            WebloggerFactory.getWeblogger().flush();
+            weblogger().flush();
 
         } catch (WebloggerException e) {
             log.error("Error running trash purge task", e);
@@ -222,27 +222,12 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
             log.error("Unexpected exception running task", e);
         } finally {
             // always release
-            WebloggerFactory.getWeblogger().release();
+            weblogger().release();
         }
 
         log.debug("task completed");
 
     }
 
-
-    /**
-     * Main method so that this task may be run from outside the webapp.
-     */
-    public static void main(String[] args) throws Exception {
-        try {
-            TrashPurgeTask task = new TrashPurgeTask();
-            task.init();
-            task.run();
-            System.exit(0);
-        } catch (WebloggerException ex) {
-            ex.printStackTrace();
-            System.exit(-1);
-        }
-    }
 
 }

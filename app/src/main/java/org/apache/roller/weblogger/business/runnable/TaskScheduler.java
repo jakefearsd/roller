@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RollerConstants;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.TaskLock;
 
 import static org.apache.roller.util.RollerConstants.GRACEFUL_SHUTDOWN_WAIT_IN_SECONDS;
@@ -51,11 +51,13 @@ public class TaskScheduler implements Runnable {
     
     private static final Logger log = LoggerFactory.getLogger(TaskScheduler.class);
     private final ExecutorService pool;
+    private final Weblogger weblogger;
     private final List<RollerTask> tasks;
     
     
-    public TaskScheduler(List<RollerTask> webloggerTasks) {
+    public TaskScheduler(Weblogger weblogger, List<RollerTask> webloggerTasks) {
         
+        this.weblogger = weblogger;
         // store list of tasks available to run
         tasks = webloggerTasks;
         
@@ -93,7 +95,7 @@ public class TaskScheduler implements Runnable {
                         runTasks(now);
                     } finally {
                         // always release session after each pass
-                        WebloggerFactory.getWeblogger().release();
+                        weblogger.release();
                     }
                 }
                 
@@ -140,7 +142,7 @@ public class TaskScheduler implements Runnable {
         
         log.debug("Started - {}", currentTime);
         
-        ThreadManager tmgr = WebloggerFactory.getWeblogger().getThreadManager();
+        ThreadManager tmgr = weblogger.getThreadManager();
         
         for (RollerTask task : tasks) {
             try {

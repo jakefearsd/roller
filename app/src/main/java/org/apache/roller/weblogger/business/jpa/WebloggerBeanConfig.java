@@ -92,8 +92,8 @@ public class WebloggerBeanConfig {
     }
 
     @Bean
-    public ThreadManager threadManager(JPAPersistenceStrategy strategy) {
-        return new JPAThreadManagerImpl(strategy);
+    public ThreadManager threadManager(@Lazy Weblogger weblogger, JPAPersistenceStrategy strategy) {
+        return new JPAThreadManagerImpl(weblogger, strategy);
     }
 
     @Bean

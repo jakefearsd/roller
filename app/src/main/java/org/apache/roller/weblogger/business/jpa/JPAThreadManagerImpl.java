@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.runnable.ThreadManagerImpl;
 import org.apache.roller.weblogger.business.runnable.RollerTask;
 import org.apache.roller.weblogger.pojos.TaskLock;
@@ -45,8 +46,8 @@ public class JPAThreadManagerImpl extends ThreadManagerImpl {
     private final JPAPersistenceStrategy strategy;
 
 
-    public JPAThreadManagerImpl(JPAPersistenceStrategy strat) {
-        super();
+    public JPAThreadManagerImpl(Weblogger weblogger, JPAPersistenceStrategy strat) {
+        super(weblogger);
 
         log.debug("Instantiating JPA Thread Manager");
 

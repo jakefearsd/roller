@@ -24,7 +24,7 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -86,18 +86,18 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
     }
 
 
-    public void init() throws WebloggerException {
+    public void init(Weblogger weblogger) throws WebloggerException {
     // CPD-OFF -- The two scheduled tasks share their configuration-reading
     // shape: same properties, same defaults, same parse-and-validate order.
     // Collapsing it means a shared base for tasks that otherwise have nothing
     // in common, and the shape is what a third task would be copied from
     // anyway. Left as a known duplicate rather than an unexamined one.
-        this.init(NAME);
+        this.init(weblogger, NAME);
     }
 
     @Override
-    public void init(String name) throws WebloggerException {
-        super.init(name);
+    public void init(Weblogger weblogger, String name) throws WebloggerException {
+        super.init(weblogger, name);
 
         // get relevant props
         Properties props = this.getTaskProperties();
@@ -146,8 +146,8 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
 
         try {
     // CPD-ON
-            WeblogEntryManager wMgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-            IndexManager searchMgr = WebloggerFactory.getWeblogger().getIndexManager();
+            WeblogEntryManager wMgr = weblogger().getWeblogEntryManager();
+            IndexManager searchMgr = weblogger().getIndexManager();
 
             Date now = new Date();
 
@@ -167,7 +167,7 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
             }
 
             // commit the changes
-            WebloggerFactory.getWeblogger().flush();
+            weblogger().flush();
 
             // take a second pass to trigger reindexing and cache invalidations
             // this is because we need the updated entries flushed first
@@ -184,27 +184,12 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
             log.error("Unexpected exception running task", e);
         } finally {
             // always release
-            WebloggerFactory.getWeblogger().release();
+            weblogger().release();
         }
 
         log.debug("task completed");
 
     }
 
-
-    /**
-     * Main method so that this task may be run from outside the webapp.
-     */
-    public static void main(String[] args) throws Exception {
-        try {
-            ScheduledEntriesTask task = new ScheduledEntriesTask();
-            task.init();
-            task.run();
-            System.exit(0);
-        } catch (WebloggerException ex) {
-            ex.printStackTrace();
-            System.exit(-1);
-        }
-    }
 
 }

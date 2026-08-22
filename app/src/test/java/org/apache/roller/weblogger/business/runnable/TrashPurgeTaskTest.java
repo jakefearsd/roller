@@ -69,7 +69,7 @@ class TrashPurgeTaskTest {
     private WeblogManager weblogManager;
     private WeblogEntryManager entryManager;
     private PropertiesManager propertiesManager;
-    private MockedStatic<WebloggerFactory> factory;
+    private MockedStatic<WebloggerFactory> locator;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -80,15 +80,38 @@ class TrashPurgeTaskTest {
 
         when(weblogger.getWeblogManager()).thenReturn(weblogManager);
         when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
-        when(weblogger.getPropertiesManager()).thenReturn(propertiesManager);
 
-        factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        // The task itself no longer touches the static locator -- it works
+        // against the Weblogger handed to init(weblogger, name) above. But
+        // runTask() reads entry.trash.retention.days through
+        // WebloggerRuntimeConfig.getIntProperty, which still reaches
+        // WebloggerFactory (the one residual the DI wave leaves for its Task
+        // 19 / spec Decision 8). So the locator is mocked here for THAT read
+        // only, and deliberately answers with a DIFFERENT facade that knows
+        // nothing but the properties manager: if the task regressed to
+        // fetching its managers through the static, it would get null and
+        // these tests would fail rather than pass by accident.
+        Weblogger locatorOnly = mock(Weblogger.class);
+        when(locatorOnly.getPropertiesManager()).thenReturn(propertiesManager);
+        locator = mockStatic(WebloggerFactory.class);
+        locator.when(WebloggerFactory::getWeblogger).thenReturn(locatorOnly);
     }
 
     @AfterEach
     void tearDown() {
-        factory.close();
+        locator.close();
+    }
+
+    /**
+     * A task initialised the way production initialises it ({@code
+     * ThreadManagerImpl.initialize()} calls {@code init(weblogger, name)}):
+     * the facade it works against arrives through that hook, never through
+     * a static locator.
+     */
+    private TrashPurgeTask task() throws Exception {
+        TrashPurgeTask task = new TrashPurgeTask();
+        task.init(weblogger, TrashPurgeTask.NAME);
+        return task;
     }
 
     @Test
@@ -97,7 +120,7 @@ class TrashPurgeTaskTest {
         givenWeblogs(blog);
         givenRetention(-1);
 
-        new TrashPurgeTask().runTask();
+        task().runTask();
 
         verify(entryManager).purgeTrash(blog, -1);
     }
@@ -108,7 +131,7 @@ class TrashPurgeTaskTest {
         givenWeblogs(blog);
         givenRetention(0);
 
-        new TrashPurgeTask().runTask();
+        task().runTask();
 
         verify(entryManager).purgeTrash(blog, 0);
     }
@@ -119,7 +142,7 @@ class TrashPurgeTaskTest {
         givenWeblogs(blog);
         givenRetention(30);
 
-        new TrashPurgeTask().runTask();
+        task().runTask();
 
         verify(entryManager).purgeTrash(blog, 30);
     }
@@ -134,7 +157,7 @@ class TrashPurgeTaskTest {
     void theRetentionPropertyIsReReadOnEverySweepNotLatched() throws Exception {
         Weblog blog = weblog("onlyblog");
         givenWeblogs(blog);
-        TrashPurgeTask task = new TrashPurgeTask();
+        TrashPurgeTask task = task();
 
         givenRetention(30);
         task.runTask();
@@ -162,7 +185,7 @@ class TrashPurgeTaskTest {
 
         doThrow(new WebloggerException("boom")).when(entryManager).purgeTrash(eq(failing), anyInt());
 
-        new TrashPurgeTask().runTask();
+        task().runTask();
 
         verify(entryManager).purgeTrash(first, 30);
         verify(entryManager).purgeTrash(failing, 30);
@@ -186,14 +209,14 @@ class TrashPurgeTaskTest {
 
         doThrow(new RuntimeException("kaboom")).when(entryManager).purgeTrash(eq(failing), anyInt());
 
-        new TrashPurgeTask().runTask();
+        task().runTask();
 
         verify(entryManager).purgeTrash(other, 30);
     }
 
     /**
      * The lease/release contract every {@code RollerTaskWithLeasing} subclass
-     * must keep: {@code WebloggerFactory.getWeblogger().release()} always
+     * must keep: {@code weblogger().release()} always
      * runs, even when a purge blew up.
      */
     @Test
@@ -204,7 +227,7 @@ class TrashPurgeTaskTest {
 
         doThrow(new WebloggerException("boom")).when(entryManager).purgeTrash(eq(failing), anyInt());
 
-        new TrashPurgeTask().runTask();
+        task().runTask();
 
         verify(weblogger).release();
     }
@@ -218,7 +241,7 @@ class TrashPurgeTaskTest {
         givenWeblogs();
         givenRetention(30);
 
-        new TrashPurgeTask().runTask();
+        task().runTask();
 
         verify(entryManager, never()).purgeTrash(any(), anyInt());
         verify(weblogger).release();
@@ -239,7 +262,7 @@ class TrashPurgeTaskTest {
         givenRetention(30);
         when(entryManager.purgeTrash(withTrash, 30)).thenReturn(5);
 
-        new TrashPurgeTask().runTask();
+        task().runTask();
 
         verify(entryManager).purgeTrash(withTrash, 30);
         verify(entryManager).purgeTrash(empty, 30);
@@ -259,7 +282,7 @@ class TrashPurgeTaskTest {
                 .thenThrow(new WebloggerException("db down"));
         givenRetention(30);
 
-        assertDoesNotThrow(() -> new TrashPurgeTask().runTask(),
+        assertDoesNotThrow(() -> task().runTask(),
                 "a failure listing weblogs must not propagate out of runTask()");
         verify(weblogger).release();
     }
@@ -277,7 +300,7 @@ class TrashPurgeTaskTest {
                 .thenThrow(new RuntimeException("boom"));
         givenRetention(30);
 
-        assertDoesNotThrow(() -> new TrashPurgeTask().runTask(),
+        assertDoesNotThrow(() -> task().runTask(),
                 "an unchecked exception listing weblogs must not propagate out of runTask() either");
         verify(weblogger).release();
     }
@@ -329,9 +352,9 @@ class TrashPurgeTaskTest {
     }
 
     /**
-     * The zero-arg {@code init()} is what production actually calls
-     * ({@code main()} below, and every task started the normal way) -- it
-     * must delegate to {@code init(String)} using THIS task's own registered
+     * The one-arg {@code init(weblogger)} is the convenience entry point
+     * for a task started by name -- it must delegate to
+     * {@code init(weblogger, name)} using THIS task's own registered
      * name ({@code tasks.TrashPurgeTask.*} in {@code roller.properties}), not
      * silently no-op or read some other task's configuration. {@code
      * clientId} is the one field with no matching default (it starts {@code
@@ -342,7 +365,7 @@ class TrashPurgeTaskTest {
     void noArgInitDelegatesToInitWithThisTasksOwnRegisteredName() throws Exception {
         TrashPurgeTask task = new TrashPurgeTask();
 
-        task.init();
+        task.init(weblogger);
 
         assertEquals("defaultClientId", task.getClientId(),
                 "init() must have read the global tasks.clientId from roller.properties");
@@ -367,7 +390,7 @@ class TrashPurgeTaskTest {
         String previousLease = overrideConfigProperty(prefix + "leaseTime", "5");
         try {
             TrashPurgeTask task = new TrashPurgeTask();
-            task.init(taskName);
+            task.init(weblogger, taskName);
 
             assertEquals("node-7", task.getClientId());
             assertEquals("startOfHour", task.getStartTimeDesc());
@@ -397,7 +420,7 @@ class TrashPurgeTaskTest {
         try {
             TrashPurgeTask task = new TrashPurgeTask();
 
-            assertDoesNotThrow(() -> task.init(taskName),
+            assertDoesNotThrow(() -> task.init(weblogger, taskName),
                     "a malformed interval must not stop the task from being constructed");
             assertEquals(RollerTask.DEFAULT_INTERVAL_MINS, task.getInterval(),
                     "a malformed interval must leave the default interval in place");
@@ -419,7 +442,7 @@ class TrashPurgeTaskTest {
         try {
             TrashPurgeTask task = new TrashPurgeTask();
 
-            assertDoesNotThrow(() -> task.init(taskName),
+            assertDoesNotThrow(() -> task.init(weblogger, taskName),
                     "a malformed leaseTime must not stop the task from being constructed");
             assertEquals(RollerTaskWithLeasing.DEFAULT_LEASE_MINS, task.getLeaseTime(),
                     "a malformed leaseTime must leave the default lease in place");
@@ -427,15 +450,6 @@ class TrashPurgeTaskTest {
             overrideConfigProperty(key, previous);
         }
     }
-
-    // Note on main(String[]): it is a standalone entry point meant to be run
-    // outside the webapp (see its javadoc) -- it calls System.exit() on both
-    // the success and failure paths, which would terminate the test JVM
-    // rather than report a result. That is the whole method: construct,
-    // init(), run(), exit. Everything it calls (init(), run() via
-    // RollerTaskWithLeasing) is exercised above and in runTask()'s own
-    // tests; main() itself is left uncovered rather than restructured or
-    // deleted just to win a coverage number.
 
     // ---------------------------------------------------------------- fixtures
 

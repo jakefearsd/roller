@@ -58,7 +58,7 @@ public class TaskLockTest  {
         
         // need a test task to play with
         TestTask task = new TestTask();
-        task.init();
+        task.init(WebloggerFactory.getWeblogger());
         
         // try to acquire a lock
         assertTrue(mgr.registerLease(task), "Failed to acquire lease.");

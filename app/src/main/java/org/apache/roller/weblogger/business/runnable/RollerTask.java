@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Properties;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.util.DateUtil;
 
@@ -34,14 +35,39 @@ import org.apache.roller.util.DateUtil;
  */
 public abstract class RollerTask implements Runnable {
     private String taskName = null;
+    private Weblogger weblogger = null;
     protected static final int DEFAULT_INTERVAL_MINS = 1440;
 
     
     /**
      * Initialization. Run once before the task is started.
+     *
+     * <p>The {@link Weblogger} arrives here, not through a static locator:
+     * tasks are instantiated reflectively from {@code tasks.<name>.class}, so
+     * this hook is the only seam a collaborator can enter through.
+     *
+     * @param weblogger the business tier this task works against
+     * @param name the task's registered name ({@code tasks.<name>.*})
      */
-    public void init(String name) throws WebloggerException {
+    public void init(Weblogger weblogger, String name) throws WebloggerException {
+        this.weblogger = weblogger;
         this.taskName = name;
+    }
+
+
+    /**
+     * The business tier this task was initialised with.
+     *
+     * @throws IllegalStateException if {@link #init(Weblogger, String)} has
+     *         not run -- a task must never reach the tier before it is told
+     *         which one it belongs to
+     */
+    protected final Weblogger weblogger() {
+        if (weblogger == null) {
+            throw new IllegalStateException(
+                    "Task " + getClass().getSimpleName() + " used before init(weblogger, name)");
+        }
+        return weblogger;
     }
 
 

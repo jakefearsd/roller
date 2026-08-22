@@ -19,6 +19,7 @@ package org.apache.roller.weblogger.business;
 
 import java.util.Date;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.runnable.RollerTaskWithLeasing;
 
 public class TestTask extends RollerTaskWithLeasing {
@@ -26,8 +27,8 @@ public class TestTask extends RollerTaskWithLeasing {
 
     public TestTask() {}
 
-    public void init() throws WebloggerException {
-        this.init(TestTask.NAME);
+    public void init(Weblogger weblogger) throws WebloggerException {
+        this.init(weblogger, TestTask.NAME);
     }
 
     @Override
