@@ -22,19 +22,23 @@ import java.io.IOException;
 import java.io.Reader;
 
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.velocity.exception.ResourceNotFoundException;
-import org.junit.jupiter.api.AfterEach;
+import org.apache.velocity.runtime.RuntimeServices;
+import org.apache.velocity.util.ExtProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -51,20 +55,37 @@ import static org.mockito.Mockito.when;
  */
 class RollerResourceLoaderTest {
 
-    private MockWeblogger weblogger;
+    private Weblogger weblogger;
     private RollerResourceLoader loader;
 
+    /**
+     * The loader is instantiated by Velocity, so it takes its facade from the
+     * engine's application attributes (what {@code RollerVelocity.initialize}
+     * sets), read through {@code RuntimeServices} in {@code init}. Nothing here
+     * is installed into any static: the facade the test stubs is the only one
+     * the loader can possibly reach.
+     */
     @BeforeEach
     void setUp() {
-        weblogger = MockWeblogger.install();
+        weblogger = mock(Weblogger.class);
+        when(weblogger.getWeblogManager()).thenReturn(mock(WeblogManager.class));
+        RuntimeServices rsvc = mock(RuntimeServices.class);
+        when(rsvc.getLog(anyString())).thenReturn(LoggerFactory.getLogger("test"));
+        when(rsvc.getApplicationAttribute(RollerVelocity.WEBLOGGER_ATTRIBUTE)).thenReturn(weblogger);
         loader = new RollerResourceLoader();
-        loader.init(null);
+        loader.commonInit(rsvc, new ExtProperties());
+        loader.init(new ExtProperties());
     }
 
-    @AfterEach
-    void tearDown() {
-        // The factory is static and shared with every other test in the JVM.
-        MockWeblogger.uninstall();
+    /** An engine not built by {@code RollerVelocity.initialize} carries no facade; fail at init, not at first render. */
+    @Test
+    void anEngineWithoutTheFacadeIsRefusedAtInit() {
+        RuntimeServices bare = mock(RuntimeServices.class);
+        when(bare.getLog(anyString())).thenReturn(LoggerFactory.getLogger("test"));
+        RollerResourceLoader fresh = new RollerResourceLoader();
+        fresh.commonInit(bare, new ExtProperties());
+        IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> fresh.init(new ExtProperties()));
+        assertTrue(thrown.getMessage().contains(RollerVelocity.WEBLOGGER_ATTRIBUTE), thrown.getMessage());
     }
 
     @Test

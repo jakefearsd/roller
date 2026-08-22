@@ -19,18 +19,14 @@
 package org.apache.roller.weblogger.ui.core;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import jakarta.servlet.ServletContext;
 
 import org.springframework.security.core.userdetails.UserCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.velocity.runtime.RuntimeSingleton;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
@@ -51,7 +47,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  * Spring Boot {@code SmartLifecycle} bean. This class now only holds the
  * statics that lifecycle/security config populate ({@link #getServletContext()},
  * {@link #getPasswordEncoder()}) plus the helper methods they call
- * ({@link #createPasswordEncoder()}, {@link #setupVelocity()}) and the one
+ * ({@link #createPasswordEncoder()}) and the one
  * controllers/filters still call directly ({@link #flushAuthenticationUserCache(String)}).
  *
  * <p>Until Stage 1B Task 4, {@code initializeSecurityFeatures(ServletContext)}
@@ -118,33 +114,6 @@ public final class RollerContext {
      */
     public static void setPasswordEncoder(PasswordEncoder passwordEncoder) {
         encoder = passwordEncoder;
-    }
-
-    /**
-     * Initialize the Velocity rendering engine.
-     *
-     * <p>Called by {@code RollerLifecycle.start()}, in the same spot in the
-     * startup sequence that {@code contextInitialized} used to call it from.
-     */
-    public static void setupVelocity() throws WebloggerException {
-        log.info("Initializing Velocity");
-
-        // initialize the Velocity engine
-        Properties velocityProps = new Properties();
-
-        try {
-            try (InputStream instream = servletContext.getResourceAsStream("/WEB-INF/velocity.properties")) {
-                velocityProps.load(instream);
-            }
-            log.debug("Velocity props = {}", velocityProps);
-
-            // init velocity
-            RuntimeSingleton.init(velocityProps);
-
-        } catch (Exception e) {
-            throw new WebloggerException(e);
-        }
-
     }
 
     /**

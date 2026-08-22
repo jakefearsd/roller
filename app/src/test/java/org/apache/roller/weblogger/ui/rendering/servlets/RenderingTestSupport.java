@@ -22,6 +22,7 @@ import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
+import org.apache.roller.weblogger.ui.rendering.velocity.RollerVelocity;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.mockito.Mockito;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -32,8 +33,8 @@ import org.springframework.mock.web.MockServletContext;
 /**
  * Boots just enough of the container environment for the rendering servlets
  * to run in a plain JUnit JVM: a ServletContext rooted at src/main/webapp
- * (RollerVelocity's one-shot static init reads /WEB-INF/velocity.properties
- * through it), a JspFactory (PageServlet and SearchServlet call
+ * (RollerVelocity.initialize reads /WEB-INF/velocity.properties through it
+ * and WebappResourceLoader still reads it from RollerContext), a JspFactory (PageServlet and SearchServlet call
  * JspFactory.getDefaultFactory() unguarded), and the context URLs that
  * InitFilter would normally set. Installed once per JVM and never torn down:
  * the whole app suite shares one forked JVM and RollerVelocity cannot be
@@ -77,6 +78,10 @@ public final class RenderingTestSupport {
         Field field = RollerContext.class.getDeclaredField("servletContext");
         field.setAccessible(true);
         field.set(null, context);
+        // What RollerLifecycle.start() does after bootstrap: the engine carries
+        // the facade for the two Roller resource loaders. Idempotent, and the
+        // engine is never torn down (see the class javadoc).
+        RollerVelocity.initialize(context, WebloggerFactory.getWeblogger());
     }
 
     /**

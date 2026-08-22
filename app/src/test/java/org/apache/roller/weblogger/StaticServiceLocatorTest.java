@@ -130,8 +130,6 @@ class StaticServiceLocatorTest {
             PKG + "ui/rendering/util/WeblogPreviewRequest.java",
             PKG + "ui/rendering/util/WeblogRequest.java",
             PKG + "ui/rendering/util/WeblogSearchRequest.java",
-            PKG + "ui/rendering/velocity/RollerResourceLoader.java",
-            PKG + "ui/rendering/velocity/ThemeResourceLoader.java",
             // TRANSITIONAL (Task 3): bootstrap() self-installs into the shim so unmigrated
             // callers keep working; Task 20 deletes that line with the shim.
             PKG + "business/SpringWebloggerProvider.java");

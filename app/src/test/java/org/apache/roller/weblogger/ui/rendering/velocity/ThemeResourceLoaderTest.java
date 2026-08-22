@@ -18,12 +18,12 @@
 package org.apache.roller.weblogger.ui.rendering.velocity;
 
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.themes.ThemeNotFoundException;
 import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.RuntimeServices;
 import org.apache.velocity.util.ExtProperties;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
@@ -44,31 +44,30 @@ import static org.mockito.Mockito.when;
 class ThemeResourceLoaderTest {
 
     private final ThemeResourceLoader loader = new ThemeResourceLoader();
-    private MockWeblogger weblogger;
+    private ThemeManager themeManager;
 
     @BeforeEach
     void setUp() {
-        weblogger = MockWeblogger.install();
+        themeManager = mock(ThemeManager.class);
+        Weblogger weblogger = mock(Weblogger.class);
+        when(weblogger.getThemeManager()).thenReturn(themeManager);
 
-        // ResourceLoader.log (inherited from Velocity) is only set by
-        // commonInit(), which the real engine calls during startup; this
-        // test never starts the engine, so it must call it directly, or
-        // getResourceReader()'s log.isDebugEnabled() NPEs before ever
-        // reaching the code under test.
+        // ResourceLoader.log and rsvc (inherited from Velocity) are only set
+        // by commonInit(), which the real engine calls during startup; this
+        // test never starts the engine, so it calls both directly. The facade
+        // arrives the way RollerVelocity.initialize hands it over: as the
+        // engine's application attribute, read in init().
         RuntimeServices rsvc = mock(RuntimeServices.class);
         when(rsvc.getLog(anyString())).thenReturn(LoggerFactory.getLogger("test"));
+        when(rsvc.getApplicationAttribute(RollerVelocity.WEBLOGGER_ATTRIBUTE)).thenReturn(weblogger);
         loader.commonInit(rsvc, new ExtProperties());
-    }
-
-    @AfterEach
-    void tearDown() {
-        MockWeblogger.uninstall();
+        loader.init(new ExtProperties());
     }
 
     @Test
     void aThemeNotFoundFailureIsWrappedWithItsCause() throws WebloggerException {
         ThemeNotFoundException cause = new ThemeNotFoundException("no such theme");
-        when(weblogger.themeManager().getTheme("missingtheme")).thenThrow(cause);
+        when(themeManager.getTheme("missingtheme")).thenThrow(cause);
 
         ResourceNotFoundException thrown = assertThrows(ResourceNotFoundException.class,
                 () -> loader.getResourceReader("missingtheme:sometemplate", "UTF-8"));
@@ -79,7 +78,7 @@ class ThemeResourceLoaderTest {
     @Test
     void aGenericLookupFailureIsWrappedWithItsCause() throws WebloggerException {
         WebloggerException cause = new WebloggerException("database unavailable");
-        when(weblogger.themeManager().getTheme("brokentheme")).thenThrow(cause);
+        when(themeManager.getTheme("brokentheme")).thenThrow(cause);
 
         ResourceNotFoundException thrown = assertThrows(ResourceNotFoundException.class,
                 () -> loader.getResourceReader("brokentheme:sometemplate", "UTF-8"));

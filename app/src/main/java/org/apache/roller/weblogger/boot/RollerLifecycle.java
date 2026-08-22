@@ -31,6 +31,7 @@ import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.ui.core.RollerContext;
+import org.apache.roller.weblogger.ui.rendering.velocity.RollerVelocity;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
@@ -148,6 +149,12 @@ public class RollerLifecycle implements SmartLifecycle {
                 webloggerProvider.bootstrap();
                 weblogger = webloggerProvider.getWeblogger();
 
+                // Velocity is initialised only once the tier is up: the engine
+                // carries the facade for the two Roller resource loaders, and
+                // nothing renders a Velocity template before BootstrapFilter
+                // lets requests past (the install wizard is JSP).
+                initializeVelocity(weblogger);
+
                 // I2: site.absoluteurl becomes required the moment any
                 // weblog has a custom domain (see needsSiteAbsoluteUrlWarning's
                 // javadoc for the mechanism) -- warn once at startup rather
@@ -177,46 +184,33 @@ public class RollerLifecycle implements SmartLifecycle {
             }
         }
 
-        // Do a small amount of work to initialize the web tier -- always
-        // runs, whether or not the business tier bootstrapped above, same
-        // as the old code's unconditional final block.
-        //
         // The rememberMeEnabled attribute (Login.jsp reads it via
-        // ${rememberMeEnabled}) used to be set by RollerContext.initializeSecurityFeatures,
-        // which also looked up Spring Security beans by the internal names
-        // the security.xml namespace parser assigned them -- a lookup this
-        // catch used to be widened to catch(Exception) for, since that XML
-        // file was only imported into the context as Task 3 scaffolding
-        // (@ImportResource("classpath:security.xml"), removed in Task 4) and
-        // the by-name lookups threw an unchecked NoSuchBeanDefinitionException
-        // before that landed. Stage 1B Task 4 replaces security.xml with real
-        // @Bean-based wiring in SecurityConfig: those beans are constructed
-        // during context refresh, which completes before this SmartLifecycle
-        // phase ever runs, so a broken SecurityConfig now fails
-        // SpringApplication.run() outright with a BeanCreationException and
-        // never reaches this line at all. The only failure this try block can
-        // still see is setupVelocity()'s checked WebloggerException, so the
-        // catch is narrowed back to that -- same as the pre-Boot
-        // contextInitialized code caught before the by-name lookup was ever
-        // introduced here.
+        // ${rememberMeEnabled}) is set whether or not the business tier
+        // bootstrapped above, same as the old code's unconditional final block.
         servletContext.setAttribute("rememberMeEnabled", WebloggerConfig.getProperty("rememberme.enabled"));
-        try {
-            RollerContext.setupVelocity();
-        } catch (WebloggerException ex) {
-            // Decision: keep this log-fatal-and-continue, matching the old
-            // contextInitialized behavior (a Velocity init failure never
-            // propagated out of it either). A SmartLifecycle.start()
-            // exception aborts the entire SpringApplication.run(), a much
-            // bigger blast radius than the old per-webapp listener failure
-            // ever had, and Velocity's own failure mode here (a missing/
-            // malformed /WEB-INF/velocity.properties) doesn't warrant taking
-            // the whole deployment down -- rendering would be broken either
-            // way, but the admin UI, install wizard, and every non-Velocity
-            // code path stay usable for an operator to fix the config.
-            log.error("Error initializing Roller Weblogger web tier", ex);
-        }
 
         running = true;
+    }
+
+    /**
+     * Build the Velocity engine with the bootstrapped facade.
+     *
+     * <p>Decision: log-and-continue on failure, matching what the old
+     * {@code contextInitialized} did for {@code setupVelocity()}. A
+     * {@code SmartLifecycle.start()} exception aborts the entire
+     * {@code SpringApplication.run()}, a much bigger blast radius than the
+     * old per-webapp listener failure ever had, and Velocity's own failure
+     * mode here (a missing/malformed {@code /WEB-INF/velocity.properties})
+     * doesn't warrant taking the whole deployment down -- rendering would be
+     * broken either way, but the admin UI and every non-Velocity code path
+     * stay usable for an operator to fix the config.
+     */
+    private void initializeVelocity(Weblogger weblogger) {
+        try {
+            RollerVelocity.initialize(servletContext, weblogger);
+        } catch (WebloggerException ex) {
+            log.error("Error initializing the Velocity rendering engine", ex);
+        }
     }
 
     /**

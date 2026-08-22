@@ -20,21 +20,38 @@ package org.apache.roller.weblogger.ui.rendering.velocity;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Objects;
 import java.util.Properties;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.servlet.ServletContext;
+
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.ui.core.RollerContext;
 import org.apache.velocity.Template;
 import org.apache.velocity.app.VelocityEngine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
- * Represents the VelocityEngine used by Roller.
+ * The VelocityEngine used by Roller, initialised explicitly at bootstrap.
  *
- * We construct our own instance of VelocityEngine, initialize it, and provide
- * access to the instance via the Singleton getInstance() method.
+ * <p>The engine used to be built in a static initialiser that read
+ * {@code /WEB-INF/velocity.properties} through {@code RollerContext}'s static
+ * {@code ServletContext}; the two Roller resource loaders it instantiates
+ * ({@link RollerResourceLoader}, {@link ThemeResourceLoader}) then reached the
+ * business tier through the static {@code WebloggerFactory}. Both are gone:
+ * {@link #initialize(ServletContext, Weblogger)} is called once, by
+ * {@code RollerLifecycle.start()} after the business tier has bootstrapped
+ * (and by the rendering test support), and it hands the {@link Weblogger}
+ * to the loaders the only way Velocity allows -- as an <em>application
+ * attribute</em> on the engine, read back via {@code RuntimeServices} in each
+ * loader's {@code init}. The engine itself remains a process-wide singleton,
+ * on purpose: see the design spec's Decision 4 (2026-08-22, retire the static
+ * service locator) for why the Velocity stack is left static while everything
+ * above it is injected. The facade lives in the engine's attribute map, never
+ * in a static field of this class.
  */
 public final class RollerVelocity {
 
@@ -42,67 +59,101 @@ public final class RollerVelocity {
     }
 
     public static final String VELOCITY_CONFIG = "/WEB-INF/velocity.properties";
-    
-    private static final Logger log = LoggerFactory.getLogger(RollerVelocity.class);
-    
-    private static final VelocityEngine velocityEngine;
-    
-    
-    static {
-        log.info("Initializing Velocity Rendering Engine");
-        
-        // initialize the Velocity engine
-        Properties velocityProps = new Properties();
-        
-        try {
-            try (InputStream instream =
-                    RollerContext.getServletContext().getResourceAsStream(VELOCITY_CONFIG)) {
-                velocityProps.load(instream);
-            }
 
-            // Development theme reloading
-            Boolean themeReload = WebloggerConfig.getBooleanProperty("themes.reload.mode");
-            
-            // Override for theme reloading
-            if (themeReload) {
-                velocityProps.setProperty("resource.loader.class.cache", "false");
-                velocityProps.setProperty("resource.loader.class.modification_check_interval", "2");
-                velocityProps.setProperty("resource.loader.webapp.cache", "false");
-                velocityProps.setProperty("resource.loader.webapp.modification_check_interval", "2");
-                velocityProps.setProperty("velocimacro.library.autoreload", "true");
-            }
-           
-            log.debug("Velocity engine props = {}", velocityProps);
-            
-            // construct the VelocityEngine
-            velocityEngine = new VelocityEngine();
-            
-            // init velocity with our properties
-            velocityEngine.init(velocityProps);
-            
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    /** The application-attribute key under which the engine carries the facade. */
+    public static final String WEBLOGGER_ATTRIBUTE = Weblogger.class.getName();
+
+    private static final Logger log = LoggerFactory.getLogger(RollerVelocity.class);
+
+    private static volatile VelocityEngine velocityEngine;
+
+
+    /**
+     * Build and install the engine. Idempotent: a second call is a no-op, even
+     * with different arguments -- the rendering test support relies on that,
+     * because the whole test module shares one JVM and the engine cannot be
+     * re-initialised.
+     *
+     * @throws WebloggerException if {@value #VELOCITY_CONFIG} is missing or
+     *         unreadable; nothing is installed in that case, so a later call
+     *         may still succeed.
+     */
+    public static synchronized void initialize(ServletContext servletContext, Weblogger weblogger)
+            throws WebloggerException {
+        if (velocityEngine != null) {
+            log.debug("Velocity Rendering Engine already initialised; ignoring repeat call");
+            return;
         }
+        log.info("Initializing Velocity Rendering Engine");
+        velocityEngine = buildEngine(servletContext, weblogger);
     }
-    
-    
+
+    /** True once {@link #initialize} has succeeded in this JVM. */
+    public static boolean isInitialized() {
+        return velocityEngine != null;
+    }
+
+    /**
+     * Build an engine from {@value #VELOCITY_CONFIG} carrying {@code weblogger}
+     * as its {@link #WEBLOGGER_ATTRIBUTE}. Package-private so a test can build
+     * a throwaway engine without touching the JVM-wide one.
+     */
+    static VelocityEngine buildEngine(ServletContext servletContext, Weblogger weblogger)
+            throws WebloggerException {
+        Objects.requireNonNull(servletContext, "servletContext");
+        Objects.requireNonNull(weblogger, "weblogger");
+
+        Properties velocityProps = new Properties();
+        try (InputStream instream = servletContext.getResourceAsStream(VELOCITY_CONFIG)) {
+            if (instream == null) {
+                throw new WebloggerException("Velocity config " + VELOCITY_CONFIG + " not found");
+            }
+            velocityProps.load(instream);
+        } catch (IOException e) {
+            throw new WebloggerException("Unable to read " + VELOCITY_CONFIG, e);
+        }
+
+        // Development theme reloading
+        if (WebloggerConfig.getBooleanProperty("themes.reload.mode")) {
+            velocityProps.setProperty("resource.loader.class.cache", "false");
+            velocityProps.setProperty("resource.loader.class.modification_check_interval", "2");
+            velocityProps.setProperty("resource.loader.webapp.cache", "false");
+            velocityProps.setProperty("resource.loader.webapp.modification_check_interval", "2");
+            velocityProps.setProperty("velocimacro.library.autoreload", "true");
+        }
+
+        log.debug("Velocity engine props = {}", velocityProps);
+
+        VelocityEngine engine = new VelocityEngine();
+        // Must be set before init(): the engine instantiates the resource
+        // loaders during init(), and RollerResourceLoader/ThemeResourceLoader
+        // read this attribute in their own init().
+        engine.setApplicationAttribute(WEBLOGGER_ATTRIBUTE, weblogger);
+        engine.init(velocityProps);
+        return engine;
+    }
+
+
     /**
      * Access to the VelocityEngine.
      *
-     * This shouldn't ever be needed, but it's here just in case someone
-     * really needs to do something special.
+     * @throws IllegalStateException before {@link #initialize} has run
      */
     public static VelocityEngine getEngine() {
-        return velocityEngine;
+        VelocityEngine engine = velocityEngine;
+        if (engine == null) {
+            throw new IllegalStateException("RollerVelocity has not been initialised");
+        }
+        return engine;
     }
-    
+
     /**
      * Convenience static method for looking up a template.
      * @throws org.apache.velocity.exception.ResourceNotFoundException,
      *       org.apache.velocity.exception.ParseErrorException
      */
     public static Template getTemplate(String name) {
-        return velocityEngine.getTemplate(name + "|standard");
+        return getEngine().getTemplate(name + "|standard");
     }
 
     /**
@@ -111,6 +162,6 @@ public final class RollerVelocity {
      *       org.apache.velocity.exception.ParseErrorException
      */
     public static Template getTemplate(String name, String encoding) {
-        return velocityEngine.getTemplate(name + "|standard", encoding);
+        return getEngine().getTemplate(name + "|standard", encoding);
     }
 }

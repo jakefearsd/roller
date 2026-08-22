@@ -36,7 +36,7 @@ import org.apache.velocity.runtime.resource.Resource;
 import org.apache.velocity.runtime.resource.loader.ResourceLoader;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.themes.ThemeNotFoundException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.pojos.Theme;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
@@ -58,9 +58,20 @@ public class ThemeResourceLoader extends ResourceLoader {
      */
     private static final Logger logger = LoggerFactory.getLogger(ThemeResourceLoader.class);
 
+    private Weblogger weblogger;
+
+    /**
+     * Velocity calls {@code commonInit} (which sets {@code rsvc}) and then
+     * this. The facade comes from the engine's application attributes, set by
+     * {@link RollerVelocity#initialize}; a loader instantiated by Velocity
+     * cannot be constructor-injected.
+     *
+     * @throws IllegalStateException if the engine carries no {@link Weblogger}
+     */
     @Override
     public void init(ExtProperties configuration) {
         logger.debug("{}", configuration);
+        this.weblogger = RollerResourceLoader.facadeFrom(rsvc);
     }
 
     /**
@@ -93,8 +104,7 @@ public class ThemeResourceLoader extends ResourceLoader {
             }
 
             // lookup the template from the proper theme
-            ThemeManager themeMgr = WebloggerFactory.getWeblogger()
-                    .getThemeManager();
+            ThemeManager themeMgr = weblogger.getThemeManager();
             Theme theme = themeMgr.getTheme(split[0]);
             ThemeTemplate template = theme.getTemplateByName(split[1]);
 

@@ -26,7 +26,7 @@ import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.TemplateRendition;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
@@ -39,7 +39,9 @@ import org.apache.velocity.util.ExtProperties;
  * The RollerResourceLoader is a Velocity template loader which loads templates
  * from custom themes.
  * 
- * RollerResourceLoader makes use of WebloggerFactory.
+ * The loader is instantiated by Velocity from {@code velocity.properties}, so
+ * it cannot be constructor-injected; it takes the {@link Weblogger} from the
+ * engine's application attributes, set by {@link RollerVelocity#initialize}.
  * 
  * @author <a href="mailto:lance@brainopolis.com">Lance Lavandowska</a>
  * @version $Id: RollerResourceLoader.java,v 1.9 2005/01/15 03:32:49 snoopdave
@@ -49,9 +51,27 @@ public class RollerResourceLoader extends ResourceLoader {
 
 	private static final Logger log = LoggerFactory.getLogger(RollerResourceLoader.class);
 
+	private Weblogger weblogger;
+
+	/**
+	 * Velocity calls {@code commonInit} (which sets {@code rsvc}) and then this.
+	 *
+	 * @throws IllegalStateException if the engine carries no {@link Weblogger}
+	 *         -- i.e. it was not built by {@link RollerVelocity#initialize}
+	 */
     @Override
 	public void init(ExtProperties configuration) {
 		log.debug("{}", configuration);
+		this.weblogger = facadeFrom(rsvc);
+	}
+
+	static Weblogger facadeFrom(org.apache.velocity.runtime.RuntimeServices rsvc) {
+		Object attribute = rsvc == null ? null : rsvc.getApplicationAttribute(RollerVelocity.WEBLOGGER_ATTRIBUTE);
+		if (!(attribute instanceof Weblogger)) {
+			throw new IllegalStateException("Velocity engine carries no " + RollerVelocity.WEBLOGGER_ATTRIBUTE
+					+ " application attribute; build it through RollerVelocity.initialize(...)");
+		}
+		return (Weblogger) attribute;
 	}
 
 	/**
@@ -83,8 +103,7 @@ public class RollerResourceLoader extends ResourceLoader {
 		log.debug("   Actually, it's {}", name);
 
 		try {
-			WeblogTemplate page = WebloggerFactory.getWeblogger()
-					.getWeblogManager().getTemplate(name);
+			WeblogTemplate page = weblogger.getWeblogManager().getTemplate(name);
 
 			if (page == null) {
 				throw new ResourceNotFoundException(
