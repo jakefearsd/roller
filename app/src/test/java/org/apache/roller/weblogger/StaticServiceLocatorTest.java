@@ -95,10 +95,6 @@ class StaticServiceLocatorTest {
             PKG + "business/VirtualHostRegistry.java",
             PKG + "business/jpa/JPAMediaFileManagerImpl.java",
             PKG + "business/jpa/JPAWeblogManagerImpl.java",
-            PKG + "business/runnable/RollerTaskWithLeasing.java",
-            PKG + "business/runnable/ScheduledEntriesTask.java",
-            PKG + "business/runnable/TaskScheduler.java",
-            PKG + "business/runnable/TrashPurgeTask.java",
             PKG + "business/search/lucene/LuceneIndexManager.java",
             PKG + "business/shortcodes/GalleryShortcode.java",
             PKG + "business/shortcodes/ImageShortcode.java",
@@ -322,7 +318,7 @@ class StaticServiceLocatorTest {
         Map<String, String> sources = mainSources();
         assertTrue(sources.size() > 400, "expected the full main source tree, saw " + sources.size());
         assertTrue(sources.containsKey(SHIM), "expected to see the shim itself at " + SHIM);
-        assertEquals(73, ALLOWED.size(), "ledger seeded at 73 files; edit the set, not this number");
+        assertTrue(ALLOWED.size() <= 73, "the ledger was seeded at 73 files and only ever shrinks; saw " + ALLOWED.size());
     }
 
     // ---------------------------------------------------------------------
