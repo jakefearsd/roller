@@ -334,13 +334,16 @@ class in the final task.
 | Static utilities | explicit parameter | each caller |
 | Form beans | none — logic moves to the controller | — |
 
-### What a pojo may import after this wave
+### What an entity may import after this wave
 
-`org.apache.roller.weblogger.pojos.**` may not reference `Weblogger`,
-`WebloggerProvider`, any `*Manager`, `URLStrategy`, `PluginManager`,
-`ThemeManager`, or `ShortcodeExpander`. `WebloggerException` and the
-`util` helpers are fine. `StaticServiceLocatorTest` pins this as a source
-scan, so the rule cannot rot back into prose.
+`org.apache.roller.weblogger.pojos.*` — the entities, **wrappers excepted**
+— may not reference `Weblogger`, `WebloggerProvider`, any manager interface,
+`URLStrategy`, `PluginManager`, `ThemeManager`, or `ShortcodeExpander`.
+`WebloggerException` and the `util` helpers are fine. `pojos.wrapper.*` is
+the template API and holds the facade by design (Decision 5), so it is
+outside this rule. `StaticServiceLocatorTest` pins this as a source scan, so
+the rule cannot rot back into prose. (Corrected 2026-08-22 while implementing
+Task 2: the first draft said `pojos/**`, which contradicted Decision 5.)
 
 ### The JSP view helper
 
@@ -402,8 +405,8 @@ Each is a test (or a named command).
    not exist. `StaticServiceLocatorTest`'s allowlist is empty.
 2. `StaticServiceLocatorTest`: no main-source `static` field of a
    business-tier type except `WebloggerRuntimeConfig`'s attached
-   `PropertiesManager` and `RollerVelocity`'s engine; no `pojos/**` source
-   references a business-tier type.
+   `PropertiesManager` and `RollerVelocity`'s engine; no entity under
+   `pojos/` (wrappers excepted) references a business-tier type.
 3. `ContextRefreshDoesNotBootstrapTest`: a Boot context refreshed with
    `roller.lifecycle.enabled=false` and `server.port=0` contains no singleton
    for any bean defined in `WebloggerBeanConfig`.
