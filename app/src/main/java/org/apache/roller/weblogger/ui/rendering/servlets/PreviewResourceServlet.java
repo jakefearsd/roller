@@ -172,21 +172,8 @@ public class PreviewResourceServlet extends HttpServlet {
         response.setContentType(this.context.getMimeType(resourceRequest
                 .getResourcePath()));
 
-        try {
-            // ok, lets serve up the file
-            resourceStream.transferTo(response.getOutputStream());
-
-        } catch (IOException ex) {
-            log.error("Error writing resource file", ex);
-            if (!response.isCommitted()) {
-                response.reset();
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            }
-        } finally {
-            // make sure stream to resource file is closed
-            resourceStream.close();
-        }
-
+        RenderingServletUtils.streamResource(resourceStream, response,
+                resourceRequest.getResourcePath());
     }
 
 }

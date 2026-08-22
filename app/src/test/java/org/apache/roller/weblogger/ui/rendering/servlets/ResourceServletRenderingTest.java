@@ -78,4 +78,28 @@ class ResourceServletRenderingTest {
         assertEquals(404, RenderingTestSupport.execute(
                 RenderingTestSupport.resourceServlet(), request).getStatus());
     }
+
+    @Test
+    void aConditionalRequestForAnUnchangedResourceIsNotModified() throws Exception {
+        MediaFile image = TestUtils.setupImageMediaFile(weblog, "cond.jpg");
+        image.setOriginalPath("/cond.jpg");
+        MediaFileManager mfMgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        mfMgr.updateMediaFile(TestUtils.getManagedWebsite(weblog), image);
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest first = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/resources", "/resourceblog/cond.jpg");
+        MockHttpServletResponse firstResponse = RenderingTestSupport
+                .execute(RenderingTestSupport.resourceServlet(), first);
+        assertEquals(200, firstResponse.getStatus());
+
+        MockHttpServletRequest conditional = RenderingTestSupport.anonymousGet(
+                "/roller-ui/rendering/resources", "/resourceblog/cond.jpg");
+        conditional.addHeader("If-Modified-Since", firstResponse.getDateHeader("Last-Modified"));
+
+        assertEquals(304, RenderingTestSupport.execute(
+                        RenderingTestSupport.resourceServlet(), conditional).getStatus(),
+                "a reader who already has this file must not be sent it again -- every "
+                        + "image on every page depends on this");
+    }
 }

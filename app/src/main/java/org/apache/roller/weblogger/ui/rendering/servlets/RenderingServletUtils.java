@@ -34,6 +34,7 @@ import org.apache.roller.weblogger.util.cache.CachedContent;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 
 final class RenderingServletUtils {
@@ -79,6 +80,47 @@ final class RenderingServletUtils {
         if (siteWide) {
             ModelLoader.loadModels(WebloggerConfig.getProperty("rendering.siteModels"),
                     model, initData, true);
+        }
+    }
+
+    /**
+     * Streams a resource file to the client and closes it.
+     *
+     * <p>The error path is the reason this is shared. Bytes are already going
+     * out when the failure happens, so the response is normally COMMITTED by
+     * then -- and {@code sendError} on a committed response throws
+     * IllegalStateException, which would replace the IOException that actually
+     * happened with a misleading one from the handler. ResourceServlet had that
+     * bug (it guarded the reset with isCommitted but not the sendError) while
+     * PreviewResourceServlet did not; this is the preview servlet's shape,
+     * applied to both.
+     *
+     * <p>The stream is null-checked before use even though no current caller
+     * can hand over null. Every caller reaches this having gone through three
+     * separate lookups, and it holds only because MediaFile.getInputStream's
+     * null return is unreachable through the one manager method they use --
+     * an invariant three classes away that nothing here can see.
+     */
+    static void streamResource(InputStream resourceStream, HttpServletResponse response,
+                               String logContext) throws IOException {
+
+        if (resourceStream == null) {
+            log.error("No content to stream for {}", logContext);
+            sendNotFound(response);
+            return;
+        }
+
+        try {
+            resourceStream.transferTo(response.getOutputStream());
+
+        } catch (IOException ex) {
+            log.error("Error writing resource file for {}", logContext, ex);
+            if (!response.isCommitted()) {
+                response.reset();
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            }
+        } finally {
+            resourceStream.close();
         }
     }
 

@@ -167,6 +167,10 @@ public final class RenderingTestSupport {
         return init(new ResourceServlet());
     }
 
+    static PreviewResourceServlet previewResourceServlet() throws ServletException {
+        return init(new PreviewResourceServlet());
+    }
+
     private static <T extends HttpServlet> T init(T servlet) throws ServletException {
         servlet.init(new MockServletConfig(RollerContext.getServletContext()));
         return servlet;
