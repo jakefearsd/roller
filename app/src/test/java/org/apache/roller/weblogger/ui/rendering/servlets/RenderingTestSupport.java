@@ -151,11 +151,11 @@ public final class RenderingTestSupport {
         return init(new PreviewServlet());
     }
 
-    static FeedServlet feedServlet() throws ServletException {
+    public static FeedServlet feedServlet() throws ServletException {
         return init(new FeedServlet());
     }
 
-    static SearchServlet searchServlet() throws ServletException {
+    public static SearchServlet searchServlet() throws ServletException {
         return init(new SearchServlet());
     }
 
