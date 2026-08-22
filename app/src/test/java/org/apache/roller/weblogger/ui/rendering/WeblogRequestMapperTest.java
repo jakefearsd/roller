@@ -1,8 +1,9 @@
 package org.apache.roller.weblogger.ui.rendering;
 
 import org.apache.roller.weblogger.TestUtils;
-import org.apache.roller.weblogger.business.VirtualHostRegistry;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
@@ -18,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /** The public-URL front door: /roller/<handle>/... → rendering servlet forwards. */
 class WeblogRequestMapperTest {
@@ -26,13 +29,27 @@ class WeblogRequestMapperTest {
     private Weblog weblog;
     private WeblogRequestMapper mapper;
 
+    /**
+     * A provider over the suite's real, bootstrapped tier: the mapper is
+     * constructed with it and the facade (DI wave, plan Task 6b) instead of
+     * locating them. (The test side still reaches the tier through the static
+     * until plan Task 20.)
+     */
+    private static WebloggerProvider bootstrappedProvider() {
+        Weblogger tier = WebloggerFactory.getWeblogger();
+        WebloggerProvider provider = mock(WebloggerProvider.class);
+        when(provider.isBootstrapped()).thenReturn(true);
+        when(provider.getWeblogger()).thenReturn(tier);
+        return provider;
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         TestUtils.setupWeblogger();
         user = TestUtils.setupUser("mapperuser");
         weblog = TestUtils.setupWeblog("mapperblog", user);
         TestUtils.endSession(true);
-        mapper = new WeblogRequestMapper();
+        mapper = new WeblogRequestMapper(bootstrappedProvider(), WebloggerFactory.getWeblogger());
     }
 
     @AfterEach
@@ -40,9 +57,9 @@ class WeblogRequestMapperTest {
         TestUtils.teardownWeblog(weblog.getId());
         TestUtils.teardownUser(user.getUserName());
         TestUtils.endSession(true);
-        // VirtualHostRegistry is a JVM-wide static cache -- a custom domain
+        // The tier's VirtualHostRegistry is a JVM-wide cache -- a custom domain
         // set by one test must not leak into the next.
-        VirtualHostRegistry.invalidateCurrent();
+        WebloggerFactory.getWeblogger().getVirtualHostRegistry().invalidate();
     }
 
     private MockHttpServletRequest publicUrl(String method, String uriAfterContext) {
@@ -701,6 +718,6 @@ class WeblogRequestMapperTest {
         stored.setCustomDomain(host);
         WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(stored);
         TestUtils.endSession(true);
-        VirtualHostRegistry.invalidateCurrent();
+        WebloggerFactory.getWeblogger().getVirtualHostRegistry().invalidate();
     }
 }

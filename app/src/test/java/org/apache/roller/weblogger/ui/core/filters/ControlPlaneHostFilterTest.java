@@ -8,6 +8,7 @@ import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
@@ -90,28 +91,38 @@ class ControlPlaneHostFilterTest {
 
     private MockedStatic<WebloggerFactory> factory;
     private PropertiesManager properties;
+    private WebloggerProvider provider;
+    private ControlPlaneHostFilter filter;
 
     @BeforeEach
-    void setUpWebloggerFactory() throws WebloggerException {
-        Weblogger weblogger = mock(Weblogger.class);
+    void setUpFilter() throws WebloggerException {
+        // The facade the filter is CONSTRUCTED with carries the registry (DI
+        // wave, plan Task 6b).
+        Weblogger injected = mock(Weblogger.class);
         WeblogManager weblogManager = mock(WeblogManager.class);
-        properties = mock(PropertiesManager.class);
-
         Weblog vhostBlog = new Weblog("vhostblog", "creator", "VHost Blog", "desc",
                 "blog@example.com", "journal", "en_US", "UTC");
         vhostBlog.setCustomDomain(VHOST);
         when(weblogManager.getWeblogs(null, null, null, null, 0, -1))
                 .thenReturn(List.of(vhostBlog));
-        when(weblogger.getWeblogManager()).thenReturn(weblogManager);
-        when(weblogger.getPropertiesManager()).thenReturn(properties);
+        when(injected.getWeblogManager()).thenReturn(weblogManager);
+        when(injected.getVirtualHostRegistry()).thenReturn(new VirtualHostRegistry(weblogManager));
+        provider = mock(WebloggerProvider.class);
+        when(provider.isBootstrapped()).thenReturn(true);
+        filter = new ControlPlaneHostFilter(provider, injected);
 
+        // The ONE thing still reached statically: siteHostUrl() reads
+        // site.absoluteurl through WebloggerRuntimeConfig, whose single static
+        // hop is plan Task 19's. The static facade deliberately carries NO
+        // registry and NO weblog manager, so a filter that regressed to
+        // locating the registry statically would see no custom domain and
+        // every redirect test below would fail.
+        Weblogger staticFacade = mock(Weblogger.class);
+        properties = mock(PropertiesManager.class);
+        when(staticFacade.getPropertiesManager()).thenReturn(properties);
         factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        factory.when(WebloggerFactory::getWeblogger).thenReturn(staticFacade);
         factory.when(WebloggerFactory::isBootstrapped).thenReturn(true);
-        // The filter still reaches the registry through its transitional static
-        // delegator (plan Task 6 injects it), which resolves it off the mocked
-        // facade -- so hand the facade a registry over THIS test's mock manager.
-        when(weblogger.getVirtualHostRegistry()).thenReturn(new VirtualHostRegistry(weblogManager));
     }
 
     @AfterEach
@@ -138,7 +149,7 @@ class ControlPlaneHostFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        new ControlPlaneHostFilter().doFilter(request, response, chain);
+        filter.doFilter(request, response, chain);
 
         assertEquals(301, response.getStatus());
         assertEquals("https://control.example.com/roller-ui/menu.rol", response.getHeader("Location"));
@@ -152,7 +163,7 @@ class ControlPlaneHostFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        new ControlPlaneHostFilter().doFilter(request, response, chain);
+        filter.doFilter(request, response, chain);
 
         assertEquals(301, response.getStatus());
         assertEquals("https://control.example.com/api/v1/ping", response.getHeader("Location"));
@@ -167,7 +178,7 @@ class ControlPlaneHostFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        new ControlPlaneHostFilter().doFilter(request, response, chain);
+        filter.doFilter(request, response, chain);
 
         assertEquals("https://control.example.com/roller-ui/authoring/entries.rol?weblog=vhostblog",
                 response.getHeader("Location"));
@@ -180,7 +191,7 @@ class ControlPlaneHostFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        new ControlPlaneHostFilter().doFilter(request, response, chain);
+        filter.doFilter(request, response, chain);
 
         assertEquals("https://control.example.com/roller-ui/menu.rol", response.getHeader("Location"));
     }
@@ -201,7 +212,7 @@ class ControlPlaneHostFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        new ControlPlaneHostFilter().doFilter(request, response, chain);
+        filter.doFilter(request, response, chain);
 
         assertEquals("https://control.example.com/roller/roller-ui/menu.rol",
                 response.getHeader("Location"));
@@ -218,7 +229,7 @@ class ControlPlaneHostFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        new ControlPlaneHostFilter().doFilter(request, response, chain);
+        filter.doFilter(request, response, chain);
 
         assertNotNull(chain.getRequest(), "the contact endpoint must reach the rest of the chain unredirected");
         assertEquals(200, response.getStatus());
@@ -233,7 +244,7 @@ class ControlPlaneHostFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        new ControlPlaneHostFilter().doFilter(request, response, chain);
+        filter.doFilter(request, response, chain);
 
         assertNotNull(chain.getRequest());
         assertEquals(200, response.getStatus());
@@ -255,7 +266,7 @@ class ControlPlaneHostFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        new ControlPlaneHostFilter().doFilter(request, response, chain);
+        filter.doFilter(request, response, chain);
 
         assertNotNull(chain.getRequest(), "a missing site.absoluteurl must degrade to pass-through, never a loop");
         assertEquals(200, response.getStatus());
@@ -269,9 +280,30 @@ class ControlPlaneHostFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        new ControlPlaneHostFilter().doFilter(request, response, chain);
+        filter.doFilter(request, response, chain);
 
         assertNotNull(chain.getRequest());
         assertNull(response.getHeader("Location"));
+    }
+
+    /**
+     * Order 35 is ahead of BootstrapFilter (50): this filter sees requests
+     * before the tier is up, and must answer "no custom host" rather than
+     * touch a registry that does not exist yet (or build the tier through a
+     * lazy proxy). Pre-bootstrap, an admin path on what will later be a
+     * custom domain is simply served.
+     */
+    @Test
+    void beforeBootstrapNothingIsRedirected() throws Exception {
+        givenSiteAbsoluteUrl(SITE_URL);
+        when(provider.isBootstrapped()).thenReturn(false);
+        MockHttpServletRequest request = vhostRequest("GET", "/roller-ui/menu.rol");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertEquals(200, response.getStatus());
+        assertNotNull(chain.getRequest(), "a pre-bootstrap request is served, not redirected");
     }
 }

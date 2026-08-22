@@ -24,6 +24,7 @@ import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.ServletRegistration;
 
 import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.UserDataServlet;
 import org.apache.roller.weblogger.ui.core.RollerSession;
@@ -341,10 +342,27 @@ public class ServletRegistrationConfig {
      * only possible because VirtualHostRegistry reads an in-memory map and
      * needs no EntityManager -- PersistenceSessionFilter is order 60.
      */
+    // The five filters that touch the business tier are beans of their own,
+    // constructed here and handed to their FilterRegistrationBean, exactly as
+    // the servlets above are (DI wave, plan Task 6b). The WebloggerProvider
+    // is what a filter that may run BEFORE bootstrap asks first
+    // (ControlPlaneHostFilter at 35 and InitFilter at 70 see requests the
+    // install wizard has not yet satisfied); the @Lazy on the Weblogger
+    // parameter is load-bearing for the same reason the servlets' is. Boot
+    // does not double-register a Filter bean that a FilterRegistrationBean
+    // already references (ServletContextInitializerBeans skips it).
+
     @Bean
-    public FilterRegistrationBean<ControlPlaneHostFilter> controlPlaneHostFilterRegistration() {
+    public ControlPlaneHostFilter controlPlaneHostFilter(WebloggerProvider provider,
+            @Lazy Weblogger weblogger) {
+        return new ControlPlaneHostFilter(provider, weblogger);
+    }
+
+    @Bean
+    public FilterRegistrationBean<ControlPlaneHostFilter> controlPlaneHostFilterRegistration(
+            ControlPlaneHostFilter controlPlaneHostFilter) {
         FilterRegistrationBean<ControlPlaneHostFilter> registration =
-                new FilterRegistrationBean<>(new ControlPlaneHostFilter());
+                new FilterRegistrationBean<>(controlPlaneHostFilter);
         registration.setOrder(35);
         registration.setUrlPatterns(List.of("/*"));
         registration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST));
@@ -355,8 +373,13 @@ public class ServletRegistrationConfig {
     // Boot's SecurityFilterAutoConfiguration -- see application.properties.
 
     @Bean
-    public FilterRegistrationBean<BootstrapFilter> bootstrapFilterRegistration() {
-        FilterRegistrationBean<BootstrapFilter> registration = new FilterRegistrationBean<>(new BootstrapFilter());
+    public BootstrapFilter bootstrapFilter(WebloggerProvider provider) {
+        return new BootstrapFilter(provider);
+    }
+
+    @Bean
+    public FilterRegistrationBean<BootstrapFilter> bootstrapFilterRegistration(BootstrapFilter bootstrapFilter) {
+        FilterRegistrationBean<BootstrapFilter> registration = new FilterRegistrationBean<>(bootstrapFilter);
         registration.setOrder(50);
         registration.setUrlPatterns(List.of("/*"));
         registration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST));
@@ -364,9 +387,15 @@ public class ServletRegistrationConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<PersistenceSessionFilter> persistenceSessionFilterRegistration() {
+    public PersistenceSessionFilter persistenceSessionFilter(WebloggerProvider provider) {
+        return new PersistenceSessionFilter(provider);
+    }
+
+    @Bean
+    public FilterRegistrationBean<PersistenceSessionFilter> persistenceSessionFilterRegistration(
+            PersistenceSessionFilter persistenceSessionFilter) {
         FilterRegistrationBean<PersistenceSessionFilter> registration =
-                new FilterRegistrationBean<>(new PersistenceSessionFilter());
+                new FilterRegistrationBean<>(persistenceSessionFilter);
         registration.setOrder(60);
         registration.setUrlPatterns(List.of("/*"));
         registration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST));
@@ -374,8 +403,13 @@ public class ServletRegistrationConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<InitFilter> initFilterRegistration() {
-        FilterRegistrationBean<InitFilter> registration = new FilterRegistrationBean<>(new InitFilter());
+    public InitFilter initFilter(WebloggerProvider provider, @Lazy Weblogger weblogger) {
+        return new InitFilter(provider, weblogger);
+    }
+
+    @Bean
+    public FilterRegistrationBean<InitFilter> initFilterRegistration(InitFilter initFilter) {
+        FilterRegistrationBean<InitFilter> registration = new FilterRegistrationBean<>(initFilter);
         registration.setOrder(70);
         registration.setUrlPatterns(List.of("/*"));
         registration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST));
@@ -383,9 +417,15 @@ public class ServletRegistrationConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<RequestMappingFilter> requestMappingFilterRegistration() {
+    public RequestMappingFilter requestMappingFilter(WebloggerProvider provider, @Lazy Weblogger weblogger) {
+        return new RequestMappingFilter(provider, weblogger);
+    }
+
+    @Bean
+    public FilterRegistrationBean<RequestMappingFilter> requestMappingFilterRegistration(
+            RequestMappingFilter requestMappingFilter) {
         FilterRegistrationBean<RequestMappingFilter> registration =
-                new FilterRegistrationBean<>(new RequestMappingFilter());
+                new FilterRegistrationBean<>(requestMappingFilter);
         registration.setOrder(80);
         registration.setUrlPatterns(List.of("/*"));
         registration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST));

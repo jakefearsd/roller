@@ -4,7 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletContext;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,9 +29,10 @@ import static org.mockito.Mockito.when;
  * stylesheet, too wide and requests reach an application that has no database
  * behind it yet.
  *
- * <p>The three conditions are statics (a config property and a bootstrap flag),
- * so they are stubbed here rather than arranged; what is being tested is the
- * filter's decision, not where it reads the inputs from.
+ * <p>The install type is a static config read (stubbed -- Stage 2 of the DI
+ * program); the bootstrap flag is asked of the {@link WebloggerProvider} the
+ * filter is constructed with (DI wave, plan Task 6b). What is being tested is
+ * the filter's decision, not where it reads the inputs from.
  */
 class BootstrapFilterTest {
 
@@ -39,6 +40,7 @@ class BootstrapFilterTest {
     private ServletContext context;
     private RequestDispatcher dispatcher;
     private FilterChain chain;
+    private WebloggerProvider provider;
 
     @BeforeEach
     void createFilter() throws Exception {
@@ -50,22 +52,21 @@ class BootstrapFilterTest {
         FilterConfig config = mock(FilterConfig.class);
         when(config.getServletContext()).thenReturn(context);
 
-        filter = new BootstrapFilter();
+        provider = mock(WebloggerProvider.class);
+        filter = new BootstrapFilter(provider);
         filter.init(config);
     }
 
-    /** Runs the filter with the two statics forced to the given state. */
+    /** Runs the filter with the install type and the provider's bootstrap flag forced. */
     private void runWith(String installationType, boolean bootstrapped, String uri)
             throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI(uri);
+        when(provider.isBootstrapped()).thenReturn(bootstrapped);
 
-        try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class);
-             MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-
+        try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class)) {
             config.when(() -> WebloggerConfig.getProperty("installation.type"))
                     .thenReturn(installationType);
-            factory.when(WebloggerFactory::isBootstrapped).thenReturn(bootstrapped);
 
             filter.doFilter(request, new MockHttpServletResponse(), chain);
         }

@@ -20,9 +20,6 @@ package org.apache.roller.weblogger.ui.rendering.filters;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
@@ -33,57 +30,42 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.roller.weblogger.ui.rendering.RequestMapper;
-import org.apache.roller.weblogger.util.Reflection;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
+import org.apache.roller.weblogger.ui.rendering.WeblogRequestMapper;
 
 /**
- * Provides generalized request mapping capabilities.
+ * Hands every incoming request to the {@link WeblogRequestMapper}, which
+ * re-routes weblog urls ({@code /<handle>/...}, or a custom domain's root) to
+ * the rendering servlets and declines everything else.
  *
- * Incoming requests can be inspected by a series of RequestMappers and can
- * potentially be re-routed to different places within the application.
+ * <p>The mapper is constructed here, directly, with the {@link WebloggerProvider}
+ * and facade this filter is given (a bean in {@code ServletRegistrationConfig};
+ * DI wave, plan Task 6b). It used to be instantiated reflectively from the
+ * {@code rendering.rollerRequestMappers} / {@code rendering.userRequestMappers}
+ * property lists -- which named exactly one class, had no user entries, and had
+ * no way to hand a mapper a dependency. An extension point with one
+ * implementation, no consumer and no injection is not an extension point, so
+ * the lists are gone (spec Decision 3).
  *
  * @web.filter name="RequestMappingFilter"
  */
 public class RequestMappingFilter implements Filter {
-    
+
     private static final Logger log = LoggerFactory.getLogger(RequestMappingFilter.class);
-    
-    // list of RequestMappers that want to inspect the request
-    private final List<RequestMapper> requestMappers = new ArrayList<>();
-    
+
+    private final WeblogRequestMapper mapper;
+
+    public RequestMappingFilter(WebloggerProvider provider, Weblogger weblogger) {
+        this.mapper = new WeblogRequestMapper(provider, weblogger);
+    }
+
     @Override
     public void init(FilterConfig filterConfig) {
-        
-        // instantiate user defined and standard roller request mapper classes
-        try {
-            requestMappers.addAll(Reflection.newInstancesFromProperty("rendering.userRequestMappers"));
-        } catch (ReflectiveOperationException ex) {
-            log.error("Unable to load user request mappers", ex);
-        }
-        try {
-            requestMappers.addAll(Reflection.newInstancesFromProperty("rendering.rollerRequestMappers"));
-        } catch (ReflectiveOperationException ex) {
-            log.error("Unable to load roller request mappers", ex);
-        }
-        
-        if(requestMappers.isEmpty()) {
-            // hmm ... failed to load any request mappers?
-            log.warn("Failed to load any request mappers.  "+
-                    "Weblog urls probably won't function as you expect.");
-        }
-        
-        // The second line here does genuinely non-trivial work (stream +
-        // collect), unlike a plain accessor -- both lines are guarded
-        // together as one startup log entry, per GuardLogStatement's own
-        // textbook case.
-        if (log.isInfoEnabled()) {
-            log.info("Request mapping filter initialized, {} mappers configured.", requestMappers.size());
-            log.info(requestMappers.stream().map(t -> t.getClass().toString())
-                    .collect(Collectors.joining(",", "[", "]")));
-        }
+        log.info("Request mapping filter initialized, mapper {}", mapper.getClass().getName());
     }
-    
-    
+
+
     /**
      * Inspect incoming urls and see if they should be routed.
      */
@@ -101,32 +83,26 @@ public class RequestMappingFilter implements Filter {
 
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
-        
-        log.debug("entering");
-        
-        // give each mapper a chance to handle the request
-        for (RequestMapper mapper : requestMappers) {
-            log.debug("trying mapper {}", mapper.getClass().getName());
 
-            boolean wasHandled = mapper.handleRequest(request, response);
-            if(wasHandled) {
-                // if mapper has handled the request then we are done
-                log.debug("request handled by {}", mapper.getClass().getName());
-                log.debug("exiting");
-                return;
-            }
+        log.debug("entering");
+
+        if (mapper.handleRequest(request, response)) {
+            // the mapper has handled the request, so we are done
+            log.debug("request handled by {}", mapper.getClass().getName());
+            log.debug("exiting");
+            return;
         }
 
         log.debug("request not mapped");
-        
-        // nobody handled the request, so let it continue as usual
+
+        // the mapper declined the request, so let it continue as usual
         chain.doFilter(request, response);
-        
+
         log.debug("exiting");
     }
-    
+
 
     @Override
     public void destroy() {}
-    
+
 }

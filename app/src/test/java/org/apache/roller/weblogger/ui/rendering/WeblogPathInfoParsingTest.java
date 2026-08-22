@@ -1,11 +1,14 @@
 package org.apache.roller.weblogger.ui.rendering;
 
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 
 /**
  * How a weblog-relative path is split into locale, context and data.
@@ -17,7 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  */
 class WeblogPathInfoParsingTest {
 
-    private final WeblogRequestMapper mapper = new WeblogRequestMapper();
+    // Pure path parsing: the mapper never reaches its provider or facade here.
+    private final WeblogRequestMapper mapper =
+            new WeblogRequestMapper(mock(WebloggerProvider.class), mock(Weblogger.class));
 
     private WeblogRequestMapper.WeblogPathInfo parse(String path) {
         return mapper.parsePathInfo(path);

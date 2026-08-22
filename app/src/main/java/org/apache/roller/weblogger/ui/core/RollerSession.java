@@ -30,13 +30,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.User;
 
 
 /**
  * Roller session handles session startup and shutdown.
+ *
+ * <p>The per-session object stores only the user <em>name</em>; it holds no
+ * reference to the business tier (it is {@link Serializable} and lives in the
+ * servlet session). Whoever needs the {@link User} hands in the
+ * {@link UserManager} to resolve with, and the static factory is handed the
+ * {@link WebloggerProvider} so it can skip that lookup before the tier is up
+ * (DI wave, plan Task 6b -- previously both reached the static locator).
  */
 public class RollerSession 
         implements HttpSessionListener, HttpSessionActivationListener, Serializable {
@@ -57,21 +64,31 @@ public class RollerSession
    
     /**
      * Get RollerSession from request (and add user if not already present).
+     *
+     * @param provider answers whether the business tier is up; a principal is
+     *                 only resolved to a user once it is
      */
-    public static RollerSession getRollerSession(HttpServletRequest request) {
+    public static RollerSession getRollerSession(HttpServletRequest request,
+            WebloggerProvider provider) {
         RollerSession rollerSession = null;
         HttpSession session = request.getSession(false);
         if (session != null) {
+            // Before bootstrap there is no user manager to resolve against, so
+            // every lookup below sees "no user" -- exactly the SSO case the
+            // comment further down describes.
+            UserManager users = provider.isBootstrapped()
+                    ? provider.getWeblogger().getUserManager() : null;
+
             rollerSession = (RollerSession)session.getAttribute(ROLLER_SESSION);
 
             if (rollerSession == null) {
                 // Create new session if none exists
                 rollerSession = new RollerSession();
                 session.setAttribute(ROLLER_SESSION, rollerSession);
-            } else if (rollerSession.getAuthenticatedUser() != null) {
+            } else if (rollerSession.getAuthenticatedUser(users) != null) {
                 // Check if session is still valid in cache
                 RollerLoginSessionManager manager = RollerLoginSessionManager.getInstance();
-                String username = rollerSession.getAuthenticatedUser().getUserName();
+                String username = rollerSession.getAuthenticatedUser(users).getUserName();
                 if (manager.get(username) == null) {
                     rollerSession = new RollerSession();
                     session.setAttribute(ROLLER_SESSION, rollerSession);
@@ -80,14 +97,12 @@ public class RollerSession
             Principal principal = request.getUserPrincipal();
 
             // If we've got a principal but no user object, then attempt to get
-            // user object from user manager but *only* do this if we have been 
-            // bootstrapped because under an SSO scenario we may have a 
+            // user object from user manager but *only* do this if we have been
+            // bootstrapped because under an SSO scenario we may have a
             // principal even before we have been bootstrapped.
-            if (rollerSession.getAuthenticatedUser() == null && principal != null && WebloggerFactory.isBootstrapped()) { 
+            if (rollerSession.getAuthenticatedUser(users) == null && principal != null && users != null) {
                 try {
-                    
-                    UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
-                    User user = umgr.getUserByUserName(principal.getName());
+                    User user = users.getUserByUserName(principal.getName());
                     
                     // only set authenticated user if user is enabled
                     if (user != null && user.getEnabled()) {
@@ -128,14 +143,15 @@ public class RollerSession
     }
 
     /**
-     * Authenticated user associated with this session.
+     * Authenticated user associated with this session, resolved through the
+     * given manager; {@code null} when there is no user, or no manager to
+     * resolve with yet (the tier is not bootstrapped).
      */
-    public User getAuthenticatedUser() {
-        
+    public User getAuthenticatedUser(UserManager mgr) {
+
         User authenticUser = null;
-        if (userName != null) {
+        if (userName != null && mgr != null) {
             try {
-                UserManager mgr = WebloggerFactory.getWeblogger().getUserManager();
                 authenticUser = mgr.getUserByUserName(userName);
             } catch (WebloggerException ex) {
                 log.warn("Error looking up authenticated user {}", userName, ex);

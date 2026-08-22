@@ -32,17 +32,27 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 
 
 /**
  * Redirects clients to install page when app is not bootstrapped and install
  * type is "auto", otherwise does nothing.
+ *
+ * <p>Whether the tier is bootstrapped is asked of the {@link WebloggerProvider}
+ * this filter is constructed with (a bean in {@code ServletRegistrationConfig};
+ * DI wave, plan Task 6b) rather than the static locator.
  */
 public class BootstrapFilter implements Filter {
     private ServletContext context = null;
     private static final Logger log = LoggerFactory.getLogger(BootstrapFilter.class);
+
+    private final WebloggerProvider provider;
+
+    public BootstrapFilter(WebloggerProvider provider) {
+        this.provider = provider;
+    }
 
 
     @Override
@@ -63,7 +73,7 @@ public class BootstrapFilter implements Filter {
         log.debug("Entered {}", request.getRequestURI());
         
         if ("auto".equals(WebloggerConfig.getProperty("installation.type"))
-                && !WebloggerFactory.isBootstrapped() 
+                && !provider.isBootstrapped()
                 && !isInstallUrl(request.getRequestURI())) {
                     
             log.debug("Forwarding to install page");

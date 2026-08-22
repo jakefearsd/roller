@@ -23,18 +23,10 @@ import org.apache.roller.weblogger.pojos.Weblog;
  * constructed with, and rebuilt after any weblog save
  * ({@code JPAWeblogManagerImpl} calls {@link #invalidate()}). It is a bean in
  * {@code WebloggerBeanConfig}, built with the rest of the business tier and
- * reachable as {@link Weblogger#getVirtualHostRegistry()}.
- *
- * <p><b>TRANSITIONAL:</b> until plan Task 6 hands the filters, the request
- * mapper and {@code SeoController} the instance directly, they reach it through
- * the static {@code *Current} delegators below, which resolve the bootstrapped
- * tier's registry through the {@code WebloggerFactory} locator -- the one
- * static this wave is retiring, deliberately reused rather than duplicated, so
- * the test suite's existing install/restore discipline for that locator covers
- * this too. Before the tier is up a lookup answers "no weblog" rather than
- * throwing, which is what lets the control-plane filter run that early. Task 6
- * deletes the delegators and takes this file off
- * {@code StaticServiceLocatorTest.ALLOWED}.
+ * reachable as {@link Weblogger#getVirtualHostRegistry()}. The filters and the
+ * request mapper that consult it before the tier may be up guard with
+ * {@code WebloggerProvider.isBootstrapped()} first -- pre-bootstrap the answer
+ * is "no weblog", and that guard is theirs, not this class's.
  */
 public final class VirtualHostRegistry {
 
@@ -120,40 +112,5 @@ public final class VirtualHostRegistry {
         Map<String, String> immutable = Collections.unmodifiableMap(built);
         hostToHandle = immutable;
         return immutable;
-    }
-
-    // ------------------------------------------------------------------------
-    // TRANSITIONAL static delegators -- removed by plan Task 6.
-
-    /**
-     * The bootstrapped tier's registry, or null before bootstrap (the
-     * expected, quiet case) or when the facade has none (a mocked facade in a
-     * test that did not stub it).
-     */
-    private static VirtualHostRegistry current() {
-        if (!WebloggerFactory.isBootstrapped()) {
-            return null;
-        }
-        return WebloggerFactory.getWeblogger().getVirtualHostRegistry();
-    }
-
-    /** {@link #handleFor} on the tier's registry; null before bootstrap. */
-    public static String handleForCurrent(String hostHeader) {
-        VirtualHostRegistry registry = current();
-        return registry == null ? null : registry.handleFor(hostHeader);
-    }
-
-    /** {@link #hostFor} on the tier's registry; null before bootstrap. */
-    public static String hostForCurrent(String handle) {
-        VirtualHostRegistry registry = current();
-        return registry == null ? null : registry.hostFor(handle);
-    }
-
-    /** {@link #invalidate} on the tier's registry; a no-op before bootstrap. */
-    public static void invalidateCurrent() {
-        VirtualHostRegistry registry = current();
-        if (registry != null) {
-            registry.invalidate();
-        }
     }
 }

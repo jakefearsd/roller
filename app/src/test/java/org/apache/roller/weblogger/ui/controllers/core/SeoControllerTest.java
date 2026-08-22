@@ -29,11 +29,13 @@ import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.User;
@@ -75,6 +77,20 @@ import static org.mockito.Mockito.when;
 class SeoControllerTest {
 
     private static final String ABSOLUTE_CONTEXT = "http://localhost:8080/roller";
+
+    /**
+     * An {@code InitFilter} over the suite's real, bootstrapped tier -- it
+     * takes its provider and facade by constructor since the DI wave (plan
+     * Task 6b). (The test side still reaches the tier through the static
+     * until plan Task 20.)
+     */
+    private static InitFilter initFilterOverTheRealTier() {
+        Weblogger tier = WebloggerFactory.getWeblogger();
+        WebloggerProvider provider = mock(WebloggerProvider.class);
+        when(provider.isBootstrapped()).thenReturn(true);
+        when(provider.getWeblogger()).thenReturn(tier);
+        return new InitFilter(provider, tier);
+    }
 
     private SeoController controller;
     private User user;
@@ -134,7 +150,7 @@ class SeoControllerTest {
             first.setContextPath("/roller");
             first.addHeader("X-Forwarded-Proto", "https");
             new ForwardedHeaderFilter().doFilter(first, new MockHttpServletResponse(),
-                    new MockFilterChain(new HttpServlet() { }, new InitFilter()));
+                    new MockFilterChain(new HttpServlet() { }, initFilterOverTheRealTier()));
 
             ResponseEntity<String> response = controller.sitemapIndex(new MockHttpServletRequest());
 
@@ -330,6 +346,10 @@ class SeoControllerTest {
         when(broken.getWeblogManager()).thenReturn(weblogManager);
         when(weblogManager.getWeblogs(any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenThrow(new WebloggerException("database down"));
+        // The controller asks the facade's registry whether the request is on
+        // a custom domain before listing; a registry over the same failing
+        // manager answers "no" (its rebuild failure is logged, not thrown).
+        when(broken.getVirtualHostRegistry()).thenReturn(new VirtualHostRegistry(weblogManager));
         SeoController failing = new SeoController();
         inject(failing, "weblogger", broken);
 

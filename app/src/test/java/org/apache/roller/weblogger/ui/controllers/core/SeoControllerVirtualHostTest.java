@@ -70,7 +70,7 @@ class SeoControllerVirtualHostTest {
         managed.setCustomDomain("vhost.example.com");
         mgr.saveWeblog(managed);
         TestUtils.endSession(true);
-        VirtualHostRegistry.invalidateCurrent();
+        WebloggerFactory.getWeblogger().getVirtualHostRegistry().invalidate();
 
         controller = new SeoController();
         inject(controller, "weblogger", WebloggerFactory.getWeblogger());
@@ -84,7 +84,7 @@ class SeoControllerVirtualHostTest {
         TestUtils.endSession(true);
         // VirtualHostRegistry is a JVM-wide static cache -- the domain set
         // here must not leak into another test class.
-        VirtualHostRegistry.invalidateCurrent();
+        WebloggerFactory.getWeblogger().getVirtualHostRegistry().invalidate();
     }
 
     private MockHttpServletRequest onHost(String host) {

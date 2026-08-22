@@ -90,7 +90,6 @@ class StaticServiceLocatorTest {
      * 73 files, 164 call sites.
      */
     static final Set<String> ALLOWED = Set.of(
-            PKG + "business/VirtualHostRegistry.java",
             PKG + "business/shortcodes/GalleryShortcode.java",
             PKG + "business/shortcodes/ImageShortcode.java",
             PKG + "business/shortcodes/MapShortcode.java",
@@ -104,10 +103,6 @@ class StaticServiceLocatorTest {
             PKG + "pojos/WeblogEntryTag.java",
             PKG + "pojos/WeblogPermission.java",
             PKG + "pojos/wrapper/WeblogEntryWrapper.java",
-            PKG + "ui/core/RollerSession.java",
-            PKG + "ui/core/filters/BootstrapFilter.java",
-            PKG + "ui/core/filters/PersistenceSessionFilter.java",
-            PKG + "ui/rendering/WeblogRequestMapper.java",
             PKG + "ui/rendering/util/ParsedRequest.java",
             PKG + "ui/rendering/util/PreviewThemeLookup.java",
             PKG + "ui/rendering/util/WeblogFeedRequest.java",

@@ -24,6 +24,7 @@ import jakarta.servlet.http.HttpServlet;
 
 import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ import org.springframework.web.filter.ForwardedHeaderFilter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 
@@ -43,6 +45,24 @@ import static org.mockito.Mockito.when;
 public class InitFilterTest  {
 
     private static final String SERVER_NAME = "roller.example.com";
+
+    /**
+     * A filter over a tier that is not up: the custom-domain question is
+     * skipped, which is what every non-vhost test here wants (DI wave, plan
+     * Task 6b -- the filter takes its provider and facade by constructor).
+     */
+    private static InitFilter plainFilter() {
+        WebloggerProvider notBootstrapped = mock(WebloggerProvider.class);
+        return new InitFilter(notBootstrapped, null);
+    }
+
+    /** A filter over a bootstrapped tier whose facade is the given mock's. */
+    private static InitFilter filterOver(MockWeblogger mocks) {
+        WebloggerProvider bootstrapped = mock(WebloggerProvider.class);
+        when(bootstrapped.isBootstrapped()).thenReturn(true);
+        when(bootstrapped.getWeblogger()).thenReturn(mocks.weblogger());
+        return new InitFilter(bootstrapped, mocks.weblogger());
+    }
 
     @Test
     public void testGetAbsoluteUrlOnRootWithHttp() throws Exception {
@@ -147,7 +167,7 @@ public class InitFilterTest  {
             request.addHeader("X-Forwarded-Proto", "https");
 
             new ForwardedHeaderFilter().doFilter(request, new MockHttpServletResponse(),
-                    new MockFilterChain(new HttpServlet() { }, new InitFilter()));
+                    new MockFilterChain(new HttpServlet() { }, plainFilter()));
 
             assertEquals("https://photos.example.com/roller",
                     WebloggerRuntimeConfig.getAbsoluteContextURL(),
@@ -165,7 +185,7 @@ public class InitFilterTest  {
         String priorRelative = WebloggerRuntimeConfig.getRelativeContextURL();
         try {
             new ForwardedHeaderFilter().doFilter(proxiedRequest(), new MockHttpServletResponse(),
-                    new MockFilterChain(new HttpServlet() { }, new InitFilter()));
+                    new MockFilterChain(new HttpServlet() { }, plainFilter()));
 
             assertEquals("http://photos.example.com/roller",
                     WebloggerRuntimeConfig.getAbsoluteContextURL(),
@@ -234,7 +254,7 @@ public class InitFilterTest  {
         String priorRelative = WebloggerRuntimeConfig.getRelativeContextURL();
         try {
             new ForwardedHeaderFilter().doFilter(proxiedRequest(""), new MockHttpServletResponse(),
-                    new MockFilterChain(new HttpServlet() { }, new InitFilter()));
+                    new MockFilterChain(new HttpServlet() { }, plainFilter()));
 
             assertEquals("", WebloggerRuntimeConfig.getRelativeContextURL());
             assertEquals("http://photos.example.com",
@@ -265,7 +285,7 @@ public class InitFilterTest  {
             request.addHeader("X-Forwarded-Host", "maiiavorobiova.com");
 
             new ForwardedHeaderFilter().doFilter(request, new MockHttpServletResponse(),
-                    new MockFilterChain(new HttpServlet() { }, new InitFilter()));
+                    new MockFilterChain(new HttpServlet() { }, plainFilter()));
 
             assertEquals("https://maiiavorobiova.com",
                     WebloggerRuntimeConfig.getAbsoluteContextURL());
@@ -304,9 +324,8 @@ public class InitFilterTest  {
             vhostblog.setCustomDomain("vhost.example.com");
             when(mocks.getWeblogManager().getWeblogs(null, null, null, null, 0, -1))
                     .thenReturn(List.of(vhostblog));
-            // InitFilter still reaches the registry through its transitional
-            // static delegator (plan Task 6 injects it), which resolves it off
-            // the mocked facade -- hand it one over the mock manager.
+            // The filter asks the facade it is constructed with for the
+            // registry -- hand it one over the mock manager.
             when(mocks.weblogger().getVirtualHostRegistry())
                     .thenReturn(new VirtualHostRegistry(mocks.getWeblogManager()));
 
@@ -315,7 +334,7 @@ public class InitFilterTest  {
             request.addHeader("Host", "vhost.example.com");
             request.setContextPath("");
 
-            new InitFilter().doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+            filterOver(mocks).doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
 
             assertNull(WebloggerRuntimeConfig.getAbsoluteContextURL(),
                     "a request on a weblog's own custom domain must not latch the site's "
@@ -348,9 +367,8 @@ public class InitFilterTest  {
             vhostblog.setCustomDomain("vhost.example.com");
             when(mocks.getWeblogManager().getWeblogs(null, null, null, null, 0, -1))
                     .thenReturn(List.of(vhostblog));
-            // InitFilter still reaches the registry through its transitional
-            // static delegator (plan Task 6 injects it), which resolves it off
-            // the mocked facade -- hand it one over the mock manager.
+            // The filter asks the facade it is constructed with for the
+            // registry -- hand it one over the mock manager.
             when(mocks.weblogger().getVirtualHostRegistry())
                     .thenReturn(new VirtualHostRegistry(mocks.getWeblogManager()));
 
@@ -359,7 +377,7 @@ public class InitFilterTest  {
             request.addHeader("Host", "roller.example.com");
             request.setContextPath("");
 
-            new InitFilter().doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+            filterOver(mocks).doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
 
             assertEquals("http://roller.example.com", WebloggerRuntimeConfig.getAbsoluteContextURL(),
                     "an unclaimed host must still latch, unaffected by the custom-domain refusal");

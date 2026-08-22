@@ -1,10 +1,13 @@
 package org.apache.roller.weblogger.ui.rendering;
 
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 
 /**
  * CHARACTERISATION TEST -- written before the forward-url switch was replaced
@@ -33,7 +36,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  */
 class WeblogForwardUrlCharacterisationTest {
 
-    private final WeblogRequestMapper mapper = new WeblogRequestMapper();
+    // Pure url-shape parsing: the mapper never reaches its provider or facade here.
+    private final WeblogRequestMapper mapper =
+            new WeblogRequestMapper(mock(WebloggerProvider.class), mock(Weblogger.class));
 
     private static final String PAGE = "/roller-ui/rendering/page";
     private static final String FEED = "/roller-ui/rendering/feed";

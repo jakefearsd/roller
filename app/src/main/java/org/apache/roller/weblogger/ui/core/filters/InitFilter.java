@@ -33,13 +33,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 
 /**
  * A special initialization filter which ensures that we have an opportunity to
  * extract a few pieces of information about the environment we are running in
  * when the first request is sent.
- * 
+ *
+ * <p>Takes the {@link WebloggerProvider} and the (lazy) facade so it can ask
+ * the {@link VirtualHostRegistry} whether a request arrived on a custom domain
+ * -- and skip that question before the tier is up (DI wave, plan Task 6b).
+ *
  * @web.filter name="InitFilter"
  */
 public class InitFilter implements Filter {
@@ -47,6 +53,23 @@ public class InitFilter implements Filter {
     private static final Logger log = LoggerFactory.getLogger(InitFilter.class);
 
     private boolean initialized = false;
+
+    private final WebloggerProvider provider;
+    private final Weblogger weblogger;
+
+    public InitFilter(WebloggerProvider provider, Weblogger weblogger) {
+        this.provider = provider;
+        this.weblogger = weblogger;
+    }
+
+    /** True when the Host header names a weblog's custom domain; always false before bootstrap. */
+    private boolean onACustomDomain(String hostHeader) {
+        if (!provider.isBootstrapped()) {
+            return false;
+        }
+        VirtualHostRegistry registry = weblogger.getVirtualHostRegistry();
+        return registry != null && registry.handleFor(hostHeader) != null;
+    }
 
     @Override
     @SuppressFBWarnings(
@@ -77,10 +100,8 @@ public class InitFilter implements Filter {
             // until a request on a non-custom-domain host happens to arrive
             // (which "initialized" staying false here still allows: this
             // skips latching for THIS request only, not permanently).
-            boolean onACustomDomain =
-                    VirtualHostRegistry.handleForCurrent(request.getHeader("Host")) != null;
-
-            if (!onACustomDomain && validator.isValid(request.getRequestURL().toString())) {
+            if (!onACustomDomain(request.getHeader("Host"))
+                    && validator.isValid(request.getRequestURL().toString())) {
 
                 // determine absolute and relative url paths to the app
                 String relPath = request.getContextPath();

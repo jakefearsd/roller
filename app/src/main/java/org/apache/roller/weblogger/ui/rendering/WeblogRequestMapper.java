@@ -32,7 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.rendering.util.LocaleSegment;
 
@@ -42,11 +43,15 @@ import org.apache.roller.weblogger.ui.rendering.util.LocaleSegment;
  *
  * This request mapper is used to map all weblog specific urls of the form
  * /<weblog handle>/* to the appropriate servlet for handling the actual
- * request.
+ * request. It is constructed by {@code RequestMappingFilter} with the
+ * {@link WebloggerProvider} and the facade (DI wave, plan Task 6b): before the
+ * tier is up it declines every weblog-shaped url rather than touching the
+ * facade, exactly as the static locator used to throw into the same
+ * {@code catch}.
  *
  * TODO: we should try and make this class easier to extend and build upon
  */
-public class WeblogRequestMapper implements RequestMapper {
+public class WeblogRequestMapper {
     
     private static final Logger log = LoggerFactory.getLogger(WeblogRequestMapper.class);
     
@@ -107,9 +112,14 @@ public class WeblogRequestMapper implements RequestMapper {
     // roller.properties for why this is a strict subset of `restricted`.
     Set<String> appRestricted = null;
 
+    private final WebloggerProvider provider;
+    private final Weblogger weblogger;
 
-    public WeblogRequestMapper() {
 
+    public WeblogRequestMapper(WebloggerProvider provider, Weblogger weblogger) {
+
+        this.provider = provider;
+        this.weblogger = weblogger;
         this.restricted = new HashSet<>();
 
         // build roller restricted list
@@ -150,7 +160,11 @@ public class WeblogRequestMapper implements RequestMapper {
     }
     
     
-    @Override
+    /**
+     * Inspect the request and, if it is a weblog url, forward it to the right
+     * rendering servlet. Returns {@code true} when the request was handled
+     * (forwarded or redirected) and the filter chain must not continue.
+     */
     public boolean handleRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
@@ -172,7 +186,7 @@ public class WeblogRequestMapper implements RequestMapper {
         // trailing-slash rules, the forward url -- is identical either way,
         // which is the whole reason resolution lives here rather than in a
         // second mapper that would have to reimplement it.
-        String vhostHandle = VirtualHostRegistry.handleForCurrent(request.getHeader("Host"));
+        String vhostHandle = vhostHandleFor(request.getHeader("Host"));
 
         NormalizedPath normalized =
                 normalizePath(request.getRequestURI(), request.getContextPath());
@@ -243,7 +257,7 @@ public class WeblogRequestMapper implements RequestMapper {
         // Redirect precisely when the weblog has a hostname and THIS request
         // did not arrive on it. vhostHandle != null means the host already
         // resolved the weblog, i.e. we are on the canonical domain already.
-        String canonicalHost = VirtualHostRegistry.hostForCurrent(weblogHandle);
+        String canonicalHost = vhostHostFor(weblogHandle);
         if (vhostHandle == null && canonicalHost != null) {
             StringBuilder target = new StringBuilder("https://").append(canonicalHost);
             target.append(request.getContextPath());
@@ -413,17 +427,43 @@ public class WeblogRequestMapper implements RequestMapper {
     
     
     /**
+     * The registry on the bootstrapped tier, or null before bootstrap -- a
+     * request that arrives that early (installation.type=manual, no database
+     * yet) is simply not on a custom domain, and touching the lazy facade
+     * would try to build the tier instead of answering.
+     */
+    private VirtualHostRegistry registry() {
+        return provider.isBootstrapped() ? weblogger.getVirtualHostRegistry() : null;
+    }
+
+    private String vhostHandleFor(String hostHeader) {
+        VirtualHostRegistry registry = registry();
+        return registry == null ? null : registry.handleFor(hostHeader);
+    }
+
+    private String vhostHostFor(String handle) {
+        VirtualHostRegistry registry = registry();
+        return registry == null ? null : registry.hostFor(handle);
+    }
+
+    /**
      * convenience method which determines if the given string is a valid
      * weblog handle.
      */
     private boolean isWeblog(String potentialHandle) {
-        
+
         log.debug("checking weblog handle {}", potentialHandle);
-        
+
         boolean isWeblog = false;
-        
+
+        // Before bootstrap there is no manager to ask, and the answer is the
+        // same one the locator's IllegalStateException used to fall into below.
+        if (!provider.isBootstrapped()) {
+            return false;
+        }
+
         try {
-            Weblog weblog = WebloggerFactory.getWeblogger().getWeblogManager()
+            Weblog weblog = weblogger.getWeblogManager()
                     .getWeblogByHandle(potentialHandle);
             
             if(weblog != null) {

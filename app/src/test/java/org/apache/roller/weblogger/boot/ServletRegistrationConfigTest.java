@@ -28,6 +28,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletRegistration;
 
 import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.ui.controllers.ajax.ThemeDataServlet;
 import org.apache.roller.weblogger.ui.controllers.ajax.UserDataServlet;
 import org.apache.roller.weblogger.ui.core.RollerSession;
@@ -78,8 +79,11 @@ class ServletRegistrationConfigTest {
 
     private final ServletRegistrationConfig config = new ServletRegistrationConfig();
 
-    /** The servlet beans are built with a facade; the registrations never touch it. */
+    /** The servlet and filter beans are built with a facade; the registrations never touch it. */
     private final Weblogger weblogger = mock(Weblogger.class);
+
+    /** Likewise the provider the bootstrap-aware filters take (DI wave, plan Task 6b). */
+    private final WebloggerProvider provider = mock(WebloggerProvider.class);
 
     /**
      * {@link ServletRegistrationBean} exposes no getter for {@code
@@ -276,7 +280,8 @@ class ServletRegistrationConfigTest {
      */
     @Test
     void controlPlaneHostFilterRunsBetweenTheFirewallFilterAndSecurityAtOrderThirtyFive() {
-        FilterRegistrationBean<ControlPlaneHostFilter> bean = config.controlPlaneHostFilterRegistration();
+        FilterRegistrationBean<ControlPlaneHostFilter> bean = config.controlPlaneHostFilterRegistration(
+                config.controlPlaneHostFilter(provider, weblogger));
         assertInstanceOf(ControlPlaneHostFilter.class, bean.getFilter());
         assertEquals(35, bean.getOrder());
         assertEquals(Set.of("/*"), Set.copyOf(bean.getUrlPatterns()));
@@ -285,7 +290,8 @@ class ServletRegistrationConfigTest {
 
     @Test
     void bootstrapFilterRunsAfterSecurityAtOrderFifty() {
-        FilterRegistrationBean<BootstrapFilter> bean = config.bootstrapFilterRegistration();
+        FilterRegistrationBean<BootstrapFilter> bean = config.bootstrapFilterRegistration(
+                config.bootstrapFilter(provider));
         assertInstanceOf(BootstrapFilter.class, bean.getFilter());
         assertEquals(50, bean.getOrder());
         assertEquals(Set.of("/*"), Set.copyOf(bean.getUrlPatterns()));
@@ -294,7 +300,8 @@ class ServletRegistrationConfigTest {
 
     @Test
     void persistenceSessionFilterRunsAtOrderSixty() {
-        FilterRegistrationBean<PersistenceSessionFilter> bean = config.persistenceSessionFilterRegistration();
+        FilterRegistrationBean<PersistenceSessionFilter> bean = config.persistenceSessionFilterRegistration(
+                config.persistenceSessionFilter(provider));
         assertInstanceOf(PersistenceSessionFilter.class, bean.getFilter());
         assertEquals(60, bean.getOrder());
         assertEquals(Set.of("/*"), Set.copyOf(bean.getUrlPatterns()));
@@ -303,7 +310,8 @@ class ServletRegistrationConfigTest {
 
     @Test
     void initFilterRunsAtOrderSeventy() {
-        FilterRegistrationBean<InitFilter> bean = config.initFilterRegistration();
+        FilterRegistrationBean<InitFilter> bean = config.initFilterRegistration(
+                config.initFilter(provider, weblogger));
         assertInstanceOf(InitFilter.class, bean.getFilter());
         assertEquals(70, bean.getOrder());
         assertEquals(Set.of("/*"), Set.copyOf(bean.getUrlPatterns()));
@@ -312,7 +320,8 @@ class ServletRegistrationConfigTest {
 
     @Test
     void requestMappingFilterRunsLastAtOrderEighty() {
-        FilterRegistrationBean<RequestMappingFilter> bean = config.requestMappingFilterRegistration();
+        FilterRegistrationBean<RequestMappingFilter> bean = config.requestMappingFilterRegistration(
+                config.requestMappingFilter(provider, weblogger));
         assertInstanceOf(RequestMappingFilter.class, bean.getFilter());
         assertEquals(80, bean.getOrder());
         assertEquals(Set.of("/*"), Set.copyOf(bean.getUrlPatterns()));

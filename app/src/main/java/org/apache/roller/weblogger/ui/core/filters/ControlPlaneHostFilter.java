@@ -14,6 +14,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 
@@ -24,7 +26,12 @@ import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
  *
  * <p>Registered at filter order 35 -- ahead of the Spring Security chain (40),
  * so an unauthenticated admin request is moved to the right host before
- * security can mint a session and a CSRF token on the wrong one.
+ * security can mint a session and a CSRF token on the wrong one. That is also
+ * ahead of {@code BootstrapFilter} (50): this filter sees requests before the
+ * business tier is up, which is why it takes the {@link WebloggerProvider} and
+ * asks {@code isBootstrapped()} before touching the {@link VirtualHostRegistry}
+ * on the (lazy) facade -- pre-bootstrap the answer is "no custom host", never
+ * an attempt to build the tier (DI wave, plan Task 6b).
  */
 public class ControlPlaneHostFilter implements Filter {
 
@@ -32,6 +39,23 @@ public class ControlPlaneHostFilter implements Filter {
 
     /** The public rendering namespace, which must stay on the custom domain. */
     private static final String PUBLIC_RENDERING = "/roller-ui/rendering/";
+
+    private final WebloggerProvider provider;
+    private final Weblogger weblogger;
+
+    public ControlPlaneHostFilter(WebloggerProvider provider, Weblogger weblogger) {
+        this.provider = provider;
+        this.weblogger = weblogger;
+    }
+
+    /** The weblog handle a Host header resolves to, or null -- always null before bootstrap. */
+    private String customDomainHandle(String hostHeader) {
+        if (!provider.isBootstrapped()) {
+            return null;
+        }
+        VirtualHostRegistry registry = weblogger.getVirtualHostRegistry();
+        return registry == null ? null : registry.handleFor(hostHeader);
+    }
 
     /**
      * True when this path is control plane and belongs on the site host.
@@ -70,7 +94,7 @@ public class ControlPlaneHostFilter implements Filter {
         }
 
         if (belongsToSiteHost(path)
-                && VirtualHostRegistry.handleForCurrent(request.getHeader("Host")) != null) {
+                && customDomainHandle(request.getHeader("Host")) != null) {
 
             String siteUrl = siteHostUrl();
             if (siteUrl == null) {

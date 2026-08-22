@@ -2,12 +2,11 @@ package org.apache.roller.weblogger.ui.core;
 
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 import org.apache.roller.weblogger.pojos.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +17,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 
+/**
+ * The per-session object and its static factory. Since the DI wave (plan Task
+ * 6b) neither reaches the static locator: the factory is handed a
+ * {@link WebloggerProvider} (it must not resolve a principal before the tier is
+ * up), and the user lookup is handed the {@link UserManager} to resolve with.
+ */
 class RollerSessionTest {
 
     @Mock
@@ -31,6 +36,9 @@ class RollerSessionTest {
 
     @Mock
     private Weblogger roller;
+
+    @Mock
+    private WebloggerProvider provider;
 
     @Mock
     private UserManager userManager;
@@ -50,9 +58,8 @@ class RollerSessionTest {
 
         when(request.getSession(false)).thenReturn(session);
         when(roller.getUserManager()).thenReturn(userManager);
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(roller);
-        }
+        when(provider.isBootstrapped()).thenReturn(true);
+        when(provider.getWeblogger()).thenReturn(roller);
     }
 
     @Test
@@ -60,7 +67,7 @@ class RollerSessionTest {
         when(session.getAttribute(RollerSession.ROLLER_SESSION)).thenReturn(null);
         when(request.getUserPrincipal()).thenReturn(null);
 
-        RollerSession result = RollerSession.getRollerSession(request);
+        RollerSession result = RollerSession.getRollerSession(request, provider);
 
         // Verify new session was created
         assertNotNull(result);
@@ -73,7 +80,7 @@ class RollerSessionTest {
         when(session.getAttribute(RollerSession.ROLLER_SESSION)).thenReturn(rollerSession);
         when(request.getUserPrincipal()).thenReturn(null);
 
-        RollerSession result = RollerSession.getRollerSession(request);
+        RollerSession result = RollerSession.getRollerSession(request, provider);
 
         // Verify session was retrieved
         assertNotNull(result);
@@ -90,19 +97,51 @@ class RollerSessionTest {
         when(userManager.getUserByUserName(username)).thenReturn(user);
         when(user.getUserName()).thenReturn(username);
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(roller);
+        rollerSession.setAuthenticatedUser(user);
+        sessionManager.invalidate(username);
 
-            rollerSession.setAuthenticatedUser(user);
-            sessionManager.invalidate(username);
+        // Force creation of new session
+        when(session.getAttribute(RollerSession.ROLLER_SESSION)).thenReturn(null);
 
-            // Force creation of new session
-            when(session.getAttribute(RollerSession.ROLLER_SESSION)).thenReturn(null);
-            RollerSession result = RollerSession.getRollerSession(request);
+        RollerSession result = RollerSession.getRollerSession(request, provider);
 
-            assertNotNull(result);
-            assertNotEquals(rollerSession, result);
-        }
+        assertNotNull(result);
+        assertNotEquals(rollerSession, result);
+    }
+
+    /** A principal on a bootstrapped tier is resolved through the PROVIDER's facade. */
+    @Test
+    void aPrincipalIsResolvedThroughTheProvidersUserManager() throws Exception {
+        String username = "testuser";
+        when(session.getAttribute(RollerSession.ROLLER_SESSION)).thenReturn(null);
+        when(request.getUserPrincipal()).thenReturn(principal);
+        when(principal.getName()).thenReturn(username);
+        when(userManager.getUserByUserName(username)).thenReturn(user);
+        when(user.getUserName()).thenReturn(username);
+        when(user.getEnabled()).thenReturn(Boolean.TRUE);
+
+        RollerSession result = RollerSession.getRollerSession(request, provider);
+
+        assertEquals(user, result.getAuthenticatedUser(userManager));
+        verify(userManager, atLeastOnce()).getUserByUserName(username);
+    }
+
+    /**
+     * Under SSO a principal can arrive before the tier is up; the lookup must
+     * be skipped, and the provider's facade must not even be asked for.
+     */
+    @Test
+    void beforeBootstrapAPrincipalIsNotResolved() {
+        when(provider.isBootstrapped()).thenReturn(false);
+        when(session.getAttribute(RollerSession.ROLLER_SESSION)).thenReturn(null);
+        when(request.getUserPrincipal()).thenReturn(principal);
+        when(principal.getName()).thenReturn("testuser");
+
+        RollerSession result = RollerSession.getRollerSession(request, provider);
+
+        assertNotNull(result);
+        assertNull(result.getAuthenticatedUser(userManager));
+        verify(provider, never()).getWeblogger();
     }
 
     @Test
@@ -124,17 +163,22 @@ class RollerSessionTest {
         when(user.getUserName()).thenReturn(username);
         when(userManager.getUserByUserName(username)).thenReturn(user);
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(roller);
+        rollerSession.setAuthenticatedUser(user);
+        User result = rollerSession.getAuthenticatedUser(userManager);
 
-            rollerSession.setAuthenticatedUser(user);
-            User result = rollerSession.getAuthenticatedUser();
+        // Verify authenticated user was retrieved
+        assertNotNull(result);
+        // Verify retrieved user matches original user
+        assertEquals(user, result);
+    }
 
-            // Verify authenticated user was retrieved
-            assertNotNull(result);
-            // Verify retrieved user matches original user
-            assertEquals(user, result);
-        }
+    /** With no manager to resolve against (pre-bootstrap) there is no user. */
+    @Test
+    void getAuthenticatedUserWithNoManagerIsNull() {
+        when(user.getUserName()).thenReturn("testuser");
+        rollerSession.setAuthenticatedUser(user);
+
+        assertNull(rollerSession.getAuthenticatedUser(null));
     }
 
     @Test
@@ -162,17 +206,13 @@ class RollerSessionTest {
               .thenReturn(user)  // First call returns user
               .thenReturn(null); // Subsequent calls return null
 
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(roller);
+        rollerSession.setAuthenticatedUser(user);
+        sessionManager.invalidate(username);
 
-            rollerSession.setAuthenticatedUser(user);
-            sessionManager.invalidate(username);
+        // Force UserManager to return null after invalidation
+        when(userManager.getUserByUserName(username)).thenReturn(null);
 
-            // Force UserManager to return null after invalidation
-            when(userManager.getUserByUserName(username)).thenReturn(null);
-
-            assertNull(sessionManager.get(username));
-            assertNull(rollerSession.getAuthenticatedUser());
-        }
+        assertNull(sessionManager.get(username));
+        assertNull(rollerSession.getAuthenticatedUser(userManager));
     }
 }

@@ -110,7 +110,7 @@ public class SeoController extends BaseController {
     @GetMapping("/robots.txt")
     public ResponseEntity<String> robots(HttpServletRequest request) {
         String vhostHost = VirtualHostRegistry.normalise(request.getHeader("Host"));
-        String vhostHandle = VirtualHostRegistry.handleForCurrent(request.getHeader("Host"));
+        String vhostHandle = weblogger.getVirtualHostRegistry().handleFor(request.getHeader("Host"));
         // Same webapp context reached under many hostnames -- the custom
         // domain still needs the context path, or a deployment under a
         // prefix advertises a sitemap url that 404s on that same deployment.
@@ -141,7 +141,7 @@ public class SeoController extends BaseController {
      */
     @GetMapping("/sitemap.xml")
     public ResponseEntity<String> sitemapIndex(HttpServletRequest request) {
-        String vhostHandle = VirtualHostRegistry.handleForCurrent(request.getHeader("Host"));
+        String vhostHandle = weblogger.getVirtualHostRegistry().handleFor(request.getHeader("Host"));
         if (vhostHandle != null) {
             return weblogSitemap(vhostHandle);
         }

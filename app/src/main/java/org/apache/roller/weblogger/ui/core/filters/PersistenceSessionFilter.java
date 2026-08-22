@@ -30,20 +30,30 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WebloggerProvider;
 
 
 /**
  * Sole responsibility is to ensure that each request's Roller
  * persistence session is released at end of the request.
  *
+ * <p>Takes the {@link WebloggerProvider} (a bean in
+ * {@code ServletRegistrationConfig}; DI wave, plan Task 6b): before the tier
+ * is up there is nothing to release, and afterwards the release goes to the
+ * provider's facade rather than the static locator.
+ *
  * @web.filter name="PersistenceSessionFilter"
  */
 public class PersistenceSessionFilter implements Filter {
-    
+
     private static final Logger log = LoggerFactory.getLogger(PersistenceSessionFilter.class);
-    
-    
+
+    private final WebloggerProvider provider;
+
+    public PersistenceSessionFilter(WebloggerProvider provider) {
+        this.provider = provider;
+    }
+
     /**
      * Release Roller persistence session at end of request processing.
      */
@@ -67,9 +77,9 @@ public class PersistenceSessionFilter implements Filter {
         try {
             chain.doFilter(request, response);
         } finally {
-            if (WebloggerFactory.isBootstrapped()) {
+            if (provider.isBootstrapped()) {
                 log.debug("Releasing Roller Session");
-                WebloggerFactory.getWeblogger().release();
+                provider.getWeblogger().release();
             }
             
         }

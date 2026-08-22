@@ -14,7 +14,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -148,7 +147,8 @@ class VirtualHostRegistryTest {
      * M9: once the tier is up, an exception here means every custom domain
      * stops resolving site-wide -- that must not be a debug-only line nobody
      * enables in production. (The pre-bootstrap "expected, stay quiet" case is
-     * the static delegator's with no instance installed, below.)
+     * the callers' guard -- the filters and the mapper ask
+     * {@code WebloggerProvider.isBootstrapped()} before touching the registry.)
      */
     @Test
     void mapFailureLogsAtWarn() throws WebloggerException {
@@ -177,56 +177,4 @@ class VirtualHostRegistryTest {
         assertEquals("b", registry.handleFor("b.example.com"));
     }
 
-    // ------------------------------------- the TRANSITIONAL static delegators
-
-    /**
-     * Before the tier is up there is no registry, and a lookup is the EXPECTED
-     * steady state (the control-plane filter runs at order 35), not a live
-     * failure -- answer "no weblog" and keep quiet. The delegators exist only
-     * until plan Task 6 hands the filters and the mapper the instance directly.
-     */
-    @Test
-    void beforeBootstrapTheStaticLookupIsNullAndQuiet() {
-        startCapturingLogs();
-        MockWeblogger.installNotBootstrapped();
-        try {
-            assertNull(VirtualHostRegistry.handleForCurrent("anything.example.com"));
-            assertNull(VirtualHostRegistry.hostForCurrent("anything"));
-            VirtualHostRegistry.invalidateCurrent();   // must not throw
-            assertFalse(appender.events.stream().anyMatch(e -> e.getLevel() == Level.WARN),
-                    "a pre-bootstrap lookup is expected and must not log at WARN");
-        } finally {
-            MockWeblogger.uninstall();
-        }
-    }
-
-    /** A mocked facade that was never given a registry is treated like "none yet". */
-    @Test
-    void aFacadeWithNoRegistryIsTreatedAsNoneYet() {
-        MockWeblogger.install();
-        try {
-            assertNull(VirtualHostRegistry.handleForCurrent("anything.example.com"));
-            VirtualHostRegistry.invalidateCurrent();   // must not throw
-        } finally {
-            MockWeblogger.uninstall();
-        }
-    }
-
-    @Test
-    void theStaticDelegatorsReachTheBootstrappedTiersRegistry() throws WebloggerException {
-        WeblogManager manager = managerWith(weblogWithDomain("b", "b.example.com"));
-        MockWeblogger mocks = MockWeblogger.install();
-        try {
-            when(mocks.weblogger().getVirtualHostRegistry())
-                    .thenReturn(new VirtualHostRegistry(manager));
-
-            assertEquals("b", VirtualHostRegistry.handleForCurrent("b.example.com"));
-            assertEquals("b.example.com", VirtualHostRegistry.hostForCurrent("b"));
-            VirtualHostRegistry.invalidateCurrent();
-            assertEquals("b", VirtualHostRegistry.handleForCurrent("b.example.com"));
-            verify(manager, times(2)).getWeblogs(null, null, null, null, 0, -1);
-        } finally {
-            MockWeblogger.uninstall();
-        }
-    }
 }
