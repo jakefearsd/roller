@@ -113,17 +113,13 @@ class StaticServiceLocatorTest {
             PKG + "pojos/WeblogPermission.java",
             PKG + "pojos/wrapper/WeblogEntryWrapper.java",
             PKG + "ui/controllers/RollerHandlerInterceptor.java",
-            PKG + "ui/controllers/admin/CreateUserBean.java",
             PKG + "ui/controllers/ajax/ThemeDataServlet.java",
             PKG + "ui/controllers/ajax/UserDataServlet.java",
             PKG + "ui/controllers/core/InstallController.java",
-            PKG + "ui/controllers/editor/EntryBean.java",
-            PKG + "ui/controllers/editor/TemplateEditBean.java",
             PKG + "ui/core/RollerSession.java",
             PKG + "ui/core/filters/BootstrapFilter.java",
             PKG + "ui/core/filters/PersistenceSessionFilter.java",
             PKG + "ui/core/security/RollerUserDetailsService.java",
-            PKG + "ui/core/util/menu/MenuHelper.java",
             PKG + "ui/rendering/WeblogRequestMapper.java",
             PKG + "ui/rendering/model/ConfigModel.java",
             PKG + "ui/rendering/model/FeedModel.java",
@@ -157,8 +153,7 @@ class StaticServiceLocatorTest {
             PKG + "ui/rendering/util/WeblogSearchRequest.java",
             PKG + "ui/rendering/velocity/RollerResourceLoader.java",
             PKG + "ui/rendering/velocity/ThemeResourceLoader.java",
-            PKG + "ui/restapi/auth/ApiTokenAuthFilter.java",
-            PKG + "util/MailUtil.java");
+            PKG + "ui/restapi/auth/ApiTokenAuthFilter.java");
 
     /**
      * The two statics the spec permits to hold a business-tier reference
