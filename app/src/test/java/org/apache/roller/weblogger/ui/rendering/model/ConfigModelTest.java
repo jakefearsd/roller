@@ -29,11 +29,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -56,13 +58,21 @@ class ConfigModelTest {
     private ConfigModel model;
 
     @BeforeEach
-    void setUp() {
-        properties = mock(PropertiesManager.class);
+    void setUp() throws WebloggerException {
+        // The facade the model is GIVEN through initData (build info).
         weblogger = mock(Weblogger.class);
-        when(weblogger.getPropertiesManager()).thenReturn(properties);
+        // The static shim stays mocked only for WebloggerRuntimeConfig, which
+        // every site.* accessor still reads through (spec Decision 8 / plan
+        // Task 19). It answers with a SEPARATE facade that knows nothing but
+        // the properties manager, so the build-info accessors can only pass by
+        // using the facade they were given.
+        properties = mock(PropertiesManager.class);
+        Weblogger runtimeConfigOnly = mock(Weblogger.class);
+        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(properties);
         factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
         model = new ConfigModel();
+        model.init(Map.of("weblogger", weblogger));
     }
 
     @AfterEach
@@ -84,12 +94,20 @@ class ConfigModelTest {
     }
 
     @Test
-    void initAcceptsAnyInitDataBecauseItNeedsNone() {
-        // ConfigModel is loaded for feeds, pages and previews alike, none of
-        // which pass it anything. It must not start demanding a request.
-        assertDoesNotThrow(() -> model.init(new HashMap<>()),
-                "init() must tolerate empty init data; every renderer loads this "
-                        + "model without passing it anything.");
+    void initNeedsTheFacadeAndNothingElse() {
+        // ConfigModel is loaded for feeds, pages and previews alike; it must
+        // not start demanding a request. The one thing every renderer passes
+        // every model is the business-tier facade, which is where the build
+        // info comes from.
+        ConfigModel fresh = new ConfigModel();
+        assertDoesNotThrow(() -> fresh.init(Map.of("weblogger", weblogger)),
+                "init() must not demand a request or a url strategy.");
+
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> new ConfigModel().init(new HashMap<>()),
+                "init() must refuse init data with no 'weblogger'.");
+        assertTrue(thrown.getMessage().contains("weblogger"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
     }
 
     // ------------------------------------------------------------- site info

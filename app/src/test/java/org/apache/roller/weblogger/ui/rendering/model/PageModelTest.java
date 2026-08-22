@@ -82,10 +82,18 @@ class PageModelTest {
 
     @BeforeEach
     void setUp() {
+        // The facade the model is GIVEN through initData: its managers are
+        // stubbed per test. Deliberately not what the static returns, below.
         weblogger = mock(Weblogger.class);
-        when(weblogger.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
+        // The static shim stays mocked only for WebloggerRuntimeConfig, which
+        // still reaches it for site.* reads (spec Decision 8 / plan Task 19).
+        // It answers with a SEPARATE facade that knows nothing but the
+        // properties manager, so a model that regressed to locating its
+        // managers statically would NPE here rather than pass.
+        Weblogger runtimeConfigOnly = mock(Weblogger.class);
+        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
         factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL("/roller");
@@ -114,6 +122,7 @@ class PageModelTest {
             throws WebloggerException {
         Map<String, Object> initData = new HashMap<>(extras);
         initData.put("parsedRequest", request);
+        initData.put("weblogger", weblogger);
         initData.putIfAbsent("urlStrategy", new MultiWeblogURLStrategy());
         PageModel model = new PageModel();
         model.init(initData);
@@ -162,23 +171,35 @@ class PageModelTest {
     }
 
     @Test
-    void initFallsBackToTheConfiguredUrlStrategyWhenNoneIsSupplied() throws Exception {
-        // Only the preview renderer supplies its own strategy; everything else
-        // relies on this fallback. Without it every link on the page is null.
-        URLStrategy configured = mock(URLStrategy.class);
-        when(configured.getWeblogCollectionURL(any(), any(), any(), any(), any(),
-                anyInt(), anyBoolean())).thenReturn("/from-the-configured-strategy");
-        when(weblogger.getUrlStrategy()).thenReturn(configured);
-
+    void initWithoutAUrlStrategyIsRefused() {
+        // The model used to fall back to WebloggerFactory's strategy here. The
+        // only caller that ever relied on that was WeblogCacheWarmupJob, which
+        // now passes one; a missing strategy is a caller bug, and failing at
+        // init beats a null link on every page.
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", pageRequest());
+        initData.put("weblogger", weblogger);
         PageModel model = new PageModel();
-        model.init(initData);
 
-        assertEquals("/from-the-configured-strategy",
-                model.getWeblogEntriesPager().getHomeLink(),
-                "With no 'urlStrategy' in the init data the model must fall back to "
-                        + "WebloggerFactory's strategy.");
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "init() must refuse init data with no 'urlStrategy'.");
+        assertTrue(thrown.getMessage().contains("urlStrategy"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
+    }
+
+    @Test
+    void initWithoutAWebloggerIsRefused() {
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("parsedRequest", pageRequest());
+        initData.put("urlStrategy", new MultiWeblogURLStrategy());
+        PageModel model = new PageModel();
+
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "init() must refuse init data with no 'weblogger'.");
+        assertTrue(thrown.getMessage().contains("weblogger"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
     }
 
     // ---------------------------------------------------------- request data
@@ -562,6 +583,7 @@ class PageModelTest {
         WeblogPageRequest request = pageRequest();
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", request);
+        initData.put("weblogger", weblogger);
         initData.put("urlStrategy", new MultiWeblogURLStrategy());
         PageModel model = new PageModel() {
             @Override

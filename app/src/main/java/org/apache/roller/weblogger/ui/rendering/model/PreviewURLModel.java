@@ -21,7 +21,6 @@ package org.apache.roller.weblogger.ui.rendering.model;
 import java.util.Map;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPreviewRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
@@ -56,12 +55,9 @@ public class PreviewURLModel extends URLModel {
         this.weblog = weblogRequest.getWeblog();
         this.locale = weblogRequest.getLocale();
         
-        // look for url strategy
-        urlStrategy = (URLStrategy) initData.get("urlStrategy");
-        if(urlStrategy == null) {
-            urlStrategy = WebloggerFactory.getWeblogger().getUrlStrategy();
-        }
-        
+        // required, no fallback: the preview servlet always installs its own
+        urlStrategy = ModelLoader.requireUrlStrategy(initData);
+
         super.init(initData);
     }
     

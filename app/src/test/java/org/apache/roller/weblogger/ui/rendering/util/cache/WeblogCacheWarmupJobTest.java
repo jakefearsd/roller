@@ -15,18 +15,29 @@
  * copyright in this work, please see the NOTICE file in the top level
  * directory of this distribution.
  */
-
 package org.apache.roller.weblogger.ui.rendering.util.cache;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.ui.rendering.model.ModelLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests how the (experimental) cache warm-up job reads its inputs.
@@ -39,11 +50,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  */
 public class WeblogCacheWarmupJobTest {
 
+    private Weblogger weblogger;
+    private URLStrategy urlStrategy;
     private WeblogCacheWarmupJob job;
 
     @BeforeEach
     public void createTheJob() {
-        job = new WeblogCacheWarmupJob();
+        weblogger = mock(Weblogger.class);
+        urlStrategy = mock(URLStrategy.class);
+        when(weblogger.getUrlStrategy()).thenReturn(urlStrategy);
+        job = new WeblogCacheWarmupJob(weblogger);
     }
 
     @Test
@@ -123,5 +139,39 @@ public class WeblogCacheWarmupJobTest {
         job.execute();
 
         assertEquals(Map.of(), job.output(), "This job reports nothing back to its scheduler");
+    }
+
+    /**
+     * The rendering models are reflectively instantiated and receive the
+     * business-tier facade and the url strategy through {@code initData}; this
+     * job was the one caller that supplied neither and leaned on a fallback
+     * to the static locator that no longer exists (plan Task 10). Observed at
+     * the loader, because everything past it needs a Velocity engine.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void theModelsAreHandedTheFacadeAndItsUrlStrategy() {
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("weblogs", List.of("myblog"));
+        inputs.put("feed-entries-atom", "true");
+        job.input(inputs);
+
+        try (MockedStatic<ModelLoader> loader = mockStatic(ModelLoader.class)) {
+            // Stop the job right after the loader: the next step is
+            // RendererManager, whose static initialiser needs a rendering
+            // runtime this test deliberately does not have. A failing render
+            // is exactly what the job's per-weblog try/catch is for.
+            loader.when(() -> ModelLoader.loadModels(any(), any(), any(), anyBoolean()))
+                    .thenThrow(new WebloggerException("stop at the loader"));
+
+            job.execute();
+
+            ArgumentCaptor<Map<String, Object>> initData = ArgumentCaptor.forClass(Map.class);
+            loader.verify(() -> ModelLoader.loadModels(any(), any(), initData.capture(), anyBoolean()));
+            assertSame(weblogger, initData.getValue().get("weblogger"),
+                    "The job must pass the facade it was constructed with");
+            assertSame(urlStrategy, initData.getValue().get("urlStrategy"),
+                    "and that facade's url strategy -- the models no longer fall back to one");
+        }
     }
 }

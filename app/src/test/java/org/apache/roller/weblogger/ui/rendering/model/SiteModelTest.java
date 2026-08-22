@@ -88,12 +88,20 @@ class SiteModelTest {
         userManager = mock(UserManager.class);
         weblogManager = mock(WeblogManager.class);
         entryManager = mock(WeblogEntryManager.class);
+        // The facade the model is GIVEN through initData (plan Task 10).
         weblogger = mock(Weblogger.class);
         when(weblogger.getUserManager()).thenReturn(userManager);
         when(weblogger.getWeblogManager()).thenReturn(weblogManager);
         when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
         when(weblogger.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
 
+        // The static shim is still mocked -- and still has to answer with the
+        // SAME facade -- because what the model builds still reaches it: the
+        // pagers (UsersPager/WeblogsPager/WeblogEntriesListPager, plan Task
+        // 11), the pojo getters the wrappers delegate to (WeblogPermission
+        // .getWeblog()/getUser(), Stage D) and WebloggerRuntimeConfig (Task
+        // 19). The model itself no longer does; PageModelTest/URLModelTest
+        // prove that shape with a separate properties-only facade.
         factory = mockStatic(WebloggerFactory.class);
         factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
 
@@ -115,6 +123,7 @@ class SiteModelTest {
     private SiteModel modelFor(WeblogRequest request) throws WebloggerException {
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", request);
+        initData.put("weblogger", weblogger);
         initData.put("urlStrategy", new MultiWeblogURLStrategy());
         SiteModel model = new SiteModel();
         model.init(initData);
@@ -156,18 +165,33 @@ class SiteModelTest {
     }
 
     @Test
-    void initFallsBackToTheConfiguredUrlStrategyWhenNoneIsSupplied() throws Exception {
-        when(weblogger.getUrlStrategy()).thenReturn(new MultiWeblogURLStrategy());
-
+    void initWithoutAUrlStrategyIsRefused() {
+        // Used to fall back to WebloggerFactory's strategy; the only caller
+        // that relied on that (WeblogCacheWarmupJob) now passes one.
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", pageRequest());
+        initData.put("weblogger", weblogger);
         SiteModel model = new SiteModel();
-        model.init(initData);
 
-        assertEquals("/roller/frontpage/",
-                model.getWeblogEntriesPager(-1, 10).getHomeLink(),
-                "With no 'urlStrategy' in the init data the model must fall back to "
-                        + "WebloggerFactory's strategy.");
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "init() must refuse init data with no 'urlStrategy'.");
+        assertTrue(thrown.getMessage().contains("urlStrategy"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
+    }
+
+    @Test
+    void initWithoutAWebloggerIsRefused() {
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("parsedRequest", pageRequest());
+        initData.put("urlStrategy", new MultiWeblogURLStrategy());
+        SiteModel model = new SiteModel();
+
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "init() must refuse init data with no 'weblogger'.");
+        assertTrue(thrown.getMessage().contains("weblogger"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
     }
 
     // ---------------------------------------------------------- pager urls

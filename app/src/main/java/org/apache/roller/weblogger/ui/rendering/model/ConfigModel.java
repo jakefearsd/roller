@@ -20,7 +20,7 @@ package org.apache.roller.weblogger.ui.rendering.model;
 
 import java.util.Map;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 
@@ -37,10 +37,17 @@ public class ConfigModel implements Model {
     }
     
     
-    /** Init model */
+    /**
+     * The business-tier facade, handed in through {@code initData} (plan Task
+     * 10). Only the build-info accessors read it; every site.* accessor goes
+     * through {@code WebloggerRuntimeConfig}.
+     */
+    private Weblogger weblogger = null;
+
+    /** Init model: needs the facade and nothing else -- no request, no url strategy. */
     @Override
     public void init(Map<String, Object> map) throws WebloggerException {
-        // no-op
+        weblogger = ModelLoader.requireWeblogger(map);
     }
     
     
@@ -84,19 +91,19 @@ public class ConfigModel implements Model {
     
     /** Get Roller version string */
     public String getRollerVersion() {
-        return WebloggerFactory.getWeblogger().getVersion();
+        return weblogger.getVersion();
     }
     
     
     /** Get timestamp of Roller build */
     public String getRollerBuildTimestamp() {
-        return WebloggerFactory.getWeblogger().getBuildTime();
+        return weblogger.getBuildTime();
     }
     
     
     /** Get username who created Roller build */
     public String getRollerBuildUser() {
-        return WebloggerFactory.getWeblogger().getBuildUser();
+        return weblogger.getBuildUser();
     }
 
     /**

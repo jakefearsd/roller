@@ -21,7 +21,6 @@ package org.apache.roller.weblogger.ui.rendering.model;
 import java.util.Map;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesLatestPager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesPager;
@@ -60,12 +59,9 @@ public class PreviewPageModel extends PageModel {
                     "  PreviewPageModel only supports preview requests.");
         }
         
-        // look for url strategy
-        urlStrategy = (URLStrategy) initData.get("urlStrategy");
-        if(urlStrategy == null) {
-            urlStrategy = WebloggerFactory.getWeblogger().getUrlStrategy();
-        }
-        
+        // required, no fallback: the preview servlet always installs its own
+        urlStrategy = ModelLoader.requireUrlStrategy(initData);
+
         super.init(initData);
     }    
     

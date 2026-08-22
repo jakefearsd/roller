@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -71,6 +71,13 @@ public class PageModel implements Model {
     private URLStrategy urlStrategy = null;
     private Map<String, String[]> requestParameters = null;
     private Weblog weblog = null;
+
+    /**
+     * The business-tier facade, handed in through {@code initData} by the
+     * servlet that loaded this model (plan Task 10). Protected so the preview
+     * and search subclasses share it rather than locating their own.
+     */
+    protected Weblogger weblogger = null;
     
     
     /**
@@ -114,13 +121,11 @@ public class PageModel implements Model {
         
         // custom request parameters
         this.requestParameters = (Map<String, String[]>) initData.get("requestParameters");
-        
-        // look for url strategy
-        urlStrategy = (URLStrategy) initData.get("urlStrategy");
-        if(urlStrategy == null) {
-            urlStrategy = WebloggerFactory.getWeblogger().getUrlStrategy();
-        }
-        
+
+        // the facade and the url strategy are both required -- no fallback
+        weblogger = ModelLoader.requireWeblogger(initData);
+        urlStrategy = ModelLoader.requireUrlStrategy(initData);
+
         // extract weblog object
         weblog = pageRequest.getWeblog();
     }    
@@ -257,7 +262,7 @@ public class PageModel implements Model {
             return null;
         }
         try {
-            MediaFile mediaFile = WebloggerFactory.getWeblogger()
+            MediaFile mediaFile = weblogger
                     .getMediaFileManager().getMediaFile(page.getOgImageId());
             return MediaFileWrapper.wrap(mediaFile);
         } catch (Exception ex) {
@@ -280,7 +285,7 @@ public class PageModel implements Model {
      */
     public List<WeblogPage> getNavPages(WeblogWrapper navWeblog) {
         try {
-            return WebloggerFactory.getWeblogger().getWeblogPageManager()
+            return weblogger.getWeblogPageManager()
                     .getPublishedPages(navWeblog.getPojo()).stream()
                     .filter(page -> Boolean.TRUE.equals(page.getShowInNav()))
                     .collect(Collectors.toList());

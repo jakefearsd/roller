@@ -19,6 +19,7 @@
 package org.apache.roller.weblogger.ui.rendering.model;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit tests for {@link ModelLoader}, which turns the comma-separated class
@@ -94,8 +96,40 @@ class ModelLoaderTest {
 
     private Map<String, Object> load(String models, boolean fail) throws WebloggerException {
         Map<String, Object> modelMap = new HashMap<>();
-        ModelLoader.loadModels(models, modelMap, new HashMap<>(), fail);
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("weblogger", mock(Weblogger.class));
+        ModelLoader.loadModels(models, modelMap, initData, fail);
         return modelMap;
+    }
+
+    // ------------------------------------------------------------ weblogger
+
+    /**
+     * Every model receives the business-tier facade through {@code initData}
+     * (spec Decision 3); a caller that forgets it is a programming error, so
+     * the loader refuses up front — whatever the {@code fail} flag says —
+     * instead of letting a model NPE half-way through a render.
+     */
+    @Test
+    void aMissingWebloggerIsFatalWhateverTheFailFlagSays() {
+        for (boolean fail : new boolean[] {true, false}) {
+            Map<String, Object> initData = new HashMap<>();
+            WebloggerException thrown = assertThrows(WebloggerException.class,
+                    () -> ModelLoader.loadModels(GOOD, new HashMap<>(), initData, fail),
+                    "init data without a 'weblogger' must be refused (fail=" + fail + ")");
+            assertTrue(thrown.getMessage().contains("weblogger"),
+                    "The failure must name the missing key; was: " + thrown.getMessage());
+        }
+    }
+
+    @Test
+    void aWebloggerOfTheWrongTypeIsRefusedLikeAMissingOne() {
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("weblogger", "not a facade");
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> ModelLoader.loadModels(GOOD, new HashMap<>(), initData, true));
+        assertTrue(thrown.getMessage().contains("weblogger"),
+                "The failure must name the key; was: " + thrown.getMessage());
     }
 
     @Test

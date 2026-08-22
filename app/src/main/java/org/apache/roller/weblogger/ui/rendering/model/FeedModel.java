@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
@@ -77,12 +76,12 @@ public class FeedModel implements Model {
                     "  FeedModel only supports feed requests.");
         }
         
-        // look for url strategy
-        urlStrategy = (URLStrategy) initData.get("urlStrategy");
-        if(urlStrategy == null) {
-            urlStrategy = WebloggerFactory.getWeblogger().getUrlStrategy();
-        }
-        
+        // Both are required -- no fallback. The facade is validated but not
+        // kept: nothing in this model needs it yet; the pager it builds will
+        // take it from here when the pagers are migrated (plan Task 11).
+        ModelLoader.requireWeblogger(initData);
+        urlStrategy = ModelLoader.requireUrlStrategy(initData);
+
         // extract weblog object
         weblog = feedRequest.getWeblog();
     }

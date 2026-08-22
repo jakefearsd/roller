@@ -82,11 +82,16 @@ class URLModelTest {
         // manager before falling back to the value the InitFilter published.
         // Stubbing the factory keeps that lookup from throwing (and from
         // logging a stack trace) on every single URL we build.
+        // The facade the model is GIVEN through initData.
         weblogger = mock(Weblogger.class);
+        // The static shim stays mocked only for WebloggerRuntimeConfig (spec
+        // Decision 8 / plan Task 19), answering with a SEPARATE facade that
+        // knows nothing but the properties manager.
         PropertiesManager properties = mock(PropertiesManager.class);
-        when(weblogger.getPropertiesManager()).thenReturn(properties);
+        Weblogger runtimeConfigOnly = mock(Weblogger.class);
+        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(properties);
         factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL(SITE);
@@ -105,7 +110,7 @@ class URLModelTest {
         factory.close();
     }
 
-    private static URLModel modelFor(Weblog weblog, String locale, URLStrategy strategy)
+    private URLModel modelFor(Weblog weblog, String locale, URLStrategy strategy)
             throws WebloggerException {
         WeblogRequest request = new WeblogRequest();
         request.setWeblog(weblog);
@@ -113,6 +118,7 @@ class URLModelTest {
 
         Map<String, Object> initData = new LinkedHashMap<>();
         initData.put("parsedRequest", request);
+        initData.put("weblogger", weblogger);
         if (strategy != null) {
             initData.put("urlStrategy", strategy);
         }
@@ -167,19 +173,31 @@ class URLModelTest {
     }
 
     @Test
-    void initFallsBackToTheConfiguredUrlStrategyWhenNoneIsSupplied() throws Exception {
-        // Renderers that do not pass a strategy (previews pass their own) must
-        // get the application's. Silently getting none would NPE mid-render.
-        URLStrategy configured = mock(URLStrategy.class);
-        when(configured.getWeblogCollectionURL(any(), any(), any(), any(), any(), anyInt(), anyBoolean()))
-                .thenReturn("/fallback");
-        when(weblogger.getUrlStrategy()).thenReturn(configured);
+    void initWithoutAUrlStrategyIsRefused() {
+        // Used to fall back to WebloggerFactory's strategy; the only caller
+        // that relied on that (WeblogCacheWarmupJob) now passes one. Failing
+        // at init beats a null link mid-render.
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> modelFor(weblog, null, null),
+                "init() must refuse init data with no 'urlStrategy'.");
+        assertTrue(thrown.getMessage().contains("urlStrategy"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
+    }
 
-        URLModel withoutStrategy = modelFor(weblog, null, null);
+    @Test
+    void initWithoutAWebloggerIsRefused() {
+        WeblogRequest request = new WeblogRequest();
+        request.setWeblog(weblog);
+        Map<String, Object> initData = new LinkedHashMap<>();
+        initData.put("parsedRequest", request);
+        initData.put("urlStrategy", new MultiWeblogURLStrategy());
+        URLModel model = new URLModel();
 
-        assertEquals("/fallback", withoutStrategy.getHome(),
-                "With no 'urlStrategy' in the init data the model must fall back to "
-                        + "WebloggerFactory's strategy.");
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "init() must refuse init data with no 'weblogger'.");
+        assertTrue(thrown.getMessage().contains("weblogger"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
     }
 
     // ------------------------------------------------------------ site roots

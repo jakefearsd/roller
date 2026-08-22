@@ -29,7 +29,6 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.search.SearchResultList;
 import org.apache.roller.weblogger.pojos.WeblogEntryWrapperComparator;
@@ -73,11 +72,8 @@ public class SearchResultsModel extends PageModel {
 			throw new WebloggerException("expected searchRequest from init data");
 		}
 
-		// look for url strategy
-		urlStrategy = (URLStrategy) initData.get("urlStrategy");
-		if (urlStrategy == null) {
-			urlStrategy = WebloggerFactory.getWeblogger().getUrlStrategy();
-		}
+		// required, no fallback (the parent init below also takes the facade)
+		urlStrategy = ModelLoader.requireUrlStrategy(initData);
 
 		// let parent initialize
 		super.init(initData);
@@ -89,7 +85,7 @@ public class SearchResultsModel extends PageModel {
 		}
 
 		// setup the search
-		IndexManager indexMgr = WebloggerFactory.getWeblogger().getIndexManager();
+		IndexManager indexMgr = weblogger.getIndexManager();
 		try {
 			SearchResultList searchResultList = indexMgr.search(
 				searchRequest.getQuery(),

@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.jpa.JPAWeblogEntryManagerImpl;
@@ -67,8 +66,11 @@ public class SiteModel implements Model {
     private int pageNum = 0;
     
     private URLStrategy urlStrategy = null;
-    
-    
+
+    /** The business-tier facade, handed in through {@code initData} (plan Task 10). */
+    private Weblogger weblogger = null;
+
+
     @Override
     public String getModelName() {
         return "site";
@@ -94,12 +96,10 @@ public class SiteModel implements Model {
             pageNum = feedRequest.getPage();
         }
         
-        // look for url strategy
-        urlStrategy = (URLStrategy) initData.get("urlStrategy");
-        if(urlStrategy == null) {
-            urlStrategy = WebloggerFactory.getWeblogger().getUrlStrategy();
-        }
-        
+        // the facade and the url strategy are both required -- no fallback
+        weblogger = ModelLoader.requireWeblogger(initData);
+        urlStrategy = ModelLoader.requireUrlStrategy(initData);
+
         // extract weblog object
         weblog = weblogRequest.getWeblog();
     }
@@ -254,7 +254,7 @@ public class SiteModel implements Model {
      */
     public Map<String, Long> getUserNameLetterMap() {
         try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
+            Weblogger roller = weblogger;
             UserManager umgr = roller.getUserManager();
             return umgr.getUserNameLetterMap();
         } catch (Exception e) {
@@ -271,7 +271,7 @@ public class SiteModel implements Model {
      */
     public Map<String, Long> getWeblogHandleLetterMap() {
         try {
-            return WebloggerFactory.getWeblogger().getWeblogManager().getWeblogHandleLetterMap();
+            return weblogger.getWeblogManager().getWeblogHandleLetterMap();
         } catch (Exception e) {
             log.error("ERROR: fetching weblog handle letter map", e);
         }
@@ -285,7 +285,7 @@ public class SiteModel implements Model {
     public List<WeblogWrapper> getUsersWeblogs(String userName) {
         List<WeblogWrapper> results = new ArrayList<>();
         try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
+            Weblogger roller = weblogger;
             UserManager umgr = roller.getUserManager();
             User user = umgr.getUserByUserName(userName);
             List<WeblogPermission> perms = umgr.getWeblogPermissions(user);
@@ -305,9 +305,9 @@ public class SiteModel implements Model {
     public List<UserWrapper> getWeblogsUsers(String handle) {
         List<UserWrapper> results = new ArrayList<>();
         try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
+            Weblogger roller = weblogger;
             UserManager umgr = roller.getUserManager();
-            Weblog website = WebloggerFactory.getWeblogger().getWeblogManager().getWeblogByHandle(handle);
+            Weblog website = weblogger.getWeblogManager().getWeblogByHandle(handle);
             List<WeblogPermission> perms = umgr.getWeblogPermissions(website);
             for (WeblogPermission perm : perms) {
                 results.add(UserWrapper.wrap(perm.getUser()));
@@ -324,7 +324,7 @@ public class SiteModel implements Model {
     public UserWrapper getUser(String username) {
         UserWrapper wrappedUser = null;
         try {            
-            Weblogger roller = WebloggerFactory.getWeblogger();
+            Weblogger roller = weblogger;
             UserManager umgr = roller.getUserManager();
             User user = umgr.getUserByUserName(username, Boolean.TRUE);
             wrappedUser = UserWrapper.wrap(user);
@@ -339,7 +339,7 @@ public class SiteModel implements Model {
     public WeblogWrapper getWeblog(String handle) {
         WeblogWrapper wrappedWebsite = null;
         try {            
-            Weblog website = WebloggerFactory.getWeblogger().getWeblogManager().getWeblogByHandle(handle);
+            Weblog website = weblogger.getWeblogManager().getWeblogByHandle(handle);
             wrappedWebsite = WeblogWrapper.wrap(website, urlStrategy);
         } catch (Exception e) {
             log.error("ERROR: fetching users by letter", e);
@@ -360,7 +360,7 @@ public class SiteModel implements Model {
         List<WeblogWrapper> results = new ArrayList<>();
         Date startDate = JPAWeblogEntryManagerImpl.getStartDateNow(sinceDays);
         try {            
-            List<Weblog> weblogs = WebloggerFactory.getWeblogger().getWeblogManager().getWeblogs(
+            List<Weblog> weblogs = weblogger.getWeblogManager().getWeblogs(
                 Boolean.TRUE, Boolean.TRUE, startDate, null, 0, length);
             for (Weblog website : weblogs) {
                 results.add(WeblogWrapper.wrap(website, urlStrategy));
@@ -380,7 +380,7 @@ public class SiteModel implements Model {
     public List<UserWrapper> getNewUsers(int sinceDays, int length) {
         List<UserWrapper> results = new ArrayList<>();
         try {            
-            Weblogger roller = WebloggerFactory.getWeblogger();
+            Weblogger roller = weblogger;
             UserManager umgr = roller.getUserManager();
             List<User> users = umgr.getUsers(Boolean.TRUE, null, null, 0, length);
             for (User user : users) {
@@ -400,7 +400,7 @@ public class SiteModel implements Model {
     public List<WeblogEntryWrapper> getPinnedWeblogEntries(int length) {
         List<WeblogEntryWrapper> results = new ArrayList<>();
         try {            
-            Weblogger roller = WebloggerFactory.getWeblogger();
+            Weblogger roller = weblogger;
             WeblogEntryManager wmgr = roller.getWeblogEntryManager();
             List<WeblogEntry> weblogEntries = wmgr.getWeblogEntriesPinnedToMain(length);
             for (WeblogEntry entry : weblogEntries) {
@@ -428,7 +428,7 @@ public class SiteModel implements Model {
         }
         
         try {            
-            Weblogger roller = WebloggerFactory.getWeblogger();
+            Weblogger roller = weblogger;
             WeblogEntryManager wmgr = roller.getWeblogEntryManager();
             return wmgr.getPopularTags(null, startDate, 0, length);
         } catch (Exception e) {
@@ -441,7 +441,7 @@ public class SiteModel implements Model {
     public long getEntryCount() {
         long count = 0;
         try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
+            Weblogger roller = weblogger;
             WeblogEntryManager mgr = roller.getWeblogEntryManager();
             count = mgr.getEntryCount();            
         } catch (WebloggerException e) {
@@ -454,7 +454,7 @@ public class SiteModel implements Model {
     public long getWeblogCount() {
         long count = 0;
         try {
-            count = WebloggerFactory.getWeblogger().getWeblogManager().getWeblogCount();            
+            count = weblogger.getWeblogManager().getWeblogCount();            
         } catch (WebloggerException e) {
             log.error("Error getting weblog count for site", e);
         }
@@ -465,7 +465,7 @@ public class SiteModel implements Model {
     public long getUserCount() {
         long count = 0;
         try {
-            Weblogger roller = WebloggerFactory.getWeblogger();
+            Weblogger roller = weblogger;
             UserManager mgr = roller.getUserManager();
             count = mgr.getUserCount();            
         } catch (WebloggerException e) {

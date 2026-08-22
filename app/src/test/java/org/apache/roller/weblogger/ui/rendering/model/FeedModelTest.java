@@ -77,9 +77,14 @@ class FeedModelTest {
 
     @BeforeEach
     void setUp() {
+        // The facade the model is GIVEN through initData (plan Task 10).
         weblogger = mock(Weblogger.class);
         properties = mock(PropertiesManager.class);
         when(weblogger.getPropertiesManager()).thenReturn(properties);
+        // The static shim is still mocked -- with the SAME facade -- because
+        // the FeedEntriesPager the model builds still queries the entry
+        // manager through it (plan Task 11), as does WebloggerRuntimeConfig
+        // for the feed size (Task 19). The model itself no longer does.
         factory = mockStatic(WebloggerFactory.class);
         factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
 
@@ -110,6 +115,7 @@ class FeedModelTest {
     private FeedModel modelFor(WeblogFeedRequest request) throws WebloggerException {
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", request);
+        initData.put("weblogger", weblogger);
         initData.put("urlStrategy", new MultiWeblogURLStrategy());
         FeedModel model = new FeedModel();
         model.init(initData);
@@ -179,20 +185,33 @@ class FeedModelTest {
     }
 
     @Test
-    void initFallsBackToTheConfiguredUrlStrategyWhenNoneIsSupplied() throws Exception {
-        URLStrategy configured = mock(URLStrategy.class);
-        when(configured.getWeblogFeedURL(any(), any(), anyString(), anyString(), any(),
-                any(), any(), anyBoolean(), anyBoolean())).thenReturn("/from-config");
-        when(weblogger.getUrlStrategy()).thenReturn(configured);
-
+    void initWithoutAUrlStrategyIsRefused() {
+        // Used to fall back to WebloggerFactory's strategy; the only caller
+        // that relied on that (WeblogCacheWarmupJob) now passes one.
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", feedRequest("entries", "rss"));
+        initData.put("weblogger", weblogger);
         FeedModel model = new FeedModel();
-        model.init(initData);
 
-        assertEquals("/from-config", model.getWeblogEntriesPager().getHomeLink(),
-                "With no 'urlStrategy' in the init data the model must fall back to "
-                        + "WebloggerFactory's strategy.");
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "init() must refuse init data with no 'urlStrategy'.");
+        assertTrue(thrown.getMessage().contains("urlStrategy"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
+    }
+
+    @Test
+    void initWithoutAWebloggerIsRefused() {
+        Map<String, Object> initData = new HashMap<>();
+        initData.put("parsedRequest", feedRequest("entries", "rss"));
+        initData.put("urlStrategy", new MultiWeblogURLStrategy());
+        FeedModel model = new FeedModel();
+
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "init() must refuse init data with no 'weblogger'.");
+        assertTrue(thrown.getMessage().contains("weblogger"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
     }
 
     // ---------------------------------------------------------- request data

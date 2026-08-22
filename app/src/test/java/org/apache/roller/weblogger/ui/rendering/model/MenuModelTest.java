@@ -28,15 +28,12 @@ import org.apache.logging.log4j.core.config.Property;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,7 +48,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -64,25 +60,20 @@ import static org.mockito.Mockito.when;
  */
 class MenuModelTest {
 
-    private MockedStatic<WebloggerFactory> factory;
     private UserManager userManager;
+    private Weblogger weblogger;
     private Weblog weblog;
 
     @BeforeEach
     void setUp() {
+        // No static shim here: the model gets its facade through initData, and
+        // MenuHelper takes the UserManager as a parameter (plan Task 8).
         userManager = mock(UserManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
+        weblogger = mock(Weblogger.class);
         when(weblogger.getUserManager()).thenReturn(userManager);
-        factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
 
         weblog = new Weblog("testblog", "testuser", "Test Blog", "a test blog",
                 "blog@example.com", "journal", "en_US", "UTC");
-    }
-
-    @AfterEach
-    void tearDown() {
-        factory.close();
     }
 
     private WeblogPageRequest pageRequest() {
@@ -95,6 +86,7 @@ class MenuModelTest {
     private MenuModel modelFor(WeblogPageRequest request) throws WebloggerException {
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", request);
+        initData.put("weblogger", weblogger);
         MenuModel model = new MenuModel();
         model.init(initData);
         return model;

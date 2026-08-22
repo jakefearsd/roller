@@ -24,6 +24,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.runnable.Job;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.StaticTemplate;
@@ -51,8 +52,23 @@ public class WeblogCacheWarmupJob implements Job {
     
     // inputs from the user
     private Map<String, Object> inputs = null;
-    
-    
+
+    /** The business-tier facade handed to every model the job loads. */
+    private final Weblogger weblogger;
+
+
+    /**
+     * @param weblogger the facade the rendering models receive through
+     *                  {@code initData} (the models are reflectively
+     *                  instantiated and have no other way to get it); its
+     *                  url strategy is passed alongside, since the models
+     *                  no longer fall back to the application's default.
+     */
+    public WeblogCacheWarmupJob(Weblogger weblogger) {
+        this.weblogger = weblogger;
+    }
+
+
     @Override
     public void execute() {
         
@@ -117,6 +133,11 @@ public class WeblogCacheWarmupJob implements Job {
                 initData.put("request", null);
                 initData.put("feedRequest", feedRequest);
                 initData.put("weblogRequest", feedRequest);
+                // every model requires both; this was the one caller that
+                // supplied neither and leaned on the models' (now deleted)
+                // fallback to the static locator
+                initData.put("weblogger", weblogger);
+                initData.put("urlStrategy", weblogger.getUrlStrategy());
                 
                 // Load models for feeds
                 String feedModels = WebloggerConfig.getProperty("rendering.feedModels");

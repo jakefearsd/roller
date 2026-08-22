@@ -64,15 +64,21 @@ class PreviewModelsTest {
     private static final String ABSOLUTE_SITE = "http://blogs.example.com/roller";
 
     private MockedStatic<WebloggerFactory> factory;
+    private Weblogger weblogger;
     private Weblog weblog;
     private String previousRelativeContextURL;
 
     @BeforeEach
     void setUp() {
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
+        // The facade the models are GIVEN through initData.
+        weblogger = mock(Weblogger.class);
+        // The static shim stays mocked only for WebloggerRuntimeConfig (spec
+        // Decision 8 / plan Task 19), answering with a SEPARATE facade that
+        // knows nothing but the properties manager.
+        Weblogger runtimeConfigOnly = mock(Weblogger.class);
+        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
         factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL(SITE);
@@ -104,9 +110,10 @@ class PreviewModelsTest {
         return request;
     }
 
-    private static Map<String, Object> initData(Object request, Object urlStrategy) {
+    private Map<String, Object> initData(Object request, Object urlStrategy) {
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", request);
+        initData.put("weblogger", weblogger);
         initData.put("urlStrategy", urlStrategy);
         return initData;
     }
@@ -150,18 +157,19 @@ class PreviewModelsTest {
     }
 
     @Test
-    void previewUrlModelFallsBackToTheConfiguredUrlStrategy() throws Exception {
-        when(WebloggerFactory.getWeblogger().getUrlStrategy())
-                .thenReturn(new PreviewURLStrategy("someTheme"));
-
+    void previewUrlModelRefusesInitDataWithoutAUrlStrategy() throws Exception {
+        // Used to fall back to WebloggerFactory's strategy; the preview servlet
+        // always supplies its own, and a missing one is a caller bug.
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", previewRequest());
+        initData.put("weblogger", weblogger);
         PreviewURLModel model = new PreviewURLModel();
-        model.init(initData);
 
-        assertTrue(model.resource("style.css").contains("previewresource"),
-                "With no 'urlStrategy' in the init data the model must fall back to "
-                        + "WebloggerFactory's strategy.");
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "init() must refuse init data with no 'urlStrategy'.");
+        assertTrue(thrown.getMessage().contains("urlStrategy"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
     }
 
     @Test
@@ -291,36 +299,33 @@ class PreviewModelsTest {
     }
 
     @Test
-    void previewPageModelFallsBackToTheConfiguredUrlStrategy() throws Exception {
-        // The factory's strategy is deliberately a different one from the
-        // MultiWeblogURLStrategy passed in elsewhere, so the assertion can tell
-        // which of the two the model actually used.
-        when(WebloggerFactory.getWeblogger().getUrlStrategy())
-                .thenReturn(new PreviewURLStrategy("someTheme"));
-
+    void previewPageModelRefusesInitDataWithoutAUrlStrategy() throws Exception {
+        // Used to fall back to WebloggerFactory's strategy; the preview servlet
+        // always supplies its own (a PreviewURLStrategy), and a missing one is
+        // a caller bug rather than something to paper over.
         Map<String, Object> initData = new HashMap<>();
         initData.put("parsedRequest", previewRequest());
+        initData.put("weblogger", weblogger);
         PreviewPageModel model = new PreviewPageModel();
-        model.init(initData);
 
-        assertTrue(model.getWeblogEntriesPager("nil").getHomeLink()
-                        .contains("/roller-ui/authoring/preview/"),
-                "With no 'urlStrategy' in the init data the model must use the "
-                        + "factory's — the preview strategy routes through the "
-                        + "preview servlet.");
+        WebloggerException thrown = assertThrows(WebloggerException.class,
+                () -> model.init(initData),
+                "init() must refuse init data with no 'urlStrategy'.");
+        assertTrue(thrown.getMessage().contains("urlStrategy"),
+                "The failure should name what was missing; was: " + thrown.getMessage());
     }
 
     @Test
-    void anExplicitUrlStrategyWinsOverTheConfiguredOne() throws Exception {
-        when(WebloggerFactory.getWeblogger().getUrlStrategy())
-                .thenReturn(new PreviewURLStrategy("someTheme"));
-
+    void theSuppliedUrlStrategyIsTheOneTheModelBuildsLinksWith() throws Exception {
+        // Characterisation: the strategy in initData is used verbatim. With the
+        // fallback gone there is nothing else it could be, but this is the
+        // contract the preview servlet relies on when it installs a
+        // PreviewURLStrategy.
         PreviewPageModel model = previewPageModel(previewRequest());
 
         assertEquals(SITE + "/testblog/",
                 model.getWeblogEntriesPager("nil").getHomeLink(),
-                "A strategy supplied in the init data must not be overwritten by the "
-                        + "application's.");
+                "The model must build its links with the strategy it was given.");
     }
 
     @Test

@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
 import org.apache.roller.weblogger.ui.core.util.menu.MenuHelper;
@@ -42,25 +42,28 @@ public class MenuModel implements Model {
     private static final Logger log = LoggerFactory.getLogger(MenuModel.class);
     
     private WeblogPageRequest pageRequest = null;
-    
-    
+
+    /** The business-tier facade, handed in through {@code initData} (plan Task 10). */
+    private Weblogger weblogger = null;
+
+
     /** Template context name to be used for model */
     @Override
     public String getModelName() {
         return "menuModel";
     }
-    
-    
+
+
     /** Init page model based on request */
     @Override
     public void init(Map<String, Object> initData) throws WebloggerException {
-        
+
         // we expect the init data to contain a weblogRequest object
         WeblogRequest weblogRequest = (WeblogRequest) initData.get("parsedRequest");
         if(weblogRequest == null) {
             throw new WebloggerException("expected weblogRequest from init data");
         }
-        
+
         // MenuModel only works on page requests, so cast weblogRequest
         // into a WeblogPageRequest and if it fails then throw exception
         if(weblogRequest instanceof WeblogPageRequest) {
@@ -69,6 +72,8 @@ public class MenuModel implements Model {
             throw new WebloggerException("weblogRequest is not a WeblogPageRequest."+
                     "  MenuModel only supports page requests.");
         }
+
+        weblogger = ModelLoader.requireWeblogger(initData);
     }
     
     
@@ -80,9 +85,7 @@ public class MenuModel implements Model {
         try {
             GlobalPermission adminPerm =
                 new GlobalPermission(Collections.singletonList(GlobalPermission.ADMIN));
-            // Still on the static shim: models are reflectively instantiated
-            // and receive their collaborators in a later task of the DI wave.
-            UserManager userManager = WebloggerFactory.getWeblogger().getUserManager();
+            UserManager userManager = weblogger.getUserManager();
             boolean hasAdmin = userManager.checkPermission(adminPerm, pageRequest.getUser());
             if (pageRequest.isLoggedIn() && hasAdmin) {
                 return MenuHelper.getMenu("admin", "noAction", pageRequest.getUser(),
@@ -102,7 +105,7 @@ public class MenuModel implements Model {
     public Menu getAuthorMenu() {
         if(pageRequest.isLoggedIn()) {
             return MenuHelper.getMenu("editor", null, pageRequest.getUser(), pageRequest.getWeblog(),
-                    WebloggerFactory.getWeblogger().getUserManager());
+                    weblogger.getUserManager());
         }
         return null;
     }

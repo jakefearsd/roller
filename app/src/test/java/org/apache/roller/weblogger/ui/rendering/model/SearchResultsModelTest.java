@@ -132,6 +132,10 @@ class SearchResultsModelTest {
         initData.put("searchRequest", searchRequest);
         initData.put("parsedRequest", pageRequest);
         initData.put("pageRequest", pageRequest);
+        // The servlets supply both; the model no longer falls back to the
+        // static for either (plan Task 10).
+        initData.put("weblogger", WebloggerFactory.getWeblogger());
+        initData.put("urlStrategy", WebloggerFactory.getWeblogger().getUrlStrategy());
 
         SearchResultsModel model = new SearchResultsModel();
         model.init(initData);

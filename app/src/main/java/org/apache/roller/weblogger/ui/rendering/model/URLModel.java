@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -55,6 +55,13 @@ public class URLModel implements Model {
     protected String locale = null;
     
     protected URLStrategy urlStrategy = null;
+
+    /**
+     * The business-tier facade, handed in through {@code initData} by the
+     * servlet that loaded this model (plan Task 10); shared with the preview
+     * subclass.
+     */
+    protected Weblogger weblogger = null;
     
     
     public URLModel() {}
@@ -75,12 +82,10 @@ public class URLModel implements Model {
         
         this.weblog = weblogRequest.getWeblog();
         this.locale = weblogRequest.getLocale();
-        
-        // look for url strategy
-        urlStrategy = (URLStrategy) initData.get("urlStrategy");
-        if(urlStrategy == null) {
-            urlStrategy = WebloggerFactory.getWeblogger().getUrlStrategy();
-        }
+
+        // the facade and the url strategy are both required -- no fallback
+        weblogger = ModelLoader.requireWeblogger(initData);
+        urlStrategy = ModelLoader.requireUrlStrategy(initData);
     }
     
     
@@ -276,7 +281,7 @@ public class URLModel implements Model {
     public String editEntry(String anchor) {
         try {
             // need to determine entryId from anchor
-            WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
+            WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
             WeblogEntry entry = wmgr.getWeblogEntryByAnchor(weblog, anchor);
             if(entry != null) {
                 return urlStrategy.getEntryEditURL(weblog.getHandle(), entry.getId(), false);

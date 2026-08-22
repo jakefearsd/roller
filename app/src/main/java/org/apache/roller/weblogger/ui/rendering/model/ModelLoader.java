@@ -22,6 +22,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.util.Reflection;
 import org.apache.roller.weblogger.util.Utilities;
 
@@ -36,6 +38,41 @@ public final class ModelLoader {
 
     private static final Logger log = LoggerFactory.getLogger(ModelLoader.class);
 
+    /** The {@code initData} key under which every model receives the business-tier facade. */
+    static final String WEBLOGGER = "weblogger";
+
+    /** The {@code initData} key under which the url-building models receive their strategy. */
+    static final String URL_STRATEGY = "urlStrategy";
+
+    /**
+     * The business-tier facade a renderer put into {@code initData}, or a
+     * {@link WebloggerException} naming the key if it is missing or not a
+     * {@link Weblogger}. Models call this from {@code init()} instead of
+     * reaching for a static locator.
+     */
+    static Weblogger requireWeblogger(Map<String, Object> initData) throws WebloggerException {
+        Object value = initData == null ? null : initData.get(WEBLOGGER);
+        if (value instanceof Weblogger weblogger) {
+            return weblogger;
+        }
+        throw new WebloggerException("expected '" + WEBLOGGER + "' (a Weblogger) from init data");
+    }
+
+    /**
+     * The url strategy a renderer put into {@code initData}, or a
+     * {@link WebloggerException} naming the key. There is deliberately no
+     * fallback to the application's default strategy: the preview servlet
+     * installs its own, and the one caller that used to pass none
+     * ({@code WeblogCacheWarmupJob}) now passes one.
+     */
+    static URLStrategy requireUrlStrategy(Map<String, Object> initData) throws WebloggerException {
+        Object value = initData == null ? null : initData.get(URL_STRATEGY);
+        if (value instanceof URLStrategy strategy) {
+            return strategy;
+        }
+        throw new WebloggerException("expected '" + URL_STRATEGY + "' (a URLStrategy) from init data");
+    }
+
     /**
      * Convenience method to load a comma-separated list of page models.
      *
@@ -44,7 +81,13 @@ public final class ModelLoader {
      */
     public static void loadModels(String modelsString, Map<String, Object> modelMap,
             Map<String, Object> initData, boolean fail) throws WebloggerException {
-        
+
+        // Every model receives the business-tier facade through initData (the
+        // models are reflectively instantiated, so this is their only way in).
+        // A caller that forgot it is a programming error, not a per-model
+        // failure, so it is refused whatever the fail flag says.
+        requireWeblogger(initData);
+
         String[] models = Utilities.stringToStringArray(modelsString, ",");
         if (models != null) {
             for (String model : models) {
