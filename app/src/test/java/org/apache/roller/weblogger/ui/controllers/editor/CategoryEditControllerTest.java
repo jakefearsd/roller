@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -267,6 +268,34 @@ class CategoryEditControllerTest extends EditorControllerTestSupport {
         assertEquals(LIST_REDIRECT, view);
         assertEquals("Their Category", foreign.getName(),
                 "a foreign category must come through the request unchanged");
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
+        assertTrue(flashMessages(redirectAttributes).isEmpty(),
+                "and the edit must not report success");
+    }
+
+    /**
+     * A uniqueness check that cannot be performed must not be read as "unique".
+     *
+     * <p>{@code categoryNamed} logged the lookup failure and returned null, and
+     * the duplicate-name check reads null as "no such category" -- so the
+     * category store being unreachable was the one condition under which a
+     * rename onto another category's name went through unchecked. Same shape,
+     * same fix as TemplateEditController's name and link checks.
+     */
+    @Test
+    void aNameUniquenessCheckThatFailsRefusesTheSave() throws Exception {
+        WeblogCategory existing = categoryNamed("cat-1", "Travel");
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1")).thenReturn(existing);
+        when(weblogger.getWeblogEntryManager().getWeblogCategoryByName(eq(weblog), any()))
+                .thenThrow(new WebloggerException("category store unreachable"));
+
+        bean.setId("cat-1");
+        bean.setName("Food");
+
+        controller.categoryEditSave(request, model, bean, redirectAttributes);
+
+        assertFalse(errors(model).isEmpty(),
+                "the author must be told the save did not happen, got: " + errors(model));
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogCategory(any());
         assertTrue(flashMessages(redirectAttributes).isEmpty(),
                 "and the edit must not report success");

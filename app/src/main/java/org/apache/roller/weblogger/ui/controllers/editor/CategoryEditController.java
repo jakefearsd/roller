@@ -161,26 +161,32 @@ public class CategoryEditController extends BaseController {
                 addError(model, "categoryForm.error.duplicateName", bean.getName(), request);
             }
         } else {
-            WeblogCategory wc = categoryNamed(getActionWeblog(request), bean.getName());
-            if (wc != null && !wc.getId().equals(bean.getId())) {
-                addError(model, "categoryForm.error.duplicateName", bean.getName(), request);
+            try {
+                WeblogCategory wc = categoryNamed(getActionWeblog(request), bean.getName());
+                if (wc != null && !wc.getId().equals(bean.getId())) {
+                    addError(model, "categoryForm.error.duplicateName", bean.getName(), request);
+                }
+            } catch (WebloggerException ex) {
+                // Fail closed. A uniqueness check that could not run is not a
+                // check that passed, and the caller's hasErrors() gate would
+                // otherwise read the empty error list as "this name is free" --
+                // the same shape TemplateEditController's name/link checks had.
+                log.error("Error checking category name uniqueness for {}", bean.getName(), ex);
+                addError(model, "generic.error.check.logs", request);
             }
         }
     }
 
     /**
-     * The weblog's category of that name, or null when there is none -- or
-     * when the lookup fails, which is what {@code Weblog.getWeblogCategory}
-     * (the entity getter this replaces) answered too. Kept as a move, not a
-     * fix: on a failed lookup the duplicate-name check does not fire.
+     * The weblog's category of that name, or null when there is none. A
+     * failed lookup propagates rather than answering null: the duplicate-name
+     * check in {@link #myValidate} reads null as "no duplicate", so swallowing
+     * here would let a rename through unchecked exactly when the category
+     * store is unreachable. (It used to, as a move of the fail-open
+     * {@code Weblog.getWeblogCategory} getter it replaced.)
      */
-    private WeblogCategory categoryNamed(Weblog weblog, String name) {
-        try {
-            return weblogger.getWeblogEntryManager().getWeblogCategoryByName(weblog, name);
-        } catch (WebloggerException e) {
-            log.error("ERROR: fetching category: {}", name, e);
-            return null;
-        }
+    private WeblogCategory categoryNamed(Weblog weblog, String name) throws WebloggerException {
+        return weblogger.getWeblogEntryManager().getWeblogCategoryByName(weblog, name);
     }
 
     @ModelAttribute("bean")
