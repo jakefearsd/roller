@@ -67,18 +67,35 @@ class ThemeEditControllerTest extends EditorControllerTestSupport {
         // does not is its own group of tests below.
         givenRuntimeProperty("themes.customtheme.allowed", "true");
 
-        // Weblog.getTheme() routes through WebloggerFactory.getWeblogger().getThemeManager()
-        // (the same static factory MockWeblogger installs into), not the controller's
-        // injected weblogger field. save() calls it unconditionally via
+        // The controller resolves the current theme through its injected
+        // facade's ThemeManager. save() does so unconditionally via
         // isSharedThemeCustomStylesheet() before even branching on themeType, so
         // every test needs a non-null default here or it NPEs before the
         // behaviour under test ever runs. Tests that care about the current
-        // theme's id or stylesheet override this with their own stub.
+        // theme's id, name or stylesheet override this with their own stub.
         WeblogTheme defaultCurrentTheme = mock(WeblogTheme.class);
         when(weblogger.getThemeManager().getTheme(weblog)).thenReturn(defaultCurrentTheme);
     }
 
     // --- execute ---
+
+    @Test
+    void executeOnASharedThemeNamesTheCurrentThemeForTheForm() throws Exception {
+        // ThemeEdit.jsp shows "Your current theme: <name>" from a model
+        // attribute the controller resolves through its ThemeManager -- the
+        // raw entity no longer knows its theme (plan Task 17).
+        weblog.setEditorTheme("journal");
+        WeblogTheme journal = mock(WeblogTheme.class);
+        when(journal.getId()).thenReturn("journal");
+        when(journal.getName()).thenReturn("Quiet Journal");
+        when(weblogger.getThemeManager().getTheme(weblog)).thenReturn(journal);
+
+        String view = controller.execute(request, model);
+
+        assertEquals(".ThemeEdit", view);
+        assertEquals("journal", model.getAttribute("themeId"));
+        assertEquals("Quiet Journal", model.getAttribute("currentThemeName"));
+    }
 
     @Test
     void executeOnACustomThemeLeavesTheThemeIdsUnsetAndSkipsImport() throws Exception {

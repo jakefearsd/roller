@@ -84,8 +84,8 @@ class StylesheetEditControllerTest extends EditorControllerTestSupport {
         when(weblogger.getWeblogManager().getTemplateByLink(weblog, STYLESHEET_LINK))
                 .thenReturn(template);
 
-        // Weblog.getTheme() resolves through the ThemeManager, so the custom-theme
-        // paths need it wired up too.
+        // The custom-theme paths resolve the weblog's theme through the facade's
+        // ThemeManager, so it needs wiring up too.
         WeblogTheme customTheme = mock(WeblogTheme.class);
         when(customTheme.getStylesheet()).thenReturn(sharedStylesheet);
         when(weblogger.getThemeManager().getTheme(weblog)).thenReturn(customTheme);

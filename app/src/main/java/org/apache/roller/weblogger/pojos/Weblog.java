@@ -23,14 +23,9 @@ import java.util.*;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.roller.weblogger.WebloggerException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.util.UUIDGenerator;
 import org.apache.roller.weblogger.util.I18nUtils;
 import org.apache.roller.weblogger.util.Utilities;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 
 
 /**
@@ -44,7 +39,6 @@ public class Weblog implements Serializable {
     
     public static final long serialVersionUID = 206437645033737127L;
     
-    private static final Logger log = LoggerFactory.getLogger(Weblog.class);
 
     
     // Simple properties
@@ -127,22 +121,6 @@ public class Weblog implements Serializable {
             .toHashCode();
     } 
     
-    /**
-     * Get the Theme object in use by this weblog, or null if no theme selected.
-     */
-    public WeblogTheme getTheme() {
-        try {
-            // let the ThemeManager handle it
-            ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
-            return themeMgr.getTheme(this);
-        } catch (WebloggerException ex) {
-            log.error("Error getting theme for weblog - {}", getHandle(), ex);
-        }
-        
-        // TODO: maybe we should return a default theme in this case?
-        return null;
-    }
-
     /**
      * Id of the Website.
      */

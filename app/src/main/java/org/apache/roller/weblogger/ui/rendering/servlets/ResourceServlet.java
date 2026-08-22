@@ -120,7 +120,7 @@ public class ResourceServlet extends HttpServlet {
 
         // first see if resource comes from weblog's shared theme
         try {
-            WeblogTheme weblogTheme = weblog.getTheme();
+            WeblogTheme weblogTheme = weblogger.getThemeManager().getTheme(weblog);
             if (weblogTheme != null) {
                 ThemeResource resource = weblogTheme
                         .getResource(resourceRequest.getResourcePath());

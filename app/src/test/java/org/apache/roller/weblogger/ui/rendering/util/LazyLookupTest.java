@@ -235,7 +235,7 @@ class LazyLookupTest {
         when(weblogger.getWeblogManager()).thenReturn(weblogManager);
         when(weblogger.getThemeManager()).thenReturn(themeManager);
         when(weblogManager.getWeblogByHandle(anyString(), any())).thenReturn(weblog);
-        when(weblog.getTheme()).thenReturn(weblogTheme);
+        when(themeManager.getTheme(weblog)).thenReturn(weblogTheme);
         when(weblogTheme.getTemplateByLink("about")).thenReturn(template);
 
         WeblogPageRequest request =
@@ -255,9 +255,11 @@ class LazyLookupTest {
         org.apache.roller.weblogger.pojos.WeblogTheme weblogTheme =
                 mock(org.apache.roller.weblogger.pojos.WeblogTheme.class);
 
+        ThemeManager themeManager = mock(ThemeManager.class);
         when(weblogger.getWeblogManager()).thenReturn(weblogManager);
+        when(weblogger.getThemeManager()).thenReturn(themeManager);
         when(weblogManager.getWeblogByHandle(anyString(), any())).thenReturn(weblog);
-        when(weblog.getTheme()).thenReturn(weblogTheme);
+        when(themeManager.getTheme(weblog)).thenReturn(weblogTheme);
         when(weblogTheme.getTemplateByLink(anyString()))
                 .thenThrow(new WebloggerException("theme store unreadable"));
 

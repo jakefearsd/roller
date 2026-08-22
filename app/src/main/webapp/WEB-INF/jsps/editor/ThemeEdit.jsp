@@ -74,7 +74,7 @@
 
         <%-- you have shared theme X --%>
         <p class="lead">
-            <spring:message code="themeEditor.yourCurrentTheme"/>&nbsp;<b>${actionWeblog.theme.name}</b>
+            <spring:message code="themeEditor.yourCurrentTheme"/>&nbsp;<b>${currentThemeName}</b>
             <c:choose>
 <c:when test="${sharedThemeCustomStylesheet}">
                 <spring:message code="themeEditor.yourCustomStylesheet"/>

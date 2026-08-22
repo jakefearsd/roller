@@ -99,7 +99,7 @@ class PageServletDecisionTest {
         when(pageRequest.getPageSlug()).thenReturn("no-such-page");
         when(pageRequest.getWeblogPageContent()).thenReturn(null);
 
-        assertNull(PageServlet.selectTemplate(pageRequest, weblog));
+        assertNull(PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()));
     }
 
     /**
@@ -113,7 +113,7 @@ class PageServletDecisionTest {
         ThemeTemplate override = mock(ThemeTemplate.class);
         when(theme.getTemplateByName("_page")).thenReturn(override);
 
-        assertEquals(override, PageServlet.selectTemplate(pageRequest, weblog));
+        assertEquals(override, PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()));
     }
 
     /**
@@ -130,7 +130,7 @@ class PageServletDecisionTest {
         when(theme.getTemplateByName("_page")).thenReturn(null);
 
         assertInstanceOf(StaticThemeTemplate.class,
-                PageServlet.selectTemplate(pageRequest, weblog));
+                PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()));
     }
 
     @Test
@@ -141,7 +141,7 @@ class PageServletDecisionTest {
         when(theme.getTemplateByName("_page")).thenThrow(new WebloggerException("theme is broken"));
 
         assertInstanceOf(StaticThemeTemplate.class,
-                PageServlet.selectTemplate(pageRequest, weblog),
+                PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()),
                 "a broken theme lookup must fall back, not propagate a 500");
     }
 
@@ -157,7 +157,7 @@ class PageServletDecisionTest {
         ThemeTemplate defaultTemplate = mock(ThemeTemplate.class);
         when(theme.getDefaultTemplate()).thenReturn(defaultTemplate);
 
-        assertNull(PageServlet.selectTemplate(pageRequest, weblog),
+        assertNull(PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()),
                 "a named page is answered by that page or by nothing");
     }
 
@@ -167,7 +167,7 @@ class PageServletDecisionTest {
         when(pageRequest.getContext()).thenReturn("page");
         when(pageRequest.getWeblogPage()).thenReturn(named);
 
-        assertEquals(named, PageServlet.selectTemplate(pageRequest, weblog));
+        assertEquals(named, PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()));
     }
 
     @Test
@@ -177,7 +177,7 @@ class PageServletDecisionTest {
         when(theme.getTemplateByAction(ComponentType.TAGSINDEX)).thenReturn(null);
         when(theme.getDefaultTemplate()).thenReturn(mock(ThemeTemplate.class));
 
-        assertNull(PageServlet.selectTemplate(pageRequest, weblog),
+        assertNull(PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()),
                 "a tags index has no default to fall back to either");
     }
 
@@ -194,7 +194,7 @@ class PageServletDecisionTest {
         when(theme.getDefaultTemplate()).thenReturn(defaultTemplate);
 
         assertEquals(defaultTemplate,
-                PageServlet.selectTemplate(pageRequest, weblog));
+                PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()));
     }
 
     @Test
@@ -203,7 +203,7 @@ class PageServletDecisionTest {
         when(pageRequest.getWeblogAnchor()).thenReturn("some-post");
         when(theme.getTemplateByAction(ComponentType.PERMALINK)).thenReturn(permalink);
 
-        assertEquals(permalink, PageServlet.selectTemplate(pageRequest, weblog));
+        assertEquals(permalink, PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()));
     }
 
     @Test
@@ -212,7 +212,7 @@ class PageServletDecisionTest {
         when(theme.getDefaultTemplate()).thenReturn(defaultTemplate);
 
         assertEquals(defaultTemplate,
-                PageServlet.selectTemplate(pageRequest, weblog));
+                PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()));
     }
 
     /**
@@ -223,7 +223,7 @@ class PageServletDecisionTest {
     void aThemeThatFailsToLoadYieldsNoTemplateRatherThanAnError() throws Exception {
         when(theme.getDefaultTemplate()).thenThrow(new WebloggerException("theme is broken"));
 
-        assertNull(PageServlet.selectTemplate(pageRequest, weblog));
+        assertNull(PageServlet.selectTemplate(pageRequest, weblog, weblogger.getThemeManager()));
     }
 
     // --------------------------------------------------------------- rejection

@@ -21,12 +21,10 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 
 import java.util.Date;
 import java.util.List;
@@ -45,7 +43,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -268,39 +265,6 @@ class WeblogLogicTest {
     // recent entry finders, counts, tags, lookups: moved off the entity to
     // WeblogWrapper (plan Task 16) -- see WeblogWrapperDelegationTest.
 
-    // -------------------------------------------------------- counts, tags
-
-    @Test
-    void themeLookupFailsSoftlyRatherThanBreakingTheRender() throws Exception {
-        org.apache.roller.weblogger.business.themes.ThemeManager themes =
-                mock(org.apache.roller.weblogger.business.themes.ThemeManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getThemeManager()).thenReturn(themes);
-        when(themes.getTheme(weblog)).thenThrow(new WebloggerException("no such theme"));
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertNull(weblog.getTheme(),
-                    "A weblog pointing at a theme that no longer exists must report no "
-                            + "theme rather than propagating out of the accessor");
-        }
-    }
-
-    @Test
-    void themeLookupReturnsTheThemeTheManagerResolved() throws Exception {
-        WeblogTheme resolved = mock(WeblogTheme.class);
-        org.apache.roller.weblogger.business.themes.ThemeManager themes =
-                mock(org.apache.roller.weblogger.business.themes.ThemeManager.class);
-        Weblogger weblogger = mock(Weblogger.class);
-        when(weblogger.getThemeManager()).thenReturn(themes);
-        when(themes.getTheme(weblog)).thenReturn(resolved);
-
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-
-            assertSame(resolved, weblog.getTheme(),
-                    "The weblog must render with the theme the ThemeManager resolved for it");
-        }
-    }
+    // theme: Weblog.getTheme() moved off the entity (plan Task 17) -- callers
+    // ask the ThemeManager they hold; see WeblogWrapperDelegationTest.
 }

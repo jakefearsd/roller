@@ -105,7 +105,6 @@
                     <cascade-remove/>
                 </cascade>
             </one-to-many>
-			<transient name="theme"/>
             <transient name="localeInstance"/>
             <transient name="timeZoneInstance" />
 		</attributes>

@@ -78,10 +78,12 @@ class StaticServiceLocatorTest {
     private static final String SHIM = PKG + "business/WebloggerFactory.java";
 
     // ---------------------------------------------------------------------
-    // The wave's migration ledger. These three sets ONLY EVER SHRINK. Each
-    // task in docs/superpowers/plans/2026-08-22-retire-static-service-locator.md
-    // ends by removing its files here; the wave is done when ALLOWED and
-    // POJO_ALLOWED are empty and the shim no longer exists.
+    // The wave's migration ledger. ALLOWED ONLY EVER SHRINKS. Each task in
+    // docs/superpowers/plans/2026-08-22-retire-static-service-locator.md ends
+    // by removing its files here; the wave is done when ALLOWED is empty and
+    // the shim no longer exists. (The entity allowlist, POJO_ALLOWED, was
+    // emptied by Stage D -- plan Task 17 -- and the entity rule is now
+    // unconditional.)
     // ---------------------------------------------------------------------
 
     /**
@@ -91,7 +93,6 @@ class StaticServiceLocatorTest {
      */
     static final Set<String> ALLOWED = Set.of(
             PKG + "config/WebloggerRuntimeConfig.java",
-            PKG + "pojos/Weblog.java",
             // TRANSITIONAL (Task 3): bootstrap() self-installs into the shim so unmigrated
             // callers keep working; Task 20 deletes that line with the shim.
             PKG + "business/SpringWebloggerProvider.java");
@@ -112,14 +113,6 @@ class StaticServiceLocatorTest {
     static final Set<String> STATIC_RESIDUALS = Set.of(
             PKG + "config/WebloggerRuntimeConfig.java",
             PKG + "ui/rendering/velocity/RollerVelocity.java");
-
-    /**
-     * Entities under {@code pojos/} that still reference a business-tier type.
-     * Emptied by Stage D (plan Tasks 14-17).
-     */
-    static final Set<String> POJO_ALLOWED = Set.of(
-            // getTheme() -- plan Task 17
-            PKG + "pojos/Weblog.java");
 
     /**
      * The business-tier types, named explicitly rather than by a
@@ -221,22 +214,10 @@ class StaticServiceLocatorTest {
         }
 
         List<String> problems = new ArrayList<>();
-        Set<String> referencingFiles = referencing.stream()
-                .map(s -> s.substring(0, s.indexOf(" (")))
-                .collect(Collectors.toCollection(TreeSet::new));
         for (String entry : referencing) {
-            String file = entry.substring(0, entry.indexOf(" ("));
-            if (!POJO_ALLOWED.contains(file)) {
-                problems.add(entry + ": an entity may not reach a manager, the facade, the URL "
-                        + "strategy or the render seam. Entities are data plus invariants -- "
-                        + "move the behaviour to a service (spec Decision 5). POJO_ALLOWED "
-                        + "only ever shrinks.");
-            }
-        }
-        for (String file : new TreeSet<>(POJO_ALLOWED)) {
-            if (!referencingFiles.contains(file)) {
-                problems.add(file + " is clean: remove it from StaticServiceLocatorTest.POJO_ALLOWED.");
-            }
+            problems.add(entry + ": an entity may not reach a manager, the facade, the URL "
+                    + "strategy or the render seam. Entities are data plus invariants -- "
+                    + "move the behaviour to a service (spec Decision 5).");
         }
         assertTrue(problems.isEmpty(), () -> String.join("\n", problems));
     }

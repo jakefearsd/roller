@@ -311,7 +311,7 @@ public class PageModel implements Model {
             return ThemeTemplateWrapper.wrap(pageRequest.getWeblogPage());
         } else {
             try {
-                return ThemeTemplateWrapper.wrap(weblog.getTheme().getDefaultTemplate());
+                return ThemeTemplateWrapper.wrap(weblogger.getThemeManager().getTheme(weblog).getDefaultTemplate());
             } catch (WebloggerException ex) {
                 log.error("Error getting default page", ex);
             }

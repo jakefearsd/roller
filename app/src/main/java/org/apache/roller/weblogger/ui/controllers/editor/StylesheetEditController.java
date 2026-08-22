@@ -262,7 +262,7 @@ public class StylesheetEditController extends BaseController {
                 SharedTheme themeName = themeManager.getTheme(getActionWeblog(request).getEditorTheme());
                 stylesheet = themeName.getStylesheet();
             } else {
-                stylesheet = getActionWeblog(request).getTheme().getStylesheet();
+                stylesheet = weblogger.getThemeManager().getTheme(getActionWeblog(request)).getStylesheet();
             }
             if (stylesheet != null) {
                 return weblogger.getWeblogManager()

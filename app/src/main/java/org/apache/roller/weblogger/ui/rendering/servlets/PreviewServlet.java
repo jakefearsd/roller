@@ -254,7 +254,7 @@ public class PreviewServlet extends HttpServlet {
 
         if (page == null) {
             try {
-                page = tmpWebsite.getTheme().getDefaultTemplate();
+                page = weblogger.getThemeManager().getTheme(tmpWebsite).getDefaultTemplate();
             } catch (WebloggerException re) {
                 log.error("Error getting default page for preview", re);
             }
@@ -269,7 +269,7 @@ public class PreviewServlet extends HttpServlet {
      */
     private Template templateForAction(Weblog weblog, ComponentType action, String label) {
         try {
-            return weblog.getTheme().getTemplateByAction(action);
+            return weblogger.getThemeManager().getTheme(weblog).getTemplateByAction(action);
         } catch (Exception e) {
             log.error("Error getting weblog page for action '{}'", label, e);
             return null;

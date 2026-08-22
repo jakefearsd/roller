@@ -24,6 +24,7 @@ import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -304,7 +305,9 @@ class PageModelTest {
         WeblogTheme theme = mock(WeblogTheme.class);
         when(theme.getDefaultTemplate()).thenReturn(template);
         Weblog themed = mock(Weblog.class);
-        when(themed.getTheme()).thenReturn(theme);
+        ThemeManager themes = mock(ThemeManager.class);
+        when(weblogger.getThemeManager()).thenReturn(themes);
+        when(themes.getTheme(themed)).thenReturn(theme);
 
         WeblogPageRequest request = new WeblogPageRequest();
         request.setWeblog(themed);
@@ -320,7 +323,9 @@ class PageModelTest {
         WeblogTheme theme = mock(WeblogTheme.class);
         when(theme.getDefaultTemplate()).thenThrow(new WebloggerException("no templates"));
         Weblog themed = mock(Weblog.class);
-        when(themed.getTheme()).thenReturn(theme);
+        ThemeManager themes = mock(ThemeManager.class);
+        when(weblogger.getThemeManager()).thenReturn(themes);
+        when(themes.getTheme(themed)).thenReturn(theme);
 
         WeblogPageRequest request = new WeblogPageRequest();
         request.setWeblog(themed);

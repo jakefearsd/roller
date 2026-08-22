@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.util.stream.Collectors;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogTheme;
 
 
 /**
@@ -83,23 +84,29 @@ public final class WeblogWrapper {
     }
 
 
+    /** The theme this weblog renders with, resolved through the facade the wrapper was given. */
+    private WeblogTheme theme() throws WebloggerException {
+        return weblogger.getThemeManager().getTheme(this.pojo);
+    }
+
+
     public ThemeTemplateWrapper getTemplateByAction(ComponentType action) throws WebloggerException {
-        return ThemeTemplateWrapper.wrap(this.pojo.getTheme().getTemplateByAction(action));
+        return ThemeTemplateWrapper.wrap(theme().getTemplateByAction(action));
     }
     
     
     public ThemeTemplateWrapper getTemplateByName(String name) throws WebloggerException {
-        return ThemeTemplateWrapper.wrap(this.pojo.getTheme().getTemplateByName(name));
+        return ThemeTemplateWrapper.wrap(theme().getTemplateByName(name));
     }
     
     
     public ThemeTemplateWrapper getTemplateByLink(String link) throws WebloggerException {
-        return ThemeTemplateWrapper.wrap(this.pojo.getTheme().getTemplateByLink(link));
+        return ThemeTemplateWrapper.wrap(theme().getTemplateByLink(link));
     }
     
     
     public List<ThemeTemplateWrapper> getTemplates() throws WebloggerException {
-        return this.pojo.getTheme().getTemplates().stream()
+        return theme().getTemplates().stream()
                 .map(ThemeTemplateWrapper::wrap)
                 .collect(Collectors.toList());
     }
@@ -240,8 +247,8 @@ public final class WeblogWrapper {
 
     public String getStylesheet() throws WebloggerException {
         // custom stylesheet comes from the weblog theme
-        if(this.pojo.getTheme().getStylesheet() != null) {
-            return urlStrategy.getWeblogPageURL(this.pojo, null, this.pojo.getTheme().getStylesheet().getLink(), null, null, null, null, 0, false);
+        if(theme().getStylesheet() != null) {
+            return urlStrategy.getWeblogPageURL(this.pojo, null, theme().getStylesheet().getLink(), null, null, null, null, 0, false);
         }
         return null;
     }

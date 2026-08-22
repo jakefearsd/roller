@@ -50,9 +50,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.mockito.MockedStatic;
-import static org.mockito.Mockito.mockStatic;
 
 /**
  * Covers the {@link WeblogWrapper} accessors that reach through the business
@@ -92,23 +89,6 @@ class WeblogWrapperDelegationTest {
         when(themes.getTheme(weblog)).thenReturn(theme);
 
         wrapper = WeblogWrapper.wrap(weblog, urls, weblogger);
-    }
-
-    /**
-     * Runs {@code body} with the static locator answering a facade that knows
-     * ONLY the theme manager: {@code Weblog.getTheme()} still locates statically
-     * (plan Task 17). Every other lookup the wrapper makes -- entries, counts,
-     * tags, categories, creator -- goes through the facade it was GIVEN, which
-     * is why the static facade deliberately carries no entry or user manager:
-     * a wrapper that regressed to locating them would NPE here.
-     */
-    private <T> T withWeblogger(Supplier<T> body) {
-        Weblogger themeOnly = mock(Weblogger.class);
-        when(themeOnly.getThemeManager()).thenReturn(themes);
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(themeOnly);
-            return body.get();
-        }
     }
 
     @Test
@@ -252,7 +232,7 @@ class WeblogWrapperDelegationTest {
     void countsComeFromTheEntryManager() throws Exception {
         when(entries.getEntryCount(weblog)).thenReturn(13L);
 
-        assertEquals(13L, withWeblogger(wrapper::getEntryCount));
+        assertEquals(13L, wrapper.getEntryCount());
     }
 
     @Test
@@ -269,13 +249,13 @@ class WeblogWrapperDelegationTest {
                 org.mockito.ArgumentMatchers.anyInt())).thenReturn(List.of(tag));
 
         assertEquals("Hello World",
-                withWeblogger(() -> wrapper.getRecentWeblogEntries("General", 5))
+                wrapper.getRecentWeblogEntries("General", 5)
                         .get(0).getTitle(),
                 "Recent entries must reach the theme wrapped, not as raw pojos");
         assertEquals("Hello World",
-                withWeblogger(() -> wrapper.getRecentWeblogEntriesByTag("java", 5))
+                wrapper.getRecentWeblogEntriesByTag("java", 5)
                         .get(0).getTitle());
-        assertEquals(List.of(tag), withWeblogger(() -> wrapper.getPopularTags(30, 5)),
+        assertEquals(List.of(tag), wrapper.getPopularTags(30, 5),
                 "Tag statistics carry no mutable state, so they are passed through as-is");
     }
 
@@ -292,10 +272,10 @@ class WeblogWrapperDelegationTest {
         when(entries.getWeblogCategoryByName(weblog, "Travel")).thenReturn(category);
 
         assertEquals("Hello World",
-                withWeblogger(() -> wrapper.getWeblogEntry("hello-world")).getTitle());
+                wrapper.getWeblogEntry("hello-world").getTitle());
         assertEquals("Travel",
-                withWeblogger(() -> wrapper.getWeblogCategory("Travel")).getName());
-        assertNull(withWeblogger(() -> wrapper.getWeblogEntry("no-such-anchor")),
+                wrapper.getWeblogCategory("Travel").getName());
+        assertNull(wrapper.getWeblogEntry("no-such-anchor"),
                 "An anchor that matches nothing must wrap to null so the permalink page "
                         + "can render a 404");
     }
@@ -309,7 +289,7 @@ class WeblogWrapperDelegationTest {
         when(weblogger.getUserManager()).thenReturn(users);
         when(users.getUserByUserName("alice")).thenReturn(alice);
 
-        assertEquals("Alice A", withWeblogger(() -> wrapper.getCreator()).getScreenName());
+        assertEquals("Alice A", wrapper.getCreator().getScreenName());
     }
 
     @Test
@@ -317,6 +297,20 @@ class WeblogWrapperDelegationTest {
         assertEquals(new Date(1_700_000_000_000L), wrapper.getLastModified(),
                 "Theme caching keys on this timestamp, so it has to be the weblog's own "
                         + "rather than a fresh clock reading");
+    }
+
+    @Test
+    void themeLookupsResolveThroughTheInjectedFacadesThemeManager() throws Exception {
+        // Nothing is installed in any static here: the only ThemeManager in the
+        // picture is the one on the facade the wrapper was GIVEN. Before plan
+        // Task 17 the wrapper delegated to Weblog.getTheme(), which located the
+        // manager statically and blew up in exactly this test.
+        when(theme.getStylesheet()).thenReturn(null);
+
+        assertNull(wrapper.getStylesheet());
+        wrapper.getTemplateByName("About");
+
+        verify(themes, times(2)).getTheme(weblog);
     }
 
     @Test
@@ -333,19 +327,13 @@ class WeblogWrapperDelegationTest {
         // Three distinct templates, so a lookup that consulted the wrong one
         // would return the wrong name rather than the right one by accident.
         assertEquals("Weblog",
-                withWeblogger(() -> lookup(() -> wrapper.getTemplateByAction(ComponentType.WEBLOG)))
+                lookup(() -> wrapper.getTemplateByAction(ComponentType.WEBLOG))
                         .getName());
         assertEquals("About",
-                withWeblogger(() -> lookup(() -> wrapper.getTemplateByName("About"))).getName());
+                lookup(() -> wrapper.getTemplateByName("About")).getName());
         assertEquals("Archive",
-                withWeblogger(() -> lookup(() -> wrapper.getTemplateByLink("archive"))).getName());
-        assertEquals(2, withWeblogger(() -> {
-            try {
-                return wrapper.getTemplates();
-            } catch (Exception e) {
-                throw new AssertionError(e);
-            }
-        }).size());
+                lookup(() -> wrapper.getTemplateByLink("archive")).getName());
+        assertEquals(2, wrapper.getTemplates().size());
     }
 
     @Test
@@ -355,13 +343,7 @@ class WeblogWrapperDelegationTest {
         when(urls.getWeblogPageURL(weblog, null, "custom.css", null, null, null, null, 0, false))
                 .thenReturn("/roller/testblog/page/custom.css");
 
-        assertEquals("/roller/testblog/page/custom.css", withWeblogger(() -> {
-            try {
-                return wrapper.getStylesheet();
-            } catch (Exception e) {
-                throw new AssertionError(e);
-            }
-        }), "The stylesheet link has to be resolved through the URL strategy; emitting "
+        assertEquals("/roller/testblog/page/custom.css", wrapper.getStylesheet(), "The stylesheet link has to be resolved through the URL strategy; emitting "
                 + "the template's own link would produce a URL relative to the page");
     }
 
@@ -369,13 +351,7 @@ class WeblogWrapperDelegationTest {
     void aThemeWithNoStylesheetProducesNoStylesheetLink() throws Exception {
         when(theme.getStylesheet()).thenReturn(null);
 
-        assertNull(withWeblogger(() -> {
-            try {
-                return wrapper.getStylesheet();
-            } catch (Exception e) {
-                throw new AssertionError(e);
-            }
-        }), "A theme with no stylesheet must produce no <link>, not one pointing at "
+        assertNull(wrapper.getStylesheet(), "A theme with no stylesheet must produce no <link>, not one pointing at "
                 + "nothing");
     }
 

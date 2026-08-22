@@ -452,7 +452,7 @@ public class WeblogPageRequest extends WeblogRequest {
 
         if (weblogPage == null && weblogPageName != null) {
             try {
-                weblogPage = getWeblog().getTheme().getTemplateByLink(
+                weblogPage = weblogger().getThemeManager().getTheme(getWeblog()).getTemplateByLink(
                         weblogPageName);
             } catch (WebloggerException ex) {
                 log.error("Error getting weblog page {}", weblogPageName, ex);

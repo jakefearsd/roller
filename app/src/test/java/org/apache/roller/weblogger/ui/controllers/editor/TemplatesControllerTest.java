@@ -65,11 +65,9 @@ class TemplatesControllerTest extends EditorControllerTestSupport {
         model = newModel();
         weblog.setEditorTheme(WeblogTheme.CUSTOM);
 
-        // Weblog.getTheme() routes through WebloggerFactory.getWeblogger().getThemeManager()
-        // (the same static factory MockWeblogger installs into), not the controller's
-        // injected weblogger field. Without this stub it resolves to null and
-        // loadTemplatesList's `getTheme().getStylesheet()` NPEs before the test even
-        // gets to assert anything.
+        // The controller resolves the weblog's theme through its injected facade's
+        // ThemeManager. Without this stub it resolves to null and loadTemplatesList's
+        // `theme.getStylesheet()` NPEs before the test even gets to assert anything.
         org.apache.roller.weblogger.pojos.WeblogTheme defaultWeblogTheme =
                 mock(org.apache.roller.weblogger.pojos.WeblogTheme.class);
         when(weblogger.getThemeManager().getTheme(weblog)).thenReturn(defaultWeblogTheme);

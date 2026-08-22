@@ -128,7 +128,7 @@ public class PreviewResourceServlet extends HttpServlet {
         // second, see if resource comes from weblog's configured shared theme
         if (resourceStream == null) {
             try {
-                WeblogTheme weblogTheme = weblog.getTheme();
+                WeblogTheme weblogTheme = weblogger.getThemeManager().getTheme(weblog);
                 if (weblogTheme != null) {
                     ThemeResource resource = weblogTheme
                             .getResource(resourceRequest.getResourcePath());

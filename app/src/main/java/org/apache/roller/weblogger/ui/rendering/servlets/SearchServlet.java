@@ -133,11 +133,12 @@ public class SearchServlet extends HttpServlet {
         ThemeTemplate page = null;
         try {
             // try looking for a specific search page
-            page = weblog.getTheme().getTemplateByAction(ThemeTemplate.ComponentType.SEARCH);
+            WeblogTheme theme = weblogger.getThemeManager().getTheme(weblog);
+            page = theme.getTemplateByAction(ThemeTemplate.ComponentType.SEARCH);
 
             // if not found then fall back on default page
             if (page == null) {
-                page = weblog.getTheme().getDefaultTemplate();
+                page = theme.getDefaultTemplate();
             }
 
             // if still null then that's a problem

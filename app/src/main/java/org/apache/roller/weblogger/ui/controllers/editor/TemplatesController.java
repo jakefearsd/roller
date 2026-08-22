@@ -159,10 +159,11 @@ public class TemplatesController extends BaseController {
                 WeblogManager mgr = weblogger.getWeblogManager();
 
                 if (WeblogTemplate.DEFAULT_PAGE.equals(template.getName())) {
-                    ThemeTemplate stylesheet = getActionWeblog(request).getTheme().getStylesheet();
-                    if (stylesheet != null && getActionWeblog(request).getTheme().getStylesheet() != null
+                    WeblogTheme theme = weblogger.getThemeManager().getTheme(getActionWeblog(request));
+                    ThemeTemplate stylesheet = theme.getStylesheet();
+                    if (stylesheet != null && theme.getStylesheet() != null
                             && stylesheet.getLink().equals(
-                            getActionWeblog(request).getTheme().getStylesheet().getLink())) {
+                            theme.getStylesheet().getLink())) {
                         WeblogTemplate css = mgr.getTemplateByLink(getActionWeblog(request), stylesheet.getLink());
                         if (css != null) {
                             mgr.removeTemplate(css);
@@ -191,10 +192,11 @@ public class TemplatesController extends BaseController {
             List<WeblogTemplate> raw = weblogger.getWeblogManager().getTemplates(getActionWeblog(request));
             List<WeblogTemplate> pages = new ArrayList<>(raw);
 
-            if (getActionWeblog(request).getTheme().getStylesheet() != null) {
+            WeblogTheme theme = weblogger.getThemeManager().getTheme(getActionWeblog(request));
+            if (theme.getStylesheet() != null) {
                 pages.remove(weblogger.getWeblogManager()
                         .getTemplateByLink(getActionWeblog(request),
-                                getActionWeblog(request).getTheme().getStylesheet().getLink()));
+                                theme.getStylesheet().getLink()));
             }
             model.addAttribute("templates", pages);
 

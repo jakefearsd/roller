@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -182,7 +183,7 @@ public class PageServlet extends HttpServlet {
         log.debug("Looking for template to use for rendering");
 
         // figure out what template to use
-        ThemeTemplate page = selectTemplate(pageRequest, weblog);
+        ThemeTemplate page = selectTemplate(pageRequest, weblog, weblogger.getThemeManager());
         if (page == null) {
             RenderingServletUtils.sendNotFound(response);
             return;
@@ -357,7 +358,7 @@ public class PageServlet extends HttpServlet {
      * 404, not the front page), a tags index likewise, and only a permalink
      * is allowed to fall back.
      */
-    static ThemeTemplate selectTemplate(WeblogPageRequest pageRequest, Weblog weblog) {
+    static ThemeTemplate selectTemplate(WeblogPageRequest pageRequest, Weblog weblog, ThemeManager themes) {
 
         ThemeTemplate page = null;
 
@@ -380,7 +381,7 @@ public class PageServlet extends HttpServlet {
             // than 404ing means a theme does not have to know pages exist.
             ThemeTemplate template = null;
             try {
-                template = weblog.getTheme().getTemplateByName("_page");
+                template = themes.getTheme(weblog).getTemplateByName("_page");
             } catch (Exception e) {
                 // Not simply "no _page override" -- getTemplateByName
                 // returns null for that. An exception here means a real
@@ -404,7 +405,7 @@ public class PageServlet extends HttpServlet {
         // template. Also no fallback.
         if ("tags".equals(pageRequest.getContext()) && pageRequest.getTags() != null) {
             try {
-                return weblog.getTheme().getTemplateByAction(ComponentType.TAGSINDEX);
+                return themes.getTheme(weblog).getTemplateByAction(ComponentType.TAGSINDEX);
             } catch (Exception e) {
                 log.error("Error getting weblog page for action 'tagsIndex'", e);
                 return null;
@@ -414,7 +415,7 @@ public class PageServlet extends HttpServlet {
         // If this is a permalink then look for a permalink template
         if (pageRequest.getWeblogAnchor() != null) {
             try {
-                page = weblog.getTheme().getTemplateByAction(ComponentType.PERMALINK);
+                page = themes.getTheme(weblog).getTemplateByAction(ComponentType.PERMALINK);
             } catch (Exception e) {
                 log.error("Error getting weblog page for action 'permalink'", e);
             }
@@ -423,7 +424,7 @@ public class PageServlet extends HttpServlet {
         // if we haven't found a page yet then try our default page
         if (page == null) {
             try {
-                page = weblog.getTheme().getDefaultTemplate();
+                page = themes.getTheme(weblog).getDefaultTemplate();
             } catch (Exception e) {
                 log.error("Error getting default page for weblog = {}", weblog.getHandle(), e);
             }

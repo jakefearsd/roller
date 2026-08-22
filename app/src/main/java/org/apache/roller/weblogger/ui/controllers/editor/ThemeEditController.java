@@ -79,10 +79,11 @@ public class ThemeEditController extends BaseController {
             model.addAttribute("selectedThemeId", null);
             model.addAttribute("importTheme", false);
         } else {
-            String themeId = getActionWeblog(request).getTheme().getId();
+            String themeId = currentTheme(request).getId();
             model.addAttribute("themeId", themeId);
             model.addAttribute("selectedThemeId", themeId);
         }
+        model.addAttribute("currentThemeName", currentThemeName(request));
 
         return ".ThemeEdit";
     }
@@ -152,7 +153,7 @@ public class ThemeEditController extends BaseController {
                     String originalTheme = weblog.getEditorTheme();
                     WeblogManager mgr = weblogger.getWeblogManager();
 
-                    if (!originalTheme.equals(selectedThemeId) && getActionWeblog(request).getTheme().getStylesheet() != null) {
+                    if (!originalTheme.equals(selectedThemeId) && currentTheme(request).getStylesheet() != null) {
                         WeblogTemplate stylesheet = mgr.getTemplateByAction(getActionWeblog(request), ComponentType.STYLESHEET);
                         if (stylesheet != null) {
                             mgr.removeTemplate(stylesheet);
@@ -180,10 +181,11 @@ public class ThemeEditController extends BaseController {
             model.addAttribute("themeId", null);
             model.addAttribute("selectedThemeId", null);
         } else {
-            String themeId = getActionWeblog(request).getTheme().getId();
+            String themeId = currentTheme(request).getId();
             model.addAttribute("themeId", themeId);
             model.addAttribute("selectedThemeId", themeId);
         }
+        model.addAttribute("currentThemeName", currentThemeName(request));
 
         return ".ThemeEdit";
     }
@@ -225,10 +227,31 @@ public class ThemeEditController extends BaseController {
      */
     private static final String SITEWIDE_ONLY_THEME_ID = "frontpage";
 
+    /**
+     * The theme the action weblog renders with, or null when it cannot be
+     * resolved -- the same fail-soft answer the entity's deleted
+     * {@code getTheme()} gave, so a half-configured weblog still reaches the
+     * form. Resolved through the injected facade, never located.
+     */
+    private WeblogTheme currentTheme(HttpServletRequest request) {
+        try {
+            return weblogger.getThemeManager().getTheme(getActionWeblog(request));
+        } catch (WebloggerException ex) {
+            log.error("Error getting theme for weblog - {}", getActionWeblog(request).getHandle(), ex);
+            return null;
+        }
+    }
+
+    /** What the form shows as "your current theme"; null when there is none to name. */
+    private String currentThemeName(HttpServletRequest request) {
+        WeblogTheme theme = currentTheme(request);
+        return theme == null ? null : theme.getName();
+    }
+
     private void loadThemeData(HttpServletRequest request, Model model) {
         ThemeManager themeMgr = weblogger.getThemeManager();
         String currentThemeId = WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme())
-                ? null : getActionWeblog(request).getTheme().getId();
+                ? null : currentTheme(request).getId();
         List<SharedTheme> selectable = themeMgr.getEnabledThemesList().stream()
                 .filter(t -> !SITEWIDE_ONLY_THEME_ID.equals(t.getId()) || SITEWIDE_ONLY_THEME_ID.equals(currentThemeId))
                 .toList();
@@ -250,10 +273,10 @@ public class ThemeEditController extends BaseController {
     private boolean isSharedThemeCustomStylesheet(HttpServletRequest request) {
         try {
             if (!WeblogTheme.CUSTOM.equals(getActionWeblog(request).getEditorTheme())
-                    && getActionWeblog(request).getTheme().getStylesheet() != null) {
+                    && currentTheme(request).getStylesheet() != null) {
                 ThemeTemplate override = weblogger.getWeblogManager()
                         .getTemplateByLink(getActionWeblog(request),
-                                getActionWeblog(request).getTheme().getStylesheet().getLink());
+                                currentTheme(request).getStylesheet().getLink());
                 if (override != null) {
                     return true;
                 }
