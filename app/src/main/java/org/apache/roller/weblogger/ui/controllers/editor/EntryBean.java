@@ -23,8 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WeblogEntryManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -370,8 +368,19 @@ public class EntryBean {
         return PubStatus.SCHEDULED.name().equals(status);
     }
     
-    public void copyTo(WeblogEntry entry) throws WebloggerException {
-        
+    /**
+     * Copies the form onto the entry.
+     *
+     * @param category the category the controller resolved from
+     *                 {@link #getCategoryId()}, or {@code null} if the id
+     *                 resolved to nothing. The bean is pure -- the data binder
+     *                 instantiates it, so it cannot be handed a manager to look
+     *                 the id up itself -- but the decision of what a missing or
+     *                 foreign category means still lives here, next to the
+     *                 rest of what a submitted form is allowed to say.
+     */
+    public void copyTo(WeblogEntry entry, WeblogCategory category) throws WebloggerException {
+
         entry.setTitle(EntryFieldRules.escapeTitle(getTitle()));
         entry.setStatus(PubStatus.valueOf(getStatus()));
         entry.setLocale(getLocale());
@@ -396,20 +405,12 @@ public class EntryBean {
 
         // figure out the category selected
         if (getCategoryId() != null) {
-            WeblogCategory cat = null;
-            try {
-                WeblogEntryManager wmgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
-                cat = wmgr.getWeblogCategory(getCategoryId());
-            } catch (WebloggerException ex) {
-                log.error("Error getting category by id", ex);
-            }
-            
-            if(cat == null) {
-                throw new WebloggerException("Category could not be found - "+getCategoryId());
-            } else if(!entry.getWebsite().equals(cat.getWeblog())) {
+            if (category == null) {
+                throw new WebloggerException("Category could not be found - " + getCategoryId());
+            } else if (!entry.getWebsite().equals(category.getWeblog())) {
                 throw new WebloggerException("Illegal category, not owned by action weblog");
             } else {
-                entry.setCategory(cat);
+                entry.setCategory(category);
             }
         } else {
             throw new WebloggerException("No category specified");

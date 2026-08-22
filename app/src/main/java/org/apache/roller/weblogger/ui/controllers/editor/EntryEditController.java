@@ -622,6 +622,25 @@ public class EntryEditController extends BaseController {
         }
     }
 
+    /**
+     * Resolves the category the form posted, for {@code EntryBean.copyTo} to
+     * file the entry under. The bean is pure and cannot look the id up itself;
+     * this keeps the semantics it used to have -- a lookup that fails is logged
+     * and reads as "not found", which {@code copyTo} then refuses, so a broken
+     * store never files an entry under no category.
+     */
+    private WeblogCategory lookupSubmittedCategory(EntryBean bean) {
+        if (bean.getCategoryId() == null) {
+            return null;
+        }
+        try {
+            return weblogger.getWeblogEntryManager().getWeblogCategory(bean.getCategoryId());
+        } catch (WebloggerException ex) {
+            log.error("Error getting category by id", ex);
+            return null;
+        }
+    }
+
     private String doSave(HttpServletRequest request, Model model, EntryBean bean,
                           WeblogEntry entry, String actionName, Timestamp pubTime) {
         if (StringUtils.isNotBlank(bean.getCanonicalUrl())
@@ -636,7 +655,7 @@ public class EntryEditController extends BaseController {
                 entry.setUpdateTime(new Timestamp(new Date().getTime()));
                 entry.setPubTime(pubTime);
 
-                bean.copyTo(entry);
+                bean.copyTo(entry, lookupSubmittedCategory(bean));
 
                 if (entry.isPublished() && entry.getPubTime() == null) {
                     entry.setPubTime(entry.getUpdateTime());
@@ -661,7 +680,7 @@ public class EntryEditController extends BaseController {
                 CacheManager.invalidate(entry);
 
                 if (entry.isPending() && MailUtil.isMailConfigured()) {
-                    MailUtil.sendPendingEntryNotice(entry);
+                    MailUtil.sendPendingEntryNotice(weblogger, entry);
                 }
 
                 if ("entryEdit".equals(actionName)) {

@@ -23,6 +23,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.ui.core.util.menu.Menu;
@@ -77,27 +78,31 @@ public class MenuModel implements Model {
      */
     public Menu getAdminMenu() {
         try {
-            GlobalPermission adminPerm = 
+            GlobalPermission adminPerm =
                 new GlobalPermission(Collections.singletonList(GlobalPermission.ADMIN));
-            boolean hasAdmin = WebloggerFactory.getWeblogger().getUserManager()
-                    .checkPermission(adminPerm, pageRequest.getUser());            
+            // Still on the static shim: models are reflectively instantiated
+            // and receive their collaborators in a later task of the DI wave.
+            UserManager userManager = WebloggerFactory.getWeblogger().getUserManager();
+            boolean hasAdmin = userManager.checkPermission(adminPerm, pageRequest.getUser());
             if (pageRequest.isLoggedIn() && hasAdmin) {
-                return MenuHelper.getMenu("admin", "noAction", pageRequest.getUser(), pageRequest.getWeblog());
+                return MenuHelper.getMenu("admin", "noAction", pageRequest.getUser(),
+                        pageRequest.getWeblog(), userManager);
             }
         } catch (WebloggerException ex) {
             log.error("ERROR: fetching user roles", ex);
         }
         return null;
     }
-    
-    
+
+
     /**
      * Get a Menu representing the author UI action menu, if the use is
      * currently logged in.
      */
     public Menu getAuthorMenu() {
         if(pageRequest.isLoggedIn()) {
-            return MenuHelper.getMenu("editor", null, pageRequest.getUser(), pageRequest.getWeblog());
+            return MenuHelper.getMenu("editor", null, pageRequest.getUser(), pageRequest.getWeblog(),
+                    WebloggerFactory.getWeblogger().getUserManager());
         }
         return null;
     }

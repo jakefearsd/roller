@@ -35,8 +35,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MailProvider;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
@@ -65,19 +65,23 @@ public final class MailUtil {
     
     /**
      * Send an email notice that a new pending entry has been submitted.
+     *
+     * @param weblogger the business tier, handed in by the caller: it answers
+     *                  who the weblog's reviewers are and builds the edit link
      */
-    public static void sendPendingEntryNotice(WeblogEntry entry) throws WebloggerException {
-        
+    public static void sendPendingEntryNotice(Weblogger weblogger, WeblogEntry entry)
+            throws WebloggerException {
+
         Session mailSession = WebloggerStartup.getMailProvider() != null
                 ? WebloggerStartup.getMailProvider().getSession() : null;
 
         if (mailSession == null) {
             throw new WebloggerException("Couldn't get mail Session");
         }
-        
+
         try {
-            WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
-            
+            WeblogManager wmgr = weblogger.getWeblogManager();
+
             String userName = entry.getCreator().getUserName();
             String from = entry.getCreator().getEmailAddress();
             String cc[] = new String[] {from};
@@ -102,7 +106,8 @@ public final class MailUtil {
             to = reviewers.toArray(String[]::new);
             
             // Figure URL to entry edit page
-            String editURL = WebloggerFactory.getWeblogger().getUrlStrategy().getEntryEditURL(entry.getWebsite().getHandle(), entry.getId(), true);
+            String editURL = weblogger.getUrlStrategy()
+                    .getEntryEditURL(entry.getWebsite().getHandle(), entry.getId(), true);
             
             ResourceBundle resources = ResourceBundle.getBundle(
                     "ApplicationResources", entry.getWebsite().getLocaleInstance());

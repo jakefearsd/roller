@@ -647,7 +647,7 @@ class MenuHelperTest {
         when(properties.getProperty("groupblogging.enabled")).thenReturn(null);
 
         try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
-            Menu menu = MenuHelper.getMenu("editor", "categories", user, weblog);
+            Menu menu = MenuHelper.getMenu("editor", "categories", user, weblog, userManager);
 
             assertEquals(List.of("tabbedmenu.weblog", "tabbedmenu.design", "tabbedmenu.website"),
                     tabKeys(menu),
@@ -679,7 +679,7 @@ class MenuHelperTest {
         when(properties.getProperty("themes.customtheme.allowed")).thenReturn(null);
 
         try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
-            Menu menu = MenuHelper.getMenu("editor", null, user, weblog);
+            Menu menu = MenuHelper.getMenu("editor", null, user, weblog, userManager);
 
             assertTrue(tabKeys(menu).contains("tabbedmenu.design"),
                     "themes.customtheme.allowed is set in neither configuration, so it must "
@@ -700,7 +700,7 @@ class MenuHelperTest {
                 .thenReturn(new RuntimeConfigProperty("themes.customtheme.allowed", "false"));
 
         try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
-            Menu menu = MenuHelper.getMenu("editor", null, user, weblog);
+            Menu menu = MenuHelper.getMenu("editor", null, user, weblog, userManager);
 
             assertTrue(tabKeys(menu).contains("tabbedmenu.design"),
                     "An administrator switched custom themes off at runtime, but the Design "
@@ -714,16 +714,37 @@ class MenuHelperTest {
 
     @Test
     void anUnknownMenuIdProducesNoMenu() {
-        assertNull(MenuHelper.getMenu("no-such-menu", "globalConfig", user, weblog),
+        assertNull(MenuHelper.getMenu("no-such-menu", "globalConfig", user, weblog, userManager),
                 "An unknown menu id must produce no menu rather than an empty one, which the "
                         + "JSP would render as a bare, tabless menu bar.");
     }
 
     @Test
     void aNullMenuIdProducesNoMenu() {
-        assertNull(MenuHelper.getMenu(null, "globalConfig", user, weblog),
+        assertNull(MenuHelper.getMenu(null, "globalConfig", user, weblog, userManager),
                 "A null menu id must be handled rather than thrown on: it reaches here from a "
                         + "controller that did not declare a menu.");
+    }
+
+    /**
+     * The user manager is a parameter, not a lookup: {@code getMenu} must
+     * consult the one it is handed and nothing else. Before the DI wave it
+     * reached the static {@code WebloggerFactory} for it, which is why this
+     * test hands in a manager the fixture's static mock has never heard of,
+     * and asserts the static mock's manager was left alone.
+     */
+    @Test
+    void getMenuConsultsTheUserManagerItIsGiven() throws Exception {
+        UserManager explicit = mock(UserManager.class);
+        when(explicit.checkPermission(any(), eq(user))).thenReturn(true);
+        PropertiesManager properties = mock(PropertiesManager.class);
+
+        try (MockedStatic<WebloggerFactory> factory = businessTier(properties)) {
+            MenuHelper.getMenu("editor", null, user, weblog, explicit);
+        }
+
+        verify(explicit, atLeastOnce()).checkPermission(any(), eq(user));
+        verifyNoInteractions(userManager);
     }
 
     // ------------------------------------------------------------------
@@ -789,7 +810,13 @@ class MenuHelperTest {
         enabledProperties.add("groupblogging.enabled");
     }
 
-    /** Stands a mock Weblogger up behind the static factory {@code getMenu} uses. */
+    /**
+     * Stands a mock Weblogger up behind the static factory. Since the DI wave
+     * {@code getMenu} takes its user manager as a parameter; what still reaches
+     * the static is the property reads -- {@code WebloggerRuntimeConfig} looks
+     * the properties manager up through {@code WebloggerFactory}, and that is
+     * the configuration wave's job to retire, not this test's.
+     */
     private MockedStatic<WebloggerFactory> businessTier(PropertiesManager properties) {
         Weblogger weblogger = mock(Weblogger.class);
         when(weblogger.getUserManager()).thenReturn(userManager);

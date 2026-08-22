@@ -28,6 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
@@ -112,6 +113,12 @@ public class TemplateEditController extends BaseController {
         if (!hasErrors(model)) {
             try {
                 bean.copyTo(template);
+                // The bean writes the edited markup onto the STANDARD rendition
+                // (creating one if the template had none) but persists nothing;
+                // saving it is this controller's job, before the template
+                // itself, as it always was.
+                weblogger.getWeblogManager().saveTemplateRendition(
+                        template.getTemplateRendition(RenditionType.STANDARD));
                 template.setLastModified(new Date());
 
                 if (bean.getAutoContentType() == null || !bean.getAutoContentType()) {

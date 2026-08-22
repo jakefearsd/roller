@@ -798,6 +798,26 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
     }
 
+    /**
+     * Characterisation: the controller owns the category lookup now (the form
+     * bean is pure), and keeps the semantics the bean had -- a lookup that
+     * throws is reported as an error, not a stack trace, and nothing is saved.
+     * Expected to pass on arrival; it exists so moving the lookup out of
+     * {@code EntryBean.copyTo} could not change it.
+     */
+    @Test
+    void aCategoryLookupFailureIsReportedRatherThanThrown() throws Exception {
+        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-1"))
+                .thenThrow(new WebloggerException("database down"));
+        bean.setCategoryId("cat-1");
+
+        controller.entryAddSaveDraft(request, model, bean);
+
+        assertTrue(errors(model).contains("generic.error.check.logs"),
+                "A failed category lookup must be reported: " + errors(model));
+        verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
+    }
+
     // --- SEO panel ---
 
     @Test

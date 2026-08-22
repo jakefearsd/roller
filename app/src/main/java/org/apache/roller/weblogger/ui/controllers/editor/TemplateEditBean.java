@@ -21,7 +21,6 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
@@ -140,13 +139,21 @@ public class TemplateEditBean {
     }
     
     
+    /**
+     * Copies the form onto the template and its STANDARD rendition. Persists
+     * nothing: the bean is pure (the data binder instantiates it), so the
+     * controller's save path is what calls {@code saveTemplateRendition} on
+     * the rendition this leaves behind -- reachable afterwards through
+     * {@code dataHolder.getTemplateRendition(RenditionType.STANDARD)} in both
+     * branches below, because the rendition constructor registers itself with
+     * the template.
+     */
     public void copyTo(WeblogTemplate dataHolder) throws WebloggerException {
 
         if (dataHolder.getTemplateRendition(RenditionType.STANDARD) != null) {
             // if we have a template, then set it
             CustomTemplateRendition tc = dataHolder.getTemplateRendition(RenditionType.STANDARD);
             tc.setTemplate(contentsStandard);
-            WebloggerFactory.getWeblogger().getWeblogManager().saveTemplateRendition(tc);
         } else {
             // otherwise create it, then set it -- with the edited contents, not
             // an empty string. Writing "" here silently threw away everything
@@ -155,7 +162,6 @@ public class TemplateEditBean {
             // column is NOT NULL, hence the fallback for an absent field.
             CustomTemplateRendition tc = new CustomTemplateRendition(dataHolder, RenditionType.STANDARD);
             tc.setTemplate(contentsStandard == null ? "" : contentsStandard);
-            WebloggerFactory.getWeblogger().getWeblogManager().saveTemplateRendition(tc);
         }
 
         // the rest of the template properties can be modified only when

@@ -26,6 +26,7 @@ import org.apache.roller.weblogger.pojos.WeblogTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.ui.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -330,6 +332,46 @@ class TemplateEditControllerTest extends EditorControllerTestSupport {
     }
 
     // --- TemplateEditBean ---
+
+    /**
+     * The form bean is pure: it writes the edited markup onto the template's
+     * rendition and persists nothing -- the controller's save path owns the
+     * {@code saveTemplateRendition} call. Before the DI wave {@code copyTo}
+     * reached the static {@code WebloggerFactory} for a manager and saved the
+     * rendition itself.
+     */
+    @Test
+    void beanCopyToDoesNotPersistTheRendition() throws Exception {
+        CustomTemplateRendition rendition = givenRendition("old markup");
+        bean.setContentsStandard("new markup");
+
+        bean.copyTo(template);
+
+        assertEquals("new markup", rendition.getTemplate(),
+                "copyTo still writes the edited markup onto the rendition");
+        verify(weblogger.getWeblogManager(), never()).saveTemplateRendition(any());
+    }
+
+    /**
+     * Characterisation: with the persistence moved out of the bean, the
+     * controller's save must still store an existing rendition's edited
+     * contents, and before {@code saveTemplate} as it always did. Expected to
+     * pass on arrival.
+     */
+    @Test
+    void savingAnExistingRenditionPersistsItsEditedContents() throws Exception {
+        CustomTemplateRendition rendition = givenRendition("old markup");
+        bean.setId("tmpl-1");
+        bean.setName("Sidebar");
+        bean.setContentsStandard("new markup");
+
+        controller.save(request, model, bean);
+
+        InOrder inOrder = inOrder(weblogger.getWeblogManager());
+        inOrder.verify(weblogger.getWeblogManager()).saveTemplateRendition(rendition);
+        inOrder.verify(weblogger.getWeblogManager()).saveTemplate(template);
+        assertEquals("new markup", rendition.getTemplate());
+    }
 
     @Test
     void beanCopyToOnlyRenamesCustomTemplates() throws Exception {

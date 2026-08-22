@@ -327,6 +327,32 @@ class UserEditControllerTest {
         assertTrue(((List<?>) model.getAttribute("permissions")).isEmpty());
     }
 
+    /**
+     * Characterisation: the admin checkbox is decided by the controller now,
+     * not by {@code CreateUserBean.copyFrom}, and it keeps the semantics the
+     * bean had -- a role lookup that fails leaves the box unticked and the rest
+     * of the profile loaded. Failing open here would offer to make somebody an
+     * admin on the strength of a database error. Expected to pass on arrival;
+     * it exists so moving the check out of the bean could not change it.
+     */
+    @Test
+    void modifyLeavesTheAdminBoxUntickedWhenTheRoleLookupFails() throws Exception {
+        User stored = user("jake", "jake@example.com");
+        when(weblogger.userManager().getUser("u1")).thenReturn(stored);
+        when(weblogger.userManager().getWeblogPermissions(stored)).thenReturn(List.of());
+        when(weblogger.userManager().checkPermission(any(GlobalPermission.class), eq(stored)))
+                .thenThrow(new WebloggerException("database down"));
+        CreateUserBean bean = new CreateUserBean();
+        bean.setId("u1");
+
+        String view = controller.modifyUserExecute(ControllerTestFixture.requestFor(null), model, bean);
+
+        assertEquals(".UserEdit", view);
+        CreateUserBean loaded = (CreateUserBean) model.getAttribute("bean");
+        assertFalse(loaded.isAdministrator(), "a failed role lookup must not tick the admin box");
+        assertEquals("jake", loaded.getUserName(), "the rest of the profile is still loaded");
+    }
+
     @Test
     void modifyFallsBackToUserNameLookupWhenTheFormCarriesNoId() throws Exception {
         CreateUserBean bean = new CreateUserBean();

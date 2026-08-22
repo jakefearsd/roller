@@ -19,7 +19,6 @@ package org.apache.roller.weblogger.ui.controllers.admin;
 
 import java.util.List;
 
-import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
@@ -35,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -97,7 +98,7 @@ class CreateUserBeanTest {
     }
 
     @Test
-    void copyFromReadsTheProfileAndTheAdminRole() throws Exception {
+    void copyFromReadsTheProfile() {
         User user = new User();
         user.setId("u1");
         user.setUserName("jake");
@@ -108,7 +109,6 @@ class CreateUserBeanTest {
         user.setLocale("en_GB");
         user.setTimeZone("Europe/Berlin");
         user.setEnabled(Boolean.FALSE);
-        when(weblogger.userManager().checkPermission(any(GlobalPermission.class), eq(user))).thenReturn(true);
 
         CreateUserBean bean = new CreateUserBean();
         bean.copyFrom(user);
@@ -122,35 +122,28 @@ class CreateUserBeanTest {
         assertEquals("en_GB", bean.getLocale());
         assertEquals("Europe/Berlin", bean.getTimeZone());
         assertEquals(Boolean.FALSE, bean.getEnabled());
-        assertTrue(bean.isAdministrator(), "the admin checkbox comes from the user's real role");
     }
 
+    /**
+     * The form bean is pure: the data binder instantiates it, so it has no way
+     * to be handed a collaborator, and it must therefore not go looking for one.
+     * The admin checkbox is the controller's to set (see
+     * {@code UserEditControllerTest}); before the DI wave {@code copyFrom}
+     * reached the static {@code WebloggerFactory} for a user manager to ask,
+     * which is why this test stands one up and asserts it was never consulted.
+     */
     @Test
-    void copyFromLeavesTheAdminBoxUntickedForAnOrdinaryUser() throws Exception {
+    void copyFromNeverConsultsTheUserManager() throws Exception {
         User user = new User();
         user.setUserName("jake");
-        when(weblogger.userManager().checkPermission(any(GlobalPermission.class), eq(user))).thenReturn(false);
+        when(weblogger.userManager().checkPermission(any(GlobalPermission.class), eq(user))).thenReturn(true);
 
         CreateUserBean bean = new CreateUserBean();
         bean.copyFrom(user);
 
-        assertFalse(bean.isAdministrator());
-    }
-
-    @Test
-    void copyFromDoesNotTickTheAdminBoxWhenTheRoleLookupFails() throws Exception {
-        // Failing open here would offer to make somebody an admin on the
-        // strength of a database error.
-        User user = new User();
-        user.setUserName("jake");
-        when(weblogger.userManager().checkPermission(any(GlobalPermission.class), eq(user)))
-                .thenThrow(new WebloggerException("database down"));
-
-        CreateUserBean bean = new CreateUserBean();
-        bean.copyFrom(user);
-
-        assertFalse(bean.isAdministrator());
-        assertEquals("jake", bean.getUserName(), "the rest of the profile is still loaded");
+        assertFalse(bean.isAdministrator(),
+                "copyFrom must not decide the admin flag; that is the controller's job");
+        verify(weblogger.userManager(), never()).checkPermission(any(), any());
     }
 
     @Test

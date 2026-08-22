@@ -23,9 +23,15 @@ import java.util.List;
 import jakarta.mail.Message;
 import jakarta.mail.internet.MimeMessage;
 
+import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.WeblogManager;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.startup.MockMailProvider;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
+import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +39,10 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * What Roller actually puts in the mail it sends.
@@ -66,6 +76,61 @@ class MailUtilTest {
     @AfterEach
     void tearDown() {
         MockMailProvider.uninstall();
+    }
+
+    // ------------------------------------------------------ pending entry notice
+
+    /**
+     * The notice reaches the weblog's reviewers through the {@code Weblogger} it
+     * is handed, not through the static factory. The two tiers in this test
+     * answer differently -- the explicit one knows a reviewer, the globally
+     * installed mock knows nobody -- so the recipient list proves which one was
+     * consulted. (The global mock is still needed for the entity getters the
+     * notice reads, {@code entry.getCreator()} and
+     * {@code weblog.hasUserPermission()}; moving those off the static is the
+     * entity stage of the DI wave, not this one's.)
+     */
+    @Test
+    void pendingEntryNoticeGoesToTheReviewersOfTheTierItIsGiven() throws Exception {
+        MockWeblogger global = MockWeblogger.install();
+        try {
+            User author = new User();
+            author.setUserName("author");
+            author.setEmailAddress("author@example.invalid");
+            User reviewer = new User();
+            reviewer.setUserName("reviewer");
+            reviewer.setEmailAddress("reviewer@example.invalid");
+            when(global.userManager().getUserByUserName("author")).thenReturn(author);
+            when(global.userManager().checkPermission(any(), eq(reviewer))).thenReturn(true);
+            when(global.weblogManager().getWeblogUsers(weblog, true)).thenReturn(List.of());
+
+            WeblogManager explicitWeblogs = mock(WeblogManager.class);
+            when(explicitWeblogs.getWeblogUsers(weblog, true)).thenReturn(List.of(reviewer));
+            URLStrategy urls = mock(URLStrategy.class);
+            when(urls.getEntryEditURL("mailblog", "entry-1", true))
+                    .thenReturn("https://site.invalid/edit/entry-1");
+            Weblogger explicit = mock(Weblogger.class);
+            when(explicit.getWeblogManager()).thenReturn(explicitWeblogs);
+            when(explicit.getUrlStrategy()).thenReturn(urls);
+
+            WeblogEntry entry = new WeblogEntry();
+            entry.setId("entry-1");
+            entry.setWebsite(weblog);
+            entry.setCreatorUserName("author");
+            entry.setTitle("Pending");
+
+            MailUtil.sendPendingEntryNotice(explicit, entry);
+
+            MimeMessage message = mail.onlyMessage();
+            assertEquals(List.of("reviewer@example.invalid"),
+                    addresses(message, Message.RecipientType.TO),
+                    "the reviewers must come from the tier the notice was given");
+            assertEquals("author@example.invalid", message.getFrom()[0].toString());
+            assertTrue(message.getContent().toString().contains("https://site.invalid/edit/entry-1"),
+                    "the edit link must come from the tier's url strategy");
+        } finally {
+            MockWeblogger.uninstall();
+        }
     }
 
     // ------------------------------------------------------- configured or not

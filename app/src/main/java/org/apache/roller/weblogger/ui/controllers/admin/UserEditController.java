@@ -179,6 +179,7 @@ public class UserEditController extends BaseController {
 
         // populate form data from user profile data
         bean.copyFrom(user);
+        bean.setAdministrator(isAdministrator(user));
         model.addAttribute("bean", bean);
         model.addAttribute("mailConfigured", PasswordLinkMailer.isReady());
         model.addAttribute("permissions", getPermissions(user));
@@ -309,6 +310,7 @@ public class UserEditController extends BaseController {
         }
 
         bean.copyFrom(user);
+        bean.setAdministrator(isAdministrator(user));
         model.addAttribute("bean", bean);
         model.addAttribute("permissions", getPermissions(user));
 
@@ -396,6 +398,25 @@ public class UserEditController extends BaseController {
             log.error("ERROR getting permissions for user {}", user.getUserName(), ex);
         }
         return new ArrayList<>();
+    }
+
+    /**
+     * Whether the user holds the global admin role, for the edit form's
+     * checkbox. This used to live in {@code CreateUserBean.copyFrom}; it moved
+     * here because the bean is pure and the controller holds the user manager.
+     * A lookup that fails reads as "not an admin" (a display default, logged)
+     * rather than offering to make somebody an admin on the strength of a
+     * database error.
+     */
+    private boolean isAdministrator(User user) {
+        try {
+            GlobalPermission adminPerm =
+                    new GlobalPermission(Collections.singletonList(GlobalPermission.ADMIN));
+            return weblogger.getUserManager().checkPermission(adminPerm, user);
+        } catch (WebloggerException ex) {
+            log.warn("Could not determine administrator status for user {}", user.getUserName(), ex);
+            return false;
+        }
     }
 
     private void addLocalesAndTimezones(Model model) {

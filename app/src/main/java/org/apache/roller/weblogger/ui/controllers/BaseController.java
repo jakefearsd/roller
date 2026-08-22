@@ -448,7 +448,8 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
         model.addAttribute("desiredMenu", getDesiredMenu());
 
         // build menu if applicable
-        Menu menu = MenuHelper.getMenu(getDesiredMenu(), getActionName(), user, weblog);
+        Menu menu = MenuHelper.getMenu(getDesiredMenu(), getActionName(), user, weblog,
+                weblogger.getUserManager());
         if (menu != null) {
             model.addAttribute("menu", menu);
         }

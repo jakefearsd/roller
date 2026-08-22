@@ -559,7 +559,9 @@ class SeoHeadRenderingTest {
         EntryBean bean = new EntryBean();
         bean.copyFrom(managed, Locale.getDefault());
         bean.setTitle(title);
-        bean.copyTo(managed);
+        // The bean is pure: the controller resolves the category it posted, so
+        // hand it the one copyFrom just read off the entry.
+        bean.copyTo(managed, managed.getCategory());
         mgr.saveWeblogEntry(managed);
         TestUtils.endSession(true);
     }

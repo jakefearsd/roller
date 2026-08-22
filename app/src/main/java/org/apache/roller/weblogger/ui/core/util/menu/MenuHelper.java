@@ -31,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.UserManager;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
@@ -87,11 +86,15 @@ public final class MenuHelper {
      *            the user
      * @param weblog
      *            the weblog
-     * 
+     * @param userManager
+     *            answers the permission checks that decide which entries the
+     *            user may see; handed in by the caller rather than looked up
+     *            here, so this helper has no dependency on the container
+     *
      * @return the menu
      */
     public static Menu getMenu(String menuId, String currentAction, User user,
-            Weblog weblog) {
+            Weblog weblog, UserManager userManager) {
 
         if (menuId == null) {
             return null;
@@ -104,8 +107,7 @@ public final class MenuHelper {
         if (menuConfig != null) {
             try {
                 menu = buildMenu(menuId, menuConfig, currentAction, user, weblog,
-                        WebloggerFactory.getWeblogger().getUserManager(),
-                        MenuHelper::getBooleanProperty);
+                        userManager, MenuHelper::getBooleanProperty);
             } catch (WebloggerException ex) {
                 log.error("ERROR: fethcing user roles", ex);
             }

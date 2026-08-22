@@ -19,14 +19,8 @@
 package org.apache.roller.weblogger.ui.controllers.admin;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
 
 
@@ -34,8 +28,6 @@ import org.apache.roller.weblogger.pojos.User;
  * Bean used by CreateUser action.
  */
 public class CreateUserBean {
-
-    private static final Logger log = LoggerFactory.getLogger(CreateUserBean.class);
 
     private String id = null;
     private String userName = null;
@@ -168,16 +160,10 @@ public class CreateUserBean {
         this.locale = dataHolder.getLocale();
         this.timeZone = dataHolder.getTimeZone();
         this.enabled = dataHolder.getEnabled();
-
-        try {
-            GlobalPermission adminPerm =
-                new GlobalPermission(Collections.singletonList(GlobalPermission.ADMIN));
-            this.administrator = WebloggerFactory.getWeblogger().getUserManager()
-                    .checkPermission(adminPerm, dataHolder);
-
-        } catch (WebloggerException ex) {
-            log.warn("Could not determine administrator status for user {}", this.userName, ex);
-        }
+        // The administrator flag is not part of the profile: it is a permission
+        // check, and the controller that owns the user manager sets it (see
+        // UserEditController). The bean is pure -- the data binder instantiates
+        // it, so it has nowhere to get a manager from.
     }
 
 }

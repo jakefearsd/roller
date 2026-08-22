@@ -38,6 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -165,7 +168,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setTitle("Tom & Jerry <b>rule</b>");
         bean.setText("<p>Real markup stays</p>");
 
-        bean.copyTo(entry);
+        bean.copyTo(entry, entry.getCategory());
 
         assertEquals("Tom &amp; Jerry &lt;b&gt;rule&lt;/b&gt;", entry.getTitle());
         assertEquals("<p>Real markup stays</p>", entry.getText());
@@ -185,25 +188,27 @@ class EntryBeanTest extends EditorControllerTestSupport {
         otherWeblog.setId("weblog-2");
         otherWeblog.setHandle("otherblog");
         foreign.setWeblog(otherWeblog);
-        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-9")).thenReturn(foreign);
 
         bean.setStatus(PubStatus.DRAFT.name());
         bean.setCategoryId("cat-9");
 
-        WebloggerException ex = assertThrows(WebloggerException.class, () -> bean.copyTo(entry));
+        WebloggerException ex = assertThrows(WebloggerException.class,
+                () -> bean.copyTo(entry, foreign));
         assertTrue(ex.getMessage().contains("Illegal category"),
                 "Expected the cross-weblog category to be refused, got: " + ex.getMessage());
     }
 
     @Test
     void copyToRejectsACategoryIdThatDoesNotResolve() throws Exception {
+        // The controller looked the id up and found nothing; the bean must
+        // refuse rather than file the entry with no category.
         WeblogEntry entry = entryInCategory("cat-1");
-        when(weblogger.getWeblogEntryManager().getWeblogCategory("nope")).thenReturn(null);
 
         bean.setStatus(PubStatus.DRAFT.name());
         bean.setCategoryId("nope");
 
-        WebloggerException ex = assertThrows(WebloggerException.class, () -> bean.copyTo(entry));
+        WebloggerException ex = assertThrows(WebloggerException.class,
+                () -> bean.copyTo(entry, null));
         assertTrue(ex.getMessage().contains("could not be found"),
                 "Expected a not-found complaint, got: " + ex.getMessage());
     }
@@ -214,9 +219,27 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setStatus(PubStatus.DRAFT.name());
         bean.setCategoryId(null);
 
-        WebloggerException ex = assertThrows(WebloggerException.class, () -> bean.copyTo(entry));
+        WebloggerException ex = assertThrows(WebloggerException.class,
+                () -> bean.copyTo(entry, null));
         assertTrue(ex.getMessage().contains("No category specified"),
                 "Expected a missing-category complaint, got: " + ex.getMessage());
+    }
+
+    /**
+     * The form bean is pure: the category it files the entry under is handed
+     * to it by the controller, which owns the lookup. Before the DI wave
+     * {@code copyTo} reached the static {@code WebloggerFactory} for a
+     * {@code WeblogEntryManager} to resolve the id itself.
+     */
+    @Test
+    void copyToNeverConsultsTheEntryManager() throws Exception {
+        WeblogEntry entry = entryInCategory("cat-1");
+        bean.setStatus(PubStatus.DRAFT.name());
+        bean.setCategoryId("cat-1");
+
+        bean.copyTo(entry, entry.getCategory());
+
+        verify(weblogger.getWeblogEntryManager(), never()).getWeblogCategory(any());
     }
 
     @Test
@@ -228,7 +251,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setCategoryId("cat-1");
         bean.setTagsAsString("hello,world foo/bar");
 
-        bean.copyTo(entry);
+        bean.copyTo(entry, entry.getCategory());
 
         assertEquals("bar foo hello world", entry.getTagsAsString(),
                 "Punctuation must split tags rather than survive into the tag name");
@@ -241,7 +264,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setCategoryId("cat-1");
         bean.setTagsAsString(null);
 
-        bean.copyTo(entry);
+        bean.copyTo(entry, entry.getCategory());
 
         assertEquals("", entry.getTagsAsString());
     }
@@ -266,7 +289,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setEventEnd(new Timestamp(1_800_003_600_000L));
         bean.setEventLocation("Champ de Mars");
 
-        bean.copyTo(entry);
+        bean.copyTo(entry, entry.getCategory());
 
         assertEquals("A summary", entry.getSummary());
         assertEquals("For search engines", entry.getSearchDescription());
@@ -295,11 +318,11 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setCategoryId("cat-1");
         bean.setJsonLdType(null);
 
-        bean.copyTo(entry);
+        bean.copyTo(entry, entry.getCategory());
         assertEquals(JsonLdType.BLOG_POSTING, entry.getJsonLdType());
 
         bean.setJsonLdType("SomethingFromTheFuture");
-        bean.copyTo(entry);
+        bean.copyTo(entry, entry.getCategory());
         assertEquals(JsonLdType.BLOG_POSTING, entry.getJsonLdType(),
                 "An unknown submitted type must degrade to the default, not throw");
     }
@@ -319,7 +342,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setStatus(PubStatus.DRAFT.name());
         bean.setCategoryId("cat-1");
 
-        bean.copyTo(entry);
+        bean.copyTo(entry, entry.getCategory());
 
         assertNull(entry.getGeoLatitude());
         assertNull(entry.getGeoLongitude());
@@ -390,7 +413,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setCategoryId("cat-1");
         bean.setNoindex(false);
 
-        bean.copyTo(entry);
+        bean.copyTo(entry, entry.getCategory());
 
         assertEquals(Boolean.FALSE, entry.getNoindex());
     }
@@ -411,7 +434,7 @@ class EntryBeanTest extends EditorControllerTestSupport {
         bean.setPinnedToMain(false);
         bean.setPubTimeLocal("2020-01-01T00:00");
 
-        bean.copyTo(entry);
+        bean.copyTo(entry, entry.getCategory());
 
         assertEquals(existingPubTime, entry.getPubTime(), "copyTo must leave pubTime alone");
         assertTrue(entry.getPinnedToMain(), "copyTo must leave pinnedToMain alone");
@@ -572,11 +595,10 @@ class EntryBeanTest extends EditorControllerTestSupport {
         replacement.setId("cat-2");
         replacement.setName("Food");
         replacement.setWeblog(weblog);
-        when(weblogger.getWeblogEntryManager().getWeblogCategory("cat-2")).thenReturn(replacement);
 
         bean.setStatus(PubStatus.DRAFT.name());
         bean.setCategoryId("cat-2");
-        bean.copyTo(entry);
+        bean.copyTo(entry, replacement);
 
         assertEquals(replacement, entry.getCategory());
     }
