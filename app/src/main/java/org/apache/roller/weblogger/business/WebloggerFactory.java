@@ -25,6 +25,18 @@ import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 
 /**
  * Provides access to the Weblogger instance and bootstraps the business tier.
+ *
+ * <p><b>Being retired.</b> This class is the static service locator the
+ * 2026-08-22 plan ({@code docs/superpowers/plans/2026-08-22-retire-static-service-locator.md})
+ * removes: container-managed classes take the facade by injection, the
+ * reflectively-built models and tasks receive it through their {@code init}
+ * hooks, and the entities stop reaching for it altogether. Do not add a call
+ * site -- {@code StaticServiceLocatorTest.ALLOWED} is the ledger of the files
+ * that still have one, and it only ever shrinks; a reference from a file not
+ * on that list fails the build. The class itself is deleted in that plan's
+ * Task 20. (Deliberately not {@code @Deprecated}: that would spray a warning
+ * per remaining call site for no information the ledger does not already
+ * carry.)
  */
 public final class WebloggerFactory {
     
