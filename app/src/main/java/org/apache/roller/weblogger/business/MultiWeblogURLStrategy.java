@@ -63,6 +63,27 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
                                             String locale,
                                             boolean absolute) {
 
+        if (weblog == null) {
+            return null;
+        }
+        return weblogRoot(weblog, locale, absolute)
+                + URLUtilities.getQueryString(commonParams());
+    }
+
+    /**
+     * The root that every url for this weblog hangs off, with no query string.
+     *
+     * <p>Separate from {@link #getWeblogURL} because the builders below use it
+     * as a PREFIX, and a prefix must not carry a query string. That distinction
+     * did not exist before, and PreviewURLStrategy -- whose getWeblogURL
+     * appends the previewed theme -- broke every inherited builder because of
+     * it: the feed, search and media urls spliced their path onto the end of
+     * the theme parameter's value. A subclass changing where urls live
+     * overrides this; a subclass adding a parameter overrides
+     * {@link #commonParams}.
+     */
+    protected String weblogRoot(Weblog weblog, String locale, boolean absolute) {
+
         StringBuilder url = new StringBuilder();
         String customDomain = weblog == null ? null : weblog.getCustomDomain();
 
@@ -98,6 +119,15 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
     
     
     /**
+     * Parameters carried by every url this strategy builds. Empty here; the
+     * preview strategy adds the theme being previewed.
+     */
+    protected Map<String, String> commonParams() {
+        return Map.of();
+    }
+
+
+    /**
      * Get url for a single weblog entry on a given weblog.
      */
     @Override
@@ -112,7 +142,7 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         
         StringBuilder url = new StringBuilder();
         
-        url.append(getWeblogURL(weblog, locale, absolute));
+        url.append(weblogRoot(weblog, locale, absolute));
         url.append("entry/").append(URLUtilities.encode(entryAnchor));
         
     return url.toString();
@@ -133,7 +163,7 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         }
         
         StringBuilder url = new StringBuilder();
-        url.append(getWeblogURL(weblog, null, absolute));
+        url.append(weblogRoot(weblog, null, absolute));
         url.append("mediaresource");
         url.append('/');
         url.append(URLUtilities.encode(fileAnchor));
@@ -171,9 +201,9 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         }
         
         StringBuilder pathinfo = new StringBuilder(URL_BUFFER_SIZE);
-        Map<String, String> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>(commonParams());
         
-        pathinfo.append(getWeblogURL(weblog, locale, absolute));
+        pathinfo.append(weblogRoot(weblog, locale, absolute));
         
         String cat;
         if("root".equals(category)) {
@@ -226,9 +256,9 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         }
         
         StringBuilder pathinfo = new StringBuilder(URL_BUFFER_SIZE);
-        Map<String, String> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>(commonParams());
         
-        pathinfo.append(getWeblogURL(weblog, locale, absolute));
+        pathinfo.append(weblogRoot(weblog, locale, absolute));
         
         if(pageLink != null) {
             pathinfo.append("page/").append(URLUtilities.encode(pageLink));
@@ -275,10 +305,10 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         
         StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
         
-        url.append(getWeblogURL(weblog, locale, absolute));
+        url.append(weblogRoot(weblog, locale, absolute));
         url.append("feed/").append(type).append('/').append(format);
         
-        Map<String, String> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>(commonParams());
         if(category != null && !category.isBlank()) {
             params.put("cat", URLUtilities.encode(category));
         }
@@ -313,10 +343,10 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         
         StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
         
-        url.append(getWeblogURL(weblog, locale, absolute));
+        url.append(weblogRoot(weblog, locale, absolute));
         url.append("search");
         
-        Map<String, String> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>(commonParams());
         if(query != null) {
             params.put("q", URLUtilities.encode(query));
             
@@ -345,7 +375,7 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         
         StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
         
-        url.append(getWeblogURL(weblog, null, absolute));
+        url.append(weblogRoot(weblog, null, absolute));
         url.append("resource/");
         
         if(filePath.startsWith("/")) {
@@ -366,7 +396,7 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         
         StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
         
-        url.append(getWeblogURL(weblog, null, true));
+        url.append(weblogRoot(weblog, null, true));
         url.append("search");
         
         Map<String, String> params = Map.of("q", "{searchTerms}", "page", "{startPage}");

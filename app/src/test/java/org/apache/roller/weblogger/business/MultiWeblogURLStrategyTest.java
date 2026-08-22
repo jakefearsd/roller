@@ -1,5 +1,7 @@
 package org.apache.roller.weblogger.business;
 
+import java.util.List;
+
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
@@ -7,6 +9,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Url generation for a weblog that owns a hostname.
@@ -129,5 +133,117 @@ class MultiWeblogURLStrategyTest {
         assertEquals("https://vhost.example.com/roller/entry/my-post",
                 strategy.getWeblogEntryURL(
                         weblog("vhostblog", "vhost.example.com"), null, "my-post", true));
+    }
+
+    // --- the shared builders, now that both strategies run through them ----
+
+    /**
+     * These cover MultiWeblogURLStrategy directly rather than through a custom
+     * domain, which is what the tests above are about. It carries the logic for
+     * BOTH strategies since PreviewURLStrategy was reduced to two hooks, so a
+     * gap here is a gap in the preview too.
+     */
+    @Test
+    void everyBuilderDeclinesAMissingWeblog() {
+        assertNull(strategy.getWeblogURL(null, null, false));
+        assertNull(strategy.getWeblogEntryURL(null, null, "anchor", false));
+        assertNull(strategy.getWeblogFeedURL(null, null, "entries", "atom", null, null,
+                List.of(), false, false));
+        assertNull(strategy.getWeblogSearchURL(null, null, "q", null, 0, false));
+        assertNull(strategy.getWeblogResourceURL(null, "f.png", false));
+        assertNull(strategy.getWeblogSearchPageURLTemplate(null));
+    }
+
+    @Test
+    void anEntryUrlNeedsAnAnchor() {
+        assertNull(strategy.getWeblogEntryURL(weblog("blog", null), null, null, false),
+                "there is no url for \"some entry, unspecified\"");
+    }
+
+    @Test
+    void aResourceUrlNeedsAPath() {
+        assertNull(strategy.getWeblogResourceURL(weblog("blog", null), null, false));
+        assertNull(strategy.getWeblogResourceURL(weblog("blog", null), "", false),
+                "an empty path names no resource");
+    }
+
+    @Test
+    void aFeedCarriesOnlyTheNarrowingItWasGiven() {
+        String bare = strategy.getWeblogFeedURL(weblog("blog", null), null, "entries", "atom",
+                null, null, List.of(), false, false);
+
+        assertEquals("/blog/feed/entries/atom", bare,
+                "no category, no tags, no term, no excerpts: no query string at all");
+    }
+
+    @Test
+    void blankNarrowingIsTreatedAsAbsent() {
+        String url = strategy.getWeblogFeedURL(weblog("blog", null), null, "entries", "atom",
+                "   ", "  ", List.of(), false, false);
+
+        assertEquals("/blog/feed/entries/atom", url,
+                "a blank category or term is not a filter, and must not become an empty "
+                        + "query parameter: " + url);
+    }
+
+    @Test
+    void aFeedCarriesTheNarrowingItWasGiven() {
+        String url = strategy.getWeblogFeedURL(weblog("blog", null), null, "entries", "atom",
+                "Travel", "spain", List.of("hiking"), true, false);
+
+        assertTrue(url.startsWith("/blog/feed/entries/atom?"), url);
+        assertTrue(url.contains("cat=Travel"), url);
+        assertTrue(url.contains("q=spain"), url);
+        assertTrue(url.contains("tags=hiking"), url);
+        assertTrue(url.contains("excerpts=true"), url);
+    }
+
+    @Test
+    void aSearchUrlCarriesItsQueryAndCategory() {
+        String url = strategy.getWeblogSearchURL(weblog("blog", null), null, "spain",
+                "Travel", 2, false);
+
+        assertTrue(url.startsWith("/blog/search?"), url);
+        assertTrue(url.contains("q=spain"), url);
+        assertTrue(url.contains("cat=Travel"), url);
+        assertTrue(url.contains("page=2"), url);
+    }
+
+    /**
+     * Characterises an inconsistency rather than endorsing it. The feed builder
+     * two methods up treats a blank term as absent
+     * ({@code term != null && !term.isBlank()}); the search builder checks only
+     * for null, so a blank query becomes a real parameter and the url searches
+     * for whitespace.
+     *
+     * <p>Left alone deliberately: the result is a valid url that finds nothing,
+     * not a malformed one, so changing it is a behaviour decision rather than a
+     * fix. Pinned so that whoever makes that decision knows it was noticed.
+     */
+    @Test
+    void aBlankSearchQueryStillBecomesAParameter() {
+        String url = strategy.getWeblogSearchURL(weblog("blog", null), null, "  ", null, 0, false);
+
+        assertEquals("/blog/search?q=++", url,
+                "blank is not treated as absent here, unlike on the feed builder");
+    }
+
+    @Test
+    void aNullSearchQueryDropsTheNarrowingThatDependsOnIt() {
+        String url = strategy.getWeblogSearchURL(weblog("blog", null), null, null,
+                "Travel", 2, false);
+
+        assertEquals("/blog/search", url,
+                "a category and a page number only mean something alongside a query, so "
+                        + "with no query they are dropped rather than emitted alone");
+    }
+
+    @Test
+    void theOpenSearchTemplateKeepsItsPlaceholders() {
+        String url = strategy.getWeblogSearchPageURLTemplate(weblog("blog", null));
+
+        assertTrue(url.contains("{searchTerms}"),
+                "the placeholders are what make this a template rather than a url: " + url);
+        assertTrue(url.contains("{startPage}"), url);
     }
 }

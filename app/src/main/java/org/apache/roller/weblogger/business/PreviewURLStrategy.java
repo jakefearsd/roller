@@ -20,7 +20,6 @@ package org.apache.roller.weblogger.business;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
@@ -43,39 +42,42 @@ public class PreviewURLStrategy extends MultiWeblogURLStrategy {
     
     
     /**
-     * Get root url for a given *preview* weblog.  
-     * Optionally for a certain locale.
+     * Previews live under the authoring servlet rather than at the weblog's own
+     * address, and are never on a custom domain -- an author previewing a theme
+     * is on the site host by definition.
      */
     @Override
-    public String getWeblogURL(Weblog weblog, String locale, boolean absolute) {
-        
-        if(weblog == null) {
-            return null;
-        }
-        
+    protected String weblogRoot(Weblog weblog, String locale, boolean absolute) {
+
         StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
-        
-        if(absolute) {
+
+        if (absolute) {
             url.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
         } else {
             url.append(WebloggerRuntimeConfig.getRelativeContextURL());
         }
-        
+
         url.append(PREVIEW_URL_SEGMENT).append(weblog.getHandle()).append('/');
-        
-        if(locale != null) {
+
+        if (locale != null) {
             url.append(locale).append('/');
         }
-        
-        Map<String, String> params = Collections.emptyMap();
-        if(previewTheme != null) {
-            params = Map.of("theme", URLUtilities.encode(previewTheme));
-        }
-        
-        return url.append(URLUtilities.getQueryString(params)).toString();
+
+        return url.toString();
     }
-    
-    
+
+    /**
+     * Every url built while previewing carries the theme being previewed, or a
+     * link out of the preview would land on the live weblog.
+     */
+    @Override
+    protected Map<String, String> commonParams() {
+        return previewTheme == null
+                ? Map.of()
+                : Map.of("theme", URLUtilities.encode(previewTheme));
+    }
+
+
     /**
      * Get url for a given *preview* weblog entry.  
      * Optionally for a certain locale.
@@ -90,162 +92,18 @@ public class PreviewURLStrategy extends MultiWeblogURLStrategy {
             return null;
         }
 
-        StringBuilder url = new StringBuilder(URL_BUFFER_SIZE);
-        
-        if(absolute) {
-            url.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
-        } else {
-            url.append(WebloggerRuntimeConfig.getRelativeContextURL());
-        }
-        
-        url.append(PREVIEW_URL_SEGMENT).append(weblog.getHandle()).append('/');
-        
-        if(locale != null) {
-            url.append(locale).append('/');
-        }
-        
-        Map<String, String> params = new HashMap<>();
-        if(previewTheme != null) {
-            params.put("theme", URLUtilities.encode(previewTheme));
-        }
-        if(previewAnchor != null) {
+        Map<String, String> params = new HashMap<>(commonParams());
+        if (previewAnchor != null) {
             params.put("previewEntry", URLUtilities.encode(previewAnchor));
         }
-        
-        return url.append(URLUtilities.getQueryString(params)).toString();
+
+        return weblogRoot(weblog, locale, absolute)
+                + URLUtilities.getQueryString(params);
     }
     
     
-    /**
-     * Get url for a collection of entries on a given weblog.
-     */
-    @Override
-    public String getWeblogCollectionURL(Weblog weblog,
-                                                      String locale,
-                                                      String category,
-                                                      String dateString,
-                                                      List<String> tags,
-                                                      int pageNum,
-                                                      boolean absolute) {
-        
-        if(weblog == null) {
-            return null;
-        }
-
-        StringBuilder pathinfo = new StringBuilder(URL_BUFFER_SIZE);
-        Map<String, String> params = new HashMap<>();
-        
-        if(absolute) {
-        	pathinfo.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
-        } else {
-        	pathinfo.append(WebloggerRuntimeConfig.getRelativeContextURL());
-        }
-        
-        pathinfo.append(PREVIEW_URL_SEGMENT).append(weblog.getHandle()).append('/');
-        
-        if(locale != null) {
-        	pathinfo.append(locale).append('/');
-        }
-
-        String cat;
-        if("root".equals(category)) {
-            cat = null;
-        } else {
-            cat = category;
-        }
-        
-        if(cat != null && dateString == null) {
-            pathinfo.append("category/").append(URLUtilities.encodePath(cat));
-            
-        } else if(dateString != null && cat == null) {
-            pathinfo.append("date/").append(dateString);  
-        
-        } else if(tags != null && !tags.isEmpty()) {
-            pathinfo.append("tags/").append(URLUtilities.getEncodedTagsString(tags));
-        } else {
-            if (dateString != null) {
-                params.put("date", dateString);
-            }
-            if (cat != null) {
-                params.put("cat", URLUtilities.encode(cat));
-            }
-        }
-
-        if(pageNum > 0) {
-            params.put("page", Integer.toString(pageNum));
-        }
-        
-        if(previewTheme != null) {
-            params.put("theme", URLUtilities.encode(previewTheme));
-        }
-
-        return pathinfo.append(URLUtilities.getQueryString(params)).toString();
-    }
     
 
-    /**
-     * Get url for a custom page on a given weblog.
-     */
-    @Override
-    public String getWeblogPageURL(Weblog weblog,
-                                                String locale,
-                                                String pageLink,
-                                                String entryAnchor,
-                                                String category,
-                                                String dateString,
-                                                List<String> tags,
-                                                int pageNum,
-                                                boolean absolute) {
-        
-        if(weblog == null) {
-            return null;
-        }
-        
-        StringBuilder pathinfo = new StringBuilder(URL_BUFFER_SIZE);
-        Map<String, String> params = new HashMap<>();
-        
-        if(absolute) {
-            pathinfo.append(WebloggerRuntimeConfig.getAbsoluteContextURL());
-        } else {
-            pathinfo.append(WebloggerRuntimeConfig.getRelativeContextURL());
-        }
-        
-        pathinfo.append(PREVIEW_URL_SEGMENT).append(weblog.getHandle()).append('/');
-        
-        if(locale != null) {
-            pathinfo.append(locale).append('/');
-        }
-        
-        if(previewTheme != null) {
-            params.put("theme", URLUtilities.encode(previewTheme));
-        }
-        
-        if(pageLink != null) {
-            // encoded, as MultiWeblogURLStrategy encodes it. Left raw, an author
-            // who named a page "a?theme=x" prepended their own theme parameter
-            // ahead of the real one in the query string built below.
-            pathinfo.append("page/").append(URLUtilities.encode(pageLink));
-            
-            // for custom pages we only allow query params
-            if(dateString != null) {
-                params.put("date", dateString);
-            }
-            if(category != null) {
-                params.put("cat", URLUtilities.encode(category));
-            }
-            if(tags != null && !tags.isEmpty()) {
-                params.put("tags", URLUtilities.getEncodedTagsString(tags));
-            }
-            if(pageNum > 0) {
-                params.put("page", Integer.toString(pageNum));
-            }
-        } else {
-            // if there is no page link then this is just a typical collection url
-            return getWeblogCollectionURL(weblog, locale, category, dateString, tags, pageNum, absolute);
-        }
-        
-        return pathinfo.append(URLUtilities.getQueryString(params)).toString();
-    }
     
     
     /**

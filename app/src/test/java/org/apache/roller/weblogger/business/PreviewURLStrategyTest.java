@@ -292,4 +292,64 @@ class PreviewURLStrategyTest {
         assertEquals(RESOURCE_ROOT + "logo.png",
                 noTheme.getWeblogResourceURL(weblog(), "/logo.png", false));
     }
+
+    // --- the builders preview does NOT override ---------------------------
+
+    /**
+     * These three are inherited from MultiWeblogURLStrategy, which builds them
+     * by using getWeblogURL() as a PREFIX. The preview override of that method
+     * returns the root with its query string already attached, so the inherited
+     * builders spliced a path segment onto the end of the theme parameter's
+     * value:
+     *
+     * <pre>/roller-ui/authoring/preview/myblog/?theme=journalfeed/entries/atom</pre>
+     *
+     * Every feed, search and media url in a theme preview was malformed that
+     * way -- the media one meaning images did not load while previewing a
+     * theme. The fix is structural: the root is now a separate hook from the
+     * url, so a prefix is always just a prefix.
+     */
+    @Test
+    void anInheritedFeedUrlIsNotSplicedIntoTheThemeParameter() {
+        String url = preview.getWeblogFeedURL(
+                weblog(), null, "entries", "atom", null, null, List.of(), false, false);
+
+        assertTrue(url.contains(ROOT + "feed/entries/atom"),
+                "the feed path must follow the weblog root, not the query string: " + url);
+        assertEquals(1, url.chars().filter(c -> c == '?').count(),
+                "one query string: " + url);
+        assertTrue(url.contains("theme=journal") && !url.contains("theme=journalfeed"),
+                "the previewed theme must survive as its own value: " + url);
+    }
+
+    @Test
+    void anInheritedSearchUrlIsWellFormed() {
+        String url = preview.getWeblogSearchURL(weblog(), null, "hello", null, 0, false);
+
+        assertTrue(url.contains(ROOT + "search"),
+                "the search path must follow the weblog root: " + url);
+        assertEquals(1, url.chars().filter(c -> c == '?').count(),
+                "one query string, not two: " + url);
+        assertTrue(url.contains("q=hello"), url);
+        assertTrue(url.contains("theme=journal") && !url.contains("theme=journalsearch"), url);
+    }
+
+    /**
+     * A media file carries no theme, and should not: it is a weblog upload
+     * served by MediaResourceServlet, which has no interest in which theme is
+     * being previewed. (Theme-shipped files are a different thing and go
+     * through getWeblogResourceURL, which does carry it.) What matters here is
+     * that the path is a path -- it used to be spliced onto the end of the
+     * theme parameter's value, which is why images did not load in previews.
+     */
+    @Test
+    void anInheritedMediaFileUrlIsWellFormed() {
+        String url = preview.getMediaFileURL(weblog(), "photo.jpg", false);
+
+        assertEquals(ROOT + "mediaresource/photo.jpg", url,
+                "an image previewed with a theme has to resolve, or the preview shows "
+                        + "broken images");
+        assertEquals(0, url.chars().filter(c -> c == '?').count(),
+                "and needs no query string at all: " + url);
+    }
 }
