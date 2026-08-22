@@ -21,10 +21,6 @@ package org.apache.roller.weblogger.ui.rendering.util;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.themes.ThemeNotFoundException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
-import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.pojos.Theme;
 
 
@@ -82,20 +78,10 @@ public class WeblogPreviewResourceRequest extends WeblogResourceRequest {
 
     public Theme getTheme() {
         
-        if(theme == null && themeName != null) {
-            try {
-                ThemeManager themeMgr = WebloggerFactory.getWeblogger().getThemeManager();
-                theme = themeMgr.getTheme(themeName);
-            } catch(ThemeNotFoundException ignored) {
-                // A preview URL naming an unknown theme is routine (someone
-                // trying out a theme name), not an error worth logging --
-                // theme simply stays null and the caller treats that as
-                // "no theme".
-            } catch(WebloggerException re) {
-                log.error("Error looking up theme {}", themeName, re);
-            }
+        if (theme == null) {
+            theme = PreviewThemeLookup.byName(themeName);
         }
-        
+
         return theme;
     }
 

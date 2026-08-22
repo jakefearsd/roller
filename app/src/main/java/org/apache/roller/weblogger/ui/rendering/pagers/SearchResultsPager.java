@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.ui.rendering.pagers;
 
+import org.apache.roller.weblogger.ui.rendering.util.LocaleSegment;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
@@ -66,25 +67,11 @@ public class SearchResultsPager implements WeblogEntriesPager {
         // does this pager have more results?
         this.moreResults = more;
         
-        // get a message utils instance to handle i18n of messages
-        Locale viewLocale = null;
-        if(locale != null) {
-            String[] langCountry = locale.split("_");
-            if(langCountry.length == 1) {
-                viewLocale = new Locale(langCountry[0]);
-            } else if(langCountry.length == 2) {
-                viewLocale = new Locale(langCountry[0], langCountry[1]);
-            } else {
-                // 3+ underscore-separated parts (e.g. "en_US_POSIX"): use the
-                // first three as language/country/variant. Falling through
-                // with viewLocale left null used to reach
-                // I18nMessages.getMessages(Locale), which dereferences its
-                // parameter unconditionally (NP_NULL_PARAM_DEREF).
-                viewLocale = new Locale(langCountry[0], langCountry[1], langCountry[2]);
-            }
-        } else {
-            viewLocale = weblog.getLocaleInstance();
-        }
+        // get a message utils instance to handle i18n of messages.
+        // Never null: I18nMessages.getMessages dereferences its argument.
+        Locale viewLocale = locale != null
+                ? LocaleSegment.toLocale(locale)
+                : weblog.getLocaleInstance();
         this.messageUtils = I18nMessages.getMessages(viewLocale);
     }
     

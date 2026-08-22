@@ -64,71 +64,64 @@ public class EntryRemoveController extends BaseController {
     public String remove(HttpServletRequest request, Model model,
                          @RequestParam(value = "removeId", required = false) String removeId,
                          RedirectAttributes redirectAttributes) {
-        populateCommonModel(request, model);
-        model.addAttribute("actionName", "entryRemove");
-
-        WeblogEntry entry = lookupEntry(removeId, request);
-        if (entry != null) {
-            try {
-                trashEntryWithIndex(entry);
-                weblogger.flush();
-
-                addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);
-
-                // This endpoint is orphaned in the UI (nothing posts to it
-                // directly any more), but it must still land the author
-                // back on the entry list like its sibling
-                // entryRemoveViaList, not on a blank entryAdd form.
-                return "redirect:/roller-ui/authoring/entries.rol?weblog="
-                        + getActionWeblog(request).getHandle();
-
-            } catch (Exception e) {
-                log.error("Error removing entry {}", removeId, e);
-                addError(model, "generic.error.check.logs", request);
-            }
-        } else {
-            addFlashError(redirectAttributes, "weblogEntry.notFound", request);
-            return "redirect:/roller-ui/menu.rol";
-        }
-
-        // The delete is driven by a modal on the entry list, so there is no
-        // confirmation page to fall back to; return to the list with the error.
-        addFlashError(redirectAttributes, "generic.error.check.logs", request);
-        return "redirect:/roller-ui/authoring/entries.rol?weblog="
-                + getActionWeblog(request).getHandle();
+        // Orphaned in the UI -- nothing posts here directly any more -- but it
+        // still has to behave like its sibling below rather than rot into a
+        // different answer.
+        return removeEntry(request, model, removeId, redirectAttributes, "entryRemove");
     }
 
 
     @PostMapping("/entryRemoveViaList!remove.rol")
     public String entryRemoveViaListRemove(HttpServletRequest request, Model model,
-                                           @RequestParam(value = "removeId", required = false) String removeId,
+                                           @RequestParam(value = "removeId", required = false)
+                                           String removeId,
                                            RedirectAttributes redirectAttributes) {
+        return removeEntry(request, model, removeId, redirectAttributes, "entryRemoveViaList");
+    }
+
+
+    /**
+     * Trashes one entry and sends the author back to the entry list.
+     *
+     * <p>The two endpoints above differed in nothing but their mapping and the
+     * actionName they report, and were otherwise the same thirty lines written
+     * twice -- including the recovery paths, which are the part that would
+     * quietly diverge.
+     *
+     * @param actionName what the view calls this action; the only thing the two
+     *                   callers disagree about
+     */
+    private String removeEntry(HttpServletRequest request, Model model, String removeId,
+                               RedirectAttributes redirectAttributes, String actionName) {
+
         populateCommonModel(request, model);
-        model.addAttribute("actionName", "entryRemoveViaList");
+        model.addAttribute("actionName", actionName);
 
         WeblogEntry entry = lookupEntry(removeId, request);
-        if (entry != null) {
-            try {
-                trashEntryWithIndex(entry);
-                weblogger.flush();
-
-                addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(), request);
-
-                return "redirect:/roller-ui/authoring/entries.rol?weblog="
-                        + getActionWeblog(request).getHandle();
-
-            } catch (Exception e) {
-                log.error("Error removing entry {}", removeId, e);
-                addError(model, "generic.error.check.logs", request);
-            }
-        } else {
+        if (entry == null) {
             addFlashError(redirectAttributes, "weblogEntry.notFound", request);
             return "redirect:/roller-ui/menu.rol";
+        }
+
+        try {
+            trashEntryWithIndex(entry);
+            weblogger.flush();
+
+            addFlashMessage(redirectAttributes, "weblogEdit.entryRemoved", entry.getTitle(),
+                    request);
+            return entryListRedirect(request);
+
+        } catch (Exception e) {
+            log.error("Error removing entry {}", removeId, e);
         }
 
         // The delete is driven by a modal on the entry list, so there is no
         // confirmation page to fall back to; return to the list with the error.
         addFlashError(redirectAttributes, "generic.error.check.logs", request);
+        return entryListRedirect(request);
+    }
+
+    private String entryListRedirect(HttpServletRequest request) {
         return "redirect:/roller-ui/authoring/entries.rol?weblog="
                 + getActionWeblog(request).getHandle();
     }

@@ -332,44 +332,28 @@ single most common pre-existing bug the migration surfaced — JCL's
 and it is exactly as easy to reintroduce by hand as it was to inherit from
 JCL. There is no compiler check for it; read the argument list.
 
-CPD runs at **200 tokens**. One of the blocks it flags at that threshold is a
-render cache pair (the others are the entry pagers, genuinely extractable) —
-the `CPD-OFF` marker around it is load-bearing at 200, not a precaution against
-some lower setting. There used to be **two** render-cache blocks, suppressed
-for two different reasons behind one copy-pasted comment that stated the wrong
-one. Only one is left, and the distinction still matters:
+CPD runs at **110 tokens**, lowered from 200 on 2026-08-22 after a triage
+pass. The old threshold was picked because 100 found twenty blocks — but it
+also *missed* real ones, and that turned out to matter more. Two rules
+duplicated across a routing/parsing boundary sat at roughly a hundred tokens
+each and were invisible to the gate until someone read them:
 
-- `SiteWideCache.generateKey` ↔ `WeblogPageCache.generateKey` (306 tokens),
-  **still suppressed.** Collapsing this pair would be a behavioural change,
-  because the two caches' expiry contracts genuinely differ. `SiteWideCache` is
-  the **only** render cache registered as a `CacheHandler`
-  (`constructCache(this, ...)`), so `CacheManager` invalidates it eagerly and
-  wholesale. Giving it the per-weblog base would hand it an expiry contract it
-  does not have.
-- `WeblogPageCache` ↔ `WeblogFeedCache`, the `get`/`put`/`remove`/`clear` block
-  (200 tokens), **gone — the duplication was removed, not re-suppressed.**
-  That pair was never justified by differing contracts: the two are identical,
-  both passing `constructCache(null, ...)` and expiring lazily against
-  `weblog.lastModified`. They now share `LazyExpiringRenderCache`, which owns
-  the config read, the backing `Cache`, and the four accessors. The subclasses
-  keep only their `CACHE_ID`, their singleton, and their own `generateKey`.
-  Each passes its **own** logger to the base, so `HIT`/`MISS` lines are still
-  attributed to the concrete cache rather than relabelled to the base.
-  `LazyRenderCacheEquivalenceCharacterisationTest` pins the equivalence that
-  makes the shared base legitimate — if the two caches ever stop agreeing, or
-  one starts reading the other's `CACHE_ID`-prefixed configuration, it fails.
+- `isLocale`, byte-for-byte identical in `WeblogRequest` and
+  `WeblogRequestMapper` — one deciding how a url is **routed**, the other how
+  the same url is **parsed**. A divergence would not have failed anything
+  loudly; the two halves would simply have understood the same url as
+  different requests. Now `LocaleSegment`.
+- The `<rendition>` parser, copied inside `ThemeMetadataParser` at 193 tokens.
 
-**`WeblogFeedCache` has no `CacheHandler`.** The retired comment claimed it was
-invalidated through `CacheManager`, which it never was, and that error is what
-kept the second pair unexamined. Only `SiteWideCache` is on the eager side.
-`RenderCache`/`RenderCaches` give the rendering servlets one name for "the
-cache for this request" by adapting all three without merging any of them; that
-adapter layer is the place to add a caller-facing cache concern, not a shared
-base.
+Both are single-homed now. The triage at 110 found nine blocks; four were
+genuinely extractable and were extracted, and the rest carry `CPD-OFF` with a
+stated reason — including two (the day/month pagers) marked as **deferred
+rather than excused**, so the next reader knows they were measured, not missed.
 
-The threshold stays at 200 rather than dropping to 100
-for a separate reason: 100 finds twenty blocks, not zero, and the gate starts
-demanding refactors whose risk exceeds the duplication's cost.
+**The threshold is part of the gate's spec.** `QualityGatePomTest` pins it, and
+its failure message says what to do: changing it means updating the design doc
+and that test, not just the pom. It is not a claim that duplication below 110
+is fine — only that below it the gate costs more than it returns.
 
 **Editing `config/pmd/ruleset.xml` has two traps that break the build at parse
 time.** A literal `{}` anywhere in that file — including inside a comment, and

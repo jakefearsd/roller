@@ -19,6 +19,7 @@
 package org.apache.roller.weblogger.ui.rendering.pagers;
 
 import java.util.List;
+import java.util.stream.Stream;
 import java.util.Map;
 
 import org.apache.roller.weblogger.business.URLStrategy;
@@ -44,41 +45,51 @@ class AbstractPagerTest {
     private static final String BASE_URL = "http://localhost/roller/users";
 
     /**
-     * Minimal concrete pager. {@code AbstractPager} leaves both the item list
-     * and the has-more decision to subclasses, so both are injected here.
+     * Minimal concrete pager.
+     *
+     * <p>{@code AbstractPager} now owns the paging arithmetic, so "there is a
+     * next page" is not injected any more -- it is derived, the way the real
+     * pagers derive it: the fetch is asked for one row more than a page holds,
+     * and the extra row IS the signal. This stub therefore expresses "more" by
+     * returning that extra row.
      */
     private static final class FixedPager extends AbstractPager<String> {
 
-        private final List<String> items;
-        private final boolean more;
+        private final List<String> fetched;
 
         FixedPager(int pageNum, List<String> items, boolean more) {
-            super(mock(URLStrategy.class), BASE_URL, pageNum);
-            this.items = items;
-            this.more = more;
+            super(mock(URLStrategy.class), BASE_URL, pageNum, items.size());
+            this.fetched = more
+                    ? Stream.concat(items.stream(), Stream.of("one-more")).toList()
+                    : items;
         }
 
         @Override
-        public List<String> getItems() {
-            return items;
+        protected List<String> fetchPage(int offset, int limit) {
+            return fetched;
         }
 
         @Override
-        public boolean hasMoreItems() {
-            return more;
+        protected String itemLabel() {
+            return "thing";
         }
     }
 
-    /** A subclass that does not override hasMoreItems(), to pin the base default. */
+    /** A pager whose fetch returns exactly one page, so nothing follows it. */
     private static final class DefaultPager extends AbstractPager<String> {
 
         DefaultPager(int pageNum) {
-            super(mock(URLStrategy.class), BASE_URL, pageNum);
+            super(mock(URLStrategy.class), BASE_URL, pageNum, 1);
         }
 
         @Override
-        public List<String> getItems() {
+        protected List<String> fetchPage(int offset, int limit) {
             return List.of("only");
+        }
+
+        @Override
+        protected String itemLabel() {
+            return "thing";
         }
     }
 
@@ -171,7 +182,7 @@ class AbstractPagerTest {
     // ------------------------------------------------------------- base class
 
     @Test
-    void pagersThatDoNotOverrideHasMoreItemsNeverOfferANextLink() {
+    void aFetchThatDoesNotOverflowAPageOffersNoNextLink() {
         // The default is deliberately false: a pager that has not worked out
         // whether more items exist must not advertise a page that may not be there.
         DefaultPager pager = new DefaultPager(0);

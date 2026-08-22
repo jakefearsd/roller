@@ -57,6 +57,13 @@ public class CreateUserBean {
         this.list = list;
     }
 
+    // CPD-OFF -- A pojo and its form bean necessarily name the same fields, and
+    // the getters/copy methods that move values between them are that list
+    // written out twice. Removing the duplication means introducing a mapper,
+    // which is a design change rather than a cleanup: the copy methods are also
+    // where per-field rules live (EntryBean escapes the title on the way in and
+    // unescapes it on the way out -- see CLAUDE.md, Templates), and a generic
+    // mapper is exactly where such a rule gets lost.
     public String getId() {
         return id;
     }
@@ -123,6 +130,7 @@ public class CreateUserBean {
 
 
     public Boolean getEnabled() {
+    // CPD-ON
         return enabled;
     }
 

@@ -101,6 +101,12 @@ public class WeblogEntriesMonthPager extends AbstractWeblogEntriesPager {
         cal.add(Calendar.DATE, 1);
         date = cal.getTime();
         Date startDate = DateUtil.getStartOfMonth(date, cal);
+    // CPD-OFF -- The day and month pagers differ only in how they turn a date
+    // string into a range and which message key names their home link;
+    // everything between is identical. This IS extractable -- the same pull-up
+    // that AbstractPager just received for its paging arithmetic -- and is
+    // deferred rather than excused. It stays marked so the next reader knows it
+    // was measured, not missed.
         Date endDate = DateUtil.getEndOfMonth(date, cal);
 
         if (entries == null) {
@@ -127,6 +133,7 @@ public class WeblogEntriesMonthPager extends AbstractWeblogEntriesPager {
     @Override
     public String getHomeName() {
         return messageUtils.getString("weblogEntriesPager.month.home");
+    // CPD-ON
     }
     
     

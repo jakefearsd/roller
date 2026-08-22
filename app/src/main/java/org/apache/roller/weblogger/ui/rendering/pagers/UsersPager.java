@@ -18,13 +18,10 @@
 
 package org.apache.roller.weblogger.ui.rendering.pagers;
 
-import java.util.ArrayList;
+import org.apache.roller.weblogger.WebloggerException;
 import java.util.List;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.User;
@@ -36,16 +33,12 @@ import org.apache.roller.weblogger.pojos.wrapper.UserWrapper;
  */
 public class UsersPager extends AbstractPager<UserWrapper> {
     
-    private static final Logger log = LoggerFactory.getLogger(UsersPager.class);
     
     private String letter = null;
-    private final int length;
     
     // collection for the pager
-    private List<UserWrapper> users;
     
     // are there more items?
-    private boolean more = false;
     
     
     public UsersPager(
@@ -56,9 +49,8 @@ public class UsersPager extends AbstractPager<UserWrapper> {
             int            page,
             int            length) {
         
-        super(strat, baseUrl, page);
+        super(strat, baseUrl, page, length);
         
-        this.length = length;
         
         // initialize the collection
         getItems();
@@ -74,88 +66,43 @@ public class UsersPager extends AbstractPager<UserWrapper> {
             int            page,
             int            length) {
         
-        super(strat, baseUrl, page);
+        super(strat, baseUrl, page, length);
         
         this.letter = letter;
-        this.length = length;
         
         // initialize the collection
         getItems();
     }
     
     
+    /**
+     * A letter-filtered listing has to carry the letter across pages, or page
+     * two of "starting with B" silently becomes page two of everything.
+     */
     @Override
-    public String getNextLink() {
-        // need to add letter param if it exists
-        if(letter != null) {
-            int page = getPage() + 1;
-            if(hasMoreItems()) {
-                return createURL(getUrl(), Map.of("page", ""+page, "letter", letter));
-            }
-            return null;
-        } else {
-            return super.getNextLink();
-        }
+    protected Map<String, String> linkParams() {
+        return letter == null ? Map.of() : Map.of("letter", letter);
     }
     
     
     @Override
-    public String getPrevLink() {
-        // need to add letter param if it exists
-        if(letter != null) {
-            int page = getPage() - 1;
-            if (page >= 0) {
-                return createURL(getUrl(), Map.of("page", ""+page, "letter", letter));
-            }
-            return null;
-        } else {
-            return super.getPrevLink();
-        }
+    protected List<UserWrapper> fetchPage(int offset, int limit) throws WebloggerException {
+
+        UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+
+        List<User> rawUsers = letter == null
+                ? umgr.getUsers(Boolean.TRUE, null, null, offset, limit)
+                : umgr.getUsersByLetter(letter.charAt(0), offset, limit);
+
+        return rawUsers.stream().map(UserWrapper::wrap).toList();
     }
-    
-    
+
+
     @Override
-    public List<UserWrapper> getItems() {
-        
-        if (users == null) {
-            // calculate offset
-            int offset = getPage() * length;
-            
-            List<UserWrapper> results = new ArrayList<>();
-            try {
-                Weblogger roller = WebloggerFactory.getWeblogger();
-                UserManager umgr = roller.getUserManager();
-                List<User> rawUsers;
-                if (letter == null) {
-                    rawUsers = umgr.getUsers(Boolean.TRUE, null, null, offset, length + 1);
-                } else {
-                    rawUsers = umgr.getUsersByLetter(letter.charAt(0), offset, length + 1);
-                }
-                
-                // wrap the results
-                int count = 0;
-                for (User user : rawUsers) {
-                    if (count++ < length) {
-                        results.add(UserWrapper.wrap(user));
-                    } else {
-                        more = true;
-                    }
-                }
-                
-            } catch (Exception e) {
-                log.error("ERROR: fetching user list", e);
-            }
-            
-            users = results;
-        }
-        
-        return users;
+    protected String itemLabel() {
+        return "user";
     }
     
     
-    @Override
-    public boolean hasMoreItems() {
-        return more;
-    }
     
 }

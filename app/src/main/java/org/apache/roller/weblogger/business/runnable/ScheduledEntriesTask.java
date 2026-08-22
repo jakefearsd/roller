@@ -87,6 +87,11 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
 
 
     public void init() throws WebloggerException {
+    // CPD-OFF -- The two scheduled tasks share their configuration-reading
+    // shape: same properties, same defaults, same parse-and-validate order.
+    // Collapsing it means a shared base for tasks that otherwise have nothing
+    // in common, and the shape is what a third task would be copied from
+    // anyway. Left as a known duplicate rather than an unexamined one.
         this.init(NAME);
     }
 
@@ -140,6 +145,7 @@ public class ScheduledEntriesTask extends RollerTaskWithLeasing {
         log.debug("task started");
 
         try {
+    // CPD-ON
             WeblogEntryManager wMgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
             IndexManager searchMgr = WebloggerFactory.getWeblogger().getIndexManager();
 

@@ -18,15 +18,12 @@
 
 package org.apache.roller.weblogger.ui.rendering.pagers;
 
-import java.util.ArrayList;
+import org.apache.roller.weblogger.WebloggerException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -38,17 +35,13 @@ import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
  */
 public class WeblogsPager extends AbstractPager<WeblogWrapper> {
     
-    private static final Logger log = LoggerFactory.getLogger(WeblogsPager.class);
     
     private String letter = null;
     private int sinceDays = -1;
-    private int length = 0;
     
     // collection for the pager
-    private List<WeblogWrapper> weblogs;
     
     // are there more items?
-    private boolean more = false;
     
     
     public WeblogsPager(
@@ -59,10 +52,9 @@ public class WeblogsPager extends AbstractPager<WeblogWrapper> {
             int            page,
             int            length) {
         
-        super(strat, baseUrl, page);
+        super(strat, baseUrl, page, length);
         
         this.sinceDays = sinceDays;
-        this.length = length;
         
         // initialize the collection
         getItems();
@@ -78,96 +70,53 @@ public class WeblogsPager extends AbstractPager<WeblogWrapper> {
             int            page,
             int            length) {
         
-        super(strat, baseUrl, page);
+        super(strat, baseUrl, page, length);
         
         this.letter = letter;
         this.sinceDays = sinceDays;
-        this.length = length;
         
         // initialize the collection
         getItems();
     }
     
     
+    /**
+     * A letter-filtered listing has to carry the letter across pages, or page
+     * two of "starting with B" silently becomes page two of everything.
+     */
     @Override
-    public String getNextLink() {
-        // need to add letter param if it exists
-        if(letter != null) {
-            int page = getPage() + 1;
-            if(hasMoreItems()) {
-                return createURL(getUrl(), Map.of("page", ""+page, "letter", letter));
-            }
-            return null;
-        } else {
-            return super.getNextLink();
+    protected Map<String, String> linkParams() {
+        return letter == null ? Map.of() : Map.of("letter", letter);
+    }
+    
+    
+    @Override
+    protected List<WeblogWrapper> fetchPage(int offset, int limit)
+            throws WebloggerException {
+
+        Date startDate = null;
+        if (sinceDays != -1) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(new Date());
+            cal.add(Calendar.DATE, -1 * sinceDays);
+            startDate = cal.getTime();
         }
+
+        WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
+
+        List<Weblog> rawWeblogs = letter == null
+                ? wmgr.getWeblogs(Boolean.TRUE, Boolean.TRUE, startDate, null, offset, limit)
+                : wmgr.getWeblogsByLetter(letter.charAt(0), offset, limit);
+
+        return rawWeblogs.stream().map(w -> WeblogWrapper.wrap(w, urlStrategy)).toList();
     }
-    
-    
+
+
     @Override
-    public String getPrevLink() {
-        // need to add letter param if it exists
-        if(letter != null) {
-            int page = getPage() - 1;
-            if (page >= 0) {
-                return createURL(getUrl(), Map.of("page", ""+page, "letter", letter));
-            }
-            return null;
-        } else {
-            return super.getPrevLink();
-        }
+    protected String itemLabel() {
+        return "weblog";
     }
     
     
-    @Override
-    public List<WeblogWrapper> getItems() {
-        
-        if (weblogs == null) {
-            // calculate offset
-            int offset = getPage() * length;
-            
-            List<WeblogWrapper> results = new ArrayList<>();
-            Date startDate = null;
-            if (sinceDays != -1) {
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(new Date());
-                cal.add(Calendar.DATE, -1 * sinceDays);
-                startDate = cal.getTime();
-            }
-            try {
-                Weblogger roller = WebloggerFactory.getWeblogger();
-                WeblogManager wmgr = roller.getWeblogManager();
-                List<Weblog> rawWeblogs;
-                if (letter == null) {
-                    rawWeblogs = wmgr.getWeblogs(Boolean.TRUE, Boolean.TRUE, startDate, null, offset, length + 1);
-                } else {
-                    rawWeblogs = wmgr.getWeblogsByLetter(letter.charAt(0), offset, length + 1);
-                }
-                
-                // wrap the results
-                int count = 0;
-                for (Weblog website : rawWeblogs) {
-                    if (count++ < length) {
-                        results.add(WeblogWrapper.wrap(website, urlStrategy));
-                    } else {
-                        more = true;
-                    }
-                }
-                
-            } catch (Exception e) {
-                log.error("ERROR: fetching weblog list", e);
-            }
-            
-            weblogs = results;
-        }
-        
-        return weblogs;
-    }
-    
-    
-    @Override
-    public boolean hasMoreItems() {
-        return more;
-    }
     
 }

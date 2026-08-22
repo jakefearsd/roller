@@ -1,7 +1,12 @@
 package org.apache.roller.weblogger.ui.rendering.util;
 
+import java.util.Locale;
+
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -80,5 +85,56 @@ class LocaleSegmentTest {
         assertTrue(LocaleSegment.isLocale("de"),
                 "which is why a page slugged \"de\" is unreachable -- see "
                         + "WeblogPathInfoParsingTest");
+    }
+
+    // --- turning a locale string into a Locale ----------------------------
+
+    /**
+     * Three classes parsed this independently and disagreed about a three-part
+     * string. The pagers handled it and carried a comment about the
+     * NullPointerException that not handling it caused;
+     * WeblogRequest.getLocaleInstance returned null for it -- the same bug that
+     * comment describes, in the copy that never got the fix.
+     */
+    @Test
+    void aThreePartLocaleKeepsItsVariant() {
+        Locale locale = LocaleSegment.toLocale("en_US_POSIX");
+
+        assertNotNull(locale, "null here reaches I18nMessages.getMessages, which "
+                + "dereferences its argument unconditionally");
+        assertEquals("en", locale.getLanguage());
+        assertEquals("US", locale.getCountry());
+        assertEquals("POSIX", locale.getVariant());
+    }
+
+    @Test
+    void aLanguageAloneBecomesALanguageOnlyLocale() {
+        Locale locale = LocaleSegment.toLocale("de");
+
+        assertEquals("de", locale.getLanguage());
+        assertEquals("", locale.getCountry());
+    }
+
+    @Test
+    void aLanguageAndCountryBecomeBoth() {
+        Locale locale = LocaleSegment.toLocale("pt_BR");
+
+        assertEquals("pt", locale.getLanguage());
+        assertEquals("BR", locale.getCountry());
+    }
+
+    @Test
+    void moreThanThreePartsUsesTheFirstThree() {
+        Locale locale = LocaleSegment.toLocale("en_US_POSIX_EXTRA");
+
+        assertEquals("POSIX", locale.getVariant(),
+                "a fourth part is dropped rather than throwing -- callers want a Locale, "
+                        + "not an exception, from url text");
+    }
+
+    @Test
+    void noLocaleStringMeansNoLocale() {
+        assertNull(LocaleSegment.toLocale(null),
+                "every caller reads null as \"fall back to the weblog's own locale\"");
     }
 }

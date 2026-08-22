@@ -114,6 +114,19 @@ Settled before design; recorded so a later reader does not relitigate them.
    a behavioural change wearing cleanup's clothes. They get `// CPD-OFF`
    markers carrying that reason.
 
+   > **Threshold lowered to 110 (2026-08-22).** 200 was chosen because 100
+   > found twenty blocks. The cost of that choice turned out to be real: two
+   > rules duplicated across a routing/parsing boundary sat at roughly a
+   > hundred tokens each and were invisible to the gate until someone read
+   > them — `isLocale`, copied between `WeblogRequest` and
+   > `WeblogRequestMapper` (one deciding how a url is routed, the other how it
+   > is parsed), and the `<rendition>` parser copied inside
+   > `ThemeMetadataParser` at 193 tokens. A triage pass at 110 found nine
+   > blocks; four were genuinely extractable and were extracted, and the rest
+   > now carry `CPD-OFF` with a stated reason. The gate runs at 110 and
+   > `QualityGatePomTest` pins it. This is not a claim that duplication below
+   > 110 is fine — only that below it the gate costs more than it returns.
+
    > **Correction (2026-08-21).** "Unlike its siblings" is wrong, and the
    > `CPD-OFF` markers inherited the error. `WeblogFeedCache` has no
    > CacheHandler either — it passes `constructCache(null, ...)` and expires

@@ -18,13 +18,11 @@
 
 package org.apache.roller.weblogger.ui.rendering.pagers;
 
+import org.apache.roller.weblogger.WebloggerException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
@@ -39,11 +37,9 @@ import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
  */
 public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
     
-    private static final Logger log = LoggerFactory.getLogger(WeblogEntriesListPager.class);
     
     private String locale = null;
     private int sinceDays = -1;
-    private int length = 0;
     
     private Weblog queryWeblog = null;
     private User queryUser = null;
@@ -51,10 +47,8 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
     private List<String> queryTags = null;
     
     // entries for the pager
-    private List<WeblogEntryWrapper> entries;
     
     // are there more entries?
-    private boolean more = false;
     
     // most recent update time of current set of entries
     private Date lastUpdated = null;    
@@ -72,7 +66,7 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
             int            pageNum,
             int            length) {
         
-        super(strat, baseUrl, pageNum);
+        super(strat, baseUrl, pageNum, length);
         
         // store the data
         this.queryWeblog = queryWeblog;
@@ -81,7 +75,6 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
         this.queryTags = queryTags;
         this.locale = locale;
         this.sinceDays = sinceDays;
-        this.length = length;
         
         // initialize the pager collection
         getItems();
@@ -89,62 +82,41 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
     
     
     @Override
-    public List<WeblogEntryWrapper> getItems() {
-        
-        if (entries == null) {
-            // calculate offset
-            int offset = getPage() * length;
+    protected List<WeblogEntryWrapper> fetchPage(int offset, int limit)
+            throws WebloggerException {
 
-            List<WeblogEntryWrapper> results = new ArrayList<>();
-            
-            Date startDate = null;
-            if(sinceDays > 0) {
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(new Date());
-                cal.add(Calendar.DATE, -1 * sinceDays);
-                startDate = cal.getTime();
-            }
-            
-            try {
-                WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
-                wesc.setWeblog(queryWeblog);
-                wesc.setUser(queryUser);
-                wesc.setStartDate(startDate);
-                wesc.setCatName(queryCat);
-                wesc.setTags(queryTags);
-                wesc.setStatus(WeblogEntry.PubStatus.PUBLISHED);
-                wesc.setLocale(locale);
-                wesc.setOffset(offset);
-                wesc.setMaxResults(length+1);
-                List<WeblogEntry> rawEntries = WebloggerFactory.getWeblogger()
-                        .getWeblogEntryManager().getWeblogEntries(wesc);
-
-                // wrap the results
-                int count = 0;
-                for (WeblogEntry entry : rawEntries) {
-                    if (count++ < length) {
-                        results.add(WeblogEntryWrapper.wrap(entry, urlStrategy));
-                    }
-                }
-                if (rawEntries.size() > length) {
-                    more = true;
-                }
-                
-            } catch (Exception e) {
-                log.error("ERROR: fetching weblog entries list", e);
-            }
-            
-            entries = results;
+        Date startDate = null;
+        if (sinceDays > 0) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(new Date());
+            cal.add(Calendar.DATE, -1 * sinceDays);
+            startDate = cal.getTime();
         }
-        
-        return entries;
+
+        WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
+        wesc.setWeblog(queryWeblog);
+        wesc.setUser(queryUser);
+        wesc.setStartDate(startDate);
+        wesc.setCatName(queryCat);
+        wesc.setTags(queryTags);
+        wesc.setStatus(WeblogEntry.PubStatus.PUBLISHED);
+        wesc.setLocale(locale);
+        wesc.setOffset(offset);
+        wesc.setMaxResults(limit);
+
+        return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+                .getWeblogEntries(wesc).stream()
+                .map(e -> WeblogEntryWrapper.wrap(e, urlStrategy))
+                .toList();
     }
-    
-    
+
+
     @Override
-    public boolean hasMoreItems() {
-        return more;
+    protected String itemLabel() {
+        return "weblog entry";
     }
+    
+    
 
     /** Get last updated time from items in pager */
     public Date getLastUpdated() {

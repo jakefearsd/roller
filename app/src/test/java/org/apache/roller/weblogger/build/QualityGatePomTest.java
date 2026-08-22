@@ -167,10 +167,12 @@ class QualityGatePomTest {
     @Test
     void theGatesSensitivityIsPinned() throws IOException {
         String parentPom = read("pom.xml");
-        assertTrue(parentPom.contains("<minimumTokens>200</minimumTokens>"),
+        assertTrue(parentPom.contains("<minimumTokens>110</minimumTokens>"),
                 "CPD's duplication threshold is part of the gate's spec (Decision 6): raising it "
                 + "silently drops duplicate blocks from the gate with no other test failing. Changing "
-                + "it is a spec change: update the design doc and this test.");
+                + "it is a spec change: update the design doc and this test. Lowered from 200 to 110 "
+                + "on 2026-08-22 after a triage pass -- 200 had missed two rules duplicated across a "
+                + "routing/parsing boundary at roughly a hundred tokens each.");
         assertTrue(parentPom.contains("<threshold>Low</threshold>"),
                 "SpotBugs threshold=Low is part of the gate's spec: raising it (e.g. to High) silently "
                 + "drops findings with no other test failing. Changing it is a spec change: update the "

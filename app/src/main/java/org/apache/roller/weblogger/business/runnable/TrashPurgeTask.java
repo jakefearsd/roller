@@ -118,6 +118,11 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
     // carry at its source and deletes this suppression along with it.
     @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
     public void init() throws WebloggerException {
+    // CPD-OFF -- The two scheduled tasks share their configuration-reading
+    // shape: same properties, same defaults, same parse-and-validate order.
+    // Collapsing it means a shared base for tasks that otherwise have nothing
+    // in common, and the shape is what a third task would be copied from
+    // anyway. Left as a known duplicate rather than an unexamined one.
         this.init(TrashPurgeTask.NAME);
     }
 
@@ -183,6 +188,7 @@ public class TrashPurgeTask extends RollerTaskWithLeasing {
         log.debug("task started");
 
         try {
+    // CPD-ON
             WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
             WeblogEntryManager wemgr = WebloggerFactory.getWeblogger().getWeblogEntryManager();
 

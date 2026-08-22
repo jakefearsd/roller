@@ -157,14 +157,22 @@ limitations under the License.
                         <printFailingErrors>true</printFailingErrors>
                         <failOnViolation>true</failOnViolation>
                         <skip>${quality.check.skip}</skip>
-                        <!-- CPD: 200 tokens. Two of the four blocks flagged AT this
-                             threshold are the render caches, whose expiry contracts
-                             genuinely differ; see their `CPD-OFF` markers, which are
-                             load-bearing at 200, not a precaution against some lower
-                             setting. Dropping to 100 finds twenty blocks, not zero, and
-                             the gate starts demanding refactors whose risk exceeds the
-                             duplication's cost. -->
-                        <minimumTokens>200</minimumTokens>
+                        <!-- CPD: 110 tokens, lowered from 200 after a deliberate
+                             triage pass. 200 was chosen because 100 found twenty
+                             blocks; the trouble is that it also missed real ones. Two
+                             rules duplicated across a routing/parsing boundary sat at
+                             roughly a hundred tokens each and were invisible to this
+                             gate until someone read them: isLocale, copied between
+                             WeblogRequest and WeblogRequestMapper, and the rendition
+                             parser copied inside ThemeMetadataParser. Both are now
+                             single-homed.
+
+                             At 110 the tree is clean apart from blocks carrying
+                             `CPD-OFF` with a stated reason. Anything new above 110
+                             fails the build, which is the point: this threshold is
+                             not a claim that smaller duplication is fine, only that
+                             below it the gate costs more than it returns. -->
+                        <minimumTokens>110</minimumTokens>
                     </configuration>
                     <dependencies>
                         <dependency>

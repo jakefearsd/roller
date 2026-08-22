@@ -18,6 +18,8 @@
 
 package org.apache.roller.weblogger.ui.rendering.util;
 
+import java.util.Locale;
+
 /**
  * Whether a url path segment names a locale.
  *
@@ -64,5 +66,38 @@ public final class LocaleSegment {
             return langCountry[0].length() == 2 && langCountry[1].length() == 2;
         }
         return false;
+    }
+
+    /**
+     * Turns a locale string into a {@link Locale}.
+     *
+     * <p>Three places parsed this independently and did not agree.
+     * AbstractWeblogEntriesPager and SearchResultsPager handled a three-part
+     * string ("en_US_POSIX") as language/country/variant, carrying a comment
+     * about the NullPointerException that used to result from not doing so --
+     * I18nMessages.getMessages(Locale) dereferences its argument
+     * unconditionally. WeblogRequest.getLocaleInstance handled one and two
+     * parts and returned null for three, which is the bug that comment
+     * describes, still present in the copy that never got the fix.
+     *
+     * <p>This is the complete version. A string with more than three parts uses
+     * the first three; anything null-ish gives null, which every caller already
+     * treats as "fall back to the weblog's own locale".
+     */
+    public static Locale toLocale(String localeString) {
+
+        if (localeString == null) {
+            return null;
+        }
+
+        String[] langCountry = localeString.split("_");
+
+        if (langCountry.length == 1) {
+            return new Locale(langCountry[0]);
+        }
+        if (langCountry.length == 2) {
+            return new Locale(langCountry[0], langCountry[1]);
+        }
+        return new Locale(langCountry[0], langCountry[1], langCountry[2]);
     }
 }
