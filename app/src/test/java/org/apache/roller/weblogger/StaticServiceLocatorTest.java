@@ -91,15 +91,9 @@ class StaticServiceLocatorTest {
      */
     static final Set<String> ALLOWED = Set.of(
             PKG + "business/VirtualHostRegistry.java",
-            PKG + "business/jpa/JPAMediaFileManagerImpl.java",
-            PKG + "business/jpa/JPAWeblogManagerImpl.java",
-            PKG + "business/search/lucene/LuceneIndexManager.java",
             PKG + "business/shortcodes/GalleryShortcode.java",
             PKG + "business/shortcodes/ImageShortcode.java",
             PKG + "business/shortcodes/MapShortcode.java",
-            PKG + "business/themes/ThemeManagerImpl.java",
-            PKG + "business/themes/WeblogCustomTheme.java",
-            PKG + "business/themes/WeblogSharedTheme.java",
             PKG + "config/WebloggerRuntimeConfig.java",
             PKG + "pojos/GlobalPermission.java",
             PKG + "pojos/MediaFile.java",

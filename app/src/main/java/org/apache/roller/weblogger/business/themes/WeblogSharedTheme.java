@@ -22,7 +22,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WeblogManager;
 
 import java.util.*;
 import org.apache.roller.weblogger.pojos.Theme;
@@ -60,9 +60,14 @@ public class WeblogSharedTheme extends WeblogTheme {
     
     private SharedTheme theme = null;
 
-    public WeblogSharedTheme(Weblog weblog, SharedTheme theme) {
+    // The weblog-side template store; transient because WeblogTheme is
+    // Serializable and a manager is not state worth serialising.
+    private final transient WeblogManager weblogManager;
+
+    public WeblogSharedTheme(Weblog weblog, SharedTheme theme, WeblogManager weblogManager) {
         super(weblog);
         this.theme = theme;
+        this.weblogManager = weblogManager;
     }
     
     
@@ -106,7 +111,7 @@ public class WeblogSharedTheme extends WeblogTheme {
         
         // first get the pages from the db
         try {
-            for (ThemeTemplate template : WebloggerFactory.getWeblogger().getWeblogManager().getTemplates(this.weblog)) {
+            for (ThemeTemplate template : weblogManager.getTemplates(this.weblog)) {
                 pages.put(template.getName(), template);
             }
         } catch(Exception e) {
@@ -145,8 +150,7 @@ public class WeblogSharedTheme extends WeblogTheme {
         ThemeTemplate stylesheet = this.theme.getStylesheet();
         if (stylesheet != null) {
             // now try getting custom version from weblog
-            ThemeTemplate override = WebloggerFactory.getWeblogger()
-                    .getWeblogManager().getTemplateByAction(this.weblog, ComponentType.STYLESHEET);
+            ThemeTemplate override = weblogManager.getTemplateByAction(this.weblog, ComponentType.STYLESHEET);
             if (override != null) {
                 stylesheet = override;
             }
@@ -207,7 +211,7 @@ public class WeblogSharedTheme extends WeblogTheme {
         
         // if we didn't get the Template from a theme then look in the db
         if (template == null) {
-            template = WebloggerFactory.getWeblogger().getWeblogManager().getTemplateByName(this.weblog, name);
+            template = weblogManager.getTemplateByName(this.weblog, name);
         }
         
         return template;
@@ -239,8 +243,7 @@ public class WeblogSharedTheme extends WeblogTheme {
 
         // if we didn't get the Template from a theme then look in the db
         if(template == null) {
-            template = WebloggerFactory.getWeblogger()
-                    .getWeblogManager().getTemplateByLink(this.weblog, link);
+            template = weblogManager.getTemplateByLink(this.weblog, link);
         }
 
         return template;

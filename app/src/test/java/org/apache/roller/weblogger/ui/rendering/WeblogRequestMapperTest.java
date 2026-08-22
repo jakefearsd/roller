@@ -42,7 +42,7 @@ class WeblogRequestMapperTest {
         TestUtils.endSession(true);
         // VirtualHostRegistry is a JVM-wide static cache -- a custom domain
         // set by one test must not leak into the next.
-        VirtualHostRegistry.invalidate();
+        VirtualHostRegistry.invalidateCurrent();
     }
 
     private MockHttpServletRequest publicUrl(String method, String uriAfterContext) {
@@ -701,6 +701,6 @@ class WeblogRequestMapperTest {
         stored.setCustomDomain(host);
         WebloggerFactory.getWeblogger().getWeblogManager().saveWeblog(stored);
         TestUtils.endSession(true);
-        VirtualHostRegistry.invalidate();
+        VirtualHostRegistry.invalidateCurrent();
     }
 }

@@ -40,7 +40,6 @@ import org.apache.roller.weblogger.business.InitializationException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -168,13 +167,13 @@ public class ThemeManagerImpl implements ThemeManager {
 		// if theme is custom or null then return a WeblogCustomTheme
 		if (weblog.getEditorTheme() == null
 				|| WeblogTheme.CUSTOM.equals(weblog.getEditorTheme())) {
-			weblogTheme = new WeblogCustomTheme(weblog);
+			weblogTheme = new WeblogCustomTheme(weblog, roller.getWeblogManager());
 
 			// otherwise we are returning a WeblogSharedTheme
 		} else {
 			SharedTheme staticTheme = this.themes.get(weblog.getEditorTheme());
 			if (staticTheme != null) {
-				weblogTheme = new WeblogSharedTheme(weblog, staticTheme);
+				weblogTheme = new WeblogSharedTheme(weblog, staticTheme, roller.getWeblogManager());
 			} else {
 				log.warn("Unable to lookup theme {}", weblog.getEditorTheme());
 			}
@@ -300,7 +299,7 @@ public class ThemeManagerImpl implements ThemeManager {
                         weblogTemplateCode.setTemplate(templateCode.getTemplate());
                         weblogTemplateCode.setTemplateLanguage(templateCode
                                 .getTemplateLanguage());
-                        WebloggerFactory.getWeblogger().getWeblogManager()
+                        roller.getWeblogManager()
                                 .saveTemplateRendition(weblogTemplateCode);
                     }
 

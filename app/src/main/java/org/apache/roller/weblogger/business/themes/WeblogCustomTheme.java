@@ -20,7 +20,7 @@ package org.apache.roller.weblogger.business.themes;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.roller.weblogger.WebloggerException;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.WeblogManager;
 
 import java.util.Date;
 import java.util.List;
@@ -59,8 +59,13 @@ public class WeblogCustomTheme extends WeblogTheme {
 
     private static final long serialVersionUID = 1L;
 
-    public WeblogCustomTheme(Weblog weblog) {
+    // The weblog-side template store; transient because WeblogTheme is
+    // Serializable and a manager is not state worth serialising.
+    private final transient WeblogManager weblogManager;
+
+    public WeblogCustomTheme(Weblog weblog, WeblogManager weblogManager) {
         super(weblog);
+        this.weblogManager = weblogManager;
     }
 
     @Override
@@ -106,7 +111,7 @@ public class WeblogCustomTheme extends WeblogTheme {
      */
     @Override
     public List<? extends ThemeTemplate> getTemplates() throws WebloggerException {
-        return WebloggerFactory.getWeblogger().getWeblogManager().getTemplates(this.weblog);
+        return weblogManager.getTemplates(this.weblog);
     }
     
     
@@ -126,7 +131,7 @@ public class WeblogCustomTheme extends WeblogTheme {
      */
     @Override
     public ThemeTemplate getDefaultTemplate() throws WebloggerException {
-        return WebloggerFactory.getWeblogger().getWeblogManager()
+        return weblogManager
                 .getTemplateByAction(this.weblog, ComponentType.WEBLOG);
     }
     
@@ -140,7 +145,7 @@ public class WeblogCustomTheme extends WeblogTheme {
         if (action == null) {
             return null;
         }
-        return WebloggerFactory.getWeblogger().getWeblogManager().getTemplateByAction(this.weblog, action);
+        return weblogManager.getTemplateByAction(this.weblog, action);
     }
     
     
@@ -153,7 +158,7 @@ public class WeblogCustomTheme extends WeblogTheme {
         if (name == null) {
             return null;
         }
-        return WebloggerFactory.getWeblogger().getWeblogManager().getTemplateByName(this.weblog, name);
+        return weblogManager.getTemplateByName(this.weblog, name);
     }
     
     
@@ -166,7 +171,7 @@ public class WeblogCustomTheme extends WeblogTheme {
         if (link == null) {
             return null;
         }
-        return WebloggerFactory.getWeblogger().getWeblogManager().getTemplateByLink(this.weblog, link);
+        return weblogManager.getTemplateByLink(this.weblog, link);
     }
     
     

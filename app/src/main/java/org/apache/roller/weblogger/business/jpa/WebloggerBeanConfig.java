@@ -28,6 +28,7 @@ import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.MultiWeblogURLStrategy;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.URLStrategy;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.UserTokenManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
@@ -102,8 +103,20 @@ public class WebloggerBeanConfig {
     }
 
     @Bean
-    public WeblogManager weblogManager(@Lazy Weblogger weblogger, JPAPersistenceStrategy strategy) {
-        return new JPAWeblogManagerImpl(weblogger, strategy);
+    public WeblogManager weblogManager(@Lazy Weblogger weblogger, JPAPersistenceStrategy strategy,
+                                       VirtualHostRegistry virtualHostRegistry) {
+        return new JPAWeblogManagerImpl(weblogger, strategy, virtualHostRegistry);
+    }
+
+    /**
+     * The hostname-to-handle map. Takes the weblog manager lazily (the manager
+     * depends back on the registry to invalidate it after a save) and is
+     * therefore built eagerly WITH the manager, so the map is resolvable from
+     * the first request rather than from the first save.
+     */
+    @Bean
+    public VirtualHostRegistry virtualHostRegistry(@Lazy WeblogManager weblogManager) {
+        return new VirtualHostRegistry(weblogManager);
     }
 
     @Bean
@@ -184,7 +197,8 @@ public class WebloggerBeanConfig {
             UserManager userManager,
             WeblogManager weblogManager,
             WeblogEntryManager weblogEntryManager,
-            URLStrategy urlStrategy) throws WebloggerException {
+            URLStrategy urlStrategy,
+            VirtualHostRegistry virtualHostRegistry) throws WebloggerException {
         return new JPAWebloggerImpl(
                 strategy,
                 indexManager,
@@ -202,6 +216,7 @@ public class WebloggerBeanConfig {
                 userManager,
                 weblogManager,
                 weblogEntryManager,
-                urlStrategy);
+                urlStrategy,
+                virtualHostRegistry);
     }
 }

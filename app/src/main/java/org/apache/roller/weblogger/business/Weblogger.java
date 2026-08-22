@@ -122,6 +122,12 @@ public interface Weblogger {
      * Get the URLStrategy used to build all urls in the system.
      */
     URLStrategy getUrlStrategy();
+
+    /**
+     * The hostname-to-weblog-handle map (custom domains), built with the rest
+     * of the tier so it resolves from the first request.
+     */
+    VirtualHostRegistry getVirtualHostRegistry();
     
     /**
      * Flush object states.

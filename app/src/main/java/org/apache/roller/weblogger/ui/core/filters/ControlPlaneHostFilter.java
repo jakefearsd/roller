@@ -70,7 +70,7 @@ public class ControlPlaneHostFilter implements Filter {
         }
 
         if (belongsToSiteHost(path)
-                && VirtualHostRegistry.handleFor(request.getHeader("Host")) != null) {
+                && VirtualHostRegistry.handleForCurrent(request.getHeader("Host")) != null) {
 
             String siteUrl = siteHostUrl();
             if (siteUrl == null) {

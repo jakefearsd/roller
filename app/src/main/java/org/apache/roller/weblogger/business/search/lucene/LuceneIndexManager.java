@@ -51,7 +51,6 @@ import org.apache.roller.weblogger.business.InitializationException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.search.IndexManager;
 import org.apache.roller.weblogger.business.search.SearchResultList;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -467,7 +466,7 @@ public class LuceneIndexManager implements IndexManager {
      * @throws WebloggerException
      *             the weblogger exception
      */
-    static SearchResultList convertHitsToEntryList(
+    SearchResultList convertHitsToEntryList(
         ScoreDoc[] hits,
         SearchOperation search,
         int pageNum,
@@ -494,7 +493,6 @@ public class LuceneIndexManager implements IndexManager {
         try {
             Set<String> categories = new TreeSet<>();
             Set<String> categorySet = new TreeSet<>();
-            Weblogger roller = WebloggerFactory.getWeblogger();
             WeblogEntryManager weblogMgr = roller.getWeblogEntryManager();
 
             WeblogEntry entry;

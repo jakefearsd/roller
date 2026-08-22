@@ -21,6 +21,7 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.roller.testing.RollerDatabaseExtension;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for {@link JPAPersistenceStrategy}.
@@ -111,7 +113,7 @@ class JPAPersistenceStrategyTest {
             strategy.store(weblog);
             strategy.flush();
 
-            WeblogManager weblogManager = new JPAWeblogManagerImpl(null, strategy);
+            WeblogManager weblogManager = new JPAWeblogManagerImpl(null, strategy, mock(VirtualHostRegistry.class));
             Weblog reloaded = weblogManager.getWeblogByHandle("jpapersistencestrategytest");
 
             assertNotNull(reloaded,
@@ -164,7 +166,7 @@ class JPAPersistenceStrategyTest {
             strategy.flush();
             assertEquals(1, runs.get(), "must run exactly once, once the commit has succeeded");
 
-            WeblogManager weblogManager = new JPAWeblogManagerImpl(null, strategy);
+            WeblogManager weblogManager = new JPAWeblogManagerImpl(null, strategy, mock(VirtualHostRegistry.class));
             Weblog reloaded = weblogManager.getWeblogByHandle("runaftercommittest");
             strategy.remove(reloaded);
             strategy.flush();

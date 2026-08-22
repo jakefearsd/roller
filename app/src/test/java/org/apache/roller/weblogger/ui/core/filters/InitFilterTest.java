@@ -304,6 +304,11 @@ public class InitFilterTest  {
             vhostblog.setCustomDomain("vhost.example.com");
             when(mocks.getWeblogManager().getWeblogs(null, null, null, null, 0, -1))
                     .thenReturn(List.of(vhostblog));
+            // InitFilter still reaches the registry through its transitional
+            // static delegator (plan Task 6 injects it), which resolves it off
+            // the mocked facade -- hand it one over the mock manager.
+            when(mocks.weblogger().getVirtualHostRegistry())
+                    .thenReturn(new VirtualHostRegistry(mocks.getWeblogManager()));
 
             MockHttpServletRequest request = new MockHttpServletRequest("GET", "/entry/my-post");
             request.setServerName("vhost.example.com");
@@ -317,7 +322,6 @@ public class InitFilterTest  {
                             + "absolute context url from it");
         } finally {
             MockWeblogger.uninstall();
-            VirtualHostRegistry.invalidate();
             WebloggerRuntimeConfig.setAbsoluteContextURL(priorAbsolute);
             WebloggerRuntimeConfig.setRelativeContextURL(priorRelative);
         }
@@ -344,6 +348,11 @@ public class InitFilterTest  {
             vhostblog.setCustomDomain("vhost.example.com");
             when(mocks.getWeblogManager().getWeblogs(null, null, null, null, 0, -1))
                     .thenReturn(List.of(vhostblog));
+            // InitFilter still reaches the registry through its transitional
+            // static delegator (plan Task 6 injects it), which resolves it off
+            // the mocked facade -- hand it one over the mock manager.
+            when(mocks.weblogger().getVirtualHostRegistry())
+                    .thenReturn(new VirtualHostRegistry(mocks.getWeblogManager()));
 
             MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");
             request.setServerName("roller.example.com");
@@ -356,7 +365,6 @@ public class InitFilterTest  {
                     "an unclaimed host must still latch, unaffected by the custom-domain refusal");
         } finally {
             MockWeblogger.uninstall();
-            VirtualHostRegistry.invalidate();
             WebloggerRuntimeConfig.setAbsoluteContextURL(priorAbsolute);
             WebloggerRuntimeConfig.setRelativeContextURL(priorRelative);
         }

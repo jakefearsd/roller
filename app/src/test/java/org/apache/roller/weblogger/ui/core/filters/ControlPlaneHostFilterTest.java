@@ -107,15 +107,16 @@ class ControlPlaneHostFilterTest {
 
         factory = mockStatic(WebloggerFactory.class);
         factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-        // VirtualHostRegistry is a JVM-wide static cache -- force a fresh
-        // build under THIS test's mock rather than a previous test's.
-        VirtualHostRegistry.invalidate();
+        factory.when(WebloggerFactory::isBootstrapped).thenReturn(true);
+        // The filter still reaches the registry through its transitional static
+        // delegator (plan Task 6 injects it), which resolves it off the mocked
+        // facade -- so hand the facade a registry over THIS test's mock manager.
+        when(weblogger.getVirtualHostRegistry()).thenReturn(new VirtualHostRegistry(weblogManager));
     }
 
     @AfterEach
     void tearDownWebloggerFactory() {
         factory.close();
-        VirtualHostRegistry.invalidate();
     }
 
     private void givenSiteAbsoluteUrl(String value) throws WebloggerException {

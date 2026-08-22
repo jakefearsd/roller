@@ -42,7 +42,6 @@ import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.CustomTemplateRendition;
 import org.apache.roller.weblogger.pojos.TagStat;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
@@ -66,11 +65,14 @@ public class JPAWeblogManagerImpl implements WeblogManager {
 
     private final Weblogger roller;
     private final JPAPersistenceStrategy strategy;
+    private final VirtualHostRegistry virtualHosts;
     
     // cached mapping of weblogHandles -> weblogIds
     private final Map<String, String> weblogHandleToIdMap = Collections.synchronizedMap(new HashMap<>());
 
-    public JPAWeblogManagerImpl(Weblogger roller, JPAPersistenceStrategy strat) {
+    public JPAWeblogManagerImpl(Weblogger roller, JPAPersistenceStrategy strat,
+                                VirtualHostRegistry virtualHosts) {
+        this.virtualHosts = virtualHosts;
         log.debug("Instantiating JPA Weblog Manager");
         this.roller = roller;
         this.strategy = strat;
@@ -103,8 +105,8 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         // caller sees "Saved changes". runAfterCommit() is what closes that
         // window: it re-invalidates once the surrounding transaction has
         // actually committed.
-        VirtualHostRegistry.invalidate();
-        strategy.runAfterCommit(VirtualHostRegistry::invalidate);
+        virtualHosts.invalidate();
+        strategy.runAfterCommit(virtualHosts::invalidate);
     }
 
     @Override
@@ -118,8 +120,8 @@ public class JPAWeblogManagerImpl implements WeblogManager {
         // it. Cheap: the map is rebuilt lazily on the next read, not here.
         // See saveWeblog's comment above for why this alone is not enough
         // (I5) and runAfterCommit() is needed too.
-        VirtualHostRegistry.invalidate();
-        strategy.runAfterCommit(VirtualHostRegistry::invalidate);
+        virtualHosts.invalidate();
+        strategy.runAfterCommit(virtualHosts::invalidate);
 
         // remove entry from cache mapping
         this.weblogHandleToIdMap.remove(weblog.getHandle());
@@ -189,7 +191,7 @@ public class JPAWeblogManagerImpl implements WeblogManager {
 
         // remove mediafile metadata
         // remove uploaded files
-        MediaFileManager mfmgr = WebloggerFactory.getWeblogger().getMediaFileManager();
+        MediaFileManager mfmgr = roller.getMediaFileManager();
         mfmgr.removeAllFiles(weblog);
         //List<MediaFileDirectory> dirs = mmgr.getMediaFileDirectories(weblog);
         //for (MediaFileDirectory dir : dirs) {

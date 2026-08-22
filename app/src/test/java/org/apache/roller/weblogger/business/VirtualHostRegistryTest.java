@@ -9,6 +9,7 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,9 +17,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Host-header normalisation, which decides whether a request resolves at all. */
+/**
+ * Host-header normalisation, which decides whether a request resolves at all,
+ * and the registry's behaviour as an instance that is handed its
+ * {@code WeblogManager} (DI wave, plan Task 4) rather than locating it.
+ */
 class VirtualHostRegistryTest {
 
     @Test
@@ -54,7 +62,7 @@ class VirtualHostRegistryTest {
         assertEquals("[::1]", VirtualHostRegistry.normalise("[::1]"));
     }
 
-    // -------------------------------------------------- map() failure logging
+    // ------------------------------------------------------------ log capture
 
     /** Captures the log events VirtualHostRegistry's own logger actually emits. */
     private static final class CapturingAppender extends AbstractAppender {
@@ -92,43 +100,133 @@ class VirtualHostRegistryTest {
         if (appender != null) {
             appender.stop();
         }
-        VirtualHostRegistry.invalidate();
-        MockWeblogger.uninstall();
+    }
+
+    // ------------------------------------------ the injected-manager instance
+
+    private static Weblog weblogWithDomain(String handle, String domain) {
+        Weblog w = new Weblog();
+        w.setHandle(handle);
+        w.setCustomDomain(domain);
+        return w;
+    }
+
+    private static WeblogManager managerWith(Weblog... weblogs) throws WebloggerException {
+        WeblogManager manager = mock(WeblogManager.class);
+        when(manager.getWeblogs(null, null, null, null, 0, -1)).thenReturn(List.of(weblogs));
+        return manager;
+    }
+
+    @Test
+    void resolvesAHostThroughTheManagerItWasGiven() throws WebloggerException {
+        VirtualHostRegistry registry =
+                new VirtualHostRegistry(managerWith(weblogWithDomain("b", "B.Example.com:443")));
+
+        assertEquals("b", registry.handleFor("b.example.com"));
+        assertEquals("b.example.com", registry.hostFor("b"));
+        assertNull(registry.handleFor("other.example.com"));
+        assertNull(registry.hostFor("nobody"));
+        assertNull(registry.hostFor(null));
+    }
+
+    /** The map is built once and cached; {@code invalidate()} is what rebuilds it. */
+    @Test
+    void invalidateRebuildsFromTheManagerOnTheNextRead() throws WebloggerException {
+        WeblogManager manager = managerWith(weblogWithDomain("b", "b.example.com"));
+        VirtualHostRegistry registry = new VirtualHostRegistry(manager);
+
+        registry.handleFor("b.example.com");
+        registry.handleFor("b.example.com");
+        verify(manager, times(1)).getWeblogs(null, null, null, null, 0, -1);
+
+        registry.invalidate();
+        registry.handleFor("b.example.com");
+        verify(manager, times(2)).getWeblogs(null, null, null, null, 0, -1);
     }
 
     /**
-     * M9: after bootstrap, an exception here means every custom domain stops
-     * resolving site-wide -- that must not be a debug-only line nobody
-     * enables in production.
+     * M9: once the tier is up, an exception here means every custom domain
+     * stops resolving site-wide -- that must not be a debug-only line nobody
+     * enables in production. (The pre-bootstrap "expected, stay quiet" case is
+     * the static delegator's with no instance installed, below.)
      */
     @Test
-    void mapFailureLogsAtWarnOnceBootstrapped() throws WebloggerException {
+    void mapFailureLogsAtWarn() throws WebloggerException {
         startCapturingLogs();
-        MockWeblogger mocks = MockWeblogger.install();
-        when(mocks.getWeblogManager().getWeblogs(null, null, null, null, 0, -1))
+        WeblogManager manager = mock(WeblogManager.class);
+        when(manager.getWeblogs(null, null, null, null, 0, -1))
                 .thenThrow(new WebloggerException("boom"));
 
-        VirtualHostRegistry.handleFor("anything.example.com");
+        assertNull(new VirtualHostRegistry(manager).handleFor("anything.example.com"));
 
         assertTrue(appender.events.stream().anyMatch(e -> e.getLevel() == Level.WARN),
-                "map() must log at WARN once the app has bootstrapped, so a live failure "
-                        + "is not silently invisible at the default log level");
+                "map() must log at WARN, so a live failure is not silently invisible at the "
+                        + "default log level");
     }
 
+    /** A failed build is not cached: the next read tries the manager again. */
+    @Test
+    void aFailedBuildIsNotCached() throws WebloggerException {
+        WeblogManager manager = mock(WeblogManager.class);
+        when(manager.getWeblogs(null, null, null, null, 0, -1))
+                .thenThrow(new WebloggerException("boom"))
+                .thenReturn(List.of(weblogWithDomain("b", "b.example.com")));
+        VirtualHostRegistry registry = new VirtualHostRegistry(manager);
+
+        assertNull(registry.handleFor("b.example.com"));
+        assertEquals("b", registry.handleFor("b.example.com"));
+    }
+
+    // ------------------------------------- the TRANSITIONAL static delegators
+
     /**
-     * Before bootstrap, {@code WebloggerFactory.getWeblogger()} throwing is
-     * the EXPECTED steady state (see the class javadoc: "before Roller has
-     * bootstrapped there are no weblogs"), not a live failure -- keep this
-     * one quiet.
+     * Before the tier is up there is no registry, and a lookup is the EXPECTED
+     * steady state (the control-plane filter runs at order 35), not a live
+     * failure -- answer "no weblog" and keep quiet. The delegators exist only
+     * until plan Task 6 hands the filters and the mapper the instance directly.
      */
     @Test
-    void mapFailureStaysQuietBeforeBootstrap() {
+    void beforeBootstrapTheStaticLookupIsNullAndQuiet() {
         startCapturingLogs();
         MockWeblogger.installNotBootstrapped();
+        try {
+            assertNull(VirtualHostRegistry.handleForCurrent("anything.example.com"));
+            assertNull(VirtualHostRegistry.hostForCurrent("anything"));
+            VirtualHostRegistry.invalidateCurrent();   // must not throw
+            assertFalse(appender.events.stream().anyMatch(e -> e.getLevel() == Level.WARN),
+                    "a pre-bootstrap lookup is expected and must not log at WARN");
+        } finally {
+            MockWeblogger.uninstall();
+        }
+    }
 
-        VirtualHostRegistry.handleFor("anything.example.com");
+    /** A mocked facade that was never given a registry is treated like "none yet". */
+    @Test
+    void aFacadeWithNoRegistryIsTreatedAsNoneYet() {
+        MockWeblogger.install();
+        try {
+            assertNull(VirtualHostRegistry.handleForCurrent("anything.example.com"));
+            VirtualHostRegistry.invalidateCurrent();   // must not throw
+        } finally {
+            MockWeblogger.uninstall();
+        }
+    }
 
-        assertFalse(appender.events.stream().anyMatch(e -> e.getLevel() == Level.WARN),
-                "a pre-bootstrap lookup is expected and must not log at WARN");
+    @Test
+    void theStaticDelegatorsReachTheBootstrappedTiersRegistry() throws WebloggerException {
+        WeblogManager manager = managerWith(weblogWithDomain("b", "b.example.com"));
+        MockWeblogger mocks = MockWeblogger.install();
+        try {
+            when(mocks.weblogger().getVirtualHostRegistry())
+                    .thenReturn(new VirtualHostRegistry(manager));
+
+            assertEquals("b", VirtualHostRegistry.handleForCurrent("b.example.com"));
+            assertEquals("b.example.com", VirtualHostRegistry.hostForCurrent("b"));
+            VirtualHostRegistry.invalidateCurrent();
+            assertEquals("b", VirtualHostRegistry.handleForCurrent("b.example.com"));
+            verify(manager, times(2)).getWeblogs(null, null, null, null, 0, -1);
+        } finally {
+            MockWeblogger.uninstall();
+        }
     }
 }

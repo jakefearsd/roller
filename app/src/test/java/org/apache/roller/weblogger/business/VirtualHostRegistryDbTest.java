@@ -39,7 +39,7 @@ class VirtualHostRegistryDbTest {
         TestUtils.endSession(true);
         // VirtualHostRegistry is a JVM-wide static cache -- a custom domain
         // set by one test must not leak into the next.
-        VirtualHostRegistry.invalidate();
+        VirtualHostRegistry.invalidateCurrent();
     }
 
     /**
@@ -57,7 +57,7 @@ class VirtualHostRegistryDbTest {
         mgr.saveWeblog(stored);
         TestUtils.endSession(true);
 
-        assertEquals("vhostdbblog", VirtualHostRegistry.handleFor("dbtest.example.com"));
+        assertEquals("vhostdbblog", VirtualHostRegistry.handleForCurrent("dbtest.example.com"));
     }
 
     @Test
@@ -68,7 +68,7 @@ class VirtualHostRegistryDbTest {
         mgr.saveWeblog(stored);
         TestUtils.endSession(true);
 
-        assertEquals("dbtest2.example.com", VirtualHostRegistry.hostFor("vhostdbblog"));
+        assertEquals("dbtest2.example.com", VirtualHostRegistry.hostForCurrent("vhostdbblog"));
     }
 
     /**
@@ -89,15 +89,15 @@ class VirtualHostRegistryDbTest {
         mgr.saveWeblog(stored);
         TestUtils.endSession(true);
         // Force the map to build and cache under the OLD domain.
-        assertEquals("vhostdbblog", VirtualHostRegistry.handleFor("old.example.com"));
+        assertEquals("vhostdbblog", VirtualHostRegistry.handleForCurrent("old.example.com"));
 
         stored = mgr.getWeblogByHandle("vhostdbblog");
         stored.setCustomDomain("new.example.com");
         mgr.saveWeblog(stored);
         TestUtils.endSession(true);
 
-        assertNull(VirtualHostRegistry.handleFor("old.example.com"));
-        assertEquals("vhostdbblog", VirtualHostRegistry.handleFor("new.example.com"));
+        assertNull(VirtualHostRegistry.handleForCurrent("old.example.com"));
+        assertEquals("vhostdbblog", VirtualHostRegistry.handleForCurrent("new.example.com"));
     }
 
     /**
@@ -136,7 +136,7 @@ class VirtualHostRegistryDbTest {
         java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
         Thread reader = new Thread(() -> {
             try {
-                assertNull(VirtualHostRegistry.handleFor("race.example.com"),
+                assertNull(VirtualHostRegistry.handleForCurrent("race.example.com"),
                         "sanity: a genuinely concurrent reader on its own connection must not "
                                 + "observe the still-uncommitted domain");
             } catch (Throwable t) {
@@ -156,7 +156,7 @@ class VirtualHostRegistryDbTest {
         // The write actually commits now, on the original thread.
         TestUtils.endSession(true);
 
-        assertEquals("vhostdbblog", VirtualHostRegistry.handleFor("race.example.com"),
+        assertEquals("vhostdbblog", VirtualHostRegistry.handleForCurrent("race.example.com"),
                 "the registry must be invalidated again after commit -- otherwise the stale "
                         + "pre-commit map stays cached until an unrelated save invalidates it");
     }
@@ -180,12 +180,12 @@ class VirtualHostRegistryDbTest {
         mgr.saveWeblog(stored);
         TestUtils.endSession(true);
         // Force the map to build and cache the mapping before removal.
-        assertEquals("vhostdbremoveblog", VirtualHostRegistry.handleFor("removeme.example.com"));
+        assertEquals("vhostdbremoveblog", VirtualHostRegistry.handleForCurrent("removeme.example.com"));
 
         mgr.removeWeblog(mgr.getWeblog(removalWeblog.getId()));
         TestUtils.endSession(true);
 
-        assertNull(VirtualHostRegistry.handleFor("removeme.example.com"));
+        assertNull(VirtualHostRegistry.handleForCurrent("removeme.example.com"));
 
         TestUtils.teardownUser(removalUser.getUserName());
         TestUtils.endSession(true);

@@ -26,6 +26,9 @@ import javax.imageio.ImageIO;
 
 import org.apache.roller.weblogger.TestUtils;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.jpa.JPAMediaFileManagerImpl;
+import org.apache.roller.weblogger.business.jpa.JPAPersistenceStrategy;
+import org.apache.roller.weblogger.business.jpa.JPAWebloggerImpl;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
@@ -388,9 +391,9 @@ public class MediaFileCropTest {
      * failure writing the re-encoded original (disk full, IO error) must
      * leave the file on disk byte-identical, every rendition in place, and
      * the database row describing the pre-crop image. The write failure is
-     * injected through the WebloggerFactory seam with a FileContentManager
-     * that fails exactly the original's save and delegates everything else
-     * to the real, disk-backed implementation.
+     * injected through the facade the media manager is constructed with (a
+     * FileContentManager that fails exactly the original's save and delegates
+     * everything else to the real, disk-backed implementation).
      */
     @Test
     public void aFailedOriginalWriteLeavesFileAndDatabaseUntouched() throws Throwable {
@@ -402,11 +405,11 @@ public class MediaFileCropTest {
         byte[] thumbnailBefore = fileBytes(id + "_sm");
         String blurhashBefore = mfMgr.getMediaFile(id).getBlurhash();
 
-        withFailingSaveFor(id, () -> {
+        withFailingSaveFor(id, failingMfMgr -> {
             weblog = TestUtils.getManagedWebsite(weblog);
             MediaFile managed = mfMgr.getMediaFile(id);
             assertThrows(WebloggerException.class,
-                    () -> mfMgr.cropMediaFile(weblog, managed, 5, 5, 488, 300),
+                    () -> failingMfMgr.cropMediaFile(weblog, managed, 5, 5, 488, 300),
                     "the disk failure must surface as a WebloggerException");
         });
         TestUtils.endSession(true);
@@ -436,11 +439,11 @@ public class MediaFileCropTest {
         MediaFile mediaFile = uploadResource("crop-thumbfail.jpg", "/hawk-exif.jpg");
         String id = mediaFile.getId();
 
-        withFailingSaveFor(id + "_sm", () -> {
+        withFailingSaveFor(id + "_sm", failingMfMgr -> {
             weblog = TestUtils.getManagedWebsite(weblog);
             MediaFile managed = mfMgr.getMediaFile(id);
             // must NOT throw: the original was already swapped successfully
-            mfMgr.cropMediaFile(weblog, managed, 5, 5, 488, 300);
+            failingMfMgr.cropMediaFile(weblog, managed, 5, 5, 488, 300);
         });
         TestUtils.endSession(true);
 
@@ -454,13 +457,16 @@ public class MediaFileCropTest {
     }
 
     /**
-     * Installs, for the duration of {@code action}, a business tier identical
-     * to the real one except that {@code FileContentManager.saveFileContent}
-     * fails for exactly {@code failingFileId} -- the disk-full injection the
-     * atomicity tests need, threaded through the WebloggerFactory seam.
+     * Hands {@code action} a media manager identical to the real one except
+     * that its {@code FileContentManager.saveFileContent} fails for exactly
+     * {@code failingFileId} -- the disk-full injection the atomicity tests
+     * need. The manager reaches the content manager through the facade it is
+     * constructed with (DI wave, plan Task 4), so the injection is a facade
+     * handed to a purpose-built manager on the live persistence strategy, not
+     * a swap of the static locator.
      */
     private void withFailingSaveFor(String failingFileId,
-            org.junit.jupiter.api.function.Executable action) throws Throwable {
+            org.junit.jupiter.api.function.ThrowingConsumer<MediaFileManager> action) throws Throwable {
         Weblogger real = WebloggerFactory.getWeblogger();
         FileContentManager failingCmgr = mock(FileContentManager.class,
                 org.mockito.AdditionalAnswers.delegatesTo(fcMgr));
@@ -471,27 +477,13 @@ public class MediaFileCropTest {
                 org.mockito.AdditionalAnswers.delegatesTo(real));
         doReturn(failingCmgr).when(failingWeblogger).getFileContentManager();
 
-        WebloggerProvider previous = WebloggerFactory.currentProvider();
-        WebloggerFactory.installProvider(new WebloggerProvider() {
-            @Override
-            public boolean isBootstrapped() {
-                return true;
-            }
+        action.accept(new JPAMediaFileManagerImpl(failingWeblogger, liveStrategy(real)));
+    }
 
-            @Override
-            public void bootstrap() {
-                // already bootstrapped
-            }
-
-            @Override
-            public Weblogger getWeblogger() {
-                return failingWeblogger;
-            }
-        });
-        try {
-            action.execute();
-        } finally {
-            WebloggerFactory.installProvider(previous);
-        }
+    /** The bootstrapped tier's persistence strategy, so the test manager shares its EntityManager. */
+    private static JPAPersistenceStrategy liveStrategy(Weblogger real) throws ReflectiveOperationException {
+        java.lang.reflect.Field field = JPAWebloggerImpl.class.getDeclaredField("strategy");
+        field.setAccessible(true);
+        return (JPAPersistenceStrategy) field.get(real);
     }
 }

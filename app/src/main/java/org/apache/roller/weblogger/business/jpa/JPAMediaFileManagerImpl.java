@@ -47,7 +47,6 @@ import org.apache.roller.weblogger.business.FileIOException;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.RenditionSupport;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.FileContent;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -191,8 +190,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
     public void createMediaFile(Weblog weblog, MediaFile mediaFile,
             RollerMessages errors) throws WebloggerException {
 
-        FileContentManager cmgr = WebloggerFactory.getWeblogger()
-                .getFileContentManager();
+        FileContentManager cmgr = roller.getFileContentManager();
         if (!cmgr.canSave(weblog, mediaFile.getName(),
                 mediaFile.getContentType(), mediaFile.getLength(), errors)) {
             return;
@@ -209,7 +207,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
 
     private void persistNewMediaFile(Weblog weblog, MediaFileDirectory directory,
             MediaFile mediaFile, InputStream is) throws WebloggerException {
-        FileContentManager cmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager cmgr = roller.getFileContentManager();
         strategy.store(mediaFile);
 
         // Refresh associated parent for changes
@@ -228,8 +226,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
 
     private void updateThumbnail(MediaFile mediaFile) {
         try {
-            FileContentManager cmgr = WebloggerFactory.getWeblogger()
-                    .getFileContentManager();
+            FileContentManager cmgr = roller.getFileContentManager();
             FileContent fc = cmgr.getFileContent(mediaFile.getWeblog(),
                     mediaFile.getId());
             BufferedImage img;
@@ -389,8 +386,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
             InputStream is) throws WebloggerException {
         updateMediaFile(weblog, mediaFile);
 
-        FileContentManager cmgr = WebloggerFactory.getWeblogger()
-                .getFileContentManager();
+        FileContentManager cmgr = roller.getFileContentManager();
         RollerMessages msgs = new RollerMessages();
         if (!cmgr.canSave(weblog, mediaFile.getName(),
                 mediaFile.getContentType(), mediaFile.getLength(), msgs)) {
@@ -420,8 +416,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         MediaFile mediaFile = (MediaFile) this.strategy.load(MediaFile.class,
                 id);
         if (includeContent) {
-            FileContentManager cmgr = WebloggerFactory.getWeblogger()
-                    .getFileContentManager();
+            FileContentManager cmgr = roller.getFileContentManager();
 
             FileContent content = cmgr.getFileContent(mediaFile.getDirectory()
                     .getWeblog(), id);
@@ -512,8 +507,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         } catch (NoResultException e) {
             return null;
         }
-        FileContentManager cmgr = WebloggerFactory.getWeblogger()
-                .getFileContentManager();
+        FileContentManager cmgr = roller.getFileContentManager();
         FileContent content = cmgr.getFileContent(
                 mf.getDirectory().getWeblog(), mf.getId());
         mf.setContent(content);
@@ -558,8 +552,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
     @Override
     public void removeMediaFile(Weblog weblog, MediaFile mediaFile)
             throws WebloggerException {
-        FileContentManager cmgr = WebloggerFactory.getWeblogger()
-                .getFileContentManager();
+        FileContentManager cmgr = roller.getFileContentManager();
 
         this.strategy.remove(mediaFile);
 
@@ -737,8 +730,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
         if (dir == null) {
             return;
         }
-        FileContentManager cmgr = WebloggerFactory.getWeblogger()
-                .getFileContentManager();
+        FileContentManager cmgr = roller.getFileContentManager();
         Set<MediaFile> files = dir.getMediaFiles();
         for (MediaFile mf : files) {
             deleteContentQuietly(cmgr, dir.getWeblog(), mf.getId());
@@ -763,7 +755,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
     public int regenerateRenditions(Weblog weblog) throws WebloggerException {
         // Rebuilds every image's rendition ladder, thumbnail, stored
         // dimensions, EXIF fields and blurhash from the original on disk.
-        FileContentManager cmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager cmgr = roller.getFileContentManager();
         int count = 0;
         for (MediaFileDirectory dir : getMediaFileDirectories(weblog)) {
             for (MediaFile mf : dir.getMediaFiles()) {
@@ -850,7 +842,7 @@ public class JPAMediaFileManagerImpl implements MediaFileManager {
                     + " has no server-side re-encode path");
         }
 
-        FileContentManager cmgr = WebloggerFactory.getWeblogger().getFileContentManager();
+        FileContentManager cmgr = roller.getFileContentManager();
         try {
             FileContent fc = cmgr.getFileContent(weblog, mediaFile.getId());
             BufferedImage img = ImageIO.read(fc.getInputStream());

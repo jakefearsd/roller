@@ -78,7 +78,7 @@ public class InitFilter implements Filter {
             // (which "initialized" staying false here still allows: this
             // skips latching for THIS request only, not permanently).
             boolean onACustomDomain =
-                    VirtualHostRegistry.handleFor(request.getHeader("Host")) != null;
+                    VirtualHostRegistry.handleForCurrent(request.getHeader("Host")) != null;
 
             if (!onACustomDomain && validator.isValid(request.getRequestURL().toString())) {
 

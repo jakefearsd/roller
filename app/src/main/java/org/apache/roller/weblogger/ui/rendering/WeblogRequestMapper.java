@@ -172,7 +172,7 @@ public class WeblogRequestMapper implements RequestMapper {
         // trailing-slash rules, the forward url -- is identical either way,
         // which is the whole reason resolution lives here rather than in a
         // second mapper that would have to reimplement it.
-        String vhostHandle = VirtualHostRegistry.handleFor(request.getHeader("Host"));
+        String vhostHandle = VirtualHostRegistry.handleForCurrent(request.getHeader("Host"));
 
         NormalizedPath normalized =
                 normalizePath(request.getRequestURI(), request.getContextPath());
@@ -243,7 +243,7 @@ public class WeblogRequestMapper implements RequestMapper {
         // Redirect precisely when the weblog has a hostname and THIS request
         // did not arrive on it. vhostHandle != null means the host already
         // resolved the weblog, i.e. we are on the canonical domain already.
-        String canonicalHost = VirtualHostRegistry.hostFor(weblogHandle);
+        String canonicalHost = VirtualHostRegistry.hostForCurrent(weblogHandle);
         if (vhostHandle == null && canonicalHost != null) {
             StringBuilder target = new StringBuilder("https://").append(canonicalHost);
             target.append(request.getContextPath());

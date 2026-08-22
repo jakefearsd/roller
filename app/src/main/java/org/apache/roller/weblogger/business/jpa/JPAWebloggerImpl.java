@@ -27,6 +27,7 @@ import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.UserTokenManager;
+import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.WeblogPageManager;
@@ -66,7 +67,8 @@ public class JPAWebloggerImpl extends WebloggerImpl {
         UserManager          userManager,
         WeblogManager        weblogManager,
         WeblogEntryManager   weblogEntryManager,
-        URLStrategy          urlStrategy) throws WebloggerException {
+        URLStrategy          urlStrategy,
+        VirtualHostRegistry  virtualHostRegistry) throws WebloggerException {
 
         super(
             indexManager,
@@ -84,7 +86,8 @@ public class JPAWebloggerImpl extends WebloggerImpl {
             userManager,
             weblogManager,
             weblogEntryManager,
-            urlStrategy);
+            urlStrategy,
+            virtualHostRegistry);
         
         this.strategy = strategy;
     }
