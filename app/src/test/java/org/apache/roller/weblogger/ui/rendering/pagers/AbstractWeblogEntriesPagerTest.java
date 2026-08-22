@@ -69,6 +69,9 @@ class AbstractWeblogEntriesPagerTest {
      * Minimal concrete pager. The base class leaves the entry collection and
      * the has-more decision to subclasses; both are injected.
      */
+    /** Neither test pager queries anything, so the facade they are built with is inert. */
+    private static final Weblogger NO_TIER = mock(Weblogger.class);
+
     private static final class FixedEntriesPager extends AbstractWeblogEntriesPager {
 
         private final boolean more;
@@ -76,7 +79,7 @@ class AbstractWeblogEntriesPagerTest {
         FixedEntriesPager(URLStrategy strat, Weblog weblog, String locale, String pageLink,
                 String entryAnchor, String dateString, String catName, List<String> tags,
                 int page, boolean more) {
-            super(strat, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
+            super(strat, NO_TIER, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
             this.more = more;
         }
 
@@ -110,7 +113,7 @@ class AbstractWeblogEntriesPagerTest {
     private static final class DefaultEntriesPager extends AbstractWeblogEntriesPager {
 
         DefaultEntriesPager(URLStrategy strat, Weblog weblog) {
-            super(strat, weblog, "en_US", null, null, null, null, null, 0);
+            super(strat, NO_TIER, weblog, "en_US", null, null, null, null, null, 0);
         }
 
         @Override

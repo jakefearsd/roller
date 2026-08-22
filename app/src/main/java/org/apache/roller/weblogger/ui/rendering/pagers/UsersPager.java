@@ -22,7 +22,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import java.util.List;
 import java.util.Map;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.wrapper.UserWrapper;
@@ -34,6 +34,9 @@ import org.apache.roller.weblogger.pojos.wrapper.UserWrapper;
 public class UsersPager extends AbstractPager<UserWrapper> {
     
     
+    /** The business tier this pager queries; handed in by the model that built it (plan Task 11). */
+    private final Weblogger weblogger;
+
     private String letter = null;
     
     // collection for the pager
@@ -43,6 +46,7 @@ public class UsersPager extends AbstractPager<UserWrapper> {
     
     public UsersPager(
             URLStrategy    strat,
+            Weblogger      weblogger,
             String         baseUrl,
             String         locale,
             int            sinceDays,
@@ -50,6 +54,7 @@ public class UsersPager extends AbstractPager<UserWrapper> {
             int            length) {
         
         super(strat, baseUrl, page, length);
+        this.weblogger = weblogger;
         
         
         // initialize the collection
@@ -59,6 +64,7 @@ public class UsersPager extends AbstractPager<UserWrapper> {
     
     public UsersPager(
             URLStrategy    strat,
+            Weblogger      weblogger,
             String         baseUrl,
             String         letter,
             String         locale,
@@ -67,6 +73,7 @@ public class UsersPager extends AbstractPager<UserWrapper> {
             int            length) {
         
         super(strat, baseUrl, page, length);
+        this.weblogger = weblogger;
         
         this.letter = letter;
         
@@ -88,7 +95,7 @@ public class UsersPager extends AbstractPager<UserWrapper> {
     @Override
     protected List<UserWrapper> fetchPage(int offset, int limit) throws WebloggerException {
 
-        UserManager umgr = WebloggerFactory.getWeblogger().getUserManager();
+        UserManager umgr = weblogger.getUserManager();
 
         List<User> rawUsers = letter == null
                 ? umgr.getUsers(Boolean.TRUE, null, null, offset, limit)

@@ -99,12 +99,12 @@ class WeblogEntriesArchivePagerTest extends EntriesPagerTestSupport {
     }
 
     private WeblogEntriesMonthPager monthPager(Weblog weblog, String dateString, int page) {
-        return new WeblogEntriesMonthPager(urlStrategy, weblog, "en_US", null, null,
+        return new WeblogEntriesMonthPager(urlStrategy, weblogger, weblog, "en_US", null, null,
                 dateString, null, null, page);
     }
 
     private WeblogEntriesDayPager dayPager(Weblog weblog, String dateString, int page) {
-        return new WeblogEntriesDayPager(urlStrategy, weblog, "en_US", null, null, dateString,
+        return new WeblogEntriesDayPager(urlStrategy, weblogger, weblog, "en_US", null, null, dateString,
                 null, null, page);
     }
 
@@ -138,7 +138,7 @@ class WeblogEntriesArchivePagerTest extends EntriesPagerTestSupport {
         Weblog weblog = weblog();
         when(entryManager.getWeblogEntryObjectMap(any())).thenReturn(Map.of());
 
-        withRuntimeConfig(() -> new WeblogEntriesMonthPager(urlStrategy, weblog, "en_US", null,
+        withRuntimeConfig(() -> new WeblogEntriesMonthPager(urlStrategy, weblogger, weblog, "en_US", null,
                 null, PAST_MONTH, "Java", List.of("testing"), 1));
 
         ArgumentCaptor<WeblogEntrySearchCriteria> criteria =
@@ -329,7 +329,7 @@ class WeblogEntriesArchivePagerTest extends EntriesPagerTestSupport {
         Weblog weblog = weblog();
         when(entryManager.getWeblogEntryObjectMap(any())).thenReturn(Map.of());
 
-        withRuntimeConfig(() -> new WeblogEntriesDayPager(urlStrategy, weblog, "en_US", null,
+        withRuntimeConfig(() -> new WeblogEntriesDayPager(urlStrategy, weblogger, weblog, "en_US", null,
                 null, PAST_DAY, "Java", List.of("testing"), 1));
 
         ArgumentCaptor<WeblogEntrySearchCriteria> criteria =

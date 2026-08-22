@@ -26,11 +26,9 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -44,7 +42,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -74,14 +72,31 @@ class WeblogsPagerTest {
         return list;
     }
 
-    /** Runs the given body with WebloggerFactory answering with the supplied manager. */
-    private static void withWeblogManager(WeblogManager manager, Runnable body) {
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger weblogger = mock(Weblogger.class);
-            when(weblogger.getWeblogManager()).thenReturn(manager);
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            body.run();
-        }
+    /** The facade the pager under test is constructed with; set per test by {@link #withWeblogManager}. */
+    private Weblogger weblogger;
+
+    /**
+     * Runs the body with {@link #weblogger} answering with the supplied manager.
+     * Nothing is installed statically: the pager takes the facade in its
+     * constructor (plan Task 11).
+     */
+    private void withWeblogManager(WeblogManager manager, Runnable body) {
+        weblogger = mock(Weblogger.class);
+        when(weblogger.getWeblogManager()).thenReturn(manager);
+        body.run();
+    }
+
+    @Test
+    void weblogsComeFromTheInjectedFacadesWeblogManager() throws Exception {
+        WeblogManager manager = mock(WeblogManager.class);
+        when(manager.getWeblogs(any(), any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(weblogs(2));
+
+        withWeblogManager(manager, () -> {
+            WeblogsPager pager = new WeblogsPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH);
+            assertEquals(2, pager.getItems().size(), "the injected manager's weblogs are the page");
+        });
+        verify(manager).getWeblogs(any(), any(), any(), any(), anyInt(), anyInt());
     }
 
     // ---------------------------------------------------------- item fetching
@@ -95,7 +110,7 @@ class WeblogsPagerTest {
                 .thenReturn(weblogs(LENGTH));
 
         withWeblogManager(manager, () -> {
-            WeblogsPager pager = new WeblogsPager(urlStrategy, BASE_URL, "en", -1, 0, LENGTH);
+            WeblogsPager pager = new WeblogsPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH);
 
             assertEquals(LENGTH, pager.getItems().size(),
                     "A full page of results must all be shown");
@@ -115,7 +130,7 @@ class WeblogsPagerTest {
                 .thenReturn(weblogs(LENGTH + 1));
 
         withWeblogManager(manager, () -> {
-            WeblogsPager pager = new WeblogsPager(urlStrategy, BASE_URL, "en", -1, 0, LENGTH);
+            WeblogsPager pager = new WeblogsPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH);
 
             assertEquals(LENGTH, pager.getItems().size(),
                     "The probe row must be dropped, not rendered as a sixth entry");
@@ -131,7 +146,7 @@ class WeblogsPagerTest {
                 .thenReturn(weblogs(0));
 
         withWeblogManager(manager, () -> {
-            new WeblogsPager(urlStrategy, BASE_URL, "en", -1, 3, LENGTH);
+            new WeblogsPager(urlStrategy, weblogger, BASE_URL, "en", -1, 3, LENGTH);
         });
 
         ArgumentCaptor<Integer> offset = ArgumentCaptor.forClass(Integer.class);
@@ -153,7 +168,7 @@ class WeblogsPagerTest {
                 .thenReturn(weblogs(0));
 
         withWeblogManager(manager, () ->
-                new WeblogsPager(urlStrategy, BASE_URL, "en", -1, 0, LENGTH));
+                new WeblogsPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH));
 
         org.mockito.Mockito.verify(manager).getWeblogs(anyBoolean(), anyBoolean(), isNull(),
                 any(), anyInt(), anyInt());
@@ -166,7 +181,7 @@ class WeblogsPagerTest {
                 .thenReturn(weblogs(0));
 
         withWeblogManager(manager, () ->
-                new WeblogsPager(urlStrategy, BASE_URL, "en", 7, 0, LENGTH));
+                new WeblogsPager(urlStrategy, weblogger, BASE_URL, "en", 7, 0, LENGTH));
 
         ArgumentCaptor<Date> startDate = ArgumentCaptor.forClass(Date.class);
         org.mockito.Mockito.verify(manager).getWeblogs(anyBoolean(), anyBoolean(),
@@ -190,7 +205,7 @@ class WeblogsPagerTest {
                 .thenThrow(new WebloggerException("database is down"));
 
         withWeblogManager(manager, () -> {
-            WeblogsPager pager = new WeblogsPager(urlStrategy, BASE_URL, "en", -1, 0, LENGTH);
+            WeblogsPager pager = new WeblogsPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH);
 
             assertTrue(pager.getItems().isEmpty(),
                     "A failed lookup must yield an empty list, never null");
@@ -207,10 +222,10 @@ class WeblogsPagerTest {
                 .thenReturn(weblogs(2));
 
         withWeblogManager(manager, () -> {
-            assertNull(new WeblogsPager(urlStrategy, BASE_URL, "en", -1, 0, LENGTH).getPrevLink(),
+            assertNull(new WeblogsPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH).getPrevLink(),
                     "Page 0 of the plain directory has nothing before it");
             assertEquals(BASE_URL + "?page=0",
-                    new WeblogsPager(urlStrategy, BASE_URL, "en", -1, 1, LENGTH).getPrevLink(),
+                    new WeblogsPager(urlStrategy, weblogger, BASE_URL, "en", -1, 1, LENGTH).getPrevLink(),
                     "Page 1 of the plain directory steps back to page 0 with no letter");
         });
     }
@@ -225,7 +240,7 @@ class WeblogsPagerTest {
 
         withWeblogManager(manager, () -> {
             WeblogsPager pager =
-                    new WeblogsPager(urlStrategy, BASE_URL, "b", "en", -1, 0, LENGTH);
+                    new WeblogsPager(urlStrategy, weblogger, BASE_URL, "b", "en", -1, 0, LENGTH);
 
             assertEquals(2, pager.getItems().size());
         });
@@ -243,7 +258,7 @@ class WeblogsPagerTest {
 
         withWeblogManager(manager, () -> {
             WeblogsPager pager =
-                    new WeblogsPager(urlStrategy, BASE_URL, "b", "en", -1, 0, LENGTH);
+                    new WeblogsPager(urlStrategy, weblogger, BASE_URL, "b", "en", -1, 0, LENGTH);
 
             String next = pager.getNextLink();
             assertNotNull(next, "There is another page of B weblogs");
@@ -261,7 +276,7 @@ class WeblogsPagerTest {
 
         withWeblogManager(manager, () -> {
             WeblogsPager pager =
-                    new WeblogsPager(urlStrategy, BASE_URL, "b", "en", -1, 0, LENGTH);
+                    new WeblogsPager(urlStrategy, weblogger, BASE_URL, "b", "en", -1, 0, LENGTH);
 
             assertNull(pager.getNextLink(),
                     "The letter listing must stop offering pages when the letter runs out");
@@ -276,7 +291,7 @@ class WeblogsPagerTest {
 
         withWeblogManager(manager, () -> {
             WeblogsPager pager =
-                    new WeblogsPager(urlStrategy, BASE_URL, "b", "en", -1, 0, LENGTH);
+                    new WeblogsPager(urlStrategy, weblogger, BASE_URL, "b", "en", -1, 0, LENGTH);
 
             assertNull(pager.getPrevLink(),
                     "Page 0 of a letter listing has nothing before it; the check is "
@@ -292,7 +307,7 @@ class WeblogsPagerTest {
 
         withWeblogManager(manager, () -> {
             WeblogsPager pager =
-                    new WeblogsPager(urlStrategy, BASE_URL, "b", "en", -1, 1, LENGTH);
+                    new WeblogsPager(urlStrategy, weblogger, BASE_URL, "b", "en", -1, 1, LENGTH);
 
             String prev = pager.getPrevLink();
             assertNotNull(prev, "Page 1 of a letter listing can go back to page 0");

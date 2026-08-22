@@ -27,6 +27,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 import org.apache.roller.util.DateUtil;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.URLStrategy;
 
 
@@ -52,6 +53,7 @@ public class WeblogEntriesMonthPager extends AbstractWeblogEntriesPager {
     
     public WeblogEntriesMonthPager(
             URLStrategy        strat,
+            Weblogger          weblogger,
             Weblog             weblog,
             String             locale,
             String             pageLink,
@@ -61,7 +63,7 @@ public class WeblogEntriesMonthPager extends AbstractWeblogEntriesPager {
             List<String>       tags,
             int                page) {
         
-        super(strat, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
+        super(strat, weblogger, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
 
         TimeZone tz = weblog.getTimeZoneInstance();
 

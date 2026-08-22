@@ -127,7 +127,7 @@ public class SiteModel implements Model {
         }
         
         return new WeblogEntriesListPager(
-            urlStrategy,
+            urlStrategy, weblogger,
             pagerUrl, null, null, null,
             tags,
             weblogRequest.getLocale(),
@@ -184,7 +184,7 @@ public class SiteModel implements Model {
         }
        
         return new WeblogEntriesListPager(
-            urlStrategy,
+            urlStrategy, weblogger,
             pagerUrl, queryWeblog.getPojo(), user, cat,
             tags,
             weblogRequest.getLocale(),
@@ -214,7 +214,7 @@ public class SiteModel implements Model {
         }
         
         return new UsersPager(
-            urlStrategy,
+            urlStrategy, weblogger,
             pagerUrl,
             letter,
             weblogRequest.getLocale(),
@@ -236,7 +236,7 @@ public class SiteModel implements Model {
         }
         
         return new WeblogsPager(
-            urlStrategy,
+            urlStrategy, weblogger,
             pagerUrl,
             letter,
             weblogRequest.getLocale(),

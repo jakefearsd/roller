@@ -81,12 +81,15 @@ class FeedModelTest {
         weblogger = mock(Weblogger.class);
         properties = mock(PropertiesManager.class);
         when(weblogger.getPropertiesManager()).thenReturn(properties);
-        // The static shim is still mocked -- with the SAME facade -- because
-        // the FeedEntriesPager the model builds still queries the entry
-        // manager through it (plan Task 11), as does WebloggerRuntimeConfig
-        // for the feed size (Task 19). The model itself no longer does.
+        // The static shim is still mocked, but with a SEPARATE, properties-only
+        // facade: the FeedEntriesPager the model builds now takes the facade
+        // from the model (plan Task 11), so only WebloggerRuntimeConfig's
+        // feed-size read still goes through the static (Task 19). A pager that
+        // regressed to static location would find no entry manager and fail.
+        Weblogger runtimeConfigOnly = mock(Weblogger.class);
+        when(runtimeConfigOnly.getPropertiesManager()).thenReturn(properties);
         factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL("/roller");

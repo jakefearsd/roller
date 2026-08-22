@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
@@ -52,6 +51,7 @@ public class WeblogEntriesPermalinkPager extends AbstractWeblogEntriesPager {
     
     public WeblogEntriesPermalinkPager(
             URLStrategy        strat,
+            Weblogger          weblogger,
             Weblog             weblog,
             String             locale,
             String             pageLink,
@@ -61,7 +61,7 @@ public class WeblogEntriesPermalinkPager extends AbstractWeblogEntriesPager {
             List<String>       tags,
             int                page) {
         
-        super(strat, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
+        super(strat, weblogger, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
         
         getEntries();
     }
@@ -71,8 +71,7 @@ public class WeblogEntriesPermalinkPager extends AbstractWeblogEntriesPager {
     public Map<Date, List<WeblogEntryWrapper>> getEntries() {
         if (entries == null) {
             try {
-                Weblogger roller = WebloggerFactory.getWeblogger();
-                WeblogEntryManager wmgr = roller.getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 currEntry = wmgr.getWeblogEntryByAnchor(weblog, entryAnchor);
                 if (currEntry != null && currEntry.getStatus().equals(PubStatus.PUBLISHED)) {
                     entries = Map.of(new Date(currEntry.getPubTime().getTime()), List.of(WeblogEntryWrapper.wrap(currEntry, urlStrategy)));
@@ -150,8 +149,7 @@ public class WeblogEntriesPermalinkPager extends AbstractWeblogEntriesPager {
     public WeblogEntry getNextEntry() {
         if (nextEntry == null) {
             try {
-                Weblogger roller = WebloggerFactory.getWeblogger();
-                WeblogEntryManager wmgr = roller.getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 nextEntry = wmgr.getNextEntry(currEntry, null, locale);
                 // make sure that entry is published and not to future
                 if (nextEntry != null && nextEntry.getPubTime().after(new Date())
@@ -171,8 +169,7 @@ public class WeblogEntriesPermalinkPager extends AbstractWeblogEntriesPager {
     public WeblogEntry getPrevEntry() {
         if (prevEntry == null) {
             try {
-                Weblogger roller = WebloggerFactory.getWeblogger();
-                WeblogEntryManager wmgr = roller.getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 prevEntry = wmgr.getPreviousEntry(currEntry, null, locale);
                 // make sure that entry is published and not to future
                 if (prevEntry != null && prevEntry.getPubTime().after(new Date())

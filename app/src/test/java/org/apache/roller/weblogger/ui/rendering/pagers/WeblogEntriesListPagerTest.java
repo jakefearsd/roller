@@ -27,13 +27,11 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -42,7 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -76,17 +73,34 @@ class WeblogEntriesListPagerTest {
         return list;
     }
 
-    private static void withEntryManager(WeblogEntryManager manager, Runnable body) {
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger weblogger = mock(Weblogger.class);
-            when(weblogger.getWeblogEntryManager()).thenReturn(manager);
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            body.run();
-        }
+    /** The facade the pager under test is constructed with; set per test by {@link #withEntryManager}. */
+    private Weblogger weblogger;
+
+    /**
+     * Runs the body with {@link #weblogger} answering with the supplied manager.
+     * Nothing is installed statically: the pager takes the facade in its
+     * constructor (plan Task 11).
+     */
+    private void withEntryManager(WeblogEntryManager manager, Runnable body) {
+        weblogger = mock(Weblogger.class);
+        when(weblogger.getWeblogEntryManager()).thenReturn(manager);
+        body.run();
+    }
+
+    @Test
+    void entriesComeFromTheInjectedFacadesEntryManager() throws Exception {
+        WeblogEntryManager manager = mock(WeblogEntryManager.class);
+        when(manager.getWeblogEntries(any())).thenReturn(entries(2));
+
+        withEntryManager(manager, () -> {
+            assertEquals(2, pager(0, -1).getItems().size(),
+                    "the injected manager's entries are the page");
+        });
+        verify(manager).getWeblogEntries(any());
     }
 
     private WeblogEntriesListPager pager(int pageNum, int sinceDays) {
-        return new WeblogEntriesListPager(urlStrategy, BASE_URL, new Weblog(), null, null,
+        return new WeblogEntriesListPager(urlStrategy, weblogger, BASE_URL, new Weblog(), null, null,
                 null, "en", sinceDays, pageNum, LENGTH);
     }
 
@@ -166,7 +180,7 @@ class WeblogEntriesListPagerTest {
         WeblogEntryManager manager = mock(WeblogEntryManager.class);
         when(manager.getWeblogEntries(any())).thenReturn(List.of());
 
-        withEntryManager(manager, () -> new WeblogEntriesListPager(urlStrategy, BASE_URL,
+        withEntryManager(manager, () -> new WeblogEntriesListPager(urlStrategy, weblogger, BASE_URL,
                 queryWeblog, queryUser, "Java", List.of("testing"), "en", -1, 0, LENGTH));
 
         ArgumentCaptor<WeblogEntrySearchCriteria> criteria =

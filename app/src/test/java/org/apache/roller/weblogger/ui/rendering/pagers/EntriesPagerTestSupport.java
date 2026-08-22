@@ -42,9 +42,13 @@ import static org.mockito.Mockito.when;
  *
  * <p>Those pagers reach the business tier twice on construction: once through
  * {@code WebloggerRuntimeConfig} for the site page-size ceiling, and once
- * through the {@link WeblogEntryManager} for the entries themselves. Both go via
- * the {@code WebloggerFactory} static, so a single scoped static mock covers
- * them and no container or database is needed.
+ * through the {@link WeblogEntryManager} for the entries themselves. The
+ * entries come from the {@link Weblogger} the pager is constructed with
+ * ({@link #weblogger}, plan Task 11); only the runtime-config read still goes
+ * through the {@code WebloggerFactory} static (plan Task 19), which is why
+ * {@link #withRuntimeConfig} installs a SEPARATE, properties-only facade there:
+ * a pager that regressed to locating its entry manager statically would find
+ * none and fail, rather than silently passing.
  */
 abstract class EntriesPagerTestSupport {
 
@@ -59,6 +63,17 @@ abstract class EntriesPagerTestSupport {
 
     final URLStrategy urlStrategy = mock(URLStrategy.class);
     final WeblogEntryManager entryManager = mock(WeblogEntryManager.class);
+
+    /**
+     * The facade a pager is constructed WITH (plan Task 11). Its entry manager
+     * is this fixture's {@link #entryManager}; nothing else is stubbed, so a
+     * pager that reached for any other manager would get null and fail loudly.
+     */
+    final Weblogger weblogger = mock(Weblogger.class);
+
+    {
+        when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
+    }
 
     /** A weblog pinned to UTC so date arithmetic in the tests is reproducible. */
     static Weblog weblog() {
@@ -79,12 +94,13 @@ abstract class EntriesPagerTestSupport {
     }
 
     /**
-     * Runs the body with WebloggerFactory answering with this fixture's entry
-     * manager and a runtime config that supplies site.pages.maxEntries.
+     * Runs the body with WebloggerFactory answering with a properties-only
+     * facade that supplies site.pages.maxEntries (the one read that is still
+     * static, plan Task 19). The entry manager is NOT reachable through it.
      */
     void withRuntimeConfig(Runnable body) {
         try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger weblogger = mock(Weblogger.class);
+            Weblogger runtimeConfigOnly = mock(Weblogger.class);
             PropertiesManager propertiesManager = mock(PropertiesManager.class);
             try {
                 when(propertiesManager.getProperty("site.pages.maxEntries"))
@@ -94,9 +110,8 @@ abstract class EntriesPagerTestSupport {
                 // getProperty declares this; stubbing a mock never actually throws.
                 throw new AssertionError("stubbing a mock must not throw", impossible);
             }
-            when(weblogger.getPropertiesManager()).thenReturn(propertiesManager);
-            when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+            when(runtimeConfigOnly.getPropertiesManager()).thenReturn(propertiesManager);
+            factory.when(WebloggerFactory::getWeblogger).thenReturn(runtimeConfigOnly);
             body.run();
         }
     }

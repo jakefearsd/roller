@@ -26,7 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -47,6 +46,7 @@ public class WeblogEntriesPreviewPager extends WeblogEntriesPermalinkPager {
     
     public WeblogEntriesPreviewPager(
             URLStrategy        strat,
+            Weblogger          weblogger,
             Weblog             weblog,
             String             locale,
             String             pageLink,
@@ -56,7 +56,7 @@ public class WeblogEntriesPreviewPager extends WeblogEntriesPermalinkPager {
             List<String>       tags,
             int                page) {
         
-        super(strat, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
+        super(strat, weblogger, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
     }
     
     
@@ -64,8 +64,7 @@ public class WeblogEntriesPreviewPager extends WeblogEntriesPermalinkPager {
     public Map<Date, List<WeblogEntryWrapper>> getEntries() {
         if (entries == null) {
             try {
-                Weblogger roller = WebloggerFactory.getWeblogger();
-                WeblogEntryManager wmgr = roller.getWeblogEntryManager();
+                WeblogEntryManager wmgr = weblogger.getWeblogEntryManager();
                 currEntry = wmgr.getWeblogEntryByAnchor(weblog, entryAnchor);
                 if (currEntry != null) {
 

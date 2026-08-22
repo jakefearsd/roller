@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
@@ -47,6 +48,7 @@ public class WeblogEntriesLatestPager extends AbstractWeblogEntriesPager {
     
     public WeblogEntriesLatestPager(
             URLStrategy        strat,
+            Weblogger          weblogger,
             Weblog             weblog,
             String             locale,
             String             pageLink,
@@ -56,7 +58,7 @@ public class WeblogEntriesLatestPager extends AbstractWeblogEntriesPager {
             List<String>       tags,
             int                page) {
         
-        super(strat, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
+        super(strat, weblogger, weblog, locale, pageLink, entryAnchor, dateString, catName, tags, page);
         
         // initialize the pager collection
         getEntries();

@@ -25,11 +25,9 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.URLStrategy;
 import org.apache.roller.weblogger.business.UserManager;
 import org.apache.roller.weblogger.business.Weblogger;
-import org.apache.roller.weblogger.business.WebloggerFactory;
 import org.apache.roller.weblogger.pojos.User;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -41,7 +39,6 @@ import static org.mockito.ArgumentMatchers.anyChar;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -70,13 +67,32 @@ class UsersPagerTest {
         return list;
     }
 
-    private static void withUserManager(UserManager manager, Runnable body) {
-        try (MockedStatic<WebloggerFactory> factory = mockStatic(WebloggerFactory.class)) {
-            Weblogger weblogger = mock(Weblogger.class);
-            when(weblogger.getUserManager()).thenReturn(manager);
-            factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
-            body.run();
-        }
+    /** The facade the pager under test is constructed with; set per test by {@link #withUserManager}. */
+    private Weblogger weblogger;
+
+    /**
+     * Runs the body with {@link #weblogger} answering with the supplied manager.
+     * Nothing is installed statically: the pager takes the facade in its
+     * constructor (plan Task 11), so a regression to static location would
+     * reach whatever -- if anything -- the JVM-wide shim holds, not this mock.
+     */
+    private void withUserManager(UserManager manager, Runnable body) {
+        weblogger = mock(Weblogger.class);
+        when(weblogger.getUserManager()).thenReturn(manager);
+        body.run();
+    }
+
+    @Test
+    void usersComeFromTheInjectedFacadesUserManager() throws Exception {
+        UserManager manager = mock(UserManager.class);
+        when(manager.getUsers(any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(users(2));
+
+        withUserManager(manager, () -> {
+            UsersPager pager = new UsersPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH);
+            assertEquals(2, pager.getItems().size(), "the injected manager's users are the page");
+        });
+        verify(manager).getUsers(any(), any(), any(), anyInt(), anyInt());
     }
 
     @Test
@@ -86,7 +102,7 @@ class UsersPagerTest {
                 .thenReturn(users(LENGTH));
 
         withUserManager(manager, () -> {
-            UsersPager pager = new UsersPager(urlStrategy, BASE_URL, "en", -1, 0, LENGTH);
+            UsersPager pager = new UsersPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH);
 
             assertEquals(LENGTH, pager.getItems().size());
             assertFalse(pager.hasMoreItems(),
@@ -102,7 +118,7 @@ class UsersPagerTest {
                 .thenReturn(users(LENGTH + 1));
 
         withUserManager(manager, () -> {
-            UsersPager pager = new UsersPager(urlStrategy, BASE_URL, "en", -1, 0, LENGTH);
+            UsersPager pager = new UsersPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH);
 
             assertEquals(LENGTH, pager.getItems().size(),
                     "The extra probe row must not be rendered");
@@ -117,7 +133,7 @@ class UsersPagerTest {
         when(manager.getUsers(any(), any(), any(), anyInt(), anyInt())).thenReturn(users(0));
 
         withUserManager(manager, () ->
-                new UsersPager(urlStrategy, BASE_URL, "en", -1, 2, LENGTH));
+                new UsersPager(urlStrategy, weblogger, BASE_URL, "en", -1, 2, LENGTH));
 
         ArgumentCaptor<Integer> offset = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> max = ArgumentCaptor.forClass(Integer.class);
@@ -136,7 +152,7 @@ class UsersPagerTest {
                 .thenThrow(new WebloggerException("database is down"));
 
         withUserManager(manager, () -> {
-            UsersPager pager = new UsersPager(urlStrategy, BASE_URL, "en", -1, 0, LENGTH);
+            UsersPager pager = new UsersPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH);
 
             assertTrue(pager.getItems().isEmpty(),
                     "A failed lookup must yield an empty list, never null");
@@ -151,10 +167,10 @@ class UsersPagerTest {
         when(manager.getUsers(any(), any(), any(), anyInt(), anyInt())).thenReturn(users(2));
 
         withUserManager(manager, () -> {
-            assertNull(new UsersPager(urlStrategy, BASE_URL, "en", -1, 0, LENGTH).getPrevLink(),
+            assertNull(new UsersPager(urlStrategy, weblogger, BASE_URL, "en", -1, 0, LENGTH).getPrevLink(),
                     "Page 0 of the plain directory has nothing before it");
             assertEquals(BASE_URL + "?page=0",
-                    new UsersPager(urlStrategy, BASE_URL, "en", -1, 1, LENGTH).getPrevLink(),
+                    new UsersPager(urlStrategy, weblogger, BASE_URL, "en", -1, 1, LENGTH).getPrevLink(),
                     "Page 1 of the plain directory steps back to page 0 with no letter");
         });
     }
@@ -165,7 +181,7 @@ class UsersPagerTest {
         when(manager.getUsersByLetter(anyChar(), anyInt(), anyInt())).thenReturn(users(2));
 
         withUserManager(manager, () -> {
-            UsersPager pager = new UsersPager(urlStrategy, BASE_URL, "a", "en", -1, 0, LENGTH);
+            UsersPager pager = new UsersPager(urlStrategy, weblogger, BASE_URL, "a", "en", -1, 0, LENGTH);
 
             assertEquals(2, pager.getItems().size());
         });
@@ -180,7 +196,7 @@ class UsersPagerTest {
                 .thenReturn(users(LENGTH + 1));
 
         withUserManager(manager, () -> {
-            UsersPager pager = new UsersPager(urlStrategy, BASE_URL, "a", "en", -1, 0, LENGTH);
+            UsersPager pager = new UsersPager(urlStrategy, weblogger, BASE_URL, "a", "en", -1, 0, LENGTH);
 
             String next = pager.getNextLink();
             assertNotNull(next, "There is another page of A users");
@@ -197,7 +213,7 @@ class UsersPagerTest {
         when(manager.getUsersByLetter(anyChar(), anyInt(), anyInt())).thenReturn(users(LENGTH));
 
         withUserManager(manager, () -> {
-            UsersPager pager = new UsersPager(urlStrategy, BASE_URL, "a", "en", -1, 0, LENGTH);
+            UsersPager pager = new UsersPager(urlStrategy, weblogger, BASE_URL, "a", "en", -1, 0, LENGTH);
 
             assertNull(pager.getNextLink(),
                     "The letter listing must stop offering pages when the letter runs out");
@@ -210,7 +226,7 @@ class UsersPagerTest {
         when(manager.getUsersByLetter(anyChar(), anyInt(), anyInt())).thenReturn(users(2));
 
         withUserManager(manager, () -> {
-            UsersPager pager = new UsersPager(urlStrategy, BASE_URL, "a", "en", -1, 0, LENGTH);
+            UsersPager pager = new UsersPager(urlStrategy, weblogger, BASE_URL, "a", "en", -1, 0, LENGTH);
 
             assertNull(pager.getPrevLink(),
                     "Page 0 has nothing before it; the guard is page-1 >= 0");
@@ -223,7 +239,7 @@ class UsersPagerTest {
         when(manager.getUsersByLetter(anyChar(), anyInt(), anyInt())).thenReturn(users(2));
 
         withUserManager(manager, () -> {
-            UsersPager pager = new UsersPager(urlStrategy, BASE_URL, "a", "en", -1, 1, LENGTH);
+            UsersPager pager = new UsersPager(urlStrategy, weblogger, BASE_URL, "a", "en", -1, 1, LENGTH);
 
             String prev = pager.getPrevLink();
             assertNotNull(prev, "Page 1 can go back to page 0");

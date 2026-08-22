@@ -99,7 +99,7 @@ public class PreviewPageModel extends PageModel {
         
         if (anchor != null) {
             return new WeblogEntriesPreviewPager(
-                    urlStrategy,
+                    urlStrategy, weblogger,
                     previewRequest.getWeblog(),
                     previewRequest.getLocale(),
                     previewRequest.getWeblogPageName(),
@@ -110,7 +110,7 @@ public class PreviewPageModel extends PageModel {
                     previewRequest.getPageNum());
         } else {
             return new WeblogEntriesLatestPager(
-                    urlStrategy,
+                    urlStrategy, weblogger,
                     previewRequest.getWeblog(),
                     previewRequest.getLocale(),
                     previewRequest.getWeblogPageName(),

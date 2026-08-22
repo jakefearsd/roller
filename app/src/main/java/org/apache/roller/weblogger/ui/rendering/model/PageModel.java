@@ -384,7 +384,7 @@ public class PageModel implements Model {
         // determine which mode to use
         if (pageRequest.getWeblogAnchor() != null) {
             return new WeblogEntriesPermalinkPager(
-                    urlStrategy,
+                    urlStrategy, weblogger,
                     weblog,
                     pageRequest.getLocale(),
                     pageRequest.getWeblogPageName(),
@@ -395,7 +395,7 @@ public class PageModel implements Model {
                     pageRequest.getPageNum());
         } else if (dateString != null && dateString.length() == 8) {
             return new WeblogEntriesDayPager(
-                    urlStrategy,
+                    urlStrategy, weblogger,
                     weblog,
                     pageRequest.getLocale(),
                     pageRequest.getWeblogPageName(),
@@ -406,7 +406,7 @@ public class PageModel implements Model {
                     pageRequest.getPageNum());
         } else if (dateString != null && dateString.length() == 6) {
             return new WeblogEntriesMonthPager(
-                    urlStrategy,
+                    urlStrategy, weblogger,
                     weblog,
                     pageRequest.getLocale(),
                     pageRequest.getWeblogPageName(),
@@ -418,7 +418,7 @@ public class PageModel implements Model {
           
         } else {
             return new WeblogEntriesLatestPager(
-                    urlStrategy,
+                    urlStrategy, weblogger,
                     weblog,
                     pageRequest.getLocale(),
                     pageRequest.getWeblogPageName(),

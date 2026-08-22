@@ -24,7 +24,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -38,6 +38,9 @@ import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
     
     
+    /** The business tier this pager queries; handed in by the model that built it (plan Task 11). */
+    private final Weblogger weblogger;
+
     private String locale = null;
     private int sinceDays = -1;
     
@@ -56,6 +59,7 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
     
     public WeblogEntriesListPager(
             URLStrategy    strat,
+            Weblogger      weblogger,
             String         baseUrl,
             Weblog         queryWeblog,
             User           queryUser,
@@ -67,6 +71,7 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
             int            length) {
         
         super(strat, baseUrl, pageNum, length);
+        this.weblogger = weblogger;
         
         // store the data
         this.queryWeblog = queryWeblog;
@@ -104,7 +109,7 @@ public class WeblogEntriesListPager extends AbstractPager<WeblogEntryWrapper> {
         wesc.setOffset(offset);
         wesc.setMaxResults(limit);
 
-        return WebloggerFactory.getWeblogger().getWeblogEntryManager()
+        return weblogger.getWeblogEntryManager()
                 .getWeblogEntries(wesc).stream()
                 .map(e -> WeblogEntryWrapper.wrap(e, urlStrategy))
                 .toList();

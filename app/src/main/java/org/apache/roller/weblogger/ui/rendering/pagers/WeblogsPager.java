@@ -24,7 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
@@ -36,6 +36,9 @@ import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
 public class WeblogsPager extends AbstractPager<WeblogWrapper> {
     
     
+    /** The business tier this pager queries; handed in by the model that built it (plan Task 11). */
+    private final Weblogger weblogger;
+
     private String letter = null;
     private int sinceDays = -1;
     
@@ -46,6 +49,7 @@ public class WeblogsPager extends AbstractPager<WeblogWrapper> {
     
     public WeblogsPager(
             URLStrategy    strat,
+            Weblogger      weblogger,
             String         baseUrl,
             String         locale,
             int            sinceDays,
@@ -53,6 +57,7 @@ public class WeblogsPager extends AbstractPager<WeblogWrapper> {
             int            length) {
         
         super(strat, baseUrl, page, length);
+        this.weblogger = weblogger;
         
         this.sinceDays = sinceDays;
         
@@ -63,6 +68,7 @@ public class WeblogsPager extends AbstractPager<WeblogWrapper> {
     
     public WeblogsPager(
             URLStrategy    strat,
+            Weblogger      weblogger,
             String         baseUrl,
             String         letter,
             String         locale,
@@ -71,6 +77,7 @@ public class WeblogsPager extends AbstractPager<WeblogWrapper> {
             int            length) {
         
         super(strat, baseUrl, page, length);
+        this.weblogger = weblogger;
         
         this.letter = letter;
         this.sinceDays = sinceDays;
@@ -102,7 +109,7 @@ public class WeblogsPager extends AbstractPager<WeblogWrapper> {
             startDate = cal.getTime();
         }
 
-        WeblogManager wmgr = WebloggerFactory.getWeblogger().getWeblogManager();
+        WeblogManager wmgr = weblogger.getWeblogManager();
 
         List<Weblog> rawWeblogs = letter == null
                 ? wmgr.getWeblogs(Boolean.TRUE, Boolean.TRUE, startDate, null, offset, limit)

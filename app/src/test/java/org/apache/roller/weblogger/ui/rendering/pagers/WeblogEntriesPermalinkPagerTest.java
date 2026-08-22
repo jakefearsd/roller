@@ -61,7 +61,7 @@ class WeblogEntriesPermalinkPagerTest extends EntriesPagerTestSupport {
     }
 
     private WeblogEntriesPermalinkPager pager(String anchor) {
-        return new WeblogEntriesPermalinkPager(urlStrategy, weblog(), "en_US", null, anchor,
+        return new WeblogEntriesPermalinkPager(urlStrategy, weblogger, weblog(), "en_US", null, anchor,
                 null, null, null, 0);
     }
 
@@ -323,7 +323,7 @@ class WeblogEntriesPermalinkPagerTest extends EntriesPagerTestSupport {
                 .thenThrow(new WebloggerException("database is down"));
 
         withRuntimeConfig(() -> {
-            WeblogEntriesPreviewPager pager = new WeblogEntriesPreviewPager(urlStrategy,
+            WeblogEntriesPreviewPager pager = new WeblogEntriesPreviewPager(urlStrategy, weblogger,
                     weblog(), "en_US", null, "draft", null, null, null, 0);
 
             assertNull(pager.getEntries(),
@@ -369,7 +369,7 @@ class WeblogEntriesPermalinkPagerTest extends EntriesPagerTestSupport {
                         WeblogEntry.PubStatus.DRAFT));
 
         withRuntimeConfig(() -> {
-            WeblogEntriesPreviewPager pager = new WeblogEntriesPreviewPager(urlStrategy,
+            WeblogEntriesPreviewPager pager = new WeblogEntriesPreviewPager(urlStrategy, weblogger,
                     weblog(), "en_US", null, "secret", null, null, null, 0);
 
             assertNotNull(pager.getEntries(), "A preview must render a draft");
@@ -399,7 +399,7 @@ class WeblogEntriesPermalinkPagerTest extends EntriesPagerTestSupport {
 
         withRuntimeConfig(() -> {
             Date before = new Date();
-            WeblogEntriesPreviewPager pager = new WeblogEntriesPreviewPager(urlStrategy,
+            WeblogEntriesPreviewPager pager = new WeblogEntriesPreviewPager(urlStrategy, weblogger,
                     weblog(), "en_US", null, "draft", null, null, null, 0);
 
             Map<Date, ?> entries = pager.getEntries();
@@ -416,7 +416,7 @@ class WeblogEntriesPermalinkPagerTest extends EntriesPagerTestSupport {
         when(entryManager.getWeblogEntryByAnchor(any(), anyString())).thenReturn(null);
 
         withRuntimeConfig(() -> {
-            WeblogEntriesPreviewPager pager = new WeblogEntriesPreviewPager(urlStrategy,
+            WeblogEntriesPreviewPager pager = new WeblogEntriesPreviewPager(urlStrategy, weblogger,
                     weblog(), "en_US", null, "does-not-exist", null, null, null, 0);
 
             assertNull(pager.getEntries());

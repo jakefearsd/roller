@@ -52,7 +52,7 @@ import static org.mockito.Mockito.when;
 class WeblogEntriesLatestPagerTest extends EntriesPagerTestSupport {
 
     private WeblogEntriesLatestPager pager(int page) {
-        return new WeblogEntriesLatestPager(urlStrategy, weblog(), "en_US", null, null, null,
+        return new WeblogEntriesLatestPager(urlStrategy, weblogger, weblog(), "en_US", null, null, null,
                 null, null, page);
     }
 
@@ -188,7 +188,7 @@ class WeblogEntriesLatestPagerTest extends EntriesPagerTestSupport {
         org.apache.roller.weblogger.pojos.Weblog weblog = weblog();
         when(entryManager.getWeblogEntryObjectMap(any())).thenReturn(Map.of());
 
-        withRuntimeConfig(() -> new WeblogEntriesLatestPager(urlStrategy, weblog, "en_US", null,
+        withRuntimeConfig(() -> new WeblogEntriesLatestPager(urlStrategy, weblogger, weblog, "en_US", null,
                 null, null, "Java", List.of("testing"), 0));
 
         ArgumentCaptor<WeblogEntrySearchCriteria> criteria =

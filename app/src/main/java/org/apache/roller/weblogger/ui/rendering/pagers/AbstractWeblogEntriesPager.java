@@ -37,7 +37,7 @@ import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.weblogger.business.URLStrategy;
-import org.apache.roller.weblogger.business.WebloggerFactory;
+import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.util.I18nMessages;
 
 /**
@@ -57,6 +57,8 @@ public abstract class AbstractWeblogEntriesPager implements WeblogEntriesPager {
     
     final Weblog weblog;
     final String locale;
+    /** The business tier this pager queries; handed in by the model that built it (plan Task 11). */
+    final Weblogger weblogger;
     final String pageLink;
     final String entryAnchor;
     final String dateString;
@@ -71,6 +73,7 @@ public abstract class AbstractWeblogEntriesPager implements WeblogEntriesPager {
     
     public AbstractWeblogEntriesPager(
             URLStrategy        strat,
+            Weblogger          weblogger,
             Weblog             weblog,
             String             locale,
             String             pageLink,
@@ -81,6 +84,7 @@ public abstract class AbstractWeblogEntriesPager implements WeblogEntriesPager {
             int                page) {
         
         this.urlStrategy = strat;
+        this.weblogger = weblogger;
         
         this.weblog = weblog;
         this.locale = locale;
@@ -266,7 +270,7 @@ public abstract class AbstractWeblogEntriesPager implements WeblogEntriesPager {
         wesc.setOffset(offset);
         wesc.setMaxResults(length + 1);
         Map<Date, List<WeblogEntry>> mmap =
-                WebloggerFactory.getWeblogger().getWeblogEntryManager().getWeblogEntryObjectMap(wesc);
+                weblogger.getWeblogEntryManager().getWeblogEntryObjectMap(wesc);
 
         boolean moreEntries = false;
 

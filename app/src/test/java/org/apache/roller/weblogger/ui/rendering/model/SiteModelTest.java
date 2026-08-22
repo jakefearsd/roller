@@ -95,15 +95,20 @@ class SiteModelTest {
         when(weblogger.getWeblogEntryManager()).thenReturn(entryManager);
         when(weblogger.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
 
-        // The static shim is still mocked -- and still has to answer with the
-        // SAME facade -- because what the model builds still reaches it: the
-        // pagers (UsersPager/WeblogsPager/WeblogEntriesListPager, plan Task
-        // 11), the pojo getters the wrappers delegate to (WeblogPermission
-        // .getWeblog()/getUser(), Stage D) and WebloggerRuntimeConfig (Task
-        // 19). The model itself no longer does; PageModelTest/URLModelTest
-        // prove that shape with a separate properties-only facade.
+        // The static shim is still mocked, but with a SEPARATE facade that
+        // deliberately has NO entry manager: the pagers the model builds now
+        // take the facade from the model (plan Task 11), so a pager that
+        // regressed to static location would find nothing and fail. What the
+        // static facade still answers for is the pojo getters the wrappers
+        // delegate to -- WeblogPermission.getWeblog()/getUser() resolve by
+        // name through the weblog/user managers (Stage D) -- and
+        // WebloggerRuntimeConfig's property reads (Task 19).
+        Weblogger staticallyReachable = mock(Weblogger.class);
+        when(staticallyReachable.getUserManager()).thenReturn(userManager);
+        when(staticallyReachable.getWeblogManager()).thenReturn(weblogManager);
+        when(staticallyReachable.getPropertiesManager()).thenReturn(mock(PropertiesManager.class));
         factory = mockStatic(WebloggerFactory.class);
-        factory.when(WebloggerFactory::getWeblogger).thenReturn(weblogger);
+        factory.when(WebloggerFactory::getWeblogger).thenReturn(staticallyReachable);
 
         previousRelativeContextURL = WebloggerRuntimeConfig.getRelativeContextURL();
         WebloggerRuntimeConfig.setRelativeContextURL("/roller");
