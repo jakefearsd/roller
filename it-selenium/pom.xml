@@ -95,6 +95,29 @@ limitations under the License.
              run it before shipping anything that touches routing. -->
         <it.context.path/>
 
+        <!-- How many test CLASSES, and therefore how many Chromes, run at
+             once. The default matches junit-platform.properties' own value and
+             is tuned for a developer machine; see that file for the reasoning.
+
+             It is a property rather than a constant because the number is a
+             statement about the MACHINE, not about the suite, and CI runs on a
+             much smaller one. A GitHub-hosted runner inherited the 16-core
+             default silently until the runner image moved from
+             ubuntu24/20260810.271 to 20260816.277, after which the nightly
+             failed every night: Chrome renderer timeouts scattered across a
+             different handful of classes each run, several reported with a
+             negative remaining deadline (the command's timeout had expired
+             before the browser was scheduled at all), which is starvation
+             rather than a slow page. .github/workflows/main.yml passes a lower
+             value; ItCiWorkflowTest pins that it does.
+
+             Overriding it on the command line only works because failsafe
+             forwards it into the forked JVM as a JUnit configuration
+             parameter (see systemPropertyVariables below); a -D on the Maven
+             command line does not reach a forked JVM by itself, and
+             junit-platform.properties would win. -->
+        <it.parallelism>4</it.parallelism>
+
         <!-- ONE ID PER RUN, stamped into every process, file, directory and
              container this module creates. It is what makes cleanup
              identity-based rather than pidfile-based: an app JVM carries it as
@@ -484,6 +507,14 @@ limitations under the License.
                              it is read when the HttpClient classes initialise, so it must be set on
                              the failsafe-forked JVM itself, not from test code. -->
                         <jdk.httpclient.allowRestrictedHeaders>host</jdk.httpclient.allowRestrictedHeaders>
+                        <!-- JUnit resolves configuration parameters from system
+                             properties BEFORE junit-platform.properties, so this
+                             is what makes -Dit.parallelism=<n> actually take
+                             effect. It has to be set here, on the forked JVM,
+                             rather than relying on the Maven command line: the
+                             fork does not inherit it. See the it.parallelism
+                             property above for why CI needs a smaller value. -->
+                        <junit.jupiter.execution.parallel.config.fixed.parallelism>${it.parallelism}</junit.jupiter.execution.parallel.config.fixed.parallelism>
                     </systemPropertyVariables>
                     <trimStackTrace>false</trimStackTrace>
                 </configuration>

@@ -151,8 +151,37 @@ jobs:
           cache: maven
 
       # Chrome ships on ubuntu-latest; RollerIT runs it headless.
+      #
+      # -Dit.parallelism: a hosted runner is not the 16-core developer box
+      # junit-platform.properties' default of 4 was tuned for, and it inherited
+      # that number silently until the runner image moved to
+      # ubuntu24/20260816.277, after which every nightly failed with Chrome
+      # renderer timeouts spread across a different handful of classes each run
+      # -- several with a negative remaining deadline, i.e. the browser was
+      # never scheduled inside its own timeout. Fewer concurrent browsers costs
+      # wall clock on a job that has no deadline pressure (45-minute timeout,
+      # runs nightly) and buys back a suite that finishes. ItCiWorkflowTest
+      # pins that this stays below the local default.
       - name: Run browser integration tests
-        run: mvn -V -ntp verify -Pit
+        run: mvn -V -ntp verify -Pit -Dit.parallelism=2
+
+      # The app log lives only on the runner and dies with it, which is why six
+      # consecutive red nightlies produced nothing anyone could read afterwards
+      # -- and why a separate, genuinely code-shaped failure on this same job
+      # (the 403 on createUser!save.rol, CLAUDE.md's "MECHANISM NOT
+      # ESTABLISHED") has stayed unexplained. A Selenium stack trace says what
+      # the browser could not do; app-<run id>.log is the only record of what
+      # the SERVER did.
+      - name: Upload IT diagnostics
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: it-diagnostics
+          path: |
+            it-selenium/target/it-work/**
+            it-selenium/target/failsafe-reports/**
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Publish IT Report
         # Third-party: pinned to a commit SHA, not the mutable v2 tag.
