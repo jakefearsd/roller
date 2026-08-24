@@ -1332,11 +1332,17 @@ excused whatever its type.
 - **`.empty-state`/`.empty-state-title`/`.empty-state-body`** are the
   "invitations, not shrugs" signature (one 600/16px title, one `--ink-soft`
   sentence, at most one primary-button action, icon-free) on Entries/Pages/
-  Submissions/MediaFileView. `Pages.jsp`/`Submissions.jsp` render it
-  as the lone `<tr>` in an otherwise-empty table body, which makes its `<td>`
-  the tbody's first-child — the same structural hook the table header's
-  caps-label rule keys off — so `.empty-state` resets those inherited
-  properties rather than trusting every future caller to remember.
+  Submissions/MediaFileView. **`Categories.jsp` is the one caller that still
+  renders it INSIDE the table** — as the lone `<tr>` of an otherwise-empty
+  tbody, which makes its `<td>` the tbody's first-child, the same structural
+  hook the table header's caps-label rule keys off. That is why
+  `.empty-state` carries `font-weight`/`text-transform`/`letter-spacing`
+  resets: they are load-bearing for that one caller, not decoration, and
+  deleting them because "the empty states are siblings now" breaks Categories
+  silently. `Pages.jsp`/`Submissions.jsp` used to be in-table too and are the
+  reason the resets were written; both now render the block as a sibling of
+  the table in a `<c:otherwise>`, so check the caller before assuming
+  either shape.
 - `roller-ui/scripts/ajax-user.js` is pulled in with `<%@ include %>` (a
   translation-time include), so JSP scriptlets inside it **are** interpolated —
   it is not a static resource despite the `.js` extension. `UserAdmin.jsp`'s

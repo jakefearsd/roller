@@ -127,7 +127,7 @@
     <c:otherwise>
 
     <div class="empty-state">
-        <p class="empty-state-title"><spring:message code="submissions.none"/></p>
+        <p class="empty-state-title"><spring:message code="empty.inquiries.title"/></p>
         <p class="empty-state-body"><spring:message code="empty.inquiries.body"/></p>
     </div>
 

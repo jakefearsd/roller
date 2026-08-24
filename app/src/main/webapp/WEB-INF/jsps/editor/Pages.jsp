@@ -116,7 +116,7 @@
     <c:otherwise>
 
     <div class="empty-state">
-        <p class="empty-state-title"><spring:message code="weblogPagesForm.noneFound"/></p>
+        <p class="empty-state-title"><spring:message code="empty.pages.title"/></p>
         <p class="empty-state-body"><spring:message code="empty.pages.body"/></p>
         <a href="${addUrl}" class="btn btn-primary">
             <spring:message code="weblogPagesForm.add"/>
