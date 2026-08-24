@@ -1,6 +1,6 @@
 # Retire the Static Service Locator — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Every dependency on the business tier is visible in a constructor.
 `WebloggerFactory` — the process-global static through which 73 main-source
@@ -117,22 +117,22 @@ arrival — and its javadoc must say so. **D7.**
   carrying `[image]`, `[gallery]`, `[map]`, `[faq]`, a category, tags, a
   featured image; one published `WeblogPage`).
 
-- [ ] **Step 1:** For each of `journal`, `portfolio`, `travel`: render the
+- [x] **Step 1:** For each of `journal`, `portfolio`, `travel`: render the
   home page, a permalink, a category page, a tag page, a date archive, a
   static page (`/<handle>/<slug>`), and `searchresults` (via `SearchServlet`)
   through the real servlets; also render `frontpage`'s home (needs
   `site.frontpage.weblog.handle`), the two Atom feeds, and the error page
   (force a 404 through `PageServlet`).
-- [ ] **Step 2:** Assert on each body: no match for
+- [x] **Step 2:** Assert on each body: no match for
   `\$!?\{?[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*` **outside**
   `<script>`/`<style>` blocks (strip those first — inline JS may legitimately
   use `$x` identifiers), and no literal `#showX(`/`#foreach`/`#if` text.
   Collect all failures per page and report them together.
-- [ ] **Step 3:** Prove it bites: temporarily rename
+- [x] **Step 3:** Prove it bites: temporarily rename
   `WeblogEntryWrapper.getDisplayContent` and watch every `_day.vm` page fail
   with `$entry.displayContent` in the body; restore. Record in the javadoc
   that this was done.
-- [ ] **Step 4:** `mvn -pl app test -Dtest=ThemeReferenceLeakTest` green.
+- [x] **Step 4:** `mvn -pl app test -Dtest=ThemeReferenceLeakTest` green.
 
 ### Task 2: The two guard tests
 
@@ -141,7 +141,7 @@ arrival — and its javadoc must say so. **D7.**
 - Test: `app/src/test/java/org/apache/roller/weblogger/boot/ContextRefreshDoesNotBootstrapTest.java`
 - Modify: `business/WebloggerFactory.java` (javadoc: deprecated, deleted by this plan's Task 20; the allowlist is the migration ledger)
 
-- [ ] **Step 1 — `StaticServiceLocatorTest`.** Three assertions, each a
+- [x] **Step 1 — `StaticServiceLocatorTest`.** Three assertions, each a
   walk of `app/src/main/java`:
   1. The set of files containing the token `WebloggerFactory` (excluding
      `WebloggerFactory.java` itself and the four javadoc-only mentions:
@@ -162,7 +162,7 @@ arrival — and its javadoc must say so. **D7.**
      pojo/wrapper files) and Stage D empties it.
   The failure message for each names the file and says what to do (add to /
   remove from the ledger, or inject it).
-- [ ] **Step 2 — `ContextRefreshDoesNotBootstrapTest`.** Start
+- [x] **Step 2 — `ContextRefreshDoesNotBootstrapTest`.** Start
   `RollerApplication` with `SpringApplicationBuilder(...).properties(
   "roller.lifecycle.enabled=false", "server.port=0")`, refresh, and assert
   `beanFactory.containsSingleton(name)` is **false** for every bean name
@@ -173,7 +173,7 @@ arrival — and its javadoc must say so. **D7.**
   red the moment a future injection point forgets `@Lazy`. `RollerTestBootstrap`
   has already pointed `WebloggerConfig` at the test DB, so the context's
   static config loads fine; the business tier must simply never be asked for.
-- [ ] **Step 3:** Both green; commit message names them as the wave's ledger
+- [x] **Step 3:** Both green; commit message names them as the wave's ledger
   and invariant.
 
 ### Task 3: `WebloggerProvider` as the bean; the two bootstrap sites
@@ -191,19 +191,19 @@ the provider's own `bootstrap()` — so nothing else changes behaviour.
 - Tests: `SpringWebloggerProviderTest`, `RollerLifecycleTest`, `InstallControllerTest` (or wherever install flows are covered — they use `MockWeblogger.installNotBootstrapped()` today and will instead pass a mock `WebloggerProvider` with `isBootstrapped()` stubbed), `ApiTokenAuthFilterTest`
 - Ledger: remove `boot/RollerLifecycle.java`, `boot/SecurityConfig.java`, `ui/controllers/core/InstallController.java`, `ui/restapi/auth/ApiTokenAuthFilter.java` from `ALLOWED`
 
-- [ ] **Step 1:** Failing tests: `SpringWebloggerProviderTest` —
+- [x] **Step 1:** Failing tests: `SpringWebloggerProviderTest` —
   `isBootstrapped()` false before, true after `bootstrap()`; `getWeblogger()`
   throws before; `bootstrap()` refuses when `!WebloggerStartup.isPrepared()`;
   `bootstrap()` is idempotent; `initialize()` was called exactly once
   (spy the `Weblogger` bean in a test `@Configuration`).
-- [ ] **Step 2:** Implement; `RollerLifecycleTest` constructs the lifecycle
+- [x] **Step 2:** Implement; `RollerLifecycleTest` constructs the lifecycle
   with a mock provider and asserts the call order `prepare → bootstrap`, and
   that a `BootstrapException` from the provider is logged and leaves
   `running=true` exactly as today.
-- [ ] **Step 3:** `InstallController` tests: pre-bootstrap branches reachable
+- [x] **Step 3:** `InstallController` tests: pre-bootstrap branches reachable
   via a stubbed provider — no `installNotBootstrapped()` in these tests any
   more.
-- [ ] **Step 4:** `mvn -pl app test` green; ledger shrunk by 4.
+- [x] **Step 4:** `mvn -pl app test` green; ledger shrunk by 4.
 
 ---
 
@@ -223,9 +223,9 @@ rewrites the affected tests to pass the collaborator instead of
 - Tests: `VirtualHostRegistryTest`, `WeblogSharedTheme`/`WeblogCustomTheme` tests, `LuceneIndexManager` tests, `JPAWeblogManagerImplTest`.
 - Ledger: remove the 7 files.
 
-- [ ] Failing tests first for the theme constructors and the registry bean;
+- [x] Failing tests first for the theme constructors and the registry bean;
   substitutions are characterisation (existing tests pass unchanged).
-- [ ] `SpringWebloggerProviderTest.bootstrapBuildsTheFullGraphWithSingletons`
+- [x] `SpringWebloggerProviderTest.bootstrapBuildsTheFullGraphWithSingletons`
   still passes (the registry is now in the graph).
 
 ### Task 5: Background tasks
@@ -356,17 +356,17 @@ the wrappers' own nested `wrap`s of related objects) pass what they hold.
 This task **does not yet delete** the pojo getters — it only makes the
 wrappers hold what Stage D will need, and does the one behaviour change:
 
-- [ ] **Step 1 (D6, the failing test):** `PreviewUrlRenderingTest` — render a
+- [x] **Step 1 (D6, the failing test):** `PreviewUrlRenderingTest` — render a
   home page and a permalink through `PreviewServlet` with `?theme=journal`
   and assert `$model.weblog.absoluteURL`, `$entry.permalink` and an
   `$image.permalink` in the body carry the preview URL shape the installed
   `PreviewURLStrategy` produces. Watch it fail (today they carry the
   production shape).
-- [ ] **Step 2:** `WeblogWrapper.getURL/getAbsoluteURL` and
+- [x] **Step 2:** `WeblogWrapper.getURL/getAbsoluteURL` and
   `WeblogEntryWrapper.getPermalink` use `urlStrategy` (the field they already
   have); `MediaFileWrapper.getPermalink/getThumbnailURL/getSrcset/url(int)/webpUrl(int)`
   use the new field. Test green.
-- [ ] **Step 3:** Wrapper tests (`MediaFileWrapperTest`,
+- [x] **Step 3:** Wrapper tests (`MediaFileWrapperTest`,
   `SmallWrapperDelegationTest`, `WeblogEntryWrapperTest`,
   `WeblogWrapperDelegationTest`) drop `mockStatic`; `ThemeReferenceLeakTest`
   still green.
@@ -526,14 +526,14 @@ wrappers hold what Stage D will need, and does the one behaviour change:
 
 ### Task 18: The JSP sweep and the browser suite at both context paths
 
-- [ ] `grep -rn "actionWeblog\.\(absoluteURL\|theme\)\|\.permalink\|\.thumbnailURL\|\.creator\b\|\.inUse\|hasGlobalPermission\|perms\.weblog" app/src/main/webapp/WEB-INF/jsps` — every hit must be a `bean.*`/`urls.*`/explicit-attribute form.
-- [ ] `mvn verify -Pit` green; `mvn verify -Pit -Dit.context.path=roller`
+- [x] `grep -rn "actionWeblog\.\(absoluteURL\|theme\)\|\.permalink\|\.thumbnailURL\|\.creator\b\|\.inUse\|hasGlobalPermission\|perms\.weblog" app/src/main/webapp/WEB-INF/jsps` — every hit must be a `bean.*`/`urls.*`/explicit-attribute form.
+- [x] `mvn verify -Pit` green; `mvn verify -Pit -Dit.context.path=roller`
   green. `RouteSweepIT` is the acceptance test for every JSP touched in Tasks
   15–17 (a missing EL property is a 500, which the sweep catches as a
   non-200 — and a page that renders chrome with no tile is what the route
   markers catch). Also watch `ThemeIT`, `ThemeMatrixIT`, `GalleryIT`,
   `EditorSeoIT`, `UserAdminIT`, `CategoryIT`.
-- [ ] If a known flake fires (CLAUDE.md lists three), rerun once; a 403 on an
+- [x] If a known flake fires (CLAUDE.md lists three), rerun once; a 403 on an
   admin POST is traced, not rerun.
 
 ---
@@ -561,50 +561,50 @@ wrappers hold what Stage D will need, and does the one behaviour change:
 
 **D9.**
 
-- [ ] `TestUtils`: `private static volatile Weblogger weblogger`;
+- [x] `TestUtils`: `private static volatile Weblogger weblogger`;
   `setupWeblogger()` builds it once per JVM through
   `new SpringWebloggerProvider()` + `bootstrap()` (no static install);
   `public static Weblogger weblogger()` (throws if not set up — the message
   says "call `TestUtils.setupWeblogger()`"); `shutdownWeblogger()`.
-- [ ] `sed -i '' 's/WebloggerFactory\.getWeblogger()/TestUtils.weblogger()/g'`
+- [x] `sed -i '' 's/WebloggerFactory\.getWeblogger()/TestUtils.weblogger()/g'`
   over `app/src/test/java`, then fix imports (`WebloggerFactory` →
   `TestUtils` where not already imported). ~82 files; compile, then run the
   suite.
-- [ ] `MockWeblogger`: delete `install()`, `uninstall()`,
+- [x] `MockWeblogger`: delete `install()`, `uninstall()`,
   `installNotBootstrapped()`, `previousProvider`; it is a builder over a
   mocked facade. `MockWebloggerTest` shrinks accordingly. Any remaining
   `install()` caller is a class whose test was not rewritten in its own task
   — go back and do that, do not work around it here.
-- [ ] `ControllerTestFixture` (both copies): `LAZY_WEBLOGGER` forwards to a
+- [x] `ControllerTestFixture` (both copies): `LAZY_WEBLOGGER` forwards to a
   fixture-held `Supplier<Weblogger>` (`useWeblogger(...)`, default
   `TestUtils::weblogger`) — the install/setup tests set a mock provider
   instead.
-- [ ] `SpringWebloggerProvider.bootstrap()`: delete the transitional
+- [x] `SpringWebloggerProvider.bootstrap()`: delete the transitional
   `WebloggerFactory.installProvider(this)`. `WebloggerFactory.java` deleted.
   `RollerLifecycleTest`: no `MockWeblogger.installNotBootstrapped()`
   bracketing — it already uses a mock provider since Task 3.
-- [ ] `StaticServiceLocatorTest`: assertion 1 becomes "no main or test source
+- [x] `StaticServiceLocatorTest`: assertion 1 becomes "no main or test source
   references `WebloggerFactory`"; `ALLOWED` and `POJO_ALLOWED` deleted; the
   two named residuals remain.
-- [ ] `grep -rl "mockStatic(WebloggerFactory" app/src/test` empty;
+- [x] `grep -rl "mockStatic(WebloggerFactory" app/src/test` empty;
   `grep -rl WebloggerFactory app/src` empty.
-- [ ] `mvn -pl app verify` green (all gates); `bin/check-diff-coverage.sh`
+- [x] `mvn -pl app verify` green (all gates); `bin/check-diff-coverage.sh`
   against the range that will be pushed — expect green; if the
   parameter-threading churn in error paths trips it, apply CLAUDE.md's ruling
   (accept, say so, no coverage theatre).
 
 ### Task 21: CLAUDE.md and the spec
 
-- [ ] CLAUDE.md "Architecture Overview → DI Container": rewrite the paragraph
+- [x] CLAUDE.md "Architecture Overview → DI Container": rewrite the paragraph
   that says rendering servlets/models/pagers/tasks/`RollerHandlerInterceptor`
   "intentionally still go through the `WebloggerFactory` static shim" —
   they do not; describe the injection shapes table from the spec in two
   sentences, name the two residual statics and the guard test, and point at
   the Stage 2 follow-up.
-- [ ] CLAUDE.md "Testing Commands": `TestUtils.weblogger()` is how a test
+- [x] CLAUDE.md "Testing Commands": `TestUtils.weblogger()` is how a test
   reaches the tier; `MockWeblogger` is a builder; the `ContextRefreshDoesNotBootstrapTest`
   invariant.
-- [ ] Spec status → implemented; record the final measured numbers (files
+- [x] Spec status → implemented; record the final measured numbers (files
   touched, test files migrated) and any ruling made mid-wave.
 
 ## Post-implementation
