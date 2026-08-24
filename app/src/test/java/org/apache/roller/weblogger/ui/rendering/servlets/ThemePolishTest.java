@@ -202,4 +202,39 @@ class ThemePolishTest {
         assertTrue(!body.contains("<h3>"),
                 "the hit count must not be a heading:\n" + body);
     }
+
+    /**
+     * Every entry carried tags, every tag had a working archive page, and no
+     * bundled theme ever linked to one -- {@code #showEntryTags} was defined
+     * in weblog.vm and documented as custom-theme API, but no shipped theme
+     * called it, so a reader had no route from an entry to the rest of that
+     * subject and the tag archives were unreachable from the site itself.
+     *
+     * <p>Scoped to the permalink branch of each theme's {@code _day.vm}: the
+     * entry list is a scanning surface where a tag row competes with the
+     * titles, while the reading view is where a reader who just finished the
+     * piece is looking for more of the same.
+     */
+    @Test
+    void everyThemesPermalinkLinksTheEntrysTags() throws IOException {
+        List<String> offenders = new ArrayList<>();
+        for (Path template : themeFiles(".vm")) {
+            if (!"_day.vm".equals(template.getFileName().toString())) {
+                continue;
+            }
+            String src = read(template);
+            int permalink = src.indexOf("#if($model.permalink)");
+            if (permalink < 0) {
+                offenders.add(name(template) + ": no permalink branch to carry the tags");
+                continue;
+            }
+            int elseAt = src.indexOf("#else", permalink);
+            String branch = elseAt < 0 ? src.substring(permalink) : src.substring(permalink, elseAt);
+            if (!branch.contains("#showEntryTags")) {
+                offenders.add(name(template)
+                        + ": the permalink branch does not call #showEntryTags");
+            }
+        }
+        assertTrue(offenders.isEmpty(), String.join("\n  ", offenders));
+    }
 }

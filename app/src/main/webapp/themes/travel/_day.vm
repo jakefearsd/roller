@@ -32,6 +32,11 @@
             #end
         </p>
         <div class="tg-entry-content">$entry.displayContent</div>
+        ## The meta line runs above the content in this theme, so the tag
+        ## row lands here -- last in the article, either way.
+        #if(!$entry.tags.isEmpty())
+        <p class="tg-entry-tags">#showEntryTags($entry)</p>
+        #end
     </article>
     #end
 #else

@@ -34,6 +34,11 @@
                 &middot; <a href="$url.editEntry($entry.anchor)">Edit</a>
                 #end
             </p>
+            ## After the meta line, which is itself after the content here:
+            ## the tag row closes the entry rather than interrupting it.
+            #if(!$entry.tags.isEmpty())
+            <p class="pf-entry-tags">#showEntryTags($entry)</p>
+            #end
         </div>
     </article>
     #end

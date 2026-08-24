@@ -27,6 +27,13 @@
             <time class="d" datetime="$utils.formatIso8601Day($entry.pubTime)">$utils.formatDate($entry.pubTime, "MMMM d, yyyy")</time>
         </p>
         <div class="qj-prose">$entry.displayContent</div>
+        ## Last thing in the reading view, after the prose: a reader who has
+        ## just finished the piece is the one looking for more of the subject.
+        ## $url.tag builds the archive url; the tag pages existed all along
+        ## and no bundled theme had ever linked to one.
+        #if(!$entry.tags.isEmpty())
+        <p class="qj-tags">#showEntryTags($entry)</p>
+        #end
     </article>
     #end
 #else

@@ -301,6 +301,34 @@ class JournalThemeRenderingTest {
                 "no comment form may survive in rendered output");
     }
 
+    /**
+     * The scan in {@link ThemePolishTest#everyThemesPermalinkLinksTheEntrysTags}
+     * proves all three themes call the macro; this proves the call actually
+     * reaches a reader -- that the wrapper exposes the tags, the macro builds
+     * a real archive url, and Velocity resolves both rather than printing the
+     * reference as literal text (which is how this codebase fails).
+     */
+    @Test
+    void thePermalinkLinksTheEntrysTags() throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry("tagged-entry", weblog, user);
+        WeblogEntryManager mgr = TestUtils.weblogger().getWeblogEntryManager();
+        WeblogEntry managed = mgr.getWeblogEntry(entry.getId());
+        managed.addTag("fieldwork");
+        mgr.saveWeblogEntry(managed);
+        TestUtils.endSession(true);
+
+        String body = render("/" + HANDLE + "/entry/tagged-entry");
+
+        assertTrue(body.contains("rel=\"tag\""),
+                "the permalink must link the entry's tags:\n" + body);
+        assertTrue(body.contains(">fieldwork</a>"),
+                "the tag's own name must be the link text:\n" + body);
+        assertTrue(body.contains("/tags/fieldwork"),
+                "the tag link must point at the tag archive:\n" + body);
+        assertFalse(body.contains("$entry.tags") || body.contains("#showEntryTags"),
+                "no unresolved Velocity reference may survive:\n" + body);
+    }
+
     // ---------------------------------------------------------------- search
 
     @Test

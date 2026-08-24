@@ -396,6 +396,29 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 }
 .qj-prose blockquote p { margin: 0; }
 
+/* ---- entry tags (reading view) ----
+   Quiet pills rather than the accent-coloured inline links .qj-prose a uses:
+   the tag row sits directly under the prose and would otherwise read as a
+   continuation of the writing. Same 58ch measure so it lines up with it. */
+.qj-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .375rem;
+    max-width: 58ch;
+    margin: 1.75rem 0 0;
+}
+.qj-tags a {
+    display: inline-block;
+    padding: .125rem .5rem;
+    border-radius: var(--qj-radius);
+    background: var(--qj-accent-quiet);
+    color: var(--qj-accent);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: .8125rem;
+    text-decoration: none;
+}
+.qj-tags a:hover { background: var(--qj-accent); color: var(--qj-paper); }
+
 /* ---- search results ---- */
 
 .qj-search-head { margin-bottom: 1.5rem; }

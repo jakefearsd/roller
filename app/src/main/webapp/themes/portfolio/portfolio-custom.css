@@ -295,6 +295,25 @@ body.pf a:hover {
     border-bottom: 1px solid var(--pf-line);
 }
 
+/* entry tags -- picks up .pf-entry-meta's letterspaced caps idiom rather than
+   inventing a second metadata voice directly beneath it. */
+.pf-entry-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .375rem;
+    margin-top: .75rem;
+}
+.pf-entry-tags a {
+    padding: .125rem .5rem;
+    border: 1px solid var(--pf-line);
+    border-radius: 2px;
+    color: var(--pf-muted);
+    font-size: .75rem;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+}
+.pf-entry-tags a:hover { color: var(--pf-accent); border-color: var(--pf-accent); }
+
 /* pager ------------------------------------------------- */
 
 .pf-pager {
