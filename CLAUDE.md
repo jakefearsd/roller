@@ -269,6 +269,20 @@ real tier into that same static).
   exempting a category of line from the gate buys a permanent hole to settle a
   one-off event. The next push measures only its own diff and returns to
   normal.
+- **Three i18n ratchets guard the message bundle, and each answers a
+  question the others cannot.** `MessageKeyTest` has a JSP arm (every
+  `<spring:message code>` resolves), a **Java arm** (every key named in a
+  `getText`/`addError`/`addMessage` literal exists — the half that used to be
+  unguarded), and an **orphan arm** matching on a word boundary rather than a
+  substring, so `error` no longer looks used because `error.upload` exists.
+  `MessagePlaceholderContractTest` pins arity: a value's highest `{n}` must
+  match what every call site passes, which is what catches a message that
+  silently renders `{1}` to a reader. `MessageFormatRegressionTest` runs
+  **both** apostrophe directions over **every** translation — a value with a
+  placeholder may not carry a bare `'`, one without may not carry `''`.
+  All three assert against a set that is now `Set.of()`; **a ratchet whose
+  offender set is still populated is green and means nothing**, so empty the
+  set rather than adding to it.
 - Browser ITs run in CI (`mvn verify -Pit`) — see `it-selenium/`, and CI
   below for *when*.
 
@@ -1317,6 +1331,23 @@ excused whatever its type.
   "Powered by Apache Roller" card and the header dropdown menus.
   `RouteSweepIT.adminRailIsPresentWithAnActiveSpineOnATabbedPage` is a smoke
   test riding an already-covered route (Entries), not a new fixture.
+- **A confirmation prompt is `data-confirm`, never an inline
+  `onclick="return confirm('...')"` — the inline form FAILS OPEN.**
+  `fn:escapeXml` renders an apostrophe as `&#039;`, and in a JS-string
+  position the HTML parser decodes it back to `'` *before* the JS compiles.
+  One apostrophe in the message — a translated value, or an address like
+  `o'brien@example.com` — terminates the string, the handler fails to
+  compile, and **the click proceeds with no confirmation at all**: the
+  destructive action just happens. In an attribute value there is no second
+  parser, so `dataset.confirm` receives the literal text and quotes are
+  merely characters. The handler lives in `theme/scripts/roller.js`.
+  **The click/submit division is load-bearing:** `click` owns
+  `data-confirm` on a *control* (a button routing by `formaction`, a link),
+  `submit` owns it on the *form* (the only way to catch Enter in a text
+  field). The click handler's ancestor walk therefore **stops at the form** —
+  without that stop it finds the form-level attribute, prompts, allows the
+  native submit, and the submit handler prompts again. Two dialogs for one
+  click reads as a bug, and it shipped that way for a round on `UserEdit`.
 - **Buttons theme through Bootstrap's `--bs-btn-*` custom properties**
   (`--bs-btn-hover-bg`, `--bs-btn-active-bg`, `--bs-btn-disabled-bg`, …),
   never literal `:hover`/`:active` rules of our own — Bootstrap's own
