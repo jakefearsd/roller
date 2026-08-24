@@ -408,9 +408,9 @@ No new tests: this rides T7's ratchets plus grep verification; per-string tests 
 | Order | tabbedpage renders messages ABOVE the page title, mainmenupage below — standardize on title-then-messages in both. |
 | GenericError | The view has NO body (license + taglib only) — CreateWeblogController's "creation disabled"/"one per user" answers render one auto-dismissing alert on a blank page. Give it an `.empty-state` body: one-sentence explanation + a single "Back to your weblogs" link to `/roller-ui/menu.rol`. |
 
-- [ ] **Step 1:** Failing source-scan (new method in an existing tiles/JSP test or `AdminJspHygieneTest`): `messages.jsp` contains `role="status"` and `role="alert"`; contains no nested `alert-info` inside the success block; `GenericError.jsp` contains `empty-state`.
-- [ ] **Step 2:** Apply; green; `RouteSweepIT` markers unaffected (`#messages`/`#errors` ids unchanged — verify no IT greps the alert classes: `grep -rn "alert-info" it-selenium/src/test/java`).
-- [ ] **Step 3:** Commit — `fix(admin): flash messages announce, persist errors, render flat; GenericError gets a body`
+- [x] **Step 1:** Failing source-scan (new method in an existing tiles/JSP test or `AdminJspHygieneTest`): `messages.jsp` contains `role="status"` and `role="alert"`; contains no nested `alert-info` inside the success block; `GenericError.jsp` contains `empty-state`.
+- [x] **Step 2:** Apply; green; `RouteSweepIT` markers unaffected (`#messages`/`#errors` ids unchanged — verify no IT greps the alert classes: `grep -rn "alert-info" it-selenium/src/test/java`).
+- [x] **Step 3:** Commit — `fix(admin): flash messages announce, persist errors, render flat; GenericError gets a body`
 
 ### Task 12: Missing and mis-wired feedback
 
@@ -426,8 +426,8 @@ No new tests: this rides T7's ratchets plus grep verification; per-string tests 
 | `MediaFileAddSuccess.jsp:117-118` | Non-image files described as "`0 x 0 pixels`" → drop the dimensions line from the enclosure loop (keep it in the image loop `:68-69`). | JSP scan or characterisation note. |
 | `EntryEditController` publish flash | `weblogEdit.publishedEntry` gains a view link: `Blog entry published! <a href="{0}">View it</a>` with `entry.getPermalink()` as the arg. **Constraint: the argument must remain server-built — `messages.jsp` renders unescaped.** | Controller test asserts the permalink arg is passed. |
 
-- [ ] **Step 1:** Failing controller tests per row; **the new bundle keys ride MessageKeyTest** (Java arm from T7 now enforces them).
-- [ ] **Step 2:** Apply; green; commit — `fix(feedback): every consequential action reports; errors render as errors`
+- [x] **Step 1:** Failing controller tests per row; **the new bundle keys ride MessageKeyTest** (Java arm from T7 now enforces them).
+- [x] **Step 2:** Apply; green; commit — `fix(feedback): every consequential action reports; errors render as errors`
 
 ---
 
@@ -471,8 +471,8 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | Loop controls → `aria-label` | Row checkboxes: `Entries.jsp:121` (`${fn:escapeXml(post.title)}`), `Submissions.jsp:80`, `MediaFileView.jsp:196,249`, `MediaFileAddSuccess.jsp:46` + radios `:101,:138`. `Members.jsp:130-145` permission radios: `aria-label` = column header key + `${fn:escapeXml(perm.user.userName)}`. |
 | Macros | `weblog.vm:1185,1252` search inputs + `:1189,:1256` category selects get `aria-label` (key `macro.weblog.searchbutton` or new). |
 
-- [ ] Apply; `JspLabelBindingTest` green; `RouteSweepIT` unaffected (only attributes added).
-- [ ] Commit — `a11y(admin): bind every form label; name loop controls`
+- [x] Apply; `JspLabelBindingTest` green; `RouteSweepIT` unaffected (only attributes added).
+- [x] Commit — `a11y(admin): bind every form label; name loop controls`
 
 ### Task 14: Landmarks, headings, scope, modals, lang, titles
 
@@ -491,9 +491,9 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | Layout titles | `tiles-errorpage.jsp:26` → `${site.shortName}: ${pageTitle}` pattern + give the denied path a `denied.title=Access denied` pageTitle; `tiles-installpage.jsp:26` add the shortName prefix; `tiles-popuppage.jsp` add a `<title>` (same line as simplepage `:26`). |
 | Flash region order | (done in T11 — no-op here). |
 
-- [ ] **Step 1:** Failing scan additions (`AdminJspHygieneTest`): every tiles layout contains `lang=`; tabbed/mainmenu contain `<h1 class="roller-page-title"`; the 9 tables' header rows contain `scope="col"`; listed modal divs contain `aria-modal`.
-- [ ] **Step 2:** Apply; green; run `mvn verify -Pit -Dit.test=RouteSweepIT` (full chrome render per route) and `MediaCropIT` if practical.
-- [ ] **Step 3:** Commit — `a11y(admin): landmarks, heading order, table scope, modal semantics, document lang`
+- [x] **Step 1:** Failing scan additions (`AdminJspHygieneTest`): every tiles layout contains `lang=`; tabbed/mainmenu contain `<h1 class="roller-page-title"`; the 9 tables' header rows contain `scope="col"`; listed modal divs contain `aria-modal`.
+- [x] **Step 2:** Apply; green; run `mvn verify -Pit -Dit.test=RouteSweepIT` (full chrome render per route) and `MediaCropIT` if practical.
+- [x] **Step 3:** Commit — `a11y(admin): landmarks, heading order, table scope, modal semantics, document lang`
 
 ### Task 15: Semantics & hygiene sweep
 
@@ -510,9 +510,9 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | Duplicate ids | `MediaFileView.jsp:199-200,252-253` `id="mediafileidentity"` in loops, read by nothing → delete the hidden inputs. `weblog.vm` search macros both emit `id="q"` on one frontpage page → parameterize (`q-main`/`q-again`; JS reads `form.q` by NAME — verified safe; grep theme CSS for `#q` first). |
 | Empty-state placement | `Pages.jsp:92-104` + `Submissions.jsp:123-132` move the empty state out of the table to a sibling (everyone else's pattern); delete the defensive CSS reset at `roller.css:1279-1289` it necessitated; add `empty.pages.title`/`empty.inquiries.title` keys and retire the two stray non-`empty.*` titles. |
 
-- [ ] **Step 1:** Failing scans: no `tabindex="[1-9]` in the JSP tree; no `border="0"`; no `href="#"` with `onclick` in the editor tree (T3 + this task complete the set).
-- [ ] **Step 2:** Apply; green; `RouteSweepIT` (Pages/Submissions empty-state markers — check `Routes.java` pins for those two routes and update in the same commit if they reference the in-table structure).
-- [ ] **Step 3:** Commit — `a11y(admin): semantics, icon names, deprecated markup, tab order, duplicate ids`
+- [x] **Step 1:** Failing scans: no `tabindex="[1-9]` in the JSP tree; no `border="0"`; no `href="#"` with `onclick` in the editor tree (T3 + this task complete the set).
+- [x] **Step 2:** Apply; green; `RouteSweepIT` (Pages/Submissions empty-state markers — check `Routes.java` pins for those two routes and update in the same commit if they reference the in-table structure).
+- [x] **Step 3:** Commit — `a11y(admin): semantics, icon names, deprecated markup, tab order, duplicate ids`
 
 ---
 
