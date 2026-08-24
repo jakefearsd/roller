@@ -535,9 +535,9 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | Maintenance | Wrap each prompt+button pair in a bordered row; add `confirm()` naming the selected weblog to Rebuild Search Index and Regenerate Renditions. |
 | Editor odds | `PageEdit.jsp:239-241` red `btn-danger` delete → quiet `.delete-link` (siblings' pattern); `Login.jsp:57-60` delete the `type="reset"` button (keep `#login`); rail cards `EntryEdit.jsp:393,427` → `.editor-box` + `.rail-group-label` instead of `.card`/`.card-header`; `roller.css` `.editor-grid` → `column-gap: 26px; row-gap: 14px;` (fixes the 14px-vs-26px rail seam); SEO drawer (`EntryEdit.jsp:218-368`): replace `row`/`col-sm-*` pairs inside `#collapseSeo` with the stacked `.editor-field-label` pattern the Publish/Organize boxes use — **field ids/names/JS unchanged** (the browser-test contract at `:207-209` holds). |
 
-- [ ] **Step 1:** Failing scans: roller.css contains `p.subtitle`; the six named forms contain exactly one `btn-primary`; `DesignTokenTest` green (no new hex).
-- [ ] **Step 2:** Apply; run `RouteSweepIT` + `UserAdminIT` (button assertions) if practical.
-- [ ] **Step 3:** Commit — `design(admin): subtitle role, primary actions, install/error type scale, structural markup`
+- [x] **Step 1:** Failing scans: roller.css contains `p.subtitle`; the six named forms contain exactly one `btn-primary`; `DesignTokenTest` green (no new hex).
+- [x] **Step 2:** Apply; run `RouteSweepIT` + `UserAdminIT` (button assertions) if practical.
+- [x] **Step 3:** Commit — `design(admin): subtitle role, primary actions, install/error type scale, structural markup`
 
 ### Task 17: Form protections
 
@@ -552,9 +552,9 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | Submissions | `Submissions.jsp:134-137` bulk delete gets the `Entries.jsp:326-352` count-modal (permanent delete of visitor inquiries currently one unconfirmed click — the only naked destructive control in the app); port the 4-line select-all sync from `Entries.jsp:374-377`. |
 | Search-vs-sort | `MediaFileView.jsp:117` hide the sort select when `pager` is present (sorting currently discards the search silently). `MediaFileImageChooser.jsp:49-50` label the blank folder option + the select. `MediaFileView.jsp:477` drop the confirm on the non-destructive Move. |
 
-- [ ] **Step 1:** Failing scans: Login carries `autocomplete=`; no `maxlength="40"` in `WeblogConfig.jsp`; `Submissions.jsp` references the bulk-delete modal. Controller test for the cancel-redirect `directoryId`.
-- [ ] **Step 2:** Apply; green; manual smoke of the guard on a slow upload (button disables, `formaction` routing still works on Entries bulk bar).
-- [ ] **Step 3:** Commit — `ux(admin): submit guards, autocomplete/autofocus, schema-true maxlengths, upload cancel, submissions confirm`
+- [x] **Step 1:** Failing scans: Login carries `autocomplete=`; no `maxlength="40"` in `WeblogConfig.jsp`; `Submissions.jsp` references the bulk-delete modal. Controller test for the cancel-redirect `directoryId`.
+- [x] **Step 2:** Apply; green; manual smoke of the guard on a slow upload (button disables, `formaction` routing still works on Entries bulk bar).
+- [x] **Step 3:** Commit — `ux(admin): submit guards, autocomplete/autofocus, schema-true maxlengths, upload cancel, submissions confirm`
 
 ---
 
@@ -574,8 +574,8 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | SEO snippet URL | `EntryEdit.jsp:253` empty on entryAdd → fall back to `${actionWeblog.absoluteURL}` + placeholder slug. |
 | Alt badge | `MediaFileView.jsp:206-209,259-262`: the "no alt text" badge whose tooltip says "Open it to add one" becomes a `<button>` calling the same `onClickEdit(id, name)` as the tile. |
 
-- [ ] Tests: JSP scans for the permalink-row presence on PageEdit and the clipbutton on AddSuccess; the rest is markup + existing patterns. New keys ride MessageKeyTest.
-- [ ] Manual smoke each affordance in `./roller dev`; commit — `ux(admin): copy and view affordances`
+- [x] Tests: JSP scans for the permalink-row presence on PageEdit and the clipbutton on AddSuccess; the rest is markup + existing patterns. New keys ride MessageKeyTest.
+- [x] Manual smoke each affordance in `./roller dev`; commit — `ux(admin): copy and view affordances`
 
 ### Task 19: Editor niceties
 
@@ -591,8 +591,8 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | Media → new entry | "New entry with selected" button in `MediaFileView.jsp`'s `.image-controls` bar posting checked `selectedMediaFiles` to `entryAddWithMediaFile.rol` via the leftover `#createPostForm` (`:20-25`). **First step: read `EntryAddWithMediaFileController` and confirm the expected param names; if they don't line up in ~15 minutes of work, drop this item and note it.** |
 | Entries status | Add a narrow status column to `Entries.jsp` using the `Pages.jsp:79-88` badge pattern + existing `weblogEdit.published/draft/pending/scheduled` keys (color-only rows are an a11y problem); render the five status options as GET link-chips above the table (`entries.rol?weblog=X&bean.status=DRAFT`) marking the active one — possible now that T1 made the filter GET. Bulk actions keep the filter: `EntriesController.backToList` (`:312-315`) reuses `buildBaseUrl` with the bean from the three bulk handlers. |
 
-- [ ] Tests: controller test for `backToList` preserving `bean.status`/`bean.categoryName`; JSP scan for the badge column; BrowserHealth exemption removal compiles + `RouteSweepIT` green (favicon now 200).
-- [ ] Commit per coherent chunk (keyboard+session; trash+titles+favicon; entries list; media) — 4 commits.
+- [x] Tests: controller test for `backToList` preserving `bean.status`/`bean.categoryName`; JSP scan for the badge column; BrowserHealth exemption removal compiles + `RouteSweepIT` green (favicon now 200).
+- [x] Commit per coherent chunk (keyboard+session; trash+titles+favicon; entries list; media) — 4 commits.
 
 ---
 
@@ -613,9 +613,9 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | Nav labels | `aria-label` on the unnamed `<nav>`s (frontpage `_blogdirectory.vm:41`, portfolio/travel `weblog.vm:42` + `permalink.vm:38` — journal's pattern); `role="search"` on the footer search forms; frontpage live dot `aria-hidden="true"` (it is decorative — always green regardless of activity). |
 | Error JSPs dark | `404.jsp/403.jsp/error.jsp` declare `color-scheme: light dark` then style light-only → add the dark `@media` block (background/color/.code). |
 
-- [ ] **Step 1:** Failing wrapper test (`getLanguageTag` returns `en-US` for `en_US`); failing rendering-test assertions (`lang="`, `<h1`, skip link, `color-scheme`).
-- [ ] **Step 2:** Apply; all four theme rendering tests green **with pinned CSPs byte-identical**.
-- [ ] **Step 3:** Commit — `a11y(themes): lang, skip links, focus, color-scheme, heading structure`
+- [x] **Step 1:** Failing wrapper test (`getLanguageTag` returns `en-US` for `en_US`); failing rendering-test assertions (`lang="`, `<h1`, skip link, `color-scheme`).
+- [x] **Step 2:** Apply; all four theme rendering tests green **with pinned CSPs byte-identical**.
+- [x] **Step 3:** Commit — `a11y(themes): lang, skip links, focus, color-scheme, heading structure`
 
 ### Task 21: Theme polish
 
@@ -632,9 +632,9 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | Favicons | Add the corrected favicon `<link>` one-liner to journal/travel/portfolio heads (frontpage fixed in T6). |
 | Dead macros | Delete from `weblog.vm`: the six jQuery-Mobile macros (`#showMobile*`, `#showMobilePopupDialog` — the library is not shipped; they cannot work), `#_showCommonJavascript` (ActiveX), `#_Jave`. KEEP and document `#showWeblogEntryLinksList`, `#showAtomFeedsList`, `#showEntryTags`, `#showMetaDescription` as the custom-theme API. Update the contents list at `:19-59`. **Velocity-grep every macro name over both template trees before deleting.** |
 
-- [ ] **Step 1:** Failing rendering assertions: permalink render contains the tag link when the entry has tags; search results title contains the term; `<time` present.
-- [ ] **Step 2:** Apply; all rendering tests green, CSPs untouched; run `mvn verify -Pit -Dit.test=ThemeMatrixIT` (all themes render the shortcode entry on home + permalink).
-- [ ] **Step 3:** Commit — `polish(themes): titles, dates, search page, shortcode styling parity, tags, dead macros`
+- [x] **Step 1:** Failing rendering assertions: permalink render contains the tag link when the entry has tags; search results title contains the term; `<time` present.
+- [x] **Step 2:** Apply; all rendering tests green, CSPs untouched; run `mvn verify -Pit -Dit.test=ThemeMatrixIT` (all themes render the shortcode entry on home + permalink).
+- [x] **Step 3:** Commit — `polish(themes): titles, dates, search page, shortcode styling parity, tags, dead macros`
 
 ---
 
@@ -657,12 +657,12 @@ Run → fails today on `MediaFileImageDimension.jsp` (`for="status"` ×3) and `E
 | `TemplateEdit.jsp:127` `id="panel-plugins"` → `panel-advanced` | Stale plugins marker; not in Routes (re-grep). |
 | `Routes.java:423` comment | Trim the stale `fetchDirectoryContentLight` note to one line (the route is already gone — only this comment remains). |
 
-- [ ] Steps: grep-first per row → delete → `mvn -pl app test` → `RouteSweepIT`. Commit — `chore: delete dead UI code (screens, scripts, keys, fossils)`
+- [x] Steps: grep-first per row → delete → `mvn -pl app test` → `RouteSweepIT`. Commit — `chore: delete dead UI code (screens, scripts, keys, fossils)`
 
 ### Task 23: Docs, memory, final verification
 
-- [ ] Update `CLAUDE.md` if any invariant changed (candidates: the new i18n ratchets — add one line to the testing section naming `MessagePlaceholderContractTest` and the Java-side MessageKeyTest arm; the confirm-vs-modal rule from the T17 inventory: "native confirm when there is nothing to report beyond a sentence, modal when a count or target must be shown").
-- [ ] Full gate: `mvn clean verify` (unit + PMD/SpotBugs/CPD + coverage floors).
+- [x] Update `CLAUDE.md` if any invariant changed (candidates: the new i18n ratchets — add one line to the testing section naming `MessagePlaceholderContractTest` and the Java-side MessageKeyTest arm; the confirm-vs-modal rule from the T17 inventory: "native confirm when there is nothing to report beyond a sentence, modal when a count or target must be shown").
+- [x] Full gate: `mvn clean verify` (unit + PMD/SpotBugs/CPD + coverage floors).
 - [ ] Browser suite: `mvn verify -Pit`. Nothing in this plan changed URL routing semantics, so the `-Dit.context.path=roller` pass is optional; run it if T4's SearchServlet change or T18's Pages links feel routing-adjacent.
 - [ ] `bin/check-diff-coverage.sh <base>` over the whole range — expect JSP/VM/properties changes to be invisible to it; if Java error-path lines ding it, apply the accept-and-say-so policy.
 - [ ] Report ready-to-push. **Do not push.**
