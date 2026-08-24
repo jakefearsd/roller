@@ -78,7 +78,7 @@ The Entries sidebar filter is broken three ways: the form POSTs to a GET-only ma
 
 **Steps:**
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```java
 // EntriesControllerTest additions
@@ -117,11 +117,11 @@ void theDatePickerBindingMatchesRealIds() throws Exception {
 }
 ```
 
-- [ ] **Step 2: Run and watch all three fail** — `mvn -pl app test -Dtest=EntriesControllerTest` — expected: form is `method="post"`, URL contains `bean.categoryPath`, script binds `#entries_bean_startDateString` with no such id.
-- [ ] **Step 3: Apply the changes table.** Add `weblogEntryQuery.label.anyCategory` to the bundle.
-- [ ] **Step 4: Re-run; all pass.** Also run `mvn -pl app test -Dtest=MessageKeyTest` (new key referenced from JSP).
-- [ ] **Step 5: Manual smoke via `./roller dev`:** filter by status + category, page to page 2, confirm the filter holds; open a date picker.
-- [ ] **Step 6: Commit** — `fix(editor): make the entry-list filter usable (GET form, datepicker ids, pager category param)`
+- [x] **Step 2: Run and watch all three fail** — `mvn -pl app test -Dtest=EntriesControllerTest` — expected: form is `method="post"`, URL contains `bean.categoryPath`, script binds `#entries_bean_startDateString` with no such id.
+- [x] **Step 3: Apply the changes table.** Add `weblogEntryQuery.label.anyCategory` to the bundle.
+- [x] **Step 4: Re-run; all pass.** Also run `mvn -pl app test -Dtest=MessageKeyTest` (new key referenced from JSP).
+- [x] **Step 5: Manual smoke via `./roller dev`:** filter by status + category, page to page 2, confirm the filter holds; open a date picker.
+- [x] **Step 6: Commit** — `fix(editor): make the entry-list filter usable (GET form, datepicker ids, pager category param)`
 
 ### Task 2: Repair the dead-JS controls (Struts-id fossils)
 
@@ -148,7 +148,7 @@ Four independent breakages, one mechanism: JS addressing `document.<formName>` o
 
 **Steps:**
 
-- [ ] **Step 1: Write the failing source-scan test** (new `EditorJspScriptBindingTest`):
+- [x] **Step 1: Write the failing source-scan test** (new `EditorJspScriptBindingTest`):
 
 ```java
 /** Every document.<name> reference in an editor JSP must match a form that
@@ -173,10 +173,10 @@ void everyDocumentFormReferenceResolves() throws Exception {
 }
 ```
 
-- [ ] **Step 2: Run; expect failures naming StylesheetEdit and Members.** (`mvn -pl app test -Dtest=EditorJspScriptBindingTest`)
-- [ ] **Step 3: Apply the table.** For TemplateEdit also extend Task 1's id-binding scan pattern to this file (same test class, second method over `TemplateEdit.jsp`) — watch it fail on `#template-code-tabs`/`#template_bean_link`, then fix.
-- [ ] **Step 4: All green; manual smoke:** revert a stylesheet, remove a member (confirm appears), edit a custom template (content-type checkbox reveals the manual field), create a folder in a fresh weblog's empty media library.
-- [ ] **Step 5: Commit** — `fix(editor): repair dead Struts-era JS bindings (stylesheet revert/delete, member-remove confirm, template edit, folder create)`
+- [x] **Step 2: Run; expect failures naming StylesheetEdit and Members.** (`mvn -pl app test -Dtest=EditorJspScriptBindingTest`)
+- [x] **Step 3: Apply the table.** For TemplateEdit also extend Task 1's id-binding scan pattern to this file (same test class, second method over `TemplateEdit.jsp`) — watch it fail on `#template-code-tabs`/`#template_bean_link`, then fix.
+- [x] **Step 4: All green; manual smoke:** revert a stylesheet, remove a member (confirm appears), edit a custom template (content-type checkbox reveals the manual field), create a folder in a fresh weblog's empty media library.
+- [x] **Step 5: Commit** — `fix(editor): repair dead Struts-era JS bindings (stylesheet revert/delete, member-remove confirm, template edit, folder create)`
 
 ### Task 3: Kill the apostrophe-in-onclick bug class (six files)
 
@@ -203,7 +203,7 @@ void everyDocumentFormReferenceResolves() throws Exception {
 
 **Steps:**
 
-- [ ] **Step 1: Write the failing scan** (extend `EditorJspScriptBindingTest`):
+- [x] **Step 1: Write the failing scan** (extend `EditorJspScriptBindingTest`):
 
 ```java
 /** onclick attributes must not interpolate escaped author text — the entity
@@ -220,11 +220,11 @@ void noOnclickInterpolatesAuthorText() throws Exception {
 }
 ```
 
-- [ ] **Step 2: Run; expect failures naming the six files.**
-- [ ] **Step 3: Convert each site to the data-attribute pattern + button + aria-label.** Update the IT selectors found in the grep in the same commit.
-- [ ] **Step 4: Green. Manual smoke:** create an entry titled `Maiia's trip`, delete it from the list; upload a file named `Maiia's portrait.jpg`, insert it via the chooser.
-- [ ] **Step 5: Run the media/entry browser ITs if practical:** `mvn verify -Pit -Dit.test=GalleryIT` (the chooser path).
-- [ ] **Step 6: Commit** — `fix(editor): apostrophe-safe action controls via data attributes (6 files)`
+- [x] **Step 2: Run; expect failures naming the six files.**
+- [x] **Step 3: Convert each site to the data-attribute pattern + button + aria-label.** Update the IT selectors found in the grep in the same commit.
+- [x] **Step 4: Green. Manual smoke:** create an entry titled `Maiia's trip`, delete it from the list; upload a file named `Maiia's portrait.jpg`, insert it via the chooser.
+- [x] **Step 5: Run the media/entry browser ITs if practical:** `mvn verify -Pit -Dit.test=GalleryIT` (the chooser path).
+- [x] **Step 6: Commit** — `fix(editor): apostrophe-safe action controls via data attributes (6 files)`
 
 ### Task 4: Server-side small fixes (routing, reflection, feedback wiring)
 
@@ -245,11 +245,11 @@ Independent one-to-few-line Java/JSP fixes, each with a real test.
 
 **Steps:**
 
-- [ ] **Step 1:** Write the failing tests for the five Java-side rows (servlet 404, two redirect targets, setup model attrs). Run, watch fail.
-- [ ] **Step 2:** Apply all changes.
-- [ ] **Step 3:** Tests green; run the JSP scans; run greps.
-- [ ] **Step 4:** Manual smoke: cancel out of weblog-remove; save Setup twice and confirm the front-page weblog is stable.
-- [ ] **Step 5:** Commit — `fix: search-404, setup reflection + flash target, remove-confirm cancel, small JS correctness`
+- [x] **Step 1:** Write the failing tests for the five Java-side rows (servlet 404, two redirect targets, setup model attrs). Run, watch fail.
+- [x] **Step 2:** Apply all changes.
+- [x] **Step 3:** Tests green; run the JSP scans; run greps.
+- [x] **Step 4:** Manual smoke: cancel out of weblog-remove; save Setup twice and confirm the front-page weblog is stable.
+- [x] **Step 5:** Commit — `fix: search-404, setup reflection + flash target, remove-confirm cancel, small JS correctness`
 
 ### Task 5: Reader-facing rendering correctness (velocity layer)
 
@@ -282,11 +282,11 @@ Independent one-to-few-line Java/JSP fixes, each with a real test.
 | `portfolio/_day.vm:16,43`, `travel/_day.vm:15,34` | `#showResponsiveImage` alt double-escape: they pass `$entry.title` (stored escaped) into a macro that escapes again. Pass `$utils.unescapeHTML($entry.title)` (verified `UtilitiesModel.unescapeHTML` exists at `:224`); prefer `$entry.featuredImage.altText` when non-empty. |
 | `searchresults.vm` ×3 | Add `#if($model.hits == 0)` a one-sentence no-results message `#end`, and `#if($utils.isNotEmpty($model.errorMessage))` a FIXED "Search is temporarily unavailable." sentence (never the raw exception) — `SearchResultsModel.getErrorMessage()` is rendered by nothing today, so Lucene-down looks like zero results. |
 
-- [ ] **Step 1:** Write failing tests: `VelocityErrorTemplateTest` (source-scan: `error-page.vm`/`error-parse.vm` contain no `$exception`/`$exceptionSource`/class-name references); extend a theme rendering test to assert a category name containing `&` renders escaped in the nav macro output; feeds rendering test for the author escape.
-- [ ] **Step 2:** Run, watch fail. **Before deleting `templates/navbar/`+`templates/menu/`, run the Velocity grep for each macro/file name** — expect zero references (agent-verified, re-verify).
-- [ ] **Step 3:** Apply table; delete the dead dirs.
-- [ ] **Step 4:** Green; run all theme rendering tests (`mvn -pl app test -Dtest='*ThemeRenderingTest,*RenderingTest'`) — pinned CSPs must be byte-identical.
-- [ ] **Step 5:** Commit — `fix(rendering): escapes, feed validity, error-template leak, dead velocity fossils`
+- [x] **Step 1:** Write failing tests: `VelocityErrorTemplateTest` (source-scan: `error-page.vm`/`error-parse.vm` contain no `$exception`/`$exceptionSource`/class-name references); extend a theme rendering test to assert a category name containing `&` renders escaped in the nav macro output; feeds rendering test for the author escape.
+- [x] **Step 2:** Run, watch fail. **Before deleting `templates/navbar/`+`templates/menu/`, run the Velocity grep for each macro/file name** — expect zero references (agent-verified, re-verify).
+- [x] **Step 3:** Apply table; delete the dead dirs.
+- [x] **Step 4:** Green; run all theme rendering tests (`mvn -pl app test -Dtest='*ThemeRenderingTest,*RenderingTest'`) — pinned CSPs must be byte-identical.
+- [x] **Step 5:** Commit — `fix(rendering): escapes, feed validity, error-template leak, dead velocity fossils`
 
 ### Task 6: Journal + frontpage pagination and gates
 
@@ -307,9 +307,9 @@ Independent one-to-few-line Java/JSP fixes, each with a real test.
 | `frontpage/_day.vm` | `## unused` placeholder still declared in `theme.xml:66-76` → delete both, or keep with an explanatory comment (pick delete; grep first). |
 | `frontpage-custom.css:239,249` | `.fd-search input.searchButton` targets a class no macro emits (macro emits `.button`) → fix both selectors. `:264-275` dead `.fd-crumb`/`table.fd-table` rules → delete. |
 
-- [ ] **Step 1:** Failing rendering-test assertions: journal page-2 render carries "Older"/"Earlier" text on the link whose `rel="next"`; frontpage first-page render contains the pinned-entries block when pinned entries exist.
-- [ ] **Step 2:** Watch fail, apply, green. Velocity-grep before the `_day.vm` deletion.
-- [ ] **Step 3:** Commit — `fix(themes): pager direction, pinned-entry gate, frontpage gates and dead CSS`
+- [x] **Step 1:** Failing rendering-test assertions: journal page-2 render carries "Older"/"Earlier" text on the link whose `rel="next"`; frontpage first-page render contains the pinned-entries block when pinned entries exist.
+- [x] **Step 2:** Watch fail, apply, green. Velocity-grep before the `_day.vm` deletion.
+- [x] **Step 3:** Commit — `fix(themes): pager direction, pinned-entry gate, frontpage gates and dead CSS`
 
 ---
 
