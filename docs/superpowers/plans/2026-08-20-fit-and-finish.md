@@ -329,9 +329,9 @@ Independent one-to-few-line Java/JSP fixes, each with a real test.
 3. **MessageFormat apostrophes, both directions, all bundles** (extend `MessageFormatRegressionTest`): values WITH placeholders must not contain a bare `'`; values WITHOUT placeholders must not contain `''`. Run over every `ApplicationResources*.properties`. **Expected initial failures:** six fr bare-quote values, three fr + one zh doubled-quote values (list in Task 8).
 4. **Orphan ratchet word-boundary fix** (MessageKeyTest): `allSources.contains(key)` → word-boundary regex match. **Expected:** orphan count becomes 8 (`categoriesForm.root`, `error`, `error.upload.file`, `macro.weblog.readMore`, `pageForm.template`, `uploadFiles.upload`, `userAdmin.title`, `websiteSettings.removeWebsite`); assert the exact set so Task 22 can delete them and shrink it to zero.
 
-- [ ] **Step 1:** Write all four; run `mvn -pl app test -Dtest='MessageKeyTest,MessagePlaceholderContractTest,MessageFormatRegressionTest'`.
-- [ ] **Step 2:** Confirm each fails listing EXACTLY the expected offenders (differences mean the sweep data drifted — investigate before proceeding). Temporarily `@Disabled` with a `// enabled by Task 8` note OR keep red locally — do NOT commit red: commit the tests together with Task 8's fixes if executing solo, or commit with the known-offender lists as the assertion baseline and ratchet down. **Chosen approach: commit T7+T8 as two commits in one push-unit, T7's tests carrying the offender lists as `expectedLegacyOffenders` sets that T8 empties.**
-- [ ] **Step 3:** Commit — `test(i18n): ratchets for java-side keys, placeholder contracts, locale apostrophes, orphan word-boundaries`
+- [x] **Step 1:** Write all four; run `mvn -pl app test -Dtest='MessageKeyTest,MessagePlaceholderContractTest,MessageFormatRegressionTest'`.
+- [x] **Step 2:** Confirm each fails listing EXACTLY the expected offenders (differences mean the sweep data drifted — investigate before proceeding). Temporarily `@Disabled` with a `// enabled by Task 8` note OR keep red locally — do NOT commit red: commit the tests together with Task 8's fixes if executing solo, or commit with the known-offender lists as the assertion baseline and ratchet down. **Chosen approach: commit T7+T8 as two commits in one push-unit, T7's tests carrying the offender lists as `expectedLegacyOffenders` sets that T8 empties.**
+- [x] **Step 3:** Commit — `test(i18n): ratchets for java-side keys, placeholder contracts, locale apostrophes, orphan word-boundaries`
 
 ### Task 8: Fix everything Task 7 enumerates
 
@@ -346,10 +346,10 @@ Independent one-to-few-line Java/JSP fixes, each with a real test.
 | fr apostrophes (bare `'` + args → double them) | fr:58, fr:177, fr:181, fr:314 (also fix `accés`→`accès`), fr:469, fr:525. |
 | Doubled `''` in no-arg values → single | fr:292 `maintenance.button.index`, fr:300 `memberPermissions.title`, fr:209 `index.createUserHelp`, zh:781 `userSettings.tip.username`. |
 
-- [ ] **Step 1:** With T7's ratchets red (offender lists), apply every row.
-- [ ] **Step 2:** Empty the `expectedLegacyOffenders` sets; all four ratchets green with zero exceptions.
-- [ ] **Step 3:** `mvn -pl app test` (controller tests touched by message-key changes).
-- [ ] **Step 4:** Commit — `fix(i18n): missing keys, literal-english keys, placeholder contracts, locale apostrophes`
+- [x] **Step 1:** With T7's ratchets red (offender lists), apply every row.
+- [x] **Step 2:** Empty the `expectedLegacyOffenders` sets; all four ratchets green with zero exceptions.
+- [x] **Step 3:** `mvn -pl app test` (controller tests touched by message-key changes).
+- [x] **Step 4:** Commit — `fix(i18n): missing keys, literal-english keys, placeholder contracts, locale apostrophes`
 
 ### Task 9: Hardcoded English in JSPs → bundle keys
 
@@ -367,9 +367,9 @@ Independent one-to-few-line Java/JSP fixes, each with a real test.
 | TemplateEdit alert | New key `pageForm.launch.linkChanged`. |
 | Submissions | `submissions.showFullMessage` key. |
 
-- [ ] **Step 1:** Extend `MessageKeyTest` JSP arm with a hardcoded-English tripwire scoped to the exact attributes fixed here (e.g. assert no `placeholder="Username"`, no `aria-label="Close"`, no `>Newer<`/`>Older<` literals in the JSP tree). Watch fail.
-- [ ] **Step 2:** Apply; add keys; green (including the existing every-key-resolves arm).
-- [ ] **Step 3:** Commit — `fix(i18n): route remaining hardcoded UI strings through the bundle`
+- [x] **Step 1:** Extend `MessageKeyTest` JSP arm with a hardcoded-English tripwire scoped to the exact attributes fixed here (e.g. assert no `placeholder="Username"`, no `aria-label="Close"`, no `>Newer<`/`>Older<` literals in the JSP tree). Watch fail.
+- [x] **Step 2:** Apply; add keys; green (including the existing every-key-resolves arm).
+- [x] **Step 3:** Commit — `fix(i18n): route remaining hardcoded UI strings through the bundle`
 
 ### Task 10: Bundle value quality sweep (values only — key names never change)
 
@@ -387,9 +387,9 @@ No new tests: this rides T7's ratchets plus grep verification; per-string tests 
 | Defaults | `runtimeConfigDefs.xml` `site.shortName` default "Front Page" → "Roller" (**edit carefully: bare `--` in an XML comment breaks this file SILENTLY**). |
 | Housekeeping | Delete the 9 orphan section-header comment blocks (Bookmarks/Ping/Planet/etc.); fix `_es.properties:20` `�` → `í` and spot-check that bundle's values for the same lossy transcode; `UserAdmin.jsp:33` dead `inviteMember.userName` label → `userSettings.username`. |
 
-- [ ] **Step 1:** Apply; run `mvn -pl app test -Dtest='Message*Test'` + full `mvn -pl app test` (flash-message assertions in controller tests may pin old copy — update those in the same commit and say so).
-- [ ] **Step 2:** Verification greps return zero: `grep -n "Perfom\|the the\|not found system\|blogroll" app/src/main/resources/ApplicationResources.properties`.
-- [ ] **Step 3:** Commit — `copy: bundle value sweep (typos, stale features, terminology, casing)`
+- [x] **Step 1:** Apply; run `mvn -pl app test -Dtest='Message*Test'` + full `mvn -pl app test` (flash-message assertions in controller tests may pin old copy — update those in the same commit and say so).
+- [x] **Step 2:** Verification greps return zero: `grep -n "Perfom\|the the\|not found system\|blogroll" app/src/main/resources/ApplicationResources.properties`.
+- [x] **Step 3:** Commit — `copy: bundle value sweep (typos, stale features, terminology, casing)`
 
 ---
 
