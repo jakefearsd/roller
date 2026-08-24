@@ -20,7 +20,10 @@
 <nav class="navbar navbar-expand-md roller-topbar">
     <div class="container-fluid">
 
-        <a class="navbar-brand" href="#"><spring:message code="installer.bannerTitleLeft"/></a>
+        <%-- A <span>, not an <a href="#">: during installation there is no
+             home to link to, and an anchor that navigates nowhere is a
+             control a keyboard user can tab to and activate for nothing. --%>
+        <span class="navbar-brand"><spring:message code="installer.bannerTitleLeft"/></span>
 
         <button type="button" class="navbar-toggler collapsed"
                 data-bs-toggle="collapse" data-bs-target="#navbar" aria-expanded="false" aria-controls="navbar"

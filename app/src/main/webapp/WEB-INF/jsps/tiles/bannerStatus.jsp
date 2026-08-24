@@ -24,7 +24,11 @@
 <nav class="navbar navbar-expand-md roller-topbar">
     <div class="container-fluid">
 
-        <a class="navbar-brand" href="#">${rc:getProp('site.name')}</a>
+        <%-- The brand links home. It was href="#" while a second nav item
+             below carried the same destination under site.shortName, so the
+             one control every reader expects to be a home link did nothing
+             and a redundant one did the job. --%>
+        <a class="navbar-brand" href="<c:url value='/'/>">${rc:getProp('site.name')}</a>
 
         <button type="button" class="navbar-toggler collapsed"
                 data-bs-toggle="collapse" data-bs-target="#navbar" aria-expanded="false" aria-controls="navbar"
@@ -36,8 +40,6 @@
         <div id="navbar" class="navbar-collapse collapse">
 
             <ul class="navbar-nav ms-auto">
-
-                <li class="nav-item"><a class="nav-link" href="<c:url value='/'/>">${rc:getProp('site.shortName')}</a></li>
 
                 <li class="nav-item">
                     <a class="nav-link" href="<c:url value="/roller-ui/menu.rol"/>">
