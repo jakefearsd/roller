@@ -118,6 +118,25 @@ limitations under the License.
              junit-platform.properties would win. -->
         <it.parallelism>4</it.parallelism>
 
+        <!-- Whether classes run concurrently AT ALL. True locally, false in
+             CI, and the split exists because it.parallelism above turned out
+             not to bound anything.
+
+             JUnit's fixed strategy treats parallelism as a TARGET for a
+             ForkJoinPool, not a cap: the pool compensates for blocked tasks
+             by spawning more threads, and a Selenium test blocks on nearly
+             every line. Measured here, -Dit.parallelism=1 still ran four IT
+             classes concurrently (about 17s wall clock for four classes of
+             about 10s each, rather than 40s), and a CI run with
+             -Dit.parallelism=2 started 24 classes inside four seconds. So the
+             number shapes the local run loosely and guarantees nothing.
+
+             Disabling parallel execution is a different code path with no
+             pool in it, which is why this is the knob CI uses. It costs the
+             nightly wall clock (roughly 14 minutes of test time rather than
+             8) against a 45-minute timeout, on a job that runs overnight. -->
+        <it.parallel.enabled>true</it.parallel.enabled>
+
         <!-- ONE ID PER RUN, stamped into every process, file, directory and
              container this module creates. It is what makes cleanup
              identity-based rather than pidfile-based: an app JVM carries it as
@@ -515,6 +534,10 @@ limitations under the License.
                              fork does not inherit it. See the it.parallelism
                              property above for why CI needs a smaller value. -->
                         <junit.jupiter.execution.parallel.config.fixed.parallelism>${it.parallelism}</junit.jupiter.execution.parallel.config.fixed.parallelism>
+                        <!-- The only bound that actually holds; see the
+                             it.parallel.enabled property above for the
+                             measurement that says so. -->
+                        <junit.jupiter.execution.parallel.enabled>${it.parallel.enabled}</junit.jupiter.execution.parallel.enabled>
                     </systemPropertyVariables>
                     <trimStackTrace>false</trimStackTrace>
                 </configuration>

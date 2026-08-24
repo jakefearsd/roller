@@ -152,18 +152,28 @@ jobs:
 
       # Chrome ships on ubuntu-latest; RollerIT runs it headless.
       #
-      # -Dit.parallelism: a hosted runner is not the 16-core developer box
-      # junit-platform.properties' default of 4 was tuned for, and it inherited
-      # that number silently until the runner image moved to
-      # ubuntu24/20260816.277, after which every nightly failed with Chrome
-      # renderer timeouts spread across a different handful of classes each run
-      # -- several with a negative remaining deadline, i.e. the browser was
-      # never scheduled inside its own timeout. Fewer concurrent browsers costs
-      # wall clock on a job that has no deadline pressure (45-minute timeout,
-      # runs nightly) and buys back a suite that finishes. ItCiWorkflowTest
-      # pins that this stays below the local default.
+      # -Dit.parallel.enabled=false: CI runs the browser suite SERIALLY.
+      #
+      # A hosted runner is not the 16-core developer box junit-platform
+      # .properties' parallelism of 4 was tuned for, and it inherited that
+      # number silently until the runner image moved to ubuntu24/20260816.277,
+      # after which every nightly failed with Chrome renderer timeouts spread
+      # across a different handful of classes each run -- several with a
+      # negative remaining deadline, i.e. the browser was never scheduled
+      # inside its own timeout.
+      #
+      # Turning the number DOWN was tried first and changed nothing, because
+      # the number bounds nothing: JUnit's fixed strategy treats parallelism as
+      # a target for a ForkJoinPool that compensates for blocked tasks by
+      # spawning more threads, and Selenium blocks constantly. That run passed
+      # -Dit.parallelism=2 and still started 24 classes within four seconds;
+      # locally, -Dit.parallelism=1 still ran four classes concurrently.
+      # Disabling parallel execution is a different code path with no pool in
+      # it, and is the only bound that holds. It costs wall clock (~14 minutes
+      # of test time rather than ~8) on a job with a 45-minute timeout that
+      # runs overnight. ItCiWorkflowTest pins this.
       - name: Run browser integration tests
-        run: mvn -V -ntp verify -Pit -Dit.parallelism=2
+        run: mvn -V -ntp verify -Pit -Dit.parallel.enabled=false
 
       # The app log lives only on the runner and dies with it, which is why six
       # consecutive red nightlies produced nothing anyone could read afterwards

@@ -61,37 +61,66 @@ class ItCiWorkflowTest {
     private static final Path IT_POM = REPO_ROOT.resolve("it-selenium/pom.xml");
 
     /**
-     * The local default and the CI value must both exist, and CI's must be
-     * lower. Asserting the relationship rather than the literal 2 keeps this
-     * from becoming a second place to edit when either number is retuned.
+     * CI must turn class-parallelism OFF, not merely turn it down.
+     *
+     * <p>Turning it down does nothing, and that is the whole finding here.
+     * {@code fixed.parallelism} is a TARGET for JUnit's ForkJoinPool, not a
+     * cap: the pool compensates for blocked tasks by spawning more threads,
+     * and a Selenium test blocks on almost every line. Measured on this
+     * repository, {@code -Dit.parallelism=1} still ran four IT classes
+     * concurrently (~17s wall clock for four classes of ~10s each, instead
+     * of ~40s), and a CI run with {@code -Dit.parallelism=2} started 24
+     * classes within four seconds. The number has never bounded anything.
+     *
+     * <p>{@code parallel.enabled=false} is a different code path with no
+     * pool involved, so it is the only bound that actually holds. It costs
+     * the nightly wall clock (roughly 14 minutes of test time rather than
+     * 8) against a 45-minute timeout, on a job that runs while everyone is
+     * asleep.
      */
     @Test
-    void theNightlyRunsFewerBrowsersThanADeveloperMachineDoes() throws IOException {
-        int local = localDefaultParallelism();
-        int ci = ciParallelism();
+    void theNightlyDoesNotRunBrowsersConcurrentlyAtAll() throws IOException {
+        String itJob = integrationTestJob(Files.readString(MAIN_WORKFLOW));
 
-        assertTrue(ci < local,
-                "the nightly must lower it.parallelism below the local default (" + local
-                        + "), got " + ci + ". The default is tuned for a 16-core box; a "
-                        + "GitHub runner starves at that many concurrent Chromes.");
-        assertTrue(ci >= 1, "parallelism must be at least 1, got " + ci);
+        assertTrue(itJob.contains("-Dit.parallel.enabled=false"),
+                "the nightly must pass -Dit.parallel.enabled=false. Lowering it.parallelism "
+                        + "instead does NOT bound anything: JUnit's fixed strategy treats it as a "
+                        + "target and compensates for blocked tasks by spawning more threads, so "
+                        + "even parallelism=1 runs classes concurrently.");
     }
 
     /**
-     * The pom must hand the value to JUnit as a system property on the
-     * failsafe-forked JVM. junit-platform.properties alone is not
-     * overridable, and a system property set on the Maven command line does
-     * not reach a forked JVM by itself.
+     * Both knobs must be handed to JUnit as system properties on the
+     * failsafe-forked JVM: junit-platform.properties alone is not
+     * overridable, and a -D on the Maven command line does not reach a fork
+     * by itself.
      */
     @Test
-    void theParallelismReachesTheForkedJvmAsAnOverridableProperty() throws IOException {
+    void theParallelSettingsReachTheForkedJvmAsOverridableProperties() throws IOException {
         String pom = Files.readString(IT_POM);
 
+        assertTrue(pom.contains("<junit.jupiter.execution.parallel.enabled>"
+                        + "${it.parallel.enabled}</junit.jupiter.execution.parallel.enabled>"),
+                "failsafe must pass junit.jupiter.execution.parallel.enabled as "
+                        + "${it.parallel.enabled}, or -Dit.parallel.enabled never reaches the fork "
+                        + "and junit-platform.properties wins");
         assertTrue(pom.contains("<junit.jupiter.execution.parallel.config.fixed.parallelism>"
                         + "${it.parallelism}</junit.jupiter.execution.parallel.config.fixed.parallelism>"),
-                "failsafe must pass junit.jupiter.execution.parallel.config.fixed.parallelism"
-                        + " as ${it.parallelism} in systemPropertyVariables, or -Dit.parallelism"
-                        + " never reaches the forked JVM and junit-platform.properties wins");
+                "failsafe must also forward the parallelism, which still shapes the LOCAL run");
+    }
+
+    /** The local default stays parallel; only CI opts out. */
+    @Test
+    void aDeveloperMachineStillRunsTheSuiteInParallel() throws IOException {
+        String pom = Files.readString(IT_POM);
+        Matcher m = Pattern.compile(
+                "<it\\.parallel\\.enabled>\\s*(true|false)\\s*</it\\.parallel\\.enabled>").matcher(pom);
+        if (!m.find()) {
+            fail("no <it.parallel.enabled> property in " + IT_POM);
+        }
+        assertTrue("true".equals(m.group(1)),
+                "the local default must stay parallel; the 8-minute suite is why it exists");
+        assertTrue(localDefaultParallelism() >= 1, "the local parallelism default must survive");
     }
 
     /**
@@ -124,16 +153,6 @@ class ItCiWorkflowTest {
         if (!m.find()) {
             return fail("no <it.parallelism> property in " + IT_POM
                     + "; the parallelism must be a named property so CI can override it");
-        }
-        return Integer.parseInt(m.group(1));
-    }
-
-    private static int ciParallelism() throws IOException {
-        String itJob = integrationTestJob(Files.readString(MAIN_WORKFLOW));
-        Matcher m = Pattern.compile("-Dit\\.parallelism=(\\d+)").matcher(itJob);
-        if (!m.find()) {
-            return fail("the integration-test job must pass -Dit.parallelism=<n>; without it CI "
-                    + "silently inherits the developer-machine default");
         }
         return Integer.parseInt(m.group(1));
     }
