@@ -212,6 +212,9 @@ class EqualsContractTest {
                 new Specimen("WeblogPage (keyed on id)",
                         page("page-a"), page("page-a"), page("page-b")),
 
+                new Specimen("WeblogRedirect (keyed on id)",
+                        redirect("redirect-a"), redirect("redirect-a"), redirect("redirect-b")),
+
                 new Specimen("RollerEvent (keyed on id)",
                         event("event-a"), event("event-a"), event("event-b")),
 
@@ -248,6 +251,14 @@ class EqualsContractTest {
         WeblogPage page = new WeblogPage();
         page.setId(id);
         return page;
+    }
+
+    private static WeblogRedirect redirect(String id) {
+        WeblogRedirect redirect = new WeblogRedirect();
+        redirect.setId(id);
+        redirect.setSourcePath("/old");
+        redirect.setTargetPath("/new");
+        return redirect;
     }
 
     private static RollerEvent event(String id) {

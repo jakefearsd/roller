@@ -20,6 +20,11 @@
         <named-query name="WeblogPage.removeByWeblog">
             <query>DELETE FROM WeblogPage p WHERE p.weblog = ?1</query>
         </named-query>
+        <!-- Remembers the slug this page was loaded with, so savePage can
+             tell a rename from any other edit and mint the redirect that
+             keeps the old URL alive (same mechanism as WeblogEntry's
+             revision snapshot). -->
+        <post-load method-name="snapshotLoadedSlug"/>
         <attributes>
             <id name="id">
                 <column name="id"/>

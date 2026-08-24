@@ -1685,6 +1685,79 @@ answering to.
   test reads `PageEdit.jsp` directly to pin the marker's actual name rather
   than hardcoding it.
 
+## Redirects (301s for URLs that would otherwise 404)
+
+`roller_weblog_redirect` (V028) maps a weblog-relative source path to a
+weblog-relative target, served as a 301. Spec:
+`docs/superpowers/specs/2026-08-24-url-redirects-design.md`; the API section
+in `docs/api/README.md` is the admin surface — there is deliberately no JSP
+screen.
+
+- **A rule is consulted ONLY where a 404 is already decided, and that
+  ordering IS the safety property.** Four seams, all through
+  `RedirectResponder.answer`: `PageServlet`'s `selectTemplate == null` and
+  `rejectionReason != null` exits, and `WeblogRequestMapper`'s two
+  `sendError(SC_NOT_FOUND)` sites plus its `calculateForwardUrl == null`
+  decline. A rule whose source names live content simply never fires —
+  shadowing is impossible by construction, not by validation, and
+  `RedirectServingTest.aRuleCanNeverShadowLiveContent` pins it. **Do not add
+  a fifth call site that has not already decided to 404** — that is the one
+  way to break the design. The mapper's decline is the one seam where
+  "would 404" holds by argument rather than by construction (the mapper
+  returns false and the chain continues), which is why the no-rule decline
+  is pinned as a test alongside the rule-answered 301.
+- **Every failure around a redirect degrades to the decided 404, never a
+  500.** A resolver exception, a missing weblog root, a vanished weblog row —
+  the responder logs and steps aside. A favor that could not be looked up is
+  not a favor owed.
+- **The Location derives from the WEBLOG, never the request**:
+  `URLStrategy.getWeblogURL` root + target + the reader's original query
+  string (read through the forward attributes in `PageServlet`, since a
+  forwarded request's own URI names the internal servlet path). Custom
+  domains and the servlet context path are inherited from the strategy, not
+  reimplemented — this must not become the vhost wave's fourth hand-built
+  URL that drops the context path.
+- **One hop, enforced from both ends at save time** — a rule may neither
+  begin where an existing rule ends nor end where one begins — plus the
+  open-redirect refusals (`//` prefix, schemes, query strings, backslash,
+  control chars; external targets are refused outright). Both paths are
+  normalized (leading `/` required, trailing slashes stripped) identically
+  at save and match, so `/old` and `/old/` are one rule.
+- **Renaming a page's slug mints its own `SLUG_HISTORY` rule** via
+  `WeblogRedirectManager.recordRename`, called from `savePage` in the SAME
+  transaction (a rename whose history row failed to write is a rename that
+  silently killed a URL). The ceremony's order is load-bearing: delete rules
+  sitting on either slug first, then re-point rules targeting the old slug
+  at the new one (the collapse — or an existing rule strands on a 404 and
+  one-hop breaks under repeated renames), then mint. An A→B→A round trip
+  converges to one rule. The old slug is known via `WeblogPage.loadedSlug`,
+  a JPA post-load snapshot — the same mechanism as entry revisions.
+- **Entry anchors are immutable, so there is no entry-side hook** — the
+  editor's `EntryBean` carries no anchor field and `createAnchor` fires only
+  when the anchor is unset. Migrated permalinks are manual rules; do not go
+  hunting for a "missing" entry rename hook.
+- **Hit bookkeeping is best-effort and single-statement**: `recordHit` runs
+  one JPQL `UPDATE ... hit_count = hit_count + 1` (no load-modify-store, so
+  concurrent hits cannot lose updates) inside its own try/catch — the 301
+  was already owed to the reader. `hitCount`/`lastHitAt` are readable over
+  the API list.
+- **Every served redirect and every rule mutation logs one INFO line on the
+  named logger `roller.redirects`** (`WeblogRedirectManager.LOG_NAME`) —
+  rule id, origin, the full requested URI with query string, target,
+  referer, user-agent. Referer/UA are attacker-controlled: `{}` slots only,
+  nothing after them.
+- **The JPA trap this feature hit so you don't have to**: the strategy's
+  `getNamedQuery` deliberately sets `FlushModeType.COMMIT` (queries never
+  see the unit of work's pending writes), so `recordRename`'s
+  mint-after-remove validation reads through `getNamedQueryCommitFirst`
+  (AUTO) instead — without that, a legal rename is refused for a collision
+  with a rule that was just deleted. The hot `resolve` path keeps the
+  no-flush mode on purpose.
+- `removeWeblog` cascades `WeblogRedirect.removeByWeblog` beside the other
+  per-weblog children; `WeblogOwnership.redirect` is the fifth member of the
+  by-id ownership family, used by `RedirectsApi` (404 never 403, POST
+  permission, no update verb — delete and recreate).
+
 ## Virtual hosts (per-weblog custom domains)
 
 A weblog with `weblog.custom_domain` set is served at that hostname's root:

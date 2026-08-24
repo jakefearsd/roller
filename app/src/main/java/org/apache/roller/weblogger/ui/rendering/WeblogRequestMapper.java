@@ -114,12 +114,14 @@ public class WeblogRequestMapper {
 
     private final WebloggerProvider provider;
     private final Weblogger weblogger;
+    private final RedirectResponder redirectResponder;
 
 
     public WeblogRequestMapper(WebloggerProvider provider, Weblogger weblogger) {
 
         this.provider = provider;
         this.weblogger = weblogger;
+        this.redirectResponder = new RedirectResponder(weblogger);
         this.restricted = new HashSet<>();
 
         // build roller restricted list
@@ -336,6 +338,11 @@ public class WeblogRequestMapper {
             // a tags query at /<weblog>/tags/tag1+tag2, buth that's it
             if((weblogRequestData == null && !trailingSlash) ||
                     (weblogRequestData != null && trailingSlash)) {
+                // A decided 404 -- one of the consultation seams where a
+                // redirect rule may answer instead (see RedirectResponder).
+                if (answeredByRedirect(weblogHandle, pathInfo, request, response)) {
+                    return true;
+                }
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return true;
             }
@@ -343,17 +350,29 @@ public class WeblogRequestMapper {
             // this means that someone has accessed a weblog url and included
             // a trailing slash, like /<weblog>/entry/<anchor>/ which is not
             // supported, so we need to offer up a 404 Not Found
+            if (answeredByRedirect(weblogHandle, pathInfo, request, response)) {
+                return true;
+            }
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return true;
         }
-        
+
         // calculate forward url
         String forwardUrl = calculateForwardUrl(request, weblogHandle, weblogLocale,
                 weblogRequestContext, weblogRequestData);
-        
-        // if we don't have a forward url then the request was invalid somehow
+
+        // if we don't have a forward url then the request was invalid somehow.
+        // This decline is the seam that serves the site-migration case
+        // (/2019/05/old-post.html under a handle or on a vhost): the weblog is
+        // resolved by this point and nothing downstream serves anything under
+        // a weblog's namespace -- the protected roots returned above before
+        // ever reaching here -- so a declined weblog-shaped url is a 404 in
+        // practice, and a redirect rule may answer it. The spec calls this the
+        // one seam where "would 404" holds by argument rather than by
+        // construction, which is why RedirectServingTest pins the no-rule
+        // decline as well as the rule-answered 301.
         if(forwardUrl == null) {
-            return false;
+            return answeredByRedirect(weblogHandle, pathInfo, request, response);
         }
         
         // dispatch to forward url
@@ -444,6 +463,35 @@ public class WeblogRequestMapper {
     private String vhostHostFor(String handle) {
         VirtualHostRegistry registry = registry();
         return registry == null ? null : registry.hostFor(handle);
+    }
+
+    /**
+     * Consult the redirect rules for a request this mapper has decided it
+     * cannot serve. Called ONLY where a 404 (or the equivalent decline of a
+     * resolved weblog url) is already decided -- adding a call site that has
+     * not decided that is how a rule gets to shadow live content.
+     *
+     * @param pathInfo the weblog-relative path in this mapper's own form:
+     *        after the handle on the site host, the whole path on a custom
+     *        domain, no leading slash, {@code null} for the weblog root.
+     */
+    private boolean answeredByRedirect(String weblogHandle, String pathInfo,
+            HttpServletRequest request, HttpServletResponse response) {
+        try {
+            Weblog weblog = weblogger.getWeblogManager()
+                    .getWeblogByHandle(weblogHandle);
+            if (weblog == null) {
+                return false;
+            }
+            String path = pathInfo == null ? "/" : "/" + pathInfo;
+            return redirectResponder.answer(weblog, path, request, response);
+        } catch (Exception ex) {
+            // A favor that could not be looked up is not a favor owed: the
+            // 404/decline this seam had already decided proceeds unchanged.
+            log.warn("Could not consult redirect rules for weblog {}",
+                    weblogHandle, ex);
+            return false;
+        }
     }
 
     /**

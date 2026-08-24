@@ -46,6 +46,7 @@ public abstract class WebloggerImpl implements Weblogger {
     private final MediaFileManager     mediaFileManager;
     private final FileContentManager   fileContentManager;
     private final WeblogPageManager    weblogPageManager;
+    private final WeblogRedirectManager weblogRedirectManager;
     private final EventManager         eventManager;
     private final FormSubmissionManager formSubmissionManager;
     private final UserTokenManager     userTokenManager;
@@ -75,6 +76,7 @@ public abstract class WebloggerImpl implements Weblogger {
         MediaFileManager     mediaFileManager,
         FileContentManager   fileContentManager,
         WeblogPageManager    weblogPageManager,
+        WeblogRedirectManager weblogRedirectManager,
         EventManager         eventManager,
         FormSubmissionManager formSubmissionManager,
         UserTokenManager     userTokenManager,
@@ -94,6 +96,7 @@ public abstract class WebloggerImpl implements Weblogger {
         this.mediaFileManager    = mediaFileManager;
         this.fileContentManager  = fileContentManager;
         this.weblogPageManager   = weblogPageManager;
+        this.weblogRedirectManager = weblogRedirectManager;
         this.eventManager        = eventManager;
         this.formSubmissionManager = formSubmissionManager;
         this.userTokenManager    = userTokenManager;
@@ -200,6 +203,17 @@ public abstract class WebloggerImpl implements Weblogger {
     @Override
     public WeblogPageManager getWeblogPageManager() {
         return weblogPageManager;
+    }
+
+
+    /**
+     *
+     *
+     * @see org.apache.roller.weblogger.business.Weblogger#getWeblogRedirectManager()
+     */
+    @Override
+    public WeblogRedirectManager getWeblogRedirectManager() {
+        return weblogRedirectManager;
     }
 
 

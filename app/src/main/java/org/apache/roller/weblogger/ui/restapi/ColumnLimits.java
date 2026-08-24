@@ -59,6 +59,9 @@ public final class ColumnLimits {
 
     // roller_weblogpage (V014__weblog_pages.sql)
     public static final int PAGE_SLUG = 255;
+
+    // roller_weblog_redirect (V028__weblog_redirects.sql)
+    public static final int REDIRECT_PATH = 255;
     public static final int PAGE_TITLE = 255;
 
     // roller_api_token (V026__api_tokens.sql)

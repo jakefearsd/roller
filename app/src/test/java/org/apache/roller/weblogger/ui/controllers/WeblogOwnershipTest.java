@@ -67,4 +67,43 @@ class WeblogOwnershipTest {
     void anUnknownIdIsAbsent() {
         assertNull(WeblogOwnership.entry(weblogger, "no-such-id", mine));
     }
+
+    // The redirect member of the family follows the same contract as the
+    // other four: found for the owner, absent for everyone and everything
+    // else -- a foreign id, a blank id, an unknown id, and a store failure
+    // all read identically.
+
+    @Test
+    void aRedirectOfTheActionWeblogIsFound() throws Exception {
+        org.apache.roller.weblogger.pojos.WeblogRedirect rule =
+                new org.apache.roller.weblogger.pojos.WeblogRedirect();
+        rule.setWeblog(TestUtils.getManagedWebsite(mine));
+        rule.setSourcePath("/ownership-old");
+        rule.setTargetPath("/ownership-new");
+        weblogger.getWeblogRedirectManager().saveRedirect(rule);
+        weblogger.flush();
+        TestUtils.endSession(true);
+
+        assertNotNull(WeblogOwnership.redirect(weblogger, rule.getId(), mine));
+        assertNull(WeblogOwnership.redirect(weblogger, rule.getId(), theirs),
+                "a foreign id must read as absent, not as someone else's rule");
+    }
+
+    @Test
+    void aBlankOrUnknownRedirectIdIsAbsent() {
+        assertNull(WeblogOwnership.redirect(weblogger, null, mine));
+        assertNull(WeblogOwnership.redirect(weblogger, "  ", mine));
+        assertNull(WeblogOwnership.redirect(weblogger, "no-such-id", mine));
+    }
+
+    /** A store failure reads as absent -- 404, never a 500 leaking the error. */
+    @Test
+    void aRedirectStoreFailureReadsAsAbsent() throws Exception {
+        org.apache.roller.weblogger.business.MockWeblogger mock =
+                org.apache.roller.weblogger.business.MockWeblogger.create();
+        org.mockito.Mockito.when(mock.weblogRedirectManager().getRedirect("boom"))
+                .thenThrow(new org.apache.roller.weblogger.WebloggerException("store down"));
+
+        assertNull(WeblogOwnership.redirect(mock.weblogger(), "boom", mine));
+    }
 }

@@ -27,6 +27,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogPage;
+import org.apache.roller.weblogger.pojos.WeblogRedirect;
 import org.apache.roller.weblogger.pojos.WeblogTemplate;
 
 /**
@@ -120,6 +121,27 @@ public final class WeblogOwnership {
             return template;
         } catch (WebloggerException ex) {
             log.error("Error looking up template by id - {}", id, ex);
+        }
+        return null;
+    }
+
+    /**
+     * The redirect rule with this id, but only when it belongs to
+     * {@code weblog}.
+     */
+    public static WeblogRedirect redirect(Weblogger weblogger, String id, Weblog weblog) {
+        if (StringUtils.isBlank(id)) {
+            return null;
+        }
+        try {
+            WeblogRedirect rule = weblogger.getWeblogRedirectManager().getRedirect(id);
+            if (rule == null || rule.getWeblog() == null
+                    || !rule.getWeblog().equals(weblog)) {
+                return null;
+            }
+            return rule;
+        } catch (WebloggerException ex) {
+            log.error("Error looking up redirect by id - {}", id, ex);
         }
         return null;
     }

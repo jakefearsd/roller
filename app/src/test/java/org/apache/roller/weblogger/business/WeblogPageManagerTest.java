@@ -8,6 +8,7 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPage;
+import org.apache.roller.weblogger.pojos.WeblogRedirect;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -237,5 +238,126 @@ class WeblogPageManagerTest {
         assertTrue(manager().getPages(TestUtils.getManagedWebsite(weblog)).isEmpty());
         assertEquals(1, manager().getPages(TestUtils.getManagedWebsite(otherWeblog)).size(),
                 "the other weblog's pages must survive");
+    }
+
+    // ----------------------------------------------- automatic slug history
+
+    private WeblogRedirectManager redirects() {
+        return TestUtils.weblogger().getWeblogRedirectManager();
+    }
+
+    private void rename(WeblogPage page, String newSlug) throws Exception {
+        WeblogPage managed = manager().getPage(page.getId());
+        managed.setSlug(newSlug);
+        manager().savePage(managed);
+        TestUtils.weblogger().flush();
+        TestUtils.endSession(true);
+    }
+
+    private WeblogRedirect manualRule(String source, String target) throws Exception {
+        WeblogRedirect rule = new WeblogRedirect();
+        rule.setWeblog(TestUtils.getManagedWebsite(weblog));
+        rule.setSourcePath(source);
+        rule.setTargetPath(target);
+        rule.setOrigin(WeblogRedirect.Origin.MANUAL);
+        redirects().saveRedirect(rule);
+        TestUtils.weblogger().flush();
+        TestUtils.endSession(true);
+        return rule;
+    }
+
+    /**
+     * The highest-value redirect needs no operator at all: renaming a page's
+     * slug mints the rule that keeps the old URL alive.
+     */
+    @Test
+    void renamingAPagesSlugMintsASlugHistoryRedirect() throws Exception {
+        WeblogPage page = save(weblog, "old-name", WeblogPage.PubStatus.PUBLISHED);
+
+        rename(page, "new-name");
+
+        WeblogRedirect minted =
+                redirects().resolve(TestUtils.getManagedWebsite(weblog), "/old-name");
+        assertNotNull(minted, "the rename must keep the old URL alive");
+        assertEquals("/new-name", minted.getTargetPath());
+        assertEquals(WeblogRedirect.Origin.SLUG_HISTORY, minted.getOrigin());
+    }
+
+    @Test
+    void aSaveWithoutASlugChangeMintsNothing() throws Exception {
+        WeblogPage page = save(weblog, "steady", WeblogPage.PubStatus.PUBLISHED);
+
+        WeblogPage managed = manager().getPage(page.getId());
+        managed.setTitle("A new title, same slug");
+        manager().savePage(managed);
+        TestUtils.weblogger().flush();
+        TestUtils.endSession(true);
+
+        assertTrue(redirects().getRedirects(TestUtils.getManagedWebsite(weblog)).isEmpty());
+    }
+
+    @Test
+    void aBrandNewPageMintsNothing() throws Exception {
+        save(weblog, "fresh", WeblogPage.PubStatus.PUBLISHED);
+
+        assertTrue(redirects().getRedirects(TestUtils.getManagedWebsite(weblog)).isEmpty());
+    }
+
+    /**
+     * The collapse: renaming b to c must re-point an existing a-to-b rule at
+     * c, or that rule strands on a 404 -- and collapsing is also what keeps
+     * the one-hop invariant true under repeated renames.
+     */
+    @Test
+    void anExistingRuleTargetingTheOldSlugIsRepointed() throws Exception {
+        WeblogPage page = save(weblog, "b", WeblogPage.PubStatus.PUBLISHED);
+        manualRule("/ancient", "/b");
+
+        rename(page, "c");
+
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        assertEquals("/c", redirects().resolve(managed, "/ancient").getTargetPath(),
+                "the old manual rule must follow the rename");
+        assertEquals("/c", redirects().resolve(managed, "/b").getTargetPath(),
+                "and the rename itself is covered");
+    }
+
+    /**
+     * An a-to-b-to-a rename round trip converges to a clean table: one rule,
+     * from the transiently-occupied slug back to the live one, rather than
+     * an accretion of contradictory rows.
+     */
+    @Test
+    void aRenameRoundTripConverges() throws Exception {
+        WeblogPage page = save(weblog, "a", WeblogPage.PubStatus.PUBLISHED);
+
+        rename(page, "b");
+        rename(page, "a");
+
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        List<WeblogRedirect> remaining = redirects().getRedirects(managed);
+        assertEquals(1, remaining.size(), "got: " + remaining);
+        assertEquals("/b", remaining.get(0).getSourcePath());
+        assertEquals("/a", remaining.get(0).getTargetPath());
+        assertNull(redirects().resolve(managed, "/a"),
+                "no rule may sit on the live slug, even dormant");
+    }
+
+    /**
+     * A dormant manual rule on the old slug (saved while that slug was live,
+     * so it never fired) would collide with the minted history rule. The
+     * rename is the fresher statement of intent, so it supersedes.
+     */
+    @Test
+    void aDormantManualRuleOnTheOldSlugIsSuperseded() throws Exception {
+        WeblogPage page = save(weblog, "old-name", WeblogPage.PubStatus.PUBLISHED);
+        manualRule("/old-name", "/somewhere-else");
+
+        rename(page, "new-name");
+
+        WeblogRedirect winner =
+                redirects().resolve(TestUtils.getManagedWebsite(weblog), "/old-name");
+        assertEquals("/new-name", winner.getTargetPath());
+        assertEquals(WeblogRedirect.Origin.SLUG_HISTORY, winner.getOrigin());
     }
 }

@@ -43,6 +43,7 @@ public class WeblogPage implements ShortcodeContext, Serializable {
     private String id = UUIDGenerator.generateUUID();
     private Weblog weblog;
     private String slug;
+    private transient String loadedSlug;
     private String title;
     private String content;
     private PubStatus status = PubStatus.DRAFT;
@@ -93,6 +94,27 @@ public class WeblogPage implements ShortcodeContext, Serializable {
 
     public void setSlug(String slug) {
         this.slug = slug;
+    }
+
+    /**
+     * The slug this page was LOADED with, snapshotted by a JPA post-load
+     * callback (see {@code WeblogPage.orm.xml}) -- the same mechanism entry
+     * revisions use. {@code savePage} only ever sees the caller's new value,
+     * so this is how it can tell a rename from any other edit and mint the
+     * redirect that keeps the old URL alive. Getter-only on purpose: a
+     * property without a setter is not mapped, so no {@code <transient>} row
+     * is needed.
+     *
+     * @return the loaded slug, or {@code null} on an instance that was never
+     *         loaded from the store (a brand-new page).
+     */
+    public String getLoadedSlug() {
+        return loadedSlug;
+    }
+
+    /** JPA post-load callback; not for application code. */
+    public void snapshotLoadedSlug() {
+        this.loadedSlug = slug;
     }
 
     /**

@@ -30,6 +30,7 @@
     <mapping-file>org/apache/roller/weblogger/pojos/WeblogEntryRevision.orm.xml</mapping-file>
     <mapping-file>org/apache/roller/weblogger/pojos/CustomTemplateRendition.orm.xml</mapping-file>
     <mapping-file>org/apache/roller/weblogger/pojos/WeblogPage.orm.xml</mapping-file>
+    <mapping-file>org/apache/roller/weblogger/pojos/WeblogRedirect.orm.xml</mapping-file>
     <mapping-file>org/apache/roller/weblogger/pojos/RollerEvent.orm.xml</mapping-file>
     <mapping-file>org/apache/roller/weblogger/pojos/FormSubmission.orm.xml</mapping-file>
     <mapping-file>org/apache/roller/weblogger/pojos/UserToken.orm.xml</mapping-file>

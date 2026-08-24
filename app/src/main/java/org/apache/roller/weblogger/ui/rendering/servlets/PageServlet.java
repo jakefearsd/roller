@@ -36,6 +36,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.apache.roller.weblogger.ui.core.RollerContext;
+import org.apache.roller.weblogger.ui.rendering.RedirectResponder;
 import org.apache.roller.weblogger.ui.rendering.util.ModDateHeaderUtil;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogPageRequest;
 import org.apache.roller.weblogger.ui.rendering.util.cache.RenderCache;
@@ -71,6 +72,7 @@ public class PageServlet extends HttpServlet {
     Boolean themeReload = false;
 
     private final transient Weblogger weblogger;
+    private final transient RedirectResponder redirectResponder;
 
     /**
      * Constructed by {@code ServletRegistrationConfig} with the (lazily
@@ -80,6 +82,19 @@ public class PageServlet extends HttpServlet {
      */
     public PageServlet(Weblogger weblogger) {
         this.weblogger = weblogger;
+        this.redirectResponder = new RedirectResponder(weblogger);
+    }
+
+    /**
+     * Consult the redirect rules for a request this servlet has decided to
+     * 404. Called ONLY after that decision -- the ordering is what makes a
+     * rule unable to shadow live content.
+     */
+    private boolean answeredByRedirect(WeblogPageRequest pageRequest, Weblog weblog,
+            HttpServletRequest request, HttpServletResponse response) {
+        String pathInfo = pageRequest.getPathInfo();
+        String path = pathInfo == null ? "/" : "/" + pathInfo;
+        return redirectResponder.answer(weblog, path, request, response);
     }
 
     /**
@@ -185,6 +200,13 @@ public class PageServlet extends HttpServlet {
         // figure out what template to use
         ThemeTemplate page = selectTemplate(pageRequest, weblog, weblogger.getThemeManager());
         if (page == null) {
+            // A decided 404 -- one of the redirect consultation seams. The
+            // ordering IS the safety property: a rule is only ever asked
+            // about a request nothing serves, so it cannot shadow live
+            // content (see RedirectResponder).
+            if (answeredByRedirect(pageRequest, weblog, request, response)) {
+                return;
+            }
             RenderingServletUtils.sendNotFound(response);
             return;
         }
@@ -196,6 +218,9 @@ public class PageServlet extends HttpServlet {
                 weblogger.getWeblogEntryManager());
         if (rejection != null) {
             log.debug("page failed validation, bailing out: {}", rejection);
+            if (answeredByRedirect(pageRequest, weblog, request, response)) {
+                return;
+            }
             RenderingServletUtils.sendNotFound(response);
             return;
         }

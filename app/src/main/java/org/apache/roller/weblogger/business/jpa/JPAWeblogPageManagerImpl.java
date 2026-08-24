@@ -70,6 +70,19 @@ public class JPAWeblogPageManagerImpl implements WeblogPageManager {
 
         strategy.store(page);
 
+        // Automatic slug history: a rename mints the redirect that keeps the
+        // old URL alive. loadedSlug is the JPA post-load snapshot (null on a
+        // brand-new page), so this fires exactly when a persisted slug
+        // changed. Deliberately NOT best-effort -- same transaction as the
+        // save, because a rename whose history row failed to write is a
+        // rename that silently killed a URL, which is the exact failure the
+        // redirect feature exists to prevent.
+        String loadedSlug = page.getLoadedSlug();
+        if (loadedSlug != null && !loadedSlug.equals(slug)) {
+            roller.getWeblogRedirectManager().recordRename(
+                    page.getWeblog(), "/" + loadedSlug, "/" + slug);
+        }
+
         // update weblog last modified date.  date updated by saveWeblog().
         // WeblogPageCache has no CacheHandler -- a rendered page expires
         // lazily by comparing itself against weblog.lastModified (see

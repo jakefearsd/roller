@@ -57,6 +57,7 @@ printf '%s\n' "$PASSWORD" | bin/roller-api auth login \
 - [Categories and tags](#categories-and-tags)
 - [Media](#media)
 - [Pages](#pages)
+- [Redirects](#redirects)
 - [Audits](#audits)
 - [Site administration](#site-administration)
 - [Maintenance actions](#maintenance-actions)
@@ -444,6 +445,33 @@ raw, not HTML-escaped** — this API does not double-encode it, matching how
 every bundled theme's page template escapes it at render time instead (see
 CLAUDE.md's title-escaping asymmetry note if you are consuming both
 `EntryView.title` and `PageView.title` in the same client).
+
+## Redirects
+
+```
+GET    /api/v1/weblogs/{handle}/redirects
+POST   /api/v1/weblogs/{handle}/redirects
+DELETE /api/v1/weblogs/{handle}/redirects/{id}
+```
+
+`POST`-role required. A redirect rule answers a weblog URL **that would
+otherwise 404** with a 301 to live content — it can never shadow anything
+that is actually being served, because the lookup only runs at points where
+a 404 has already been decided (see the repository's `CLAUDE.md`,
+"Redirects"). This is the only admin surface for rules: a site migration is
+a script emitting exact rules through `POST`, and renaming a page's slug
+mints its own `SLUG_HISTORY` rule with no API call at all.
+
+A rule is `{"source": "/old-path", "target": "/new-path"}` — both
+weblog-relative (no handle, no context path, no query string; the request's
+query string is preserved on the 301 automatically). Off-site targets,
+query strings in either path, duplicate sources, and anything that would
+chain two rules together are refused as 400s with the reason in the body.
+There is no update verb: delete and recreate. The list echoes each rule's
+`hitCount` and `lastHitAt` — the way to see whether a stale URL is still
+being asked for — and every *served* redirect also logs one line to the
+`roller.redirects` logger with the requested URI, referer, and user-agent
+for diagnosis.
 
 ## Audits
 

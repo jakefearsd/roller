@@ -97,6 +97,12 @@ public interface Weblogger {
     WeblogPageManager getWeblogPageManager();
 
     /**
+     * Get the WeblogRedirectManager, which answers URLs that would otherwise
+     * 404 with 301s to live content.
+     */
+    WeblogRedirectManager getWeblogRedirectManager();
+
+    /**
      * Get the EventManager, which records first-party outcome events.
      */
     EventManager getEventManager();
