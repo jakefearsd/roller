@@ -42,10 +42,10 @@
         <c:if test="${not empty allCategories}">
 
             <tr class="rollertable">
-                <th width="30%"><spring:message code="generic.name"/></th>
-                <th width="50%"><spring:message code="generic.description"/></th>
-                <th width="10%"><spring:message code="generic.edit"/></th>
-                <th width="10%"><spring:message code="categoriesForm.remove"/></th>
+                <th scope="col" width="30%"><spring:message code="generic.name"/></th>
+                <th scope="col" width="50%"><spring:message code="generic.description"/></th>
+                <th scope="col" width="10%"><spring:message code="generic.edit"/></th>
+                <th scope="col" width="10%"><spring:message code="categoriesForm.remove"/></th>
             </tr>
 
             <c:forEach items="${allCategories}" var="category" varStatus="rowstatus">
@@ -125,7 +125,7 @@
 <%-- ============================================================= --%>
 <%-- add/edit category modal --%>
 
-<div id="category-edit-modal" class="modal category-edit-modal" tabindex="-1" role="dialog">
+<div id="category-edit-modal" class="modal category-edit-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="category-edit-title">
 
     <div class="modal-dialog modal-lg">
 
@@ -312,14 +312,14 @@
 <%-- ============================================================= --%>
 <%-- delete confirmation modal --%>
 
-<div id="delete-category-modal" class="modal delete-category-modal" tabindex="-1" role="dialog">
+<div id="delete-category-modal" class="modal delete-category-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="delete-category-modal-title">
 
     <div class="modal-dialog modal-lg">
 
         <div class="modal-content">
 
             <div class="modal-header">
-                <h3>
+                <h3 id="delete-category-modal-title">
                     <spring:message code="categoryDeleteOK.removeCategory"/>:
                     <span id="category-name"></span>
                 </h3>

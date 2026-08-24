@@ -80,14 +80,14 @@
 
 <%-- Media File Insert for plain textarea editor --%>
 
-<div id="mediafile_edit_lightbox" class="modal" role="dialog">
+<div id="mediafile_edit_lightbox" class="modal" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="mediafile-edit-lightbox-title">
 
     <div class="modal-dialog modal-lg">
 
         <div class="modal-content">
 
             <div class="modal-header">
-                <h4 class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
+                <h4 id="mediafile-edit-lightbox-title" class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
             </div>
 

@@ -45,13 +45,13 @@
     <table class="rollertable table table-striped" width="100%">
 
             <tr>
-                <th class="rollertable"><spring:message code="weblogPagesForm.slug"/></th>
-                <th class="rollertable"><spring:message code="weblogEdit.title"/></th>
-                <th class="rollertable" width="10%"><spring:message code="weblogEdit.status"/></th>
-                <th class="rollertable" width="10%"><spring:message code="weblogPagesForm.showInNav"/></th>
-                <th class="rollertable" width="10%"><spring:message code="weblogPagesForm.navOrder"/></th>
-                <th class="rollertable" width="5%"> </th>
-                <th class="rollertable" width="5%"> </th>
+                <th scope="col" class="rollertable"><spring:message code="weblogPagesForm.slug"/></th>
+                <th scope="col" class="rollertable"><spring:message code="weblogEdit.title"/></th>
+                <th scope="col" class="rollertable" width="10%"><spring:message code="weblogEdit.status"/></th>
+                <th scope="col" class="rollertable" width="10%"><spring:message code="weblogPagesForm.showInNav"/></th>
+                <th scope="col" class="rollertable" width="10%"><spring:message code="weblogPagesForm.navOrder"/></th>
+                <th scope="col" class="rollertable" width="5%"> </th>
+                <th scope="col" class="rollertable" width="5%"> </th>
             </tr>
 
             <c:forEach items="${pages}" var="p">

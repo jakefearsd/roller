@@ -100,19 +100,19 @@ function confirmMemberRemoval() {
 
     <table class="rollertable table table-striped">
         <tr>
-           <th class="rollertable" width="20%">
+           <th scope="col" class="rollertable" width="20%">
                <spring:message code="memberPermissions.userName"/>
            </th>
-           <th class="rollertable" width="20%">
+           <th scope="col" class="rollertable" width="20%">
                <spring:message code="memberPermissions.administrator"/>
            </th>
-           <th class="rollertable" width="20%">
+           <th scope="col" class="rollertable" width="20%">
                <spring:message code="memberPermissions.author"/>
            </th>
-           <th class="rollertable" width="20%">
+           <th scope="col" class="rollertable" width="20%">
                <spring:message code="memberPermissions.limited"/>
            </th>
-           <th class="rollertable" width="20%">
+           <th scope="col" class="rollertable" width="20%">
                <spring:message code="memberPermissions.remove"/>
            </th>
         </tr>

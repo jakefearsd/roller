@@ -42,10 +42,10 @@
         <c:if test="${not empty templates}">
 
             <tr>
-                <th width="30%"><spring:message code="generic.name"/></th>
-                <th width="10"><spring:message code="pagesForm.action"/></th>
-                <th width="55%"><spring:message code="generic.description"/></th>
-                <th width="10"><spring:message code="pagesForm.remove"/></th>
+                <th scope="col" width="30%"><spring:message code="generic.name"/></th>
+                <th scope="col" width="10"><spring:message code="pagesForm.action"/></th>
+                <th scope="col" width="55%"><spring:message code="generic.description"/></th>
+                <th scope="col" width="10"><spring:message code="pagesForm.remove"/></th>
             </tr>
 
             <c:forEach items="${templates}" var="p" varStatus="rowstatus">

@@ -396,14 +396,14 @@
 
 <%-- view image modal --%>
 
-<div id="mediafile_edit_lightbox" class="modal" tabindex="-1" role="dialog">
+<div id="mediafile_edit_lightbox" class="modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="mediafile-edit-lightbox-title">
 
     <div class="modal-dialog modal-lg">
 
         <div class="modal-content">
 
             <div class="modal-header">
-                <h3 class="subtitle">
+                <h3 id="mediafile-edit-lightbox-title" class="subtitle">
                     <spring:message code="mediaFileEdit.subtitle"/><b><span id="edit-subtitle"></span></b>
                 </h3>
             </div>

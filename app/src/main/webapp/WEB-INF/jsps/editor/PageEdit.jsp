@@ -284,14 +284,14 @@
 <%-- ====================================================================== --%>
 <%-- Delete confirmation --%>
 
-<div id="delete-page-modal" class="modal" tabindex="-1" role="dialog">
+<div id="delete-page-modal" class="modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="delete-page-modal-title">
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="${pageContext.request.contextPath}/roller-ui/authoring/pageRemove.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="" id="page-delete-id"/>
                 <div class="modal-header">
-                    <h3><spring:message code="generic.delete"/>: <span id="page-delete-title"></span></h3>
+                    <h3 id="delete-page-modal-title"><spring:message code="generic.delete"/>: <span id="page-delete-title"></span></h3>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>
@@ -308,11 +308,11 @@
      og:image picker. Its own ids so this JSP never collides with the entry
      editor's copy of the same modal. --%>
 
-<div id="page_mediafile_edit_lightbox" class="modal" role="dialog">
+<div id="page_mediafile_edit_lightbox" class="modal" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="page-mediafile-edit-lightbox-title">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
+                <h4 id="page-mediafile-edit-lightbox-title" class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
             </div>
             <div class="modal-body">

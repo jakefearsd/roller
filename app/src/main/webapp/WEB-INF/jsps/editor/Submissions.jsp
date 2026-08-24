@@ -64,15 +64,15 @@
     <table class="rollertable table table-striped" width="100%">
 
             <tr>
-                <th class="rollertable" width="3%">
+                <th scope="col" class="rollertable" width="3%">
                     <input type="checkbox" id="selectAllSubmissions" class="form-check-input"
                            title="<spring:message code="weblogEntryQuery.selectAll"/>"/>
                 </th>
-                <th class="rollertable"><spring:message code="submissions.column.received"/></th>
-                <th class="rollertable"><spring:message code="submissions.column.from"/></th>
-                <th class="rollertable"><spring:message code="submissions.column.subject"/></th>
-                <th class="rollertable"><spring:message code="submissions.column.message"/></th>
-                <th class="rollertable"><spring:message code="submissions.column.source"/></th>
+                <th scope="col" class="rollertable"><spring:message code="submissions.column.received"/></th>
+                <th scope="col" class="rollertable"><spring:message code="submissions.column.from"/></th>
+                <th scope="col" class="rollertable"><spring:message code="submissions.column.subject"/></th>
+                <th scope="col" class="rollertable"><spring:message code="submissions.column.message"/></th>
+                <th scope="col" class="rollertable"><spring:message code="submissions.column.source"/></th>
             </tr>
 
             <c:forEach items="${submissions}" var="s">
@@ -148,11 +148,11 @@
 <%-- Confirmation for the bulk delete, ported from Entries.jsp: a modal
      rather than window.confirm, because the native dialog cannot say how
      many inquiries are about to go. --%>
-<div id="submissions-delete-modal" class="modal" tabindex="-1" role="dialog">
+<div id="submissions-delete-modal" class="modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="submissions-delete-modal-title">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">
+                <div id="submissions-delete-modal-title" class="modal-title">
                     <h3><spring:message code="submissions.bulkDeleteConfirm"/></h3>
                     <p><spring:message code="submissions.bulkDeleteWarning"/></p>
                 </div>

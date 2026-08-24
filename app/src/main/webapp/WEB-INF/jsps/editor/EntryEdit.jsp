@@ -567,7 +567,7 @@
 <%-- newsletter confirmation modal + script (the card lives in the rail above) --%>
 
 <c:if test="${actionName == 'entryEdit' && entry.published}">
-    <div id="newsletter-confirm-modal" class="modal" tabindex="-1" role="dialog">
+    <div id="newsletter-confirm-modal" class="modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="newsletter-confirm-modal-title">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!sendNewsletter.rol"
@@ -576,7 +576,7 @@
                     <input type="hidden" name="bean.id" value="${entry.id}"/>
 
                     <div class="modal-header">
-                        <h4 class="modal-title"><spring:message code="newsletter.confirmTitle"/></h4>
+                        <h4 id="newsletter-confirm-modal-title" class="modal-title"><spring:message code="newsletter.confirmTitle"/></h4>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
                     </div>
 
@@ -613,11 +613,11 @@
 <%-- revision diff modal + script (the card lives in the rail above) --%>
 
 <c:if test="${actionName == 'entryEdit' && not empty entryRevisions}">
-    <div id="revision-diff-modal" class="modal" tabindex="-1" role="dialog">
+    <div id="revision-diff-modal" class="modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="revision-diff-modal-title">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title"><spring:message code="weblogEdit.revisionCompare"/></h4>
+                    <h4 id="revision-diff-modal-title" class="modal-title"><spring:message code="weblogEdit.revisionCompare"/></h4>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
                 </div>
                 <div class="modal-body" id="revisionDiffBody"></div>
@@ -665,7 +665,7 @@
 
 <%-- delete entry confirmation modal --%>
 
-<div id="delete-entry-modal" class="modal delete-entry-modal" tabindex="-1" role="dialog">
+<div id="delete-entry-modal" class="modal delete-entry-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="delete-entry-modal-title">
 
     <div class="modal-dialog modal-lg">
 
@@ -678,7 +678,7 @@
                 <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
                 <div class="modal-header">
-                    <div class="modal-title">
+                    <div id="delete-entry-modal-title" class="modal-title">
                         <h3><spring:message code="weblogEntryRemove.removeWeblogEntry"/></h3>
                         <p><spring:message code="weblogEntryRemove.areYouSure"/></p>
                     </div>

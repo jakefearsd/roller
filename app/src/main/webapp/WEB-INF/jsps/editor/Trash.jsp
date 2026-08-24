@@ -57,11 +57,11 @@
 <table class="rollertable table table-striped" width="100%">
 
 <tr>
-    <th class="rollertable"><spring:message code="trash.column.title"/></th>
-    <th class="rollertable" width="15%"><spring:message code="trash.column.trashed"/></th>
-    <th class="rollertable" width="15%"><spring:message code="trash.column.category"/></th>
-    <th class="rollertable" width="10%"> </th>
-    <th class="rollertable" width="10%"> </th>
+    <th scope="col" class="rollertable"><spring:message code="trash.column.title"/></th>
+    <th scope="col" class="rollertable" width="15%"><spring:message code="trash.column.trashed"/></th>
+    <th scope="col" class="rollertable" width="15%"><spring:message code="trash.column.category"/></th>
+    <th scope="col" class="rollertable" width="10%"> </th>
+    <th scope="col" class="rollertable" width="10%"> </th>
 </tr>
 
 <c:forEach items="${trashedEntries}" var="entry">

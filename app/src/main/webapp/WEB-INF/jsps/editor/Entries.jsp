@@ -131,28 +131,28 @@
 <table class="rollertable table table-striped" width="100%">
 
 <tr>
-    <th class="rollertable" width="3%">
+    <th scope="col" class="rollertable" width="3%">
         <input type="checkbox" id="selectAllEntries" class="form-check-input"
                title="<spring:message code="weblogEntryQuery.selectAll"/>"/>
     </th>
-    <th class="rollertable" width="3%"> </th>
-    <th class="rollertable" width="7%">
+    <th scope="col" class="rollertable" width="3%"> </th>
+    <th scope="col" class="rollertable" width="7%">
         <spring:message code="weblogEntryQuery.pubTime"/>
     </th>
-    <th class="rollertable" width="7%">
+    <th scope="col" class="rollertable" width="7%">
         <spring:message code="weblogEntryQuery.updateTime"/>
     </th>
-    <th class="rollertable">
+    <th scope="col" class="rollertable">
         <spring:message code="weblogEntryQuery.title"/>
     </th>
-    <th class="rollertable" width="10%">
+    <th scope="col" class="rollertable" width="10%">
         <spring:message code="weblogEdit.status"/>
     </th>
-    <th class="rollertable" width="15%">
+    <th scope="col" class="rollertable" width="15%">
         <spring:message code="weblogEntryQuery.category"/>
     </th>
-    <th class="rollertable" width="3%"> </th>
-    <th class="rollertable" width="3%"> </th>
+    <th scope="col" class="rollertable" width="3%"> </th>
+    <th scope="col" class="rollertable" width="3%"> </th>
 </tr>
 
 <c:forEach items="${pager.items}" var="post">
@@ -343,7 +343,7 @@
 </div>
 
 
-<div id="delete-entry-modal" class="modal delete-entry-modal" tabindex="-1" role="dialog">
+<div id="delete-entry-modal" class="modal delete-entry-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="delete-entry-modal-title">
 
     <div class="modal-dialog modal-lg">
 
@@ -356,7 +356,7 @@
                 <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
                 <div class="modal-header">
-                    <div class="modal-title">
+                    <div id="delete-entry-modal-title" class="modal-title">
                         <h3><spring:message code="weblogEntryRemove.removeWeblogEntry"/></h3>
                         <p><spring:message code="weblogEntryRemove.areYouSure"/></p>
                     </div>
@@ -403,11 +403,11 @@
 <%-- Confirmation for the bulk delete. A modal rather than window.confirm:
      the native dialog blocks the page for automated tests and cannot say
      how many entries are about to go. --%>
-<div id="bulk-delete-modal" class="modal" tabindex="-1" role="dialog">
+<div id="bulk-delete-modal" class="modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="bulk-delete-modal-title">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">
+                <div id="bulk-delete-modal-title" class="modal-title">
                     <h3><spring:message code="weblogEntryQuery.bulkDeleteConfirm"/></h3>
                     <p><spring:message code="weblogEntryQuery.bulkDeleteWarning"/></p>
                 </div>

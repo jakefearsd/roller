@@ -317,15 +317,81 @@ class AdminJspHygieneTest {
                 "core/MainMenuSidebar.jsp still has <h4> headings under an <h1> page title");
     }
 
-    /** A header cell with no scope is ambiguous to a screen reader's table mode. */
+    /**
+     * A header cell with no scope is ambiguous to a screen reader's table
+     * mode. Scanned over the whole tree rather than the one screen this
+     * started as: UserEdit was scoped while the seven authoring tables an
+     * editor actually lives in -- Entries, Trash, Pages, Categories,
+     * Templates, Members, Submissions -- were not, and a test naming a single
+     * file could not say so.
+     */
     @Test
-    void userEditPermissionTableScopesItsHeaders() {
-        String src = jsp("admin/UserEdit.jsp");
-        int headers = src.split("<th", -1).length - 1;
-        int scoped = src.split("<th scope=\"col\"", -1).length - 1;
-        assertTrue(headers == scoped,
-                "admin/UserEdit.jsp: " + (headers - scoped) + " of " + headers
-                        + " <th> cells lack scope=\"col\"");
+    void everyDataTableScopesItsHeaders() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (String dir : List.of("admin", "core", "editor", "tiles")) {
+            try (Stream<Path> files = Files.walk(JSPS.resolve(dir))) {
+                files.filter(f -> f.toString().endsWith(".jsp")).forEach(f -> {
+                    String body = withoutJspComments(read(f));
+                    Matcher m = Pattern.compile("<th\\b([^>]*)>").matcher(body);
+                    while (m.find()) {
+                        if (!m.group(1).contains("scope=")) {
+                            violations.add(f.getFileName() + ": <th" + m.group(1) + "> has no scope");
+                        }
+                    }
+                });
+            }
+        }
+        assertTrue(violations.isEmpty(),
+                "header cells with no scope:\n  " + String.join("\n  ", violations));
+    }
+
+    /**
+     * A div styled as a modal is not a dialog to assistive tech unless it says
+     * so: {@code role="dialog"} alone leaves the reader in the document behind
+     * it, {@code aria-modal="true"} is what scopes them to the dialog, and
+     * without {@code aria-labelledby} the dialog opens unnamed. The two media
+     * pickers additionally had no {@code tabindex="-1"}, which is what makes
+     * Esc close a Bootstrap modal -- so the only way out of the image chooser
+     * was the mouse.
+     */
+    @Test
+    void everyModalIsAnAccessibleDialog() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (String dir : List.of("admin", "core", "editor", "tiles")) {
+            try (Stream<Path> files = Files.walk(JSPS.resolve(dir))) {
+                files.filter(f -> f.toString().endsWith(".jsp")).forEach(f -> {
+                    String body = withoutJspComments(read(f));
+                    Matcher m = Pattern.compile("<div\\b([^>]*)>").matcher(body);
+                    while (m.find()) {
+                        String attrs = m.group(1);
+                        // The modal ROOT only: "modal" as a standalone class
+                        // token, never modal-dialog/-content/-header, which
+                        // are its own children and carry no dialog semantics.
+                        Matcher cls = Pattern.compile("\\bclass=\"([^\"]*)\"").matcher(attrs);
+                        if (!cls.find() || !List.of(cls.group(1).trim().split("\\s+")).contains("modal")) {
+                            continue;
+                        }
+                        String id = attrs.replaceAll("(?s).*\\bid=\"([^\"]+)\".*", "$1");
+                        String who = f.getFileName() + " #" + id;
+                        if (!attrs.contains("tabindex=\"-1\"")) {
+                            violations.add(who + ": no tabindex=\"-1\", so Esc cannot close it");
+                        }
+                        if (!attrs.contains("aria-modal=\"true\"")) {
+                            violations.add(who + ": no aria-modal=\"true\"");
+                        }
+                        Matcher labelled = Pattern.compile("aria-labelledby=\"([^\"]+)\"").matcher(attrs);
+                        if (!labelled.find()) {
+                            violations.add(who + ": no aria-labelledby, so the dialog opens unnamed");
+                        } else if (!body.contains("id=\"" + labelled.group(1) + "\"")) {
+                            violations.add(who + ": aria-labelledby=\"" + labelled.group(1)
+                                    + "\" names no element in the file");
+                        }
+                    }
+                });
+            }
+        }
+        assertTrue(violations.isEmpty(),
+                "modals that are not dialogs:\n  " + String.join("\n  ", violations));
     }
 
     // ---------------------------------------------------------------- Task 16
