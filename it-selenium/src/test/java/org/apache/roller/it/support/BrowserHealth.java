@@ -27,6 +27,7 @@ import org.openqa.selenium.devtools.HasDevTools;
 import org.openqa.selenium.devtools.v150.network.Network;
 import org.openqa.selenium.devtools.v150.page.Page;
 import org.openqa.selenium.devtools.v150.page.model.Frame;
+import org.openqa.selenium.devtools.v150.storage.Storage;
 
 import java.net.URI;
 import java.time.Duration;
@@ -201,12 +202,20 @@ public final class BrowserHealth {
     }
 
     /**
-     * Opens a fresh browser parked on {@code about:blank}, attaches the listeners, and
-     * binds the recorder to the calling thread.
+     * Parks the browser on {@code about:blank}, resets it to the state a freshly launched
+     * one would be in, attaches the listeners, and binds the recorder to the calling
+     * thread.
      *
      * <p>The blank page is not decoration. CDP only reports traffic that happens after a
      * listener is registered, so the browser has to sit somewhere harmless while we set up;
      * attaching after navigating loses exactly the events we care about.
+     *
+     * <p>The browser here is usually NOT new -- {@code BrowserHealthExtension} keeps one
+     * per test class rather than one per test -- so this method has to undo everything the
+     * previous test left behind. Two things, and skipping either one is a silent defect
+     * rather than a loud one: stale DevTools listeners would still be registered and would
+     * double-count every subsequent event, and a surviving login cookie would let a test
+     * pass on its predecessor's session instead of establishing its own.
      */
     static BrowserHealth attach() {
         // Deliberately NOT Selenide.open("about:blank"). Selenide only treats a URL
@@ -219,11 +228,34 @@ public final class BrowserHealth {
         driver.get("about:blank");
         DevTools devTools = devTools();
         devTools.createSessionIfThereIsNotOne();
+        // Before registering ours, drop the previous test's -- addListener appends, so on a
+        // reused session every test would otherwise be watched by one more set than the last.
+        devTools.clearListeners();
 
         BrowserHealth health = new BrowserHealth();
         health.listen(devTools);
+        resetSessionState(devTools);
         CURRENT.set(health);
         return health;
+    }
+
+    /**
+     * Signs the browser out and empties its web storage, so a test inheriting a browser
+     * from the one before it starts where a brand new browser would.
+     *
+     * <p>Done over CDP rather than through WebDriver because it has to work while parked on
+     * {@code about:blank}: {@code deleteAllCookies()} only reaches cookies visible to the
+     * current document, and {@code about:blank} has no origin, so it would silently clear
+     * nothing at all. The CDP commands take the origin as an argument instead.
+     *
+     * <p>Runs after the listeners are attached, so the {@code Network} domain is enabled by
+     * the time it is called. Neither command issues a request, so nothing it does reaches
+     * the recorder.
+     */
+    private static void resetSessionState(DevTools devTools) {
+        devTools.send(Network.clearBrowserCookies());
+        devTools.send(Storage.clearDataForOrigin(RollerIT.origin(),
+                "local_storage,session_storage"));
     }
 
     /** Unbinds the recorder from the calling thread; pairs with {@link #attach()}. */
