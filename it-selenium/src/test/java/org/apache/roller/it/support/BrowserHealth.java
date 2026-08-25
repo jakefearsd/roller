@@ -268,13 +268,26 @@ public final class BrowserHealth {
      * cookie for the document currently loaded. The CDP command takes the URL the cookie
      * belongs to as an argument, and Chrome derives the domain and path from it.
      *
+     * <p><b>The path is passed explicitly and must not be left to CDP.</b> Given only a
+     * url, Chrome derives the cookie's path from the url's directory -- {@code /roller/}
+     * for {@code http://host/roller/} -- while Tomcat sets its session cookie on the
+     * context path itself, {@code /roller}. Those are DIFFERENT cookies. Both match a
+     * request under {@code /roller/}, so the browser sends two JSESSIONIDs, the server
+     * honours whichever it reads first, and a freshly installed session is silently
+     * ignored in favour of a stale one left over from an earlier navigation. At the root
+     * context both paths are {@code /}, so the two agree and nothing looks wrong -- which
+     * is exactly why this survived a green suite and only failed under
+     * {@code -Dit.context.path=roller}.
+     *
      * @param name  cookie name, e.g. {@code JSESSIONID}
      * @param value cookie value
      * @param url   the URL the cookie is scoped to, context path included
+     * @param path  the path the SERVER set the cookie on, so this overwrites rather than
+     *              adding a second cookie of the same name
      */
-    static void installCookie(String name, String value, String url) {
+    static void installCookie(String name, String value, String url, String path) {
         Boolean accepted = devTools().send(Network.setCookie(name, value, Optional.of(url),
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.of(path), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty()));
 

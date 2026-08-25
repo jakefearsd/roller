@@ -312,7 +312,14 @@ public abstract class RollerIT {
      */
     protected void signInAs(String username, String password) {
         for (HttpCookie cookie : authenticateOverHttp(username, password)) {
-            BrowserHealth.installCookie(cookie.getName(), cookie.getValue(), baseUrl() + "/");
+            // The server's own path, not one derived from the url -- see
+            // BrowserHealth.installCookie for what a derived path costs under a
+            // servlet context prefix. A cookie with no path defaults to "/",
+            // which is what the root context sets anyway.
+            String path = cookie.getPath() == null || cookie.getPath().isBlank()
+                    ? "/" : cookie.getPath();
+            BrowserHealth.installCookie(cookie.getName(), cookie.getValue(),
+                    baseUrl() + "/", path);
         }
     }
 
