@@ -17,6 +17,14 @@
 #
 # Environment (all optional):
 #   IT_APP_JAVA               java command to launch with (default: java)
+#   IT_APP_HEAP               max heap for the app under test (default: 1g).
+#                             Without -Xmx the JVM takes a quarter of physical
+#                             RAM as its ceiling -- 8g on a 32G developer
+#                             machine -- for an app whose measured footprint
+#                             under this suite is well under a gigabyte. That
+#                             ceiling costs nothing until the heap grows into
+#                             it, at which point it is competing with four
+#                             Chromes for the same memory.
 #   IT_READY_TIMEOUT_SECONDS  readiness budget (default: 180)
 #   IT_OWNER_PID              build process that owns this app (default: $PPID,
 #                             which under exec-maven-plugin is the Maven JVM)
@@ -37,6 +45,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WAR="$1"; PORT="$2"; PROPS="$3"; PIDFILE="$4"; LOG="$5"; RUN_ID="$6"
 
 JAVA="${IT_APP_JAVA:-java}"
+APP_HEAP="${IT_APP_HEAP:-1g}"
 READY_TIMEOUT="${IT_READY_TIMEOUT_SECONDS:-180}"
 OWNER="$(it_owner_stamp "${IT_OWNER_PID:-$PPID}")"
 
@@ -99,7 +108,7 @@ mkdir -p "$(dirname "$PIDFILE")" "$(dirname "$LOG")"
 #
 # roller.it.run / roller.it.owner are inert as far as Roller is concerned: they
 # exist so this process can be found again by anything that has to clean it up.
-"$JAVA" -Djava.awt.headless=true -Droller.custom.config="$PROPS" \
+"$JAVA" -Xmx"$APP_HEAP" -Djava.awt.headless=true -Droller.custom.config="$PROPS" \
      "-Droller.it.run=$RUN_ID" "-Droller.it.owner=$OWNER" \
      -jar "$WAR" --server.port="$PORT" --server.servlet.context-path="$CONTEXT_PATH" \
      --management.server.port=0 \
