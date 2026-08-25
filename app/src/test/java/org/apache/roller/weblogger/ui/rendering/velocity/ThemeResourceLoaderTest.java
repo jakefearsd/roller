@@ -21,6 +21,16 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 import org.apache.roller.weblogger.business.themes.ThemeNotFoundException;
+import org.apache.roller.weblogger.business.themes.SharedTheme;
+import org.apache.roller.weblogger.pojos.ThemeTemplate;
+import org.apache.roller.weblogger.pojos.TemplateRendition;
+import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
+
+import java.io.Reader;
+import org.apache.velocity.runtime.resource.Resource;
+import org.apache.velocity.runtime.resource.ResourceCacheImpl;
+
+import java.util.Date;
 import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.RuntimeServices;
 import org.apache.velocity.util.ExtProperties;
@@ -29,6 +39,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -84,5 +96,100 @@ class ThemeResourceLoaderTest {
                 () -> loader.getResourceReader("brokentheme:sometemplate", "UTF-8"));
 
         assertEquals(cause, thrown.getCause());
+    }
+
+    /**
+     * The loader must tell Velocity the truth about when a theme last changed,
+     * because that answer is the only thing standing between a cached parse
+     * tree and a stale page.
+     *
+     * <p>Both methods used to be hardcoded -- {@code isSourceModified} returned
+     * false and {@code getLastModified} returned 0 -- so caching had to be
+     * switched off wholesale in {@code velocity.properties} to make theme
+     * editing work at all. That meant Velocity re-read AND re-parsed every
+     * theme template on every request, in production as well as in
+     * development; the parser was around a tenth of render CPU in a profile.
+     * With an honest answer here, the parse tree can be cached and rechecked
+     * on an interval instead.
+     */
+    @Test
+    void theLoaderReportsTheThemesOwnTimestamp() throws WebloggerException {
+        SharedTheme theme = mock(SharedTheme.class);
+        when(theme.getLastModified()).thenReturn(new Date(1_500_000_000_000L));
+        when(themeManager.getTheme("mytheme")).thenReturn(theme);
+
+        assertEquals(1_500_000_000_000L, loader.getLastModified(resourceNamed("mytheme:weblog")),
+                "Velocity is told the theme has never been modified, so a cached "
+                        + "parse tree can never be invalidated");
+    }
+
+    @Test
+    void aThemeReloadedFromDiskCountsAsModified() throws WebloggerException {
+        SharedTheme theme = mock(SharedTheme.class);
+        when(themeManager.getTheme("mytheme")).thenReturn(theme);
+
+        Resource resource = resourceNamed("mytheme:weblog");
+        when(theme.getLastModified()).thenReturn(new Date(1_000L));
+        resource.setLastModified(loader.getLastModified(resource));
+        assertFalse(loader.isSourceModified(resource),
+                "nothing changed on disk, so nothing should be re-parsed");
+
+        // what reLoadThemeFromDisk does: swap in a theme with a newer stamp
+        when(theme.getLastModified()).thenReturn(new Date(2_000L));
+        assertTrue(loader.isSourceModified(resource),
+                "the theme was reloaded from disk; the cached parse tree is stale");
+    }
+
+    /**
+     * A theme that cannot be looked up must not be reported as unchanged:
+     * "unchanged" pins whatever is in the cache forever. Saying "modified"
+     * costs one re-parse, which then raises the real error.
+     */
+    @Test
+    void anUnresolvableThemeIsTreatedAsModifiedRatherThanUnchanged() throws WebloggerException {
+        when(themeManager.getTheme(anyString())).thenThrow(new ThemeNotFoundException("gone"));
+        Resource resource = resourceNamed("mytheme:weblog");
+        resource.setLastModified(123L);
+        assertTrue(loader.isSourceModified(resource));
+        assertEquals(0L, loader.getLastModified(resource));
+    }
+
+    private static Resource resourceNamed(String name) {
+        Resource r = new org.apache.velocity.Template();
+        r.setName(name);
+        return r;
+    }
+
+    /**
+     * Velocity calls {@code getResourceReader(name, null)} -- with a NULL
+     * encoding -- from {@code ResourceLoader.resourceExists()}, which
+     * {@code ResourceManagerImpl.refreshResource()} uses to find the loader
+     * that owns a cached resource.
+     *
+     * <p>This is only reachable when the loader caches, which is why it sat
+     * here undetected: with caching off, refreshResource never runs. Turning
+     * caching on surfaced it immediately as a {@code NullPointerException}
+     * from {@code String.getBytes(null)}, which
+     * {@code VelocityRendererFactory} turned into a null renderer and the
+     * servlets turned into an intermittent 404 on a perfectly good page --
+     * about 4 in every 60 concurrent requests, with the real cause visible
+     * only at debug level.
+     */
+    @Test
+    void aNullEncodingFallsBackToUtf8RatherThanThrowing() throws Exception {
+        SharedTheme theme = mock(SharedTheme.class);
+        ThemeTemplate template = mock(ThemeTemplate.class);
+        TemplateRendition rendition = mock(TemplateRendition.class);
+        when(rendition.getTemplate()).thenReturn("Hello \u00e9");
+        when(template.getTemplateRendition(RenditionType.STANDARD)).thenReturn(rendition);
+        when(theme.getTemplateByName("weblog")).thenReturn(template);
+        when(themeManager.getTheme("mytheme")).thenReturn(theme);
+
+        try (Reader reader = loader.getResourceReader("mytheme:weblog", null)) {
+            StringBuilder read = new StringBuilder();
+            int c;
+            while ((c = reader.read()) != -1) { read.append((char) c); }
+            assertEquals("Hello \u00e9", read.toString());
+        }
     }
 }

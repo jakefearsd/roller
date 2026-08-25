@@ -113,12 +113,26 @@ public final class RollerVelocity {
             throw new WebloggerException("Unable to read " + VELOCITY_CONFIG, e);
         }
 
+        // How often Velocity may re-check whether a shared theme changed on disk
+        // before it will reuse a cached parse tree. Seconds. Small enough that an
+        // edit shows up on its own, large enough that steady read traffic pays one
+        // timestamp comparison per template per interval rather than a full
+        // re-parse per request.
+        velocityProps.setProperty("resource.loader.theme.modification_check_interval",
+                Integer.toString(WebloggerConfig.getIntProperty("themes.reload.interval", 5)));
+
         // Development theme reloading
         if (WebloggerConfig.getBooleanProperty("themes.reload.mode")) {
             velocityProps.setProperty("resource.loader.class.cache", "false");
             velocityProps.setProperty("resource.loader.class.modification_check_interval", "2");
             velocityProps.setProperty("resource.loader.webapp.cache", "false");
             velocityProps.setProperty("resource.loader.webapp.modification_check_interval", "2");
+            // The theme loader is NOT switched off here, unlike the two above. It
+            // keeps its parse cache and simply rechecks more eagerly, because it
+            // can: ThemeResourceLoader reports the theme's real disk timestamp, so
+            // an edit is picked up on the next check rather than needing the cache
+            // gone entirely.
+            velocityProps.setProperty("resource.loader.theme.modification_check_interval", "2");
             velocityProps.setProperty("velocimacro.library.autoreload", "true");
         }
 

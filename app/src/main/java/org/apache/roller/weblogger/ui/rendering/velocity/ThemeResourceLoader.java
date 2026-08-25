@@ -27,6 +27,8 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,6 +89,15 @@ public class ThemeResourceLoader extends ResourceLoader {
                     "Need to specify a template name!");
         }
 
+        // Velocity passes a NULL encoding from ResourceLoader.resourceExists(),
+        // which ResourceManagerImpl.refreshResource() calls to work out which
+        // loader owns a cached resource. Unreachable while this loader had
+        // caching switched off; with caching on it is reached constantly, and
+        // String.getBytes(null) throws NPE -- which surfaced as a renderer that
+        // could not be created and an intermittent 404 on a page that was fine.
+        String charset = (encoding == null || encoding.isEmpty())
+                ? StandardCharsets.UTF_8.name() : encoding;
+
         RenditionType renditionType = RenditionType.STANDARD;
         if (name.contains("|")) {
             String[] pair = name.split("\\|");
@@ -126,7 +137,7 @@ public class ThemeResourceLoader extends ResourceLoader {
             logger.debug("Resource found!");
 
             // return the input stream
-            return new InputStreamReader(new ByteArrayInputStream(contents.getBytes(encoding)), encoding);
+            return new InputStreamReader(new ByteArrayInputStream(contents.getBytes(charset)), charset);
 
         } catch (UnsupportedEncodingException uex) {
             // We expect UTF-8 in all JRE installation.
@@ -155,7 +166,12 @@ public class ThemeResourceLoader extends ResourceLoader {
      */
     @Override
     public boolean isSourceModified(Resource resource) {
-        return false;
+        long current = getLastModified(resource);
+        // 0 means "could not tell" -- an unresolvable theme, or one with no
+        // timestamp. Answer "modified" there rather than "unchanged": unchanged
+        // pins whatever is in the cache for the life of the JVM, while modified
+        // costs one re-parse and lets the real error surface.
+        return current == 0L || current > resource.getLastModified();
     }
 
     /**
@@ -163,7 +179,33 @@ public class ThemeResourceLoader extends ResourceLoader {
      */
     @Override
     public long getLastModified(Resource resource) {
-        return 0;
+        if (resource == null || resource.getName() == null) {
+            return 0L;
+        }
+        // Template keys are "<theme>:<template>|<rendition>"; only the theme
+        // half carries a timestamp, and it is the theme as a whole that
+        // ThemeManager.reLoadThemeFromDisk swaps out.
+        String name = resource.getName();
+        int pipe = name.indexOf('|');
+        if (pipe >= 0) {
+            name = name.substring(0, pipe);
+        }
+        int colon = name.indexOf(':');
+        if (colon < 1) {
+            return 0L;
+        }
+        try {
+            Theme theme = weblogger.getThemeManager().getTheme(name.substring(0, colon));
+            Date modified = theme == null ? null : theme.getLastModified();
+            return modified == null ? 0L : modified.getTime();
+        } catch (WebloggerException | RuntimeException ex) {
+            // Deliberately not fatal and deliberately not "unchanged": this is
+            // only ever a cache-freshness question, and isSourceModified turns
+            // the 0 into "re-parse", which routes the real failure through
+            // getResourceReader where it is already handled.
+            logger.debug("Could not read the last-modified time of {}", name, ex);
+            return 0L;
+        }
     }
 
 }

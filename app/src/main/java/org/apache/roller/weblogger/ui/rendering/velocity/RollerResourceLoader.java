@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import org.slf4j.Logger;
@@ -114,7 +115,14 @@ public class RollerResourceLoader extends ResourceLoader {
 			if (templateCode != null) {
 				contents = templateCode.getTemplate();
 			}
-			return new InputStreamReader(new ByteArrayInputStream(contents.getBytes(encoding)), encoding);
+			// Velocity passes a NULL encoding from resourceExists(); see the same
+			// guard in ThemeResourceLoader, where an unguarded getBytes(null)
+			// produced intermittent 404s the moment caching was switched on. This
+			// loader still runs uncached, so the path is not reachable today -- the
+			// guard is here so that stays a choice rather than a trap.
+			String charset = (encoding == null || encoding.isEmpty())
+					? StandardCharsets.UTF_8.name() : encoding;
+			return new InputStreamReader(new ByteArrayInputStream(contents.getBytes(charset)), charset);
 
 		} catch (UnsupportedEncodingException uex) {
 			// This should never actually happen. We expect UTF-8 in all JRE
