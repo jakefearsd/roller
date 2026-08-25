@@ -192,4 +192,45 @@ class ThemeResourceLoaderTest {
             assertEquals("Hello \u00e9", read.toString());
         }
     }
+
+    /**
+     * A resource with no name, or none at all, reports 0 rather than throwing.
+     *
+     * <p>Velocity asks for a last-modified time on paths this loader does not
+     * own -- it is consulted for every resource until one claims it -- so an
+     * unparseable name has to be an ordinary answer, not an exception thrown
+     * out of a cache-freshness check. 0 then routes through isSourceModified
+     * as "re-parse", which is the safe direction.
+     */
+    @Test
+    void anUnnamedResourceReportsNoTimestampRatherThanThrowing() {
+        assertEquals(0L, loader.getLastModified(null));
+        assertEquals(0L, loader.getLastModified(new org.apache.velocity.Template()));
+    }
+
+    /**
+     * A name that is not in {@code <theme>:<template>} shape belongs to one of
+     * the other three loaders (webapp, roller, class), not this one.
+     */
+    @Test
+    void aNameWithoutAThemePrefixReportsNoTimestamp() {
+        assertEquals(0L, loader.getLastModified(resourceNamed("weblog.vm")),
+                "a bare template name carries no theme, so there is no theme "
+                        + "timestamp to report");
+        assertEquals(0L, loader.getLastModified(resourceNamed(":weblog")),
+                "an empty theme half is not a theme either");
+    }
+
+    /**
+     * The rendition suffix is stripped before the theme is looked up, so both
+     * renditions of a template share one theme timestamp.
+     */
+    @Test
+    void theRenditionSuffixDoesNotHideTheTheme() throws WebloggerException {
+        SharedTheme theme = mock(SharedTheme.class);
+        when(theme.getLastModified()).thenReturn(new Date(4_242L));
+        when(themeManager.getTheme("mytheme")).thenReturn(theme);
+
+        assertEquals(4_242L, loader.getLastModified(resourceNamed("mytheme:weblog|standard")));
+    }
 }
