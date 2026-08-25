@@ -258,6 +258,25 @@ public final class BrowserHealth {
                 "local_storage,session_storage"));
     }
 
+    /**
+     * Installs a cookie on the browser without navigating anywhere.
+     *
+     * <p>Over CDP for the same reason {@link #resetSessionState} is: this is called while
+     * parked on {@code about:blank}, and WebDriver's {@code addCookie} can only write a
+     * cookie for the document currently loaded. The CDP command takes the URL the cookie
+     * belongs to as an argument, and Chrome derives the domain and path from it.
+     *
+     * @param name  cookie name, e.g. {@code JSESSIONID}
+     * @param value cookie value
+     * @param url   the URL the cookie is scoped to, context path included
+     */
+    static void installCookie(String name, String value, String url) {
+        devTools().send(Network.setCookie(name, value, Optional.of(url),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty()));
+    }
+
     /** Unbinds the recorder from the calling thread; pairs with {@link #attach()}. */
     static void detach() {
         CURRENT.remove();

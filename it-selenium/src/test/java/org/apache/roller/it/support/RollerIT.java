@@ -24,13 +24,21 @@ import com.codeborne.selenide.SelenideElement;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.HttpCookie;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.codeborne.selenide.Condition.checked;
 import static com.codeborne.selenide.Condition.disappear;
@@ -249,7 +257,108 @@ public abstract class RollerIT {
      * under test.
      */
     protected void loginAsAdmin() {
-        loginAs(ADMIN_USERNAME, ADMIN_PASSWORD);
+        signInAs(ADMIN_USERNAME, ADMIN_PASSWORD);
+    }
+
+    /** Spring Security's login-processing endpoint; see {@code SecurityConfig.formLogin}. */
+    private static final String LOGIN_PROCESSING_PATH = "/roller_j_security_check";
+
+    /** Matches the token {@code <sec:csrfInput/>} renders into the login form. */
+    private static final Pattern CSRF_INPUT = Pattern.compile(
+            "name=\"_csrf\"[^>]*value=\"([^\"]+)\"");
+
+    /**
+     * Signs in the cheap way: authenticate over HTTP, hand the browser the resulting
+     * session cookie, and land on the menu.
+     *
+     * <p>This exists because signing in was the single most expensive thing the suite did.
+     * {@link #loginAs} drives the real form, which costs THREE full page loads -- the login
+     * page, whatever {@code login-redirect.rol} forwards to, and the menu -- and every one
+     * of them re-fetches and re-parses jQuery UI, Bootstrap and EasyMDE, because the health
+     * recorder runs with the HTTP cache disabled. 21 of the 36 IT classes pay that from
+     * {@code @BeforeEach}. Measured: a test that logs in and opens one page costs 2.86s
+     * ({@code RouteSweepIT}) against 0.88s for one that opens a page without signing in
+     * ({@code PublicSurfaceIT}) -- so about 2s per test, roughly 30% of the suite.
+     *
+     * <p>An {@code HttpClient} fetches the login page as ONE document and no sub-resources,
+     * so the two requests here cost a small fraction of the two page loads they replace.
+     *
+     * <p><b>This is not a weaker check than the form login, and in one way it is stronger.</b>
+     * Success is read from the redirect Spring Security itself issues -- anything pointing at
+     * {@code login.rol?error} is a refusal -- rather than inferred from a page having
+     * rendered. It still ends on the menu with the same logout-link assertion, so callers
+     * cannot tell the difference.
+     *
+     * <p><b>Isolation is unchanged.</b> Each call authenticates on its own, producing its own
+     * server-side session; nothing is cached or shared between tests or classes.
+     *
+     * <p>{@link #loginAs} is deliberately kept for anything that is TESTING the login screen
+     * rather than merely needing to be signed in -- it is the only path that exercises the
+     * form, the redirect chain and the failure page.
+     *
+     * @throws IllegalStateException if the credentials are refused
+     */
+    protected void signInAs(String username, String password) {
+        for (HttpCookie cookie : authenticateOverHttp(username, password)) {
+            BrowserHealth.installCookie(cookie.getName(), cookie.getValue(), baseUrl() + "/");
+        }
+        openPath(MENU_PATH);
+        webdriver().shouldHave(urlContaining(MENU_PATH));
+        $(LOGOUT_LINK).should(exist);
+        BrowserHealth.current().settle();
+    }
+
+    /**
+     * Performs the form login over HTTP and returns the cookies it produced.
+     *
+     * <p>Redirects are NEVER followed: the 302's {@code Location} is the evidence of success
+     * or failure, and following it would both hide that and pull down a page we do not want.
+     * Every cookie the exchange produced is returned rather than {@code JSESSIONID} alone,
+     * so a deployment that renames the session cookie, or adds one, still works.
+     */
+    private static List<HttpCookie> authenticateOverHttp(String username, String password) {
+        CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+        HttpClient http = HttpClient.newBuilder()
+                .cookieHandler(cookies)
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .connectTimeout(Duration.ofSeconds(20))
+                .build();
+        try {
+            HttpResponse<String> form = http.send(
+                    HttpRequest.newBuilder(URI.create(baseUrl() + LOGIN_PATH))
+                            .timeout(Duration.ofSeconds(20)).GET().build(),
+                    HttpResponse.BodyHandlers.ofString());
+            Matcher token = CSRF_INPUT.matcher(form.body());
+            if (!token.find()) {
+                throw new IllegalStateException("No _csrf token on " + LOGIN_PATH
+                        + ". The login form renders one through <sec:csrfInput/>; if that has "
+                        + "changed, this fast sign-in has to change with it.");
+            }
+            String body = "j_username=" + encode(username)
+                    + "&j_password=" + encode(password)
+                    + "&_csrf=" + encode(token.group(1));
+            HttpResponse<String> post = http.send(
+                    HttpRequest.newBuilder(URI.create(baseUrl() + LOGIN_PROCESSING_PATH))
+                            .timeout(Duration.ofSeconds(20))
+                            .header("Content-Type", "application/x-www-form-urlencoded")
+                            .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+                    HttpResponse.BodyHandlers.ofString());
+            String location = post.headers().firstValue("Location").orElse("");
+            if (location.contains("login.rol")) {
+                throw new IllegalStateException("Sign-in refused for '" + username
+                        + "': Spring Security redirected to " + location);
+            }
+            return cookies.getCookieStore().getCookies();
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            throw new IllegalStateException("Could not sign in as '" + username + "'", e);
+        }
+    }
+
+    private static String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     /**
