@@ -80,7 +80,15 @@ class MultiUserJourneyIT extends RollerIT {
         logout();
 
         // --- Alice sets up her weblog and publishes ------------------------
-        loginAs(alice, PASSWORD);
+        // signInAs, not loginAs: nothing in this class is testing the login
+        // SCREEN, only that these two accounts own separate blogs and cannot
+        // reach each other's. The fast path still posts the same credentials to
+        // the same j_security_check endpoint, so "the account the admin just
+        // created can actually sign in" is still proved here; it just skips the
+        // three page loads the form costs, four times over. UserAdminIT keeps
+        // the form login for a non-admin account, where the screen IS the
+        // subject.
+        signInAs(alice, PASSWORD);
         createWeblog(aliceBlog, "Alice's Blog " + suffix);
         String aliceEntryId = publishEntry(aliceBlog, "Alice first post " + suffix,
                 "Written by Alice " + suffix);
@@ -93,7 +101,7 @@ class MultiUserJourneyIT extends RollerIT {
         logout();
 
         // --- Bob does the same on his own weblog ---------------------------
-        loginAs(bob, PASSWORD);
+        signInAs(bob, PASSWORD);
         createWeblog(bobBlog, "Bob's Blog " + suffix);
         String bobEntryId = publishEntry(bobBlog, "Bob first post " + suffix,
                 "Written by Bob " + suffix);
@@ -114,7 +122,7 @@ class MultiUserJourneyIT extends RollerIT {
         deleteEntry(bobBlog, aliceEntryId);
         logout();
 
-        loginAs(alice, PASSWORD);
+        signInAs(alice, PASSWORD);
         assertTrue(entryBody(aliceBlog, aliceEntryId).contains(editedBody),
                 "Bob's delete removed Alice's entry");
 
@@ -128,7 +136,7 @@ class MultiUserJourneyIT extends RollerIT {
         logout();
 
         // --- Bob's post is untouched by all of that ------------------------
-        loginAs(bob, PASSWORD);
+        signInAs(bob, PASSWORD);
         assertTrue(entryBody(bobBlog, bobEntryId).contains("Written by Bob"),
                 "Bob's entry did not survive Alice's activity");
         logout();

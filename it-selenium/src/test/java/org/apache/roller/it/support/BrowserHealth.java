@@ -25,6 +25,7 @@ import org.openqa.selenium.WrapsDriver;
 import org.openqa.selenium.devtools.DevTools;
 import org.openqa.selenium.devtools.HasDevTools;
 import org.openqa.selenium.devtools.v150.network.Network;
+import org.openqa.selenium.devtools.v150.network.model.Cookie;
 import org.openqa.selenium.devtools.v150.page.Page;
 import org.openqa.selenium.devtools.v150.page.model.Frame;
 import org.openqa.selenium.devtools.v150.storage.Storage;
@@ -32,6 +33,7 @@ import org.openqa.selenium.devtools.v150.storage.Storage;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -271,10 +273,47 @@ public final class BrowserHealth {
      * @param url   the URL the cookie is scoped to, context path included
      */
     static void installCookie(String name, String value, String url) {
-        devTools().send(Network.setCookie(name, value, Optional.of(url),
+        Boolean accepted = devTools().send(Network.setCookie(name, value, Optional.of(url),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty()));
+
+        // CDP's setCookie answers with a success flag, and a rejected cookie is
+        // reported ONLY there -- the command does not fail, so an unchecked call
+        // returns normally having written nothing. That is the whole failure mode
+        // worth guarding: the sign-in helper transplants a session cookie minted
+        // over HTTP into Chrome, and a silent rejection would surface much later
+        // as every authenticated test landing on the login page for no stated
+        // reason. Checking the flag costs nothing (the round trip has already
+        // happened) and names the cause at the point it occurs.
+        if (!Boolean.TRUE.equals(accepted)) {
+            throw new IllegalStateException(
+                    "Chrome refused the cookie '" + name + "' for " + url
+                            + ". The browser is therefore not signed in, and every "
+                            + "assertion that assumes it is will fail somewhere else.");
+        }
+    }
+
+    /**
+     * The cookies Chrome holds for {@code url}, as name-to-value pairs.
+     *
+     * <p>Over CDP for the same reason the two methods above are: the caller may be parked
+     * on {@code about:blank}, where WebDriver's cookie API sees nothing at all. The CDP
+     * command takes the URL as an argument instead of reading it off the loaded document.
+     *
+     * @param url the URL whose cookies to read, context path included
+     */
+    static Map<String, String> readCookies(String url) {
+        Map<String, String> cookies = new LinkedHashMap<>();
+        for (Cookie cookie : devTools().send(Network.getCookies(Optional.of(List.of(url))))) {
+            cookies.put(cookie.getName(), cookie.getValue());
+        }
+        return cookies;
+    }
+
+    /** Empties Chrome's cookie jar, which is what signs the browser out. */
+    static void clearCookies() {
+        devTools().send(Network.clearBrowserCookies());
     }
 
     /** Unbinds the recorder from the calling thread; pairs with {@link #attach()}. */

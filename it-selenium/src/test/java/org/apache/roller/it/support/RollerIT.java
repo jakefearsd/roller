@@ -21,6 +21,7 @@ package org.apache.roller.it.support;
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.Selenide;
 import com.codeborne.selenide.SelenideElement;
+import com.codeborne.selenide.WebDriverRunner;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.chrome.ChromeOptions;
 
@@ -37,6 +38,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -268,8 +270,8 @@ public abstract class RollerIT {
             "name=\"_csrf\"[^>]*value=\"([^\"]+)\"");
 
     /**
-     * Signs in the cheap way: authenticate over HTTP, hand the browser the resulting
-     * session cookie, and land on the menu.
+     * Signs in the cheap way: authenticate over HTTP and hand the browser the resulting
+     * session cookie. Navigates nowhere.
      *
      * <p>This exists because signing in was the single most expensive thing the suite did.
      * {@link #loginAs} drives the real form, which costs THREE full page loads -- the login
@@ -286,8 +288,18 @@ public abstract class RollerIT {
      * <p><b>This is not a weaker check than the form login, and in one way it is stronger.</b>
      * Success is read from the redirect Spring Security itself issues -- anything pointing at
      * {@code login.rol?error} is a refusal -- rather than inferred from a page having
-     * rendered. It still ends on the menu with the same logout-link assertion, so callers
-     * cannot tell the difference.
+     * rendered.
+     *
+     * <p><b>It deliberately does not navigate afterwards, and that is the second saving.</b>
+     * It used to finish by opening the menu and asserting a logout link, which cost a further
+     * full page load on every call for a check the two steps above already make between them:
+     * the 302 proves the credentials and the session, and {@code installCookie} now checks
+     * CDP's own success flag, which is the only place a refused cookie is ever reported. What
+     * the menu load added beyond that was a better error message, not a broader check. Every
+     * caller was audited before it went: all 21 sites either navigate as their next statement
+     * or call a helper whose first statement is an {@code openPath}, so nothing depended on
+     * landing anywhere in particular. <b>Do not write one that does</b> -- after this call the
+     * browser is wherever it already was, usually {@code about:blank} at the start of a test.
      *
      * <p><b>Isolation is unchanged.</b> Each call authenticates on its own, producing its own
      * server-side session; nothing is cached or shared between tests or classes.
@@ -302,10 +314,6 @@ public abstract class RollerIT {
         for (HttpCookie cookie : authenticateOverHttp(username, password)) {
             BrowserHealth.installCookie(cookie.getName(), cookie.getValue(), baseUrl() + "/");
         }
-        openPath(MENU_PATH);
-        webdriver().shouldHave(urlContaining(MENU_PATH));
-        $(LOGOUT_LINK).should(exist);
-        BrowserHealth.current().settle();
     }
 
     /**
@@ -395,24 +403,101 @@ public abstract class RollerIT {
     }
 
     /**
-     * Signs out, so the next login starts from a clean session.
+     * Signs out: empties the browser's cookie jar and invalidates the server-side
+     * session. Navigates nowhere.
      *
-     * <p>Waits for the login form rather than for the logout link to vanish:
-     * logout redirects, and asserting on the page we left is how a browser
-     * test ends up racing a navigation.
+     * <p>The mirror image of {@link #signInAs}, and cheap for the same reason. Signing
+     * out used to be two full page loads -- {@code logout.rol}, then the login page, to
+     * settle the redirect chain the first one kicks off -- and the suite does it 52
+     * times. Neither load was doing work a test depended on: an audit of all 52 sites
+     * found that every one either navigates as its next statement, calls a helper whose
+     * first statement is an {@code openPath}, makes a raw HTTP request that never had
+     * the browser's cookies anyway, or is the last statement of its test (where
+     * {@code BrowserHealth.attach()} clears the cookie jar before the next test
+     * regardless). <b>Nothing may be written that depends on landing on the login
+     * page</b> -- after this call the browser is still showing whatever it was.
+     *
+     * <p><b>Both halves are here on purpose.</b> Clearing Chrome's cookies is what makes
+     * the BROWSER anonymous, which is what the tests that log out mid-test actually
+     * want -- they go on to read a page as a stranger would. Hitting {@code logout.rol}
+     * is what makes the SERVER forget, so this method does not quietly become a lie
+     * about a session that is still perfectly usable. The order matters only in that
+     * the cookies must be read before they are cleared.
+     *
+     * <p>The HTTP call is best-effort: a session that has already expired, or a
+     * transport that fails, still leaves the browser signed out, which is the part a
+     * caller can observe. Failing here would turn a tidy-up into a test failure.
      */
     protected void logout() {
-        openPath("/roller-ui/logout.rol");
-
-        // Then go to the login page ourselves rather than waiting on the
-        // redirect chain logout kicks off. The session is already invalidated
-        // by the time logout.rol responds, so this is not papering over a
-        // race -- it removes one: on a loaded runner the redirect can still be
-        // in flight when the assertion below runs, and the failure ("no login
-        // form") looks nothing like its cause.
-        openPath(LOGIN_PATH);
-        $("#j_username").should(exist);
+        // Settle first. The old two-page-load implementation waited for a document
+        // to finish loading, which incidentally made this method a barrier: a test
+        // that clicked something and then logged out could not race its own POST.
+        // Cheap as this version is, dropping that property silently would push the
+        // race onto whatever the caller does next, so it is kept deliberately --
+        // settle() costs nothing when the network is already quiet, which is the
+        // usual case.
         BrowserHealth.current().settle();
+
+        Map<String, String> cookies = BrowserHealth.readCookies(baseUrl() + "/");
+        BrowserHealth.clearCookies();
+        invalidateServerSession(cookies);
+    }
+
+    /** GETs {@code logout.rol} carrying {@code cookies}, so the server drops the session. */
+    private static void invalidateServerSession(Map<String, String> cookies) {
+        if (cookies.isEmpty()) {
+            return;
+        }
+        String header = cookies.entrySet().stream()
+                .map(e -> e.getKey() + "=" + e.getValue())
+                .collect(Collectors.joining("; "));
+        try {
+            HttpClient.newBuilder()
+                    .followRedirects(HttpClient.Redirect.NEVER)
+                    .connectTimeout(Duration.ofSeconds(20)).build()
+                    .send(HttpRequest.newBuilder(URI.create(baseUrl() + "/roller-ui/logout.rol"))
+                            .header("Cookie", header).GET().build(),
+                            HttpResponse.BodyHandlers.discarding());
+        } catch (java.io.IOException e) {
+            // Best-effort by design -- see the javadoc above.
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Runs browser work from a class's {@code @AfterAll}, where there is a live
+     * browser but no attached health recorder.
+     *
+     * <p>Needed because the two halves of the browser's lifecycle end at
+     * different moments. {@code BrowserHealthExtension.afterEach} calls
+     * {@code BrowserHealth.detach()} after every test, which clears the
+     * thread-local recorder; the WebDriver itself stays up until that
+     * extension's own {@code afterAll}. JUnit runs a class's {@code @AfterAll}
+     * methods BEFORE any {@code AfterAllCallback} extension, so in between
+     * those two points {@link #openPath} has a browser to drive but
+     * {@code BrowserHealth.current()} throws. This re-attaches a recorder for
+     * the duration of {@code work} and detaches it again.
+     *
+     * <p>Use it for class-level fixture teardown that has no HTTP equivalent
+     * -- deleting a weblog, for instance, which the automation API cannot do.
+     * Assertions made inside {@code work} are ordinary assertions; the
+     * recorder is here so the navigation helpers function, not to add a
+     * health verdict to a class that has already finished reporting.
+     *
+     * <p>A no-op when no browser was ever started (every test in the class was
+     * skipped, say), rather than starting one just to close it.
+     */
+    protected static void inBrowserAfterAll(Runnable work) {
+        if (!WebDriverRunner.hasWebDriverStarted()) {
+            return;
+        }
+        BrowserHealth.attach();
+        try {
+            work.run();
+        } finally {
+            BrowserHealth.detach();
+        }
     }
 
     /** The site-wide settings page, where global runtime properties are edited. */

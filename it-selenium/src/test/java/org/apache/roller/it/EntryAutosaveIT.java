@@ -69,14 +69,23 @@ class EntryAutosaveIT extends RollerIT {
     void logInAndClearDrafts() {
         loginAsAdmin();
         contextPath = URI.create(baseUrl()).getPath();
+
+        // Navigate before touching storage, and do not remove this: signing in
+        // no longer loads a page (RollerIT.signInAs installs a session cookie
+        // over CDP and stops there), so without an explicit open the browser is
+        // still on about:blank -- which has no origin, and every localStorage
+        // call below it throws WebDriverException. This class is the only one in
+        // the suite that reads or writes storage directly, so it is the only one
+        // that has to say so.
+        openPath("/roller-ui/menu.rol");
+
         // localStorage survives across tests that share a browser session
         // (and, more importantly, this suite runs its whole class in one
         // JVM against a shared instance), so a snapshot left behind by one
         // test -- or by a previous run against the same profile -- can be
         // offered to the next test and make it pass or fail for the wrong
-        // reason. Clear this module's own keys once there is an origin to
-        // operate on (right after login), so every test here starts from an
-        // empty draft store.
+        // reason. Clear this module's own keys, so every test here starts from
+        // an empty draft store.
         clearStoredDrafts();
     }
 
@@ -167,7 +176,15 @@ class EntryAutosaveIT extends RollerIT {
         waitForDraftSnapshot(editKey);
 
         $("button[formaction$='entryEdit!publish.rol']").click();
-        $("#entry").should(exist);
+
+        // Wait for the PUBLISHED page, not merely for an #entry -- the page we
+        // are leaving has one of those too, so `should(exist)` was satisfied
+        // instantly by the OLD document and the reload below then raced the
+        // publish POST still in flight ("aborted by navigation: Not attached to
+        // an active page"). The hidden status input is the right thing to wait
+        // on twice over: it is only PUBLISHED once the save has round-tripped,
+        // and the status change is the very thing this test is about.
+        $("input[name='bean.status'][value='PUBLISHED']").should(exist);
 
         reloadWithoutLeaveWarning();
         $("#entry").should(exist);

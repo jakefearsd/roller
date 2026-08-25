@@ -29,7 +29,6 @@ import com.codeborne.selenide.Selenide;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -160,23 +159,61 @@ class VirtualHostIT extends RollerIT {
         RollerIT.markSelenideConfigured();
     }
 
-    /** Undoes {@link #enableVhostDns()} so later test classes in the suite get a plain Chrome instance. */
+    /**
+     * Tears the class fixture down and undoes {@link #enableVhostDns()}, so
+     * later test classes in the suite get a plain Chrome instance.
+     *
+     * <p>One {@code @AfterAll} rather than two, because the order in which
+     * JUnit runs several {@code @AfterAll} methods of the same class is not
+     * specified -- and these two are order-dependent, the fixture teardown
+     * needing the browser this method then closes.
+     */
     @AfterAll
-    void disableVhostDns() {
+    void removeVhostWeblogAndDisableVhostDns() {
+        inBrowserAfterAll(this::removeVhostWeblog);
         Selenide.closeWebDriver();
         Configuration.browserCapabilities = chromeOptions();
     }
 
     /**
-     * Creates a fresh weblog with {@link #VHOST} as its custom domain, and
-     * points {@code site.absoluteurl} at the site host so the control-plane
-     * redirect (criterion 3) has something real to redirect to.
+     * Creates ONE weblog for the whole class, with {@link #VHOST} as its
+     * custom domain, and points {@code site.absoluteurl} at the site host so
+     * the control-plane redirect (criterion 3) has something real to redirect
+     * to.
+     *
+     * <p><b>Once per class, not once per test, and the guard is what makes it
+     * so.</b> The obvious spelling of "once per class" is {@code @BeforeAll},
+     * and it does not work here: {@code BrowserHealthExtension} creates the
+     * WebDriver from a {@code BeforeEachCallback}, so a {@code @BeforeAll}
+     * body has no browser to drive and every helper below it navigates. The
+     * fixture therefore stays in {@code @BeforeEach} and skips itself once
+     * built -- which {@code @TestInstance(PER_CLASS)}, already on this class
+     * for {@link #enableVhostDns()}, is what makes possible: the instance
+     * field survives from one test to the next.
+     *
+     * <p>Sharing is safe because every test here is additive against the
+     * fixture and none of them mutates it: five are pure {@link #get} calls
+     * that only read, two publish an entry under a {@link #nonce()} title,
+     * one publishes a page, and criterion 11 restores
+     * {@code site.absoluteurl} in its own {@code finally}. Nothing renames
+     * the weblog, clears its custom domain, or deletes it -- the operations
+     * a later test would notice.
+     *
+     * <p>It is worth the ceremony: the fixture is nine page loads and cost
+     * ~9.7s, which for the five tests whose entire body is one HTTP GET was
+     * essentially all of their runtime, and this class sits on the
+     * {@link RollerIT#GLOBAL_CONFIG} lock -- the suite's critical path -- so
+     * every second saved here is a second off the wall clock rather than a
+     * second returned to a thread pool that has other work anyway.
      *
      * <p>The seeded {@code it_weblog} is deliberately left alone -- other IT
      * classes depend on it carrying no custom domain.
      */
     @BeforeEach
-    void createVhostWeblog() {
+    void createVhostWeblogOnce() {
+        if (vhostHandle != null) {
+            return;
+        }
         loginAsAdmin();
         priorSiteAbsoluteUrl = setSiteAbsoluteUrl(baseUrl());
         vhostHandle = createWeblog();
@@ -184,9 +221,19 @@ class VirtualHostIT extends RollerIT {
         logout();
     }
 
-    /** Removes the fixture weblog and restores {@code site.absoluteurl} -- both global state. */
-    @AfterEach
-    void removeVhostWeblog() {
+    /**
+     * Removes the fixture weblog and restores {@code site.absoluteurl} -- both
+     * global state, so neither may be left behind for the next class.
+     *
+     * <p>Guarded on the handle because a failure inside
+     * {@link #createVhostWeblogOnce()} leaves it null, and an
+     * {@code @AfterAll} that then threw would replace the real failure with a
+     * {@code NullPointerException} from the teardown.
+     */
+    private void removeVhostWeblog() {
+        if (vhostHandle == null) {
+            return;
+        }
         loginAsAdmin();
         removeWeblog(vhostHandle);
         setSiteAbsoluteUrl(priorSiteAbsoluteUrl);
